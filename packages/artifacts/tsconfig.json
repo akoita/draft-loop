@@ -6,5 +6,5 @@
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../evidence" }]
+  "references": [{ "path": "../evidence" }, { "path": "../schemas" }]
 }
