@@ -17,10 +17,14 @@ baseline for the next stage.
   manually dispatched and the publish job uses the `release` environment.
 - Candidate source material, workspace databases, provider credentials, and
   run history are never included in release artifacts or manifests.
+- Each release includes a CycloneDX JSON software bill of materials generated
+  from the checked-out dependency tree with a pinned Syft version.
 
 Signing, automatic updates, and broader distribution remain later beta-stage
-work. The current release process provides repeatable GitHub artifacts,
-checksums, release metadata, and generated release notes.
+work. GitHub artifact provenance attestations are opt-in because GitHub only
+supports attestations for private repositories on eligible enterprise plans.
+When enabled, the workflow attests the packaged desktop artifacts after they
+are downloaded into the publishing job.
 
 ## Local checks
 
@@ -48,12 +52,16 @@ excluded from the artifact list to avoid self-referential metadata.
    issue links and acceptance evidence.
 3. Merge the PR into `main` and wait for CI to pass.
 4. Run **Release** from GitHub Actions with the matching version and
-   `dry_run=true`.
+   `dry_run=true`. Keep `attest_provenance=false` for a dry run.
 5. Review the dry-run manifest, platform artifacts, checksums, and known
-   limitations.
-6. Re-run the workflow with `dry_run=false` after maintainer approval.
-7. Confirm the GitHub tag, generated notes, attached artifacts, manifest, and
-   `SHA256SUMS` file. Update `docs/roadmap.md` with the release evidence.
+   limitations, including the attached CycloneDX SBOM.
+6. Re-run the workflow with `dry_run=false` after maintainer approval. Set
+   `attest_provenance=true` only when the repository plan supports GitHub
+   artifact attestations.
+7. Confirm the GitHub tag, generated notes, attached artifacts, manifest,
+   CycloneDX SBOM, and `SHA256SUMS` file. Verify attestations with
+   `gh attestation verify` when enabled, then update `docs/roadmap.md` with
+   the release evidence.
 
 The workflow builds the packaged desktop application on Linux, macOS, and
 Windows. The CLI remains source-distributed during the alpha stage; a

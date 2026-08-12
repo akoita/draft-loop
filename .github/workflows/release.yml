@@ -12,6 +12,11 @@ on:
         required: true
         default: true
         type: boolean
+      attest_provenance:
+        description: "Generate GitHub artifact provenance attestations when the repository plan supports them"
+        required: true
+        default: false
+        type: boolean
 
 concurrency:
   group: release
@@ -136,6 +141,8 @@ jobs:
     environment: release
     permissions:
       contents: write
+      id-token: write
+      attestations: write
     env:
       RELEASE_VERSION: ${{ inputs.version }}
       RELEASE_COMMIT: ${{ needs.validate.outputs.commit }}
@@ -143,6 +150,7 @@ jobs:
       RELEASE_CHANNEL: ${{ needs.validate.outputs.channel }}
       RELEASE_NAME: ${{ needs.validate.outputs.release_name }}
       DRY_RUN: ${{ inputs.dry_run }}
+      ATTEST_PROVENANCE: ${{ inputs.attest_provenance }}
     steps:
       - name: Check out approved main
         uses: actions/checkout@v7
@@ -163,12 +171,31 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare release output directory
+        run: mkdir -p release-output
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0.24.0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: release-output/draft-loop-${{ env.RELEASE_VERSION }}.cdx.json
+          syft-version: v1.50.0
+          upload-artifact: false
+          upload-release-assets: false
+
       - name: Download platform artifacts
         uses: actions/download-artifact@v8
         with:
           pattern: release-*
           path: release-artifacts
           merge-multiple: true
+
+      - name: Generate artifact provenance attestations
+        if: ${{ !inputs.dry_run && inputs.attest_provenance }}
+        uses: actions/attest@v4
+        with:
+          subject-path: release-artifacts/**
 
       - name: Create checksums
         run: |
@@ -199,6 +226,10 @@ jobs:
             "",
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             `Stage issue: https://github.com/${repository}/issues/46`,
+            "SBOM: CycloneDX JSON is attached to the release.",
+            ...(process.env.ATTEST_PROVENANCE === "true"
+              ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]
+              : ["Provenance: not requested for this run."]),
             "",
             "Known limitations: CLI remains source-distributed during the alpha stage; signing and automatic updates remain beta-stage work.",
           ].join("\n");
@@ -214,6 +245,7 @@ jobs:
             release-output/release-manifest.json
             release-output/SHA256SUMS
             release-output/release-notes.md
+            release-output/draft-loop-${{ inputs.version }}.cdx.json
           if-no-files-found: error
           retention-days: 14
 
@@ -223,7 +255,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mapfile -t assets < <(find release-artifacts -type f ! -name 'SHA256SUMS' -print | sort)
-          assets+=(release-output/SHA256SUMS release-output/release-manifest.json)
+          assets+=(release-output/SHA256SUMS release-output/release-manifest.json "release-output/draft-loop-${RELEASE_VERSION}.cdx.json")
           release_args=(
             "v${RELEASE_VERSION}"
             "${assets[@]}"
