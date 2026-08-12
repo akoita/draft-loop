@@ -34,9 +34,9 @@ workflow:
   export;
 - a desktop review workspace with a typed, capability-limited host bridge and
   deterministic browser fallback;
-
-The packaged native host and its application-service implementation remain to
-be connected to the desktop bridge for the local alpha.
+- a packaged Electron desktop host that connects the bridge to the shared local
+  application driver, native workspace/file dialogs, SQLite history, and
+  restart-safe review state;
 
 ## Stack
 
@@ -46,7 +46,7 @@ be connected to the desktop bridge for the local alpha.
 | Workspace | pnpm monorepo with framework-free domain packages |
 | Model providers | Anthropic SDK, OpenAI SDK, cross-provider author–critic pairing |
 | Contracts and validation | Zod, strict TypeScript, JSON Schema structured outputs |
-| CLI and desktop shell | Commander, React 19, Vite |
+| CLI and desktop shell | Commander, React 19, Vite, Electron 43, Electron Forge 7 |
 | Persistence and output | Drizzle ORM, SQLite boundary, Markdown/PDF/DOCX rendering contracts |
 | Quality | Biome, ESLint, Markdownlint, Vitest, GitHub Actions |
 
@@ -93,6 +93,17 @@ To run the current CLI shell:
 ```sh
 pnpm start
 ```
+
+To run or package the native desktop shell:
+
+```sh
+pnpm --filter @draft-loop/desktop start
+pnpm --filter @draft-loop/desktop package
+```
+
+The packaged host is offline-first. Creating a workspace from the desktop
+starts the deterministic fixture workflow; live provider execution remains an
+explicit, separately designed consent flow.
 
 The phase-0 CLI workflow is available with a local workspace manifest:
 

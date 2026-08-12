@@ -19,6 +19,19 @@ schemas ---- domain ---- evidence ---- ingestion
 storage ---- artifacts ---- rendering
 ```
 
+The packaged desktop path adds a native boundary around the same application
+contract:
+
+```text
+React renderer -> preload NativeBridge -> Electron main host
+                                      -> application -> SQLite/orchestrator
+```
+
+The renderer receives only bounded projections. Native dialogs, workspace
+paths, SQLite handles, provider credentials, and export writes remain in the
+main process. Browser mode intentionally has no such capabilities and keeps a
+deterministic fixture fallback.
+
 - Domain concepts do not depend on provider SDKs, storage engines, or UI
   frameworks.
 - Schemas validate data crossing package and persistence boundaries.
@@ -27,7 +40,7 @@ storage ---- artifacts ---- rendering
 - The orchestrator owns round sequencing, budgets, pause/stop behavior, and
   user-visible run events; provider adapters own SDK translation only.
 - The application package owns adapter-neutral use cases and command/query
-  contracts. CLI and desktop adapters supply runtime-specific drivers without
+  contracts. CLI and desktop adapters use the same local driver without
   importing one another or exposing provider SDKs to the UI.
 - Validation is deterministic where possible. Evaluations represent rubric
   scores and structured critique; neither is treated as proof of truth.
@@ -99,15 +112,15 @@ See [the threat model](threat-model.md) and [privacy and evaluation
 policy](privacy-and-evaluation.md) for the current trust boundaries, redaction
 rules, retention defaults, and deterministic evaluation gate.
 
-The phase-0 CLI is an adapter over these contracts. It stores a small workspace
-manifest beside a local SQLite history file, ingests selected local sources,
-constructs a context snapshot, and drives the same orchestration engine used by
-future UI adapters. Offline fixture agents make the lifecycle testable without
-network access. The desktop renderer uses the same adapter-neutral review port
-through a capability-limited bridge; browser mode has no filesystem or
-credential capabilities and retains only a deterministic fixture fallback until
-a packaged host is installed. Live provider execution is opt-in after the data-policy
-preflight. Approved artifacts are rendered locally to Markdown, controlled
+The CLI and packaged desktop host are adapters over these contracts. They use
+the same local application driver, which stores a small workspace manifest
+beside a local SQLite history file, ingests selected local sources, constructs a
+context snapshot, and drives the orchestration engine. Offline fixture agents
+make the lifecycle testable without network access. The desktop renderer uses
+the same adapter-neutral review port through a capability-limited bridge;
+browser mode has no filesystem or credential capabilities and retains only a
+deterministic fixture fallback. Live provider execution is opt-in after the
+data-policy preflight. Approved artifacts are rendered locally to Markdown, controlled
 DOCX, or controlled PDF. Each renderer consumes the same ordered structured
 artifact; the CLI records artifact version, template version, timestamp,
 format, MIME type, and checksum in the immutable export record.

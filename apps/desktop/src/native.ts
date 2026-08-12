@@ -55,10 +55,35 @@ function unwrap<Value>(result: BridgeResult<Value>): Value {
 }
 
 export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopReviewPort {
+  const load = async (): Promise<DesktopReviewState> => {
+    const result = await capabilityPort.execute({ type: "review.load", input: {} });
+    return unwrap(result);
+  };
+  const ensureRun = async (workspaceId: string): Promise<DesktopReviewState> => {
+    const status = unwrap(
+      await capabilityPort.execute({ type: "run.status", input: { workspaceId } }),
+    );
+    if (status.runId === null) {
+      unwrap(await capabilityPort.execute({ type: "run.start", input: { workspaceId } }));
+    }
+    return load();
+  };
   return {
-    load: async () => {
-      const result = await capabilityPort.execute({ type: "review.load", input: {} });
-      return unwrap(result);
+    load,
+    openWorkspace: async () => {
+      const result = unwrap(
+        await capabilityPort.execute({
+          type: "workspace.open",
+          input: { selection: "native-dialog" },
+        }),
+      );
+      return ensureRun(result.workspace.id);
+    },
+    createWorkspace: async (name) => {
+      const result = unwrap(
+        await capabilityPort.execute({ type: "workspace.create", input: { name } }),
+      );
+      return ensureRun(result.workspace.id);
     },
     dispatch: async (state: DesktopReviewState, action: ReviewAction) => {
       const result = await capabilityPort.execute({
@@ -97,8 +122,8 @@ function isNativeBridge(value: unknown): value is NativeBridge {
 
 /**
  * Resolves an optional host-injected bridge, falling back to browser mode.
- * A future Electron/Tauri preload may install a NativeBridge at this key after
- * applying its own host-side permission and user-gesture checks.
+ * The Electron preload installs a NativeBridge at this key after the host has
+ * applied its permission, filesystem-scope, and user-gesture checks.
  */
 export function getNativeBridge(): NativeBridge {
   const candidate = (globalThis as Record<string, unknown>)[nativeBridgeGlobalKey];

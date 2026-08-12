@@ -8,5 +8,12 @@
     "outDir": "dist/types",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "vite.config.ts"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "forge.config.ts",
+    "vite.config.ts",
+    "vite.main.config.ts",
+    "vite.preload.config.ts"
+  ]
 }

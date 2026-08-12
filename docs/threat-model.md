@@ -74,8 +74,8 @@ The following are intentionally open until the product needs them:
 
 - provider-specific retention and training settings need verification in the
   user-facing policy flow;
-- desktop packaging, auto-update, and filesystem permissions need a separate
-  deployment review;
+- signed desktop updates, installer permissions, and production packaging need
+  a separate deployment review;
 - cloud sync, accounts, multi-tenancy, RAG/vector storage, browser access,
   tools, and job submission each add trust boundaries and require a new review;
 - user-defined redaction rules can remove useful context, so redaction results

@@ -6,5 +6,15 @@
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../orchestrator" }, { "path": "../rendering" }]
+  "references": [
+    { "path": "../artifacts" },
+    { "path": "../domain" },
+    { "path": "../ingestion" },
+    { "path": "../orchestrator" },
+    { "path": "../providers" },
+    { "path": "../rendering" },
+    { "path": "../schemas" },
+    { "path": "../security" },
+    { "path": "../storage" }
+  ]
 }

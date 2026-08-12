@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import type { DesktopReviewPort, DesktopReviewState, ReviewAction } from "./model.js";
@@ -6,13 +6,19 @@ import { createDesktopReviewPort } from "./native.js";
 import { ReviewWorkspace } from "./review.js";
 import "./styles.css";
 
-export function App({ port = createDesktopReviewPort() }: { readonly port?: DesktopReviewPort }) {
+export function App({ port }: { readonly port?: DesktopReviewPort }) {
+  const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
   const [state, setState] = useState<DesktopReviewState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const nativeActions = useMemo(
+    () => ({ open: activePort.openWorkspace, create: activePort.createWorkspace }),
+    [activePort],
+  );
 
   useEffect(() => {
     let active = true;
-    void port
+    void activePort
       .load()
       .then((loaded) => {
         if (active) setState(loaded);
@@ -27,11 +33,11 @@ export function App({ port = createDesktopReviewPort() }: { readonly port?: Desk
     return () => {
       active = false;
     };
-  }, [port]);
+  }, [activePort]);
 
   const onAction = (action: ReviewAction) => {
     if (state === null) return;
-    void port
+    void activePort
       .dispatch(state, action)
       .then(setState)
       .catch((reason: unknown) => {
@@ -42,11 +48,51 @@ export function App({ port = createDesktopReviewPort() }: { readonly port?: Desk
   };
 
   if (error !== null) {
+    const openWorkspace = nativeActions.open;
+    const createWorkspace = nativeActions.create;
+    const setup = async (action: (() => Promise<DesktopReviewState>) | undefined) => {
+      if (action === undefined) return;
+      setBusy(true);
+      setError(null);
+      try {
+        setState(await action());
+      } catch (reason: unknown) {
+        setError(reason instanceof Error ? reason.message : "The workspace could not be opened.");
+      } finally {
+        setBusy(false);
+      }
+    };
     return (
       <main className="app-shell">
         <section className="panel">
           <h1>Review workspace unavailable</h1>
           <p>{error}</p>
+          {openWorkspace === undefined && createWorkspace === undefined ? null : (
+            <div className="approval-actions">
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={busy || createWorkspace === undefined}
+                onClick={() =>
+                  void setup(
+                    createWorkspace === undefined
+                      ? undefined
+                      : () => createWorkspace("draft-loop-offline"),
+                  )
+                }
+              >
+                Create offline workspace
+              </button>
+              <button
+                className="button button-quiet"
+                type="button"
+                disabled={busy || openWorkspace === undefined}
+                onClick={() => void setup(openWorkspace)}
+              >
+                Open workspace
+              </button>
+            </div>
+          )}
         </section>
       </main>
     );

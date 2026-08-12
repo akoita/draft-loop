@@ -121,3 +121,5 @@ export function createApplicationService(driver: ApplicationDriver): Application
   };
   return Object.freeze(service);
 }
+
+export * from "./local.js";
