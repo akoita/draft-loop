@@ -119,9 +119,18 @@ importers:
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../domain
+      '@draft-loop/evaluations':
+        specifier: workspace:*
+        version: link:../evaluations
       '@draft-loop/schemas':
         specifier: workspace:*
         version: link:../schemas
+      '@draft-loop/storage':
+        specifier: workspace:*
+        version: link:../storage
+      '@draft-loop/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/providers:
     dependencies:
