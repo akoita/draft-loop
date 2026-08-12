@@ -1,13 +1,17 @@
-import { StrictMode } from "react";
+import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 
+import { createFixtureReviewState, type ReviewAction, reduceReviewState } from "./model.js";
+import { ReviewWorkspace } from "./review.js";
+import "./styles.css";
+
 function App() {
-  return (
-    <main>
-      <h1>Draft Loop</h1>
-      <p>The desktop shell will host the local author–critic workspace.</p>
-    </main>
-  );
+  const [state, setState] = useState(createFixtureReviewState);
+  const onAction = (action: ReviewAction) => {
+    setState((current) => reduceReviewState(current, action));
+  };
+
+  return <ReviewWorkspace state={state} onAction={onAction} />;
 }
 
 const root = document.getElementById("root");
