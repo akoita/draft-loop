@@ -1,0 +1,238 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release; must match the root package.json"
+        required: true
+        type: string
+      dry_run:
+        description: "Build and validate the release without publishing a GitHub Release"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release source
+    runs-on: ubuntu-latest
+    outputs:
+      commit: ${{ steps.revision.outputs.commit }}
+      stage: ${{ steps.metadata.outputs.stage }}
+      channel: ${{ steps.metadata.outputs.channel }}
+      release_name: ${{ steps.metadata.outputs.release_name }}
+    steps:
+      - name: Check out approved main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify version and release policy
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          test "$RELEASE_VERSION" = "$(node -p "require('./package.json').version")"
+          pnpm release:check
+
+      - name: Pin approved revision
+        id: revision
+        run: echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Read release metadata
+        id: metadata
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const metadata = JSON.parse(fs.readFileSync("release.json", "utf8"));
+          for (const [key, value] of Object.entries({
+            stage: metadata.stage,
+            channel: metadata.channel,
+            release_name: metadata.releaseName,
+          })) {
+            if (typeof value !== "string" || value.length === 0 || value.includes("\n")) {
+              throw new Error(`Invalid release metadata output for ${key}.`);
+            }
+            fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
+          }
+          NODE
+
+      - name: Run repository quality gates
+        run: pnpm validate
+
+  build:
+    name: Build ${{ matrix.name }} desktop artifact
+    needs: validate
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x64
+            os: ubuntu-latest
+            arch: x64
+          - name: macos-arm64
+            os: macos-latest
+            arch: arm64
+          - name: windows-x64
+            os: windows-latest
+            arch: x64
+    steps:
+      - name: Check out approved main
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packaged desktop application
+        run: pnpm --filter @draft-loop/desktop make --arch ${{ matrix.arch }}
+
+      - name: Upload platform artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.name }}
+          path: apps/desktop/out/make
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Create release manifest and publish
+    needs: [validate, build]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+      RELEASE_COMMIT: ${{ needs.validate.outputs.commit }}
+      RELEASE_STAGE: ${{ needs.validate.outputs.stage }}
+      RELEASE_CHANNEL: ${{ needs.validate.outputs.channel }}
+      RELEASE_NAME: ${{ needs.validate.outputs.release_name }}
+      DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - name: Check out approved main
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.validate.outputs.commit }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Download platform artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Create checksums
+        run: |
+          mkdir -p release-output
+          find release-artifacts -type f -print0 | sort -z | xargs -0 sha256sum > release-output/SHA256SUMS
+
+      - name: Generate release manifest
+        run: |
+          mkdir -p release-output
+          commit="$(git rev-parse HEAD)"
+          if [[ "$DRY_RUN" == "true" ]]; then
+            node scripts/release.mjs manifest --dry-run --commit "$commit" --artifacts-dir release-artifacts > release-output/release-manifest.json
+          else
+            node scripts/release.mjs manifest --output release-output/release-manifest.json --commit "$commit" --artifacts-dir release-artifacts
+          fi
+          node -e 'const manifest = require("./release-output/release-manifest.json"); if (manifest.version !== process.env.RELEASE_VERSION) throw new Error(`Manifest version ${manifest.version} does not match ${process.env.RELEASE_VERSION}.`);'
+          cat release-output/release-manifest.json
+
+      - name: Prepare release notes
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const repository = process.env.GITHUB_REPOSITORY;
+          const notes = [
+            `Roadmap stage: ${process.env.RELEASE_STAGE}`,
+            `Channel: ${process.env.RELEASE_CHANNEL}`,
+            `Source commit: ${process.env.RELEASE_COMMIT}`,
+            "",
+            `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
+            `Stage issue: https://github.com/${repository}/issues/46`,
+            "",
+            "Known limitations: CLI remains source-distributed during the alpha stage; signing and automatic updates remain beta-stage work.",
+          ].join("\n");
+          fs.writeFileSync("release-output/release-notes.md", `${notes}\n`, "utf8");
+          NODE
+
+      - name: Upload dry-run manifest
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-dry-run-${{ inputs.version }}
+          path: |
+            release-output/release-manifest.json
+            release-output/SHA256SUMS
+            release-output/release-notes.md
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub Release
+        if: ${{ !inputs.dry_run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t assets < <(find release-artifacts -type f ! -name 'SHA256SUMS' -print | sort)
+          assets+=(release-output/SHA256SUMS release-output/release-manifest.json)
+          release_args=(
+            "v${RELEASE_VERSION}"
+            "${assets[@]}"
+            --target "${RELEASE_COMMIT}"
+            --title "${RELEASE_NAME} v${RELEASE_VERSION}"
+            --generate-notes
+            --notes-file release-output/release-notes.md
+          )
+          if [[ "$RELEASE_CHANNEL" != "stable" ]]; then
+            release_args+=(--prerelease)
+          fi
+          gh release create "${release_args[@]}"

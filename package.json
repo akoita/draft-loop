@@ -19,7 +19,10 @@
     "lint:code": "biome check . && eslint .",
     "lint:docs": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules/**\" \"#**/dist/**\" \"#coverage/**\"",
     "typecheck": "tsc -b",
-    "test": "vitest run",
+    "test": "vitest run && pnpm test:release",
+    "test:release": "node --test scripts/release.test.mjs",
+    "release:check": "node scripts/release.mjs check",
+    "release:manifest": "node scripts/release.mjs manifest",
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "start": "pnpm --filter @draft-loop/cli start"
   },

@@ -145,10 +145,12 @@ success by themselves.
 ## Review cadence and change log
 
 Review this roadmap after each stage exit, after material pilot evidence, or at
-least monthly while active development continues. A roadmap change should say
-what changed, why, and what moved out to make room.
+least monthly while active development continues. Every stage exit should also
+produce a versioned release using [the release procedure](releasing.md). A
+roadmap change should say what changed, why, and what moved out to make room.
 
 | Date | Change | Reason |
 | --- | --- | --- |
 | 2026-08-12 | Created the living roadmap and set Integrated local alpha as Now | Phase-0 implementation is complete; product integration and real validation are the next constraints |
 | 2026-08-12 | Added the shared local driver and Electron host path to the alpha scope | The renderer bridge now has a real local runtime; packaged acceptance is the remaining stage gate |
+| 2026-08-13 | Added stage-based release automation as issue #46 | Each roadmap stage should leave a versioned, reproducible baseline for the next stage |

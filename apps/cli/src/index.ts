@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import packageJson from "../package.json";
 
 import { applicationService, runPilot, safeErrorMessage, workspaceRoot } from "./workflow.js";
 
@@ -26,7 +27,7 @@ export function createCli(): Command {
   const command = new Command()
     .name("draft-loop")
     .description("Local-first CV drafting and review workspace")
-    .version("0.1.0")
+    .version(packageJson.version)
     .showHelpAfterError();
 
   command
