@@ -35,7 +35,12 @@ import {
   type ModelResponse,
   OpenAIAdapter,
 } from "@draft-loop/providers";
-import { type OutputFormat, outputFormats, renderArtifact } from "@draft-loop/rendering";
+import {
+  extensionForFormat,
+  type OutputFormat,
+  outputFormats,
+  renderArtifact,
+} from "@draft-loop/rendering";
 import {
   contextSnapshotSchema,
   type DraftArtifact,
@@ -80,6 +85,26 @@ export interface WorkspaceConfig {
 
 export interface CliIo {
   readonly write: (line: string) => void;
+}
+
+export interface PilotReport {
+  readonly schemaVersion: 1;
+  readonly status: "passed" | "failed";
+  readonly generatedAt: string;
+  readonly workspaceId: string;
+  readonly runId: string;
+  readonly authorProvider: string;
+  readonly criticProvider: string;
+  readonly initialArtifactVersion: number;
+  readonly revisedArtifactVersion: number;
+  readonly initialFindingCount: number;
+  readonly initialErrorCount: number;
+  readonly finalFindingCount: number;
+  readonly rounds: number;
+  readonly userEditCount: number;
+  readonly auditEventCount: number;
+  readonly exportFormat: "markdown";
+  readonly nextDecision: string;
 }
 
 export class CliUserError extends Error {
@@ -588,8 +613,23 @@ function fixtureAgents(
         ),
     },
     critic: {
-      execute: async () =>
-        execution<Critique>({ findings: [] }, config.criticCompany, config.criticModel),
+      execute: async ({ artifact }) => {
+        const firstClaim = artifact.claims[0];
+        const findings: Critique["findings"] =
+          artifact.version === 1 && firstClaim !== undefined
+            ? [
+                {
+                  id: "fixture-unsupported-claim",
+                  code: "unsupported-claim",
+                  category: "factuality",
+                  severity: "error",
+                  message: "Synthetic pilot critic requires the lead claim to be reviewed.",
+                  claimId: firstClaim.id,
+                },
+              ]
+            : [];
+        return execution<Critique>({ findings }, config.criticCompany, config.criticModel);
+      },
     },
   };
 }
@@ -909,54 +949,109 @@ async function saveTypedHistory(
   config: WorkspaceConfig,
   snapshot: RunSnapshot,
 ): Promise<void> {
-  if ((await storage.getRun(snapshot.runId)) !== undefined) return;
   if (snapshot.artifact !== null) {
-    await storage.saveArtifactVersion({
-      id: snapshot.artifact.id,
+    if ((await storage.getArtifactVersion(snapshot.artifact.id)) === undefined) {
+      await storage.saveArtifactVersion({
+        id: snapshot.artifact.id,
+        workspaceId: config.id,
+        version: snapshot.artifact.version,
+        parentVersionId: snapshot.artifact.parentVersionId,
+        createdAt: snapshot.artifact.createdAt,
+        payload: asJsonObject(snapshot.artifact),
+      });
+    }
+  }
+  if ((await storage.getRun(snapshot.runId)) === undefined) {
+    await storage.saveRun({
+      id: snapshot.runId,
       workspaceId: config.id,
-      version: snapshot.artifact.version,
-      parentVersionId: snapshot.artifact.parentVersionId,
-      createdAt: snapshot.artifact.createdAt,
-      payload: asJsonObject(snapshot.artifact),
+      contextSnapshotId: snapshot.contextSnapshotId,
+      state: snapshot.state,
+      round: snapshot.round,
+      currentStep: snapshot.currentStep,
+      budget: asJsonObject(snapshot.budget),
+      artifactId: snapshot.artifact?.id ?? null,
+      approval: snapshot.approval,
+      totalCostUsd: snapshot.totalCostUsd,
+      startedAt: snapshot.startedAt,
+      updatedAt: snapshot.updatedAt,
+      lastError: snapshot.lastError === null ? null : asJsonObject(snapshot.lastError),
+      payload: { executionCount: snapshot.executionHistory.length },
     });
   }
-  await storage.saveRun({
-    id: snapshot.runId,
-    workspaceId: config.id,
-    contextSnapshotId: snapshot.contextSnapshotId,
-    state: snapshot.state,
-    round: snapshot.round,
-    currentStep: snapshot.currentStep,
-    budget: asJsonObject(snapshot.budget),
-    artifactId: snapshot.artifact?.id ?? null,
-    approval: snapshot.approval,
-    totalCostUsd: snapshot.totalCostUsd,
-    startedAt: snapshot.startedAt,
-    updatedAt: snapshot.updatedAt,
-    lastError: snapshot.lastError === null ? null : asJsonObject(snapshot.lastError),
-    payload: { executionCount: snapshot.executionHistory.length },
-  });
-  await storage.saveRound({
-    id: `${snapshot.runId}:round:${snapshot.round}`,
-    workspaceId: config.id,
-    runId: snapshot.runId,
-    number: snapshot.round,
-    state:
-      snapshot.state === "drafting" ||
-      snapshot.state === "reviewing" ||
-      snapshot.state === "revising" ||
-      snapshot.state === "budget-exhausted" ||
-      snapshot.state === "provider-error" ||
-      snapshot.state === "paused" ||
-      snapshot.state === "stopped" ||
-      snapshot.state === "awaiting-approval"
-        ? snapshot.state
-        : "awaiting-approval",
-    startedAt: snapshot.startedAt,
-    completedAt: snapshot.updatedAt,
-    evaluation: snapshot.latestEvaluation === null ? null : asJsonObject(snapshot.latestEvaluation),
-    payload: { executionCount: snapshot.executionHistory.length },
-  });
+  const roundId = `${snapshot.runId}:round:${snapshot.round}`;
+  if ((await storage.getRound(roundId)) === undefined) {
+    await storage.saveRound({
+      id: roundId,
+      workspaceId: config.id,
+      runId: snapshot.runId,
+      number: snapshot.round,
+      state:
+        snapshot.state === "drafting" ||
+        snapshot.state === "reviewing" ||
+        snapshot.state === "revising" ||
+        snapshot.state === "budget-exhausted" ||
+        snapshot.state === "provider-error" ||
+        snapshot.state === "paused" ||
+        snapshot.state === "stopped" ||
+        snapshot.state === "awaiting-approval"
+          ? snapshot.state
+          : "awaiting-approval",
+      startedAt: snapshot.startedAt,
+      completedAt: snapshot.updatedAt,
+      evaluation:
+        snapshot.latestEvaluation === null ? null : asJsonObject(snapshot.latestEvaluation),
+      payload: { executionCount: snapshot.executionHistory.length },
+    });
+  }
+  for (const executionRecord of snapshot.executionHistory) {
+    if ((await storage.getExecution(executionRecord.id)) !== undefined) continue;
+    await storage.saveExecution({
+      id: executionRecord.id,
+      workspaceId: config.id,
+      runId: snapshot.runId,
+      roundId: `${snapshot.runId}:round:${executionRecord.round}`,
+      contextSnapshotId: executionRecord.contextSnapshotId,
+      artifactId: snapshot.artifact?.id ?? null,
+      attempt: Number(executionRecord.id.split(":attempt:")[1] ?? 1),
+      step: executionRecord.step,
+      status: executionRecord.status,
+      provider: executionRecord.provider,
+      modelId: executionRecord.modelId,
+      providerRequestId: executionRecord.providerRequestId,
+      outputChecksum: executionRecord.outputChecksum ?? null,
+      inputTokens: executionRecord.inputTokens,
+      outputTokens: executionRecord.outputTokens,
+      totalTokens: executionRecord.totalTokens,
+      estimatedUsd: executionRecord.estimatedUsd,
+      startedAt: snapshot.startedAt,
+      completedAt: executionRecord.completedAt,
+      errorCode: executionRecord.errorCode ?? null,
+      output: executionRecord.output === undefined ? null : asJsonObject(executionRecord.output),
+      payload: { source: "phase-zero-cli" },
+    });
+  }
+  for (const [findingIndex, finding] of snapshot.findings.entries()) {
+    const findingId = `${snapshot.runId}:round:${snapshot.round}:finding:${findingIndex}:${finding.code}`;
+    if ((await storage.getFinding(findingId)) !== undefined) continue;
+    await storage.saveFinding({
+      id: findingId,
+      workspaceId: config.id,
+      runId: snapshot.runId,
+      roundId,
+      executionId: null,
+      artifactId: snapshot.artifact?.id ?? null,
+      code: finding.code,
+      category: finding.category ?? "quality",
+      severity: finding.severity,
+      message: finding.message,
+      claimId: finding.claimId ?? null,
+      sectionId: finding.sectionId ?? null,
+      requirementId: finding.requirementId ?? null,
+      createdAt: snapshot.updatedAt,
+      payload: { source: "phase-zero-cli" },
+    });
+  }
 }
 
 function preflight(config: WorkspaceConfig, io: CliIo, runBudget: RunBudget): void {
@@ -1192,7 +1287,7 @@ export async function exportRun(
     const format = formatInput as OutputFormat;
     const outputPath =
       outputPathInput === undefined
-        ? join(root, "exports", `${runId}.${format}`)
+        ? join(root, "exports", `${runId}${extensionForFormat(format)}`)
         : resolve(root, outputPathInput);
     await mkdir(dirname(outputPath), { recursive: true });
     const rendered = renderArtifact(snapshot.artifact, format, {
@@ -1228,6 +1323,119 @@ export async function exportRun(
   } finally {
     await storage.close();
   }
+}
+
+function pilotReportMarkdown(report: PilotReport): string {
+  return `# DraftLoop Phase-0 Pilot Report
+
+## Result
+
+- Status: **${report.status}**
+- Generated: ${report.generatedAt}
+- Workspace: ${report.workspaceId}
+- Run: ${report.runId}
+- Fixture data: deterministic synthetic inputs only
+
+## Workflow metrics
+
+| Metric | Result |
+| --- | --- |
+| Author provider | ${report.authorProvider} |
+| Critic provider | ${report.criticProvider} |
+| Initial artifact version | ${report.initialArtifactVersion} |
+| Revised artifact version | ${report.revisedArtifactVersion} |
+| Initial critique findings | ${report.initialFindingCount} (${report.initialErrorCount} errors) |
+| Final critique findings | ${report.finalFindingCount} |
+| Bounded rounds | ${report.rounds} |
+| User edits | ${report.userEditCount} |
+| Local audit events | ${report.auditEventCount} |
+| Export | ${report.exportFormat} |
+
+## Validation result
+
+The offline phase-0 workflow completed ingestion, authoring, independent
+critique, one bounded revision, explicit approval, local export, and local
+audit recording. The report intentionally contains counts and identifiers
+only; it does not copy source material, prompts, provider responses, or hidden
+reasoning.
+
+## Next decision
+
+${report.nextDecision}
+`;
+}
+
+export async function runPilot(
+  rootInput: string,
+  io: CliIo = defaultIo,
+): Promise<{ readonly report: PilotReport; readonly reportPath: string }> {
+  const root = resolve(rootInput);
+  const sourceDirectory = join(root, "evidence");
+  await mkdir(sourceDirectory, { recursive: true });
+  await writeFile(
+    join(root, "job.md"),
+    "TypeScript systems engineer\nKubernetes operations\n",
+    "utf8",
+  );
+  await writeFile(
+    join(sourceDirectory, "resume.md"),
+    "Synthetic candidate evidence for TypeScript systems engineering and Kubernetes operations.",
+    "utf8",
+  );
+  const config = await initWorkspace(
+    {
+      root,
+      jobDescription: "job.md",
+      sources: "evidence",
+      fixtureMode: true,
+      maxRounds: 2,
+    },
+    io,
+  );
+  const started = await startRun(root, {}, io);
+  const revisionRequested = await lifecycleRun(root, "revision", started.runId, io);
+  const revised = await resumeRun(root, { runId: started.runId }, io);
+  const approved = await lifecycleRun(root, "approve", started.runId, io);
+  await exportRun(root, started.runId, undefined, io, "markdown");
+  const storage = await openStorage(root);
+  let auditEventCount: number;
+  try {
+    auditEventCount = (await storage.listAuditEvents(config.id)).length;
+  } finally {
+    await storage.close();
+  }
+  const report: PilotReport = {
+    schemaVersion: 1,
+    status:
+      started.state === "awaiting-approval" &&
+      revisionRequested.state === "revising" &&
+      revised.state === "awaiting-approval" &&
+      approved.state === "approved" &&
+      revised.artifact?.version === 2 &&
+      revised.findings.length === 0
+        ? "passed"
+        : "failed",
+    generatedAt: timestamp(),
+    workspaceId: config.id,
+    runId: started.runId,
+    authorProvider: `${config.authorCompany}/${config.authorModel}`,
+    criticProvider: `${config.criticCompany}/${config.criticModel}`,
+    initialArtifactVersion: started.artifact?.version ?? 0,
+    revisedArtifactVersion: revised.artifact?.version ?? 0,
+    initialFindingCount: started.findings.length,
+    initialErrorCount: started.findings.filter((finding) => finding.severity === "error").length,
+    finalFindingCount: revised.findings.length,
+    rounds: revised.round,
+    userEditCount: 0,
+    auditEventCount,
+    exportFormat: "markdown",
+    nextDecision:
+      "Mechanics are ready for a small, consented pilot using sanitized real applications. Measure useful findings, unsupported claims, time saved, rounds, and user edits before expanding scope.",
+  };
+  const reportPath = join(root, "pilot-report.md");
+  await writeFile(reportPath, pilotReportMarkdown(report), "utf8");
+  io.write(`Pilot ${report.status}: report written to ${reportPath}`);
+  return { report, reportPath };
 }
 
 export function safeErrorMessage(error: unknown): string {

@@ -105,3 +105,9 @@ preflight. Approved artifacts are rendered locally to Markdown, controlled
 DOCX, or controlled PDF. Each renderer consumes the same ordered structured
 artifact; the CLI records artifact version, template version, timestamp,
 format, MIME type, and checksum in the immutable export record.
+
+The `pilot` CLI command uses synthetic local fixtures to validate the phase-0
+mechanics end to end: ingestion, authoring, independent criticism, one bounded
+revision, approval, export, typed local history, and audit events. Its report
+contains only safe counts and identifiers. It is a workflow validation, not
+evidence that the quality hypothesis has been proven on real applications.

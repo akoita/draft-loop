@@ -6,6 +6,7 @@ import {
   lifecycleRun,
   readWorkspace,
   resumeRun,
+  runPilot,
   safeErrorMessage,
   startRun,
   statusRun,
@@ -94,6 +95,14 @@ export function createCli(): Command {
           : { maxCharacters: options.maxCharacters as number }),
         fixtureMode: boolOption(options, "fixture"),
       });
+    });
+
+  command
+    .command("pilot")
+    .description("Run the offline phase-0 pilot against synthetic fixture data")
+    .argument("[workspace]", "new pilot workspace directory", "./draft-loop-pilot")
+    .action(async (workspace: string) => {
+      await runPilot(workspaceRoot(workspace));
     });
 
   command

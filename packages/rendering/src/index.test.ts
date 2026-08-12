@@ -58,6 +58,7 @@ describe("Markdown rendering", () => {
       templateVersion: "cv-controlled-v1",
     });
     expect(pdf.metadata.checksum).toBe(samePdf.metadata.checksum);
+    expect(pdf.extension).toBe(".pdf");
     expect(new TextDecoder().decode(pdf.content)).toContain("TypeScript engineer.");
     expect(new TextDecoder().decode(docx.content)).toContain("PK");
     expect(docx.content.slice(0, 4)).toEqual(new Uint8Array([0x50, 0x4b, 0x03, 0x04]));

@@ -1,15 +1,15 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import { openSqliteStorage } from "@draft-loop/storage";
 import { afterEach, describe, expect, it } from "vitest";
-
 import {
   type CliIo,
   exportRun,
   initWorkspace,
   lifecycleRun,
   resumeRun,
+  runPilot,
   startRun,
   statusRun,
 } from "./workflow.js";
@@ -97,5 +97,30 @@ describe("phase-0 CLI workflow", () => {
     const resumed = await resumeRun(root);
     expect(resumed.state).toBe("awaiting-approval");
     expect(resumed.round).toBe(2);
+  });
+
+  it("runs the offline phase-zero pilot and writes a redacted validation report", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-pilot-"));
+    directories.push(root);
+    const messages = io();
+
+    const result = await runPilot(root, messages.value);
+    const report = await readFile(result.reportPath, "utf8");
+
+    expect(result.report.status).toBe("passed");
+    expect(result.report.initialFindingCount).toBe(1);
+    expect(result.report.initialErrorCount).toBe(1);
+    expect(result.report.revisedArtifactVersion).toBe(2);
+    expect(result.report.finalFindingCount).toBe(0);
+    expect(result.report.auditEventCount).toBeGreaterThan(0);
+    expect(report).toContain("small, consented pilot");
+    expect(report).not.toContain("Synthetic candidate evidence");
+    expect(report).not.toContain("systemPrompt");
+
+    const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+    await expect(storage.listExecutions(result.report.runId)).resolves.toHaveLength(4);
+    await expect(storage.listFindings(result.report.runId)).resolves.toHaveLength(1);
+    await expect(storage.listExports(result.report.runId)).resolves.toHaveLength(1);
+    await storage.close();
   });
 });

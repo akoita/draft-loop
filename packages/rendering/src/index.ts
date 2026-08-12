@@ -6,6 +6,11 @@ import type { DraftArtifact } from "@draft-loop/schemas";
 export type OutputFormat = "markdown" | "pdf" | "docx";
 export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"];
 export const renderTemplateVersion = "cv-controlled-v1";
+export type OutputExtension = ".md" | ".pdf" | ".docx";
+
+export function extensionForFormat(format: OutputFormat): OutputExtension {
+  return format === "markdown" ? ".md" : `.${format}`;
+}
 
 export interface RenderConstraints {
   readonly requiredSections?: readonly string[];
@@ -41,7 +46,7 @@ export interface RenderMetadata {
 
 export interface RenderedDocument {
   readonly content: Uint8Array;
-  readonly extension: `.${OutputFormat}`;
+  readonly extension: OutputExtension;
   readonly mimeType: string;
   readonly metadata: RenderMetadata;
 }
@@ -419,7 +424,7 @@ export function renderArtifact(
         : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   return Object.freeze({
     content,
-    extension: `.${format}` as const,
+    extension: extensionForFormat(format),
     mimeType,
     metadata: Object.freeze(metadata),
   });

@@ -99,6 +99,9 @@ pnpm --filter @draft-loop/cli start -- approve ./workspace
 pnpm --filter @draft-loop/cli start -- export ./workspace
 pnpm --filter @draft-loop/cli start -- export ./workspace --format pdf
 pnpm --filter @draft-loop/cli start -- export ./workspace --format docx
+
+# Run the offline phase-0 pilot and write pilot-report.md
+pnpm --filter @draft-loop/cli start -- pilot ./pilot-workspace
 ```
 
 Fixture mode is deterministic and offline. Live provider execution requires
@@ -113,6 +116,11 @@ workspace.
 Approved artifacts are rendered locally. Every export records the artifact
 version, template version, timestamp, format, and SHA-256 checksum in local
 history.
+
+The `pilot` command creates synthetic local inputs, runs one critic finding and
+one bounded revision, approves and exports the result, and writes a report
+containing counts and the next decision. It does not use provider credentials
+or include source text, prompts, or provider responses in the report.
 
 ## Validation
 
