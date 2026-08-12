@@ -156,15 +156,18 @@ export function createCli(): Command {
 
   command
     .command("export")
-    .description("Render an approved artifact to a local Markdown file")
+    .description("Render an approved artifact to a local document")
     .argument("[workspace]", "workspace directory", ".")
     .option("--run-id <id>", "run id to export")
     .option("--output <path>", "local output path")
+    .option("--format <format>", "output format: markdown, pdf, or docx", "markdown")
     .action(async (workspace: string, options: Record<string, unknown>) => {
       await exportRun(
         workspaceRoot(workspace),
         options.runId as string | undefined,
         options.output as string | undefined,
+        undefined,
+        options.format as string,
       );
     });
 

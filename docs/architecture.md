@@ -101,4 +101,7 @@ manifest beside a local SQLite history file, ingests selected local sources,
 constructs a context snapshot, and drives the same orchestration engine used by
 future UI adapters. Offline fixture agents make the lifecycle testable without
 network access; live provider execution is opt-in after the data-policy
-preflight. Approved artifacts are rendered locally to Markdown only.
+preflight. Approved artifacts are rendered locally to Markdown, controlled
+DOCX, or controlled PDF. Each renderer consumes the same ordered structured
+artifact; the CLI records artifact version, template version, timestamp,
+format, MIME type, and checksum in the immutable export record.

@@ -30,7 +30,8 @@ workflow:
   events, a repository-grounded threat model, and a first/revised/manual
   evaluation comparison gate;
 - a phase-0 CLI workflow that connects local ingestion, SQLite history,
-  orchestration lifecycle, approval decisions, and local Markdown export;
+  orchestration lifecycle, approval decisions, and local Markdown/DOCX/PDF
+  export;
 - a desktop UI shell and package boundaries for the next implementation stages.
 
 The desktop review experience and richer provider/presentation workflows remain
@@ -96,6 +97,8 @@ pnpm --filter @draft-loop/cli start -- start ./workspace
 pnpm --filter @draft-loop/cli start -- status ./workspace
 pnpm --filter @draft-loop/cli start -- approve ./workspace
 pnpm --filter @draft-loop/cli start -- export ./workspace
+pnpm --filter @draft-loop/cli start -- export ./workspace --format pdf
+pnpm --filter @draft-loop/cli start -- export ./workspace --format docx
 ```
 
 Fixture mode is deterministic and offline. Live provider execution requires
@@ -106,6 +109,10 @@ contains states, steps, counts, and codes, not prompts or source content.
 Keep candidate data out of the repository. Before using real application
 material, review the provider transmission and retention policy for the
 workspace.
+
+Approved artifacts are rendered locally. Every export records the artifact
+version, template version, timestamp, format, and SHA-256 checksum in local
+history.
 
 ## Validation
 

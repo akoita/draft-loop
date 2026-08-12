@@ -35,7 +35,7 @@ import {
   type ModelResponse,
   OpenAIAdapter,
 } from "@draft-loop/providers";
-import { renderMarkdown } from "@draft-loop/rendering";
+import { type OutputFormat, outputFormats, renderArtifact } from "@draft-loop/rendering";
 import {
   contextSnapshotSchema,
   type DraftArtifact,
@@ -1171,6 +1171,7 @@ export async function exportRun(
   runIdInput: string | undefined,
   outputPathInput: string | undefined,
   io: CliIo = defaultIo,
+  formatInput: string = "markdown",
 ): Promise<string> {
   const root = resolve(rootInput);
   const config = await readWorkspace(root);
@@ -1185,14 +1186,23 @@ export async function exportRun(
       throw new CliUserError("Only an approved run can be exported. Review and approve it first.");
     }
     if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
+    if (!outputFormats.includes(formatInput as OutputFormat)) {
+      throw new CliUserError(`Unsupported export format: ${formatInput}.`);
+    }
+    const format = formatInput as OutputFormat;
     const outputPath =
       outputPathInput === undefined
-        ? join(root, "exports", `${runId}.md`)
+        ? join(root, "exports", `${runId}.${format}`)
         : resolve(root, outputPathInput);
     await mkdir(dirname(outputPath), { recursive: true });
-    const rendered = renderMarkdown(snapshot.artifact);
-    await writeFile(outputPath, rendered, "utf8");
-    const outputChecksum = createHash("sha256").update(rendered, "utf8").digest("hex");
+    const rendered = renderArtifact(snapshot.artifact, format, {
+      requiredSections: config.requiredSections,
+      ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
+      ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
+      generatedAt: timestamp(),
+    });
+    await writeFile(outputPath, rendered.content);
+    const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
       id: `export-${runId}-${outputChecksum.slice(0, 12)}`,
       workspaceId: config.id,
@@ -1202,10 +1212,18 @@ export async function exportRun(
       status: "completed",
       outputPath,
       outputChecksum,
-      createdAt: timestamp(),
-      payload: { format: "markdown", approved: true },
+      createdAt: rendered.metadata.generatedAt,
+      payload: {
+        format,
+        approved: true,
+        artifactVersion: rendered.metadata.artifactVersion,
+        templateVersion: rendered.metadata.templateVersion,
+        mimeType: rendered.mimeType,
+      },
     });
-    io.write(`Exported approved artifact to ${outputPath}`);
+    io.write(
+      `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,
+    );
     return outputPath;
   } finally {
     await storage.close();
