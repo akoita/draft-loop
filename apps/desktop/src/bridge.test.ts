@@ -71,6 +71,19 @@ describe("desktop capability bridge", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it("rejects workspace names that resolve outside the selected parent", async () => {
+    const invoke = vi.fn<NativeBridge["invoke"]>();
+    const port = createCapabilityPort(bridge(invoke, ["workspace.create"]));
+
+    const result = await port.execute({
+      type: "workspace.create",
+      input: { name: ".." },
+    });
+
+    expect(result).toMatchObject({ ok: false, error: { code: "invalid-input" } });
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   it("does not carry credential values through the bridge", async () => {
     const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
       ok: true,

@@ -324,7 +324,13 @@ function identifier(value: unknown): string {
 
 function workspaceName(value: unknown): string {
   const result = stringValue(value, 120);
-  if (result.trim() !== result || result.includes("/") || result.includes("\\")) {
+  if (
+    result.trim() !== result ||
+    result === "." ||
+    result === ".." ||
+    result.includes("/") ||
+    result.includes("\\")
+  ) {
     return invalidInput();
   }
   return result;

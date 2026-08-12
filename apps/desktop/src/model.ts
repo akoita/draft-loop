@@ -118,6 +118,8 @@ export interface DesktopReviewPort {
     state: DesktopReviewState,
     action: ReviewAction,
   ) => Promise<DesktopReviewState>;
+  readonly openWorkspace?: () => Promise<DesktopReviewState>;
+  readonly createWorkspace?: (name: string) => Promise<DesktopReviewState>;
 }
 
 export function unresolvedBlockingFindings(state: DesktopReviewState): readonly ReviewFinding[] {

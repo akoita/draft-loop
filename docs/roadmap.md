@@ -37,15 +37,16 @@ consented cases.
 The phase-0 foundation is complete: canonical contracts, provider adapters,
 author-critic orchestration, local ingestion, deterministic validation,
 SQLite history, a review UI, approved Markdown/DOCX/PDF export, and an offline
-synthetic pilot. The CLI works end to end. The desktop review interface still
-uses fixture state, binary document extraction is not configured by default,
-and product quality has not yet been demonstrated on real applications.
+synthetic pilot. The CLI and packaged Electron desktop path now share the local
+application driver; the desktop can create/open a workspace, run the offline
+fixture, review it, and recover persisted decisions after restart. Product
+quality has not yet been demonstrated on real applications.
 
 ## Roadmap
 
 | Horizon | Stage | Status | Outcome | Key dependencies |
 | --- | --- | --- | --- | --- |
-| Now | Integrated local alpha | In progress | Complete one application entirely in the desktop app | Shared application service, native bridge, lifecycle projection, binary extraction |
+| Now | Integrated local alpha | Acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, lifecycle projection, binary extraction |
 | Next | Retrieval and provider quality | Not started | Improve evidence selection and make live runs dependable | Alpha workflow, retrieval baseline, representative evaluation cases |
 | Next | Real-application pilot | Not started | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics |
 | Later | Production-ready beta | Not started | Distribute a safe, dependable desktop application | Pilot decision, packaging and security review |
@@ -150,3 +151,4 @@ what changed, why, and what moved out to make room.
 | Date | Change | Reason |
 | --- | --- | --- |
 | 2026-08-12 | Created the living roadmap and set Integrated local alpha as Now | Phase-0 implementation is complete; product integration and real validation are the next constraints |
+| 2026-08-12 | Added the shared local driver and Electron host path to the alpha scope | The renderer bridge now has a real local runtime; packaged acceptance is the remaining stage gate |
