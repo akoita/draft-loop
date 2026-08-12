@@ -162,6 +162,8 @@ importers:
         specifier: 4.4.3
         version: 4.4.3
 
+  packages/security: {}
+
   packages/storage:
     dependencies:
       '@draft-loop/domain':

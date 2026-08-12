@@ -87,3 +87,7 @@ is presented as structured, inspectable work product. Provider calls require an
 explicit data policy, and local retention settings must be visible per
 workspace. Human approval is mandatory; job discovery, application submission,
 and uncontrolled external research are outside the MVP.
+
+See [the threat model](threat-model.md) and [privacy and evaluation
+policy](privacy-and-evaluation.md) for the current trust boundaries, redaction
+rules, retention defaults, and deterministic evaluation gate.

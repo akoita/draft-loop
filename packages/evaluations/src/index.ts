@@ -503,3 +503,199 @@ export function evaluateReadiness(
 
 export const evaluateDraftReadiness = evaluateReadiness;
 export const evaluateDraftArtifact = evaluateReadiness;
+
+export type EvaluationVariant = "first-draft" | "revised-draft" | "manual-baseline";
+
+export interface EvaluationUserEffort {
+  readonly reviewMinutes?: number;
+  readonly editCount?: number;
+  readonly approvalCount?: number;
+}
+
+export interface EvaluationCase {
+  readonly id: string;
+  readonly context: ReadinessEvaluationContext;
+  readonly firstDraft: DraftArtifact;
+  readonly revisedDraft: DraftArtifact;
+  readonly manualBaseline: DraftArtifact;
+  readonly userEffort?: Readonly<Partial<Record<EvaluationVariant, EvaluationUserEffort>>>;
+}
+
+export interface EvaluationVariantResult {
+  readonly variant: EvaluationVariant;
+  readonly evaluation: ReadinessEvaluation;
+  readonly userEffort?: EvaluationUserEffort;
+}
+
+export interface EvaluationDelta {
+  readonly baseline: EvaluationVariant;
+  readonly candidate: "revised-draft";
+  readonly dimensionDelta: Readonly<Record<ReadinessDimension, number>>;
+  readonly readinessDelta: number;
+  readonly reviewMinutesDelta?: number;
+  readonly editCountDelta?: number;
+  readonly approvalCountDelta?: number;
+}
+
+export interface EvaluationHarnessOptions {
+  readonly readinessOptions?: Omit<ReadinessEvaluationOptions, "round" | "priorScoreHistory">;
+  readonly maxDimensionDrop?: number;
+  readonly maxReadinessDrop?: number;
+}
+
+export interface EvaluationComparison {
+  readonly caseId: string;
+  readonly results: readonly EvaluationVariantResult[];
+  readonly deltas: readonly EvaluationDelta[];
+  readonly qualityRegression: boolean;
+  readonly regressions: readonly string[];
+}
+
+export class EvaluationRegressionError extends Error {
+  readonly comparison: EvaluationComparison;
+
+  constructor(comparison: EvaluationComparison) {
+    super(
+      `Evaluation quality regression in case ${comparison.caseId}: ${comparison.regressions.join(", ")}`,
+    );
+    this.name = "EvaluationRegressionError";
+    this.comparison = comparison;
+  }
+}
+
+const evaluationVariants: readonly EvaluationVariant[] = [
+  "first-draft",
+  "revised-draft",
+  "manual-baseline",
+];
+
+function validateRegressionLimit(value: number | undefined, name: string): number {
+  const resolved = value ?? 0;
+  if (!Number.isFinite(resolved) || resolved < 0) {
+    throw new RangeError(`${name} must be a finite non-negative number`);
+  }
+  return resolved;
+}
+
+function effortDelta(
+  baseline: EvaluationUserEffort | undefined,
+  candidate: EvaluationUserEffort | undefined,
+  key: keyof EvaluationUserEffort,
+): number | undefined {
+  const baselineValue = baseline?.[key];
+  const candidateValue = candidate?.[key];
+  if (baselineValue === undefined || candidateValue === undefined) {
+    return undefined;
+  }
+  return candidateValue - baselineValue;
+}
+
+function evaluationDelta(
+  baseline: EvaluationVariantResult,
+  candidate: EvaluationVariantResult,
+): EvaluationDelta {
+  const dimensionDelta = Object.fromEntries(
+    readinessDimensions.map((dimension) => [
+      dimension,
+      Number(
+        (
+          candidate.evaluation.scoreVector[dimension] - baseline.evaluation.scoreVector[dimension]
+        ).toFixed(6),
+      ),
+    ]),
+  ) as Record<ReadinessDimension, number>;
+  const reviewMinutesDelta = effortDelta(
+    baseline.userEffort,
+    candidate.userEffort,
+    "reviewMinutes",
+  );
+  const editCountDelta = effortDelta(baseline.userEffort, candidate.userEffort, "editCount");
+  const approvalCountDelta = effortDelta(
+    baseline.userEffort,
+    candidate.userEffort,
+    "approvalCount",
+  );
+  return Object.freeze({
+    baseline: baseline.variant,
+    candidate: "revised-draft" as const,
+    dimensionDelta: Object.freeze(dimensionDelta),
+    readinessDelta: Number(candidate.evaluation.ready) - Number(baseline.evaluation.ready),
+    ...(reviewMinutesDelta === undefined ? {} : { reviewMinutesDelta }),
+    ...(editCountDelta === undefined ? {} : { editCountDelta }),
+    ...(approvalCountDelta === undefined ? {} : { approvalCountDelta }),
+  });
+}
+
+function regressionReasons(
+  first: EvaluationVariantResult,
+  revised: EvaluationVariantResult,
+  maxDimensionDrop: number,
+  maxReadinessDrop: number,
+): readonly string[] {
+  const reasons: string[] = [];
+  for (const dimension of readinessDimensions) {
+    const delta =
+      revised.evaluation.scoreVector[dimension] - first.evaluation.scoreVector[dimension];
+    if (delta < -maxDimensionDrop) {
+      reasons.push(`${dimension} dropped by ${Math.abs(delta).toFixed(6)}`);
+    }
+  }
+  const readinessDelta = Number(revised.evaluation.ready) - Number(first.evaluation.ready);
+  if (readinessDelta < -maxReadinessDrop) {
+    reasons.push("readiness regressed");
+  }
+  if (first.evaluation.meetsRubric && !revised.evaluation.meetsRubric) {
+    reasons.push("revised draft no longer meets the readiness rubric");
+  }
+  return reasons;
+}
+
+/**
+ * Evaluates the generated variants with the same deterministic rubric. The
+ * manual baseline is a comparison reference; first-to-revised is the CI gate.
+ */
+export function compareEvaluationCase(
+  evaluationCase: EvaluationCase,
+  options: EvaluationHarnessOptions = {},
+): EvaluationComparison {
+  const maxDimensionDrop = validateRegressionLimit(options.maxDimensionDrop, "maxDimensionDrop");
+  const maxReadinessDrop = validateRegressionLimit(options.maxReadinessDrop, "maxReadinessDrop");
+  const drafts: Readonly<Record<EvaluationVariant, DraftArtifact>> = {
+    "first-draft": evaluationCase.firstDraft,
+    "revised-draft": evaluationCase.revisedDraft,
+    "manual-baseline": evaluationCase.manualBaseline,
+  };
+  const results = evaluationVariants.map((variant, index) => {
+    const readinessOptions = options.readinessOptions ?? {};
+    return Object.freeze({
+      variant,
+      evaluation: evaluateReadiness(drafts[variant], evaluationCase.context, {
+        ...readinessOptions,
+        round: index === 1 ? 2 : 1,
+      }),
+      ...(evaluationCase.userEffort?.[variant] === undefined
+        ? {}
+        : { userEffort: Object.freeze({ ...evaluationCase.userEffort[variant] }) }),
+    });
+  }) as readonly EvaluationVariantResult[];
+  const revised = results[1];
+  const first = results[0];
+  const manual = results[2];
+  if (first === undefined || revised === undefined || manual === undefined) {
+    throw new Error("Evaluation variants are incomplete");
+  }
+  const regressions = regressionReasons(first, revised, maxDimensionDrop, maxReadinessDrop);
+  return Object.freeze({
+    caseId: evaluationCase.id,
+    results: Object.freeze(results),
+    deltas: Object.freeze([evaluationDelta(first, revised), evaluationDelta(manual, revised)]),
+    qualityRegression: regressions.length > 0,
+    regressions: Object.freeze(regressions),
+  });
+}
+
+export function assertNoQualityRegression(comparison: EvaluationComparison): void {
+  if (comparison.qualityRegression) {
+    throw new EvaluationRegressionError(comparison);
+  }
+}

@@ -26,6 +26,9 @@ workflow:
 - Anthropic and OpenAI adapters with strict structured-output requests;
 - provider-diversity checks, data-exposure policy enforcement, normalized
   provider errors, usage/cost metadata, and deterministic tests;
+- local privacy guardrails, credential redaction, content-free operational
+  events, a repository-grounded threat model, and a first/revised/manual
+  evaluation comparison gate;
 - CLI and desktop shells plus package boundaries for the next implementation
   stages.
 
@@ -56,12 +59,17 @@ The monorepo separates product contracts from adapters:
 - `ingestion` and `evidence` normalize local sources and connect claims to
   evidence.
 - `validation`, `evaluations`, and `artifacts` check and represent drafts.
+- `security` owns privacy classifications, retention defaults, redaction, and
+  allowlisted operational events.
 - `rendering` and `storage` handle output and local persistence boundaries.
 - `apps/cli` is the first user-facing adapter.
 - `apps/desktop` is the React desktop UI shell.
 
 See [docs/architecture.md](docs/architecture.md) for the workflow state
 machine, trust boundaries, and stopping conditions.
+
+Security and data handling are documented in [the threat model](docs/threat-model.md)
+and [privacy and evaluation policy](docs/privacy-and-evaluation.md).
 
 ## Quick start
 
