@@ -75,6 +75,9 @@ importers:
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      better-sqlite3:
+        specifier: 13.0.3
+        version: 13.0.3
       react:
         specifier: 19.2.8
         version: 19.2.8
@@ -4186,7 +4189,6 @@ snapshots:
   better-sqlite3@13.0.3:
     dependencies:
       node-addon-api: 8.9.1
-    optional: true
 
   bluebird@3.7.2: {}
 
@@ -5334,8 +5336,7 @@ snapshots:
     dependencies:
       semver: 7.8.5
 
-  node-addon-api@8.9.1:
-    optional: true
+  node-addon-api@8.9.1: {}
 
   node-api-version@0.2.1:
     dependencies:

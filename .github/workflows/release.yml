@@ -126,6 +126,19 @@ jobs:
       - name: Build packaged desktop application
         run: pnpm --filter @draft-loop/desktop make --arch ${{ matrix.arch }}
 
+      - name: Locate packaged Linux executable
+        if: ${{ matrix.name == 'linux-x64' }}
+        id: packaged-linux
+        shell: bash
+        run: |
+          executable="$(find apps/desktop/out -type f -name '@draft-loop-desktop' -perm -u+x -print -quit)"
+          test -n "$executable"
+          echo "path=$executable" >> "$GITHUB_OUTPUT"
+
+      - name: Run packaged desktop smoke
+        if: ${{ matrix.name == 'linux-x64' }}
+        run: pnpm desktop:smoke -- "${{ steps.packaged-linux.outputs.path }}"
+
       - name: Upload platform artifacts
         uses: actions/upload-artifact@v7
         with:

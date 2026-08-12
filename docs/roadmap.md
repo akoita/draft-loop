@@ -46,7 +46,7 @@ quality has not yet been demonstrated on real applications.
 
 | Horizon | Stage | Status | Outcome | Key dependencies |
 | --- | --- | --- | --- | --- |
-| Now | Integrated local alpha | Acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, lifecycle projection, binary extraction |
+| Now | Integrated local alpha | Acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, packaged smoke acceptance |
 | Next | Retrieval and provider quality | Not started | Improve evidence selection and make live runs dependable | Alpha workflow, retrieval baseline, representative evaluation cases |
 | Next | Real-application pilot | Not started | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics |
 | Later | Production-ready beta | Not started | Distribute a safe, dependable desktop application | Pilot decision, packaging and security review |

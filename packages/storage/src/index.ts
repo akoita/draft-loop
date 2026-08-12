@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
+import { join } from "node:path";
 
 import { type WorkflowState, workflowStates } from "@draft-loop/domain";
 
@@ -745,15 +746,38 @@ function requirePositiveInteger(value: number, field: string): number {
   return value;
 }
 
+function moduleRequire(): NodeRequire {
+  try {
+    return createRequire(import.meta.url);
+  } catch {
+    // Electron Forge emits the main bundle as CommonJS. In that bundle Vite
+    // can leave import.meta.url undefined, so use an absolute cwd anchor.
+    return createRequire(join(process.cwd(), "package.json"));
+  }
+}
+
 function loadSqlite(filename: string): SqliteHandle {
   let loaded: unknown;
+  const require = moduleRequire();
   try {
-    loaded = createRequire(import.meta.url)("better-sqlite3");
+    loaded = require("better-sqlite3");
   } catch (error) {
-    throw new StorageUnavailableError(
-      "SQLite storage requires the optional better-sqlite3 dependency.",
-      { cause: error },
-    );
+    const resourcesPath = (process as NodeJS.Process & { readonly resourcesPath?: string })
+      .resourcesPath;
+    if (resourcesPath === undefined) {
+      throw new StorageUnavailableError(
+        "SQLite storage requires the optional better-sqlite3 dependency.",
+        { cause: error },
+      );
+    }
+    try {
+      loaded = require(join(resourcesPath, "better-sqlite3"));
+    } catch {
+      throw new StorageUnavailableError(
+        "SQLite storage requires the optional better-sqlite3 dependency.",
+        { cause: error },
+      );
+    }
   }
   const Constructor = (loaded as { readonly default?: unknown }).default ?? loaded;
   if (typeof Constructor !== "function") {

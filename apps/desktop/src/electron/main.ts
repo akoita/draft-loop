@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import {
   app,
   BrowserWindow,
@@ -10,6 +10,7 @@ import {
 } from "electron";
 
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
+import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
@@ -85,8 +86,27 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  const smokeEnabled = process.env.DRAFT_LOOP_SMOKE === "1";
+  const smokeRoot = process.env.DRAFT_LOOP_SMOKE_WORKSPACE;
+  const smokePhase = process.env.DRAFT_LOOP_SMOKE_PHASE;
+  if (smokeEnabled && (smokeRoot === undefined || smokePhase === undefined)) {
+    throw new Error(
+      "Packaged smoke requires DRAFT_LOOP_SMOKE_WORKSPACE and DRAFT_LOOP_SMOKE_PHASE.",
+    );
+  }
+  if (smokeEnabled && smokePhase !== "prepare" && smokePhase !== "resume") {
+    throw new Error(`Unsupported packaged smoke phase: ${smokePhase}`);
+  }
+  const smokeWorkspace = smokeRoot === undefined ? undefined : resolve(smokeRoot);
   const host = createNativeHost({
-    dialogs: { chooseDirectory, chooseFiles },
+    dialogs:
+      smokeEnabled && smokeWorkspace !== undefined
+        ? {
+            chooseDirectory: async (mode) =>
+              mode === "create" ? dirname(smokeWorkspace) : smokeWorkspace,
+            chooseFiles: async () => [],
+          }
+        : { chooseDirectory, chooseFiles },
     credentials: createSafeStorageCredentialStore({
       safeStorage,
       filename: join(app.getPath("userData"), "credentials.json"),
@@ -94,10 +114,33 @@ app.whenReady().then(() => {
       // can provide this callback without changing the bridge contract.
       readSecret: async () => undefined,
     }),
+    ...(smokeEnabled
+      ? {
+          onError: (error: unknown, capability: string) => {
+            console.error(
+              `packaged smoke host error (${capability}):`,
+              error instanceof Error ? (error.stack ?? error.message) : error,
+            );
+          },
+        }
+      : {}),
   });
   session.defaultSession.setPermissionRequestHandler((_webContents, _permission, callback) => {
     callback(false);
   });
+  if (smokeEnabled && smokeWorkspace !== undefined && smokePhase !== undefined) {
+    void runPackagedSmoke({
+      host,
+      phase: smokePhase as PackagedSmokePhase,
+      workspaceRoot: smokeWorkspace,
+    })
+      .then(() => app.exit(0))
+      .catch((error: unknown) => {
+        console.error(error instanceof Error ? error.message : "Packaged smoke failed.");
+        app.exit(1);
+      });
+    return;
+  }
   ipcMain.handle(bridgeChannel, async (event, command: unknown) => {
     if (mainWindow === undefined || event.sender !== mainWindow.webContents) {
       return {

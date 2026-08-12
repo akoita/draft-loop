@@ -23,6 +23,7 @@
     "test:release": "node --test scripts/release.test.mjs",
     "release:check": "node scripts/release.mjs check",
     "release:manifest": "node scripts/release.mjs manifest",
+    "desktop:smoke": "node scripts/desktop-smoke.mjs",
     "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
     "start": "pnpm --filter @draft-loop/cli start"
   },
