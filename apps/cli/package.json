@@ -19,5 +19,8 @@
   "dependencies": {
     "@draft-loop/application": "workspace:*",
     "commander": "15.0.0"
+  },
+  "devDependencies": {
+    "@draft-loop/storage": "workspace:*"
   }
 }

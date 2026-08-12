@@ -62,6 +62,10 @@ importers:
       commander:
         specifier: 15.0.0
         version: 15.0.0
+    devDependencies:
+      '@draft-loop/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
 
   apps/desktop:
     dependencies:
