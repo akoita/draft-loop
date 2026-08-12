@@ -63,6 +63,12 @@ describe("phase-0 CLI workflow", () => {
     expect(started.state).toBe("awaiting-approval");
     expect(messages.output.join("\n")).toContain("Provider pairing: author anthropic/");
     expect(messages.output.join("\n")).not.toContain("Synthetic candidate evidence");
+    const startedStorage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+    await expect(startedStorage.getLatestRunSnapshot(started.runId)).resolves.toMatchObject({
+      state: "awaiting-approval",
+      runId: started.runId,
+    });
+    await startedStorage.close();
 
     const approved = await lifecycleRun(root, "approve", undefined, messages.value);
     expect(approved.state).toBe("approved");
@@ -76,6 +82,12 @@ describe("phase-0 CLI workflow", () => {
     const status = await statusRun(root, undefined, messages.value);
     expect(status?.state).toBe("approved");
     expect(messages.output.join("\n")).toContain("approval=approved");
+    const approvedStorage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+    await expect(approvedStorage.getLatestRunSnapshot(started.runId)).resolves.toMatchObject({
+      state: "approved",
+      runId: started.runId,
+    });
+    await approvedStorage.close();
   });
 
   it("does not start live providers without an explicit data-policy approval", async () => {
