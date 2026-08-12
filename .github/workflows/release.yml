@@ -41,7 +41,7 @@ jobs:
           ref: main
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v4.4.0
         with:
           version: 10.18.3
 
@@ -110,7 +110,7 @@ jobs:
           ref: ${{ needs.validate.outputs.commit }}
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v4.4.0
         with:
           version: 10.18.3
 
@@ -171,7 +171,7 @@ jobs:
           ref: ${{ needs.validate.outputs.commit }}
 
       - name: Set up pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v4.4.0
         with:
           version: 10.18.3
 
