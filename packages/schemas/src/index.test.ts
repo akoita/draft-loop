@@ -9,6 +9,7 @@ import {
   agentContextReferenceSchema,
   contextSnapshotInputSchema,
   contextSnapshotSchema,
+  draftArtifactSchema,
   jobRequirementInputSchema,
   modelConfigurationSchema,
 } from "./index.js";
@@ -196,5 +197,102 @@ describe("canonical context snapshot schemas", () => {
       format: "markdown",
       requiredSections: [],
     });
+  });
+});
+
+describe("structured artifact schemas", () => {
+  const validArtifact = {
+    schemaVersion: 1,
+    id: "artifact-1",
+    version: 1,
+    parentVersionId: null,
+    createdAt: "2026-08-12T10:00:00.000Z",
+    language: "en",
+    sections: [
+      {
+        id: "section-summary",
+        title: "Summary",
+        kind: "summary" as const,
+        order: 0,
+        blocks: [
+          {
+            id: "block-summary-1",
+            type: "paragraph" as const,
+            text: "Engineer building reliable systems.",
+            claimIds: ["claim-summary-1"],
+          },
+        ],
+      },
+    ],
+    claims: [
+      {
+        id: "claim-summary-1",
+        text: "Engineer building reliable systems.",
+        sectionId: "section-summary",
+        blockId: "block-summary-1",
+        substantive: true,
+        status: "verified" as const,
+        evidence: [
+          {
+            sourcePath: "/local/candidate/resume.md",
+            sourceChecksum: checksum,
+            locator: "line:4-5",
+            excerpt: "Built reliable systems.",
+          },
+        ],
+      },
+    ],
+    decisions: [],
+  };
+
+  it("validates structured artifacts with claims, evidence, and version metadata", () => {
+    expect(draftArtifactSchema.parse(validArtifact)).toEqual(validArtifact);
+  });
+
+  it("allows an unbacked claim for deterministic highlighting, but rejects broken references", () => {
+    expect(
+      draftArtifactSchema.parse({
+        ...validArtifact,
+        claims: [
+          {
+            ...validArtifact.claims[0],
+            evidence: [],
+          },
+        ],
+      }).claims[0]?.evidence,
+    ).toEqual([]);
+
+    expect(() =>
+      draftArtifactSchema.parse({
+        ...validArtifact,
+        claims: [{ ...validArtifact.claims[0], sectionId: "missing-section" }],
+      }),
+    ).toThrow(/existing section/i);
+    expect(() =>
+      draftArtifactSchema.parse({ ...validArtifact, version: 2, parentVersionId: null }),
+    ).toThrow(/parent version/i);
+  });
+
+  it("rejects duplicate IDs and decisions that reference missing claims", () => {
+    expect(() =>
+      draftArtifactSchema.parse({
+        ...validArtifact,
+        sections: [validArtifact.sections[0], { ...validArtifact.sections[0] }],
+      }),
+    ).toThrow(/sections ids must be unique/i);
+    expect(() =>
+      draftArtifactSchema.parse({
+        ...validArtifact,
+        decisions: [
+          {
+            id: "decision-1",
+            type: "edit",
+            rationale: "User edited the summary.",
+            createdAt: "2026-08-12T10:00:00.000Z",
+            claimId: "missing-claim",
+          },
+        ],
+      }),
+    ).toThrow(/decision claim/i);
   });
 });

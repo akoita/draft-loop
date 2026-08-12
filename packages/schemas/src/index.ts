@@ -247,3 +247,176 @@ export const checksumPattern = checksumSchema;
 // Keep the dimensions exported alongside the schemas so consumers do not have
 // to duplicate the rubric's canonical keys.
 export { outputFormats, readinessDimensions, requirementPriorities };
+
+export const artifactSchemaVersion = 1 as const;
+
+export const artifactSectionKinds = [
+  "summary",
+  "experience",
+  "education",
+  "skills",
+  "projects",
+  "custom",
+] as const;
+
+export const artifactBlockTypes = ["paragraph", "bullet"] as const;
+export const claimStatuses = ["unverified", "verified", "disputed"] as const;
+export const artifactDecisionTypes = [
+  "edit",
+  "accept-finding",
+  "reject-finding",
+  "approve",
+] as const;
+
+const uniqueStrings = (values: readonly string[]): boolean =>
+  new Set(values).size === values.length;
+
+const evidenceReferenceShape = z.object({
+  sourcePath: nonEmptyString,
+  sourceChecksum: checksumSchema.optional(),
+  locator: nonEmptyString.optional(),
+  excerpt: nonEmptyString,
+});
+
+export const artifactEvidenceReferenceSchema = evidenceReferenceShape;
+export type ArtifactEvidenceReference = z.infer<typeof artifactEvidenceReferenceSchema>;
+
+export const artifactBlockSchema = z.object({
+  id: nonEmptyString,
+  type: z.enum(artifactBlockTypes),
+  text: nonEmptyString,
+  claimIds: z
+    .array(nonEmptyString)
+    .refine(uniqueStrings, "claim ids must be unique within a block"),
+});
+export type ArtifactBlock = z.infer<typeof artifactBlockSchema>;
+
+export const artifactSectionSchema = z.object({
+  id: nonEmptyString,
+  title: nonEmptyString,
+  kind: z.enum(artifactSectionKinds),
+  order: z.number().finite().int().nonnegative(),
+  blocks: z.array(artifactBlockSchema),
+});
+export type ArtifactSection = z.infer<typeof artifactSectionSchema>;
+
+export const artifactClaimSchema = z.object({
+  id: nonEmptyString,
+  text: nonEmptyString,
+  sectionId: nonEmptyString,
+  blockId: nonEmptyString,
+  substantive: z.boolean(),
+  status: z.enum(claimStatuses),
+  evidence: z.array(artifactEvidenceReferenceSchema),
+});
+export type ArtifactClaim = z.infer<typeof artifactClaimSchema>;
+
+export const artifactDecisionSchema = z.object({
+  id: nonEmptyString,
+  type: z.enum(artifactDecisionTypes),
+  rationale: nonEmptyString,
+  createdAt: timestampSchema,
+  claimId: nonEmptyString.optional(),
+});
+export type ArtifactDecision = z.infer<typeof artifactDecisionSchema>;
+
+const artifactVersionShape = z.object({
+  schemaVersion: z.literal(artifactSchemaVersion),
+  id: nonEmptyString,
+  version: z.number().finite().int().positive(),
+  parentVersionId: nonEmptyString.nullable(),
+  createdAt: timestampSchema,
+  language: nonEmptyString,
+  sections: z.array(artifactSectionSchema).min(1),
+  claims: z.array(artifactClaimSchema),
+  decisions: z.array(artifactDecisionSchema),
+});
+
+export const draftArtifactSchema = artifactVersionShape.superRefine((artifact, context) => {
+  if (artifact.version === 1 && artifact.parentVersionId !== null) {
+    context.addIssue({
+      code: "custom",
+      path: ["parentVersionId"],
+      message: "version 1 artifacts must not have a parent version",
+    });
+  }
+  if (artifact.version > 1 && artifact.parentVersionId === null) {
+    context.addIssue({
+      code: "custom",
+      path: ["parentVersionId"],
+      message: "artifact versions after version 1 must link to a parent version",
+    });
+  }
+
+  const sectionIds = artifact.sections.map((section) => section.id);
+  const blockIds = artifact.sections.flatMap((section) => section.blocks.map((block) => block.id));
+  const blockSectionIds = new Map(
+    artifact.sections.flatMap((section) =>
+      section.blocks.map((block) => [block.id, section.id] as const),
+    ),
+  );
+  const claimIds = artifact.claims.map((claim) => claim.id);
+  const decisionIds = artifact.decisions.map((decision) => decision.id);
+
+  for (const [field, values] of [
+    ["sections", sectionIds],
+    ["blocks", blockIds],
+    ["claims", claimIds],
+    ["decisions", decisionIds],
+  ] as const) {
+    if (!uniqueStrings(values)) {
+      context.addIssue({ code: "custom", path: [field], message: `${field} ids must be unique` });
+    }
+  }
+
+  const sectionIdSet = new Set(sectionIds);
+  const blockIdSet = new Set(blockIds);
+  const claimIdSet = new Set(claimIds);
+  for (const [index, claim] of artifact.claims.entries()) {
+    if (!sectionIdSet.has(claim.sectionId)) {
+      context.addIssue({
+        code: "custom",
+        path: ["claims", index, "sectionId"],
+        message: "claim section must reference an existing section",
+      });
+    }
+    if (!blockIdSet.has(claim.blockId)) {
+      context.addIssue({
+        code: "custom",
+        path: ["claims", index, "blockId"],
+        message: "claim block must reference an existing block",
+      });
+    } else if (blockSectionIds.get(claim.blockId) !== claim.sectionId) {
+      context.addIssue({
+        code: "custom",
+        path: ["claims", index, "sectionId"],
+        message: "claim section must match the section containing its block",
+      });
+    }
+  }
+  for (const [sectionIndex, section] of artifact.sections.entries()) {
+    for (const [blockIndex, block] of section.blocks.entries()) {
+      for (const [claimIndex, claimId] of block.claimIds.entries()) {
+        if (!claimIdSet.has(claimId)) {
+          context.addIssue({
+            code: "custom",
+            path: ["sections", sectionIndex, "blocks", blockIndex, "claimIds", claimIndex],
+            message: "block claim must reference an existing claim",
+          });
+        }
+      }
+    }
+  }
+  for (const [index, decision] of artifact.decisions.entries()) {
+    if (decision.claimId !== undefined && !claimIdSet.has(decision.claimId)) {
+      context.addIssue({
+        code: "custom",
+        path: ["decisions", index, "claimId"],
+        message: "decision claim must reference an existing claim",
+      });
+    }
+  }
+});
+
+export type DraftArtifactInput = z.input<typeof draftArtifactSchema>;
+export type DraftArtifact = z.output<typeof draftArtifactSchema>;
