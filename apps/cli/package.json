@@ -17,8 +17,17 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.116.0",
+    "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/domain": "workspace:*",
+    "@draft-loop/ingestion": "workspace:*",
     "@draft-loop/orchestrator": "workspace:*",
-    "commander": "15.0.0"
+    "@draft-loop/providers": "workspace:*",
+    "@draft-loop/rendering": "workspace:*",
+    "@draft-loop/schemas": "workspace:*",
+    "@draft-loop/security": "workspace:*",
+    "@draft-loop/storage": "workspace:*",
+    "commander": "15.0.0",
+    "openai": "7.4.0"
   }
 }

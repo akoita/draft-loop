@@ -29,11 +29,12 @@ workflow:
 - local privacy guardrails, credential redaction, content-free operational
   events, a repository-grounded threat model, and a first/revised/manual
   evaluation comparison gate;
-- CLI and desktop shells plus package boundaries for the next implementation
-  stages.
+- a phase-0 CLI workflow that connects local ingestion, SQLite history,
+  orchestration lifecycle, approval decisions, and local Markdown export;
+- a desktop UI shell and package boundaries for the next implementation stages.
 
-The end-to-end orchestration, local ingestion, persistence, validation, and
-artifact rendering layers are scaffolded and will be built on these contracts.
+The desktop review experience and richer provider/presentation workflows remain
+to be built on these contracts.
 
 ## Stack
 
@@ -85,6 +86,22 @@ To run the current CLI shell:
 ```sh
 pnpm start
 ```
+
+The phase-0 CLI workflow is available with a local workspace manifest:
+
+```sh
+pnpm --filter @draft-loop/cli start -- init ./workspace \
+  --job-description ./job.md --sources ./evidence --fixture
+pnpm --filter @draft-loop/cli start -- start ./workspace
+pnpm --filter @draft-loop/cli start -- status ./workspace
+pnpm --filter @draft-loop/cli start -- approve ./workspace
+pnpm --filter @draft-loop/cli start -- export ./workspace
+```
+
+Fixture mode is deterministic and offline. Live provider execution requires
+both provider credentials and the explicit `--allow-provider-data` approval;
+the CLI prints the provider pairing and budget before starting. Progress output
+contains states, steps, counts, and codes, not prompts or source content.
 
 Keep candidate data out of the repository. Before using real application
 material, review the provider transmission and retention policy for the

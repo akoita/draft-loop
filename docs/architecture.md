@@ -91,3 +91,10 @@ and uncontrolled external research are outside the MVP.
 See [the threat model](threat-model.md) and [privacy and evaluation
 policy](privacy-and-evaluation.md) for the current trust boundaries, redaction
 rules, retention defaults, and deterministic evaluation gate.
+
+The phase-0 CLI is an adapter over these contracts. It stores a small workspace
+manifest beside a local SQLite history file, ingests selected local sources,
+constructs a context snapshot, and drives the same orchestration engine used by
+future UI adapters. Offline fixture agents make the lifecycle testable without
+network access; live provider execution is opt-in after the data-policy
+preflight. Approved artifacts are rendered locally to Markdown only.

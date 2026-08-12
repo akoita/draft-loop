@@ -53,15 +53,42 @@ importers:
 
   apps/cli:
     dependencies:
+      '@anthropic-ai/sdk':
+        specifier: 0.116.0
+        version: 0.116.0(zod@4.4.3)
+      '@draft-loop/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@draft-loop/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      '@draft-loop/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
+      '@draft-loop/rendering':
+        specifier: workspace:*
+        version: link:../../packages/rendering
+      '@draft-loop/schemas':
+        specifier: workspace:*
+        version: link:../../packages/schemas
+      '@draft-loop/security':
+        specifier: workspace:*
+        version: link:../../packages/security
+      '@draft-loop/storage':
+        specifier: workspace:*
+        version: link:../../packages/storage
       commander:
         specifier: 15.0.0
         version: 15.0.0
+      openai:
+        specifier: 7.4.0
+        version: 7.4.0(zod@4.4.3)
 
   apps/desktop:
     dependencies:
@@ -152,6 +179,9 @@ importers:
       '@draft-loop/artifacts':
         specifier: workspace:*
         version: link:../artifacts
+      '@draft-loop/schemas':
+        specifier: workspace:*
+        version: link:../schemas
 
   packages/schemas:
     dependencies:

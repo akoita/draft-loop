@@ -1,0 +1,97 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import {
+  type CliIo,
+  exportRun,
+  initWorkspace,
+  lifecycleRun,
+  resumeRun,
+  startRun,
+  statusRun,
+} from "./workflow.js";
+
+const directories: string[] = [];
+
+async function fixtureWorkspace(): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), "draft-loop-cli-"));
+  directories.push(root);
+  const sourceDirectory = join(root, "evidence");
+  await mkdir(sourceDirectory);
+  await writeFile(
+    join(root, "job.md"),
+    "TypeScript systems engineer\nKubernetes operations\n",
+    "utf8",
+  );
+  await writeFile(
+    join(sourceDirectory, "resume.md"),
+    "Synthetic candidate evidence for TypeScript systems engineering and Kubernetes operations.",
+    "utf8",
+  );
+  return root;
+}
+
+function io(): { readonly output: string[]; readonly value: CliIo } {
+  const output: string[] = [];
+  return { output, value: { write: (line) => output.push(line) } };
+}
+
+afterEach(async () => {
+  await Promise.all(
+    directories.splice(0).map((directory) => rm(directory, { recursive: true, force: true })),
+  );
+});
+
+describe("phase-0 CLI workflow", () => {
+  it("runs the offline happy path, records approval, and exports locally", async () => {
+    const root = await fixtureWorkspace();
+    const messages = io();
+    await initWorkspace(
+      {
+        root,
+        jobDescription: "job.md",
+        sources: "evidence",
+        fixtureMode: true,
+      },
+      messages.value,
+    );
+
+    const started = await startRun(root, {}, messages.value);
+    expect(started.state).toBe("awaiting-approval");
+    expect(messages.output.join("\n")).toContain("Provider pairing: author anthropic/");
+    expect(messages.output.join("\n")).not.toContain("Synthetic candidate evidence");
+
+    const approved = await lifecycleRun(root, "approve", undefined, messages.value);
+    expect(approved.state).toBe("approved");
+    const outputPath = await exportRun(root, undefined, undefined, messages.value);
+    expect(await readFile(outputPath, "utf8")).toContain("## Summary");
+
+    const status = await statusRun(root, undefined, messages.value);
+    expect(status?.state).toBe("approved");
+    expect(messages.output.join("\n")).toContain("approval=approved");
+  });
+
+  it("does not start live providers without an explicit data-policy approval", async () => {
+    const root = await fixtureWorkspace();
+    await initWorkspace({ root, jobDescription: "job.md", sources: "evidence" });
+
+    await expect(startRun(root)).rejects.toThrow("Provider execution is disabled by default");
+  });
+
+  it("records a revision request and resumes the same durable run", async () => {
+    const root = await fixtureWorkspace();
+    await initWorkspace({ root, jobDescription: "job.md", sources: "evidence", fixtureMode: true });
+    const started = await startRun(root);
+
+    const revision = await lifecycleRun(root, "revision", started.runId);
+    expect(revision.state).toBe("revising");
+    expect(revision.round).toBe(2);
+
+    const resumed = await resumeRun(root);
+    expect(resumed.state).toBe("awaiting-approval");
+    expect(resumed.round).toBe(2);
+  });
+});
