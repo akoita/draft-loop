@@ -241,6 +241,23 @@ export const contextSnapshotInputSchema = contextSnapshotInputShape.superRefine(
 export type ContextSnapshotInput = z.input<typeof contextSnapshotInputSchema>;
 export type ContextSnapshot = z.output<typeof contextSnapshotInputSchema>;
 
+/**
+ * Serialize a validated snapshot at the persistence boundary. The schema parse
+ * is intentional: callers cannot persist a structurally compatible object that
+ * bypasses the canonical context contract.
+ */
+export function serializeContextSnapshot(snapshot: unknown): string {
+  return JSON.stringify(contextSnapshotSchema.parse(snapshot));
+}
+
+/**
+ * Reload a snapshot from local persistence while preserving provenance,
+ * constraints, rubric, and model identity through schema validation.
+ */
+export function parseContextSnapshot(serialized: string): ContextSnapshot {
+  return contextSnapshotSchema.parse(JSON.parse(serialized));
+}
+
 export const contextSnapshotSchemaVersion = contextSchemaVersion;
 export const checksumPattern = checksumSchema;
 

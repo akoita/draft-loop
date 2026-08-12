@@ -1,4 +1,10 @@
-import type { ContextSnapshot, WorkflowState, Workspace } from "@draft-loop/domain";
+import {
+  type ContextSnapshot,
+  SemanticValidationError,
+  validateContextSnapshotInput,
+  type WorkflowState,
+  type Workspace,
+} from "@draft-loop/domain";
 import {
   evaluateReadiness,
   type ReadinessEvaluation,
@@ -80,6 +86,7 @@ export interface CriticAgent {
 export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly id: string;
   readonly runId: string;
+  readonly contextSnapshotId: string;
   readonly round: number;
   readonly step: Exclude<OrchestrationStep, null>;
   readonly status: ExecutionStatus;
@@ -507,6 +514,16 @@ function initialSnapshot(request: OrchestrationRequest, now: string): RunSnapsho
   });
 }
 
+function validateOrchestrationRequest(request: OrchestrationRequest): void {
+  if (request.context.workspaceId !== request.workspace.id) {
+    throw new Error("The context snapshot must belong to the requested workspace.");
+  }
+  const validation = validateContextSnapshotInput(request.context);
+  if (!validation.valid) {
+    throw new SemanticValidationError(validation.issues);
+  }
+}
+
 export function createOrchestrationEngine(
   options: OrchestrationEngineOptions,
 ): OrchestrationEngine & OrchestrationPort {
@@ -663,6 +680,7 @@ export function createOrchestrationEngine(
       const record: ExecutionRecord = {
         id,
         runId: snapshot.runId,
+        contextSnapshotId: context.id,
         round: snapshot.round,
         step,
         status: "completed",
@@ -692,6 +710,7 @@ export function createOrchestrationEngine(
       const failedExecution: ExecutionRecord = {
         id,
         runId: snapshot.runId,
+        contextSnapshotId: context.id,
         round: snapshot.round,
         step,
         status: "failed",
@@ -821,6 +840,7 @@ export function createOrchestrationEngine(
   };
 
   const start = async (request: OrchestrationRequest): Promise<RunSnapshot> => {
+    validateOrchestrationRequest(request);
     const budget = validateBudget(request.budget);
     let snapshot = await options.store.loadRun(request.runId);
     if (snapshot === undefined) {

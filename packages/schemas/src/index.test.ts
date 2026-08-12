@@ -12,6 +12,8 @@ import {
   draftArtifactSchema,
   jobRequirementInputSchema,
   modelConfigurationSchema,
+  parseContextSnapshot,
+  serializeContextSnapshot,
 } from "./index.js";
 
 const checksum = "a".repeat(64);
@@ -158,7 +160,7 @@ describe("canonical context snapshot schemas", () => {
 
   it("round-trips all provenance, constraints, rubric, and model metadata through JSON", () => {
     const snapshot = createContextSnapshot(validInput());
-    const parsed = contextSnapshotSchema.parse(JSON.parse(JSON.stringify(snapshot)));
+    const parsed = parseContextSnapshot(serializeContextSnapshot(snapshot));
 
     expect(parsed).toEqual(snapshot);
     expect(parsed.requirements).toEqual(snapshot.requirements);
@@ -167,6 +169,14 @@ describe("canonical context snapshot schemas", () => {
     expect(parsed.truthfulnessPolicy).toBe(snapshot.truthfulnessPolicy);
     expect(parsed.readinessRubric).toEqual(snapshot.readinessRubric);
     expect(parsed.modelConfiguration).toEqual(snapshot.modelConfiguration);
+  });
+
+  it("rejects malformed serialized snapshots at the persistence boundary", () => {
+    expect(() => parseContextSnapshot("not-json")).toThrow();
+    const snapshot = createContextSnapshot(validInput());
+    expect(() =>
+      parseContextSnapshot(serializeContextSnapshot({ ...snapshot, schemaVersion: 2 as never })),
+    ).toThrow();
   });
 
   it("validates agent references with a non-empty shared snapshot id", () => {

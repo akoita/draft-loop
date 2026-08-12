@@ -217,10 +217,35 @@ describe("durable orchestration", () => {
     expect(result.executionHistory).toHaveLength(2);
     expect(author).toHaveBeenCalledOnce();
     expect(critic).toHaveBeenCalledOnce();
+    expect(
+      result.executionHistory.every((execution) => execution.contextSnapshotId === "context-1"),
+    ).toBe(true);
     expect((await engine.approve("run-1")).state).toBe("approved");
     expect((await engine.events("run-1")).map((event) => event.type)).toEqual(
       expect.arrayContaining(["run.created", "step.completed", "state.changed", "user.approved"]),
     );
+  });
+
+  it("rejects invalid or cross-workspace context before invoking an agent", async () => {
+    const { engine, author, critic } = engineFixture();
+    const mismatched = createContextSnapshot({
+      ...context(),
+      id: "context-other",
+      workspaceId: "workspace-other",
+    });
+
+    await expect(engine.start(request({ context: mismatched }))).rejects.toThrow(
+      /must belong to the requested workspace/i,
+    );
+    expect(author).not.toHaveBeenCalled();
+    expect(critic).not.toHaveBeenCalled();
+
+    const invalid = { ...context(), requirements: [] } as unknown as ContextSnapshot;
+    await expect(engine.start(request({ context: invalid }))).rejects.toThrow(
+      /requirements: at least one normalized job requirement/i,
+    );
+    expect(author).not.toHaveBeenCalled();
+    expect(critic).not.toHaveBeenCalled();
   });
 
   it("persists failed attempts and retries with a new execution id", async () => {
@@ -288,6 +313,7 @@ describe("durable orchestration", () => {
       ...execution(savedArtifact, "anthropic", "author-test"),
       id: "run-1:1:author:attempt:1",
       runId: "run-1",
+      contextSnapshotId: "context-1",
       round: 1,
       step: "author",
       status: "completed",
@@ -345,6 +371,7 @@ describe("durable orchestration", () => {
       store.saveExecution({
         id: "run-1:1:author:attempt:1",
         runId: "run-1",
+        contextSnapshotId: "context-1",
         round: 1,
         step: "author",
         status: "failed",
@@ -363,6 +390,7 @@ describe("durable orchestration", () => {
       store.saveExecution({
         id: "run-1:1:author:attempt:1",
         runId: "run-1",
+        contextSnapshotId: "context-1",
         round: 1,
         step: "author",
         status: "failed",

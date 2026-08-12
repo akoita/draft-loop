@@ -30,6 +30,10 @@ storage ---- artifacts ---- rendering
   scores and structured critique; neither is treated as proof of truth.
 - Storage is local by default. Rendering consumes approved artifacts and does
   not submit them anywhere.
+- Context snapshots cross the persistence boundary through
+  `serializeContextSnapshot` and `parseContextSnapshot`; the Zod schema checks
+  version, requirements, evidence checksums, rubric values, and model identity
+  before a snapshot is reloaded.
 
 ## Author–critic loop
 
