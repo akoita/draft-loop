@@ -70,6 +70,9 @@ The monorepo separates product contracts from adapters:
 See [docs/architecture.md](docs/architecture.md) for the workflow state
 machine, trust boundaries, and stopping conditions.
 
+Product direction, stage outcomes, and exit criteria are maintained in the
+[living product roadmap](docs/roadmap.md).
+
 Security and data handling are documented in [the threat model](docs/threat-model.md)
 and [privacy and evaluation policy](docs/privacy-and-evaluation.md).
 
