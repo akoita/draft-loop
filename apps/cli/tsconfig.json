@@ -5,7 +5,7 @@
     "outDir": "dist/types",
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "package.json"],
   "references": [
     { "path": "../../packages/application" },
     { "path": "../../packages/artifacts" },

@@ -73,6 +73,9 @@ The monorepo separates product contracts from adapters:
 See [docs/architecture.md](docs/architecture.md) for the workflow state
 machine, trust boundaries, and stopping conditions.
 
+See [docs/releasing.md](docs/releasing.md) for the stage-based release policy,
+dry-run workflow, artifact manifest, and maintainer approval boundary.
+
 Product direction, stage outcomes, and exit criteria are maintained in the
 [living product roadmap](docs/roadmap.md).
 
