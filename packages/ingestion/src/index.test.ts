@@ -16,6 +16,82 @@ async function fixture(name: string, content: string | Uint8Array): Promise<stri
   return path;
 }
 
+function littleEndian(value: number, length: number): Uint8Array {
+  const result = new Uint8Array(length);
+  let remaining = value >>> 0;
+  for (let index = 0; index < length; index += 1) {
+    result[index] = remaining & 0xff;
+    remaining >>>= 8;
+  }
+  return result;
+}
+
+function crc32(bytes: Uint8Array): number {
+  let crc = 0xffffffff;
+  for (const byte of bytes) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function concat(...parts: readonly Uint8Array[]): Uint8Array {
+  const result = new Uint8Array(parts.reduce((total, part) => total + part.length, 0));
+  let offset = 0;
+  for (const part of parts) {
+    result.set(part, offset);
+    offset += part.length;
+  }
+  return result;
+}
+
+function storedDocx(document: string): Uint8Array {
+  const name = new TextEncoder().encode("word/document.xml");
+  const content = new TextEncoder().encode(document);
+  const local = concat(
+    new Uint8Array([0x50, 0x4b, 0x03, 0x04]),
+    littleEndian(20, 2),
+    new Uint8Array(2),
+    new Uint8Array(2),
+    new Uint8Array(2),
+    new Uint8Array(2),
+    littleEndian(crc32(content), 4),
+    littleEndian(content.length, 4),
+    littleEndian(content.length, 4),
+    littleEndian(name.length, 2),
+    new Uint8Array(2),
+    name,
+    content,
+  );
+  const central = concat(
+    new Uint8Array([0x50, 0x4b, 0x01, 0x02]),
+    littleEndian(20, 2),
+    littleEndian(20, 2),
+    new Uint8Array(8),
+    littleEndian(crc32(content), 4),
+    littleEndian(content.length, 4),
+    littleEndian(content.length, 4),
+    littleEndian(name.length, 2),
+    new Uint8Array(2),
+    new Uint8Array(2),
+    new Uint8Array(2),
+    new Uint8Array(2),
+    new Uint8Array(4),
+    new Uint8Array(4),
+    name,
+  );
+  const end = concat(
+    new Uint8Array([0x50, 0x4b, 0x05, 0x06]),
+    new Uint8Array(4),
+    littleEndian(1, 2),
+    littleEndian(1, 2),
+    littleEndian(central.length, 4),
+    littleEndian(local.length, 4),
+    new Uint8Array(2),
+  );
+  return concat(local, central, end);
+}
+
 afterEach(async () => {
   await Promise.all(
     temporaryDirectories.splice(0).map((directory) => rm(directory, { recursive: true })),
@@ -85,7 +161,30 @@ describe("local source ingestion", () => {
     expect(observed.checksum).toBe(result.source?.checksum);
   });
 
-  it("reports binary formats without an extractor instead of decoding them as text", async () => {
+  it("extracts text from local PDF and DOCX files with default safe extractors", async () => {
+    const pdfPath = await fixture(
+      "resume.pdf",
+      `%PDF-1.4\n1 0 obj\n<< /Length 116 >>\nstream\nBT\n/F1 10 Tf 1 0 0 1 56 790 Tm (Experience) Tj\n/F1 10 Tf 1 0 0 1 56 774 Tm (Built reliable systems.) Tj\nET\nendstream\nendobj\n%%EOF`,
+    );
+    const docxPath = await fixture(
+      "resume.docx",
+      storedDocx(
+        '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Ada &amp; Grace</w:t></w:r></w:p><w:p><w:r><w:t>Built reliable systems.</w:t></w:r></w:p></w:body></w:document>',
+      ),
+    );
+
+    const pdfResult = await ingestFile({ path: pdfPath });
+    const docxResult = await ingestFile({ path: docxPath });
+
+    expect(pdfResult.issues).toEqual([]);
+    expect(pdfResult.source?.text).toBe("Experience\nBuilt reliable systems.");
+    expect(pdfResult.source?.chunks[0]?.locator).toEqual({ lineStart: 1, lineEnd: 2 });
+    expect(docxResult.issues).toEqual([]);
+    expect(docxResult.source?.text).toBe("Ada & Grace\nBuilt reliable systems.");
+    expect(docxResult.source?.chunks[0]?.locator).toEqual({ lineStart: 1, lineEnd: 2 });
+  });
+
+  it("reports malformed binary formats without decoding them as text", async () => {
     const secret = "CONFIDENTIAL-CANDIDATE-MATERIAL";
     const path = await fixture("resume.docx", new TextEncoder().encode(secret));
 
@@ -94,7 +193,7 @@ describe("local source ingestion", () => {
     expect(result.source?.mediaType).toBe(
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     );
-    expect(result.issues).toMatchObject([{ code: "extractor-unavailable", recoverable: true }]);
+    expect(result.issues).toMatchObject([{ code: "parse-failure", recoverable: true }]);
     expect(result.issues[0]?.message).not.toContain(secret);
     expect(result.source?.text).toBe("");
     expect(result.source?.chunks).toEqual([]);

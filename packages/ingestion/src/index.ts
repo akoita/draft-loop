@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { extname } from "node:path";
+import { inflateRawSync, inflateSync } from "node:zlib";
 
 export const supportedMediaTypes = [
   "text/plain",
@@ -96,6 +97,9 @@ export interface IngestionOptions {
   readonly extractors?: readonly BinarySourceExtractor[];
 }
 
+const maxBinaryBytes = 32 * 1024 * 1024;
+const maxExtractedCharacters = 2_000_000;
+
 export function detectMediaType(source: IngestionSource): SupportedMediaType | null {
   const explicitMediaType = source.mediaType?.split(";", 1)[0]?.trim().toLowerCase();
   if (explicitMediaType !== undefined && isSupportedMediaType(explicitMediaType)) {
@@ -169,6 +173,264 @@ function extractHtml(text: string): string {
       .replace(/\n{2,}/g, "\n"),
   ).trim();
 }
+
+function readUint16(bytes: Uint8Array, offset: number): number {
+  return (bytes[offset] ?? 0) | ((bytes[offset + 1] ?? 0) << 8);
+}
+
+function readUint32(bytes: Uint8Array, offset: number): number {
+  return (
+    ((bytes[offset] ?? 0) |
+      ((bytes[offset + 1] ?? 0) << 8) |
+      ((bytes[offset + 2] ?? 0) << 16) |
+      ((bytes[offset + 3] ?? 0) << 24)) >>>
+    0
+  );
+}
+
+function latin1Bytes(value: string): Uint8Array {
+  const bytes = new Uint8Array(value.length);
+  for (let index = 0; index < value.length; index += 1) {
+    bytes[index] = value.charCodeAt(index) & 0xff;
+  }
+  return bytes;
+}
+
+function extractZipEntry(bytes: Uint8Array, entryName: string): string {
+  if (bytes.length > maxBinaryBytes) {
+    throw new Error("binary source exceeds the configured size limit");
+  }
+  const minimumEndRecord = 22;
+  const searchStart = Math.max(0, bytes.length - 65_557);
+  let endOffset = -1;
+  for (let offset = bytes.length - minimumEndRecord; offset >= searchStart; offset -= 1) {
+    if (
+      bytes[offset] === 0x50 &&
+      bytes[offset + 1] === 0x4b &&
+      bytes[offset + 2] === 0x05 &&
+      bytes[offset + 3] === 0x06
+    ) {
+      endOffset = offset;
+      break;
+    }
+  }
+  if (endOffset < 0) throw new Error("ZIP end record is missing");
+
+  const entryCount = readUint16(bytes, endOffset + 10);
+  const directorySize = readUint32(bytes, endOffset + 12);
+  const directoryOffset = readUint32(bytes, endOffset + 16);
+  if (
+    directoryOffset > bytes.length ||
+    directorySize > bytes.length - directoryOffset ||
+    entryCount > 10_000
+  ) {
+    throw new Error("ZIP directory is invalid");
+  }
+
+  let offset = directoryOffset;
+  for (let index = 0; index < entryCount; index += 1) {
+    if (offset + 46 > bytes.length || readUint32(bytes, offset) !== 0x02014b50) {
+      throw new Error("ZIP directory entry is invalid");
+    }
+    const flags = readUint16(bytes, offset + 8);
+    const compression = readUint16(bytes, offset + 10);
+    const compressedSize = readUint32(bytes, offset + 20);
+    const uncompressedSize = readUint32(bytes, offset + 24);
+    const nameLength = readUint16(bytes, offset + 28);
+    const extraLength = readUint16(bytes, offset + 30);
+    const commentLength = readUint16(bytes, offset + 32);
+    const localOffset = readUint32(bytes, offset + 42);
+    const nameStart = offset + 46;
+    const nameEnd = nameStart + nameLength;
+    const name = new TextDecoder("utf-8", { fatal: true }).decode(bytes.slice(nameStart, nameEnd));
+    offset = nameEnd + extraLength + commentLength;
+    if (name !== entryName) continue;
+    if ((flags & 0x1) !== 0) throw new Error("encrypted ZIP entries are not supported");
+    if (uncompressedSize > maxExtractedCharacters || compressedSize > bytes.length) {
+      throw new Error("ZIP entry exceeds the configured extraction limit");
+    }
+    if (localOffset + 30 > bytes.length || readUint32(bytes, localOffset) !== 0x04034b50) {
+      throw new Error("ZIP local entry is invalid");
+    }
+    const localNameLength = readUint16(bytes, localOffset + 26);
+    const localExtraLength = readUint16(bytes, localOffset + 28);
+    const dataStart = localOffset + 30 + localNameLength + localExtraLength;
+    if (dataStart > bytes.length || compressedSize > bytes.length - dataStart) {
+      throw new Error("ZIP entry data is truncated");
+    }
+    const compressed = bytes.slice(dataStart, dataStart + compressedSize);
+    let content: Uint8Array;
+    if (compression === 0) {
+      content = compressed;
+    } else if (compression === 8) {
+      content = new Uint8Array(inflateRawSync(compressed));
+    } else {
+      throw new Error("ZIP compression method is not supported");
+    }
+    if (content.length > maxExtractedCharacters) {
+      throw new Error("ZIP entry exceeds the configured extraction limit");
+    }
+    return new TextDecoder("utf-8", { fatal: true }).decode(content);
+  }
+  throw new Error(`ZIP entry ${entryName} is missing`);
+}
+
+function extractDocx(bytes: Uint8Array): string {
+  const xml = extractZipEntry(bytes, "word/document.xml");
+  if (!/<(?:[a-z]+:)?document\b/u.test(xml)) throw new Error("DOCX document part is invalid");
+  return normalizeText(
+    decodeHtmlEntities(
+      xml
+        .replace(/<w:(?:tab|br)\b[^>]*\/?\s*>/gu, "\t")
+        .replace(/<\/w:(?:p|tr)>/gu, "\n")
+        .replace(/<[^>]*>/gu, "")
+        .replace(/\t+/gu, " "),
+    ),
+  );
+}
+
+function decodePdfLiteral(value: string): string {
+  let result = "";
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character !== "\\") {
+      result += character;
+      continue;
+    }
+    const escaped = value[++index] ?? "";
+    const escapes: Readonly<Record<string, string>> = {
+      "\\": "\\",
+      "(": "(",
+      ")": ")",
+      b: "\b",
+      f: "\f",
+      n: "\n",
+      r: "\r",
+      t: "\t",
+    };
+    if (escapes[escaped] !== undefined) {
+      result += escapes[escaped];
+      continue;
+    }
+    if (/[0-7]/u.test(escaped)) {
+      const octal = `${escaped}${value[index + 1] ?? ""}${value[index + 2] ?? ""}`.match(
+        /^[0-7]{1,3}/u,
+      )?.[0];
+      if (octal !== undefined) {
+        result += String.fromCharCode(Number.parseInt(octal, 8));
+        index += octal.length - 1;
+        continue;
+      }
+    }
+    if (escaped === "\n") continue;
+    if (escaped === "\r" && value[index + 1] === "\n") index += 1;
+  }
+  return result;
+}
+
+function pdfString(value: string, start: number): { readonly value: string; readonly end: number } {
+  let depth = 1;
+  let index = start + 1;
+  let raw = "";
+  while (index < value.length) {
+    const character = value[index];
+    if (character === "\\") {
+      raw += character;
+      raw += value[index + 1] ?? "";
+      index += 2;
+      continue;
+    }
+    if (character === "(") depth += 1;
+    if (character === ")") {
+      depth -= 1;
+      if (depth === 0) return { value: decodePdfLiteral(raw), end: index + 1 };
+    }
+    raw += character;
+    index += 1;
+  }
+  throw new Error("PDF text string is unterminated");
+}
+
+function pdfArray(value: string, start: number): { readonly value: string; readonly end: number } {
+  let index = start + 1;
+  const strings: string[] = [];
+  while (index < value.length) {
+    const character = value[index];
+    if (character === "]") return { value: strings.join(""), end: index + 1 };
+    if (character === "(") {
+      const parsed = pdfString(value, index);
+      strings.push(parsed.value);
+      index = parsed.end;
+      continue;
+    }
+    index += 1;
+  }
+  throw new Error("PDF text array is unterminated");
+}
+
+function extractPdfOperators(content: string): string {
+  let result = "";
+  let index = 0;
+  while (index < content.length) {
+    const character = content[index];
+    if (character === "(") {
+      const parsed = pdfString(content, index);
+      let cursor = parsed.end;
+      while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
+      if (content.startsWith("Tj", cursor)) {
+        result += `${parsed.value}\n`;
+        index = cursor + 2;
+        continue;
+      }
+      index = parsed.end;
+      continue;
+    }
+    if (character === "[") {
+      const parsed = pdfArray(content, index);
+      let cursor = parsed.end;
+      while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
+      if (content.startsWith("TJ", cursor)) {
+        result += `${parsed.value}\n`;
+        index = cursor + 2;
+        continue;
+      }
+      index = parsed.end;
+      continue;
+    }
+    index += 1;
+  }
+  return normalizeText(result);
+}
+
+function extractPdf(bytes: Uint8Array): string {
+  if (bytes.length > maxBinaryBytes) throw new Error("PDF exceeds the configured size limit");
+  const binary = Buffer.from(bytes).toString("latin1");
+  if (!binary.startsWith("%PDF-")) throw new Error("PDF header is invalid");
+  if (/\/Encrypt\b/u.test(binary)) throw new Error("encrypted PDFs are not supported");
+  const textParts: string[] = [];
+  const streams = /stream(?:\r\n|\n|\r)([\s\S]*?)(?:\r\n|\n|\r)endstream/gu;
+  for (const match of binary.matchAll(streams)) {
+    const stream = match[1] ?? "";
+    const streamOffset = match.index ?? 0;
+    const dictionary = binary.slice(Math.max(0, streamOffset - 1200), streamOffset);
+    let decoded = latin1Bytes(stream);
+    if (/\/FlateDecode\b/u.test(dictionary)) {
+      decoded = new Uint8Array(inflateSync(decoded));
+    }
+    textParts.push(extractPdfOperators(Buffer.from(decoded).toString("latin1")));
+  }
+  const text = normalizeText(textParts.filter((part) => part !== "").join("\n"));
+  if (text === "") throw new Error("PDF contains no extractable text");
+  return text;
+}
+
+export const defaultBinaryExtractors: readonly BinarySourceExtractor[] = Object.freeze([
+  { mediaType: "application/pdf", extract: ({ bytes }) => extractPdf(bytes) },
+  {
+    mediaType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    extract: ({ bytes }) => extractDocx(bytes),
+  },
+]);
 
 function checksum(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -303,7 +565,23 @@ async function extractSource(
     }
   }
 
-  const extractor = findExtractor(mediaType, options.extractors ?? []);
+  if (bytes.length > maxBinaryBytes) {
+    return {
+      text: "",
+      issues: [
+        issue(
+          "parse-failure",
+          source.path,
+          "The source file exceeds the configured binary extraction limit.",
+        ),
+      ],
+    };
+  }
+
+  const extractor = findExtractor(
+    mediaType,
+    options.extractors === undefined ? defaultBinaryExtractors : options.extractors,
+  );
   if (extractor === undefined) {
     return {
       text: "",
