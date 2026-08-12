@@ -1,0 +1,21 @@
+{
+  "name": "@draft-loop/schemas",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@draft-loop/domain": "workspace:*",
+    "zod": "4.4.3"
+  }
+}

@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest an improvement to DraftLoop
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+      description: What user need or workflow problem would this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed approach
+      description: Describe the desired behavior and how it fits the existing package boundaries.
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Privacy and provider considerations
+      description: Explain any data retention, provider-diversity, or external-side-effect implications.

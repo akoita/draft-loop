@@ -1,0 +1,37 @@
+{
+  "name": "draft-loop",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=24.5.0",
+    "pnpm": ">=10.18.3"
+  },
+  "scripts": {
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "pnpm lint:code && pnpm lint:docs",
+    "lint:code": "biome check . && eslint .",
+    "lint:docs": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules/**\" \"#**/dist/**\" \"#coverage/**\"",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "validate": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test",
+    "start": "pnpm --filter @draft-loop/cli start"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.8",
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.4",
+    "@types/react-dom": "19.2.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "eslint": "10.8.1",
+    "lefthook": "2.1.10",
+    "markdownlint-cli2": "0.23.2",
+    "prettier": "3.9.6",
+    "tsx": "4.23.12",
+    "typescript": "7.0.2",
+    "vite": "8.2.1",
+    "vitest": "4.1.10"
+  }
+}

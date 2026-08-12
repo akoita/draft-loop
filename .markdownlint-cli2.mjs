@@ -1,0 +1,11 @@
+export default {
+  config: {
+    default: true,
+    MD001: false,
+    MD013: false,
+    MD033: false,
+    MD036: false,
+    MD041: false,
+    MD060: false,
+  },
+};
