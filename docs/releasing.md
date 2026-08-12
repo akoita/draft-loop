@@ -45,6 +45,18 @@ The manifest records the project and stage, package versions, commit, runtime
 versions, artifact paths, byte sizes, and SHA-256 checksums. Checksum files are
 excluded from the artifact list to avoid self-referential metadata.
 
+The Linux packaging job also launches the unpacked Electron binary twice in a
+headless smoke workflow. The first launch creates a synthetic offline run and
+requests a revision; the second launch reopens the workspace, resumes the run,
+approves the revised draft, and verifies the local export. This keeps the
+packaged host, SQLite runtime, and restart boundary in the release gate.
+
+To run the same check locally after packaging:
+
+```text
+pnpm desktop:smoke -- ./apps/desktop/out/@draft-loop-desktop-linux-x64/@draft-loop-desktop
+```
+
 ## Stage release procedure
 
 1. Update the root version and all workspace package versions in a focused PR.

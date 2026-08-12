@@ -5,6 +5,7 @@ export default [
     ignores: [
       "node_modules/**",
       "**/dist/**",
+      "**/out/**",
       "**/.vite/**",
       "**/coverage/**",
       "**/*.{ts,tsx,json,jsonc,md,yml,yaml}",

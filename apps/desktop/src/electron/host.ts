@@ -56,6 +56,7 @@ export interface NativeHostOptions {
   readonly applicationService?: ApplicationService;
   readonly dialogs: NativeHostDialogs;
   readonly credentials?: NativeCredentialStore;
+  readonly onError?: (error: unknown, capability: BridgeCapability) => void;
 }
 
 interface ActiveWorkspace {
@@ -359,10 +360,12 @@ function safeFormat(value: ExportFormat): "markdown" | "pdf" | "docx" {
   return value;
 }
 
-export function createNativeHost(options: NativeHostOptions): {
+export interface NativeHost {
   readonly capabilities: readonly BridgeCapability[];
   readonly invoke: (value: unknown) => Promise<BridgeResult<unknown>>;
-} {
+}
+
+export function createNativeHost(options: NativeHostOptions): NativeHost {
   const service =
     options.applicationService ?? createApplicationService(createLocalApplicationDriver());
   let active: ActiveWorkspace | undefined;
@@ -670,6 +673,7 @@ export function createNativeHost(options: NativeHostOptions): {
           };
       }
     } catch (error) {
+      options.onError?.(error, command.type);
       return { ok: false, error: safeBridgeError(error, command.type) };
     }
   }
