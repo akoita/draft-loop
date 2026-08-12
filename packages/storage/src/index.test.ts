@@ -194,7 +194,7 @@ function removeMigrationTwo(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "PRAGMA foreign_keys = OFF; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version = 2;",
+    "PRAGMA foreign_keys = OFF; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3);",
   );
   database.close();
 }
@@ -203,9 +203,9 @@ describe("SQLite storage", () => {
   it("applies migration v1 idempotently and rejects sensitive key persistence", async () => {
     const storage = openSqliteStorage(":memory:");
 
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3]);
     storage.migrate();
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3]);
 
     await storage.set("ui.language", "en");
     await expect(storage.get("ui.language")).resolves.toBe("en");
@@ -229,10 +229,10 @@ describe("SQLite storage", () => {
 
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     upgraded.migrate();
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -257,6 +257,22 @@ describe("SQLite storage", () => {
       }),
     );
     await first.saveRun(run(savedArtifact.id));
+    await first.saveRunSnapshot({
+      workspaceId: workspace.id,
+      runId: "run-1",
+      contextSnapshotId: "context-1",
+      state: "drafting",
+      round: 1,
+      currentStep: "author",
+      budget: { maxRounds: 3 },
+      artifactId: savedArtifact.id,
+      approval: "pending",
+      totalCostUsd: 0.01,
+      startedAt: "2026-08-12T10:10:00.000Z",
+      updatedAt: "2026-08-12T10:10:01.000Z",
+      lastError: null,
+      payload: { state: "drafting" },
+    });
     await first.saveRound(round());
     await first.saveExecution(execution());
     await first.saveFinding(finding());
@@ -270,6 +286,12 @@ describe("SQLite storage", () => {
     await expect(second.getEvidenceSource(source.id)).resolves.toEqual(source);
     await expect(second.getArtifactVersion(savedArtifact.id)).resolves.toEqual(savedArtifact);
     await expect(second.getRun("run-1")).resolves.toMatchObject(run(savedArtifact.id));
+    await expect(second.getLatestRunSnapshot("run-1")).resolves.toMatchObject({
+      runId: "run-1",
+      state: "drafting",
+      payload: { state: "drafting" },
+    });
+    await expect(second.listRunSnapshots("run-1")).resolves.toHaveLength(1);
     await expect(second.listRounds("run-1")).resolves.toHaveLength(1);
     await expect(second.getExecution("execution-1")).resolves.toMatchObject(execution());
     await expect(second.listFindings("run-1")).resolves.toHaveLength(1);
@@ -313,6 +335,52 @@ describe("SQLite storage", () => {
     await expect(storage.saveExport({ ...exportRecord(), status: "failed" })).rejects.toThrow(
       StorageConflictError,
     );
+    await storage.close();
+  });
+
+  it("appends distinct lifecycle snapshots and returns the latest projection", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.saveWorkspace(workspace);
+    await storage.saveContextSnapshot(contextSnapshot({ fixture: true }));
+
+    const base = {
+      workspaceId: workspace.id,
+      runId: "run-1",
+      contextSnapshotId: "context-1",
+      round: 1,
+      currentStep: "author" as const,
+      budget: { maxRounds: 3 },
+      artifactId: null,
+      approval: "pending" as const,
+      totalCostUsd: 0,
+      startedAt: "2026-08-12T10:10:00.000Z",
+      lastError: null,
+    };
+
+    const first = await storage.saveRunSnapshot({
+      ...base,
+      state: "drafting",
+      updatedAt: "2026-08-12T10:10:01.000Z",
+      payload: { state: "drafting" },
+    });
+    const duplicate = await storage.saveRunSnapshot({
+      ...base,
+      state: "drafting",
+      updatedAt: "2026-08-12T10:10:01.000Z",
+      payload: { state: "drafting" },
+    });
+    const second = await storage.saveRunSnapshot({
+      ...base,
+      state: "paused",
+      currentStep: null,
+      updatedAt: "2026-08-12T10:10:02.000Z",
+      payload: { state: "paused" },
+    });
+
+    expect(duplicate).toEqual(first);
+    expect(second.sequence).toBeGreaterThan(first.sequence);
+    await expect(storage.getLatestRunSnapshot("run-1")).resolves.toEqual(second);
+    await expect(storage.listRunSnapshots("run-1")).resolves.toHaveLength(2);
     await storage.close();
   });
 

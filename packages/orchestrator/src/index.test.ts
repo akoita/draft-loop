@@ -1,6 +1,6 @@
 import { type ContextSnapshot, createContextSnapshot, createWorkspace } from "@draft-loop/domain";
 import type { DraftArtifact } from "@draft-loop/schemas";
-import type { JsonValue } from "@draft-loop/storage";
+import type { JsonValue, RunSnapshotRecordInput } from "@draft-loop/storage";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -339,6 +339,7 @@ describe("durable orchestration", () => {
       readonly payload: JsonValue;
       readonly workspaceId: string;
     }> = [];
+    const savedSnapshots: RunSnapshotRecordInput[] = [];
     const store = createStorageRunStore({
       get: async (key) => values.get(key),
       set: async (key, value) => {
@@ -351,6 +352,9 @@ describe("durable orchestration", () => {
         auditEvents
           .filter((event) => event.workspaceId === workspaceId)
           .map((event, index) => ({ ...event, sequence: index + 1 })),
+      saveRunSnapshot: async (input) => {
+        savedSnapshots.push(input);
+      },
     });
     const snapshot = pausedSnapshot();
     await store.saveRun(snapshot);
@@ -366,6 +370,8 @@ describe("durable orchestration", () => {
     });
 
     expect(await store.loadRun("run-1")).toEqual(snapshot);
+    expect(savedSnapshots).toHaveLength(1);
+    expect(savedSnapshots[0]?.payload).toEqual(snapshot);
     expect(await store.listEvents("run-1")).toEqual([savedEvent]);
     await expect(
       store.saveExecution({

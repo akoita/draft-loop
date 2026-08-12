@@ -11,7 +11,12 @@ import {
   type ReadinessScoreVector,
 } from "@draft-loop/evaluations";
 import type { DraftArtifact, WorkspaceInput } from "@draft-loop/schemas";
-import type { AuditEventInput, JsonValue, StoragePort } from "@draft-loop/storage";
+import type {
+  AuditEventInput,
+  JsonValue,
+  RunSnapshotRecordInput,
+  StoragePort,
+} from "@draft-loop/storage";
 import {
   type ValidationCategory,
   type ValidationIssue,
@@ -209,6 +214,13 @@ export interface StorageRunStore extends RunStore {}
 interface AuditStorage extends StoragePort {
   readonly appendAuditEvent: (input: AuditEventInput) => Promise<unknown>;
   readonly listAuditEvents: (workspaceId: string) => Promise<readonly AuditRecord[]>;
+  readonly saveRunSnapshot?: (input: RunSnapshotRecordInput) => Promise<unknown>;
+  readonly getLatestRunSnapshot?: (runId: string) => Promise<
+    | {
+        readonly payload: JsonValue;
+      }
+    | undefined
+  >;
 }
 
 interface AuditRecord {
@@ -443,10 +455,30 @@ export function createStorageRunStore(storage: AuditStorage): StorageRunStore {
   const store: StorageRunStore = {
     async loadRun(runId) {
       const value = await storage.get(runKey(runId));
-      return value === undefined ? undefined : immutable(JSON.parse(value) as RunSnapshot);
+      if (value !== undefined) return immutable(JSON.parse(value) as RunSnapshot);
+      const projected = await storage.getLatestRunSnapshot?.(runId);
+      return projected === undefined
+        ? undefined
+        : immutable(projected.payload as unknown as RunSnapshot);
     },
     async saveRun(snapshot) {
       await storage.set(runKey(snapshot.runId), JSON.stringify(snapshot));
+      await storage.saveRunSnapshot?.({
+        workspaceId: snapshot.workspaceId,
+        runId: snapshot.runId,
+        contextSnapshotId: snapshot.contextSnapshotId,
+        state: snapshot.state,
+        round: snapshot.round,
+        currentStep: snapshot.currentStep,
+        budget: asJson(snapshot.budget),
+        artifactId: snapshot.artifact?.id ?? null,
+        approval: snapshot.approval,
+        totalCostUsd: snapshot.totalCostUsd,
+        startedAt: snapshot.startedAt,
+        updatedAt: snapshot.updatedAt,
+        lastError: snapshot.lastError === null ? null : asJson(snapshot.lastError),
+        payload: asJson(snapshot),
+      });
     },
     async saveExecution(execution) {
       const key = executionKey(execution.runId, execution.id);

@@ -108,6 +108,34 @@ export interface RunRecord extends RunRecordInput {
   readonly checksum: string;
 }
 
+/**
+ * Append-only lifecycle projection input. The full orchestration snapshot is
+ * retained in `payload`; the duplicated columns keep current-state queries
+ * cheap and independent of the orchestrator package.
+ */
+export interface RunSnapshotRecordInput {
+  readonly workspaceId: string;
+  readonly runId: string;
+  readonly contextSnapshotId: string;
+  readonly state: StoredRunState;
+  readonly round: number;
+  readonly currentStep: StoredRunStep;
+  readonly budget: JsonValue;
+  readonly artifactId: string | null;
+  readonly approval: StoredApprovalStatus;
+  readonly totalCostUsd: number;
+  readonly startedAt: string;
+  readonly updatedAt: string;
+  readonly lastError: JsonValue | null;
+  readonly payload: JsonValue;
+}
+
+export interface RunSnapshotRecord extends RunSnapshotRecordInput {
+  readonly id: string;
+  readonly sequence: number;
+  readonly checksum: string;
+}
+
 export interface RoundRecordInput {
   readonly id: string;
   readonly workspaceId: string;
@@ -220,6 +248,9 @@ export interface HistoryStoragePort {
   readonly saveRun: (input: RunRecordInput) => Promise<RunRecord>;
   readonly getRun: (id: string) => Promise<RunRecord | undefined>;
   readonly listRuns: (workspaceId: string) => Promise<readonly RunRecord[]>;
+  readonly saveRunSnapshot: (input: RunSnapshotRecordInput) => Promise<RunSnapshotRecord>;
+  readonly getLatestRunSnapshot: (runId: string) => Promise<RunSnapshotRecord | undefined>;
+  readonly listRunSnapshots: (runId: string) => Promise<readonly RunSnapshotRecord[]>;
   readonly saveRound: (input: RoundRecordInput) => Promise<RoundRecord>;
   readonly getRound: (id: string) => Promise<RoundRecord | undefined>;
   readonly listRounds: (runId: string) => Promise<readonly RoundRecord[]>;
@@ -291,7 +322,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 2 as const;
+export const storageSchemaVersion = 3 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -604,7 +635,43 @@ const migrationTwo: Migration = {
   `.trim(),
 };
 
-const migrations: readonly Migration[] = [migrationOne, migrationTwo];
+const migrationThree: Migration = {
+  version: 3,
+  sql: `
+    CREATE TABLE IF NOT EXISTS run_snapshots (
+      sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+      id TEXT NOT NULL UNIQUE,
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+      run_id TEXT NOT NULL,
+      context_snapshot_id TEXT NOT NULL REFERENCES context_snapshots(id),
+      state TEXT NOT NULL,
+      round INTEGER NOT NULL CHECK (round >= 1),
+      current_step TEXT,
+      budget_json TEXT NOT NULL,
+      artifact_id TEXT,
+      approval TEXT NOT NULL CHECK (approval IN ('pending', 'approved', 'rejected')),
+      total_cost_usd REAL NOT NULL CHECK (total_cost_usd >= 0),
+      started_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      last_error_json TEXT,
+      payload_json TEXT NOT NULL,
+      record_checksum TEXT NOT NULL,
+      UNIQUE (run_id, record_checksum)
+    );
+
+    CREATE INDEX IF NOT EXISTS run_snapshots_run_sequence_idx
+      ON run_snapshots(run_id, sequence);
+
+    CREATE TRIGGER IF NOT EXISTS run_snapshots_immutable_update
+      BEFORE UPDATE ON run_snapshots
+      BEGIN SELECT RAISE(ABORT, 'run snapshots are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS run_snapshots_immutable_delete
+      BEFORE DELETE ON run_snapshots
+      BEGIN SELECT RAISE(ABORT, 'run snapshots are immutable'); END;
+  `.trim(),
+};
+
+const migrations: readonly Migration[] = [migrationOne, migrationTwo, migrationThree];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
 const hiddenContentKeyPattern =
@@ -1237,6 +1304,104 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort {
       .map((row) => runFromRow(row));
   }
 
+  public async saveRunSnapshot(input: RunSnapshotRecordInput): Promise<RunSnapshotRecord> {
+    this.ensureOpen();
+    requireNonEmpty(input.workspaceId, "run snapshot workspaceId");
+    requireNonEmpty(input.runId, "run snapshot runId");
+    requireNonEmpty(input.contextSnapshotId, "run snapshot contextSnapshotId");
+    requireStoredRunState(input.state, "run snapshot state");
+    requirePositive(input.round, "run snapshot round");
+    requireStoredStep(input.currentStep, "run snapshot currentStep");
+    requireNonEmpty(input.startedAt, "run snapshot startedAt");
+    requireNonEmpty(input.updatedAt, "run snapshot updatedAt");
+    requireNonNegativeNumber(input.totalCostUsd, "run snapshot totalCostUsd");
+    assertSafeRecordFields(input, ["budget", "lastError", "payload"]);
+    const checksumValue = recordChecksum(input);
+    const id = `run-snapshot:${input.runId}:${checksumValue}`;
+    const recordWithoutSequence = { ...input, id, checksum: checksumValue };
+    this.database.transaction(() => {
+      const existing = this.database
+        .prepare(
+          "SELECT sequence, workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum FROM run_snapshots WHERE id = ?",
+        )
+        .get(id);
+      if (existing !== undefined) {
+        const existingRecord = runSnapshotFromRow(existing);
+        if (existingRecord.checksum !== checksumValue) {
+          throw new StorageConflictError(`run snapshot ${id} is immutable`);
+        }
+        return;
+      }
+      this.database
+        .prepare(
+          "INSERT INTO run_snapshots (id, workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          id,
+          input.workspaceId,
+          input.runId,
+          input.contextSnapshotId,
+          input.state,
+          input.round,
+          input.currentStep,
+          serialize(input.budget),
+          input.artifactId,
+          input.approval,
+          input.totalCostUsd,
+          input.startedAt,
+          input.updatedAt,
+          input.lastError === null ? null : serialize(input.lastError),
+          serialize(input.payload),
+          checksumValue,
+        );
+      this.insertAuditEvent({
+        id: `${id}:audit`,
+        workspaceId: input.workspaceId,
+        eventType: "run-snapshot.appended",
+        entityType: "run-snapshot",
+        entityId: input.runId,
+        payload: recordToJson(recordWithoutSequence),
+        createdAt: input.updatedAt,
+      });
+    })();
+    const saved = await this.getRunSnapshotById(id);
+    if (saved === undefined) {
+      throw new StorageConflictError(`run snapshot ${id} could not be read after insert`);
+    }
+    return saved;
+  }
+
+  public async getLatestRunSnapshot(runId: string): Promise<RunSnapshotRecord | undefined> {
+    this.ensureOpen();
+    requireNonEmpty(runId, "run snapshot runId");
+    const row = this.database
+      .prepare(
+        "SELECT sequence, id, workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum FROM run_snapshots WHERE run_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get(runId);
+    return row === undefined ? undefined : runSnapshotFromRow(row);
+  }
+
+  public async listRunSnapshots(runId: string): Promise<readonly RunSnapshotRecord[]> {
+    this.ensureOpen();
+    requireNonEmpty(runId, "run snapshot runId");
+    return this.database
+      .prepare(
+        "SELECT sequence, id, workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum FROM run_snapshots WHERE run_id = ? ORDER BY sequence, id",
+      )
+      .all(runId)
+      .map((row) => runSnapshotFromRow(row));
+  }
+
+  private async getRunSnapshotById(id: string): Promise<RunSnapshotRecord | undefined> {
+    const row = this.database
+      .prepare(
+        "SELECT sequence, id, workspace_id, run_id, context_snapshot_id, state, round, current_step, budget_json, artifact_id, approval, total_cost_usd, started_at, updated_at, last_error_json, payload_json, record_checksum FROM run_snapshots WHERE id = ?",
+      )
+      .get(id);
+    return row === undefined ? undefined : runSnapshotFromRow(row);
+  }
+
   public async saveRound(input: RoundRecordInput): Promise<RoundRecord> {
     this.ensureOpen();
     requireNonEmpty(input.id, "round id");
@@ -1851,6 +2016,28 @@ function runFromRow(row: Record<string, unknown>): RunRecord {
   return {
     id: rowString(row, "id"),
     workspaceId: rowString(row, "workspace_id"),
+    contextSnapshotId: rowString(row, "context_snapshot_id"),
+    state: rowString(row, "state") as StoredRunState,
+    round: rowNumber(row, "round"),
+    currentStep: rowNullableString(row, "current_step") as StoredRunStep,
+    budget: parse(rowString(row, "budget_json")),
+    artifactId: rowNullableString(row, "artifact_id"),
+    approval: rowString(row, "approval") as StoredApprovalStatus,
+    totalCostUsd: rowNumber(row, "total_cost_usd"),
+    startedAt: rowString(row, "started_at"),
+    updatedAt: rowString(row, "updated_at"),
+    lastError: rowNullableJson(row, "last_error_json"),
+    payload: parse(rowString(row, "payload_json")),
+    checksum: rowString(row, "record_checksum"),
+  };
+}
+
+function runSnapshotFromRow(row: Record<string, unknown>): RunSnapshotRecord {
+  return {
+    sequence: rowNumber(row, "sequence"),
+    id: rowString(row, "id"),
+    workspaceId: rowString(row, "workspace_id"),
+    runId: rowString(row, "run_id"),
     contextSnapshotId: rowString(row, "context_snapshot_id"),
     state: rowString(row, "state") as StoredRunState,
     round: rowNumber(row, "round"),
