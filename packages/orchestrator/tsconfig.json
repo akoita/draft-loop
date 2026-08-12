@@ -6,5 +6,11 @@
     "tsBuildInfoFile": "./node_modules/.cache/tsconfig.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": [{ "path": "../domain" }, { "path": "../schemas" }]
+  "references": [
+    { "path": "../domain" },
+    { "path": "../schemas" },
+    { "path": "../evaluations" },
+    { "path": "../storage" },
+    { "path": "../validation" }
+  ]
 }
