@@ -56,6 +56,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: 0.116.0
         version: 0.116.0(zod@4.4.3)
+      '@draft-loop/application':
+        specifier: workspace:*
+        version: link:../../packages/application
       '@draft-loop/artifacts':
         specifier: workspace:*
         version: link:../../packages/artifacts
@@ -105,6 +108,15 @@ importers:
       vite:
         specifier: 8.2.1
         version: 8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(tsx@4.23.12)
+
+  packages/application:
+    dependencies:
+      '@draft-loop/orchestrator':
+        specifier: workspace:*
+        version: link:../orchestrator
+      '@draft-loop/rendering':
+        specifier: workspace:*
+        version: link:../rendering
 
   packages/artifacts:
     dependencies:

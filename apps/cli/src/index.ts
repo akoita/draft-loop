@@ -1,17 +1,6 @@
 import { Command } from "commander";
 
-import {
-  exportRun,
-  initWorkspace,
-  lifecycleRun,
-  readWorkspace,
-  resumeRun,
-  runPilot,
-  safeErrorMessage,
-  startRun,
-  statusRun,
-  workspaceRoot,
-} from "./workflow.js";
+import { applicationService, runPilot, safeErrorMessage, workspaceRoot } from "./workflow.js";
 
 function numberOption(value: string): number {
   const parsed = Number(value);
@@ -65,7 +54,7 @@ export function createCli(): Command {
     .option("--max-characters <number>", "maximum output characters", integerOption)
     .option("--fixture", "use deterministic offline agents")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await initWorkspace({
+      await applicationService.initialize({
         root: workspaceRoot(workspace),
         jobDescription: options.jobDescription as string,
         sources: options.sources as string,
@@ -110,8 +99,8 @@ export function createCli(): Command {
     .description("Open a workspace and show its safe status")
     .argument("[workspace]", "workspace directory", ".")
     .action(async (workspace: string) => {
-      await readWorkspace(workspaceRoot(workspace));
-      await statusRun(workspaceRoot(workspace), undefined);
+      await applicationService.readWorkspace(workspaceRoot(workspace));
+      await applicationService.status({ root: workspaceRoot(workspace) });
     });
 
   command
@@ -120,7 +109,8 @@ export function createCli(): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await startRun(workspaceRoot(workspace), {
+      await applicationService.start({
+        root: workspaceRoot(workspace),
         allowProviderData: boolOption(options, "allowProviderData"),
       });
     });
@@ -132,7 +122,8 @@ export function createCli(): Command {
     .option("--run-id <id>", "run id to resume")
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await resumeRun(workspaceRoot(workspace), {
+      await applicationService.resume({
+        root: workspaceRoot(workspace),
         ...(options.runId === undefined ? {} : { runId: options.runId as string }),
         allowProviderData: boolOption(options, "allowProviderData"),
       });
@@ -150,7 +141,11 @@ export function createCli(): Command {
       .argument("[workspace]", "workspace directory", ".")
       .option("--run-id <id>", "run id to update")
       .action(async (workspace: string, options: Record<string, unknown>) => {
-        await lifecycleRun(workspaceRoot(workspace), action, options.runId as string | undefined);
+        await applicationService.lifecycle({
+          root: workspaceRoot(workspace),
+          action,
+          ...(options.runId === undefined ? {} : { runId: options.runId as string }),
+        });
       });
   }
 
@@ -160,7 +155,10 @@ export function createCli(): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option("--run-id <id>", "run id to inspect")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await statusRun(workspaceRoot(workspace), options.runId as string | undefined);
+      await applicationService.status({
+        root: workspaceRoot(workspace),
+        ...(options.runId === undefined ? {} : { runId: options.runId as string }),
+      });
     });
 
   command
@@ -171,13 +169,12 @@ export function createCli(): Command {
     .option("--output <path>", "local output path")
     .option("--format <format>", "output format: markdown, pdf, or docx", "markdown")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await exportRun(
-        workspaceRoot(workspace),
-        options.runId as string | undefined,
-        options.output as string | undefined,
-        undefined,
-        options.format as string,
-      );
+      await applicationService.export({
+        root: workspaceRoot(workspace),
+        ...(options.runId === undefined ? {} : { runId: options.runId as string }),
+        ...(options.output === undefined ? {} : { outputPath: options.output as string }),
+        format: options.format as "markdown" | "pdf" | "docx",
+      });
     });
 
   return command;

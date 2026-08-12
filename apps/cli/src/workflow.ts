@@ -3,6 +3,7 @@ import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
 import Anthropic from "@anthropic-ai/sdk";
+import { createApplicationService, type WorkspaceDescriptor } from "@draft-loop/application";
 import {
   createArtifact,
   createArtifactVersion,
@@ -1324,6 +1325,64 @@ export async function exportRun(
     await storage.close();
   }
 }
+
+function workspaceDescriptor(root: string, config: WorkspaceConfig): WorkspaceDescriptor {
+  return {
+    id: config.id,
+    root,
+    jobDescriptionPath: config.jobDescriptionPath,
+    sourceDirectory: config.sourceDirectory,
+    language: config.language,
+    outputFormat: config.outputFormat,
+    requiredSections: config.requiredSections,
+    maxRounds: config.maxRounds,
+    ...(config.maxCostUsd === undefined ? {} : { maxCostUsd: config.maxCostUsd }),
+    ...(config.maxDurationMs === undefined ? {} : { maxDurationMs: config.maxDurationMs }),
+    ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
+    ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
+    author: { company: config.authorCompany, model: config.authorModel },
+    critic: { company: config.criticCompany, model: config.criticModel },
+    fixtureMode: config.fixtureMode,
+    ...(config.latestRunId === undefined ? {} : { latestRunId: config.latestRunId }),
+  };
+}
+
+/** CLI is an adapter over the shared application contract. */
+export const applicationService = createApplicationService({
+  initialize: async (command, io) =>
+    workspaceDescriptor(resolve(command.root), await initWorkspace(command, io as CliIo)),
+  readWorkspace: async (root) => workspaceDescriptor(resolve(root), await readWorkspace(root)),
+  start: async (command, io) =>
+    startRun(
+      command.root,
+      command.allowProviderData === undefined
+        ? {}
+        : { allowProviderData: command.allowProviderData },
+      io as CliIo,
+    ),
+  resume: async (command, io) =>
+    resumeRun(
+      command.root,
+      {
+        ...(command.runId === undefined ? {} : { runId: command.runId }),
+        ...(command.allowProviderData === undefined
+          ? {}
+          : { allowProviderData: command.allowProviderData }),
+      },
+      io as CliIo,
+    ),
+  lifecycle: async (command, io) =>
+    lifecycleRun(command.root, command.action, command.runId, io as CliIo),
+  status: async (command, io) => statusRun(command.root, command.runId, io as CliIo),
+  export: async (command, io) =>
+    exportRun(
+      command.root,
+      command.runId,
+      command.outputPath,
+      io as CliIo,
+      command.format ?? "markdown",
+    ),
+});
 
 function pilotReportMarkdown(report: PilotReport): string {
   return `# DraftLoop Phase-0 Pilot Report

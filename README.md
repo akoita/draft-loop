@@ -64,6 +64,8 @@ The monorepo separates product contracts from adapters:
 - `security` owns privacy classifications, retention defaults, redaction, and
   allowlisted operational events.
 - `rendering` and `storage` handle output and local persistence boundaries.
+- `application` defines the adapter-neutral use-case contract and safe command
+  boundary shared by user-facing adapters.
 - `apps/cli` is the first user-facing adapter.
 - `apps/desktop` is the React desktop UI shell.
 

@@ -8,9 +8,9 @@ independent critic evaluates it, and a human approves the result.
 ## Boundaries
 
 ```text
-apps/cli
+apps/cli       apps/desktop
    |
-orchestrator ---- providers ---- Anthropic / OpenAI SDKs
+application ---- orchestrator ---- providers ---- Anthropic / OpenAI SDKs
    |       \
    |        evaluations / validation
    |
@@ -26,6 +26,9 @@ storage ---- artifacts ---- rendering
 - Evidence preserves source identifiers and locations for substantive claims.
 - The orchestrator owns round sequencing, budgets, pause/stop behavior, and
   user-visible run events; provider adapters own SDK translation only.
+- The application package owns adapter-neutral use cases and command/query
+  contracts. CLI and desktop adapters supply runtime-specific drivers without
+  importing one another or exposing provider SDKs to the UI.
 - Validation is deterministic where possible. Evaluations represent rubric
   scores and structured critique; neither is treated as proof of truth.
 - Storage is local by default. Rendering consumes approved artifacts and does

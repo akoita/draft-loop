@@ -1,0 +1,123 @@
+import type { RunSnapshot } from "@draft-loop/orchestrator";
+import type { OutputFormat } from "@draft-loop/rendering";
+
+export interface ApplicationIo {
+  readonly write: (line: string) => void;
+}
+
+export interface InitializeWorkspaceCommand {
+  readonly root: string;
+  readonly jobDescription: string;
+  readonly sources: string;
+  readonly language?: string;
+  readonly instructions?: string;
+  readonly truthfulnessPolicy?: string;
+  readonly authorCompany?: string;
+  readonly authorModel?: string;
+  readonly criticCompany?: string;
+  readonly criticModel?: string;
+  readonly maxRounds?: number;
+  readonly maxCostUsd?: number;
+  readonly maxDurationMs?: number;
+  readonly maxWords?: number;
+  readonly maxCharacters?: number;
+  readonly requiredSections?: readonly string[];
+  readonly fixtureMode?: boolean;
+}
+
+export interface WorkspaceDescriptor {
+  readonly id: string;
+  readonly root: string;
+  readonly jobDescriptionPath: string;
+  readonly sourceDirectory: string;
+  readonly language: string;
+  readonly outputFormat: "markdown";
+  readonly requiredSections: readonly string[];
+  readonly maxRounds: number;
+  readonly maxCostUsd?: number;
+  readonly maxDurationMs?: number;
+  readonly maxWords?: number;
+  readonly maxCharacters?: number;
+  readonly author: { readonly company: string; readonly model: string };
+  readonly critic: { readonly company: string; readonly model: string };
+  readonly fixtureMode: boolean;
+  readonly latestRunId?: string;
+}
+
+export interface StartRunCommand {
+  readonly root: string;
+  readonly allowProviderData?: boolean;
+}
+
+export interface ResumeRunCommand extends StartRunCommand {
+  readonly runId?: string;
+}
+
+export type LifecycleAction = "pause" | "stop" | "approve" | "revision";
+
+export interface LifecycleCommand {
+  readonly root: string;
+  readonly action: LifecycleAction;
+  readonly runId?: string;
+}
+
+export interface StatusCommand {
+  readonly root: string;
+  readonly runId?: string;
+}
+
+export interface ExportCommand {
+  readonly root: string;
+  readonly runId?: string;
+  readonly outputPath?: string;
+  readonly format?: OutputFormat;
+}
+
+export interface ApplicationDriver {
+  readonly initialize: (
+    command: InitializeWorkspaceCommand,
+    io?: ApplicationIo,
+  ) => Promise<WorkspaceDescriptor>;
+  readonly readWorkspace: (root: string) => Promise<WorkspaceDescriptor>;
+  readonly start: (command: StartRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
+  readonly resume: (command: ResumeRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
+  readonly lifecycle: (command: LifecycleCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
+  readonly status: (command: StatusCommand, io?: ApplicationIo) => Promise<RunSnapshot | undefined>;
+  readonly export: (command: ExportCommand, io?: ApplicationIo) => Promise<string>;
+}
+
+export interface ApplicationService extends ApplicationDriver {}
+
+const defaultIo: ApplicationIo = { write: () => undefined };
+
+function requireRoot(root: string): string {
+  if (root.trim() === "") throw new Error("Application workspace root is required.");
+  return root;
+}
+
+function normalizeIo(io: ApplicationIo | undefined): ApplicationIo {
+  return io ?? defaultIo;
+}
+
+/**
+ * Creates the adapter-neutral application boundary shared by CLI and desktop.
+ * Drivers own filesystem, storage, provider, and native-runtime details.
+ */
+export function createApplicationService(driver: ApplicationDriver): ApplicationService {
+  const service: ApplicationService = {
+    initialize: async (command, io) =>
+      driver.initialize({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    readWorkspace: async (root) => driver.readWorkspace(requireRoot(root)),
+    start: async (command, io) =>
+      driver.start({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    resume: async (command, io) =>
+      driver.resume({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    lifecycle: async (command, io) =>
+      driver.lifecycle({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    status: async (command, io) =>
+      driver.status({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    export: async (command, io) =>
+      driver.export({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+  };
+  return Object.freeze(service);
+}
