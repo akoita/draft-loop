@@ -7,6 +7,12 @@ import {
   createCapabilityPort,
   type NativeBridge,
 } from "./bridge.js";
+import {
+  createFixtureReviewPort,
+  type DesktopReviewPort,
+  type DesktopReviewState,
+  type ReviewAction,
+} from "./model.js";
 
 export type { NativeBridge } from "./bridge.js";
 
@@ -31,6 +37,46 @@ export function createNativeCapabilityPort(nativeBridge: NativeBridge): Capabili
 /** A deterministic, capability-empty port for the Vite/browser shell. */
 export function createBrowserCapabilityPort(): CapabilityPort {
   return createCapabilityPort(createBrowserNativeBridge());
+}
+
+export class DesktopBridgeError extends Error {
+  public readonly code: string;
+
+  public constructor(code: string, message: string) {
+    super(message);
+    this.name = "DesktopBridgeError";
+    this.code = code;
+  }
+}
+
+function unwrap<Value>(result: BridgeResult<Value>): Value {
+  if (result.ok) return result.value;
+  throw new DesktopBridgeError(result.error.code, result.error.message);
+}
+
+export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopReviewPort {
+  return {
+    load: async () => {
+      const result = await capabilityPort.execute({ type: "review.load", input: {} });
+      return unwrap(result);
+    },
+    dispatch: async (state: DesktopReviewState, action: ReviewAction) => {
+      const result = await capabilityPort.execute({
+        type: "review.dispatch",
+        input: { workspaceId: state.workspaceId, runId: state.runId, action },
+      });
+      return unwrap(result);
+    },
+  };
+}
+
+/** Uses a host-backed review port when available and a fixture only in browser mode. */
+export function createDesktopReviewPort(): DesktopReviewPort {
+  const capabilityPort = createNativeCapabilityPort(getNativeBridge());
+  return capabilityPort.hasCapability("review.load") &&
+    capabilityPort.hasCapability("review.dispatch")
+    ? createBridgeReviewPort(capabilityPort)
+    : createFixtureReviewPort();
 }
 
 const nativeBridgeGlobalKey = "__DRAFT_LOOP_NATIVE_BRIDGE__";

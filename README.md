@@ -32,10 +32,11 @@ workflow:
 - a phase-0 CLI workflow that connects local ingestion, SQLite history,
   orchestration lifecycle, approval decisions, and local Markdown/DOCX/PDF
   export;
-- a desktop UI shell and package boundaries for the next implementation stages.
+- a desktop review workspace with a typed, capability-limited host bridge and
+  deterministic browser fallback;
 
-The desktop review experience and richer provider/presentation workflows remain
-to be built on these contracts.
+The packaged native host and its application-service implementation remain to
+be connected to the desktop bridge for the local alpha.
 
 ## Stack
 

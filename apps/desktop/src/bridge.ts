@@ -7,6 +7,8 @@
  * projections.
  */
 
+import type { DesktopReviewState, ReviewAction } from "./model.js";
+
 export const bridgeCapabilities = [
   "workspace.open",
   "workspace.create",
@@ -15,6 +17,8 @@ export const bridgeCapabilities = [
   "run.pause",
   "run.resume",
   "run.stop",
+  "review.load",
+  "review.dispatch",
   "file.select",
   "export.write",
   "credential.status",
@@ -94,6 +98,17 @@ export interface RunLifecycleInput {
   readonly runId: string;
 }
 
+export interface ReviewLoadInput {
+  readonly workspaceId?: string;
+  readonly runId?: string;
+}
+
+export interface ReviewDispatchInput {
+  readonly workspaceId: string;
+  readonly runId: string;
+  readonly action: ReviewAction;
+}
+
 export interface FileSelectInput {
   readonly workspaceId: string;
   readonly extensions?: readonly SupportedFileExtension[];
@@ -138,6 +153,8 @@ export interface RunStatus {
   readonly approval: RunApproval;
 }
 
+export type ReviewStateResult = DesktopReviewState;
+
 export interface SelectedFile {
   readonly id: string;
   readonly name: string;
@@ -173,6 +190,8 @@ export interface BridgeCommandInputMap {
   "run.pause": RunLifecycleInput;
   "run.resume": RunLifecycleInput;
   "run.stop": RunLifecycleInput;
+  "review.load": ReviewLoadInput;
+  "review.dispatch": ReviewDispatchInput;
   "file.select": FileSelectInput;
   "export.write": ExportWriteInput;
   "credential.status": CredentialStatusInput;
@@ -188,6 +207,8 @@ export interface BridgeCommandOutputMap {
   "run.pause": RunStatus;
   "run.resume": RunStatus;
   "run.stop": RunStatus;
+  "review.load": ReviewStateResult;
+  "review.dispatch": ReviewStateResult;
   "file.select": FileSelectResult;
   "export.write": ExportResult;
   "credential.status": CredentialStatus;
@@ -408,6 +429,63 @@ function validateRunLifecycleInput(value: unknown): RunLifecycleInput {
   };
 }
 
+function validateReviewLoadInput(value: unknown): ReviewLoadInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, ["workspaceId", "runId"])) return invalidInput();
+  const workspaceId = optionalIdentifier(input.workspaceId);
+  const runId = optionalIdentifier(input.runId);
+  return {
+    ...(workspaceId === undefined ? {} : { workspaceId }),
+    ...(runId === undefined ? {} : { runId }),
+  };
+}
+
+function validateReviewAction(value: unknown): ReviewAction {
+  const action = requireRecord(value);
+  if (typeof action.type !== "string") return invalidInput();
+  switch (action.type) {
+    case "finding-decision":
+      if (!hasOnlyKeys(action, ["type", "findingId", "decision"])) return invalidInput();
+      return {
+        type: action.type,
+        findingId: identifier(action.findingId),
+        decision: enumValue(action.decision, [
+          "pending",
+          "accepted",
+          "rejected",
+          "deferred",
+          "overridden",
+        ] as const),
+      };
+    case "edit-block":
+      if (!hasOnlyKeys(action, ["type", "blockId", "text"])) return invalidInput();
+      return {
+        type: action.type,
+        blockId: identifier(action.blockId),
+        text: stringValue(action.text, 20_000),
+      };
+    case "pause":
+    case "resume":
+    case "request-revision":
+    case "approve":
+    case "export":
+      if (!hasOnlyKeys(action, ["type"])) return invalidInput();
+      return { type: action.type };
+    default:
+      return invalidInput();
+  }
+}
+
+function validateReviewDispatchInput(value: unknown): ReviewDispatchInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, ["workspaceId", "runId", "action"])) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    runId: identifier(input.runId),
+    action: validateReviewAction(input.action),
+  };
+}
+
 function validateFileSelectInput(value: unknown): FileSelectInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, ["workspaceId", "extensions", "multiple"])) return invalidInput();
@@ -476,6 +554,10 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "run.resume", input: validateRunLifecycleInput(command.input) };
     case "run.stop":
       return { type: "run.stop", input: validateRunLifecycleInput(command.input) };
+    case "review.load":
+      return { type: "review.load", input: validateReviewLoadInput(command.input) };
+    case "review.dispatch":
+      return { type: "review.dispatch", input: validateReviewDispatchInput(command.input) };
     case "file.select":
       return { type: "file.select", input: validateFileSelectInput(command.input) };
     case "export.write":
@@ -581,6 +663,19 @@ function normalizeRunStatus(value: unknown): RunStatus {
   };
 }
 
+function normalizeReviewState(value: unknown): ReviewStateResult {
+  if (!isRecord(value)) return invalidInput();
+  if (
+    typeof value.workspaceId !== "string" ||
+    typeof value.runId !== "string" ||
+    typeof value.state !== "string" ||
+    !(runStates as readonly string[]).includes(value.state)
+  ) {
+    return invalidInput();
+  }
+  return value as unknown as DesktopReviewState;
+}
+
 function normalizeFileResult(value: unknown): FileSelectResult {
   const result = requireRecord(value);
   if (
@@ -659,6 +754,9 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "run.resume":
     case "run.stop":
       return normalizeRunStatus(value);
+    case "review.load":
+    case "review.dispatch":
+      return normalizeReviewState(value);
     case "file.select":
       return normalizeFileResult(value);
     case "export.write":

@@ -7,7 +7,12 @@ import {
   unavailableResult,
   validateBridgeCommand,
 } from "./bridge.js";
-import { createBrowserCapabilityPort, createBrowserNativeBridge } from "./native.js";
+import { createFixtureReviewState } from "./model.js";
+import {
+  createBridgeReviewPort,
+  createBrowserCapabilityPort,
+  createBrowserNativeBridge,
+} from "./native.js";
 
 function bridge(
   invoke: NativeBridge["invoke"],
@@ -35,6 +40,17 @@ describe("desktop capability bridge", () => {
         input: { name: "candidate", path: "/tmp/escape" },
       }),
     ).toThrow("invalid");
+
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          action: { type: "approve" },
+        },
+      }),
+    ).toMatchObject({ type: "review.dispatch", input: { action: { type: "approve" } } });
   });
 
   it("rejects traversal and unbounded export paths before invoking the host", async () => {
@@ -99,5 +115,22 @@ describe("desktop capability bridge", () => {
 
     expect(result).toMatchObject({ ok: false, error: { code: "operation-failed" } });
     expect(JSON.stringify(result)).not.toContain("private candidate");
+  });
+
+  it("adapts host-backed review load and dispatch into the desktop review port", async () => {
+    const state = createFixtureReviewState();
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => ({
+      ok: true,
+      value: command.type === "review.load" ? state : { ...state, state: "approved" },
+    }));
+    const port = createBridgeReviewPort(
+      createCapabilityPort(bridge(invoke, ["review.load", "review.dispatch"])),
+    );
+
+    await expect(port.load()).resolves.toEqual(state);
+    await expect(port.dispatch(state, { type: "approve" })).resolves.toMatchObject({
+      state: "approved",
+    });
+    expect(invoke).toHaveBeenCalledTimes(2);
   });
 });

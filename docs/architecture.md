@@ -103,7 +103,10 @@ The phase-0 CLI is an adapter over these contracts. It stores a small workspace
 manifest beside a local SQLite history file, ingests selected local sources,
 constructs a context snapshot, and drives the same orchestration engine used by
 future UI adapters. Offline fixture agents make the lifecycle testable without
-network access; live provider execution is opt-in after the data-policy
+network access. The desktop renderer uses the same adapter-neutral review port
+through a capability-limited bridge; browser mode has no filesystem or
+credential capabilities and retains only a deterministic fixture fallback until
+a packaged host is installed. Live provider execution is opt-in after the data-policy
 preflight. Approved artifacts are rendered locally to Markdown, controlled
 DOCX, or controlled PDF. Each renderer consumes the same ordered structured
 artifact; the CLI records artifact version, template version, timestamp,
