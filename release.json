@@ -1,7 +1,7 @@
 {
   "project": "draft-loop",
-  "stage": "integrated-local-alpha",
+  "stage": "retrieval-and-provider-quality",
   "channel": "alpha",
-  "releaseName": "Integrated local alpha",
+  "releaseName": "Retrieval and provider quality",
   "artifactTargets": ["linux-x64", "macos-arm64", "windows-x64"]
 }
