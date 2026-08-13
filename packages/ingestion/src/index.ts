@@ -896,7 +896,7 @@ function pdfString(value: string, start: number): { readonly value: string; read
     raw += character;
     index += 1;
   }
-  throw new Error("PDF text string is unterminated");
+  return { value: decodePdfLiteral(raw), end: index };
 }
 
 function pdfArray(value: string, start: number): { readonly value: string; readonly end: number } {
@@ -913,7 +913,7 @@ function pdfArray(value: string, start: number): { readonly value: string; reado
     }
     index += 1;
   }
-  throw new Error("PDF text array is unterminated");
+  return { value: strings.join(""), end: index };
 }
 
 function parsePdfCMap(cmapText: string): Map<number, string> {

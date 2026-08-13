@@ -194,6 +194,15 @@ describe("local source ingestion", () => {
     expect(result.source?.text).toContain("Job");
   });
 
+  it("resiliently extracts text from PDFs with unclosed or trailing stream operators", async () => {
+    const textStream = `1 0 obj\n<< /Length 100 >>\nstream\nBT\n/F1 12 Tf\n(Valid Senior Engineer text) Tj\n(Unclosed trailing string\nET\nendstream\nendobj`;
+    const pdfPath = await fixture("unclosed_stream.pdf", `%PDF-1.4\n${textStream}\n%%EOF`);
+
+    const result = await ingestFile({ path: pdfPath });
+    expect(result.issues).toEqual([]);
+    expect(result.source?.text).toContain("Valid Senior Engineer text");
+  });
+
   it("reports malformed binary formats without decoding them as text", async () => {
     const secret = "CONFIDENTIAL-CANDIDATE-MATERIAL";
     const path = await fixture("resume.docx", new TextEncoder().encode(secret));

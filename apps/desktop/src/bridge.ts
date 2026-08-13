@@ -678,6 +678,10 @@ export function safeBridgeError(error: unknown, capability?: BridgeCapability): 
   if (error instanceof BridgeValidationError) {
     return bridgeError(error.code, capability);
   }
+  const customMessage =
+    isRecord(error) && error.name === "NativeHostError" && typeof error.message === "string"
+      ? error.message
+      : undefined;
   if (isRecord(error) && typeof error.code === "string") {
     const code = error.code;
     if (
@@ -688,7 +692,7 @@ export function safeBridgeError(error: unknown, capability?: BridgeCapability): 
       code === "not-found" ||
       code === "operation-failed"
     ) {
-      return bridgeError(code, capability);
+      return bridgeError(code, capability, customMessage);
     }
   }
   return bridgeError("operation-failed", capability);
