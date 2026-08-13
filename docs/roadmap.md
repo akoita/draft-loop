@@ -54,8 +54,8 @@ and a real job description, followed by the stage release.
 | Now | Integrated local alpha | Implementation complete; manual real-input acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
 | Next | Retrieval and provider quality | Implementation complete; calibration benchmark baseline recorded | Improve evidence selection and make live runs dependable | Decoupled retrieval port, SQLite FTS/BM25 baseline, provider resilience & swapped roles, hybrid RRF benchmark |
 | Next | Real-application pilot | Implementation complete; consented harness and adversarial fixtures delivered | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics, adversarial fixtures |
-| Next | Production-ready beta | In progress; backup/restore, retention purge, diagnostics, ATS export, a11y, and supply-chain gates complete | Distribute a safe, dependable desktop application | Packaging optimization, backup/restore, ATS export, accessibility |
-| Next | Controlled expansion | In progress; multi-artifact, local model adapter, and multilingual templates complete | Extend proven workflows without weakening trust boundaries | Beta evidence and explicit product demand |
+| Next | Production-ready beta | Implementation complete; packaging optimization, backup/restore, ATS export, a11y, retention, and supply-chain gates complete | Distribute a safe, dependable desktop application | Packaging optimization, backup/restore, ATS export, accessibility |
+| Next | Controlled expansion | Implementation complete; multi-artifact, local model adapter, multilingual templates, and portfolio ingestion complete | Extend proven workflows without weakening trust boundaries | Multi-artifact schemas, local LLM adapters, multilingual templates, portfolio ingestion |
 
 ### Now — Integrated local alpha
 
@@ -179,3 +179,4 @@ roadmap change should say what changed, why, and what moved out to make room.
 | 2026-08-13 | Advanced Production-ready beta milestones (#73, #74, #75, #76) | Implemented atomic workspace backup/restore, ATS-compatibility export validation, Unicode typography handling, keyboard-accessible navigation with WCAG AA compliance, and automated license/secret quality gates |
 | 2026-08-13 | Implemented retention controls, content-free diagnostics, and multi-artifact generation (#81, #82) | Delivered user-confirmed audit retention purge, zero-leakage diagnostic telemetry export, and tailored Cover Letter / Application Q&A schemas, rendering, and ATS export pipelines |
 | 2026-08-13 | Delivered local model adapter and multilingual templates (#85, #86) | Added offline LocalModelAdapter for OpenAI-compatible local endpoints and canonical localized section templates across en, fr, de, es, ja |
+| 2026-08-13 | Delivered portfolio ingestion and milestone releases v0.2.0–v0.5.0 (#93, #57) | Added structured developer portfolio and project manifest ingestion; produced milestone releases across all completed roadmap stages |
