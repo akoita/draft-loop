@@ -39,18 +39,19 @@ author-critic orchestration, local ingestion, deterministic validation,
 SQLite history, a review UI, approved Markdown/DOCX/PDF export, and an offline
 synthetic pilot. The CLI and packaged Electron desktop path now share the local
 application driver; the desktop can create/open a workspace, run the offline
-fixture, review it, and recover persisted decisions after restart. Product
-quality has not yet been demonstrated on real applications. The next alpha
-completion slice is real-input onboarding and source understanding: real
-workspaces must remain empty until the user provides candidate evidence and a
-target job description; approved public URLs retain provenance and typed facts;
-the offline fixture is an explicit demo path.
+fixture, review it, and recover persisted decisions after restart. Real-input
+onboarding and source understanding are implemented: real workspaces remain
+empty until the user provides candidate evidence and a target job description;
+approved public URLs retain provenance and typed facts; the offline fixture is
+an explicit demo path. Automated host tests and packaged Linux smoke pass. The
+integrated alpha remains open only for a manual Windows run using real sources
+and a real job description, followed by the stage release.
 
 ## Roadmap
 
 | Horizon | Stage | Status | Outcome | Key dependencies |
 | --- | --- | --- | --- | --- |
-| Now | Integrated local alpha | Real-input onboarding and source provenance in progress | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
+| Now | Integrated local alpha | Implementation complete; manual real-input acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
 | Next | Retrieval and provider quality | Not started | Improve evidence selection and make live runs dependable | Real-input alpha workflow, provenance baseline, representative evaluation cases |
 | Next | Real-application pilot | Not started | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics |
 | Later | Production-ready beta | Not started | Distribute a safe, dependable desktop application | Pilot decision, packaging and security review |
@@ -172,3 +173,4 @@ roadmap change should say what changed, why, and what moved out to make room.
 | 2026-08-13 | Added real-input onboarding and approved URL intake to the integrated alpha scope as issue #51 | The first Windows release exposed that synthetic workspace data was being shown as if it were user input; retrieval and pilot work need real, provenance-bearing sources |
 | 2026-08-13 | Added typed public-source extraction and explicit review-status semantics to the alpha slice | URL provenance alone is insufficient for useful source review, and approval must not imply that unresolved warnings are validated |
 | 2026-08-13 | Added deterministic directory and ZIP package-size diagnostics to the beta packaging work | The Windows archive size needs evidence before safe payload reduction or installer changes |
+| 2026-08-13 | Recorded automated alpha acceptance evidence and kept the stage open for a real-source Windows check | The packaged Linux workflow is green, but synthetic smoke cannot stand in for a maintainer's installed-app validation with real CV and job inputs |
