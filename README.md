@@ -8,9 +8,10 @@
 ![OpenAI](https://img.shields.io/badge/provider-OpenAI-412991)
 
 DraftLoop is a local-first, agentic CV-crafting workspace. It combines a job
-description and a local evidence directory with a cross-provider author–critic
-loop, so a tailored CV can be revised against an explicit readiness rubric
-before the candidate approves it.
+description and candidate evidence with an evidence-grounded
+evaluator–optimizer loop: an author drafts, an independent critic evaluates
+against an explicit rubric, and bounded revisions continue until the candidate
+reviews and approves the result.
 
 The agents are useful participants, not authorities: source evidence stays
 traceable, provider exposure is explicit, and export requires human approval.
@@ -37,6 +38,10 @@ workflow:
 - a packaged Electron desktop host that connects the bridge to the shared local
   application driver, native workspace/file dialogs, SQLite history, and
   restart-safe review state;
+- bounded, approval-gated URL ingestion for GitHub, certification, profile,
+  portfolio, and job-description sources with provenance and typed facts;
+- explicit separation of blocking findings, warnings, artifact approval, and
+  local export, including persisted override rationales;
 
 ## Stack
 
@@ -70,8 +75,9 @@ The monorepo separates product contracts from adapters:
 - `apps/cli` is the first user-facing adapter.
 - `apps/desktop` is the React desktop UI shell.
 
-See [docs/architecture.md](docs/architecture.md) for the workflow state
-machine, trust boundaries, and stopping conditions.
+See [docs/architecture.md](docs/architecture.md) for the evaluator–optimizer
+workflow, state machine, trust boundaries, and stopping conditions. The key
+decision is recorded in [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md).
 
 See [docs/releasing.md](docs/releasing.md) for the stage-based release policy,
 dry-run workflow, artifact manifest, and maintainer approval boundary.
@@ -104,9 +110,10 @@ pnpm --filter @draft-loop/desktop start
 pnpm --filter @draft-loop/desktop package
 ```
 
-The packaged host is offline-first. Creating a workspace from the desktop
-starts the deterministic fixture workflow; live provider execution remains an
-explicit, separately designed consent flow.
+The packaged host is offline-first. Creating a real workspace starts empty and
+waits for a target job description and candidate evidence. A separately labeled
+demo workspace starts the deterministic fixture workflow; live provider
+execution remains an explicit, separately designed consent flow.
 
 The phase-0 CLI workflow is available with a local workspace manifest:
 

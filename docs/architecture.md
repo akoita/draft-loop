@@ -51,6 +51,52 @@ deterministic fixture fallback.
   version, requirements, evidence checksums, rubric values, and model identity
   before a snapshot is reloaded.
 
+## Evidence-grounded evaluator–optimizer
+
+DraftLoop applies the evaluator–optimizer pattern to a factual, evidence-backed
+workflow. The author is the optimizer's generator, the independent critic is
+the evaluator, and each revision is a bounded optimization step against a
+visible rubric. The product uses the author–critic language in the UI because
+it is easier for candidates to understand; the evaluator–optimizer description
+names the underlying control pattern.
+
+```text
+canonical inputs + rubric
+          |
+          v
+     author draft ---------> structured artifact + evidence links
+          ^                                      |
+          |                                      v
+   bounded revision <----- independent evaluator + deterministic checks
+          |
+          v
+  stable / budget exhausted / user review early
+          |
+          v
+       human approval -> local export
+```
+
+The loop is deliberately not a generic “make the prose better” cycle:
+
+- The rubric covers factuality, evidence support, requirement coverage, and
+  quality. Deterministic validators handle checks that do not need a model.
+- Evaluator findings are structured, actionable, severity-rated, and linked to
+  claims, sections, or source locators where applicable.
+- The evaluator may identify a problem, but it cannot establish truth by
+  itself. User evidence and explicit human decisions remain authoritative.
+- A different provider is used by default for author and evaluator, with both
+  provider and model identities recorded in run history.
+- The orchestrator stops after configured round, cost, or time limits, when
+  quality is stable, or when the user chooses to review early. It never loops
+  indefinitely to optimize a subjective score.
+
+This makes the pattern especially suitable for CV drafting: the output is
+verifiable against a target job and candidate-owned sources, while unsupported
+claims remain visible instead of being polished into false confidence.
+
+See [ADR 0003](adr/0003-evidence-grounded-evaluator-optimizer.md) for the
+decision and trade-offs.
+
 ## Author–critic loop
 
 1. Create a workspace with a job description, local evidence directory,
