@@ -17,7 +17,7 @@
     "format:check": "biome format .",
     "lint": "pnpm lint:code && pnpm lint:docs",
     "lint:code": "biome check . && eslint .",
-    "lint:docs": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules/**\" \"#**/dist/**\" \"#coverage/**\"",
+    "lint:docs": "markdownlint-cli2 \"**/*.md\" \"#**/node_modules/**\" \"#**/dist/**\" \"#**/out/**\" \"#coverage/**\"",
     "typecheck": "tsc -b",
     "test": "vitest run && pnpm test:release",
     "test:release": "node --test scripts/release.test.mjs scripts/security.test.mjs",
