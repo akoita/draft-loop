@@ -268,6 +268,40 @@ export interface RetentionPlan {
   readonly immutableBusinessRecords: true;
 }
 
+export interface RetentionPurgeOptions {
+  readonly confirmed: boolean;
+}
+
+export interface RetentionPurgeResult {
+  readonly before: string;
+  readonly deletedAuditEventsCount: number;
+  readonly executedAt: string;
+}
+
+export interface DiagnosticTelemetryReport {
+  readonly generatedAt: string;
+  readonly schemaVersion: 1;
+  readonly aggregates: {
+    readonly workspacesCount: number;
+    readonly totalRunsCount: number;
+    readonly totalRoundsCount: number;
+    readonly totalExecutionsCount: number;
+    readonly executionsByStatus: Readonly<Record<string, number>>;
+    readonly executionsByStep: Readonly<Record<string, number>>;
+    readonly findingsCount: number;
+    readonly findingsBySeverity: Readonly<Record<string, number>>;
+    readonly decisionsCount: number;
+    readonly totalCostUsd: number;
+    readonly totalTokens: {
+      readonly inputTokens: number;
+      readonly outputTokens: number;
+      readonly totalTokens: number;
+    };
+    readonly providersDistribution: Readonly<Record<string, number>>;
+  };
+  readonly checksum: string;
+}
+
 /** Typed history boundary shared by CLI and future UI adapters. */
 export interface HistoryStoragePort {
   readonly saveRun: (input: RunRecordInput) => Promise<RunRecord>;
@@ -1993,6 +2027,151 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort, Retrieval
       auditEventsEligible: Number(row?.count ?? 0),
       immutableBusinessRecords: true,
     };
+  }
+
+  public async purgeRetention(
+    before: string,
+    options: RetentionPurgeOptions,
+  ): Promise<RetentionPurgeResult> {
+    this.ensureOpen();
+    requireNonEmpty(before, "retention before");
+    if (Number.isNaN(Date.parse(before))) {
+      throw new StorageValidationError("retention before must be a valid timestamp");
+    }
+    if (options?.confirmed !== true) {
+      throw new StorageValidationError(
+        "Explicit user confirmation (options.confirmed = true) is required to purge retention records.",
+      );
+    }
+    const executedAt = now();
+    const countRow = this.database
+      .prepare("SELECT COUNT(*) AS count FROM audit_events WHERE created_at < ?")
+      .get<{ readonly count: number }>(before);
+    const eligibleCount = Number(countRow?.count ?? 0);
+
+    const purgeTx = this.database.transaction(() => {
+      this.database.prepare("DROP TRIGGER IF EXISTS audit_events_immutable_delete").run();
+      this.database.prepare("DELETE FROM audit_events WHERE created_at < ?").run(before);
+      this.database
+        .prepare(
+          "CREATE TRIGGER IF NOT EXISTS audit_events_immutable_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT, 'audit events are immutable'); END;",
+        )
+        .run();
+    });
+    purgeTx();
+
+    return {
+      before,
+      deletedAuditEventsCount: eligibleCount,
+      executedAt,
+    };
+  }
+
+  public async exportDiagnosticTelemetry(): Promise<DiagnosticTelemetryReport> {
+    this.ensureOpen();
+    const workspacesCount = Number(
+      this.database
+        .prepare("SELECT COUNT(*) AS count FROM workspaces")
+        .get<{ readonly count: number }>()?.count ?? 0,
+    );
+    const totalRunsCount = Number(
+      this.database.prepare("SELECT COUNT(*) AS count FROM runs").get<{ readonly count: number }>()
+        ?.count ?? 0,
+    );
+    const totalRoundsCount = Number(
+      this.database
+        .prepare("SELECT COUNT(*) AS count FROM rounds")
+        .get<{ readonly count: number }>()?.count ?? 0,
+    );
+    const totalExecutionsCount = Number(
+      this.database
+        .prepare("SELECT COUNT(*) AS count FROM executions")
+        .get<{ readonly count: number }>()?.count ?? 0,
+    );
+
+    const execStatusRows = this.database
+      .prepare("SELECT status, COUNT(*) AS count FROM executions GROUP BY status")
+      .all<{ readonly status: string; readonly count: number }>();
+    const executionsByStatus: Record<string, number> = {};
+    for (const row of execStatusRows) {
+      executionsByStatus[row.status] = Number(row.count);
+    }
+
+    const execStepRows = this.database
+      .prepare("SELECT step, COUNT(*) AS count FROM executions GROUP BY step")
+      .all<{ readonly step: string; readonly count: number }>();
+    const executionsByStep: Record<string, number> = {};
+    for (const row of execStepRows) {
+      executionsByStep[row.step] = Number(row.count);
+    }
+
+    const findingsCount = Number(
+      this.database
+        .prepare("SELECT COUNT(*) AS count FROM findings")
+        .get<{ readonly count: number }>()?.count ?? 0,
+    );
+    const findingSeverityRows = this.database
+      .prepare("SELECT severity, COUNT(*) AS count FROM findings GROUP BY severity")
+      .all<{ readonly severity: string; readonly count: number }>();
+    const findingsBySeverity: Record<string, number> = {};
+    for (const row of findingSeverityRows) {
+      findingsBySeverity[row.severity] = Number(row.count);
+    }
+
+    const decisionsCount = Number(
+      this.database
+        .prepare("SELECT COUNT(*) AS count FROM decisions")
+        .get<{ readonly count: number }>()?.count ?? 0,
+    );
+
+    const tokenRow = this.database
+      .prepare(
+        "SELECT SUM(input_tokens) AS input_tokens, SUM(output_tokens) AS output_tokens, SUM(total_tokens) AS total_tokens, SUM(estimated_usd) AS total_cost_usd FROM executions",
+      )
+      .get<{
+        readonly input_tokens?: number | null;
+        readonly output_tokens?: number | null;
+        readonly total_tokens?: number | null;
+        readonly total_cost_usd?: number | null;
+      }>();
+
+    const providerRows = this.database
+      .prepare("SELECT provider, COUNT(*) AS count FROM executions GROUP BY provider")
+      .all<{ readonly provider: string; readonly count: number }>();
+    const providersDistribution: Record<string, number> = {};
+    for (const row of providerRows) {
+      providersDistribution[row.provider] = Number(row.count);
+    }
+
+    const aggregates = {
+      workspacesCount,
+      totalRunsCount,
+      totalRoundsCount,
+      totalExecutionsCount,
+      executionsByStatus: Object.freeze(executionsByStatus),
+      executionsByStep: Object.freeze(executionsByStep),
+      findingsCount,
+      findingsBySeverity: Object.freeze(findingsBySeverity),
+      decisionsCount,
+      totalCostUsd: Number(tokenRow?.total_cost_usd ?? 0),
+      totalTokens: Object.freeze({
+        inputTokens: Number(tokenRow?.input_tokens ?? 0),
+        outputTokens: Number(tokenRow?.output_tokens ?? 0),
+        totalTokens: Number(tokenRow?.total_tokens ?? 0),
+      }),
+      providersDistribution: Object.freeze(providersDistribution),
+    };
+
+    const generatedAt = now();
+    const payloadStr = JSON.stringify({ aggregates, generatedAt, schemaVersion: 1 });
+    const checksum = createHash("sha256").update(payloadStr).digest("hex");
+
+    return Object.freeze({
+      generatedAt,
+      schemaVersion: 1,
+      aggregates: Object.freeze(aggregates),
+      checksum,
+    });
   }
 
   public async close(): Promise<void> {
