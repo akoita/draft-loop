@@ -267,6 +267,9 @@ export { outputFormats, readinessDimensions, requirementPriorities };
 
 export const artifactSchemaVersion = 1 as const;
 
+export const artifactKinds = ["cv", "cover-letter", "application-qa"] as const;
+export type ArtifactKind = (typeof artifactKinds)[number];
+
 export const artifactSectionKinds = [
   "summary",
   "experience",
@@ -274,6 +277,12 @@ export const artifactSectionKinds = [
   "skills",
   "projects",
   "custom",
+  "salutation",
+  "hook",
+  "alignment",
+  "closing",
+  "question",
+  "answer",
 ] as const;
 
 export const artifactBlockTypes = ["paragraph", "bullet"] as const;
@@ -340,6 +349,7 @@ export type ArtifactDecision = z.infer<typeof artifactDecisionSchema>;
 const artifactVersionShape = z.object({
   schemaVersion: z.literal(artifactSchemaVersion),
   id: nonEmptyString,
+  kind: z.enum(artifactKinds).optional(),
   version: z.number().finite().int().positive(),
   parentVersionId: nonEmptyString.nullable(),
   createdAt: timestampSchema,

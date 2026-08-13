@@ -140,6 +140,29 @@ function assertExportable(artifact: DraftArtifact, constraints: RenderConstraint
 
 export function renderMarkdown(artifact: DraftArtifact): string {
   const sections = [...artifact.sections].sort((left, right) => left.order - right.order);
+  if (artifact.kind === "cover-letter") {
+    return `${sections
+      .map((section) => {
+        const blocks = section.blocks
+          .map((block) => (block.type === "bullet" ? `- ${block.text}` : block.text))
+          .join("\n\n");
+        if (section.kind === "salutation" || section.kind === "closing") {
+          return blocks;
+        }
+        return `## ${section.title}\n\n${blocks}`;
+      })
+      .join("\n\n")}\n`;
+  }
+  if (artifact.kind === "application-qa") {
+    return `${sections
+      .map((section) => {
+        const blocks = section.blocks
+          .map((block) => (block.type === "bullet" ? `- ${block.text}` : block.text))
+          .join("\n\n");
+        return `### ${section.title}\n\n${blocks}`;
+      })
+      .join("\n\n")}\n`;
+  }
   return `${sections
     .map((section) => {
       const blocks = section.blocks
@@ -175,7 +198,13 @@ export function renderHtml(artifact: DraftArtifact): string {
       return `<section><h2>${escapeHtml(section.title)}</h2>${list}</section>`;
     })
     .join("");
-  return `<!doctype html><html lang="${escapeHtml(artifact.language)}"><head><meta charset="utf-8"><title>DraftLoop CV</title><style>${controlledCss}</style></head><body><main>${sections}</main></body></html>`;
+  const documentTitle =
+    artifact.kind === "cover-letter"
+      ? "DraftLoop Cover Letter"
+      : artifact.kind === "application-qa"
+        ? "DraftLoop Application Q&A"
+        : "DraftLoop CV";
+  return `<!doctype html><html lang="${escapeHtml(artifact.language)}"><head><meta charset="utf-8"><title>${escapeHtml(documentTitle)}</title><style>${controlledCss}</style></head><body><main>${sections}</main></body></html>`;
 }
 
 const controlledCss = `
@@ -290,7 +319,13 @@ function pdfBytes(artifact: DraftArtifact, options: RenderOptions = {}): Uint8Ar
   const createdDateStr = options.generatedAt
     ? options.generatedAt.replace(/[-:TZ.]/gu, "").slice(0, 14)
     : "20260813120000";
-  const title = artifact.sections[0]?.title ?? "DraftLoop Tailored CV";
+  const defaultTitle =
+    artifact.kind === "cover-letter"
+      ? "DraftLoop Cover Letter"
+      : artifact.kind === "application-qa"
+        ? "DraftLoop Application Q&A"
+        : "DraftLoop Tailored CV";
+  const title = artifact.sections[0]?.title ?? defaultTitle;
   objects[infoId] =
     `<< /Title (${escapePdfText(title)}) /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDateStr}Z) >>`;
 
@@ -411,7 +446,13 @@ function renderDocx(artifact: DraftArtifact, options: RenderOptions = {}): Uint8
       return `${heading}${blocks}`;
     })
     .join("");
-  const title = artifact.sections[0]?.title ?? "DraftLoop Tailored CV";
+  const defaultTitle =
+    artifact.kind === "cover-letter"
+      ? "DraftLoop Cover Letter"
+      : artifact.kind === "application-qa"
+        ? "DraftLoop Application Q&A"
+        : "DraftLoop Tailored CV";
+  const title = artifact.sections[0]?.title ?? defaultTitle;
   const createdDate = options.generatedAt ?? "2026-08-13T12:00:00.000Z";
   const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1008" w:right="1008" w:bottom="1008" w:left="1008"/></w:sectPr></w:body></w:document>`;
   const coreProps = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/coreProperties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${escapeHtml(title)}</dc:title><dc:creator>DraftLoop</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${createdDate}</dcterms:created></cp:coreProperties>`;
@@ -487,7 +528,15 @@ export function validateAtsExtractability(
 
   const missingSections: string[] = [];
   for (const section of artifact.sections) {
-    if (!normalizedExtracted.includes(section.title.toLowerCase().trim())) {
+    const isHeaderlessLetterSection =
+      artifact.kind === "cover-letter" &&
+      (section.kind === "salutation" || section.kind === "closing");
+    if (isHeaderlessLetterSection) {
+      const firstBlockWord = section.blocks[0]?.text.toLowerCase().trim().split(/\s+/u)[0] ?? "";
+      if (firstBlockWord !== "" && !normalizedExtracted.includes(firstBlockWord)) {
+        missingSections.push(section.title);
+      }
+    } else if (!normalizedExtracted.includes(section.title.toLowerCase().trim())) {
       missingSections.push(section.title);
     }
   }

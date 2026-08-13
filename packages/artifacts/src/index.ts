@@ -2,6 +2,7 @@ import type { EvidenceReference } from "@draft-loop/evidence";
 import {
   type ArtifactClaim,
   type ArtifactDecision,
+  type ArtifactKind,
   type ArtifactSection,
   artifactSchemaVersion,
   type DraftArtifact,
@@ -12,12 +13,14 @@ export type {
   ArtifactBlock,
   ArtifactClaim,
   ArtifactDecision,
+  ArtifactKind,
   ArtifactSection,
   DraftArtifact,
 } from "@draft-loop/schemas";
 
 export interface NewArtifactInput {
   readonly id: string;
+  readonly kind?: ArtifactKind;
   readonly createdAt: string;
   readonly language: string;
   readonly sections: readonly ArtifactSection[];
