@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
   type DesktopReviewState,
@@ -56,6 +56,36 @@ export function ReviewWorkspace({
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      if (isInput) return;
+
+      if (event.altKey || event.metaKey) {
+        if (event.key === "a" || event.key === "A") {
+          if (canApprove) {
+            event.preventDefault();
+            onAction({ type: "approve" });
+          }
+        } else if (event.key === "r" || event.key === "R") {
+          if (state.state === "awaiting-approval") {
+            event.preventDefault();
+            onAction({ type: "request-revision" });
+          }
+        } else if (event.key === "e" || event.key === "E") {
+          if (state.state === "approved") {
+            event.preventDefault();
+            onAction({ type: "export" });
+          }
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canApprove, onAction, state.state]);
 
   const submitUrl = (target: "evidence" | "job-description"): void => {
     const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
@@ -512,18 +542,22 @@ export function ReviewWorkspace({
               <button
                 className="button button-primary"
                 type="button"
+                aria-keyshortcuts="Alt+A"
+                title="Approve artifact (Alt+A)"
                 disabled={!canApprove}
                 onClick={() => onAction({ type: "approve" })}
               >
-                Approve artifact
+                Approve artifact (Alt+A)
               </button>
               <button
                 className="button button-quiet"
                 type="button"
+                aria-keyshortcuts="Alt+R"
+                title="Request revision (Alt+R)"
                 disabled={state.state !== "awaiting-approval"}
                 onClick={() => onAction({ type: "request-revision" })}
               >
-                Request revision
+                Request revision (Alt+R)
               </button>
             </div>
             <div className="export-action">
@@ -537,10 +571,12 @@ export function ReviewWorkspace({
               <button
                 className="button button-outline"
                 type="button"
+                aria-keyshortcuts="Alt+E"
+                title="Export Markdown (Alt+E)"
                 disabled={state.state !== "approved"}
                 onClick={() => onAction({ type: "export" })}
               >
-                Export Markdown
+                Export Markdown (Alt+E)
               </button>
             </div>
           </section>
