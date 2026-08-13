@@ -1,5 +1,8 @@
 import {
   type ContextSnapshot,
+  type RetrievalOptions,
+  type RetrievalPort,
+  type ScoredEvidenceChunk,
   SemanticValidationError,
   validateContextSnapshotInput,
   type WorkflowState,
@@ -69,6 +72,7 @@ export interface AuthorRequest {
   readonly context: ContextSnapshot;
   readonly currentArtifact: DraftArtifact | null;
   readonly findings: readonly ValidationIssue[];
+  readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
 }
 
 export interface CriticRequest {
@@ -78,6 +82,7 @@ export interface CriticRequest {
   readonly context: ContextSnapshot;
   readonly artifact: DraftArtifact;
   readonly deterministicFindings: readonly ValidationIssue[];
+  readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
 }
 
 export interface AuthorAgent {
@@ -207,6 +212,7 @@ export interface OrchestrationEngineOptions {
   readonly store: RunStore;
   readonly now?: () => string;
   readonly contextResolver?: (contextSnapshotId: string) => Promise<ContextSnapshot | undefined>;
+  readonly retrieval?: RetrievalPort;
 }
 
 export interface StorageRunStore extends RunStore {}
@@ -691,6 +697,15 @@ export function createOrchestrationEngine(
       if (step === "critic" && snapshot.artifact === null) {
         throw new Error("critic requires an artifact");
       }
+      const retrievedEvidence = options.retrieval
+        ? await options.retrieval
+            .queryEvidence(
+              context.jobDescription || context.requirements.map((r) => r.text).join(" "),
+              { workspaceId: snapshot.workspaceId },
+            )
+            .catch(() => [])
+        : undefined;
+
       const execution =
         step === "critic"
           ? await options.critic.execute({
@@ -700,6 +715,7 @@ export function createOrchestrationEngine(
               context,
               artifact: snapshot.artifact as DraftArtifact,
               deterministicFindings: snapshot.findings,
+              ...(retrievedEvidence ? { retrievedEvidence } : {}),
             })
           : await options.author.execute({
               executionId: id,
@@ -708,6 +724,7 @@ export function createOrchestrationEngine(
               context,
               currentArtifact: snapshot.artifact,
               findings: snapshot.findings,
+              ...(retrievedEvidence ? { retrievedEvidence } : {}),
             });
       const record: ExecutionRecord = {
         id,
@@ -981,3 +998,5 @@ export function createOrchestrationEngine(
 export interface OrchestrationPort {
   readonly run: (request: OrchestrationRequest) => Promise<RunSnapshot>;
 }
+
+export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };

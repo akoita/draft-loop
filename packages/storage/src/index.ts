@@ -2,7 +2,13 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 
-import { type WorkflowState, workflowStates } from "@draft-loop/domain";
+import {
+  type RetrievalOptions,
+  type RetrievalPort,
+  type ScoredEvidenceChunk,
+  type WorkflowState,
+  workflowStates,
+} from "@draft-loop/domain";
 
 export interface StoragePort {
   readonly get: (key: string) => Promise<string | undefined>;
@@ -286,14 +292,9 @@ export interface AuditEvent extends AuditEventInput {
   readonly eventChecksum: string;
 }
 
-export interface EvidenceSearchHit extends EvidenceChunkRecord {
-  readonly rank: number;
-}
-
-export interface EvidenceSearchOptions {
-  readonly workspaceId?: string;
-  readonly limit?: number;
-}
+export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
+export type EvidenceSearchHit = ScoredEvidenceChunk;
+export type EvidenceSearchOptions = RetrievalOptions;
 
 export class StorageUnavailableError extends Error {
   constructor(message: string, options?: { readonly cause?: unknown }) {
@@ -857,7 +858,7 @@ function requireStoredStep(step: StoredRunStep, field: string): void {
   }
 }
 
-export class SqliteStorage implements StoragePort, HistoryStoragePort {
+export class SqliteStorage implements StoragePort, HistoryStoragePort, RetrievalPort {
   private readonly database: SqliteHandle;
   private closed = false;
 
@@ -1846,14 +1847,11 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort {
     this.ensureOpen();
     const options = typeof optionsOrLimit === "number" ? { limit: optionsOrLimit } : optionsOrLimit;
     const limit = options.limit ?? 20;
-    const terms = query
-      .trim()
-      .match(/[\p{L}\p{N}_-]+/gu)
-      ?.map((term) => `"${term.replaceAll('"', '""')}"`)
-      .join(" AND ");
-    if (terms === undefined || terms === "") {
-      throw new StorageValidationError("evidence search query must contain a token");
+    const rawTokens = query.trim().match(/[\p{L}\p{N}_-]+/gu);
+    if (!rawTokens || rawTokens.length === 0) {
+      return [];
     }
+    const terms = rawTokens.map((term) => `"${term.replaceAll('"', '""')}"`).join(" AND ");
     if (options.workspaceId !== undefined) {
       requireNonEmpty(options.workspaceId, "evidence search workspaceId");
     }
@@ -1866,6 +1864,13 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort {
       )
       .all(terms, options.workspaceId ?? null, options.workspaceId ?? null, limit)
       .map((row) => ({ ...evidenceChunkFromRow(row), rank: Number(row.rank) }));
+  }
+
+  public async queryEvidence(
+    query: string,
+    options?: RetrievalOptions,
+  ): Promise<readonly ScoredEvidenceChunk[]> {
+    return this.searchEvidence(query, options);
   }
 
   public async backup(destination: string): Promise<void> {

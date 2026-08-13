@@ -36,6 +36,7 @@ function driver(): ApplicationDriver {
     lifecycle: vi.fn(async () => snapshot),
     status: vi.fn(async () => snapshot),
     export: vi.fn(async () => "exports/run-1.md"),
+    queryEvidence: vi.fn(async () => []),
   };
 }
 
@@ -48,6 +49,18 @@ describe("application service contract", () => {
 
     expect(underlying.start).toHaveBeenCalledWith(
       { root: "workspace" },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+  });
+
+  it("forwards queryEvidence with normalized root", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.queryEvidence({ root: "workspace", query: "typescript" });
+
+    expect(underlying.queryEvidence).toHaveBeenCalledWith(
+      { root: "workspace", query: "typescript" },
       expect.objectContaining({ write: expect.any(Function) }),
     );
   });

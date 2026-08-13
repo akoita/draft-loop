@@ -13,6 +13,7 @@ import {
   createContextSnapshot,
   createWorkspace,
   type ModelConfigurationInput,
+  type ScoredEvidenceChunk,
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
@@ -1345,6 +1346,24 @@ function workspaceDescriptor(root: string, config: WorkspaceConfig): WorkspaceDe
   };
 }
 
+export async function queryWorkspaceEvidence(
+  root: string,
+  query: string,
+  options?: { readonly limit?: number },
+  io?: ApplicationIo,
+): Promise<readonly ScoredEvidenceChunk[]> {
+  const config = await readWorkspace(root);
+  const storage = await openStorage(root);
+  try {
+    return await storage.queryEvidence(query, {
+      workspaceId: config.id,
+      ...(options?.limit === undefined ? {} : { limit: options.limit }),
+    });
+  } finally {
+    await storage.close();
+  }
+}
+
 /** Concrete local driver shared by CLI and the native desktop host. */
 export function createLocalApplicationDriver(): ApplicationDriver {
   return {
@@ -1374,6 +1393,13 @@ export function createLocalApplicationDriver(): ApplicationDriver {
     status: async (command, io) => statusRun(command.root, command.runId, io),
     export: async (command, io) =>
       exportRun(command.root, command.runId, command.outputPath, io, command.format ?? "markdown"),
+    queryEvidence: async (command, io) =>
+      queryWorkspaceEvidence(
+        command.root,
+        command.query,
+        command.limit === undefined ? undefined : { limit: command.limit },
+        io,
+      ),
   };
 }
 

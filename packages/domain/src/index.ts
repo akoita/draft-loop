@@ -109,6 +109,31 @@ export interface EvidenceSourceInput {
   readonly checksum?: string;
 }
 
+export interface ScoredEvidenceChunk {
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly sourceId: string;
+  readonly ordinal: number;
+  readonly lineStart: number;
+  readonly lineEnd: number;
+  readonly checksum: string;
+  readonly text: string;
+  readonly rank: number;
+}
+
+export interface RetrievalOptions {
+  readonly workspaceId?: string;
+  readonly limit?: number;
+  readonly minScore?: number;
+}
+
+export interface RetrievalPort {
+  readonly queryEvidence: (
+    query: string,
+    options?: RetrievalOptions,
+  ) => Promise<readonly ScoredEvidenceChunk[]>;
+}
+
 export type AgentRole = "author" | "critic";
 export type ModelCompany = "anthropic" | "openai" | (string & {});
 

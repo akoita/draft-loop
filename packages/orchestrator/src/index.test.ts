@@ -153,6 +153,12 @@ function engineFixture(
     readonly author?: (request: unknown) => Promise<AgentExecution<DraftArtifact>>;
     readonly critic?: (request: unknown) => Promise<AgentExecution<Critique>>;
     readonly store?: InMemoryRunStore;
+    readonly retrieval?: {
+      readonly queryEvidence: (
+        query: string,
+        options?: { readonly workspaceId?: string; readonly limit?: number },
+      ) => Promise<readonly unknown[]>;
+    };
   } = {},
 ) {
   const store = options.store ?? new InMemoryRunStore();
@@ -167,6 +173,7 @@ function engineFixture(
     critic: { execute: critic },
     store,
     now: () => timestamp,
+    ...(options.retrieval ? { retrieval: options.retrieval as never } : {}),
   });
   return { engine, author, critic, store };
 }
@@ -411,5 +418,37 @@ describe("durable orchestration", () => {
         errorCode: "different-error",
       }),
     ).rejects.toThrow(/immutable/);
+  });
+
+  it("queries retrieval port and passes retrieved evidence to author and critic", async () => {
+    const scoredChunk = {
+      id: "chunk-1",
+      workspaceId: "workspace-1",
+      sourceId: "source-1",
+      ordinal: 0,
+      lineStart: 1,
+      lineEnd: 10,
+      checksum: "a".repeat(64),
+      text: "TypeScript systems engineer",
+      rank: -1.5,
+    };
+    const retrieval = {
+      queryEvidence: vi.fn(async () => [scoredChunk]),
+    };
+    const { engine, author, critic } = engineFixture({ retrieval });
+
+    await engine.start(request());
+
+    expect(retrieval.queryEvidence).toHaveBeenCalled();
+    expect(author).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retrievedEvidence: [scoredChunk],
+      }),
+    );
+    expect(critic).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retrievedEvidence: [scoredChunk],
+      }),
+    );
   });
 });

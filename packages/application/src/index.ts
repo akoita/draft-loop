@@ -1,5 +1,8 @@
+import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OutputFormat } from "@draft-loop/rendering";
+
+export type { ScoredEvidenceChunk };
 
 export interface ApplicationIo {
   readonly write: (line: string) => void;
@@ -73,6 +76,12 @@ export interface ExportCommand {
   readonly format?: OutputFormat;
 }
 
+export interface QueryEvidenceCommand {
+  readonly root: string;
+  readonly query: string;
+  readonly limit?: number;
+}
+
 export interface ApplicationDriver {
   readonly initialize: (
     command: InitializeWorkspaceCommand,
@@ -84,6 +93,10 @@ export interface ApplicationDriver {
   readonly lifecycle: (command: LifecycleCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly status: (command: StatusCommand, io?: ApplicationIo) => Promise<RunSnapshot | undefined>;
   readonly export: (command: ExportCommand, io?: ApplicationIo) => Promise<string>;
+  readonly queryEvidence: (
+    command: QueryEvidenceCommand,
+    io?: ApplicationIo,
+  ) => Promise<readonly ScoredEvidenceChunk[]>;
 }
 
 export interface ApplicationService extends ApplicationDriver {}
@@ -118,6 +131,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.status({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     export: async (command, io) =>
       driver.export({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    queryEvidence: async (command, io) =>
+      driver.queryEvidence({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
   };
   return Object.freeze(service);
 }

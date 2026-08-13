@@ -95,6 +95,7 @@ function service(root: string) {
       export: vi.fn(
         async (command) => command.outputPath ?? join(root, "exports", "run-native.md"),
       ),
+      queryEvidence: vi.fn(async () => []),
     } satisfies ApplicationService,
     snapshot,
   };
