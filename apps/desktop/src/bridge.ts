@@ -20,6 +20,7 @@ export const bridgeCapabilities = [
   "review.load",
   "review.dispatch",
   "file.select",
+  "source.add-url",
   "export.write",
   "credential.status",
   "credential.set",
@@ -82,6 +83,8 @@ export interface WorkspaceOpenInput {
 export interface WorkspaceCreateInput {
   /** A display name only. The native host owns the destination folder picker. */
   readonly name: string;
+  /** Real workspaces are empty; demo mode is explicit and deterministic. */
+  readonly mode?: "real" | "demo";
 }
 
 export interface RunStatusInput {
@@ -113,6 +116,15 @@ export interface FileSelectInput {
   readonly workspaceId: string;
   readonly extensions?: readonly SupportedFileExtension[];
   readonly multiple?: boolean;
+  readonly target?: "evidence" | "job-description";
+}
+
+export interface SourceAddUrlInput {
+  readonly workspaceId: string;
+  readonly url: string;
+  readonly target: "evidence" | "job-description";
+  /** The renderer can only request a fetch after the user confirms it. */
+  readonly approved: boolean;
 }
 
 export interface ExportWriteInput {
@@ -167,6 +179,14 @@ export interface FileSelectResult {
   readonly files: readonly SelectedFile[];
 }
 
+export interface SourceAddUrlResult {
+  readonly sourcePath: string;
+  readonly originalUrl: string;
+  readonly finalUrl: string;
+  readonly kind: string;
+  readonly mediaType: SupportedMediaType;
+}
+
 export interface ExportResult {
   readonly exportId: string;
   readonly workspaceId: string;
@@ -193,6 +213,7 @@ export interface BridgeCommandInputMap {
   "review.load": ReviewLoadInput;
   "review.dispatch": ReviewDispatchInput;
   "file.select": FileSelectInput;
+  "source.add-url": SourceAddUrlInput;
   "export.write": ExportWriteInput;
   "credential.status": CredentialStatusInput;
   "credential.set": CredentialSetInput;
@@ -210,6 +231,7 @@ export interface BridgeCommandOutputMap {
   "review.load": ReviewStateResult;
   "review.dispatch": ReviewStateResult;
   "file.select": FileSelectResult;
+  "source.add-url": SourceAddUrlResult;
   "export.write": ExportResult;
   "credential.status": CredentialStatus;
   "credential.set": CredentialResult;
@@ -314,6 +336,17 @@ function stringValue(value: unknown, maxLength: number): string {
   return value;
 }
 
+function urlValue(value: unknown): string {
+  const result = stringValue(value, 2_048);
+  try {
+    const parsed = new URL(result);
+    if (parsed.protocol !== "https:") return invalidInput();
+  } catch {
+    return invalidInput();
+  }
+  return result;
+}
+
 function identifier(value: unknown): string {
   const result = stringValue(value, 128);
   if (!/^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,127}$/u.test(result)) {
@@ -406,8 +439,13 @@ function validateWorkspaceOpenInput(value: unknown): WorkspaceOpenInput {
 
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["name"])) return invalidInput();
-  return { name: workspaceName(input.name) };
+  if (!hasOnlyKeys(input, ["name", "mode"])) return invalidInput();
+  const mode =
+    input.mode === undefined ? undefined : enumValue(input.mode, ["real", "demo"] as const);
+  return {
+    name: workspaceName(input.name),
+    ...(mode === undefined ? {} : { mode }),
+  };
 }
 
 function validateRunStatusInput(value: unknown): RunStatusInput {
@@ -450,8 +488,12 @@ function validateReviewAction(value: unknown): ReviewAction {
   const action = requireRecord(value);
   if (typeof action.type !== "string") return invalidInput();
   switch (action.type) {
-    case "finding-decision":
-      if (!hasOnlyKeys(action, ["type", "findingId", "decision"])) return invalidInput();
+    case "finding-decision": {
+      if (!hasOnlyKeys(action, ["type", "findingId", "decision", "rationale"]))
+        return invalidInput();
+      const rationale =
+        action.rationale === undefined ? undefined : stringValue(action.rationale, 1_000).trim();
+      if (action.decision === "overridden" && rationale === "") return invalidInput();
       return {
         type: action.type,
         findingId: identifier(action.findingId),
@@ -462,7 +504,9 @@ function validateReviewAction(value: unknown): ReviewAction {
           "deferred",
           "overridden",
         ] as const),
+        ...(rationale === undefined ? {} : { rationale }),
       };
+    }
     case "edit-block":
       if (!hasOnlyKeys(action, ["type", "blockId", "text"])) return invalidInput();
       return {
@@ -471,6 +515,7 @@ function validateReviewAction(value: unknown): ReviewAction {
         text: stringValue(action.text, 20_000),
       };
     case "pause":
+    case "start":
     case "resume":
     case "request-revision":
     case "approve":
@@ -494,7 +539,8 @@ function validateReviewDispatchInput(value: unknown): ReviewDispatchInput {
 
 function validateFileSelectInput(value: unknown): FileSelectInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "extensions", "multiple"])) return invalidInput();
+  if (!hasOnlyKeys(input, ["workspaceId", "extensions", "multiple", "target"]))
+    return invalidInput();
   const extensions = input.extensions;
   if (extensions !== undefined && !Array.isArray(extensions)) return invalidInput();
   const normalizedExtensions = extensions?.map((extension) =>
@@ -507,10 +553,27 @@ function validateFileSelectInput(value: unknown): FileSelectInput {
     return invalidInput();
   }
   const multiple = optionalBooleanValue(input.multiple);
+  const target =
+    input.target === undefined
+      ? undefined
+      : enumValue(input.target, ["evidence", "job-description"] as const);
   return {
     workspaceId: identifier(input.workspaceId),
     ...(normalizedExtensions === undefined ? {} : { extensions: normalizedExtensions }),
     ...(multiple === undefined ? {} : { multiple }),
+    ...(target === undefined ? {} : { target }),
+  };
+}
+
+function validateSourceAddUrlInput(value: unknown): SourceAddUrlInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, ["workspaceId", "url", "target", "approved"])) return invalidInput();
+  if (input.approved !== true) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    url: urlValue(input.url),
+    target: enumValue(input.target, ["evidence", "job-description"] as const),
+    approved: true,
   };
 }
 
@@ -566,6 +629,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "review.dispatch", input: validateReviewDispatchInput(command.input) };
     case "file.select":
       return { type: "file.select", input: validateFileSelectInput(command.input) };
+    case "source.add-url":
+      return { type: "source.add-url", input: validateSourceAddUrlInput(command.input) };
     case "export.write":
       return { type: "export.write", input: validateExportWriteInput(command.input) };
     case "credential.status":
@@ -718,6 +783,20 @@ function normalizeFileResult(value: unknown): FileSelectResult {
   };
 }
 
+function normalizeSourceAddUrlResult(value: unknown): SourceAddUrlResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, ["sourcePath", "originalUrl", "finalUrl", "kind", "mediaType"])) {
+    return invalidInput();
+  }
+  return {
+    sourcePath: relativePath(result.sourcePath),
+    originalUrl: urlValue(result.originalUrl),
+    finalUrl: urlValue(result.finalUrl),
+    kind: stringValue(result.kind, 64),
+    mediaType: enumValue(result.mediaType, supportedMediaTypes),
+  };
+}
+
 function normalizeExportResult(value: unknown): ExportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, ["exportId", "workspaceId", "runId", "format", "relativePath"])) {
@@ -765,6 +844,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeReviewState(value);
     case "file.select":
       return normalizeFileResult(value);
+    case "source.add-url":
+      return normalizeSourceAddUrlResult(value);
     case "export.write":
       return normalizeExportResult(value);
     case "credential.status":

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ApplicationService, WorkspaceDescriptor } from "@draft-loop/application";
@@ -101,6 +101,87 @@ function service(root: string) {
 }
 
 describe("native host", () => {
+  it("creates a real workspace without synthetic candidate or job content", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-real-"));
+    const root = join(parent, "real-workspace");
+    const fixture = service(root);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+        },
+      });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "real-workspace", mode: "real" },
+      });
+      expect(created).toMatchObject({ ok: true });
+      expect(await readFile(join(root, "job.md"), "utf8")).toBe("");
+      await expect(readFile(join(root, "evidence", "resume.md"), "utf8")).rejects.toThrow();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("fetches an approved URL into local evidence with provenance only", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-url-"));
+    const root = join(parent, "url-workspace");
+    const fixture = service(root);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+        },
+        urlHostnameResolver: async () => ["93.184.216.34"],
+        urlFetcher: async () =>
+          new Response("Public project evidence", {
+            headers: { "content-type": "text/plain" },
+          }),
+      });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "url-workspace", mode: "real" },
+      });
+      const workspaceId = (
+        created as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+      const added = await host.invoke({
+        type: "source.add-url",
+        input: {
+          workspaceId,
+          url: "https://example.com/projects/draft-loop",
+          target: "evidence",
+          approved: true,
+        },
+      });
+      expect(added).toMatchObject({
+        ok: true,
+        value: {
+          originalUrl: "https://example.com/projects/draft-loop",
+          kind: "portfolio",
+          mediaType: "text/plain",
+        },
+      });
+      const provenance = await readFile(
+        join(root, ".draft-loop", "source-provenance.json"),
+        "utf8",
+      );
+      expect(provenance).toContain("https://example.com/projects/draft-loop");
+      expect(provenance).toContain('"role": "evidence"');
+      const files = await readdir(join(root, "evidence", "imported"));
+      expect(files).toHaveLength(1);
+      expect(await readFile(join(root, "evidence", "imported", files[0] ?? ""), "utf8")).toBe(
+        "Public project evidence\n",
+      );
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("keeps workspace selection native and persists review decisions locally", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-"));
     const root = join(parent, "native-workspace");
@@ -158,7 +239,12 @@ describe("native host", () => {
         input: {
           workspaceId: "workspace-native",
           runId: "run-native",
-          action: { type: "finding-decision", findingId, decision: "overridden" },
+          action: {
+            type: "finding-decision",
+            findingId,
+            decision: "overridden",
+            rationale: "The user verified this claim outside the fixture.",
+          },
         },
       });
 
@@ -242,6 +328,7 @@ describe("native host", () => {
             type: "finding-decision",
             findingId: reviewValue.findings[0]?.id ?? "missing",
             decision: "overridden",
+            rationale: "The user verified this claim outside the fixture.",
           },
         },
       });

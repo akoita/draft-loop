@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ingestFile, ingestSources } from "./index.js";
+import { classifyUrl, ingestFile, ingestSources, ingestUrl } from "./index.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -253,5 +253,247 @@ describe("local source ingestion", () => {
     await rm(path);
     await expect(readFile(path)).rejects.toThrow();
     expect(result.source?.text).toBe("Readable source");
+  });
+});
+
+describe("URL source ingestion", () => {
+  it("classifies URLs from only their parsed hostname and pathname", () => {
+    expect(classifyUrl("https://github.com/ada/project?kind=job-description#profile")).toBe(
+      "github",
+    );
+    expect(classifyUrl("https://www.credly.com/badges/123")).toBe("certification");
+    expect(classifyUrl("https://www.linkedin.com/in/ada-lovelace")).toBe("profile");
+    expect(classifyUrl("https://ada.example/portfolio")).toBe("portfolio");
+    expect(classifyUrl("https://jobs.example/roles/engineer")).toBe("job-description");
+    expect(classifyUrl("https://example.com/about-me")).toBe("generic");
+  });
+
+  it("requires approval before invoking the injected fetcher and preserves URL provenance", async () => {
+    let calls = 0;
+    const notApproved = await ingestUrl("https://example.com/profile", {
+      approval: false,
+      fetcher: async () => {
+        calls += 1;
+        return new Response("should not be fetched");
+      },
+    });
+
+    expect(notApproved.source).toBeNull();
+    expect(notApproved.issues).toMatchObject([{ code: "approval-required" }]);
+    expect(calls).toBe(0);
+
+    const originalUrl = "https://www.linkedin.com/in/ada-lovelace";
+    const fetchedAt = new Date("2026-08-13T10:00:00.000Z");
+    const seen: {
+      input?: string | undefined;
+      redirect?: RequestRedirect | undefined;
+      signal?: AbortSignal | null | undefined;
+    } = {};
+    const result = await ingestUrl(originalUrl, {
+      approval: async () => true,
+      fetcher: async (input, init) => {
+        seen.input = input;
+        seen.redirect = init?.redirect;
+        seen.signal = init?.signal;
+        return new Response("<h1>Ada Lovelace</h1><p>Mathematician</p>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      },
+      now: () => fetchedAt,
+    });
+
+    expect(seen.input).toBe(originalUrl);
+    expect(seen.redirect).toBe("manual");
+    expect(seen.signal).toBeInstanceOf(AbortSignal);
+    expect(result.issues).toEqual([]);
+    expect(result.source).toMatchObject({
+      mediaType: "text/html",
+      text: "Ada Lovelace\nMathematician",
+      url: {
+        originalUrl,
+        finalUrl: originalUrl,
+        fetchedAt: fetchedAt.toISOString(),
+        kind: "profile",
+      },
+      source: { path: originalUrl },
+    });
+    expect(result.source?.chunks[0]?.url).toEqual(result.source?.url);
+    expect(result.source?.source.url).toEqual(result.source?.url);
+  });
+
+  it("follows safe redirects, records the final URL, and revalidates redirect targets", async () => {
+    const calls: string[] = [];
+    const result = await ingestUrl("https://example.com/start", {
+      fetcher: async (input) => {
+        calls.push(input);
+        if (input.endsWith("/start")) {
+          return new Response(null, {
+            status: 302,
+            headers: { location: "/profile" },
+          });
+        }
+        return new Response("Final profile", {
+          headers: { "content-type": "text/plain" },
+        });
+      },
+      now: () => new Date("2026-08-13T10:01:00.000Z"),
+    });
+
+    expect(calls).toEqual(["https://example.com/start", "https://example.com/profile"]);
+    expect(result.issues).toEqual([]);
+    expect(result.source?.url).toMatchObject({
+      originalUrl: "https://example.com/start",
+      finalUrl: "https://example.com/profile",
+    });
+
+    let redirectCalls = 0;
+    const redirectLimit = await ingestUrl("https://example.com/one", {
+      maxRedirects: 1,
+      fetcher: async () => {
+        redirectCalls += 1;
+        return new Response(null, {
+          status: 302,
+          headers: { location: `https://example.com/${redirectCalls + 1}` },
+        });
+      },
+    });
+    expect(redirectLimit.source).toBeNull();
+    expect(redirectLimit.issues).toMatchObject([{ code: "redirect-limit" }]);
+    expect(redirectCalls).toBe(2);
+
+    const unsafeRedirectCalls: string[] = [];
+    const unsafeRedirect = await ingestUrl("https://example.com/start", {
+      fetcher: async (input) => {
+        unsafeRedirectCalls.push(input);
+        return new Response(null, {
+          status: 302,
+          headers: { location: "http://127.0.0.1/private" },
+        });
+      },
+    });
+
+    expect(unsafeRedirect.source).toBeNull();
+    expect(unsafeRedirect.issues).toMatchObject([{ code: "unsafe-url" }]);
+    expect(unsafeRedirectCalls).toEqual(["https://example.com/start"]);
+  });
+
+  it("rejects unsafe URLs before the fetcher is called", async () => {
+    const unsafeUrls = [
+      "http://example.com/profile",
+      "https://user:password@example.com/profile",
+      "https://example.com/profile#fragment",
+      "https://localhost/profile",
+      "https://127.0.0.1/profile",
+      "https://10.0.0.8/profile",
+      "https://169.254.169.254/latest/meta-data",
+      "https://[::1]/profile",
+      "https://[fd00::1]/profile",
+      "https://[fe80::1]/profile",
+    ];
+    let calls = 0;
+    for (const url of unsafeUrls) {
+      const result = await ingestUrl(url, {
+        fetcher: async () => {
+          calls += 1;
+          return new Response("unexpected", { headers: { "content-type": "text/plain" } });
+        },
+      });
+      expect(result.source).toBeNull();
+      expect(result.issues).toMatchObject([{ code: "unsafe-url" }]);
+    }
+    expect(calls).toBe(0);
+
+    let dnsCalls = 0;
+    const dnsRebinding = await ingestUrl("https://public.example/profile", {
+      resolveHostname: async () => ["192.168.1.20"],
+      fetcher: async () => {
+        dnsCalls += 1;
+        return new Response("unexpected", { headers: { "content-type": "text/plain" } });
+      },
+    });
+    expect(dnsRebinding.source).toBeNull();
+    expect(dnsRebinding.issues).toMatchObject([{ code: "unsafe-url" }]);
+    expect(dnsCalls).toBe(0);
+  });
+
+  it("bounds response bytes and extracted text without exposing response bodies", async () => {
+    const tooLarge = await ingestUrl("https://example.com/large.txt", {
+      maxResponseBytes: 3,
+      fetcher: async () =>
+        new Response("private-response-body", {
+          headers: { "content-type": "text/plain" },
+        }),
+    });
+    expect(tooLarge.source).toBeNull();
+    expect(tooLarge.issues).toMatchObject([{ code: "response-too-large" }]);
+    expect(tooLarge.issues[0]?.message).not.toContain("private-response-body");
+
+    const tooMuchText = await ingestUrl("https://example.com/profile", {
+      maxExtractedCharacters: 3,
+      fetcher: async () =>
+        new Response("private-response-body", {
+          headers: { "content-type": "text/plain" },
+        }),
+    });
+    expect(tooMuchText.source?.text).toBe("");
+    expect(tooMuchText.issues).toMatchObject([{ code: "extracted-content-too-large" }]);
+    expect(tooMuchText.issues[0]?.message).not.toContain("private-response-body");
+  });
+
+  it("reports timeout and fetch failures using sanitized issues", async () => {
+    const timeout = await ingestUrl("https://example.com/slow", {
+      timeoutMs: 1,
+      fetcher: () => new Promise<Response>(() => undefined),
+    });
+    expect(timeout.source).toBeNull();
+    expect(timeout.issues).toMatchObject([{ code: "fetch-timeout" }]);
+
+    const secret = "PRIVATE-RESPONSE-BODY";
+    const failure = await ingestUrl("https://example.com/failure", {
+      fetcher: async () => {
+        throw new Error(secret);
+      },
+    });
+    expect(failure.source).toBeNull();
+    expect(failure.issues).toMatchObject([{ code: "fetch-failure" }]);
+    expect(failure.issues[0]?.message).not.toContain(secret);
+  });
+
+  it("accepts supported text content types and rejects non-text responses", async () => {
+    const html = await ingestUrl("https://example.com/profile", {
+      fetcher: async () =>
+        new Response("<p>Visible</p><script>PRIVATE</script>", {
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
+    });
+    expect(html.issues).toEqual([]);
+    expect(html.source?.mediaType).toBe("text/html");
+    expect(html.source?.text).toBe("Visible");
+
+    const unsupported = await ingestUrl("https://example.com/data", {
+      fetcher: async () =>
+        new Response('{"private":true}', {
+          headers: { "content-type": "application/json" },
+        }),
+    });
+    expect(unsupported.source).toBeNull();
+    expect(unsupported.issues).toMatchObject([{ code: "unsupported-content-type" }]);
+    expect(unsupported.issues[0]?.message).not.toContain("private");
+  });
+
+  it("keeps content checksums and chunk IDs stable for identical URL responses", async () => {
+    const body = "First line\nSecond line";
+    const options = {
+      fetcher: async () => new Response(body, { headers: { "content-type": "text/plain" } }),
+      now: () => new Date("2026-08-13T10:02:00.000Z"),
+      maxChunkCharacters: 64,
+    };
+    const first = await ingestUrl("https://example.com/evidence.txt", options);
+    const second = await ingestUrl("https://example.com/evidence.txt", options);
+
+    expect(first.issues).toEqual([]);
+    expect(second.issues).toEqual([]);
+    expect(first.source?.checksum).toBe(second.source?.checksum);
+    expect(first.source?.chunks).toEqual(second.source?.chunks);
   });
 });

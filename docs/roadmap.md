@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document  
-**Last reviewed:** 2026-08-12  
+**Last reviewed:** 2026-08-13
 **Current stage:** Integrated local alpha
 
 This document describes product direction, not fixed delivery dates. The
@@ -40,14 +40,17 @@ SQLite history, a review UI, approved Markdown/DOCX/PDF export, and an offline
 synthetic pilot. The CLI and packaged Electron desktop path now share the local
 application driver; the desktop can create/open a workspace, run the offline
 fixture, review it, and recover persisted decisions after restart. Product
-quality has not yet been demonstrated on real applications.
+quality has not yet been demonstrated on real applications. The next alpha
+completion slice is real-input onboarding: real workspaces must remain empty
+until the user provides candidate evidence and a target job description; the
+offline fixture is an explicit demo path.
 
 ## Roadmap
 
 | Horizon | Stage | Status | Outcome | Key dependencies |
 | --- | --- | --- | --- | --- |
-| Now | Integrated local alpha | Acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, packaged smoke acceptance |
-| Next | Retrieval and provider quality | Not started | Improve evidence selection and make live runs dependable | Alpha workflow, retrieval baseline, representative evaluation cases |
+| Now | Integrated local alpha | Real-input onboarding in progress | Complete one application entirely in the desktop app | Shared application service, Electron host, real source intake, packaged smoke acceptance |
+| Next | Retrieval and provider quality | Not started | Improve evidence selection and make live runs dependable | Real-input alpha workflow, provenance baseline, representative evaluation cases |
 | Next | Real-application pilot | Not started | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics |
 | Later | Production-ready beta | Not started | Distribute a safe, dependable desktop application | Pilot decision, packaging and security review |
 | Later | Controlled expansion | Not started | Extend proven workflows without weakening trust boundaries | Beta evidence and explicit product demand |
@@ -65,6 +68,10 @@ product.
 - Add a narrow native bridge and operating-system credential storage.
 - Expose the latest lifecycle state through an append-only history projection.
 - Configure local PDF and DOCX input extractors.
+- Keep real workspace creation empty by default; make synthetic fixtures an
+  explicitly labeled demo path.
+- Provide readiness-gated local file and approved public URL intake for the
+  target job description and candidate evidence, with local provenance.
 - Keep user and architecture documentation synchronized with shipped behavior.
 
 **Exit criterion:** A user can create, run, review, approve, restart, resume,
@@ -154,3 +161,4 @@ roadmap change should say what changed, why, and what moved out to make room.
 | 2026-08-12 | Created the living roadmap and set Integrated local alpha as Now | Phase-0 implementation is complete; product integration and real validation are the next constraints |
 | 2026-08-12 | Added the shared local driver and Electron host path to the alpha scope | The renderer bridge now has a real local runtime; packaged acceptance is the remaining stage gate |
 | 2026-08-13 | Added stage-based release automation as issue #46 | Each roadmap stage should leave a versioned, reproducible baseline for the next stage |
+| 2026-08-13 | Added real-input onboarding and approved URL intake to the integrated alpha scope as issue #51 | The first Windows release exposed that synthetic workspace data was being shown as if it were user input; retrieval and pilot work need real, provenance-bearing sources |

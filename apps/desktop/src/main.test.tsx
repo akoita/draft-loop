@@ -8,6 +8,34 @@ import {
 import { ReviewWorkspace } from "./review.js";
 
 describe("desktop trust-centered review", () => {
+  it("shows honest onboarding for a real workspace without inputs", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "collecting" as const,
+      runId: "pending",
+      setup: {
+        fixtureMode: false,
+        jobDescriptionReady: false,
+        evidenceSourceCount: 0,
+        ready: false,
+        nextSteps: ["Add a target job description.", "Add at least one candidate evidence source."],
+      },
+    };
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={state}
+        onAction={() => undefined}
+        onSelectFiles={() => undefined}
+        onAddUrl={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("Bring your evidence into the loop");
+    expect(html).toContain("Add job description");
+    expect(html).toContain("Review and fetch evidence URL");
+    expect(html).toContain("Start author–critic review");
+  });
+
   it("makes paused progress, provider exposure, and unresolved findings visible", () => {
     const state = createFixtureReviewState();
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);

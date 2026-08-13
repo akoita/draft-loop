@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import {
   type DesktopReviewState,
@@ -10,6 +10,8 @@ import {
 interface ReviewWorkspaceProps {
   readonly state: DesktopReviewState;
   readonly onAction: (action: ReviewAction) => void;
+  readonly onSelectFiles?: (target: "evidence" | "job-description") => void;
+  readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -24,13 +26,152 @@ function stateLabel(value: DesktopReviewState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
-export function ReviewWorkspace({ state, onAction }: ReviewWorkspaceProps) {
+export function ReviewWorkspace({
+  state,
+  onAction,
+  onSelectFiles,
+  onAddUrl,
+}: ReviewWorkspaceProps) {
   const blockingFindings = unresolvedBlockingFindings(state);
+  const unresolvedFindings = state.findings.filter(
+    (finding) => finding.decision === "pending" || finding.decision === "deferred",
+  );
   const claimById = useMemo(
     () => new Map(state.artifact.claims.map((claim) => [claim.id, claim])),
     [state.artifact.claims],
   );
   const canApprove = state.state === "awaiting-approval" && blockingFindings.length === 0;
+  const [jobUrl, setJobUrl] = useState("");
+  const [evidenceUrl, setEvidenceUrl] = useState("");
+  const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
+
+  const submitUrl = (target: "evidence" | "job-description"): void => {
+    const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
+    if (value === "" || onAddUrl === undefined) return;
+    onAddUrl(target, value);
+    if (target === "job-description") setJobUrl("");
+    else setEvidenceUrl("");
+  };
+
+  if (state.state === "collecting") {
+    return (
+      <main className="app-shell">
+        <header className="topbar">
+          <div>
+            <p className="eyebrow">DraftLoop / Workspace setup</p>
+            <h1>Bring your evidence into the loop</h1>
+          </div>
+          <div className="run-identity">
+            <span>{state.workspaceId}</span>
+            <span className="state-pill state-collecting">Collecting inputs</span>
+          </div>
+        </header>
+        <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
+          <p className="eyebrow">Before the first run</p>
+          <h2 id="onboarding-title">Add the sources DraftLoop is allowed to use</h2>
+          <p className="onboarding-copy">
+            Your files stay in this workspace. DraftLoop will not invent missing experience or start
+            an agent run until the target job and candidate evidence are present.
+          </p>
+          <div className="setup-grid">
+            <article className="setup-card">
+              <span className="setup-number">01</span>
+              <strong>Target job description</strong>
+              <span>
+                {state.setup.jobDescriptionReady ? "Ready for review" : "Required input missing"}
+              </span>
+              <button
+                className="button button-quiet"
+                type="button"
+                disabled={onSelectFiles === undefined}
+                onClick={() => onSelectFiles?.("job-description")}
+              >
+                {state.setup.jobDescriptionReady
+                  ? "Replace job description"
+                  : "Add job description"}
+              </button>
+              <label className="url-input-label">
+                <span>Or provide a public URL</span>
+                <input
+                  className="url-input"
+                  type="url"
+                  placeholder="https://…"
+                  value={jobUrl}
+                  onChange={(event) => setJobUrl(event.target.value)}
+                  aria-label="Target job description URL"
+                />
+              </label>
+              <button
+                className="button button-outline"
+                type="button"
+                disabled={onAddUrl === undefined || jobUrl.trim() === ""}
+                onClick={() => submitUrl("job-description")}
+              >
+                Review and fetch job URL
+              </button>
+            </article>
+            <article className="setup-card">
+              <span className="setup-number">02</span>
+              <strong>Candidate evidence</strong>
+              <span>
+                {state.setup.evidenceSourceCount === 0
+                  ? "Add a CV, portfolio, or other source"
+                  : `${state.setup.evidenceSourceCount} source${state.setup.evidenceSourceCount === 1 ? "" : "s"} ready`}
+              </span>
+              <button
+                className="button button-quiet"
+                type="button"
+                disabled={onSelectFiles === undefined}
+                onClick={() => onSelectFiles?.("evidence")}
+              >
+                Add evidence files
+              </button>
+              <label className="url-input-label">
+                <span>Or provide a public URL</span>
+                <input
+                  className="url-input"
+                  type="url"
+                  placeholder="https://github.com/…"
+                  value={evidenceUrl}
+                  onChange={(event) => setEvidenceUrl(event.target.value)}
+                  aria-label="Candidate evidence URL"
+                />
+              </label>
+              <button
+                className="button button-outline"
+                type="button"
+                disabled={onAddUrl === undefined || evidenceUrl.trim() === ""}
+                onClick={() => submitUrl("evidence")}
+              >
+                Review and fetch evidence URL
+              </button>
+            </article>
+          </div>
+          {state.setup.nextSteps.length > 0 ? (
+            <div className="setup-next-steps">
+              <strong>Next steps</strong>
+              <ul>
+                {state.setup.nextSteps.map((step) => (
+                  <li key={step}>{step}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          <div className="onboarding-footer">
+            <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
+            <button
+              className="button button-primary"
+              type="button"
+              disabled={!state.setup.ready}
+              onClick={() => onAction({ type: "start" })}
+            >
+              Start author–critic review
+            </button>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="app-shell">
@@ -42,6 +183,9 @@ export function ReviewWorkspace({ state, onAction }: ReviewWorkspaceProps) {
         <div className="run-identity">
           <span>{state.workspaceId}</span>
           <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
+          <span className="approval-pill">
+            {state.approval === "approved" ? "Artifact approved" : "Approval pending"}
+          </span>
           <span>Round {state.round}</span>
         </div>
       </header>
@@ -224,7 +368,7 @@ export function ReviewWorkspace({ state, onAction }: ReviewWorkspaceProps) {
                 <p className="eyebrow">Critique</p>
                 <h2>Findings</h2>
               </div>
-              <span className="count-badge">{state.findings.length}</span>
+              <span className="count-badge">{unresolvedFindings.length} unresolved</span>
             </div>
             {state.findings.map((finding) => {
               const claim =
@@ -245,6 +389,21 @@ export function ReviewWorkspace({ state, onAction }: ReviewWorkspaceProps) {
                   {claim === undefined ? null : (
                     <p className="linked-claim">Linked claim: {claim.text}</p>
                   )}
+                  <label className="rationale-input-label">
+                    <span>Override rationale (required for Override)</span>
+                    <input
+                      className="rationale-input"
+                      type="text"
+                      value={overrideReasons[finding.id] ?? finding.rationale ?? ""}
+                      onChange={(event) =>
+                        setOverrideReasons((current) => ({
+                          ...current,
+                          [finding.id]: event.target.value,
+                        }))
+                      }
+                      aria-label={`Override rationale for ${finding.code}`}
+                    />
+                  </label>
                   <fieldset className="finding-actions" aria-label={`Decision for ${finding.code}`}>
                     <legend className="sr-only">Decision for {finding.code}</legend>
                     {(Object.keys(decisionLabels) as FindingDecision[])
@@ -258,9 +417,23 @@ export function ReviewWorkspace({ state, onAction }: ReviewWorkspaceProps) {
                           }
                           type="button"
                           key={decision}
-                          onClick={() =>
-                            onAction({ type: "finding-decision", findingId: finding.id, decision })
+                          disabled={
+                            decision === "overridden" &&
+                            (overrideReasons[finding.id] ?? finding.rationale ?? "").trim() === ""
                           }
+                          onClick={() => {
+                            const rationale = (
+                              overrideReasons[finding.id] ??
+                              finding.rationale ??
+                              ""
+                            ).trim();
+                            onAction({
+                              type: "finding-decision",
+                              findingId: finding.id,
+                              decision,
+                              ...(decision === "overridden" ? { rationale } : {}),
+                            });
+                          }}
                         >
                           {decisionLabels[decision]}
                         </button>
@@ -274,6 +447,10 @@ export function ReviewWorkspace({ state, onAction }: ReviewWorkspaceProps) {
           <section className="panel approval-panel" aria-label="approval and export">
             <p className="eyebrow">Human gate</p>
             <h2>Approval is separate from export</h2>
+            <p className="subtle approval-status">
+              Artifact: {state.approval === "approved" ? "approved" : "not approved"} · Export:{" "}
+              {state.exportPath === null ? "not exported" : "exported"}
+            </p>
             {blockingFindings.length > 0 ? (
               <p className="warning-copy">
                 Resolve or override {blockingFindings.length} blocking finding before approval.

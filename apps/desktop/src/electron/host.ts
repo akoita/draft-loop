@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { copyFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
 import {
@@ -9,6 +9,7 @@ import {
   createLocalApplicationDriver,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
+import { ingestUrl, type UrlFetcher, type UrlHostnameResolver } from "@draft-loop/ingestion";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 
 import {
@@ -22,6 +23,8 @@ import {
   type FileSelectResult,
   type ReviewDispatchInput,
   type SelectedFile,
+  type SourceAddUrlInput,
+  type SourceAddUrlResult,
   type SupportedFileExtension,
   type SupportedMediaType,
   safeBridgeError,
@@ -36,9 +39,11 @@ import type {
   ReviewEvent,
   ReviewFinding,
   ReviewSection,
+  WorkspaceReadiness,
 } from "../model.js";
 
 const configDirectory = ".draft-loop";
+const sourceProvenanceFilename = "source-provenance.json";
 const maxImportedFileBytes = 20 * 1024 * 1024;
 
 export interface NativeHostDialogs {
@@ -56,6 +61,8 @@ export interface NativeHostOptions {
   readonly applicationService?: ApplicationService;
   readonly dialogs: NativeHostDialogs;
   readonly credentials?: NativeCredentialStore;
+  readonly urlFetcher?: UrlFetcher;
+  readonly urlHostnameResolver?: UrlHostnameResolver;
   readonly onError?: (error: unknown, capability: BridgeCapability) => void;
 }
 
@@ -66,10 +73,11 @@ interface ActiveWorkspace {
 
 interface ReviewOverrides {
   readonly decisions: Readonly<Record<string, FindingDecision>>;
+  readonly rationales: Readonly<Record<string, string>>;
   readonly edits: Readonly<Record<string, string>>;
 }
 
-const emptyOverrides: ReviewOverrides = { decisions: {}, edits: {} };
+const emptyOverrides: ReviewOverrides = { decisions: {}, rationales: {}, edits: {} };
 const defaultIo: ApplicationIo = { write: () => undefined };
 
 class NativeHostError extends Error {
@@ -96,6 +104,10 @@ function overridesPath(root: string): string {
   return join(root, configDirectory, "review-overrides.json");
 }
 
+function sourceProvenancePath(root: string): string {
+  return join(root, configDirectory, sourceProvenanceFilename);
+}
+
 function rootRelative(root: string, candidate: string): string {
   const normalizedRoot = resolve(root);
   const normalizedCandidate = resolve(candidate);
@@ -118,6 +130,29 @@ function extensionForMediaType(extension: string): SupportedMediaType {
     return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
   }
   return fail("operation-failed", "The selected file type is not supported.");
+}
+
+function isSupportedEvidenceFile(path: string): boolean {
+  return [".md", ".markdown", ".txt", ".text", ".html", ".htm", ".pdf", ".docx"].includes(
+    extname(path).toLowerCase(),
+  );
+}
+
+async function countEvidenceFiles(path: string): Promise<number> {
+  try {
+    const details = await stat(path);
+    if (details.isFile()) return isSupportedEvidenceFile(path) ? 1 : 0;
+    if (!details.isDirectory()) return 0;
+    const entries = await readdir(path, { withFileTypes: true });
+    let count = 0;
+    for (const entry of entries) {
+      if (entry.name.startsWith(".")) continue;
+      count += await countEvidenceFiles(join(path, entry.name));
+    }
+    return count;
+  } catch {
+    return 0;
+  }
 }
 
 function io(): ApplicationIo {
@@ -202,6 +237,7 @@ function reviewFinding(
     message: finding.message,
     decision: overrides.decisions[id] ?? "pending",
     agreement: "critic-only",
+    ...(overrides.rationales[id] === undefined ? {} : { rationale: overrides.rationales[id] }),
     ...(finding.claimId === undefined ? {} : { claimId: finding.claimId }),
     ...(finding.sectionId === undefined ? {} : { sectionId: finding.sectionId }),
   };
@@ -243,6 +279,7 @@ function reviewState(
   snapshot: RunSnapshot,
   overrides: ReviewOverrides,
   exportPath: string | null,
+  setup: WorkspaceReadiness,
 ): DesktopReviewState {
   const artifact = reviewArtifact(snapshot.artifact, overrides);
   const evaluation = snapshot.latestEvaluation;
@@ -271,6 +308,46 @@ function reviewState(
     },
     events: reviewEvents(snapshot),
     exportPath,
+    setup,
+  };
+}
+
+function emptyReviewState(
+  descriptor: WorkspaceDescriptor,
+  setup: WorkspaceReadiness,
+): DesktopReviewState {
+  return {
+    workspaceId: descriptor.id,
+    runId: "pending",
+    state: "collecting",
+    round: 0,
+    approval: "pending",
+    totalCostUsd: 0,
+    budgetUsd: descriptor.maxCostUsd ?? null,
+    providerExposure: {
+      author: descriptor.author,
+      critic: descriptor.critic,
+      transmissionAllowed: false,
+      sensitiveData: setup.evidenceSourceCount > 0,
+      requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
+    },
+    previousArtifact: null,
+    artifact: {
+      id: "artifact-pending",
+      version: 0,
+      createdAt: new Date().toISOString(),
+      sections: [],
+      claims: [],
+    },
+    findings: [],
+    evaluation: {
+      ready: setup.ready,
+      stopReason: setup.ready ? "ready" : "collecting-inputs",
+      scores: {},
+    },
+    events: [],
+    exportPath: null,
+    setup,
   };
 }
 
@@ -288,14 +365,40 @@ async function existingExportPath(root: string, runId: string): Promise<string |
   }
 }
 
+async function workspaceReadiness(
+  descriptor: WorkspaceDescriptor,
+  root: string,
+): Promise<WorkspaceReadiness> {
+  const jobPath = resolve(root, descriptor.jobDescriptionPath);
+  let jobDescriptionReady = false;
+  try {
+    jobDescriptionReady = (await readFile(jobPath, "utf8")).trim().length > 0;
+  } catch {
+    jobDescriptionReady = false;
+  }
+  const evidenceSourceCount = await countEvidenceFiles(resolve(root, descriptor.sourceDirectory));
+  const nextSteps: string[] = [];
+  if (!jobDescriptionReady) nextSteps.push("Add a target job description.");
+  if (evidenceSourceCount === 0) nextSteps.push("Add at least one candidate evidence source.");
+  return {
+    fixtureMode: descriptor.fixtureMode,
+    jobDescriptionReady,
+    evidenceSourceCount,
+    ready: jobDescriptionReady && evidenceSourceCount > 0,
+    nextSteps,
+  };
+}
+
 async function readOverrides(root: string): Promise<ReviewOverrides> {
   try {
     const value: unknown = JSON.parse(await readFile(overridesPath(root), "utf8"));
     if (typeof value !== "object" || value === null || Array.isArray(value)) return emptyOverrides;
     const record = value as Record<string, unknown>;
     const decisions = record.decisions;
+    const rationales = record.rationales;
     const edits = record.edits;
     const normalizedDecisions: Record<string, FindingDecision> = {};
+    const normalizedRationales: Record<string, string> = {};
     if (typeof decisions === "object" && decisions !== null && !Array.isArray(decisions)) {
       for (const [id, decision] of Object.entries(decisions)) {
         if (
@@ -304,6 +407,13 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
           ["pending", "accepted", "rejected", "deferred", "overridden"].includes(decision)
         ) {
           normalizedDecisions[id] = decision as FindingDecision;
+        }
+      }
+    }
+    if (typeof rationales === "object" && rationales !== null && !Array.isArray(rationales)) {
+      for (const [id, rationale] of Object.entries(rationales)) {
+        if (id.length <= 128 && typeof rationale === "string" && rationale.length <= 1_000) {
+          normalizedRationales[id] = rationale;
         }
       }
     }
@@ -317,6 +427,7 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
     }
     return {
       decisions: normalizedDecisions,
+      rationales: normalizedRationales,
       edits: normalizedEdits,
     };
   } catch {
@@ -396,6 +507,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
 
   async function createWorkspace(
     name: string,
+    mode: "real" | "demo" = "demo",
   ): Promise<{ workspace: { id: string; name: string } }> {
     const parent = await options.dialogs.chooseDirectory("create");
     if (parent === undefined) return fail("permission-denied", "Workspace creation was cancelled.");
@@ -403,22 +515,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     try {
       await mkdir(root);
       await mkdir(join(root, "evidence"));
-      await writeFile(
-        join(root, "job.md"),
-        "TypeScript systems engineer\nLocal-first product development\n",
-        "utf8",
-      );
-      await writeFile(
-        join(root, "evidence", "resume.md"),
-        "Synthetic offline evidence for the DraftLoop desktop smoke workflow.\n",
-        "utf8",
-      );
+      if (mode === "demo") {
+        await writeFile(
+          join(root, "job.md"),
+          "TypeScript systems engineer\nLocal-first product development\n",
+          "utf8",
+        );
+        await writeFile(
+          join(root, "evidence", "resume.md"),
+          "Synthetic offline evidence for the DraftLoop desktop smoke workflow.\n",
+          "utf8",
+        );
+      } else {
+        await writeFile(join(root, "job.md"), "", "utf8");
+      }
       const descriptor = await service.initialize(
         {
           root,
           jobDescription: "job.md",
           sources: "evidence",
-          fixtureMode: true,
+          fixtureMode: mode === "demo",
           maxRounds: 2,
         },
         io(),
@@ -443,6 +559,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
 
   async function selectFiles(input: FileSelectInput): Promise<FileSelectResult> {
     const workspace = workspaceFor(input.workspaceId);
+    const targetKind = input.target ?? "evidence";
     const selected = await options.dialogs.chooseFiles(input);
     const files: SelectedFile[] = [];
     for (const sourcePath of selected.slice(0, input.multiple === false ? 1 : 100)) {
@@ -465,9 +582,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         candidateRelative === "" ||
         (!candidateRelative.startsWith("..") && !isAbsolute(candidateRelative));
       const targetRelative =
-        isInsideWorkspace && candidateRelative.startsWith("evidence/")
-          ? candidateRelative
-          : join("evidence", "imported", basename(sourcePath));
+        targetKind === "job-description"
+          ? "job.md"
+          : isInsideWorkspace && candidateRelative.startsWith("evidence/")
+            ? candidateRelative
+            : join("evidence", "imported", basename(sourcePath));
       const target = resolve(workspace.root, targetRelative);
       rootRelative(workspace.root, target);
       await mkdir(dirname(target), { recursive: true });
@@ -486,17 +605,93 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return { files };
   }
 
+  async function saveSourceProvenance(
+    root: string,
+    entry: Readonly<Record<string, string>>,
+  ): Promise<void> {
+    let entries: Record<string, string>[] = [];
+    try {
+      const parsed: unknown = JSON.parse(await readFile(sourceProvenancePath(root), "utf8"));
+      if (Array.isArray(parsed)) {
+        entries = parsed.filter(
+          (item): item is Record<string, string> =>
+            typeof item === "object" && item !== null && !Array.isArray(item),
+        );
+      }
+    } catch {
+      entries = [];
+    }
+    const withoutDuplicate = entries.filter(
+      (item) => !(item.originalUrl === entry.originalUrl && item.role === entry.role),
+    );
+    withoutDuplicate.push({ ...entry });
+    await mkdir(dirname(sourceProvenancePath(root)), { recursive: true });
+    await writeFile(
+      sourceProvenancePath(root),
+      `${JSON.stringify(withoutDuplicate, null, 2)}\n`,
+      "utf8",
+    );
+  }
+
+  async function addUrl(input: SourceAddUrlInput): Promise<SourceAddUrlResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const result = await ingestUrl(input.url, {
+      approved: input.approved,
+      ...(options.urlFetcher === undefined ? {} : { fetcher: options.urlFetcher }),
+      ...(options.urlHostnameResolver === undefined
+        ? {}
+        : { resolveHostname: options.urlHostnameResolver }),
+    });
+    const source = result.source;
+    if (source === null || source.url === undefined || result.issues.length > 0) {
+      return fail(
+        "operation-failed",
+        result.issues[0]?.message ?? "The URL did not contain usable text.",
+      );
+    }
+    const targetRelative =
+      input.target === "job-description"
+        ? "job.md"
+        : join("evidence", "imported", `url-${source.checksum.slice(0, 16)}.md`);
+    const target = resolve(workspace.root, targetRelative);
+    rootRelative(workspace.root, target);
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, `${source.text}\n`, "utf8");
+    await saveSourceProvenance(workspace.root, {
+      role: input.target,
+      originalUrl: source.url.originalUrl,
+      finalUrl: source.url.finalUrl,
+      fetchedAt: source.url.fetchedAt,
+      kind: source.url.kind,
+      checksum: source.checksum,
+      relativePath: targetRelative,
+    });
+    return {
+      sourcePath: targetRelative,
+      originalUrl: source.url.originalUrl,
+      finalUrl: source.url.finalUrl,
+      kind: source.url.kind,
+      mediaType: source.mediaType,
+    };
+  }
+
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
     const workspace = workspaceFor(input.workspaceId);
-    await loadSnapshot(workspace, input.runId);
+    if (input.action.type !== "start") await loadSnapshot(workspace, input.runId);
     let overrides = await readOverrides(workspace.root);
     let exportPath: string | null = null;
     const action: ReviewAction = input.action;
     switch (action.type) {
+      case "start":
+        await service.start({ root: workspace.root, allowProviderData: false }, io());
+        break;
       case "finding-decision":
         overrides = {
           ...overrides,
           decisions: { ...overrides.decisions, [action.findingId]: action.decision },
+          ...(action.rationale === undefined
+            ? {}
+            : { rationales: { ...overrides.rationales, [action.findingId]: action.rationale } }),
         };
         await writeOverrides(workspace.root, overrides);
         break;
@@ -529,8 +724,17 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         );
         break;
     }
-    const latest = await loadSnapshot(workspace, input.runId);
-    return reviewState(workspace.descriptor, latest, overrides, exportPath);
+    const latest = await loadSnapshot(
+      workspace,
+      input.action.type === "start" ? undefined : input.runId,
+    );
+    return reviewState(
+      workspace.descriptor,
+      latest,
+      overrides,
+      exportPath,
+      await workspaceReadiness(workspace.descriptor, workspace.root),
+    );
   }
 
   async function invoke(value: unknown): Promise<BridgeResult<unknown>> {
@@ -545,7 +749,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         case "workspace.open":
           return { ok: true, value: await openWorkspace() };
         case "workspace.create":
-          return { ok: true, value: await createWorkspace(command.input.name) };
+          return {
+            ok: true,
+            value: await createWorkspace(command.input.name, command.input.mode ?? "demo"),
+          };
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);
           return {
@@ -594,7 +801,17 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               ? active
               : workspaceFor(command.input.workspaceId);
           if (workspace === undefined) return fail("not-found", "Open a workspace first.");
-          const snapshot = await loadSnapshot(workspace, command.input.runId);
+          const snapshot = await service.status({
+            root: workspace.root,
+            ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
+          });
+          const setup = await workspaceReadiness(workspace.descriptor, workspace.root);
+          if (snapshot === undefined) {
+            return {
+              ok: true,
+              value: emptyReviewState(workspace.descriptor, setup),
+            };
+          }
           return {
             ok: true,
             value: reviewState(
@@ -602,6 +819,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               snapshot,
               await readOverrides(workspace.root),
               await existingExportPath(workspace.root, snapshot.runId),
+              setup,
             ),
           };
         }
@@ -609,6 +827,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await dispatchReview(command.input) };
         case "file.select":
           return { ok: true, value: await selectFiles(command.input) };
+        case "source.add-url":
+          return { ok: true, value: await addUrl(command.input) };
         case "export.write": {
           const workspace = workspaceFor(command.input.workspaceId);
           const outputPath =

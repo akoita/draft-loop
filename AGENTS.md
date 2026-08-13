@@ -1,5 +1,11 @@
 # Working instructions
 
+## Roadmap alignment
+
+Before proposing or implementing roadmap-stage work, read `docs/roadmap.md`,
+align the work with its current stage, and update the roadmap when scope or
+priorities change.
+
 ## Architecture boundaries
 
 - `packages/domain` owns framework-free product concepts and workflow states.

@@ -1,4 +1,5 @@
 export type ReviewRunState =
+  | "collecting"
   | "drafting"
   | "reviewing"
   | "revising"
@@ -57,6 +58,7 @@ export interface ReviewFinding {
   readonly message: string;
   readonly decision: FindingDecision;
   readonly agreement: "critic-only" | "author-and-critic" | "user-disputed";
+  readonly rationale?: string;
   readonly claimId?: string;
   readonly sectionId?: string;
 }
@@ -73,6 +75,14 @@ export interface ReviewEvaluation {
   readonly ready: boolean;
   readonly stopReason: string;
   readonly scores: Readonly<Record<string, number>>;
+}
+
+export interface WorkspaceReadiness {
+  readonly fixtureMode: boolean;
+  readonly jobDescriptionReady: boolean;
+  readonly evidenceSourceCount: number;
+  readonly ready: boolean;
+  readonly nextSteps: readonly string[];
 }
 
 export interface ReviewEvent {
@@ -97,6 +107,7 @@ export interface DesktopReviewState {
   readonly evaluation: ReviewEvaluation;
   readonly events: readonly ReviewEvent[];
   readonly exportPath: string | null;
+  readonly setup: WorkspaceReadiness;
 }
 
 export type ReviewAction =
@@ -104,9 +115,11 @@ export type ReviewAction =
       readonly type: "finding-decision";
       readonly findingId: string;
       readonly decision: FindingDecision;
+      readonly rationale?: string;
     }
   | { readonly type: "edit-block"; readonly blockId: string; readonly text: string }
   | { readonly type: "pause" }
+  | { readonly type: "start" }
   | { readonly type: "resume" }
   | { readonly type: "request-revision" }
   | { readonly type: "approve" }
@@ -120,6 +133,12 @@ export interface DesktopReviewPort {
   ) => Promise<DesktopReviewState>;
   readonly openWorkspace?: () => Promise<DesktopReviewState>;
   readonly createWorkspace?: (name: string) => Promise<DesktopReviewState>;
+  readonly createDemoWorkspace?: (name: string) => Promise<DesktopReviewState>;
+  readonly selectFiles?: (target: "evidence" | "job-description") => Promise<DesktopReviewState>;
+  readonly addUrl?: (
+    target: "evidence" | "job-description",
+    url: string,
+  ) => Promise<DesktopReviewState>;
 }
 
 export function unresolvedBlockingFindings(state: DesktopReviewState): readonly ReviewFinding[] {
@@ -139,7 +158,13 @@ export function reduceReviewState(
       return {
         ...state,
         findings: state.findings.map((finding) =>
-          finding.id === action.findingId ? { ...finding, decision: action.decision } : finding,
+          finding.id === action.findingId
+            ? {
+                ...finding,
+                decision: action.decision,
+                ...(action.rationale === undefined ? {} : { rationale: action.rationale }),
+              }
+            : finding,
         ),
       };
     case "edit-block":
@@ -159,6 +184,10 @@ export function reduceReviewState(
       return state.state === "approved" || state.state === "exported"
         ? state
         : { ...state, state: "paused" };
+    case "start":
+      return state.state === "collecting" && state.setup.ready
+        ? { ...state, state: "drafting" }
+        : state;
     case "resume":
       return state.state === "paused" ? { ...state, state: "reviewing" } : state;
     case "request-revision":
@@ -321,6 +350,13 @@ export function createFixtureReviewState(): DesktopReviewState {
       },
     ],
     exportPath: null,
+    setup: {
+      fixtureMode: true,
+      jobDescriptionReady: true,
+      evidenceSourceCount: 1,
+      ready: true,
+      nextSteps: [],
+    },
   };
 }
 

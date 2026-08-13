@@ -68,22 +68,53 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopR
     }
     return load();
   };
+  const refresh = async (): Promise<DesktopReviewState> => load();
   return {
     load,
     openWorkspace: async () => {
-      const result = unwrap(
+      unwrap(
         await capabilityPort.execute({
           type: "workspace.open",
           input: { selection: "native-dialog" },
         }),
       );
-      return ensureRun(result.workspace.id);
+      return refresh();
     },
     createWorkspace: async (name) => {
+      unwrap(
+        await capabilityPort.execute({ type: "workspace.create", input: { name, mode: "real" } }),
+      );
+      return refresh();
+    },
+    createDemoWorkspace: async (name) => {
       const result = unwrap(
-        await capabilityPort.execute({ type: "workspace.create", input: { name } }),
+        await capabilityPort.execute({ type: "workspace.create", input: { name, mode: "demo" } }),
       );
       return ensureRun(result.workspace.id);
+    },
+    selectFiles: async (target) => {
+      const state = await load();
+      unwrap(
+        await capabilityPort.execute({
+          type: "file.select",
+          input: {
+            workspaceId: state.workspaceId,
+            target,
+            ...(target === "job-description" ? { multiple: false } : {}),
+          },
+        }),
+      );
+      return refresh();
+    },
+    addUrl: async (target, url) => {
+      const state = await load();
+      unwrap(
+        await capabilityPort.execute({
+          type: "source.add-url",
+          input: { workspaceId: state.workspaceId, target, url, approved: true },
+        }),
+      );
+      return refresh();
     },
     dispatch: async (state: DesktopReviewState, action: ReviewAction) => {
       const result = await capabilityPort.execute({

@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import { readFile } from "node:fs/promises";
+import { isIP } from "node:net";
 import { extname } from "node:path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 
@@ -17,6 +19,24 @@ export type BinaryMediaType = Extract<
   "application/pdf" | "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 >;
 
+export const urlSourceKinds = [
+  "github",
+  "certification",
+  "profile",
+  "portfolio",
+  "job-description",
+  "generic",
+] as const;
+
+export type UrlSourceKind = (typeof urlSourceKinds)[number];
+
+export interface UrlProvenance {
+  readonly originalUrl: string;
+  readonly finalUrl: string;
+  readonly fetchedAt: string;
+  readonly kind: UrlSourceKind;
+}
+
 const mediaTypeByExtension: Readonly<Record<string, SupportedMediaType>> = {
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ".htm": "text/html",
@@ -31,6 +51,7 @@ const mediaTypeByExtension: Readonly<Record<string, SupportedMediaType>> = {
 export interface IngestionSource {
   readonly path: string;
   readonly mediaType?: string;
+  readonly url?: UrlProvenance;
 }
 
 export interface SourceLocator {
@@ -45,6 +66,7 @@ export interface SourceChunk {
   readonly checksum: string;
   readonly locator: SourceLocator;
   readonly text: string;
+  readonly url?: UrlProvenance;
 }
 
 export type IngestionIssueCode =
@@ -52,7 +74,15 @@ export type IngestionIssueCode =
   | "extractor-unavailable"
   | "read-failure"
   | "parse-failure"
-  | "empty-content";
+  | "empty-content"
+  | "approval-required"
+  | "unsafe-url"
+  | "redirect-limit"
+  | "fetch-timeout"
+  | "response-too-large"
+  | "fetch-failure"
+  | "unsupported-content-type"
+  | "extracted-content-too-large";
 
 export interface IngestionIssue {
   readonly code: IngestionIssueCode;
@@ -68,6 +98,7 @@ export interface NormalizedSource {
   readonly text: string;
   readonly chunks: readonly SourceChunk[];
   readonly issues: readonly IngestionIssue[];
+  readonly url?: UrlProvenance;
 }
 
 export interface IngestionResult {
@@ -97,8 +128,29 @@ export interface IngestionOptions {
   readonly extractors?: readonly BinarySourceExtractor[];
 }
 
+export type UrlFetcher = (input: string, init?: RequestInit) => Promise<Response>;
+export type UrlHostnameResolver = (hostname: string) => Promise<readonly string[]>;
+
+export interface UrlIngestionOptions extends IngestionOptions {
+  /** An explicit opt-out prevents the fetcher from being invoked. */
+  readonly approved?: boolean;
+  /** An optional approval gate for callers that need an asynchronous decision. */
+  readonly approval?: boolean | (() => boolean | Promise<boolean>);
+  readonly fetcher?: UrlFetcher;
+  /** Override DNS resolution in tests or a host-owned network policy. */
+  readonly resolveHostname?: UrlHostnameResolver;
+  readonly maxRedirects?: number;
+  readonly timeoutMs?: number;
+  readonly maxResponseBytes?: number;
+  readonly maxExtractedCharacters?: number;
+  readonly now?: () => Date;
+}
+
 const maxBinaryBytes = 32 * 1024 * 1024;
 const maxExtractedCharacters = 2_000_000;
+const maxUrlRedirects = 5;
+const maxUrlTimeoutMs = 30_000;
+const maxUrlResponseBytes = 4 * 1024 * 1024;
 
 export function detectMediaType(source: IngestionSource): SupportedMediaType | null {
   const explicitMediaType = source.mediaType?.split(";", 1)[0]?.trim().toLowerCase();
@@ -111,6 +163,73 @@ export function detectMediaType(source: IngestionSource): SupportedMediaType | n
   }
 
   return mediaTypeByExtension[extname(source.path).toLowerCase()] ?? null;
+}
+
+export function classifyUrl(input: string | URL): UrlSourceKind {
+  let parsed: URL;
+  try {
+    parsed = typeof input === "string" ? new URL(input) : input;
+  } catch {
+    return "generic";
+  }
+
+  const hostname = parsed.hostname.toLowerCase().replace(/\.$/u, "");
+  const pathname = parsed.pathname.toLowerCase();
+
+  if (
+    hostname === "github.com" ||
+    hostname.endsWith(".github.com") ||
+    hostname === "githubusercontent.com" ||
+    hostname.endsWith(".githubusercontent.com")
+  ) {
+    return "github";
+  }
+
+  if (
+    hostname === "credly.com" ||
+    hostname.endsWith(".credly.com") ||
+    hostname === "badgr.com" ||
+    hostname.endsWith(".badgr.com") ||
+    hostname === "accredible.com" ||
+    hostname.endsWith(".accredible.com") ||
+    /\/(?:certificates?|certifications?|credentials?|badges?)(?:\/|$)/u.test(pathname)
+  ) {
+    return "certification";
+  }
+
+  if (
+    hostname.startsWith("jobs.") ||
+    hostname.startsWith("careers.") ||
+    hostname === "greenhouse.io" ||
+    hostname.endsWith(".greenhouse.io") ||
+    hostname === "lever.co" ||
+    hostname.endsWith(".lever.co") ||
+    hostname === "ashbyhq.com" ||
+    hostname.endsWith(".ashbyhq.com") ||
+    /\/(?:job|jobs|career|careers|position|positions|vacancy|vacancies|opening|openings|job-description)(?:\/|$)/u.test(
+      pathname,
+    )
+  ) {
+    return "job-description";
+  }
+
+  if (
+    hostname === "linkedin.com" ||
+    hostname.endsWith(".linkedin.com") ||
+    hostname.startsWith("profile.") ||
+    /\/(?:in|pub|profile|bio)(?:\/|$)/u.test(pathname)
+  ) {
+    return "profile";
+  }
+
+  if (
+    hostname.startsWith("portfolio.") ||
+    /\/(?:portfolio|projects?|work|showcase)(?:\/|$)/u.test(pathname)
+  ) {
+    return "portfolio";
+  }
+
+  return "generic";
 }
 
 function isSupportedMediaType(value: string): value is SupportedMediaType {
@@ -453,6 +572,7 @@ function createChunks(
   mediaType: SupportedMediaType,
   sourceChecksum: string,
   maxChunkCharacters: number,
+  url: UrlProvenance | undefined = undefined,
 ): readonly SourceChunk[] {
   const lines = text.split("\n");
   while (lines.at(-1) === "") {
@@ -475,6 +595,7 @@ function createChunks(
       checksum: sourceChecksum,
       locator: { lineStart: start, lineEnd: end },
       text: chunkText,
+      ...(url === undefined ? {} : { url }),
     });
   };
 
@@ -611,6 +732,339 @@ async function extractSource(
   }
 }
 
+function sourceWithUrl(source: IngestionSource, url: UrlProvenance | undefined): IngestionSource {
+  return url === undefined ? source : { ...source, url };
+}
+
+async function normalizeIngestedBytes(
+  source: IngestionSource,
+  mediaType: SupportedMediaType,
+  bytes: Uint8Array,
+  options: IngestionOptions,
+  url: UrlProvenance | undefined = undefined,
+  maxTextCharacters: number | undefined = undefined,
+): Promise<IngestionResult> {
+  const sourceChecksum = checksum(bytes);
+  const extracted = await extractSource(source, mediaType, bytes, sourceChecksum, options);
+  const issues = [...extracted.issues];
+  let text = extracted.text;
+  if (maxTextCharacters !== undefined && text.length > maxTextCharacters) {
+    text = "";
+    issues.push(
+      issue(
+        "extracted-content-too-large",
+        source.path,
+        "The source contains more extracted text than the configured limit.",
+      ),
+    );
+  }
+  if (text.length === 0 && extracted.issues.length === 0 && issues.length === 0) {
+    issues.push(
+      issue("empty-content", source.path, "The source file contains no extractable text."),
+    );
+  }
+
+  const maxChunkCharacters = options.maxChunkCharacters ?? 1200;
+  if (!Number.isInteger(maxChunkCharacters) || maxChunkCharacters < 1) {
+    throw new RangeError("maxChunkCharacters must be a positive integer.");
+  }
+
+  const normalizedSource = sourceWithUrl(source, url);
+  const provenance = url ?? source.url;
+  return {
+    source: {
+      source: normalizedSource,
+      mediaType,
+      checksum: sourceChecksum,
+      text,
+      chunks: createChunks(
+        text,
+        source.path,
+        mediaType,
+        sourceChecksum,
+        maxChunkCharacters,
+        provenance,
+      ),
+      issues,
+      ...(provenance === undefined ? {} : { url: provenance }),
+    },
+    issues,
+  };
+}
+
+function urlIssue(
+  code:
+    | "approval-required"
+    | "unsafe-url"
+    | "redirect-limit"
+    | "fetch-timeout"
+    | "response-too-large"
+    | "fetch-failure"
+    | "unsupported-content-type"
+    | "extracted-content-too-large",
+  sourcePath: string,
+): IngestionIssue {
+  const messages: Readonly<Record<typeof code, string>> = {
+    "approval-required": "URL ingestion requires explicit approval before fetching.",
+    "unsafe-url": "The URL is not allowed for safe ingestion.",
+    "redirect-limit": "The URL redirect limit was exceeded.",
+    "fetch-timeout": "The URL request exceeded the configured timeout.",
+    "response-too-large": "The URL response exceeds the configured size limit.",
+    "fetch-failure": "The URL could not be fetched.",
+    "unsupported-content-type": "The URL response content type is not supported.",
+    "extracted-content-too-large":
+      "The URL response contains more extracted text than the configured limit.",
+  };
+  return issue(code, sourcePath, messages[code]);
+}
+
+function ipv4Parts(hostname: string): readonly number[] | null {
+  const parts = hostname.split(".");
+  if (parts.length !== 4) return null;
+  const values = parts.map((part) => Number.parseInt(part, 10));
+  if (
+    values.some(
+      (value, index) =>
+        !Number.isInteger(value) || value < 0 || value > 255 || parts[index]?.length === 0,
+    )
+  ) {
+    return null;
+  }
+  return values;
+}
+
+function unsafeIpv4(parts: readonly number[]): boolean {
+  const [first = 0, second = 0, third = 0] = parts;
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 0 && third === 0) ||
+    (first === 192 && second === 168) ||
+    (first === 198 && second >= 18 && second <= 19) ||
+    (first === 198 && second === 51 && third === 100) ||
+    (first === 203 && second === 0 && third === 113) ||
+    first >= 224
+  );
+}
+
+function ipv6Parts(hostname: string): readonly number[] | null {
+  const value = hostname.replace(/^\[|\]$/gu, "").toLowerCase();
+  const halves = value.split("::");
+  if (halves.length > 2) return null;
+
+  const parseHalf = (half: string): number[] | null => {
+    if (half === "") return [];
+    const parts = half.split(":");
+    const result: number[] = [];
+    for (const part of parts) {
+      if (part.includes(".")) {
+        const ipv4 = ipv4Parts(part);
+        if (ipv4 === null || result.length + 2 > 8) return null;
+        result.push((ipv4[0] ?? 0) * 256 + (ipv4[1] ?? 0));
+        result.push((ipv4[2] ?? 0) * 256 + (ipv4[3] ?? 0));
+        continue;
+      }
+      if (!/^[0-9a-f]{1,4}$/u.test(part)) return null;
+      result.push(Number.parseInt(part, 16));
+    }
+    return result;
+  };
+
+  const left = parseHalf(halves[0] ?? "");
+  const right = halves.length === 2 ? parseHalf(halves[1] ?? "") : [];
+  if (left === null || right === null) return null;
+  const missing = halves.length === 2 ? 8 - left.length - right.length : 0;
+  if (missing < (halves.length === 2 ? 1 : 0) || left.length + right.length + missing !== 8) {
+    return null;
+  }
+  return [...left, ...new Array<number>(missing).fill(0), ...right];
+}
+
+function unsafeLiteralHostname(hostname: string): boolean {
+  const normalized = hostname.replace(/^\[|\]$/gu, "").toLowerCase();
+  if (normalized === "localhost" || normalized.endsWith(".localhost")) return true;
+
+  const kind = isIP(normalized);
+  if (kind === 4) {
+    const parts = ipv4Parts(normalized);
+    return parts === null || unsafeIpv4(parts);
+  }
+  if (kind !== 6) return false;
+
+  const parts = ipv6Parts(normalized);
+  if (parts === null) return true;
+  const first = parts[0] ?? 0;
+  const mapped = parts.slice(0, 6).every((part) => part === 0) && parts[5] === 0xffff;
+  if (mapped) {
+    const mappedIpv4 = [
+      (parts[6] ?? 0) >>> 8,
+      (parts[6] ?? 0) & 0xff,
+      (parts[7] ?? 0) >>> 8,
+      (parts[7] ?? 0) & 0xff,
+    ];
+    return unsafeIpv4(mappedIpv4);
+  }
+  return (
+    parts.every((part) => part === 0) ||
+    (parts.slice(0, 7).every((part) => part === 0) && parts[7] === 1) ||
+    (first & 0xfe00) === 0xfc00 ||
+    (first & 0xffc0) === 0xfe80 ||
+    (first & 0xff00) === 0xff00
+  );
+}
+
+function parseSafeUrl(input: string): URL | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(input);
+  } catch {
+    return null;
+  }
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.username !== "" ||
+    parsed.password !== "" ||
+    parsed.hash !== "" ||
+    parsed.hostname === "" ||
+    unsafeLiteralHostname(parsed.hostname)
+  ) {
+    return null;
+  }
+  return parsed;
+}
+
+function boundedUrlLimit(
+  value: number | undefined,
+  fallback: number,
+  maximum: number,
+  allowZero = false,
+): number {
+  if (value === undefined) return fallback;
+  if (!Number.isInteger(value) || (allowZero ? value < 0 : value < 1)) {
+    throw new RangeError("URL ingestion limits must be positive integers.");
+  }
+  return Math.min(value, maximum);
+}
+
+class UrlTimeoutError extends Error {}
+class UrlResponseTooLargeError extends Error {}
+
+async function withUrlTimeout<T>(
+  operation: () => Promise<T>,
+  timeoutMs: number,
+  controller: AbortController,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<T>((_resolve, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(new UrlTimeoutError());
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([operation(), timeout]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+async function readResponseBytes(
+  response: Response,
+  maximum: number,
+  signal?: AbortSignal,
+): Promise<Uint8Array> {
+  const contentLength = response.headers.get("content-length");
+  if (contentLength !== null && /^\d+$/u.test(contentLength.trim())) {
+    const declared = Number(contentLength.trim());
+    if (Number.isSafeInteger(declared) && declared > maximum) {
+      void response.body?.cancel().catch(() => undefined);
+      throw new UrlResponseTooLargeError();
+    }
+  }
+
+  if (response.body === null) return new Uint8Array();
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const cancelOnAbort = (): void => {
+    void reader.cancel().catch(() => undefined);
+  };
+  signal?.addEventListener("abort", cancelOnAbort, { once: true });
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      const chunk = next.value;
+      if (chunk === undefined || total + chunk.byteLength > maximum) {
+        throw new UrlResponseTooLargeError();
+      }
+      chunks.push(chunk);
+      total += chunk.byteLength;
+    }
+  } catch (error) {
+    void reader.cancel().catch(() => undefined);
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", cancelOnAbort);
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
+}
+
+function responseMediaType(response: Response, url: URL): SupportedMediaType | null {
+  const header = response.headers.get("content-type");
+  if (header === null || header.trim() === "") {
+    return detectMediaType({ path: url.pathname });
+  }
+  const mediaType = header.split(";", 1)[0]?.trim().toLowerCase();
+  if (mediaType === "application/xhtml+xml") return "text/html";
+  if (mediaType === "text/x-markdown") return "text/markdown";
+  return mediaType !== undefined && isSupportedMediaType(mediaType) ? mediaType : null;
+}
+
+async function approvalAllowsUrlIngestion(options: UrlIngestionOptions): Promise<boolean> {
+  if (options.approved === false || options.approval === false) return false;
+  if (typeof options.approval === "function") {
+    try {
+      return await options.approval();
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
+const defaultUrlFetcher: UrlFetcher = (input, init) => globalThis.fetch(input, init);
+const defaultUrlHostnameResolver: UrlHostnameResolver = async (hostname) =>
+  (await lookup(hostname, { all: true })).map((address) => address.address);
+
+async function resolvedUrlIsSafe(
+  parsed: URL,
+  options: UrlIngestionOptions,
+  fetcher: UrlFetcher,
+): Promise<boolean> {
+  if (unsafeLiteralHostname(parsed.hostname)) return false;
+  if (options.resolveHostname === undefined && fetcher !== defaultUrlFetcher) return true;
+  const resolver = options.resolveHostname ?? defaultUrlHostnameResolver;
+  try {
+    const addresses = await resolver(parsed.hostname);
+    return addresses.length > 0 && addresses.every((address) => !unsafeLiteralHostname(address));
+  } catch {
+    return false;
+  }
+}
+
 export async function ingestFile(
   source: IngestionSource,
   options: IngestionOptions = {},
@@ -633,32 +1087,156 @@ export async function ingestFile(
     return { source: null, issues: [resultIssue] };
   }
 
-  const sourceChecksum = checksum(bytes);
-  const extracted = await extractSource(source, mediaType, bytes, sourceChecksum, options);
-  const issues = [...extracted.issues];
-  const text = extracted.text;
-  if (text.length === 0 && extracted.issues.length === 0) {
-    issues.push(
-      issue("empty-content", source.path, "The source file contains no extractable text."),
-    );
+  return normalizeIngestedBytes(source, mediaType, bytes, options, source.url);
+}
+
+export async function ingestUrl(
+  input: string,
+  options: UrlIngestionOptions = {},
+): Promise<IngestionResult> {
+  const parsed = parseSafeUrl(input);
+  if (parsed === null) {
+    return { source: null, issues: [urlIssue("unsafe-url", input)] };
   }
 
-  const maxChunkCharacters = options.maxChunkCharacters ?? 1200;
-  if (!Number.isInteger(maxChunkCharacters) || maxChunkCharacters < 1) {
-    throw new RangeError("maxChunkCharacters must be a positive integer.");
+  const originalUrl = parsed.href;
+  if (!(await approvalAllowsUrlIngestion(options))) {
+    return { source: null, issues: [urlIssue("approval-required", originalUrl)] };
   }
 
-  return {
-    source: {
-      source,
+  const maxRedirects = boundedUrlLimit(
+    options.maxRedirects,
+    maxUrlRedirects,
+    maxUrlRedirects,
+    true,
+  );
+  const timeoutMs = boundedUrlLimit(options.timeoutMs, 10_000, maxUrlTimeoutMs);
+  const maxResponseBytes = boundedUrlLimit(
+    options.maxResponseBytes,
+    maxUrlResponseBytes,
+    maxUrlResponseBytes,
+  );
+  const maxTextCharacters = boundedUrlLimit(
+    options.maxExtractedCharacters,
+    maxExtractedCharacters,
+    maxExtractedCharacters,
+  );
+  const fetcher = options.fetcher ?? defaultUrlFetcher;
+  if (!(await resolvedUrlIsSafe(parsed, options, fetcher))) {
+    return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
+  }
+  let currentUrl = parsed;
+  let redirects = 0;
+
+  while (true) {
+    let response: Response;
+    try {
+      const controller = new AbortController();
+      response = await withUrlTimeout(
+        () => fetcher(currentUrl.href, { redirect: "manual", signal: controller.signal }),
+        timeoutMs,
+        controller,
+      );
+    } catch (error) {
+      return {
+        source: null,
+        issues: [
+          urlIssue(
+            error instanceof UrlTimeoutError ? "fetch-timeout" : "fetch-failure",
+            originalUrl,
+          ),
+        ],
+      };
+    }
+
+    const observedUrl = typeof response.url === "string" ? response.url.trim() : "";
+    if (observedUrl !== "") {
+      const safeObservedUrl = parseSafeUrl(observedUrl);
+      if (safeObservedUrl === null) {
+        return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
+      }
+      if (!(await resolvedUrlIsSafe(safeObservedUrl, options, fetcher))) {
+        return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
+      }
+      currentUrl = safeObservedUrl;
+    }
+
+    if ([301, 302, 303, 307, 308].includes(response.status)) {
+      if (redirects >= maxRedirects) {
+        return { source: null, issues: [urlIssue("redirect-limit", originalUrl)] };
+      }
+      const location = response.headers.get("location");
+      if (location === null) {
+        return { source: null, issues: [urlIssue("fetch-failure", originalUrl)] };
+      }
+      let redirectUrl: URL;
+      try {
+        redirectUrl = new URL(location, currentUrl);
+      } catch {
+        return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
+      }
+      const safeRedirectUrl = parseSafeUrl(redirectUrl.href);
+      if (safeRedirectUrl === null) {
+        return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
+      }
+      if (!(await resolvedUrlIsSafe(safeRedirectUrl, options, fetcher))) {
+        return { source: null, issues: [urlIssue("unsafe-url", originalUrl)] };
+      }
+      currentUrl = safeRedirectUrl;
+      redirects += 1;
+      continue;
+    }
+
+    if (response.status < 200 || response.status >= 300) {
+      return { source: null, issues: [urlIssue("fetch-failure", originalUrl)] };
+    }
+
+    const mediaType = responseMediaType(response, currentUrl);
+    if (
+      mediaType === null ||
+      mediaType === "application/pdf" ||
+      mediaType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    ) {
+      return { source: null, issues: [urlIssue("unsupported-content-type", originalUrl)] };
+    }
+
+    let bytes: Uint8Array;
+    try {
+      const controller = new AbortController();
+      bytes = await withUrlTimeout(
+        () => readResponseBytes(response, maxResponseBytes, controller.signal),
+        timeoutMs,
+        controller,
+      );
+    } catch (error) {
+      return {
+        source: null,
+        issues: [
+          urlIssue(
+            error instanceof UrlTimeoutError
+              ? "fetch-timeout"
+              : error instanceof UrlResponseTooLargeError
+                ? "response-too-large"
+                : "fetch-failure",
+            originalUrl,
+          ),
+        ],
+      };
+    }
+
+    const provenance: UrlProvenance = {
+      originalUrl,
+      finalUrl: currentUrl.href,
+      fetchedAt: (options.now?.() ?? new Date()).toISOString(),
+      kind: classifyUrl(originalUrl),
+    };
+    const source: IngestionSource = {
+      path: originalUrl,
       mediaType,
-      checksum: sourceChecksum,
-      text,
-      chunks: createChunks(text, source.path, mediaType, sourceChecksum, maxChunkCharacters),
-      issues,
-    },
-    issues,
-  };
+      url: provenance,
+    };
+    return normalizeIngestedBytes(source, mediaType, bytes, options, provenance, maxTextCharacters);
+  }
 }
 
 export async function ingestSources(

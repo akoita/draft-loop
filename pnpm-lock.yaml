@@ -72,6 +72,9 @@ importers:
       '@draft-loop/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@draft-loop/ingestion':
+        specifier: workspace:*
+        version: link:../../packages/ingestion
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator

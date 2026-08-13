@@ -12,7 +12,11 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const nativeActions = useMemo(
-    () => ({ open: activePort.openWorkspace, create: activePort.createWorkspace }),
+    () => ({
+      open: activePort.openWorkspace,
+      create: activePort.createWorkspace,
+      createDemo: activePort.createDemoWorkspace,
+    }),
     [activePort],
   );
 
@@ -47,27 +51,32 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
       });
   };
 
+  const setup = async (action: (() => Promise<DesktopReviewState>) | undefined) => {
+    if (action === undefined) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setState(await action());
+    } catch (reason: unknown) {
+      setError(reason instanceof Error ? reason.message : "The workspace could not be opened.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (error !== null) {
     const openWorkspace = nativeActions.open;
     const createWorkspace = nativeActions.create;
-    const setup = async (action: (() => Promise<DesktopReviewState>) | undefined) => {
-      if (action === undefined) return;
-      setBusy(true);
-      setError(null);
-      try {
-        setState(await action());
-      } catch (reason: unknown) {
-        setError(reason instanceof Error ? reason.message : "The workspace could not be opened.");
-      } finally {
-        setBusy(false);
-      }
-    };
+    const createDemoWorkspace = nativeActions.createDemo;
     return (
       <main className="app-shell">
         <section className="panel">
-          <h1>Review workspace unavailable</h1>
+          <p className="eyebrow">DraftLoop / First run</p>
+          <h1>Set up a review workspace</h1>
           <p>{error}</p>
-          {openWorkspace === undefined && createWorkspace === undefined ? null : (
+          {openWorkspace === undefined &&
+          createWorkspace === undefined &&
+          createDemoWorkspace === undefined ? null : (
             <div className="approval-actions">
               <button
                 className="button button-primary"
@@ -77,11 +86,25 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
                   void setup(
                     createWorkspace === undefined
                       ? undefined
-                      : () => createWorkspace("draft-loop-offline"),
+                      : () => createWorkspace("draft-loop-workspace"),
                   )
                 }
               >
-                Create offline workspace
+                Create workspace
+              </button>
+              <button
+                className="button button-quiet"
+                type="button"
+                disabled={busy || createDemoWorkspace === undefined}
+                onClick={() =>
+                  void setup(
+                    createDemoWorkspace === undefined
+                      ? undefined
+                      : () => createDemoWorkspace("draft-loop-demo"),
+                  )
+                }
+              >
+                Try demo workspace
               </button>
               <button
                 className="button button-quiet"
@@ -107,7 +130,38 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
     );
   }
 
-  return <ReviewWorkspace state={state} onAction={onAction} />;
+  return (
+    <ReviewWorkspace
+      state={state}
+      onAction={onAction}
+      {...(activePort.selectFiles === undefined
+        ? {}
+        : {
+            onSelectFiles: (target: "evidence" | "job-description") =>
+              void activePort
+                .selectFiles?.(target)
+                .then(setState)
+                .catch((reason: unknown) => {
+                  setError(
+                    reason instanceof Error ? reason.message : "The files could not be imported.",
+                  );
+                }),
+          })}
+      {...(activePort.addUrl === undefined
+        ? {}
+        : {
+            onAddUrl: (target: "evidence" | "job-description", url: string) =>
+              void activePort
+                .addUrl?.(target, url)
+                .then(setState)
+                .catch((reason: unknown) => {
+                  setError(
+                    reason instanceof Error ? reason.message : "The URL could not be imported.",
+                  );
+                }),
+          })}
+    />
+  );
 }
 
 const root = document.getElementById("root");

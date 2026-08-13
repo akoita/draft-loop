@@ -26,11 +26,21 @@ describe("desktop capability bridge", () => {
     expect(
       validateBridgeCommand({
         type: "file.select",
-        input: { workspaceId: "workspace-1", extensions: [".pdf"], multiple: true },
+        input: {
+          workspaceId: "workspace-1",
+          extensions: [".pdf"],
+          multiple: true,
+          target: "evidence",
+        },
       }),
     ).toEqual({
       type: "file.select",
-      input: { workspaceId: "workspace-1", extensions: [".pdf"], multiple: true },
+      input: {
+        workspaceId: "workspace-1",
+        extensions: [".pdf"],
+        multiple: true,
+        target: "evidence",
+      },
     });
 
     expect(() => validateBridgeCommand({ type: "shell.exec", input: {} })).toThrow("not supported");
@@ -51,6 +61,24 @@ describe("desktop capability bridge", () => {
         },
       }),
     ).toMatchObject({ type: "review.dispatch", input: { action: { type: "approve" } } });
+
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "candidate", mode: "real" },
+      }),
+    ).toEqual({ type: "workspace.create", input: { name: "candidate", mode: "real" } });
+
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "pending",
+          action: { type: "start" },
+        },
+      }),
+    ).toMatchObject({ type: "review.dispatch", input: { action: { type: "start" } } });
   });
 
   it("rejects traversal and unbounded export paths before invoking the host", async () => {
