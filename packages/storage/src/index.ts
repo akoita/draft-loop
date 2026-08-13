@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
 import {
   type RetrievalOptions,
@@ -13,6 +14,23 @@ import {
 export interface StoragePort {
   readonly get: (key: string) => Promise<string | undefined>;
   readonly set: (key: string, value: string) => Promise<void>;
+}
+
+export interface WorkspaceBackupResult {
+  readonly backupPath: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly createdAt: string;
+}
+
+export interface WorkspaceRestoreOptions {
+  readonly verifyIntegrity?: boolean;
+}
+
+export interface MigrationReport {
+  readonly appliedCount: number;
+  readonly appliedVersions: readonly number[];
+  readonly latestVersion: number;
 }
 
 export type JsonPrimitive = string | number | boolean | null;
@@ -1874,9 +1892,87 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort, Retrieval
   }
 
   public async backup(destination: string): Promise<void> {
+    await this.createBackup(destination);
+  }
+
+  public async createBackup(destinationPath: string): Promise<WorkspaceBackupResult> {
     this.ensureOpen();
-    requireNonEmpty(destination, "backup destination");
-    await this.database.backup(destination);
+    requireNonEmpty(destinationPath, "backup destination");
+    const parentDir = dirname(destinationPath);
+    if (!existsSync(parentDir)) {
+      mkdirSync(parentDir, { recursive: true });
+    }
+    await this.database.backup(destinationPath);
+    const content = readFileSync(destinationPath);
+    const stat = statSync(destinationPath);
+    const hash = createHash("sha256").update(content).digest("hex");
+    return {
+      backupPath: destinationPath,
+      checksum: hash,
+      sizeBytes: stat.size,
+      createdAt: now(),
+    };
+  }
+
+  public static verifyDatabaseIntegrity(databasePath: string): boolean {
+    requireNonEmpty(databasePath, "database path");
+    if (!existsSync(databasePath)) {
+      return false;
+    }
+    try {
+      const db = loadSqlite(databasePath);
+      try {
+        const quickCheck = db.pragma("quick_check") as
+          | readonly { readonly quick_check?: string }[]
+          | { readonly quick_check?: string };
+        const integrityCheck = db.pragma("integrity_check") as
+          | readonly { readonly integrity_check?: string }[]
+          | { readonly integrity_check?: string };
+        const isOk = (res: unknown): boolean => {
+          if (Array.isArray(res)) {
+            return (
+              res.length === 1 && (res[0]?.quick_check === "ok" || res[0]?.integrity_check === "ok")
+            );
+          }
+          if (typeof res === "object" && res !== null) {
+            const r = res as Record<string, unknown>;
+            return r.quick_check === "ok" || r.integrity_check === "ok";
+          }
+          return res === "ok";
+        };
+        return isOk(quickCheck) && isOk(integrityCheck);
+      } finally {
+        db.close();
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  public static async restore(
+    backupPath: string,
+    destinationPath: string,
+    options: WorkspaceRestoreOptions = {},
+  ): Promise<SqliteStorage> {
+    requireNonEmpty(backupPath, "backup path");
+    requireNonEmpty(destinationPath, "destination path");
+    if (!existsSync(backupPath)) {
+      throw new StorageValidationError(`Backup file not found at: ${backupPath}`);
+    }
+    if (options.verifyIntegrity !== false) {
+      const valid = SqliteStorage.verifyDatabaseIntegrity(backupPath);
+      if (!valid) {
+        throw new StorageValidationError(
+          `Backup file at ${backupPath} failed SQLite integrity check.`,
+        );
+      }
+    }
+    const destDir = dirname(destinationPath);
+    if (!existsSync(destDir)) {
+      mkdirSync(destDir, { recursive: true });
+    }
+    copyFileSync(backupPath, destinationPath);
+    return new SqliteStorage(destinationPath);
   }
 
   /**
