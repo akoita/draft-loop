@@ -1,3 +1,4 @@
+import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import {
   type DraftArtifact,
   type JobRequirement,
@@ -5,6 +6,8 @@ import {
   type ReadinessRubric,
   readinessDimensions as schemaReadinessDimensions,
 } from "@draft-loop/schemas";
+
+export * from "./retrieval.js";
 
 export const readinessDimensions = schemaReadinessDimensions;
 
@@ -697,5 +700,231 @@ export function compareEvaluationCase(
 export function assertNoQualityRegression(comparison: EvaluationComparison): void {
   if (comparison.qualityRegression) {
     throw new EvaluationRegressionError(comparison);
+  }
+}
+
+export type RetrievalMode = "lexical" | "vector" | "hybrid";
+
+export interface RetrievalBenchmarkCase {
+  readonly id: string;
+  readonly query: string;
+  readonly corpus: readonly ScoredEvidenceChunk[];
+  readonly groundTruthEvidenceIds: readonly string[];
+  readonly requirements?: readonly { readonly id: string; readonly text: string }[];
+  readonly draftClaims?: readonly {
+    readonly id: string;
+    readonly text: string;
+    readonly evidenceIds: readonly string[];
+  }[];
+}
+
+export interface RetrievalEvaluationMetrics {
+  readonly citationAccuracy: number;
+  readonly requirementCoverage: number;
+  readonly irrelevantContextRatio: number;
+  readonly unsupportedClaimCount: number;
+  readonly meanReciprocalRank: number;
+}
+
+export interface RetrievalBenchmarkReport {
+  readonly baselineMode: RetrievalMode;
+  readonly candidateMode: RetrievalMode;
+  readonly caseCount: number;
+  readonly baselineMetrics: RetrievalEvaluationMetrics;
+  readonly candidateMetrics: RetrievalEvaluationMetrics;
+  readonly deltas: {
+    readonly citationAccuracyDelta: number;
+    readonly requirementCoverageDelta: number;
+    readonly irrelevantContextRatioDelta: number;
+    readonly unsupportedClaimDelta: number;
+    readonly meanReciprocalRankDelta: number;
+  };
+  readonly passed: boolean;
+  readonly regressionReasons: readonly string[];
+}
+
+export class RetrievalRegressionError extends Error {
+  readonly report: RetrievalBenchmarkReport;
+
+  constructor(report: RetrievalBenchmarkReport) {
+    super(
+      `Retrieval benchmark regression detected (${report.candidateMode} vs ${report.baselineMode}): ${report.regressionReasons.join(", ")}`,
+    );
+    this.name = "RetrievalRegressionError";
+    this.report = report;
+  }
+}
+
+export function evaluateRetrievalMetrics(
+  retrieved: readonly ScoredEvidenceChunk[],
+  benchmarkCase: RetrievalBenchmarkCase,
+): RetrievalEvaluationMetrics {
+  const groundTruthSet = new Set(benchmarkCase.groundTruthEvidenceIds);
+  const relevantRetrieved = retrieved.filter((chunk) => groundTruthSet.has(chunk.id));
+
+  const citationAccuracy = retrieved.length === 0 ? 0 : relevantRetrieved.length / retrieved.length;
+
+  const irrelevantContextRatio =
+    retrieved.length === 0 ? 0 : (retrieved.length - relevantRetrieved.length) / retrieved.length;
+
+  const firstRelevantIndex = retrieved.findIndex((chunk) => groundTruthSet.has(chunk.id));
+  const meanReciprocalRank = firstRelevantIndex >= 0 ? 1 / (firstRelevantIndex + 1) : 0;
+
+  const requirements = benchmarkCase.requirements ?? [];
+  let coveredRequirements = 0;
+  for (const req of requirements) {
+    const reqTokens = tokens(req.text);
+    const hasMatch = retrieved.some((chunk) => {
+      const chunkTokens = new Set(tokens(chunk.text));
+      return reqTokens.some((token) => chunkTokens.has(token));
+    });
+    if (hasMatch) {
+      coveredRequirements++;
+    }
+  }
+  const requirementCoverage =
+    requirements.length === 0 ? 1 : coveredRequirements / requirements.length;
+
+  const retrievedIdSet = new Set(retrieved.map((c) => c.id));
+  const draftClaims = benchmarkCase.draftClaims ?? [];
+  let unsupportedClaimCount = 0;
+  for (const claim of draftClaims) {
+    const hasEvidence = claim.evidenceIds.some((id) => retrievedIdSet.has(id));
+    if (!hasEvidence) {
+      unsupportedClaimCount++;
+    }
+  }
+
+  return {
+    citationAccuracy,
+    requirementCoverage,
+    irrelevantContextRatio,
+    unsupportedClaimCount,
+    meanReciprocalRank,
+  };
+}
+
+export interface BenchmarkRetrievalOptions {
+  readonly maxCitationAccuracyDrop?: number;
+  readonly maxCoverageDrop?: number;
+  readonly maxUnsupportedClaimIncrease?: number;
+}
+
+export async function benchmarkRetrieval(
+  cases: readonly RetrievalBenchmarkCase[],
+  baseline: {
+    readonly mode: RetrievalMode;
+    readonly queryEvidence: (
+      query: string,
+      options?: { readonly limit?: number },
+    ) => Promise<readonly ScoredEvidenceChunk[]>;
+  },
+  candidate: {
+    readonly mode: RetrievalMode;
+    readonly queryEvidence: (
+      query: string,
+      options?: { readonly limit?: number },
+    ) => Promise<readonly ScoredEvidenceChunk[]>;
+  },
+  options: BenchmarkRetrievalOptions = {},
+): Promise<RetrievalBenchmarkReport> {
+  const maxCitationAccuracyDrop = options.maxCitationAccuracyDrop ?? 0.05;
+  const maxCoverageDrop = options.maxCoverageDrop ?? 0.05;
+  const maxUnsupportedClaimIncrease = options.maxUnsupportedClaimIncrease ?? 0;
+
+  let totalBaselineAcc = 0;
+  let totalCandidateAcc = 0;
+  let totalBaselineCov = 0;
+  let totalCandidateCov = 0;
+  let totalBaselineIrr = 0;
+  let totalCandidateIrr = 0;
+  let totalBaselineUnsup = 0;
+  let totalCandidateUnsup = 0;
+  let totalBaselineMrr = 0;
+  let totalCandidateMrr = 0;
+
+  for (const benchmarkCase of cases) {
+    const [baselineResults, candidateResults] = await Promise.all([
+      baseline.queryEvidence(benchmarkCase.query),
+      candidate.queryEvidence(benchmarkCase.query),
+    ]);
+    const bMetrics = evaluateRetrievalMetrics(baselineResults, benchmarkCase);
+    const cMetrics = evaluateRetrievalMetrics(candidateResults, benchmarkCase);
+
+    totalBaselineAcc += bMetrics.citationAccuracy;
+    totalCandidateAcc += cMetrics.citationAccuracy;
+    totalBaselineCov += bMetrics.requirementCoverage;
+    totalCandidateCov += cMetrics.requirementCoverage;
+    totalBaselineIrr += bMetrics.irrelevantContextRatio;
+    totalCandidateIrr += cMetrics.irrelevantContextRatio;
+    totalBaselineUnsup += bMetrics.unsupportedClaimCount;
+    totalCandidateUnsup += cMetrics.unsupportedClaimCount;
+    totalBaselineMrr += bMetrics.meanReciprocalRank;
+    totalCandidateMrr += cMetrics.meanReciprocalRank;
+  }
+
+  const n = Math.max(1, cases.length);
+  const baselineMetrics: RetrievalEvaluationMetrics = {
+    citationAccuracy: totalBaselineAcc / n,
+    requirementCoverage: totalBaselineCov / n,
+    irrelevantContextRatio: totalBaselineIrr / n,
+    unsupportedClaimCount: totalBaselineUnsup / n,
+    meanReciprocalRank: totalBaselineMrr / n,
+  };
+  const candidateMetrics: RetrievalEvaluationMetrics = {
+    citationAccuracy: totalCandidateAcc / n,
+    requirementCoverage: totalCandidateCov / n,
+    irrelevantContextRatio: totalCandidateIrr / n,
+    unsupportedClaimCount: totalCandidateUnsup / n,
+    meanReciprocalRank: totalCandidateMrr / n,
+  };
+
+  const citationAccuracyDelta =
+    candidateMetrics.citationAccuracy - baselineMetrics.citationAccuracy;
+  const requirementCoverageDelta =
+    candidateMetrics.requirementCoverage - baselineMetrics.requirementCoverage;
+  const irrelevantContextRatioDelta =
+    candidateMetrics.irrelevantContextRatio - baselineMetrics.irrelevantContextRatio;
+  const unsupportedClaimDelta =
+    candidateMetrics.unsupportedClaimCount - baselineMetrics.unsupportedClaimCount;
+  const meanReciprocalRankDelta =
+    candidateMetrics.meanReciprocalRank - baselineMetrics.meanReciprocalRank;
+
+  const regressionReasons: string[] = [];
+  if (citationAccuracyDelta < -maxCitationAccuracyDrop) {
+    regressionReasons.push(
+      `Citation accuracy dropped by ${Math.abs(citationAccuracyDelta).toFixed(4)}`,
+    );
+  }
+  if (requirementCoverageDelta < -maxCoverageDrop) {
+    regressionReasons.push(
+      `Requirement coverage dropped by ${Math.abs(requirementCoverageDelta).toFixed(4)}`,
+    );
+  }
+  if (unsupportedClaimDelta > maxUnsupportedClaimIncrease) {
+    regressionReasons.push(`Unsupported claims increased by ${unsupportedClaimDelta.toFixed(2)}`);
+  }
+
+  return {
+    baselineMode: baseline.mode,
+    candidateMode: candidate.mode,
+    caseCount: cases.length,
+    baselineMetrics,
+    candidateMetrics,
+    deltas: {
+      citationAccuracyDelta,
+      requirementCoverageDelta,
+      irrelevantContextRatioDelta,
+      unsupportedClaimDelta,
+      meanReciprocalRankDelta,
+    },
+    passed: regressionReasons.length === 0,
+    regressionReasons,
+  };
+}
+
+export function assertNoRetrievalRegression(report: RetrievalBenchmarkReport): void {
+  if (!report.passed) {
+    throw new RetrievalRegressionError(report);
   }
 }

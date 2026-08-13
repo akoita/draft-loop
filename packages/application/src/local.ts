@@ -1359,7 +1359,7 @@ export async function queryWorkspaceEvidence(
   root: string,
   query: string,
   options?: { readonly limit?: number },
-  io?: ApplicationIo,
+  _io?: ApplicationIo,
 ): Promise<readonly ScoredEvidenceChunk[]> {
   const config = await readWorkspace(root);
   const storage = await openStorage(root);
