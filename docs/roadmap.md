@@ -55,7 +55,7 @@ and a real job description, followed by the stage release.
 | Next | Retrieval and provider quality | Implementation complete; calibration benchmark baseline recorded | Improve evidence selection and make live runs dependable | Decoupled retrieval port, SQLite FTS/BM25 baseline, provider resilience & swapped roles, hybrid RRF benchmark |
 | Next | Real-application pilot | Implementation complete; consented harness and adversarial fixtures delivered | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics, adversarial fixtures |
 | Next | Production-ready beta | In progress; backup/restore, retention purge, diagnostics, ATS export, a11y, and supply-chain gates complete | Distribute a safe, dependable desktop application | Packaging optimization, backup/restore, ATS export, accessibility |
-| Next | Controlled expansion | In progress; multi-artifact support (cover letters & application Q&A) complete | Extend proven workflows without weakening trust boundaries | Beta evidence and explicit product demand |
+| Next | Controlled expansion | In progress; multi-artifact, local model adapter, and multilingual templates complete | Extend proven workflows without weakening trust boundaries | Beta evidence and explicit product demand |
 
 ### Now — Integrated local alpha
 
@@ -178,3 +178,4 @@ roadmap change should say what changed, why, and what moved out to make room.
 | 2026-08-13 | Delivered consented pilot harness and adversarial security fixtures (#66, #67) | Implemented candidate consent protocol, tri-variant comparative benchmark runner, zero-leakage pilot report generator, timeline inversion detection, and adversarial security fixtures |
 | 2026-08-13 | Advanced Production-ready beta milestones (#73, #74, #75, #76) | Implemented atomic workspace backup/restore, ATS-compatibility export validation, Unicode typography handling, keyboard-accessible navigation with WCAG AA compliance, and automated license/secret quality gates |
 | 2026-08-13 | Implemented retention controls, content-free diagnostics, and multi-artifact generation (#81, #82) | Delivered user-confirmed audit retention purge, zero-leakage diagnostic telemetry export, and tailored Cover Letter / Application Q&A schemas, rendering, and ATS export pipelines |
+| 2026-08-13 | Delivered local model adapter and multilingual templates (#85, #86) | Added offline LocalModelAdapter for OpenAI-compatible local endpoints and canonical localized section templates across en, fr, de, es, ja |
