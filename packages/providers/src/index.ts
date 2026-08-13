@@ -28,6 +28,21 @@ export interface DataExposurePolicy {
   readonly requestedRetention?: "ephemeral-request" | "provider-default";
 }
 
+export interface RetryOptions {
+  readonly maxRetries?: number;
+  readonly baseDelayMs?: number;
+  readonly maxDelayMs?: number;
+  readonly sleep?: (ms: number) => Promise<void>;
+}
+
+export interface StreamingProgressEvent {
+  readonly stage: "started" | "streaming" | "completed";
+  readonly elapsedMs: number;
+  readonly tokensObserved?: number;
+}
+
+export type StreamingProgressCallback = (event: StreamingProgressEvent) => void;
+
 export interface ModelRequest<Input extends JsonValue = JsonValue> {
   readonly contextSnapshotId: string;
   readonly model: ModelSelection;
@@ -36,6 +51,7 @@ export interface ModelRequest<Input extends JsonValue = JsonValue> {
   readonly outputSchema: JsonSchema;
   readonly outputName: string;
   readonly dataPolicy: DataExposurePolicy;
+  readonly onProgress?: StreamingProgressCallback;
 }
 
 export interface ModelCost {
@@ -324,6 +340,38 @@ export interface AnthropicClient {
 export interface ProviderAdapterOptions {
   readonly configuredModel: ModelSelection;
   readonly pricing?: ModelPricing;
+  readonly retry?: RetryOptions;
+}
+
+const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+export async function executeWithRetry<T>(
+  action: () => Promise<T>,
+  options?: RetryOptions,
+): Promise<T> {
+  const maxRetries = options?.maxRetries ?? 3;
+  const baseDelayMs = options?.baseDelayMs ?? 200;
+  const maxDelayMs = options?.maxDelayMs ?? 5000;
+  const sleep = options?.sleep ?? defaultSleep;
+
+  let attempt = 0;
+  while (true) {
+    try {
+      return await action();
+    } catch (error) {
+      const isRetryableError = error instanceof ProviderAdapterError ? error.retryable : false;
+
+      if (!isRetryableError || attempt >= maxRetries) {
+        throw error;
+      }
+
+      attempt += 1;
+      const exponential = baseDelayMs * 2 ** (attempt - 1);
+      const jitter = Math.random() * (baseDelayMs / 2);
+      const delay = Math.min(maxDelayMs, exponential + jitter);
+      await sleep(delay);
+    }
+  }
 }
 
 function anthropicMessageData(value: unknown): {
@@ -388,16 +436,21 @@ export class AnthropicAdapter<
   private readonly client: AnthropicClient;
   private readonly configuredModel: ModelSelection;
   private readonly pricing: ModelPricing | undefined;
+  private readonly retry: RetryOptions | undefined;
 
   constructor(client: AnthropicClient, options: ProviderAdapterOptions) {
     this.client = client;
     this.configuredModel = options.configuredModel;
     this.pricing = options.pricing;
+    this.retry = options.retry;
   }
 
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
+
+    const startTime = Date.now();
+    request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
     const parameters: MessageCreateParamsNonStreaming = {
       model: request.model.modelId,
@@ -409,41 +462,49 @@ export class AnthropicAdapter<
       },
     };
 
-    try {
-      const responsePromise = this.client.messages.create(parameters);
-      const response =
-        typeof responsePromise.withResponse === "function"
-          ? await responsePromise.withResponse()
-          : { data: await responsePromise, request_id: null };
-      const message = anthropicMessageData(response.data);
-      const textBlock = message.content.find((block) => block.type === "text");
-      if (textBlock?.text === undefined) {
-        throw new ProviderAdapterError(
-          this.provider,
-          "invalid-response",
-          "The provider returned no structured text output.",
-          { retryable: false },
+    return executeWithRetry(async () => {
+      try {
+        const responsePromise = this.client.messages.create(parameters);
+        const response =
+          typeof responsePromise.withResponse === "function"
+            ? await responsePromise.withResponse()
+            : { data: await responsePromise, request_id: null };
+        const message = anthropicMessageData(response.data);
+        const textBlock = message.content.find((block) => block.type === "text");
+        if (textBlock?.text === undefined) {
+          throw new ProviderAdapterError(
+            this.provider,
+            "invalid-response",
+            "The provider returned no structured text output.",
+            { retryable: false },
+          );
+        }
+        const output = parseJson<Output>(this.provider, textBlock.text);
+        const accounting = usage(
+          message.usage.input_tokens,
+          message.usage.output_tokens,
+          this.pricing,
         );
+        const elapsedMs = Date.now() - startTime;
+        request.onProgress?.({
+          stage: "completed",
+          elapsedMs,
+          tokensObserved: accounting.usage.totalTokens,
+        });
+        return {
+          output,
+          contextSnapshotId: request.contextSnapshotId,
+          provider: this.provider,
+          company: this.provider,
+          modelId: request.model.modelId,
+          providerRequestId: response.request_id ?? null,
+          structuredOutputSha256: hashStructuredOutput(output),
+          ...accounting,
+        };
+      } catch (error) {
+        throw normalizeProviderError(this.provider, error);
       }
-      const output = parseJson<Output>(this.provider, textBlock.text);
-      const accounting = usage(
-        message.usage.input_tokens,
-        message.usage.output_tokens,
-        this.pricing,
-      );
-      return {
-        output,
-        contextSnapshotId: request.contextSnapshotId,
-        provider: this.provider,
-        company: this.provider,
-        modelId: request.model.modelId,
-        providerRequestId: response.request_id ?? null,
-        structuredOutputSha256: hashStructuredOutput(output),
-        ...accounting,
-      };
-    } catch (error) {
-      throw normalizeProviderError(this.provider, error);
-    }
+    }, this.retry);
   }
 }
 
@@ -464,16 +525,21 @@ export class OpenAIAdapter<
   private readonly client: OpenAIClient;
   private readonly configuredModel: ModelSelection;
   private readonly pricing: ModelPricing | undefined;
+  private readonly retry: RetryOptions | undefined;
 
   constructor(client: OpenAIClient, options: ProviderAdapterOptions) {
     this.client = client;
     this.configuredModel = options.configuredModel;
     this.pricing = options.pricing;
+    this.retry = options.retry;
   }
 
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
+
+    const startTime = Date.now();
+    request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
     const parameters: ResponseCreateParamsNonStreaming = {
       model: request.model.modelId,
@@ -495,25 +561,33 @@ export class OpenAIAdapter<
       },
     };
 
-    try {
-      const response = await this.client.responses.create(parameters);
-      const output = parseJson<Output>(this.provider, response.output_text);
-      const inputTokens = response.usage?.input_tokens ?? 0;
-      const outputTokens = response.usage?.output_tokens ?? 0;
-      const accounting = usage(inputTokens, outputTokens, this.pricing);
-      return {
-        output,
-        contextSnapshotId: request.contextSnapshotId,
-        provider: this.provider,
-        company: this.provider,
-        modelId: request.model.modelId,
-        providerRequestId: response._request_id ?? null,
-        structuredOutputSha256: hashStructuredOutput(output),
-        ...accounting,
-      };
-    } catch (error) {
-      throw normalizeProviderError(this.provider, error);
-    }
+    return executeWithRetry(async () => {
+      try {
+        const response = await this.client.responses.create(parameters);
+        const output = parseJson<Output>(this.provider, response.output_text);
+        const inputTokens = response.usage?.input_tokens ?? 0;
+        const outputTokens = response.usage?.output_tokens ?? 0;
+        const accounting = usage(inputTokens, outputTokens, this.pricing);
+        const elapsedMs = Date.now() - startTime;
+        request.onProgress?.({
+          stage: "completed",
+          elapsedMs,
+          tokensObserved: accounting.usage.totalTokens,
+        });
+        return {
+          output,
+          contextSnapshotId: request.contextSnapshotId,
+          provider: this.provider,
+          company: this.provider,
+          modelId: request.model.modelId,
+          providerRequestId: response._request_id ?? null,
+          structuredOutputSha256: hashStructuredOutput(output),
+          ...accounting,
+        };
+      } catch (error) {
+        throw normalizeProviderError(this.provider, error);
+      }
+    }, this.retry);
   }
 }
 

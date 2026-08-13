@@ -813,32 +813,41 @@ function providerAgents(
   if (anthropicKey === undefined || openAiKey === undefined) {
     throw new CliUserError("Live provider mode requires ANTHROPIC_API_KEY and OPENAI_API_KEY.");
   }
-  if (config.authorCompany !== "anthropic" || config.criticCompany !== "openai") {
+  const allowedCompanies = ["anthropic", "openai"];
+  if (
+    !allowedCompanies.includes(config.authorCompany) ||
+    !allowedCompanies.includes(config.criticCompany)
+  ) {
     throw new CliUserError(
-      "The phase-0 live adapter supports Anthropic author and OpenAI critic pairing.",
+      "Live provider mode currently supports Anthropic and OpenAI cross-company pairing.",
     );
   }
   const anthropic = new Anthropic({ apiKey: anthropicKey });
   const openai = new OpenAI({ apiKey: openAiKey });
-  const authorAdapter = new AnthropicAdapter<JsonObject, JsonObject>(
-    anthropic as unknown as AnthropicClient,
-    {
+
+  function createAdapter(company: string, modelId: string, role: "author" | "critic") {
+    if (company === "anthropic") {
+      return new AnthropicAdapter<JsonObject, JsonObject>(anthropic as unknown as AnthropicClient, {
+        configuredModel: {
+          company: "anthropic",
+          modelId,
+          role,
+          promptTemplateVersion: `cli-${role}-v1`,
+        },
+      });
+    }
+    return new OpenAIAdapter<JsonObject, JsonObject>(openai, {
       configuredModel: {
-        company: "anthropic",
-        modelId: config.authorModel,
-        role: "author",
-        promptTemplateVersion: "cli-author-v1",
+        company: "openai",
+        modelId,
+        role,
+        promptTemplateVersion: `cli-${role}-v1`,
       },
-    },
-  );
-  const criticAdapter = new OpenAIAdapter<JsonObject, JsonObject>(openai, {
-    configuredModel: {
-      company: "openai",
-      modelId: config.criticModel,
-      role: "critic",
-      promptTemplateVersion: "cli-critic-v1",
-    },
-  });
+    });
+  }
+
+  const authorAdapter = createAdapter(config.authorCompany, config.authorModel, "author");
+  const criticAdapter = createAdapter(config.criticCompany, config.criticModel, "critic");
   const dataPolicy = {
     allowTransmission: true,
     allowedCompanies: ["anthropic", "openai"] as const,

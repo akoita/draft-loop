@@ -230,6 +230,148 @@ describe("provider-neutral model adapters", () => {
     expect((error as Error).message).not.toContain("secret response body");
   });
 
+  it("retries transient rate-limit errors and recovers when subsequent attempt succeeds", async () => {
+    let attempts = 0;
+    const sleep = vi.fn(async () => undefined);
+    const rateLimitError = Object.assign(new Error("Rate limited"), {
+      status: 429,
+      requestID: "openai-req-429",
+    });
+    const successResponse = {
+      output_text: '{"answer":"recovered"}',
+      usage: { input_tokens: 10, output_tokens: 5 },
+      _request_id: "openai-req-ok",
+    } as never;
+
+    const create = async () => {
+      attempts += 1;
+      if (attempts < 3) {
+        throw rateLimitError;
+      }
+      return successResponse;
+    };
+
+    const client: OpenAIClient = { responses: { create } };
+    const openAIModel: ModelSelection = {
+      ...model,
+      company: "openai",
+      modelId: "gpt-test-exact",
+      role: "critic",
+      promptTemplateVersion: "critic-v1",
+    };
+    const adapter = new OpenAIAdapter(client, {
+      configuredModel: openAIModel,
+      retry: { maxRetries: 3, baseDelayMs: 50, maxDelayMs: 200, sleep },
+    });
+
+    const result = await adapter.execute(request({ model: openAIModel }));
+    expect(result.output).toEqual({ answer: "recovered" });
+    expect(attempts).toBe(3);
+    expect(sleep).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws when maximum retries are exhausted on persistent rate-limit errors", async () => {
+    let attempts = 0;
+    const sleep = vi.fn(async () => undefined);
+    const rateLimitError = Object.assign(new Error("Rate limited"), {
+      status: 429,
+      requestID: "openai-req-429",
+    });
+
+    const create = async () => {
+      attempts += 1;
+      throw rateLimitError;
+    };
+
+    const client: OpenAIClient = { responses: { create } };
+    const openAIModel: ModelSelection = {
+      ...model,
+      company: "openai",
+      modelId: "gpt-test-exact",
+      role: "critic",
+      promptTemplateVersion: "critic-v1",
+    };
+    const adapter = new OpenAIAdapter(client, {
+      configuredModel: openAIModel,
+      retry: { maxRetries: 2, baseDelayMs: 10, maxDelayMs: 50, sleep },
+    });
+
+    await expect(adapter.execute(request({ model: openAIModel }))).rejects.toMatchObject({
+      code: "rate-limit",
+      retryable: true,
+    });
+    expect(attempts).toBe(3); // Initial + 2 retries
+    expect(sleep).toHaveBeenCalledTimes(2);
+  });
+
+  it("fails immediately without retrying on non-retryable invalid-request errors", async () => {
+    let attempts = 0;
+    const sleep = vi.fn(async () => undefined);
+    const badRequestError = Object.assign(new Error("Bad request"), {
+      status: 400,
+      requestID: "openai-req-400",
+    });
+
+    const create = async () => {
+      attempts += 1;
+      throw badRequestError;
+    };
+
+    const client: OpenAIClient = { responses: { create } };
+    const openAIModel: ModelSelection = {
+      ...model,
+      company: "openai",
+      modelId: "gpt-test-exact",
+      role: "critic",
+      promptTemplateVersion: "critic-v1",
+    };
+    const adapter = new OpenAIAdapter(client, {
+      configuredModel: openAIModel,
+      retry: { maxRetries: 3, baseDelayMs: 50, sleep },
+    });
+
+    await expect(adapter.execute(request({ model: openAIModel }))).rejects.toMatchObject({
+      code: "invalid-request",
+      retryable: false,
+    });
+    expect(attempts).toBe(1);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it("notifies streaming progress callbacks on started and completed stages", async () => {
+    const progressEvents: unknown[] = [];
+    const response = {
+      id: "msg-progress",
+      content: [{ type: "text", text: '{"answer":"streamed"}' }],
+      model: model.modelId,
+      usage: { input_tokens: 15, output_tokens: 8 },
+    };
+    const client: AnthropicClient = {
+      messages: {
+        create: () =>
+          ({
+            withResponse: async () => ({ data: response, request_id: "anthropic-prog-1" }),
+          }) as never,
+      },
+    };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+    const result = await adapter.execute(
+      request({
+        onProgress: (event) => progressEvents.push(event),
+      }),
+    );
+
+    expect(result.output).toEqual({ answer: "streamed" });
+    expect(progressEvents).toHaveLength(2);
+    expect(progressEvents[0]).toMatchObject({ stage: "started", elapsedMs: expect.any(Number) });
+    expect(progressEvents[1]).toMatchObject({
+      stage: "completed",
+      elapsedMs: expect.any(Number),
+      tokensObserved: 23,
+    });
+  });
+
   it("preserves the provider-diversity compatibility helper", () => {
     const critic: ModelSelection = {
       ...model,
