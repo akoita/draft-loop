@@ -51,7 +51,7 @@ and a real job description, followed by the stage release.
 
 | Horizon | Stage | Status | Outcome | Key dependencies |
 | --- | --- | --- | --- | --- |
-| Now | Integrated local alpha | Implementation complete; manual real-input acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
+| Now | Integrated local alpha | Completed and validated across Linux and Windows | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
 | Next | Retrieval and provider quality | Implementation complete; calibration benchmark baseline recorded | Improve evidence selection and make live runs dependable | Decoupled retrieval port, SQLite FTS/BM25 baseline, provider resilience & swapped roles, hybrid RRF benchmark |
 | Next | Real-application pilot | Implementation complete; consented harness and adversarial fixtures delivered | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics, adversarial fixtures |
 | Next | Production-ready beta | Implementation complete; packaging optimization, backup/restore, ATS export, a11y, retention, and supply-chain gates complete | Distribute a safe, dependable desktop application | Packaging optimization, backup/restore, ATS export, accessibility |
