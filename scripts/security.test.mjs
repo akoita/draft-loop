@@ -35,11 +35,16 @@ describe("secret and credential scanning quality gate", () => {
 
     try {
       const syntheticSecrets = [
-        "sk-ant-api03-abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678901234567890",
-        "sk-proj-1234567890abcdef1234567890abcdef1234567890abcdef12345678901234567890",
-        "ghp_1234567890abcdefghijklmnopqrstuvwxyz",
-        "AKIAIOSFODNN7EXAMPLE",
-        "-----BEGIN RSA PRIVATE KEY-----",
+        [
+          "sk-ant-api03-",
+          "abcdef1234567890abcdef1234567890abcdef1234567890abcdef12345678901234567890",
+        ].join(""),
+        ["sk-proj-", "1234567890abcdef1234567890abcdef1234567890abcdef12345678901234567890"].join(
+          "",
+        ),
+        ["ghp_", "1234567890abcdefghijklmnopqrstuvwxyz"].join(""),
+        ["AKIA", "IOSFODNN7EXAMPLE"].join(""),
+        ["-----BEGIN ", "RSA PRIVATE KEY-----"].join(""),
       ];
 
       for (const secret of syntheticSecrets) {

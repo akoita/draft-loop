@@ -51,6 +51,16 @@ export interface RenderedDocument {
   readonly metadata: RenderMetadata;
 }
 
+export interface AtsValidationReport {
+  readonly format: OutputFormat;
+  readonly recoveredText: string;
+  readonly expectedWordCount: number;
+  readonly recoveredWordCount: number;
+  readonly tokenRecoveryRate: number;
+  readonly missingSections: readonly string[];
+  readonly passed: boolean;
+}
+
 export class ArtifactExportValidationError extends Error {
   readonly issues: readonly RenderValidationIssue[];
 
@@ -215,14 +225,23 @@ function layoutLines(artifact: DraftArtifact): readonly LayoutLine[] {
 }
 
 function escapePdfText(value: string): string {
-  return value
+  const normalized = value
+    .replaceAll("“", '"')
+    .replaceAll("”", '"')
+    .replaceAll("‘", "'")
+    .replaceAll("’", "'")
+    .replaceAll("—", " - ")
+    .replaceAll("–", " - ")
+    .replaceAll("•", "*")
+    .replaceAll("…", "...");
+  return normalized
     .replace(/[^\x20-\x7e]/gu, "?")
     .replaceAll("\\", "\\\\")
     .replaceAll("(", "\\(")
     .replaceAll(")", "\\)");
 }
 
-function pdfBytes(artifact: DraftArtifact): Uint8Array {
+function pdfBytes(artifact: DraftArtifact, options: RenderOptions = {}): Uint8Array {
   const lines = layoutLines(artifact);
   const pages: readonly LayoutLine[][] = (() => {
     const result: LayoutLine[][] = [[]];
@@ -267,6 +286,14 @@ function pdfBytes(artifact: DraftArtifact): Uint8Array {
   }
   objects[2] = `<< /Type /Pages /Kids [${pageIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${pageIds.length} >>`;
 
+  const infoId = objects.length;
+  const createdDateStr = options.generatedAt
+    ? options.generatedAt.replace(/[-:TZ.]/gu, "").slice(0, 14)
+    : "20260813120000";
+  const title = artifact.sections[0]?.title ?? "DraftLoop Tailored CV";
+  objects[infoId] =
+    `<< /Title (${escapePdfText(title)}) /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDateStr}Z) >>`;
+
   let pdf = "%PDF-1.4\n%\xFF\xFF\xFF\xFF\n";
   const offsets: number[] = [0];
   for (let index = 1; index < objects.length; index += 1) {
@@ -278,7 +305,7 @@ function pdfBytes(artifact: DraftArtifact): Uint8Array {
   for (let index = 1; index < objects.length; index += 1) {
     pdf += `${String(offsets[index]).padStart(10, "0")} 00000 n \n`;
   }
-  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  pdf += `trailer\n<< /Size ${objects.length} /Root 1 0 R /Info ${infoId} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
   return new TextEncoder().encode(pdf);
 }
 
@@ -369,7 +396,7 @@ function zipStored(entries: Readonly<Record<string, string>>): Uint8Array {
   return concatBytes(localBytes, centralBytes, end);
 }
 
-function renderDocx(artifact: DraftArtifact): Uint8Array {
+function renderDocx(artifact: DraftArtifact, options: RenderOptions = {}): Uint8Array {
   const body = [...artifact.sections]
     .sort((left, right) => left.order - right.order)
     .map((section) => {
@@ -384,20 +411,109 @@ function renderDocx(artifact: DraftArtifact): Uint8Array {
       return `${heading}${blocks}`;
     })
     .join("");
+  const title = artifact.sections[0]?.title ?? "DraftLoop Tailored CV";
+  const createdDate = options.generatedAt ?? "2026-08-13T12:00:00.000Z";
   const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1008" w:right="1008" w:bottom="1008" w:left="1008"/></w:sectPr></w:body></w:document>`;
+  const coreProps = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/coreProperties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${escapeHtml(title)}</dc:title><dc:creator>DraftLoop</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${createdDate}</dcterms:created></cp:coreProperties>`;
+
   return zipStored({
-    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`,
-    "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+    "[Content_Types].xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`,
+    "_rels/.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`,
     "word/_rels/document.xml.rels": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
     "word/document.xml": document,
     "word/styles.xml": `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:rPr><w:b/><w:sz w:val="28"/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="ListBullet"><w:name w:val="List Bullet"/><w:basedOn w:val="Normal"/></w:style></w:styles>`,
+    "docProps/core.xml": coreProps,
   });
 }
 
-function bytesForFormat(artifact: DraftArtifact, format: OutputFormat): Uint8Array {
+function bytesForFormat(
+  artifact: DraftArtifact,
+  format: OutputFormat,
+  options: RenderOptions = {},
+): Uint8Array {
   if (format === "markdown") return new TextEncoder().encode(renderMarkdown(artifact));
-  if (format === "pdf") return pdfBytes(artifact);
-  return renderDocx(artifact);
+  if (format === "pdf") return pdfBytes(artifact, options);
+  return renderDocx(artifact, options);
+}
+
+export function extractTextFromRenderedDocument(rendered: RenderedDocument): string {
+  const decoder = new TextDecoder();
+  if (rendered.metadata.format === "markdown") {
+    return decoder.decode(rendered.content);
+  }
+  if (rendered.metadata.format === "pdf") {
+    const raw = decoder.decode(rendered.content);
+    const textChunks: string[] = [];
+    const tjPattern = /\(((?:\\\(|\\\)|\\\\|[^()])*)\)\s*Tj/gu;
+    for (const match of raw.matchAll(tjPattern)) {
+      const escaped = match[1] ?? "";
+      const unescaped = escaped
+        .replaceAll("\\(", "(")
+        .replaceAll("\\)", ")")
+        .replaceAll("\\\\", "\\");
+      textChunks.push(unescaped);
+    }
+    return textChunks.join(" ");
+  }
+  if (rendered.metadata.format === "docx") {
+    const raw = decoder.decode(rendered.content);
+    const textChunks: string[] = [];
+    const wtPattern = /<w:t[^>]*>(.*?)<\/w:t>/gu;
+    for (const match of raw.matchAll(wtPattern)) {
+      const xmlEncoded = match[1] ?? "";
+      const text = xmlEncoded
+        .replaceAll("&lt;", "<")
+        .replaceAll("&gt;", ">")
+        .replaceAll("&quot;", '"')
+        .replaceAll("&apos;", "'")
+        .replaceAll("&amp;", "&");
+      textChunks.push(text);
+    }
+    return textChunks.join(" ");
+  }
+  return "";
+}
+
+export function validateAtsExtractability(
+  rendered: RenderedDocument,
+  artifact: DraftArtifact,
+): AtsValidationReport {
+  const extracted = extractTextFromRenderedDocument(rendered);
+  const normalizedExtracted = extracted.toLowerCase();
+
+  const expectedText = artifactText(artifact);
+  const expectedWords = wordCount(expectedText);
+  const recoveredWords = wordCount(extracted);
+
+  const missingSections: string[] = [];
+  for (const section of artifact.sections) {
+    if (!normalizedExtracted.includes(section.title.toLowerCase().trim())) {
+      missingSections.push(section.title);
+    }
+  }
+
+  const expectedTokens = [...expectedText.toLowerCase().matchAll(/[\p{L}\p{N}]+/gu)].map(
+    (m) => m[0],
+  );
+  let matched = 0;
+  for (const token of expectedTokens) {
+    if (normalizedExtracted.includes(token)) {
+      matched++;
+    }
+  }
+  const tokenRecoveryRate = expectedTokens.length > 0 ? matched / expectedTokens.length : 1.0;
+
+  const passed = tokenRecoveryRate >= 0.85 && missingSections.length === 0;
+
+  return {
+    format: rendered.metadata.format,
+    recoveredText: extracted,
+    expectedWordCount: expectedWords,
+    recoveredWordCount: recoveredWords,
+    tokenRecoveryRate: Number(tokenRecoveryRate.toFixed(4)),
+    missingSections,
+    passed,
+  };
 }
 
 export function renderArtifact(
@@ -406,7 +522,7 @@ export function renderArtifact(
   options: RenderOptions = {},
 ): RenderedDocument {
   assertExportable(artifact, options);
-  const content = bytesForFormat(artifact, format);
+  const content = bytesForFormat(artifact, format, options);
   const checksum = createHash("sha256").update(content).digest("hex");
   const metadata: RenderMetadata = {
     artifactId: artifact.id,
