@@ -168,6 +168,9 @@ importers:
       '@draft-loop/schemas':
         specifier: workspace:*
         version: link:../schemas
+      '@draft-loop/validation':
+        specifier: workspace:*
+        version: link:../validation
 
   packages/evidence:
     dependencies:

@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@draft-loop/domain": "workspace:*",
-    "@draft-loop/schemas": "workspace:*"
+    "@draft-loop/schemas": "workspace:*",
+    "@draft-loop/validation": "workspace:*"
   }
 }

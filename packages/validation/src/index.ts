@@ -120,13 +120,15 @@ function metricKey(match: string): string {
   const number = Number(numberMatch[0].replaceAll(",", ""));
   const currency = /^\s*(?:[$€£¥]|usd\b|eur\b|gbp\b|jpy\b)/u.test(normalized) ? "currency:" : "";
   const percentage = /%|\bpercent(?:age)?\b/u.test(normalized) ? "%" : "";
-  return `${currency}${number}${percentage}`;
+  const suffixMatch = normalized.match(/[kmbx]\b/u);
+  const suffix = suffixMatch ? suffixMatch[0] : "";
+  return `${currency}${number}${suffix}${percentage}`;
 }
 
 function extractMetricKeys(value: string): readonly string[] {
   const keys: string[] = [];
   const pattern =
-    /(?<![\p{L}\p{N}])(?:(?:[$€£¥]\s*)|(?:usd\s+|eur\s+|gbp\s+|jpy\s+))?\d[\d,]*(?:\.\d+)?(?:\s*(?:%|percent|percentage))?(?![\p{L}\p{N}])/giu;
+    /(?<![\p{L}\p{N}])(?:(?:[$€£¥]\s*)|(?:usd\s+|eur\s+|gbp\s+|jpy\s+))?\d[\d,]*(?:\.\d+)?(?:\s*(?:[kmbx]|%|percent|percentage))?(?![\p{L}\p{N}])/giu;
 
   for (const match of value.matchAll(pattern)) {
     const text = match[0];
@@ -153,7 +155,22 @@ function extractYears(value: string): ReadonlySet<string> {
   return new Set(value.match(/\b\d{4}\b/gu) ?? []);
 }
 
+function hasImpossibleDateRange(text: string): boolean {
+  const rangePattern = /\b(19\d{2}|20\d{2})\b\s*(?:-|–|—|to)\s*\b(19\d{2}|20\d{2})\b/gu;
+  for (const match of text.matchAll(rangePattern)) {
+    const start = Number.parseInt(match[1] ?? "0", 10);
+    const end = Number.parseInt(match[2] ?? "0", 10);
+    if (start > end) {
+      return true;
+    }
+  }
+  return false;
+}
+
 function hasDateConflict(claimText: string, evidenceText: string): boolean {
+  if (hasImpossibleDateRange(claimText) || hasImpossibleDateRange(evidenceText)) {
+    return true;
+  }
   const claimYears = extractYears(claimText);
   const evidenceYears = extractYears(evidenceText);
   if (claimYears.size === 0 || evidenceYears.size === 0) {
