@@ -52,7 +52,7 @@ and a real job description, followed by the stage release.
 | Horizon | Stage | Status | Outcome | Key dependencies |
 | --- | --- | --- | --- | --- |
 | Now | Integrated local alpha | Implementation complete; manual real-input acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
-| Next | Retrieval and provider quality | Not started | Improve evidence selection and make live runs dependable | Real-input alpha workflow, provenance baseline, representative evaluation cases |
+| Next | Retrieval and provider quality | Implementation complete; calibration benchmark baseline recorded | Improve evidence selection and make live runs dependable | Decoupled retrieval port, SQLite FTS/BM25 baseline, provider resilience & swapped roles, hybrid RRF benchmark |
 | Next | Real-application pilot | Not started | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics |
 | Later | Production-ready beta | Not started | Distribute a safe, dependable desktop application | Pilot decision, packaging and security review |
 | Later | Controlled expansion | Not started | Extend proven workflows without weakening trust boundaries | Beta evidence and explicit product demand |
@@ -174,3 +174,4 @@ roadmap change should say what changed, why, and what moved out to make room.
 | 2026-08-13 | Added typed public-source extraction and explicit review-status semantics to the alpha slice | URL provenance alone is insufficient for useful source review, and approval must not imply that unresolved warnings are validated |
 | 2026-08-13 | Added deterministic directory and ZIP package-size diagnostics to the beta packaging work | The Windows archive size needs evidence before safe payload reduction or installer changes |
 | 2026-08-13 | Recorded automated alpha acceptance evidence and kept the stage open for a real-source Windows check | The packaged Linux workflow is green, but synthetic smoke cannot stand in for a maintainer's installed-app validation with real CV and job inputs |
+| 2026-08-13 | Completed Retrieval and provider quality stage (#63, #64, #65) | Implemented decoupled RetrievalPort, SQLite FTS/BM25 baseline, exponential backoff retries, non-content streaming progress, swapped cross-company roles, local vector embeddings, and RRF hybrid benchmark quality gates |
