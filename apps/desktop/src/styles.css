@@ -208,6 +208,46 @@ h3 {
   font-weight: 620;
 }
 
+.validation-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+  border: 1px solid #34444e;
+  border-radius: 10px;
+  padding: 12px 15px;
+  color: #aebcc8;
+  background: #182129;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.validation-banner strong {
+  color: #f2f6f8;
+  font-size: 0.8rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.validation-blocked {
+  border-color: rgba(224, 117, 96, 0.52);
+  background: rgba(96, 38, 34, 0.16);
+}
+
+.validation-blocked strong {
+  color: #ffb0a1;
+}
+
+.validation-warnings {
+  border-color: rgba(214, 157, 52, 0.5);
+  background: rgba(214, 157, 52, 0.1);
+}
+
+.validation-warnings strong {
+  color: #f2c979;
+}
+
 .workspace-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.75fr) minmax(320px, 0.85fr);
@@ -611,6 +651,20 @@ textarea:focus {
   color: #82929e;
   font-size: 0.67rem;
   text-transform: uppercase;
+}
+
+.finding-resolved {
+  opacity: 0.82;
+}
+
+.finding-resolution {
+  margin-left: auto;
+  color: #8de1d2;
+}
+
+.resolution-pending,
+.resolution-deferred {
+  color: #f2c979;
 }
 
 .severity-error {

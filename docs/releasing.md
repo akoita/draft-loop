@@ -45,6 +45,33 @@ The manifest records the project and stage, package versions, commit, runtime
 versions, artifact paths, byte sizes, and SHA-256 checksums. Checksum files are
 excluded from the artifact list to avoid self-referential metadata.
 
+## Package size diagnostics
+
+The release script also provides a read-only, deterministic size report for an
+explicit unpacked package directory or ZIP archive. It does not change the
+packaging configuration or package contents:
+
+```text
+node scripts/release.mjs size-report --input ./apps/desktop/out/<unpacked-package> --format text
+node scripts/release.mjs size-report --input ./apps/desktop/out/make/<package>.zip > package-size.json
+```
+
+JSON is the default format. Use `--format text` for a category summary and the
+largest files, or add `--output <path>` to write either format to a file. The
+report has explicit totals and file counts for `runtime`, `nativeModules`,
+`dependencies`, `assets`, `generated`, `sourceMaps`, `tests`, and `other`.
+Directory reports use file sizes from the unpacked tree. ZIP reports include
+logical (uncompressed) bytes in `totalBytes`, compressed member payload bytes
+in `totalStoredBytes`, and the complete archive size in `inputBytes`.
+
+Classification uses normalized relative paths and exact path segments or file
+extensions, with this precedence: Electron/runtime paths, `.node` native
+modules, source maps, test paths, `node_modules` dependencies, asset paths,
+generated paths, then `other`. Absolute paths and `..` traversal segments in
+archives are rejected. Directory symlinks are not followed; ignored entries
+are listed in the report. Files and categories are sorted deterministically so
+reports can be compared between builds.
+
 The Linux packaging job also launches the unpacked Electron binary twice in a
 headless smoke workflow. The first launch creates a synthetic offline run and
 requests a revision; the second launch reopens the workspace, resumes the run,

@@ -30,6 +30,21 @@ export const urlSourceKinds = [
 
 export type UrlSourceKind = (typeof urlSourceKinds)[number];
 
+export const urlFactKinds = [
+  "project",
+  "technology",
+  "role",
+  "date",
+  "credential",
+  "link",
+] as const;
+
+export type UrlFactKind = (typeof urlFactKinds)[number];
+
+export const urlExtractionStatuses = ["extracted", "generic-fallback"] as const;
+
+export type UrlExtractionStatus = (typeof urlExtractionStatuses)[number];
+
 export interface UrlProvenance {
   readonly originalUrl: string;
   readonly finalUrl: string;
@@ -69,6 +84,24 @@ export interface SourceChunk {
   readonly url?: UrlProvenance;
 }
 
+export interface UrlSourceFact {
+  readonly kind: UrlFactKind;
+  readonly value: string;
+  readonly sourceUrl: string;
+  readonly locator: SourceLocator;
+  readonly status: UrlExtractionStatus;
+  /** A deterministic adapter confidence from 0 (weak) to 1 (strong). */
+  readonly confidence: number;
+  readonly label?: string;
+}
+
+export interface UrlExtraction {
+  readonly status: UrlExtractionStatus;
+  /** Aggregate confidence for the adapter result, from 0 (weak) to 1 (strong). */
+  readonly confidence: number;
+  readonly facts: readonly UrlSourceFact[];
+}
+
 export type IngestionIssueCode =
   | "unsupported-media-type"
   | "extractor-unavailable"
@@ -99,6 +132,7 @@ export interface NormalizedSource {
   readonly chunks: readonly SourceChunk[];
   readonly issues: readonly IngestionIssue[];
   readonly url?: UrlProvenance;
+  readonly urlExtraction?: UrlExtraction;
 }
 
 export interface IngestionResult {
@@ -144,6 +178,15 @@ export interface UrlIngestionOptions extends IngestionOptions {
   readonly maxResponseBytes?: number;
   readonly maxExtractedCharacters?: number;
   readonly now?: () => Date;
+}
+
+export interface UrlAdapterInput {
+  readonly url: UrlProvenance;
+  readonly mediaType: Extract<SupportedMediaType, "text/plain" | "text/markdown" | "text/html">;
+  /** Fetched response content. Adapters never fetch or resolve this content. */
+  readonly content: string;
+  /** The text already produced by the bounded generic extractor, when available. */
+  readonly normalizedText?: string;
 }
 
 const maxBinaryBytes = 32 * 1024 * 1024;
@@ -206,6 +249,28 @@ export function classifyUrl(input: string | URL): UrlSourceKind {
     hostname.endsWith(".lever.co") ||
     hostname === "ashbyhq.com" ||
     hostname.endsWith(".ashbyhq.com") ||
+    hostname === "workable.com" ||
+    hostname.endsWith(".workable.com") ||
+    hostname === "smartrecruiters.com" ||
+    hostname.endsWith(".smartrecruiters.com") ||
+    hostname === "jobvite.com" ||
+    hostname.endsWith(".jobvite.com") ||
+    hostname === "icims.com" ||
+    hostname.endsWith(".icims.com") ||
+    hostname === "bamboohr.com" ||
+    hostname.endsWith(".bamboohr.com") ||
+    hostname === "recruitee.com" ||
+    hostname.endsWith(".recruitee.com") ||
+    hostname === "teamtailor.com" ||
+    hostname.endsWith(".teamtailor.com") ||
+    hostname === "personio.com" ||
+    hostname.endsWith(".personio.com") ||
+    hostname === "myworkdayjobs.com" ||
+    hostname.endsWith(".myworkdayjobs.com") ||
+    hostname === "successfactors.com" ||
+    hostname.endsWith(".successfactors.com") ||
+    hostname === "oraclecloud.com" ||
+    hostname.endsWith(".oraclecloud.com") ||
     /\/(?:job|jobs|career|careers|position|positions|vacancy|vacancies|opening|openings|job-description)(?:\/|$)/u.test(
       pathname,
     )
@@ -234,6 +299,10 @@ export function classifyUrl(input: string | URL): UrlSourceKind {
 
 function isSupportedMediaType(value: string): value is SupportedMediaType {
   return (supportedMediaTypes as readonly string[]).includes(value);
+}
+
+function isUrlTextMediaType(value: SupportedMediaType): value is UrlAdapterInput["mediaType"] {
+  return value === "text/plain" || value === "text/markdown" || value === "text/html";
 }
 
 function issue(code: IngestionIssueCode, sourcePath: string, message: string): IngestionIssue {
@@ -291,6 +360,366 @@ function extractHtml(text: string): string {
       .replace(/\n[ \t]+/g, "\n")
       .replace(/\n{2,}/g, "\n"),
   ).trim();
+}
+
+const technologyNames = [
+  "TypeScript",
+  "JavaScript",
+  "Python",
+  "Ruby",
+  "Java",
+  "Kotlin",
+  "Swift",
+  "Go",
+  "Rust",
+  "C#",
+  "C++",
+  ".NET",
+  "React",
+  "Vue.js",
+  "Angular",
+  "Svelte",
+  "Next.js",
+  "Node.js",
+  "Express",
+  "Django",
+  "FastAPI",
+  "Spring",
+  "Rails",
+  "PostgreSQL",
+  "MySQL",
+  "SQLite",
+  "MongoDB",
+  "Redis",
+  "GraphQL",
+  "REST",
+  "Docker",
+  "Kubernetes",
+  "Terraform",
+  "AWS",
+  "Azure",
+  "GCP",
+  "GitHub Actions",
+  "Jest",
+  "Vitest",
+  "Playwright",
+] as const;
+
+type UrlFactCandidate = Omit<UrlSourceFact, "locator" | "sourceUrl" | "status"> & {
+  readonly locatorText: string;
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function cleanFactValue(value: string): string {
+  return value
+    .replace(/^#{1,6}\s*/u, "")
+    .replace(/[`*_]/gu, "")
+    .replace(/^[-*+•]\s*/u, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function lineLocator(text: string, value: string): SourceLocator {
+  const needle = value.trim().toLocaleLowerCase();
+  if (needle !== "") {
+    const lines = text.split("\n");
+    const lineIndex = lines.findIndex((line) => line.toLocaleLowerCase().includes(needle));
+    if (lineIndex >= 0) return { lineStart: lineIndex + 1, lineEnd: lineIndex + 1 };
+  }
+  return { lineStart: 1, lineEnd: 1 };
+}
+
+function urlFactSection(value: string): UrlFactKind | undefined {
+  const normalized = cleanFactValue(value).toLocaleLowerCase().replace(/[:.]$/u, "");
+  if (/^(?:featured )?projects?$/u.test(normalized)) return "project";
+  if (
+    /^(?:technical )?(?:skills?|technologies|tech stack|tools|stack|requirements?|qualifications?)$/u.test(
+      normalized,
+    )
+  ) {
+    return "technology";
+  }
+  if (/^(?:work )?(?:experience|employment|roles?)$/u.test(normalized)) return "role";
+  if (/^(?:certifications?|credentials?|degrees?|education)$/u.test(normalized)) {
+    return "credential";
+  }
+  if (/^(?:dates?|timeline|period|duration|posted|published|issued|expires?)$/u.test(normalized)) {
+    return "date";
+  }
+  return undefined;
+}
+
+function urlFactLabelKind(value: string): UrlFactKind | undefined {
+  const normalized = value.toLocaleLowerCase().replace(/\s+/gu, " ").trim();
+  if (/^(?:project|project name|featured project)s?$/u.test(normalized)) return "project";
+  if (
+    /^(?:technology|technologies|tech stack|skills?|tools|stack|requirements?|qualifications?)$/u.test(
+      normalized,
+    )
+  ) {
+    return "technology";
+  }
+  if (/^(?:role|title|position|job title)$/u.test(normalized)) return "role";
+  if (/^(?:date|dates|period|duration|posted|published|issued|expires?)$/u.test(normalized)) {
+    return "date";
+  }
+  if (
+    /^(?:credential|credentials|credential id|certification|certifications|degree|education)$/u.test(
+      normalized,
+    )
+  ) {
+    return "credential";
+  }
+  return undefined;
+}
+
+function markdownHeadings(content: string): readonly string[] {
+  return [...content.matchAll(/^\s*#{1,6}\s+(.+?)\s*#*\s*$/gmu)].map((match) =>
+    cleanFactValue(match[1] ?? ""),
+  );
+}
+
+function htmlHeadings(content: string): readonly string[] {
+  return [...content.matchAll(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]\s*>/giu)].map((match) =>
+    cleanFactValue(extractHtml(match[1] ?? "")),
+  );
+}
+
+function headingValues(
+  content: string,
+  mediaType: UrlAdapterInput["mediaType"],
+): readonly string[] {
+  if (mediaType === "text/html") return htmlHeadings(content);
+  if (mediaType === "text/markdown") return markdownHeadings(content);
+  return [];
+}
+
+function splitFactValues(value: string): readonly string[] {
+  return value
+    .split(/\s*(?:,|;|\||·)\s*/u)
+    .flatMap((part) => part.split(/\s+and\s+/iu))
+    .map(cleanFactValue)
+    .filter((part) => part.length > 0 && part.length <= 120);
+}
+
+function dateValues(value: string): readonly string[] {
+  const datePattern =
+    /\b(?:(?:19|20)\d{2}(?:\s*(?:[-–—]|to)\s*(?:(?:19|20)\d{2}|present))?|(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:t(?:ember)?)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+(?:19|20)\d{2}|\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b/giu;
+  return [...value.matchAll(datePattern)].map((match) => match[0]);
+}
+
+function roleLikeHeading(value: string): boolean {
+  return /\b(?:engineer|developer|designer|manager|scientist|analyst|architect|director|lead|intern|consultant|specialist|officer|chief|head)\b/iu.test(
+    value,
+  );
+}
+
+function safeEmbeddedUrl(value: string, baseUrl: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(value, baseUrl);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== "https:" || parsed.username !== "" || parsed.password !== "") {
+    return null;
+  }
+  parsed.hash = "";
+  return parseSafeUrl(parsed.href)?.href ?? null;
+}
+
+function linkCandidates(
+  content: string,
+  mediaType: UrlAdapterInput["mediaType"],
+  baseUrl: string,
+): readonly UrlFactCandidate[] {
+  const candidates: UrlFactCandidate[] = [];
+  if (mediaType === "text/html") {
+    const pattern =
+      /<a\b[^>]*\bhref\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))[^>]*>([\s\S]*?)<\/a\s*>/giu;
+    for (const match of content.matchAll(pattern)) {
+      const href = safeEmbeddedUrl(match[1] ?? match[2] ?? match[3] ?? "", baseUrl);
+      if (href === null) continue;
+      const label = cleanFactValue(extractHtml(match[4] ?? ""));
+      candidates.push({
+        kind: "link",
+        value: href,
+        locatorText: label === "" ? href : label,
+        confidence: 0.95,
+        ...(label === "" ? {} : { label }),
+      });
+    }
+  } else {
+    const pattern = /\[([^\]]+)\]\(\s*(https:\/\/[^\s)]+)(?:\s+["'][^)]*["'])?\s*\)/giu;
+    for (const match of content.matchAll(pattern)) {
+      const href = safeEmbeddedUrl(match[2] ?? "", baseUrl);
+      if (href === null) continue;
+      const label = cleanFactValue(match[1] ?? "");
+      candidates.push({
+        kind: "link",
+        value: href,
+        locatorText: label === "" ? href : label,
+        confidence: 0.95,
+        ...(label === "" ? {} : { label }),
+      });
+    }
+  }
+  return candidates;
+}
+
+function extractUrlFactCandidates(
+  input: UrlAdapterInput,
+  normalizedText: string,
+): readonly UrlFactCandidate[] {
+  if (
+    !["github", "job-description", "certification", "profile", "portfolio"].includes(input.url.kind)
+  ) {
+    return [];
+  }
+  if (normalizedText.trim() === "") return [];
+
+  const candidates: UrlFactCandidate[] = [];
+  const add = (
+    kind: UrlFactKind,
+    value: string,
+    confidence: number,
+    locatorText = value,
+    label?: string,
+  ): void => {
+    const cleaned = cleanFactValue(value);
+    if (cleaned === "") return;
+    candidates.push({
+      kind,
+      value: cleaned,
+      locatorText: cleanFactValue(locatorText),
+      confidence,
+      ...(label === undefined ? {} : { label }),
+    });
+  };
+
+  const headings = new Set(headingValues(input.content, input.mediaType));
+  const htmlListItems = new Set(
+    [...input.content.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li\s*>/giu)].map((match) =>
+      cleanFactValue(extractHtml(match[1] ?? "")),
+    ),
+  );
+  const ignoredGithubHeadings =
+    /^(?:installation|usage|setup|contributing|license|contact|about|getting started)$/iu;
+  let section: UrlFactKind | undefined;
+  for (const line of normalizedText.split("\n")) {
+    const cleanLine = cleanFactValue(line);
+    if (cleanLine === "") continue;
+    const heading = headings.has(cleanLine) || /^#{1,6}\s+/u.test(line.trim());
+    if (heading) {
+      section = urlFactSection(cleanLine);
+      if (section === undefined) {
+        if (
+          (input.url.kind === "github" || input.url.kind === "portfolio") &&
+          !ignoredGithubHeadings.test(cleanLine)
+        ) {
+          add("project", cleanLine, 0.85);
+        } else if (input.url.kind === "certification") {
+          add("credential", cleanLine, 0.85);
+        } else if (
+          (input.url.kind === "job-description" || input.url.kind === "profile") &&
+          roleLikeHeading(cleanLine)
+        ) {
+          add("role", cleanLine, 0.85);
+        }
+      }
+      continue;
+    }
+
+    const labelMatch = cleanLine.match(/^([A-Za-z][A-Za-z ]{1,32})\s*:\s*(.+)$/u);
+    if (labelMatch !== null) {
+      const labeledKind = urlFactLabelKind(labelMatch[1] ?? "");
+      const labeledValue = labelMatch[2] ?? "";
+      if (labeledKind === "date") {
+        for (const value of dateValues(labeledValue)) add("date", value, 0.95, value);
+      } else if (labeledKind === "technology") {
+        for (const value of splitFactValues(labeledValue)) add("technology", value, 0.95);
+      } else if (labeledKind !== undefined) {
+        add(labeledKind, labeledValue, 0.95);
+      }
+      continue;
+    }
+
+    if (section === "technology") {
+      for (const value of splitFactValues(cleanLine)) add("technology", value, 0.82);
+    } else if (
+      section === "project" &&
+      (line.trim().startsWith("-") || line.trim().startsWith("*") || htmlListItems.has(cleanLine))
+    ) {
+      add("project", cleanLine, 0.82);
+    } else if (
+      section === "role" &&
+      (line.trim().startsWith("-") || line.trim().startsWith("*") || htmlListItems.has(cleanLine))
+    ) {
+      add("role", cleanLine, 0.82);
+    } else if (
+      section === "credential" &&
+      (line.trim().startsWith("-") || line.trim().startsWith("*") || htmlListItems.has(cleanLine))
+    ) {
+      add("credential", cleanLine, 0.82);
+    }
+  }
+
+  for (const candidate of linkCandidates(input.content, input.mediaType, input.url.finalUrl)) {
+    candidates.push(candidate);
+  }
+  for (const match of normalizedText.matchAll(/https:\/\/[^\s<>)"']+/giu)) {
+    const href = safeEmbeddedUrl(match[0], input.url.finalUrl);
+    if (href !== null) add("link", href, 0.9, match[0]);
+  }
+
+  for (const match of normalizedText.matchAll(
+    /\b(?:19|20)\d{2}(?:\s*(?:[-–—]|to)\s*(?:(?:19|20)\d{2}|present))?\b/giu,
+  )) {
+    add("date", match[0], 0.8, match[0]);
+  }
+
+  for (const technology of technologyNames) {
+    const pattern = new RegExp(
+      `(?:^|[^\\p{L}\\p{N}])${escapeRegExp(technology)}(?=$|[^\\p{L}\\p{N}])`,
+      "iu",
+    );
+    if (pattern.test(normalizedText)) add("technology", technology, 0.76, technology);
+  }
+  return candidates;
+}
+
+export function extractUrlFacts(input: UrlAdapterInput): UrlExtraction {
+  const normalizedText =
+    input.normalizedText ??
+    (input.mediaType === "text/html" ? extractHtml(input.content) : normalizeText(input.content));
+  const candidates = extractUrlFactCandidates(input, normalizedText);
+  const facts: UrlSourceFact[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    const key = `${candidate.kind}\u0000${candidate.value.toLocaleLowerCase()}\u0000${input.url.finalUrl}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    facts.push({
+      kind: candidate.kind,
+      value: candidate.value,
+      sourceUrl: input.url.finalUrl,
+      locator: lineLocator(normalizedText, candidate.locatorText),
+      status: "extracted",
+      confidence: candidate.confidence,
+      ...(candidate.label === undefined ? {} : { label: candidate.label }),
+    });
+  }
+  if (facts.length === 0) {
+    return { status: "generic-fallback", confidence: 0.25, facts: [] };
+  }
+  return {
+    status: "extracted",
+    confidence: Math.max(...facts.map((fact) => fact.confidence)),
+    facts,
+  };
 }
 
 function readUint16(bytes: Uint8Array, offset: number): number {
@@ -771,6 +1200,15 @@ async function normalizeIngestedBytes(
 
   const normalizedSource = sourceWithUrl(source, url);
   const provenance = url ?? source.url;
+  const urlExtraction =
+    provenance === undefined || !isUrlTextMediaType(mediaType)
+      ? undefined
+      : extractUrlFacts({
+          url: provenance,
+          mediaType,
+          content: new TextDecoder().decode(bytes),
+          normalizedText: text,
+        });
   return {
     source: {
       source: normalizedSource,
@@ -787,6 +1225,7 @@ async function normalizeIngestedBytes(
       ),
       issues,
       ...(provenance === undefined ? {} : { url: provenance }),
+      ...(urlExtraction === undefined ? {} : { urlExtraction }),
     },
     issues,
   };

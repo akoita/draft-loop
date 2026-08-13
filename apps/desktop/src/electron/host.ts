@@ -75,9 +75,17 @@ interface ReviewOverrides {
   readonly decisions: Readonly<Record<string, FindingDecision>>;
   readonly rationales: Readonly<Record<string, string>>;
   readonly edits: Readonly<Record<string, string>>;
+  readonly history: readonly ReviewDecisionHistoryEntry[];
 }
 
-const emptyOverrides: ReviewOverrides = { decisions: {}, rationales: {}, edits: {} };
+interface ReviewDecisionHistoryEntry {
+  readonly findingId: string;
+  readonly decision: FindingDecision;
+  readonly rationale?: string;
+  readonly createdAt: string;
+}
+
+const emptyOverrides: ReviewOverrides = { decisions: {}, rationales: {}, edits: {}, history: [] };
 const defaultIo: ApplicationIo = { write: () => undefined };
 
 class NativeHostError extends Error {
@@ -243,7 +251,7 @@ function reviewFinding(
   };
 }
 
-function reviewEvents(snapshot: RunSnapshot): readonly ReviewEvent[] {
+function reviewEvents(snapshot: RunSnapshot, overrides: ReviewOverrides): readonly ReviewEvent[] {
   const events: ReviewEvent[] = [
     {
       id: `${snapshot.runId}:created`,
@@ -263,6 +271,14 @@ function reviewEvents(snapshot: RunSnapshot): readonly ReviewEvent[] {
             ? "reviewing"
             : "revising",
       createdAt: execution.completedAt,
+    });
+  }
+  for (const [index, decision] of overrides.history.entries()) {
+    events.push({
+      id: `${snapshot.runId}:decision:${index}:${decision.findingId}`,
+      label: `Finding decision recorded: ${decision.decision}`,
+      state: "awaiting-approval",
+      createdAt: decision.createdAt,
     });
   }
   events.push({
@@ -306,7 +322,7 @@ function reviewState(
       stopReason: evaluation?.stopReason ?? "continue",
       scores: evaluation?.scoreVector ?? {},
     },
-    events: reviewEvents(snapshot),
+    events: reviewEvents(snapshot, overrides),
     exportPath,
     setup,
   };
@@ -397,8 +413,10 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
     const decisions = record.decisions;
     const rationales = record.rationales;
     const edits = record.edits;
+    const history = record.history;
     const normalizedDecisions: Record<string, FindingDecision> = {};
     const normalizedRationales: Record<string, string> = {};
+    const normalizedHistory: ReviewDecisionHistoryEntry[] = [];
     if (typeof decisions === "object" && decisions !== null && !Array.isArray(decisions)) {
       for (const [id, decision] of Object.entries(decisions)) {
         if (
@@ -425,10 +443,39 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
         }
       }
     }
+    if (Array.isArray(history)) {
+      for (const item of history.slice(-100)) {
+        if (typeof item !== "object" || item === null || Array.isArray(item)) continue;
+        const entry = item as Record<string, unknown>;
+        const findingId = entry.findingId;
+        const decision = entry.decision;
+        const createdAt = entry.createdAt;
+        const rationale = entry.rationale;
+        if (
+          typeof findingId !== "string" ||
+          findingId.length === 0 ||
+          findingId.length > 128 ||
+          typeof decision !== "string" ||
+          !["pending", "accepted", "rejected", "deferred", "overridden"].includes(decision) ||
+          typeof createdAt !== "string" ||
+          createdAt.length > 64 ||
+          (rationale !== undefined && (typeof rationale !== "string" || rationale.length > 1_000))
+        ) {
+          continue;
+        }
+        normalizedHistory.push({
+          findingId,
+          decision: decision as FindingDecision,
+          createdAt,
+          ...(rationale === undefined ? {} : { rationale }),
+        });
+      }
+    }
     return {
       decisions: normalizedDecisions,
       rationales: normalizedRationales,
       edits: normalizedEdits,
+      history: normalizedHistory,
     };
   } catch {
     return emptyOverrides;
@@ -663,6 +710,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       finalUrl: source.url.finalUrl,
       fetchedAt: source.url.fetchedAt,
       kind: source.url.kind,
+      extractionStatus: source.urlExtraction?.status ?? "generic-fallback",
+      extractedFactCount: String(source.urlExtraction?.facts.length ?? 0),
       checksum: source.checksum,
       relativePath: targetRelative,
     });
@@ -671,6 +720,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       originalUrl: source.url.originalUrl,
       finalUrl: source.url.finalUrl,
       kind: source.url.kind,
+      extractionStatus: source.urlExtraction?.status ?? "generic-fallback",
       mediaType: source.mediaType,
     };
   }
@@ -689,6 +739,15 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         overrides = {
           ...overrides,
           decisions: { ...overrides.decisions, [action.findingId]: action.decision },
+          history: [
+            ...overrides.history,
+            {
+              findingId: action.findingId,
+              decision: action.decision,
+              createdAt: new Date().toISOString(),
+              ...(action.rationale === undefined ? {} : { rationale: action.rationale }),
+            },
+          ].slice(-100),
           ...(action.rationale === undefined
             ? {}
             : { rationales: { ...overrides.rationales, [action.findingId]: action.rationale } }),

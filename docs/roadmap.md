@@ -41,15 +41,16 @@ synthetic pilot. The CLI and packaged Electron desktop path now share the local
 application driver; the desktop can create/open a workspace, run the offline
 fixture, review it, and recover persisted decisions after restart. Product
 quality has not yet been demonstrated on real applications. The next alpha
-completion slice is real-input onboarding: real workspaces must remain empty
-until the user provides candidate evidence and a target job description; the
-offline fixture is an explicit demo path.
+completion slice is real-input onboarding and source understanding: real
+workspaces must remain empty until the user provides candidate evidence and a
+target job description; approved public URLs retain provenance and typed facts;
+the offline fixture is an explicit demo path.
 
 ## Roadmap
 
 | Horizon | Stage | Status | Outcome | Key dependencies |
 | --- | --- | --- | --- | --- |
-| Now | Integrated local alpha | Real-input onboarding in progress | Complete one application entirely in the desktop app | Shared application service, Electron host, real source intake, packaged smoke acceptance |
+| Now | Integrated local alpha | Real-input onboarding and source provenance in progress | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
 | Next | Retrieval and provider quality | Not started | Improve evidence selection and make live runs dependable | Real-input alpha workflow, provenance baseline, representative evaluation cases |
 | Next | Real-application pilot | Not started | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics |
 | Later | Production-ready beta | Not started | Distribute a safe, dependable desktop application | Pilot decision, packaging and security review |
@@ -72,6 +73,11 @@ product.
   explicitly labeled demo path.
 - Provide readiness-gated local file and approved public URL intake for the
   target job description and candidate evidence, with local provenance.
+- Classify supported public GitHub, certification, profile, portfolio, and job
+  URLs; extract bounded typed facts with source locators and confidence while
+  falling back safely for dynamic pages.
+- Separate blocking findings, non-blocking warnings, artifact approval, export
+  availability, and persisted override decisions in the review experience.
 - Keep user and architecture documentation synchronized with shipped behavior.
 
 **Exit criterion:** A user can create, run, review, approve, restart, resume,
@@ -117,6 +123,8 @@ drafts, and reduce meaningful user effort.
 
 - Signed installers, migrations, backup/restore, crash recovery, and safe
   upgrades.
+- Use reproducible package-size diagnostics to remove avoidable Windows and
+  cross-platform release payload before changing packaging behavior.
 - Accessibility and keyboard-complete review flows.
 - ATS and cross-viewer DOCX/PDF compatibility, Unicode typography, templates,
   and visual regression tests.
@@ -162,3 +170,5 @@ roadmap change should say what changed, why, and what moved out to make room.
 | 2026-08-12 | Added the shared local driver and Electron host path to the alpha scope | The renderer bridge now has a real local runtime; packaged acceptance is the remaining stage gate |
 | 2026-08-13 | Added stage-based release automation as issue #46 | Each roadmap stage should leave a versioned, reproducible baseline for the next stage |
 | 2026-08-13 | Added real-input onboarding and approved URL intake to the integrated alpha scope as issue #51 | The first Windows release exposed that synthetic workspace data was being shown as if it were user input; retrieval and pilot work need real, provenance-bearing sources |
+| 2026-08-13 | Added typed public-source extraction and explicit review-status semantics to the alpha slice | URL provenance alone is insufficient for useful source review, and approval must not imply that unresolved warnings are validated |
+| 2026-08-13 | Added deterministic directory and ZIP package-size diagnostics to the beta packaging work | The Windows archive size needs evidence before safe payload reduction or installer changes |

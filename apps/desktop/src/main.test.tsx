@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createFixtureReviewState,
   reduceReviewState,
+  reviewFindingSummary,
   unresolvedBlockingFindings,
 } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
@@ -58,11 +59,51 @@ describe("desktop trust-centered review", () => {
       type: "finding-decision",
       findingId: "finding-unsupported-claim",
       decision: "overridden",
+      rationale: "Verified against the candidate's original source.",
     });
     const readyForApproval = { ...overridden, state: "awaiting-approval" as const };
     const approved = reduceReviewState(readyForApproval, { type: "approve" });
     expect(approved.state).toBe("approved");
     expect(approved.approval).toBe("approved");
+  });
+
+  it("distinguishes non-blocking warnings from approval blockers", () => {
+    const initial = createFixtureReviewState();
+    const warningOnly = {
+      ...initial,
+      state: "awaiting-approval" as const,
+      findings: initial.findings.map((finding) =>
+        finding.severity === "error"
+          ? {
+              ...finding,
+              decision: "overridden" as const,
+              rationale: "Verified against the candidate's original source.",
+            }
+          : finding,
+      ),
+    };
+
+    expect(reviewFindingSummary(warningOnly)).toMatchObject({
+      blocking: [],
+      warnings: [{ id: "finding-coverage" }],
+      status: "warnings",
+    });
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={warningOnly} onAction={() => undefined} />,
+    );
+    expect(html).toContain("1 unresolved warning");
+    expect(html).toContain("Approval is available with 1 unresolved non-blocking warning");
+    expect(reduceReviewState(warningOnly, { type: "approve" }).approval).toBe("approved");
+  });
+
+  it("does not accept an override without a rationale", () => {
+    const initial = createFixtureReviewState();
+    const unchanged = reduceReviewState(initial, {
+      type: "finding-decision",
+      findingId: "finding-unsupported-claim",
+      decision: "overridden",
+    });
+    expect(unchanged.findings[0]?.decision).toBe("pending");
   });
 
   it("keeps export unavailable until after approval", () => {

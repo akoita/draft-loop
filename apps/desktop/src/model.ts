@@ -141,12 +141,33 @@ export interface DesktopReviewPort {
   ) => Promise<DesktopReviewState>;
 }
 
+export type ReviewValidationStatus = "blocked" | "warnings" | "clear";
+
+export interface ReviewFindingSummary {
+  readonly unresolved: readonly ReviewFinding[];
+  readonly blocking: readonly ReviewFinding[];
+  readonly warnings: readonly ReviewFinding[];
+  readonly status: ReviewValidationStatus;
+}
+
+function isUnresolved(finding: ReviewFinding): boolean {
+  return finding.decision === "pending" || finding.decision === "deferred";
+}
+
+export function reviewFindingSummary(state: DesktopReviewState): ReviewFindingSummary {
+  const unresolved = state.findings.filter(isUnresolved);
+  const blocking = unresolved.filter((finding) => finding.severity === "error");
+  const warnings = unresolved.filter((finding) => finding.severity === "warning");
+  return {
+    unresolved,
+    blocking,
+    warnings,
+    status: blocking.length > 0 ? "blocked" : warnings.length > 0 ? "warnings" : "clear",
+  };
+}
+
 export function unresolvedBlockingFindings(state: DesktopReviewState): readonly ReviewFinding[] {
-  return state.findings.filter(
-    (finding) =>
-      finding.severity === "error" &&
-      (finding.decision === "pending" || finding.decision === "deferred"),
-  );
+  return reviewFindingSummary(state).blocking;
 }
 
 export function reduceReviewState(
@@ -155,6 +176,7 @@ export function reduceReviewState(
 ): DesktopReviewState {
   switch (action.type) {
     case "finding-decision":
+      if (action.decision === "overridden" && (action.rationale ?? "").trim() === "") return state;
       return {
         ...state,
         findings: state.findings.map((finding) =>

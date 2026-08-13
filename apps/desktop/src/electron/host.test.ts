@@ -163,6 +163,7 @@ describe("native host", () => {
         value: {
           originalUrl: "https://example.com/projects/draft-loop",
           kind: "portfolio",
+          extractionStatus: "generic-fallback",
           mediaType: "text/plain",
         },
       });
@@ -172,6 +173,7 @@ describe("native host", () => {
       );
       expect(provenance).toContain("https://example.com/projects/draft-loop");
       expect(provenance).toContain('"role": "evidence"');
+      expect(provenance).toContain('"extractedFactCount": "0"');
       const files = await readdir(join(root, "evidence", "imported"));
       expect(files).toHaveLength(1);
       expect(await readFile(join(root, "evidence", "imported", files[0] ?? ""), "utf8")).toBe(
@@ -256,7 +258,12 @@ describe("native host", () => {
       });
       expect(reloaded).toMatchObject({
         ok: true,
-        value: { findings: [{ decision: "overridden" }] },
+        value: {
+          findings: [{ decision: "overridden" }],
+          events: expect.arrayContaining([
+            expect.objectContaining({ label: "Finding decision recorded: overridden" }),
+          ]),
+        },
       });
       expect(await readFile(join(root, ".draft-loop", "review-overrides.json"), "utf8")).toContain(
         "overridden",

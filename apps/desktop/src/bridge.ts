@@ -184,6 +184,7 @@ export interface SourceAddUrlResult {
   readonly originalUrl: string;
   readonly finalUrl: string;
   readonly kind: string;
+  readonly extractionStatus: "extracted" | "generic-fallback";
   readonly mediaType: SupportedMediaType;
 }
 
@@ -785,7 +786,16 @@ function normalizeFileResult(value: unknown): FileSelectResult {
 
 function normalizeSourceAddUrlResult(value: unknown): SourceAddUrlResult {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, ["sourcePath", "originalUrl", "finalUrl", "kind", "mediaType"])) {
+  if (
+    !hasOnlyKeys(result, [
+      "sourcePath",
+      "originalUrl",
+      "finalUrl",
+      "kind",
+      "extractionStatus",
+      "mediaType",
+    ])
+  ) {
     return invalidInput();
   }
   return {
@@ -793,6 +803,7 @@ function normalizeSourceAddUrlResult(value: unknown): SourceAddUrlResult {
     originalUrl: urlValue(result.originalUrl),
     finalUrl: urlValue(result.finalUrl),
     kind: stringValue(result.kind, 64),
+    extractionStatus: enumValue(result.extractionStatus, ["extracted", "generic-fallback"]),
     mediaType: enumValue(result.mediaType, supportedMediaTypes),
   };
 }

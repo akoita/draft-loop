@@ -265,7 +265,157 @@ describe("URL source ingestion", () => {
     expect(classifyUrl("https://www.linkedin.com/in/ada-lovelace")).toBe("profile");
     expect(classifyUrl("https://ada.example/portfolio")).toBe("portfolio");
     expect(classifyUrl("https://jobs.example/roles/engineer")).toBe("job-description");
+    expect(classifyUrl("https://acme.myworkdayjobs.com/en-US/careers/job/123")).toBe(
+      "job-description",
+    );
+    expect(classifyUrl("https://apply.smartrecruiters.com/acme/role/123")).toBe("job-description");
     expect(classifyUrl("https://example.com/about-me")).toBe("generic");
+  });
+
+  it("extracts typed GitHub facts from fetched Markdown with URL and line provenance", async () => {
+    const originalUrl = "https://github.com/ada/atlas";
+    const body = [
+      "# Atlas Platform",
+      "",
+      "## Projects",
+      "- Atlas API — event-driven reporting service",
+      "",
+      "## Technologies",
+      "TypeScript, React, PostgreSQL",
+      "",
+      "## Credentials",
+      "- AWS Certified Developer",
+      "",
+      "Dates: 2022-2024",
+      "[Live demo](https://demo.example/atlas)",
+    ].join("\n");
+    const result = await ingestUrl(originalUrl, {
+      fetcher: async () =>
+        new Response(body, { headers: { "content-type": "text/markdown; charset=utf-8" } }),
+      now: () => new Date("2026-08-13T10:03:00.000Z"),
+    });
+
+    expect(result.issues).toEqual([]);
+    expect(result.source?.urlExtraction).toMatchObject({
+      status: "extracted",
+      confidence: expect.any(Number),
+    });
+    expect(result.source?.urlExtraction?.facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "project",
+          value: "Atlas Platform",
+          sourceUrl: originalUrl,
+          locator: { lineStart: 1, lineEnd: 1 },
+          status: "extracted",
+        }),
+        expect.objectContaining({ kind: "technology", value: "TypeScript" }),
+        expect.objectContaining({ kind: "technology", value: "React" }),
+        expect.objectContaining({ kind: "technology", value: "PostgreSQL" }),
+        expect.objectContaining({ kind: "credential", value: "AWS Certified Developer" }),
+        expect.objectContaining({ kind: "date", value: "2022-2024" }),
+        expect.objectContaining({
+          kind: "link",
+          value: "https://demo.example/atlas",
+          label: "Live demo",
+        }),
+      ]),
+    );
+    expect(result.source?.urlExtraction?.facts.every((fact) => fact.confidence > 0)).toBe(true);
+    expect(result.source?.chunks[0]?.url).toEqual(result.source?.url);
+  });
+
+  it("extracts roles, dates, credentials, technologies, and links from static career HTML", async () => {
+    const originalUrl = "https://careers.example/jobs/platform";
+    const body = [
+      "<main>",
+      "<h1>Senior Platform Engineer</h1>",
+      "<p>Role: Senior Platform Engineer</p>",
+      "<p>Dates: Jan 2021 - Present</p>",
+      "<h2>Requirements</h2>",
+      "<ul><li>TypeScript and Docker</li></ul>",
+      "<h2>Credentials</h2>",
+      "<ul><li>BSc Computer Science</li></ul>",
+      '<a href="https://jobs.example/apply/platform">Apply for this role</a>',
+      "</main>",
+    ].join("");
+    const result = await ingestUrl(originalUrl, {
+      fetcher: async () =>
+        new Response(body, { headers: { "content-type": "text/html; charset=utf-8" } }),
+    });
+
+    expect(result.issues).toEqual([]);
+    expect(result.source?.urlExtraction?.facts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ kind: "role", value: "Senior Platform Engineer" }),
+        expect.objectContaining({ kind: "date", value: "Jan 2021" }),
+        expect.objectContaining({ kind: "credential", value: "BSc Computer Science" }),
+        expect.objectContaining({ kind: "technology", value: "TypeScript" }),
+        expect.objectContaining({ kind: "technology", value: "Docker" }),
+        expect.objectContaining({
+          kind: "link",
+          value: "https://jobs.example/apply/platform",
+          label: "Apply for this role",
+        }),
+      ]),
+    );
+    expect(
+      result.source?.urlExtraction?.facts.every((fact) => fact.sourceUrl === originalUrl),
+    ).toBe(true);
+  });
+
+  it("uses the typed adapter for certification, profile, and portfolio sources", async () => {
+    const fixtures = [
+      {
+        url: "https://www.credly.com/badges/example-developer",
+        body: '<h1>AWS Certified Developer</h1><p>Issued: January 2024</p><p>Credential ID: CERT-123</p><a href="https://www.credly.com/badges/example-developer">View credential</a>',
+        expected: { kind: "credential", value: "AWS Certified Developer" },
+      },
+      {
+        url: "https://www.linkedin.com/in/example-person",
+        body: '<h1>Example Person</h1><p>Role: Principal Engineer</p><p>Technologies: Python, PostgreSQL</p><p>Dates: 2020-2024</p><a href="https://example.com/profile">Profile site</a>',
+        expected: { kind: "role", value: "Principal Engineer" },
+      },
+      {
+        url: "https://example.com/portfolio",
+        body: '<h1>Atlas Portfolio</h1><h2>Projects</h2><ul><li>Atlas dashboard</li></ul><h2>Technologies</h2><ul><li>React</li></ul><a href="https://demo.example/atlas">Live demo</a>',
+        expected: { kind: "project", value: "Atlas Portfolio" },
+      },
+    ] as const;
+
+    for (const fixture of fixtures) {
+      const result = await ingestUrl(fixture.url, {
+        fetcher: async () =>
+          new Response(fixture.body, { headers: { "content-type": "text/html; charset=utf-8" } }),
+      });
+
+      expect(result.issues).toEqual([]);
+      expect(result.source?.url?.kind).not.toBe("generic");
+      expect(result.source?.urlExtraction?.status).toBe("extracted");
+      expect(result.source?.urlExtraction?.facts).toEqual(
+        expect.arrayContaining([expect.objectContaining(fixture.expected)]),
+      );
+    }
+  });
+
+  it("falls back to generic extraction for dynamic career pages without useful static facts", async () => {
+    const result = await ingestUrl("https://careers.example/jobs/platform", {
+      fetcher: async () =>
+        new Response(
+          "<html><head><script>window.__JOB_DATA__ = { title: 'Private role' };</script></head><body><div id=app></div></body></html>",
+          { headers: { "content-type": "text/html; charset=utf-8" } },
+        ),
+      now: () => new Date("2026-08-13T10:04:00.000Z"),
+    });
+
+    expect(result.source?.text).toBe("");
+    expect(result.source?.urlExtraction).toEqual({
+      status: "generic-fallback",
+      confidence: 0.25,
+      facts: [],
+    });
+    expect(result.source?.url?.kind).toBe("job-description");
+    expect(result.source?.urlExtraction?.facts).toEqual([]);
   });
 
   it("requires approval before invoking the injected fetcher and preserves URL provenance", async () => {

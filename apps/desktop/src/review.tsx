@@ -4,7 +4,7 @@ import {
   type DesktopReviewState,
   type FindingDecision,
   type ReviewAction,
-  unresolvedBlockingFindings,
+  reviewFindingSummary,
 } from "./model.js";
 
 interface ReviewWorkspaceProps {
@@ -32,15 +32,27 @@ export function ReviewWorkspace({
   onSelectFiles,
   onAddUrl,
 }: ReviewWorkspaceProps) {
-  const blockingFindings = unresolvedBlockingFindings(state);
-  const unresolvedFindings = state.findings.filter(
-    (finding) => finding.decision === "pending" || finding.decision === "deferred",
-  );
+  const findingSummary = reviewFindingSummary(state);
+  const { blocking: blockingFindings, unresolved: unresolvedFindings, warnings } = findingSummary;
   const claimById = useMemo(
     () => new Map(state.artifact.claims.map((claim) => [claim.id, claim])),
     [state.artifact.claims],
   );
   const canApprove = state.state === "awaiting-approval" && blockingFindings.length === 0;
+  const approvalLabel =
+    state.approval === "approved"
+      ? findingSummary.status === "clear"
+        ? "Artifact approved"
+        : findingSummary.status === "blocked"
+          ? `Approved with ${blockingFindings.length} unresolved blocker${blockingFindings.length === 1 ? "" : "s"}`
+          : `Approved with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`
+      : "Approval pending";
+  const validationLabel =
+    findingSummary.status === "blocked"
+      ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+      : findingSummary.status === "warnings"
+        ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+        : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
@@ -183,9 +195,7 @@ export function ReviewWorkspace({
         <div className="run-identity">
           <span>{state.workspaceId}</span>
           <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
-          <span className="approval-pill">
-            {state.approval === "approved" ? "Artifact approved" : "Approval pending"}
-          </span>
+          <span className="approval-pill">{approvalLabel}</span>
           <span>Round {state.round}</span>
         </div>
       </header>
@@ -218,6 +228,22 @@ export function ReviewWorkspace({
             {state.budgetUsd === null ? "No cap configured" : `$${state.budgetUsd.toFixed(2)} cap`}
           </span>
         </div>
+      </section>
+
+      <section
+        className={`validation-banner validation-${findingSummary.status}`}
+        aria-label="validation status"
+        role="status"
+        aria-live="polite"
+      >
+        <strong>{validationLabel}</strong>
+        <span>
+          {findingSummary.status === "blocked"
+            ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+            : findingSummary.status === "warnings"
+              ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+              : "All findings have a recorded decision."}
+        </span>
       </section>
 
       <div className="workspace-grid">
@@ -368,19 +394,33 @@ export function ReviewWorkspace({
                 <p className="eyebrow">Critique</p>
                 <h2>Findings</h2>
               </div>
-              <span className="count-badge">{unresolvedFindings.length} unresolved</span>
+              <span className="count-badge">
+                {unresolvedFindings.length === 0
+                  ? "All resolved"
+                  : `${blockingFindings.length} blocking · ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`}
+              </span>
             </div>
             {state.findings.map((finding) => {
               const claim =
                 finding.claimId === undefined ? undefined : claimById.get(finding.claimId);
               return (
-                <article className={`finding-card finding-${finding.severity}`} key={finding.id}>
+                <article
+                  className={`finding-card finding-${finding.severity}${
+                    finding.decision === "pending" || finding.decision === "deferred"
+                      ? ""
+                      : " finding-resolved"
+                  }`}
+                  key={finding.id}
+                >
                   <div className="finding-meta">
                     <span className={`severity severity-${finding.severity}`}>
-                      {finding.severity}
+                      {finding.severity === "error" ? "blocking" : "warning"}
                     </span>
                     <span>{finding.category}</span>
                     <span>{finding.code}</span>
+                    <span className={`finding-resolution resolution-${finding.decision}`}>
+                      {decisionLabels[finding.decision]}
+                    </span>
                   </div>
                   <p>{finding.message}</p>
                   {finding.agreement === "critic-only" ? (
@@ -446,14 +486,22 @@ export function ReviewWorkspace({
 
           <section className="panel approval-panel" aria-label="approval and export">
             <p className="eyebrow">Human gate</p>
-            <h2>Approval is separate from export</h2>
+            <h2>Human approval gate</h2>
             <p className="subtle approval-status">
               Artifact: {state.approval === "approved" ? "approved" : "not approved"} · Export:{" "}
-              {state.exportPath === null ? "not exported" : "exported"}
+              {state.exportPath === null ? "not exported" : "exported"} · Validation:{" "}
+              {validationLabel}
             </p>
             {blockingFindings.length > 0 ? (
               <p className="warning-copy">
-                Resolve or override {blockingFindings.length} blocking finding before approval.
+                {state.approval === "approved"
+                  ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " remains" : "s remain"} unresolved after approval.`
+                  : `Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
+              </p>
+            ) : warnings.length > 0 ? (
+              <p className="warning-copy">
+                Approval is available with {warnings.length} unresolved non-blocking warning
+                {warnings.length === 1 ? "" : "s"}. They remain visible after approval.
               </p>
             ) : (
               <p className="safe-copy">
@@ -481,7 +529,10 @@ export function ReviewWorkspace({
             <div className="export-action">
               <div>
                 <strong>Export locally</strong>
-                <span>{state.exportPath ?? "Available only after approval"}</span>
+                <span>
+                  {state.exportPath ??
+                    (state.approval === "approved" ? "Available now" : "Available after approval")}
+                </span>
               </div>
               <button
                 className="button button-outline"
