@@ -8,6 +8,115 @@ export const outputFormats: readonly OutputFormat[] = ["markdown", "pdf", "docx"
 export const renderTemplateVersion = "cv-controlled-v1";
 export type OutputExtension = ".md" | ".pdf" | ".docx";
 
+export const supportedLanguages = ["en", "fr", "de", "es", "ja"] as const;
+export type SupportedLanguage = (typeof supportedLanguages)[number];
+
+export const localizedSectionHeadings: Readonly<Record<string, Readonly<Record<string, string>>>> =
+  {
+    en: {
+      summary: "Professional Summary",
+      experience: "Work Experience",
+      education: "Education",
+      skills: "Technical Skills",
+      projects: "Key Projects",
+      salutation: "Salutation",
+      hook: "Introduction",
+      alignment: "Core Alignment",
+      closing: "Closing",
+    },
+    fr: {
+      summary: "Résumé professionnel",
+      experience: "Expérience professionnelle",
+      education: "Formation",
+      skills: "Compétences techniques",
+      projects: "Projets clés",
+      salutation: "Salutation",
+      hook: "Introduction",
+      alignment: "Adéquation au poste",
+      closing: "Conclusion",
+    },
+    de: {
+      summary: "Beruflicher Werdegang",
+      experience: "Berufserfahrung",
+      education: "Ausbildung",
+      skills: "Fachkenntnisse",
+      projects: "Wichtige Projekte",
+      salutation: "Anrede",
+      hook: "Einleitung",
+      alignment: "Qualifikationsabgleich",
+      closing: "Schlussformel",
+    },
+    es: {
+      summary: "Resumen profesional",
+      experience: "Experiencia laboral",
+      education: "Educación",
+      skills: "Habilidades técnicas",
+      projects: "Proyectos destacados",
+      salutation: "Saludo",
+      hook: "Introducción",
+      alignment: "Alineación con el puesto",
+      closing: "Cierre",
+    },
+    ja: {
+      summary: "職務要約",
+      experience: "職務経歴",
+      education: "学歴",
+      skills: "スキル・専門知識",
+      projects: "主なプロジェクト",
+      salutation: "頭語",
+      hook: "志望動機",
+      alignment: "適性・実績",
+      closing: "結語",
+    },
+  };
+
+export const localizedDocumentTitles: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+  en: {
+    cv: "DraftLoop Tailored CV",
+    "cover-letter": "DraftLoop Cover Letter",
+    "application-qa": "DraftLoop Application Q&A",
+  },
+  fr: {
+    cv: "CV personnalisé DraftLoop",
+    "cover-letter": "Lettre de motivation DraftLoop",
+    "application-qa": "Questions-réponses DraftLoop",
+  },
+  de: {
+    cv: "DraftLoop Lebenslauf",
+    "cover-letter": "DraftLoop Anschreiben",
+    "application-qa": "DraftLoop Bewerbungsfragen",
+  },
+  es: {
+    cv: "Curriculum Vitae DraftLoop",
+    "cover-letter": "Carta de presentación DraftLoop",
+    "application-qa": "Preguntas y respuestas DraftLoop",
+  },
+  ja: {
+    cv: "DraftLoop 履歴書",
+    "cover-letter": "DraftLoop 送付状",
+    "application-qa": "DraftLoop 応募質問回答",
+  },
+};
+
+export function getLocalizedSectionTitle(
+  kind: string,
+  language = "en",
+  customTitle?: string,
+): string {
+  const langKey = language.toLowerCase().slice(0, 2);
+  const langTable = localizedSectionHeadings[langKey] ?? localizedSectionHeadings.en;
+  if (customTitle && customTitle.trim() !== "") {
+    return customTitle;
+  }
+  return langTable?.[kind] ?? customTitle ?? kind;
+}
+
+export function getLocalizedDocumentTitle(artifactKind = "cv", language = "en"): string {
+  const langKey = language.toLowerCase().slice(0, 2);
+  const langTable = localizedDocumentTitles[langKey] ?? localizedDocumentTitles.en;
+  return langTable?.[artifactKind] ?? langTable?.cv ?? "DraftLoop CV";
+}
+
 export function extensionForFormat(format: OutputFormat): OutputExtension {
   return format === "markdown" ? ".md" : `.${format}`;
 }
@@ -198,12 +307,7 @@ export function renderHtml(artifact: DraftArtifact): string {
       return `<section><h2>${escapeHtml(section.title)}</h2>${list}</section>`;
     })
     .join("");
-  const documentTitle =
-    artifact.kind === "cover-letter"
-      ? "DraftLoop Cover Letter"
-      : artifact.kind === "application-qa"
-        ? "DraftLoop Application Q&A"
-        : "DraftLoop CV";
+  const documentTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   return `<!doctype html><html lang="${escapeHtml(artifact.language)}"><head><meta charset="utf-8"><title>${escapeHtml(documentTitle)}</title><style>${controlledCss}</style></head><body><main>${sections}</main></body></html>`;
 }
 
@@ -263,11 +367,11 @@ function escapePdfText(value: string): string {
     .replaceAll("–", " - ")
     .replaceAll("•", "*")
     .replaceAll("…", "...");
-  return normalized
-    .replace(/[^\x20-\x7e]/gu, "?")
-    .replaceAll("\\", "\\\\")
-    .replaceAll("(", "\\(")
-    .replaceAll(")", "\\)");
+  const ascii = normalized
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\x20-\x7e]/gu, "?");
+  return ascii.replaceAll("\\", "\\\\").replaceAll("(", "\\(").replaceAll(")", "\\)");
 }
 
 function pdfBytes(artifact: DraftArtifact, options: RenderOptions = {}): Uint8Array {
@@ -319,12 +423,7 @@ function pdfBytes(artifact: DraftArtifact, options: RenderOptions = {}): Uint8Ar
   const createdDateStr = options.generatedAt
     ? options.generatedAt.replace(/[-:TZ.]/gu, "").slice(0, 14)
     : "20260813120000";
-  const defaultTitle =
-    artifact.kind === "cover-letter"
-      ? "DraftLoop Cover Letter"
-      : artifact.kind === "application-qa"
-        ? "DraftLoop Application Q&A"
-        : "DraftLoop Tailored CV";
+  const defaultTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   const title = artifact.sections[0]?.title ?? defaultTitle;
   objects[infoId] =
     `<< /Title (${escapePdfText(title)}) /Author (DraftLoop) /Creator (DraftLoop CV Engine) /CreationDate (D:${createdDateStr}Z) >>`;
@@ -446,12 +545,7 @@ function renderDocx(artifact: DraftArtifact, options: RenderOptions = {}): Uint8
       return `${heading}${blocks}`;
     })
     .join("");
-  const defaultTitle =
-    artifact.kind === "cover-letter"
-      ? "DraftLoop Cover Letter"
-      : artifact.kind === "application-qa"
-        ? "DraftLoop Application Q&A"
-        : "DraftLoop Tailored CV";
+  const defaultTitle = getLocalizedDocumentTitle(artifact.kind ?? "cv", artifact.language);
   const title = artifact.sections[0]?.title ?? defaultTitle;
   const createdDate = options.generatedAt ?? "2026-08-13T12:00:00.000Z";
   const document = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1008" w:right="1008" w:bottom="1008" w:left="1008"/></w:sectPr></w:body></w:document>`;
@@ -520,7 +614,9 @@ export function validateAtsExtractability(
   artifact: DraftArtifact,
 ): AtsValidationReport {
   const extracted = extractTextFromRenderedDocument(rendered);
-  const normalizedExtracted = extracted.toLowerCase();
+  const normalizeText = (text: string) =>
+    text.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
+  const normalizedExtracted = normalizeText(extracted);
 
   const expectedText = artifactText(artifact);
   const expectedWords = wordCount(expectedText);
@@ -532,16 +628,18 @@ export function validateAtsExtractability(
       artifact.kind === "cover-letter" &&
       (section.kind === "salutation" || section.kind === "closing");
     if (isHeaderlessLetterSection) {
-      const firstBlockWord = section.blocks[0]?.text.toLowerCase().trim().split(/\s+/u)[0] ?? "";
+      const firstBlockWord = normalizeText(
+        section.blocks[0]?.text.toLowerCase().trim().split(/\s+/u)[0] ?? "",
+      );
       if (firstBlockWord !== "" && !normalizedExtracted.includes(firstBlockWord)) {
         missingSections.push(section.title);
       }
-    } else if (!normalizedExtracted.includes(section.title.toLowerCase().trim())) {
+    } else if (!normalizedExtracted.includes(normalizeText(section.title))) {
       missingSections.push(section.title);
     }
   }
 
-  const expectedTokens = [...expectedText.toLowerCase().matchAll(/[\p{L}\p{N}]+/gu)].map(
+  const expectedTokens = [...normalizeText(expectedText).matchAll(/[\p{L}\p{N}]+/gu)].map(
     (m) => m[0],
   );
   let matched = 0;
