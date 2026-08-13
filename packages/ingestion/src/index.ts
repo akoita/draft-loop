@@ -1688,3 +1688,78 @@ export async function ingestSources(
     issues: results.flatMap((result) => result.issues),
   };
 }
+
+export interface PortfolioProject {
+  readonly name: string;
+  readonly description: string;
+  readonly url?: string;
+  readonly role?: string;
+  readonly dateRange?: string;
+  readonly technologies: readonly string[];
+  readonly highlights: readonly string[];
+}
+
+export interface PortfolioManifest {
+  readonly authorName?: string;
+  readonly headline?: string;
+  readonly summary?: string;
+  readonly projects: readonly PortfolioProject[];
+}
+
+export function ingestPortfolioManifest(
+  manifest: PortfolioManifest,
+  sourcePath = "/sources/portfolio.json",
+): readonly SourceChunk[] {
+  const chunks: SourceChunk[] = [];
+  let currentLine = 1;
+
+  if (manifest.summary && manifest.summary.trim() !== "") {
+    const text = manifest.headline ? `${manifest.headline}: ${manifest.summary}` : manifest.summary;
+    const lineCount = text.split("\n").length;
+    chunks.push({
+      id: `${sourcePath}#L${currentLine}-L${currentLine + lineCount - 1}`,
+      sourcePath,
+      mediaType: "text/plain",
+      checksum: createHash("sha256").update(text, "utf8").digest("hex"),
+      locator: {
+        lineStart: currentLine,
+        lineEnd: currentLine + lineCount - 1,
+      },
+      text,
+    });
+    currentLine += lineCount + 1;
+  }
+
+  for (const project of manifest.projects) {
+    const techLine =
+      project.technologies.length > 0 ? `Technologies: ${project.technologies.join(", ")}` : "";
+    const highlightsText =
+      project.highlights.length > 0 ? project.highlights.map((h) => `- ${h}`).join("\n") : "";
+    const parts = [
+      `Project: ${project.name}`,
+      project.role ? `Role: ${project.role}` : "",
+      project.dateRange ? `Period: ${project.dateRange}` : "",
+      project.description,
+      techLine,
+      highlightsText,
+    ].filter((p) => p.trim() !== "");
+
+    const chunkText = parts.join("\n");
+    const lineCount = chunkText.split("\n").length;
+
+    chunks.push({
+      id: `${sourcePath}#L${currentLine}-L${currentLine + lineCount - 1}`,
+      sourcePath,
+      mediaType: "text/plain",
+      checksum: createHash("sha256").update(chunkText, "utf8").digest("hex"),
+      locator: {
+        lineStart: currentLine,
+        lineEnd: currentLine + lineCount - 1,
+      },
+      text: chunkText,
+    });
+    currentLine += lineCount + 1;
+  }
+
+  return chunks;
+}
