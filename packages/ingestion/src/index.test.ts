@@ -184,6 +184,16 @@ describe("local source ingestion", () => {
     expect(docxResult.source?.chunks[0]?.locator).toEqual({ lineStart: 1, lineEnd: 2 });
   });
 
+  it("extracts text from PDF with ToUnicode CMap and hex string text operators", async () => {
+    const cmapStream = `1 0 obj\n<< /Length 200 >>\nstream\n/CIDInit /ProcSet findresource begin 12 dict begin begincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n1 begincodespacerange <0000> <FFFF> endcodespacerange\n2 beginbfchar\n<0001> <004A>\n<0002> <0062>\nendbfchar\n1 beginbfrange\n<0003> <0004> <006F>\nendbfrange\nendcmap\nendstream\nendobj`;
+    const textStream = `2 0 obj\n<< /Length 100 >>\nstream\nBT\n/F1 12 Tf\n<000100030002> Tj\n[ <0001> 10 <00030002> ] TJ\nET\nendstream\nendobj`;
+    const pdfPath = await fixture("cmap_test.pdf", `%PDF-1.4\n${cmapStream}\n${textStream}\n%%EOF`);
+
+    const result = await ingestFile({ path: pdfPath });
+    expect(result.issues).toEqual([]);
+    expect(result.source?.text).toContain("Job");
+  });
+
   it("reports malformed binary formats without decoding them as text", async () => {
     const secret = "CONFIDENTIAL-CANDIDATE-MATERIAL";
     const path = await fixture("resume.docx", new TextEncoder().encode(secret));

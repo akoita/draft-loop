@@ -643,10 +643,17 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
   }
 }
 
-export function bridgeError(code: BridgeErrorCode, capability?: BridgeCapability): BridgeError {
+export function bridgeError(
+  code: BridgeErrorCode,
+  capability?: BridgeCapability,
+  customMessage?: string,
+): BridgeError {
   return {
     code,
-    message: errorMessages[code],
+    message:
+      typeof customMessage === "string" && customMessage.trim().length > 0
+        ? customMessage
+        : errorMessages[code],
     ...(capability === undefined ? {} : { capability }),
   };
 }
@@ -655,7 +662,6 @@ export function unavailableResult<Value>(capability: BridgeCapability): BridgeRe
   return { ok: false, error: bridgeError("capability-unavailable", capability) };
 }
 
-/** Converts unknown host exceptions to content-free, stable errors. */
 export function safeBridgeError(error: unknown, capability?: BridgeCapability): BridgeError {
   if (error instanceof BridgeValidationError) {
     return bridgeError(error.code, capability);

@@ -916,7 +916,76 @@ function pdfArray(value: string, start: number): { readonly value: string; reado
   throw new Error("PDF text array is unterminated");
 }
 
-function extractPdfOperators(content: string): string {
+function parsePdfCMap(cmapText: string): Map<number, string> {
+  const map = new Map<number, string>();
+  const bfCharRegex = /beginbfchar([\s\S]*?)endbfchar/gu;
+  for (const match of cmapText.matchAll(bfCharRegex)) {
+    const lines = match[1]?.trim().split(/\r?\n/) ?? [];
+    for (const line of lines) {
+      const parts = line.trim().match(/<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/u);
+      if (parts && parts[1] && parts[2]) {
+        const src = Number.parseInt(parts[1], 16);
+        const dstHex = parts[2];
+        let dstStr = "";
+        for (let i = 0; i < dstHex.length; i += 4) {
+          const code = Number.parseInt(dstHex.slice(i, i + 4), 16);
+          if (!Number.isNaN(code) && code > 0) {
+            dstStr += String.fromCharCode(code);
+          }
+        }
+        map.set(src, dstStr);
+      }
+    }
+  }
+  const bfRangeRegex = /beginbfrange([\s\S]*?)endbfrange/gu;
+  for (const match of cmapText.matchAll(bfRangeRegex)) {
+    const lines = match[1]?.trim().split(/\r?\n/) ?? [];
+    for (const line of lines) {
+      const rangeMatch = line
+        .trim()
+        .match(/<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/u);
+      if (rangeMatch && rangeMatch[1] && rangeMatch[2] && rangeMatch[3]) {
+        const startSrc = Number.parseInt(rangeMatch[1], 16);
+        const endSrc = Number.parseInt(rangeMatch[2], 16);
+        const startDst = Number.parseInt(rangeMatch[3], 16);
+        if (!Number.isNaN(startSrc) && !Number.isNaN(endSrc) && !Number.isNaN(startDst)) {
+          for (let src = startSrc; src <= endSrc; src++) {
+            map.set(src, String.fromCharCode(startDst + (src - startSrc)));
+          }
+        }
+      }
+    }
+  }
+  return map;
+}
+
+function decodePdfHex(hex: string, cmaps: Map<number, string>): string {
+  let result = "";
+  if (hex.length >= 4 && hex.length % 4 === 0) {
+    for (let i = 0; i < hex.length; i += 4) {
+      const chunk = hex.slice(i, i + 4);
+      const code = Number.parseInt(chunk, 16);
+      if (cmaps.has(code)) {
+        result += cmaps.get(code) ?? "";
+      } else if (!Number.isNaN(code) && code > 0) {
+        result += String.fromCharCode(code);
+      }
+    }
+    return result;
+  }
+  for (let i = 0; i < hex.length; i += 2) {
+    const chunk = hex.slice(i, i + 2);
+    const code = Number.parseInt(chunk, 16);
+    if (cmaps.has(code)) {
+      result += cmaps.get(code) ?? "";
+    } else if (!Number.isNaN(code) && code > 0) {
+      result += String.fromCharCode(code);
+    }
+  }
+  return result;
+}
+
+function extractPdfOperators(content: string, cmaps: Map<number, string>): string {
   let result = "";
   let index = 0;
   while (index < content.length) {
@@ -933,7 +1002,50 @@ function extractPdfOperators(content: string): string {
       index = parsed.end;
       continue;
     }
+    if (character === "<" && !content.startsWith("<<", index)) {
+      const closing = content.indexOf(">", index);
+      if (closing !== -1) {
+        const hex = content.slice(index + 1, closing).replace(/\s+/gu, "");
+        if (/^[0-9a-fA-F]+$/u.test(hex)) {
+          let cursor = closing + 1;
+          while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
+          if (content.startsWith("Tj", cursor)) {
+            result += `${decodePdfHex(hex, cmaps)}\n`;
+            index = cursor + 2;
+            continue;
+          }
+        }
+        index = closing + 1;
+        continue;
+      }
+    }
     if (character === "[") {
+      const closing = content.indexOf("]", index);
+      if (closing !== -1) {
+        let cursor = closing + 1;
+        while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
+        if (content.startsWith("TJ", cursor)) {
+          const inner = content.slice(index + 1, closing);
+          let textChunk = "";
+          for (const hexPart of inner.matchAll(/<([0-9a-fA-F]+)>/gu)) {
+            if (hexPart[1]) {
+              textChunk += decodePdfHex(hexPart[1], cmaps);
+            }
+          }
+          if (textChunk === "") {
+            for (const litPart of inner.matchAll(/\(([^)]*)\)/gu)) {
+              if (litPart[1]) {
+                textChunk += decodePdfLiteral(litPart[1]);
+              }
+            }
+          }
+          if (textChunk !== "") {
+            result += `${textChunk}\n`;
+          }
+          index = cursor + 2;
+          continue;
+        }
+      }
       const parsed = pdfArray(content, index);
       let cursor = parsed.end;
       while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
@@ -955,19 +1067,42 @@ function extractPdf(bytes: Uint8Array): string {
   const binary = Buffer.from(bytes).toString("latin1");
   if (!binary.startsWith("%PDF-")) throw new Error("PDF header is invalid");
   if (/\/Encrypt\b/u.test(binary)) throw new Error("encrypted PDFs are not supported");
-  const textParts: string[] = [];
+
   const streams = /stream(?:\r\n|\n|\r)([\s\S]*?)(?:\r\n|\n|\r)endstream/gu;
+  const cmaps = new Map<number, string>();
+  const decodedStreams: string[] = [];
+
   for (const match of binary.matchAll(streams)) {
     const stream = match[1] ?? "";
     const streamOffset = match.index ?? 0;
     const dictionary = binary.slice(Math.max(0, streamOffset - 1200), streamOffset);
     let decoded = latin1Bytes(stream);
     if (/\/FlateDecode\b/u.test(dictionary)) {
-      decoded = new Uint8Array(inflateSync(decoded));
+      try {
+        decoded = new Uint8Array(inflateSync(decoded));
+      } catch {
+        continue;
+      }
     }
-    textParts.push(extractPdfOperators(Buffer.from(decoded).toString("latin1")));
+    const streamText = Buffer.from(decoded).toString("latin1");
+    decodedStreams.push(streamText);
+    if (streamText.includes("begincmap")) {
+      const parsed = parsePdfCMap(streamText);
+      for (const [k, v] of parsed.entries()) {
+        cmaps.set(k, v);
+      }
+    }
   }
-  const text = normalizeText(textParts.filter((part) => part !== "").join("\n"));
+
+  const textParts: string[] = [];
+  for (const streamText of decodedStreams) {
+    const extracted = extractPdfOperators(streamText, cmaps);
+    if (extracted !== "") {
+      textParts.push(extracted);
+    }
+  }
+
+  const text = normalizeText(textParts.join("\n"));
   if (text === "") throw new Error("PDF contains no extractable text");
   return text;
 }

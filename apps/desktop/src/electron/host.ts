@@ -789,7 +789,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     const action: ReviewAction = input.action;
     switch (action.type) {
       case "start":
-        await service.start({ root: workspace.root, allowProviderData: false }, io());
+        await service.start({ root: workspace.root, allowProviderData: true }, io());
         break;
       case "finding-decision":
         overrides = {
@@ -828,7 +828,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         break;
       case "resume":
         await service.resume(
-          { root: workspace.root, runId: input.runId, allowProviderData: false },
+          { root: workspace.root, runId: input.runId, allowProviderData: true },
           io(),
         );
         break;
