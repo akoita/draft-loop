@@ -54,7 +54,7 @@ and a real job description, followed by the stage release.
 | Now | Integrated local alpha | Implementation complete; manual real-input acceptance pending | Complete one application entirely in the desktop app | Shared application service, Electron host, typed source intake, packaged smoke acceptance |
 | Next | Retrieval and provider quality | Implementation complete; calibration benchmark baseline recorded | Improve evidence selection and make live runs dependable | Decoupled retrieval port, SQLite FTS/BM25 baseline, provider resilience & swapped roles, hybrid RRF benchmark |
 | Next | Real-application pilot | Implementation complete; consented harness and adversarial fixtures delivered | Validate quality and user-effort hypotheses | Consent process, sanitized cases, calibrated metrics, adversarial fixtures |
-| Later | Production-ready beta | Not started | Distribute a safe, dependable desktop application | Pilot decision, packaging and security review |
+| Next | Production-ready beta | In progress; backup/restore, ATS export, a11y, and supply-chain gates complete | Distribute a safe, dependable desktop application | Packaging optimization, backup/restore, ATS export, accessibility |
 | Later | Controlled expansion | Not started | Extend proven workflows without weakening trust boundaries | Beta evidence and explicit product demand |
 
 ### Now — Integrated local alpha
@@ -176,3 +176,4 @@ roadmap change should say what changed, why, and what moved out to make room.
 | 2026-08-13 | Recorded automated alpha acceptance evidence and kept the stage open for a real-source Windows check | The packaged Linux workflow is green, but synthetic smoke cannot stand in for a maintainer's installed-app validation with real CV and job inputs |
 | 2026-08-13 | Completed Retrieval and provider quality stage (#63, #64, #65) | Implemented decoupled RetrievalPort, SQLite FTS/BM25 baseline, exponential backoff retries, non-content streaming progress, swapped cross-company roles, local vector embeddings, and RRF hybrid benchmark quality gates |
 | 2026-08-13 | Delivered consented pilot harness and adversarial security fixtures (#66, #67) | Implemented candidate consent protocol, tri-variant comparative benchmark runner, zero-leakage pilot report generator, timeline inversion detection, and adversarial security fixtures |
+| 2026-08-13 | Advanced Production-ready beta milestones (#73, #74, #75, #76) | Implemented atomic workspace backup/restore, ATS-compatibility export validation, Unicode typography handling, keyboard-accessible navigation with WCAG AA compliance, and automated license/secret quality gates |
