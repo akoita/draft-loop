@@ -825,3 +825,121 @@ textarea:focus {
   color: #f38ba8;
   font-size: 0.85rem;
 }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  padding: 20px;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 640px;
+  background: #181d22;
+  border: 1px solid #2f3b45;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.modal-copy {
+  color: #9cb1c2;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin-bottom: 20px;
+}
+
+.feedback-banner {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #7bd7cc;
+  background: rgba(123, 215, 204, 0.12);
+  color: #7bd7cc;
+  font-size: 0.85rem;
+}
+
+.credential-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.credential-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #1f252b;
+  border: 1px solid #2d3842;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.credential-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.credential-row-header strong {
+  color: #edf2f7;
+  font-size: 0.9rem;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.status-app {
+  color: #8de1d2;
+  background: rgba(60, 174, 155, 0.18);
+  border: 1px solid rgba(60, 174, 155, 0.35);
+}
+
+.status-env {
+  color: #9dd9f0;
+  background: rgba(72, 151, 190, 0.18);
+  border: 1px solid rgba(72, 151, 190, 0.35);
+}
+
+.status-none {
+  color: #a0aec0;
+  background: rgba(160, 174, 192, 0.12);
+  border: 1px solid rgba(160, 174, 192, 0.25);
+}
+
+.credential-input-group {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.credential-input-group input {
+  flex: 1;
+}
+
+.button-credentials {
+  font-size: 0.72rem;
+  padding: 4px 10px;
+  border: 1px solid #3d4d59;
+}

@@ -58,6 +58,9 @@ export type ExportFormat = (typeof exportFormats)[number];
 export const credentialProviders = ["anthropic", "openai"] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
 
+export const credentialSources = ["app", "env", "none"] as const;
+export type CredentialSource = (typeof credentialSources)[number];
+
 export const runStates = [
   "collecting",
   "ingesting",
@@ -139,9 +142,9 @@ export interface CredentialStatusInput {
   readonly provider: CredentialProvider;
 }
 
-/** The native host collects the value in its secure UI; no secret is accepted here. */
 export interface CredentialSetInput {
   readonly provider: CredentialProvider;
+  readonly apiKey: string;
 }
 
 export interface CredentialRemoveInput {
@@ -199,6 +202,7 @@ export interface ExportResult {
 export interface CredentialStatus {
   readonly provider: CredentialProvider;
   readonly configured: boolean;
+  readonly source: CredentialSource;
 }
 
 export type CredentialResult = CredentialStatus;
@@ -603,6 +607,14 @@ function validateCredentialInput(value: unknown): CredentialStatusInput {
   return { provider: enumValue(input.provider, credentialProviders) };
 }
 
+function validateCredentialSetInput(value: unknown): CredentialSetInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, ["provider", "apiKey"])) return invalidInput();
+  const provider = enumValue(input.provider, credentialProviders);
+  if (typeof input.apiKey !== "string" || input.apiKey.trim().length === 0) return invalidInput();
+  return { provider, apiKey: input.apiKey.trim() };
+}
+
 /** Parses untrusted renderer input into one of the allowlisted bridge commands. */
 export function validateBridgeCommand(value: unknown): BridgeCommand {
   const command = requireRecord(value);
@@ -637,7 +649,7 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
     case "credential.status":
       return { type: "credential.status", input: validateCredentialInput(command.input) };
     case "credential.set":
-      return { type: "credential.set", input: validateCredentialInput(command.input) };
+      return { type: "credential.set", input: validateCredentialSetInput(command.input) };
     case "credential.remove":
       return { type: "credential.remove", input: validateCredentialInput(command.input) };
   }
@@ -838,10 +850,11 @@ function normalizeExportResult(value: unknown): ExportResult {
 
 function normalizeCredentialResult(value: unknown): CredentialResult {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, ["provider", "configured"])) return invalidInput();
+  if (!hasOnlyKeys(result, ["provider", "configured", "source"])) return invalidInput();
   return {
     provider: enumValue(result.provider, credentialProviders),
     configured: booleanValue(result.configured),
+    source: enumValue(result.source, credentialSources),
   };
 }
 

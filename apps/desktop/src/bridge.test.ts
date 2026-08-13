@@ -112,24 +112,38 @@ describe("desktop capability bridge", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
-  it("does not carry credential values through the bridge", async () => {
-    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
-      ok: true,
-      value: { provider: "openai", configured: true },
-    }));
-    const port = createCapabilityPort(bridge(invoke, ["credential.set"]));
+  it("validates and carries in-app credential operations through the bridge", async () => {
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
+      if (command.type === "credential.set") {
+        return { ok: true, value: { provider: "openai", configured: true, source: "app" } };
+      }
+      return { ok: true, value: { provider: "openai", configured: true, source: "env" } };
+    });
+    const port = createCapabilityPort(bridge(invoke, ["credential.set", "credential.status"]));
 
-    const result = await port.execute({
+    const setResult = await port.execute({
       type: "credential.set",
-      input: { provider: "openai" },
+      input: { provider: "openai", apiKey: "sk-proj-test123" },
     });
 
-    expect(result).toEqual({ ok: true, value: { provider: "openai", configured: true } });
+    expect(setResult).toEqual({
+      ok: true,
+      value: { provider: "openai", configured: true, source: "app" },
+    });
     expect(invoke).toHaveBeenCalledWith({
       type: "credential.set",
+      input: { provider: "openai", apiKey: "sk-proj-test123" },
+    });
+
+    const statusResult = await port.execute({
+      type: "credential.status",
       input: { provider: "openai" },
     });
-    expect(JSON.stringify(invoke.mock.calls)).not.toContain("sk-secret");
+
+    expect(statusResult).toEqual({
+      ok: true,
+      value: { provider: "openai", configured: true, source: "env" },
+    });
   });
 
   it("reports unavailable browser capabilities without filesystem access", async () => {

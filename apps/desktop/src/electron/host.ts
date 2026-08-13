@@ -24,6 +24,7 @@ import {
   type BridgeResult,
   bridgeCapabilities,
   type CredentialProvider,
+  type CredentialSource,
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
@@ -58,9 +59,12 @@ export interface NativeHostDialogs {
 }
 
 export interface NativeCredentialStore {
-  readonly status: (provider: CredentialProvider) => Promise<boolean>;
-  readonly set: (provider: CredentialProvider) => Promise<boolean>;
+  readonly status: (
+    provider: CredentialProvider,
+  ) => Promise<{ configured: boolean; source: CredentialSource }>;
+  readonly set: (provider: CredentialProvider, apiKey?: string) => Promise<boolean>;
   readonly remove: (provider: CredentialProvider) => Promise<boolean>;
+  readonly get?: (provider: CredentialProvider) => Promise<string | undefined>;
 }
 
 export interface NativeHostOptions {
@@ -533,13 +537,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   const service =
     options.applicationService ?? createApplicationService(createLocalApplicationDriver());
   let active: ActiveWorkspace | undefined;
-  const credentials =
-    options.credentials ??
-    ({
-      status: async () => false,
-      set: async () => false,
-      remove: async () => false,
-    } satisfies NativeCredentialStore);
+  const credentials = options.credentials ?? createMemoryCredentialStore();
 
   function workspaceFor(id: string): ActiveWorkspace {
     if (active === undefined || active.descriptor.id !== id) {
@@ -781,6 +779,17 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
   }
 
+  async function syncCredentials(): Promise<void> {
+    const anthropicKey = await credentials.get?.("anthropic");
+    const openAiKey = await credentials.get?.("openai");
+    if (anthropicKey !== undefined && anthropicKey.trim().length > 0) {
+      process.env.ANTHROPIC_API_KEY = anthropicKey.trim();
+    }
+    if (openAiKey !== undefined && openAiKey.trim().length > 0) {
+      process.env.OPENAI_API_KEY = openAiKey.trim();
+    }
+  }
+
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
     const workspace = workspaceFor(input.workspaceId);
     if (input.action.type !== "start") await loadSnapshot(workspace, input.runId);
@@ -789,6 +798,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     const action: ReviewAction = input.action;
     switch (action.type) {
       case "start":
+        await syncCredentials();
         await service.start({ root: workspace.root, allowProviderData: true }, io());
         break;
       case "finding-decision":
@@ -827,6 +837,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         );
         break;
       case "resume":
+        await syncCredentials();
         await service.resume(
           { root: workspace.root, runId: input.runId, allowProviderData: true },
           io(),
@@ -946,31 +957,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await addUrl(command.input) };
         case "export.write": {
           const workspace = workspaceFor(command.input.workspaceId);
-          const outputPath =
-            command.input.relativePath === undefined
-              ? defaultExportPath(workspace.root, command.input.runId)
-              : resolve(workspace.root, command.input.relativePath);
-          rootRelative(workspace.root, outputPath);
-          const exportRelative = relative(
-            resolve(workspace.root, "exports"),
-            outputPath,
-          ).replaceAll("\\", "/");
-          if (
-            exportRelative === "" ||
-            exportRelative.startsWith("..") ||
-            isAbsolute(exportRelative)
-          ) {
-            return fail(
-              "permission-denied",
-              "Exports are restricted to the workspace exports folder.",
-            );
-          }
           const written = await service.export(
             {
               root: workspace.root,
               runId: command.input.runId,
               format: safeFormat(command.input.format),
-              outputPath,
+              ...(command.input.relativePath === undefined
+                ? {}
+                : { destinationPath: resolve(workspace.root, command.input.relativePath) }),
             },
             io(),
           );
@@ -985,30 +979,41 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             },
           };
         }
-        case "credential.status":
+        case "credential.status": {
+          const status = await credentials.status(command.input.provider);
           return {
             ok: true,
             value: {
               provider: command.input.provider,
-              configured: await credentials.status(command.input.provider),
+              configured: status.configured,
+              source: status.source,
             },
           };
-        case "credential.set":
+        }
+        case "credential.set": {
+          const configured = await credentials.set(command.input.provider, command.input.apiKey);
+          const status = await credentials.status(command.input.provider);
           return {
             ok: true,
             value: {
               provider: command.input.provider,
-              configured: await credentials.set(command.input.provider),
+              configured,
+              source: status.source,
             },
           };
-        case "credential.remove":
+        }
+        case "credential.remove": {
+          await credentials.remove(command.input.provider);
+          const status = await credentials.status(command.input.provider);
           return {
             ok: true,
             value: {
               provider: command.input.provider,
-              configured: await credentials.remove(command.input.provider),
+              configured: status.configured,
+              source: status.source,
             },
           };
+        }
       }
     } catch (error) {
       options.onError?.(error, command.type);
@@ -1020,17 +1025,31 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
 }
 
 export function createMemoryCredentialStore(): NativeCredentialStore {
-  const configured = new Set<CredentialProvider>();
+  const store = new Map<CredentialProvider, string>();
   return {
-    status: async (provider) => configured.has(provider),
-    set: async (provider) => {
-      configured.add(provider);
-      return true;
+    status: async (provider) => {
+      if (store.has(provider)) {
+        return { configured: true, source: "app" };
+      }
+      const envKey =
+        provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
+      if (envKey !== undefined && envKey.trim().length > 0) {
+        return { configured: true, source: "env" };
+      }
+      return { configured: false, source: "none" };
+    },
+    set: async (provider, apiKey) => {
+      if (apiKey !== undefined && apiKey.trim().length > 0) {
+        store.set(provider, apiKey.trim());
+        return true;
+      }
+      return false;
     },
     remove: async (provider) => {
-      const hadValue = configured.has(provider);
-      configured.delete(provider);
-      return hadValue;
+      return store.delete(provider);
+    },
+    get: async (provider) => {
+      return store.get(provider);
     },
   };
 }
@@ -1043,13 +1062,12 @@ export interface SafeStorageAdapter {
 
 /**
  * Uses Electron's OS-backed safeStorage encryption for provider credentials.
- * The bridge never accepts a secret; the host may supply one through an
- * app-owned prompt or another explicitly approved local input mechanism.
+ * Directly stores user-provided API keys encrypted via safeStorage.
  */
 export function createSafeStorageCredentialStore(options: {
   readonly safeStorage: SafeStorageAdapter;
   readonly filename: string;
-  readonly readSecret: (provider: CredentialProvider) => Promise<string | undefined>;
+  readonly readSecret?: (provider: CredentialProvider) => Promise<string | undefined>;
 }): NativeCredentialStore {
   const load = async (): Promise<Readonly<Record<string, string>>> => {
     try {
@@ -1064,22 +1082,36 @@ export function createSafeStorageCredentialStore(options: {
     await mkdir(dirname(options.filename), { recursive: true });
     await writeFile(options.filename, `${JSON.stringify(values, null, 2)}\n`, "utf8");
   };
+  const get = async (provider: CredentialProvider): Promise<string | undefined> => {
+    if (!options.safeStorage.isEncryptionAvailable()) return undefined;
+    const values = await load();
+    const encrypted = values[provider];
+    if (encrypted === undefined) return undefined;
+    try {
+      return options.safeStorage.decryptString(Buffer.from(encrypted, "base64"));
+    } catch {
+      return undefined;
+    }
+  };
   return {
     status: async (provider) => {
-      if (!options.safeStorage.isEncryptionAvailable()) return false;
-      const values = await load();
-      const encrypted = values[provider];
-      if (encrypted === undefined) return false;
-      try {
-        options.safeStorage.decryptString(Buffer.from(encrypted, "base64"));
-        return true;
-      } catch {
-        return false;
+      const stored = await get(provider);
+      if (stored !== undefined && stored.length > 0) {
+        return { configured: true, source: "app" };
       }
+      const envKey =
+        provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
+      if (envKey !== undefined && envKey.trim().length > 0) {
+        return { configured: true, source: "env" };
+      }
+      return { configured: false, source: "none" };
     },
-    set: async (provider) => {
+    set: async (provider, apiKey) => {
       if (!options.safeStorage.isEncryptionAvailable()) return false;
-      const secret = await options.readSecret(provider);
+      const secret =
+        apiKey !== undefined && apiKey.trim().length > 0
+          ? apiKey.trim()
+          : await options.readSecret?.(provider);
       if (secret === undefined || secret.length === 0) return false;
       const values = await load();
       const encrypted = options.safeStorage.encryptString(secret);
@@ -1094,5 +1126,6 @@ export function createSafeStorageCredentialStore(options: {
       await save(next);
       return true;
     },
+    get,
   };
 }

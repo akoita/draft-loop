@@ -5,7 +5,13 @@ import type { ApplicationService, WorkspaceDescriptor } from "@draft-loop/applic
 import { describe, expect, it, vi } from "vitest";
 
 import type { DesktopReviewState } from "../model.js";
-import { createNativeHost, type NativeHostDialogs } from "./host.js";
+import {
+  createMemoryCredentialStore,
+  createNativeHost,
+  createSafeStorageCredentialStore,
+  type NativeHostDialogs,
+  type SafeStorageAdapter,
+} from "./host.js";
 
 function descriptor(root: string): WorkspaceDescriptor {
   return {
@@ -440,5 +446,125 @@ describe("native host", () => {
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
+  });
+
+  describe("credential storage and environment fallback", () => {
+    it("stores encrypted credentials, reports source precedence, and removes them", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-"));
+      const credFile = join(parent, "credentials.json");
+
+      const mockSafeStorage: SafeStorageAdapter = {
+        isEncryptionAvailable: () => true,
+        encryptString: (plain: string) => Buffer.from(`enc:${plain}`),
+        decryptString: (enc: Buffer) => enc.toString().replace(/^enc:/, ""),
+      };
+
+      try {
+        const store = createSafeStorageCredentialStore({
+          safeStorage: mockSafeStorage,
+          filename: credFile,
+        });
+
+        // Initially unconfigured
+        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
+
+        // Set in-app key
+        const setOk = await store.set("anthropic", "sk-ant-test-key");
+        expect(setOk).toBe(true);
+
+        // Status shows configured in app
+        expect(await store.status("anthropic")).toEqual({ configured: true, source: "app" });
+        expect(await store.get?.("anthropic")).toBe("sk-ant-test-key");
+
+        // Verify stored file is encrypted
+        const rawContent = await readFile(credFile, "utf8");
+        expect(rawContent).not.toContain("sk-ant-test-key");
+
+        // Remove key
+        const removeOk = await store.remove("anthropic");
+        expect(removeOk).toBe(true);
+        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
+      } finally {
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
+    it("falls back to environment variables when in-app credential is not set", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-env-"));
+      const credFile = join(parent, "credentials.json");
+
+      const mockSafeStorage: SafeStorageAdapter = {
+        isEncryptionAvailable: () => true,
+        encryptString: (plain: string) => Buffer.from(`enc:${plain}`),
+        decryptString: (enc: Buffer) => enc.toString().replace(/^enc:/, ""),
+      };
+
+      const originalEnv = process.env.ANTHROPIC_API_KEY;
+      process.env.ANTHROPIC_API_KEY = "sk-ant-from-env";
+
+      try {
+        const store = createSafeStorageCredentialStore({
+          safeStorage: mockSafeStorage,
+          filename: credFile,
+        });
+
+        // Status reports configured via env
+        expect(await store.status("anthropic")).toEqual({ configured: true, source: "env" });
+
+        // Setting in-app key overrides status to app
+        await store.set("anthropic", "sk-ant-app-override");
+        expect(await store.status("anthropic")).toEqual({ configured: true, source: "app" });
+        expect(await store.get?.("anthropic")).toBe("sk-ant-app-override");
+
+        // Removing in-app key reverts status to env
+        await store.remove("anthropic");
+        expect(await store.status("anthropic")).toEqual({ configured: true, source: "env" });
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.ANTHROPIC_API_KEY;
+        } else {
+          process.env.ANTHROPIC_API_KEY = originalEnv;
+        }
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
+    it("handles credential bridge commands via native host", async () => {
+      const creds = createMemoryCredentialStore();
+      const host = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => undefined,
+          chooseFiles: async () => [],
+        },
+        credentials: creds,
+      });
+
+      const setResult = await host.invoke({
+        type: "credential.set",
+        input: { provider: "openai", apiKey: "sk-proj-test123" },
+      });
+      expect(setResult).toEqual({
+        ok: true,
+        value: { provider: "openai", configured: true, source: "app" },
+      });
+
+      const statusResult = await host.invoke({
+        type: "credential.status",
+        input: { provider: "openai" },
+      });
+      expect(statusResult).toEqual({
+        ok: true,
+        value: { provider: "openai", configured: true, source: "app" },
+      });
+
+      const removeResult = await host.invoke({
+        type: "credential.remove",
+        input: { provider: "openai" },
+      });
+      expect(removeResult).toEqual({
+        ok: true,
+        value: { provider: "openai", configured: false, source: "none" },
+      });
+    });
   });
 });

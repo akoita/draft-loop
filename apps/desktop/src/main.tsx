@@ -168,6 +168,23 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
                 });
             },
           })}
+      {...(activePort.getCredentialStatus === undefined
+        ? {}
+        : { getCredentialStatus: activePort.getCredentialStatus })}
+      {...(activePort.setCredential === undefined
+        ? {}
+        : {
+            onSetCredential: async (provider: "anthropic" | "openai", apiKey: string) => {
+              await activePort.setCredential?.(provider, apiKey);
+            },
+          })}
+      {...(activePort.removeCredential === undefined
+        ? {}
+        : {
+            onRemoveCredential: async (provider: "anthropic" | "openai") => {
+              await activePort.removeCredential?.(provider);
+            },
+          })}
     />
   );
 }

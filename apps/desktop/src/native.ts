@@ -123,6 +123,27 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopR
       });
       return unwrap(result);
     },
+    getCredentialStatus: async (provider) => {
+      const result = await capabilityPort.execute({
+        type: "credential.status",
+        input: { provider },
+      });
+      return unwrap(result);
+    },
+    setCredential: async (provider, apiKey) => {
+      const result = await capabilityPort.execute({
+        type: "credential.set",
+        input: { provider, apiKey },
+      });
+      return unwrap(result);
+    },
+    removeCredential: async (provider) => {
+      const result = await capabilityPort.execute({
+        type: "credential.remove",
+        input: { provider },
+      });
+      return unwrap(result);
+    },
   };
 }
 

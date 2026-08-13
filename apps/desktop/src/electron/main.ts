@@ -110,9 +110,6 @@ app.whenReady().then(() => {
     credentials: createSafeStorageCredentialStore({
       safeStorage,
       filename: join(app.getPath("userData"), "credentials.json"),
-      // The renderer cannot send secrets. A future app-owned credential prompt
-      // can provide this callback without changing the bridge contract.
-      readSecret: async () => undefined,
     }),
     ...(smokeEnabled
       ? {

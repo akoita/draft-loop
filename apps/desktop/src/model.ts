@@ -139,6 +139,16 @@ export interface DesktopReviewPort {
     target: "evidence" | "job-description",
     url: string,
   ) => Promise<DesktopReviewState>;
+  readonly getCredentialStatus?: (
+    provider: "anthropic" | "openai",
+  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
+  readonly setCredential?: (
+    provider: "anthropic" | "openai",
+    apiKey: string,
+  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
+  readonly removeCredential?: (
+    provider: "anthropic" | "openai",
+  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
 }
 
 export type ReviewValidationStatus = "blocked" | "warnings" | "clear";
@@ -383,8 +393,21 @@ export function createFixtureReviewState(): DesktopReviewState {
 }
 
 export function createFixtureReviewPort(): DesktopReviewPort {
+  const credentials = new Map<"anthropic" | "openai", string>();
   return {
     load: async () => createFixtureReviewState(),
     dispatch: async (state, action) => reduceReviewState(state, action),
+    getCredentialStatus: async (provider) => ({
+      configured: credentials.has(provider),
+      source: credentials.has(provider) ? "app" : "none",
+    }),
+    setCredential: async (provider, apiKey) => {
+      credentials.set(provider, apiKey);
+      return { configured: true, source: "app" };
+    },
+    removeCredential: async (provider) => {
+      credentials.delete(provider);
+      return { configured: false, source: "none" };
+    },
   };
 }

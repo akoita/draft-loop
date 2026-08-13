@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   type DesktopReviewState,
@@ -13,6 +13,11 @@ interface ReviewWorkspaceProps {
   readonly onSelectFiles?: (target: "evidence" | "job-description") => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   readonly errorMessage?: string | null;
+  readonly getCredentialStatus?: (
+    provider: "anthropic" | "openai",
+  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
+  readonly onSetCredential?: (provider: "anthropic" | "openai", apiKey: string) => Promise<void>;
+  readonly onRemoveCredential?: (provider: "anthropic" | "openai") => Promise<void>;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -33,6 +38,9 @@ export function ReviewWorkspace({
   onSelectFiles,
   onAddUrl,
   errorMessage,
+  getCredentialStatus,
+  onSetCredential,
+  onRemoveCredential,
 }: ReviewWorkspaceProps) {
   const findingSummary = reviewFindingSummary(state);
   const { blocking: blockingFindings, unresolved: unresolvedFindings, warnings } = findingSummary;
@@ -58,12 +66,74 @@ export function ReviewWorkspace({
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [anthropicStatus, setAnthropicStatus] = useState<{
+    configured: boolean;
+    source: "app" | "env" | "none";
+  }>({ configured: false, source: "none" });
+  const [openaiStatus, setOpenaiStatus] = useState<{
+    configured: boolean;
+    source: "app" | "env" | "none";
+  }>({ configured: false, source: "none" });
+  const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
+  const [openaiKeyInput, setOpenaiKeyInput] = useState("");
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
+
+  const refreshCredentials = useCallback(() => {
+    if (getCredentialStatus === undefined) return;
+    void getCredentialStatus("anthropic")
+      .then(setAnthropicStatus)
+      .catch(() => undefined);
+    void getCredentialStatus("openai")
+      .then(setOpenaiStatus)
+      .catch(() => undefined);
+  }, [getCredentialStatus]);
+
+  useEffect(() => {
+    refreshCredentials();
+  }, [refreshCredentials]);
+
+  const handleSaveCredential = async (provider: "anthropic" | "openai", key: string) => {
+    if (onSetCredential === undefined || key.trim() === "") return;
+    try {
+      await onSetCredential(provider, key.trim());
+      setCredentialFeedback(
+        `${provider === "anthropic" ? "Anthropic" : "OpenAI"} API key securely saved in app storage.`,
+      );
+      if (provider === "anthropic") setAnthropicKeyInput("");
+      else setOpenaiKeyInput("");
+      refreshCredentials();
+    } catch {
+      setCredentialFeedback("Failed to save API key.");
+    }
+  };
+
+  const handleRemoveCredential = async (provider: "anthropic" | "openai") => {
+    if (onRemoveCredential === undefined) return;
+    try {
+      await onRemoveCredential(provider);
+      setCredentialFeedback(
+        `${provider === "anthropic" ? "Anthropic" : "OpenAI"} API key removed from app storage.`,
+      );
+      refreshCredentials();
+    } catch {
+      setCredentialFeedback("Failed to remove API key.");
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
       if (isInput) return;
+
+      if (event.key === "Escape" && settingsOpen) {
+        event.preventDefault();
+        setSettingsOpen(false);
+        return;
+      }
 
       if (event.altKey || event.metaKey) {
         if (event.key === "a" || event.key === "A") {
@@ -87,7 +157,7 @@ export function ReviewWorkspace({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canApprove, onAction, state.state]);
+  }, [canApprove, onAction, state.state, settingsOpen]);
 
   const submitUrl = (target: "evidence" | "job-description"): void => {
     const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
@@ -97,15 +167,158 @@ export function ReviewWorkspace({
     else setEvidenceUrl("");
   };
 
+  const renderSettingsModal = () => {
+    if (!settingsOpen) return null;
+    return (
+      <div className="modal-backdrop">
+        <div
+          className="modal-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settings-dialog-title"
+        >
+          <div className="modal-header">
+            <div>
+              <p className="eyebrow">DraftLoop / Credentials</p>
+              <h2 id="settings-dialog-title">Provider API Keys</h2>
+            </div>
+            <button
+              className="button button-quiet"
+              type="button"
+              onClick={() => setSettingsOpen(false)}
+            >
+              Close
+            </button>
+          </div>
+          <p className="modal-copy">
+            Configure your Anthropic and OpenAI API keys directly in the app. Keys are stored
+            encrypted locally using your OS keychain / DPAPI and override system environment
+            variables.
+          </p>
+          {credentialFeedback ? (
+            <div className="feedback-banner" role="status">
+              <p>{credentialFeedback}</p>
+            </div>
+          ) : null}
+          <div className="credential-sections">
+            <div className="credential-row">
+              <div className="credential-row-header">
+                <strong>Anthropic API Key (Claude)</strong>
+                <span className={`status-badge status-${anthropicStatus.source}`}>
+                  {anthropicStatus.source === "app"
+                    ? "Configured in App"
+                    : anthropicStatus.source === "env"
+                      ? "Configured via Env"
+                      : "Not Configured"}
+                </span>
+              </div>
+              <div className="credential-input-group">
+                <input
+                  className="url-input"
+                  type={showAnthropicKey ? "text" : "password"}
+                  placeholder={
+                    anthropicStatus.configured ? "••••••••••••••••••••••••" : "sk-ant-api03-…"
+                  }
+                  value={anthropicKeyInput}
+                  onChange={(event) => setAnthropicKeyInput(event.target.value)}
+                  aria-label="Anthropic API Key"
+                />
+                <button
+                  className="button button-quiet"
+                  type="button"
+                  onClick={() => setShowAnthropicKey((prev) => !prev)}
+                >
+                  {showAnthropicKey ? "Hide" : "Show"}
+                </button>
+                <button
+                  className="button button-primary"
+                  type="button"
+                  disabled={anthropicKeyInput.trim() === ""}
+                  onClick={() => void handleSaveCredential("anthropic", anthropicKeyInput)}
+                >
+                  Save
+                </button>
+                {anthropicStatus.source === "app" ? (
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    onClick={() => void handleRemoveCredential("anthropic")}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            <div className="credential-row">
+              <div className="credential-row-header">
+                <strong>OpenAI API Key (GPT)</strong>
+                <span className={`status-badge status-${openaiStatus.source}`}>
+                  {openaiStatus.source === "app"
+                    ? "Configured in App"
+                    : openaiStatus.source === "env"
+                      ? "Configured via Env"
+                      : "Not Configured"}
+                </span>
+              </div>
+              <div className="credential-input-group">
+                <input
+                  className="url-input"
+                  type={showOpenaiKey ? "text" : "password"}
+                  placeholder={openaiStatus.configured ? "••••••••••••••••••••••••" : "sk-proj-…"}
+                  value={openaiKeyInput}
+                  onChange={(event) => setOpenaiKeyInput(event.target.value)}
+                  aria-label="OpenAI API Key"
+                />
+                <button
+                  className="button button-quiet"
+                  type="button"
+                  onClick={() => setShowOpenaiKey((prev) => !prev)}
+                >
+                  {showOpenaiKey ? "Hide" : "Show"}
+                </button>
+                <button
+                  className="button button-primary"
+                  type="button"
+                  disabled={openaiKeyInput.trim() === ""}
+                  onClick={() => void handleSaveCredential("openai", openaiKeyInput)}
+                >
+                  Save
+                </button>
+                {openaiStatus.source === "app" ? (
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    onClick={() => void handleRemoveCredential("openai")}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (state.state === "collecting") {
     return (
       <main className="app-shell">
+        {renderSettingsModal()}
         <header className="topbar">
           <div>
             <p className="eyebrow">DraftLoop / Workspace setup</p>
             <h1>Bring your evidence into the loop</h1>
           </div>
           <div className="run-identity">
+            <button
+              className="button button-quiet button-credentials"
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+            >
+              API Keys
+            </button>
             <span>{state.workspaceId}</span>
             <span className="state-pill state-collecting">Collecting inputs</span>
           </div>
@@ -195,6 +408,24 @@ export function ReviewWorkspace({
                 Review and fetch evidence URL
               </button>
             </article>
+            <article className="setup-card">
+              <span className="setup-number">03</span>
+              <strong>Model API keys</strong>
+              <span>
+                {state.setup.fixtureMode
+                  ? "Demo mode (no keys required)"
+                  : anthropicStatus.configured && openaiStatus.configured
+                    ? "Anthropic & OpenAI configured"
+                    : "Configure keys for live review"}
+              </span>
+              <button
+                className="button button-quiet"
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+              >
+                Manage API keys
+              </button>
+            </article>
           </div>
           {state.setup.nextSteps.length > 0 ? (
             <div className="setup-next-steps">
@@ -224,12 +455,20 @@ export function ReviewWorkspace({
 
   return (
     <main className="app-shell">
+      {renderSettingsModal()}
       <header className="topbar">
         <div>
           <p className="eyebrow">DraftLoop / Review workspace</p>
           <h1>Evidence before approval</h1>
         </div>
         <div className="run-identity">
+          <button
+            className="button button-quiet button-credentials"
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+          >
+            API Keys
+          </button>
           <span>{state.workspaceId}</span>
           <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
           <span className="approval-pill">{approvalLabel}</span>

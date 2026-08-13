@@ -923,7 +923,7 @@ function parsePdfCMap(cmapText: string): Map<number, string> {
     const lines = match[1]?.trim().split(/\r?\n/) ?? [];
     for (const line of lines) {
       const parts = line.trim().match(/<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/u);
-      if (parts && parts[1] && parts[2]) {
+      if (parts?.[1] && parts[2]) {
         const src = Number.parseInt(parts[1], 16);
         const dstHex = parts[2];
         let dstStr = "";
@@ -944,7 +944,7 @@ function parsePdfCMap(cmapText: string): Map<number, string> {
       const rangeMatch = line
         .trim()
         .match(/<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>\s+<([0-9a-fA-F]+)>/u);
-      if (rangeMatch && rangeMatch[1] && rangeMatch[2] && rangeMatch[3]) {
+      if (rangeMatch?.[1] && rangeMatch[2] && rangeMatch[3]) {
         const startSrc = Number.parseInt(rangeMatch[1], 16);
         const endSrc = Number.parseInt(rangeMatch[2], 16);
         const startDst = Number.parseInt(rangeMatch[3], 16);
