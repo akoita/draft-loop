@@ -8,6 +8,15 @@ import type { ForgeConfig } from "@electron-forge/shared-types";
 const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
+    prune: true,
+    ignore: [
+      /^\/(?:__tests__|tests|test)\//u,
+      /\.(?:test|spec)\.[cm]?[jt]sx?$/u,
+      /\.map$/u,
+      /\.d\.ts$/u,
+      /(?:README|CHANGELOG|LICENSE)\.md$/iu,
+      /(?:binding\.gyp|Makefile|\.cmake|\.o|\.obj|\.target\.mk)$/u,
+    ],
     extraResource: [resolve(__dirname, "../../node_modules/better-sqlite3")],
   },
   makers: [new MakerZIP({})],
