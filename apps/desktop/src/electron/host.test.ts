@@ -5,7 +5,7 @@ import type { ApplicationService, WorkspaceDescriptor } from "@draft-loop/applic
 import { describe, expect, it, vi } from "vitest";
 
 import type { DesktopReviewState } from "../model.js";
-import { createNativeHost } from "./host.js";
+import { createNativeHost, type NativeHostDialogs } from "./host.js";
 
 function descriptor(root: string): WorkspaceDescriptor {
   return {
@@ -378,6 +378,65 @@ describe("native host", () => {
       expect(await readFile(join(root, "exports", `${reviewValue.runId}.md`), "utf8")).toContain(
         "Evidence-backed",
       );
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("extracts and normalizes job description file imports with matching markdown metadata", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-job-select-"));
+    const jobSource = join(parent, "Senior_Role.txt");
+    await writeFile(jobSource, "Senior Data Engineer with distributed systems experience.", "utf8");
+
+    try {
+      const dialogs: NativeHostDialogs = {
+        chooseDirectory: async () => parent,
+        chooseFiles: async () => [jobSource],
+      };
+      const host = createNativeHost({ dialogs });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "job-import-test" },
+      });
+      expect(created).toMatchObject({ ok: true, value: { workspace: { id: expect.any(String) } } });
+      const workspaceId = (
+        created as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+
+      const selected = await host.invoke({
+        type: "file.select",
+        input: {
+          workspaceId,
+          target: "job-description",
+          multiple: false,
+        },
+      });
+
+      expect(selected).toEqual({
+        ok: true,
+        value: {
+          files: [
+            expect.objectContaining({
+              name: "job.md",
+              relativePath: "job.md",
+              mediaType: "text/markdown",
+            }),
+          ],
+        },
+      });
+
+      const loaded = await host.invoke({
+        type: "review.load",
+        input: { workspaceId },
+      });
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          setup: expect.objectContaining({
+            jobDescriptionReady: true,
+          }),
+        },
+      });
     } finally {
       await rm(parent, { recursive: true, force: true });
     }

@@ -12,6 +12,7 @@ interface ReviewWorkspaceProps {
   readonly onAction: (action: ReviewAction) => void;
   readonly onSelectFiles?: (target: "evidence" | "job-description") => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
+  readonly errorMessage?: string | null;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -31,6 +32,7 @@ export function ReviewWorkspace({
   onAction,
   onSelectFiles,
   onAddUrl,
+  errorMessage,
 }: ReviewWorkspaceProps) {
   const findingSummary = reviewFindingSummary(state);
   const { blocking: blockingFindings, unresolved: unresolvedFindings, warnings } = findingSummary;
@@ -115,6 +117,11 @@ export function ReviewWorkspace({
             Your files stay in this workspace. DraftLoop will not invent missing experience or start
             an agent run until the target job and candidate evidence are present.
           </p>
+          {errorMessage ? (
+            <div className="error-banner" role="alert">
+              <p>{errorMessage}</p>
+            </div>
+          ) : null}
           <div className="setup-grid">
             <article className="setup-card">
               <span className="setup-number">01</span>

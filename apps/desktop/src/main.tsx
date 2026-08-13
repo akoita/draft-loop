@@ -10,6 +10,7 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
   const [state, setState] = useState<DesktopReviewState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const nativeActions = useMemo(
     () => ({
@@ -41,11 +42,12 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
 
   const onAction = (action: ReviewAction) => {
     if (state === null) return;
+    setImportError(null);
     void activePort
       .dispatch(state, action)
       .then(setState)
       .catch((reason: unknown) => {
-        setError(
+        setImportError(
           reason instanceof Error ? reason.message : "The review action could not be completed.",
         );
       });
@@ -55,6 +57,7 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
     if (action === undefined) return;
     setBusy(true);
     setError(null);
+    setImportError(null);
     try {
       setState(await action());
     } catch (reason: unknown) {
@@ -134,31 +137,36 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
     <ReviewWorkspace
       state={state}
       onAction={onAction}
+      errorMessage={importError}
       {...(activePort.selectFiles === undefined
         ? {}
         : {
-            onSelectFiles: (target: "evidence" | "job-description") =>
+            onSelectFiles: (target: "evidence" | "job-description") => {
+              setImportError(null);
               void activePort
                 .selectFiles?.(target)
                 .then(setState)
                 .catch((reason: unknown) => {
-                  setError(
+                  setImportError(
                     reason instanceof Error ? reason.message : "The files could not be imported.",
                   );
-                }),
+                });
+            },
           })}
       {...(activePort.addUrl === undefined
         ? {}
         : {
-            onAddUrl: (target: "evidence" | "job-description", url: string) =>
+            onAddUrl: (target: "evidence" | "job-description", url: string) => {
+              setImportError(null);
               void activePort
                 .addUrl?.(target, url)
                 .then(setState)
                 .catch((reason: unknown) => {
-                  setError(
+                  setImportError(
                     reason instanceof Error ? reason.message : "The URL could not be imported.",
                   );
-                }),
+                });
+            },
           })}
     />
   );

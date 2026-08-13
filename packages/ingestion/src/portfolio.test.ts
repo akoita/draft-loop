@@ -38,20 +38,29 @@ describe("Structured Developer Portfolio Ingestion", () => {
 
     expect(chunks.length).toBe(3); // 1 summary chunk + 2 project chunks
 
-    const summaryChunk = chunks[0]!;
-    expect(summaryChunk.sourcePath).toBe("/sources/alex_portfolio.json");
-    expect(summaryChunk.text).toContain("Senior Distributed Systems Engineer");
-    expect(summaryChunk.text).toContain("resilient distributed databases");
-    expect(summaryChunk.checksum).toMatch(/^[0-9a-f]{64}$/u);
+    const summaryChunk = chunks[0];
+    expect(summaryChunk).toBeDefined();
+    if (summaryChunk) {
+      expect(summaryChunk.sourcePath).toBe("/sources/alex_portfolio.json");
+      expect(summaryChunk.text).toContain("Senior Distributed Systems Engineer");
+      expect(summaryChunk.text).toContain("resilient distributed databases");
+      expect(summaryChunk.checksum).toMatch(/^[0-9a-f]{64}$/u);
+    }
 
-    const project1 = chunks[1]!;
-    expect(project1.text).toContain("Project: DraftLoop Engine");
-    expect(project1.text).toContain("Role: Lead Architect");
-    expect(project1.text).toContain("Technologies: TypeScript, Node.js, SQLite, Electron");
-    expect(project1.text).toContain("Optimized retrieval latency to under 15ms");
+    const project1 = chunks[1];
+    expect(project1).toBeDefined();
+    if (project1) {
+      expect(project1.text).toContain("Project: DraftLoop Engine");
+      expect(project1.text).toContain("Role: Lead Architect");
+      expect(project1.text).toContain("Technologies: TypeScript, Node.js, SQLite, Electron");
+      expect(project1.text).toContain("Optimized retrieval latency to under 15ms");
+    }
 
-    const project2 = chunks[2]!;
-    expect(project2.text).toContain("Project: Distributed Ledger Sync");
-    expect(project2.text).toContain("Technologies: Rust, gRPC, RocksDB");
+    const project2 = chunks[2];
+    expect(project2).toBeDefined();
+    if (project2) {
+      expect(project2.text).toContain("Project: Distributed Ledger Sync");
+      expect(project2.text).toContain("Technologies: Rust, gRPC, RocksDB");
+    }
   });
 });

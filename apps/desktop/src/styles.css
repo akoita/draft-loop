@@ -815,3 +815,13 @@ textarea:focus {
     flex-direction: column;
   }
 }
+
+.error-banner {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #f38ba8;
+  background: rgba(243, 139, 168, 0.12);
+  color: #f38ba8;
+  font-size: 0.85rem;
+}

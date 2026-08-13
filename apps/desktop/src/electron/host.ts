@@ -9,7 +9,13 @@ import {
   createLocalApplicationDriver,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
-import { ingestUrl, type UrlFetcher, type UrlHostnameResolver } from "@draft-loop/ingestion";
+import {
+  ingestFile,
+  ingestUrl,
+  type SourceChunk,
+  type UrlFetcher,
+  type UrlHostnameResolver,
+} from "@draft-loop/ingestion";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 
 import {
@@ -119,7 +125,7 @@ function sourceProvenancePath(root: string): string {
 function rootRelative(root: string, candidate: string): string {
   const normalizedRoot = resolve(root);
   const normalizedCandidate = resolve(candidate);
-  const value = relative(normalizedRoot, normalizedCandidate);
+  const value = relative(normalizedRoot, normalizedCandidate).replaceAll("\\", "/");
   if (value === "" || (!value.startsWith("..") && !isAbsolute(value))) return value;
   return fail("permission-denied", "The selected path is outside the workspace.");
 }
@@ -624,30 +630,80 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       ) {
         return fail("operation-failed", "The selected file type is not supported.");
       }
-      const candidateRelative = relative(resolve(workspace.root), resolve(sourcePath));
-      const isInsideWorkspace =
-        candidateRelative === "" ||
-        (!candidateRelative.startsWith("..") && !isAbsolute(candidateRelative));
-      const targetRelative =
-        targetKind === "job-description"
-          ? "job.md"
-          : isInsideWorkspace && candidateRelative.startsWith("evidence/")
+
+      if (targetKind === "job-description") {
+        const targetRelative = "job.md";
+        const target = resolve(workspace.root, targetRelative);
+        rootRelative(workspace.root, target);
+        await mkdir(dirname(target), { recursive: true });
+
+        if (
+          extension === ".md" ||
+          extension === ".markdown" ||
+          extension === ".txt" ||
+          extension === ".text"
+        ) {
+          const content = await readFile(sourcePath, "utf8");
+          await writeFile(target, content, "utf8");
+        } else {
+          const ingested = await ingestFile({
+            path: sourcePath,
+            mediaType: extensionForMediaType(extension),
+          });
+          if (
+            ingested.source === null ||
+            ingested.source.chunks.length === 0 ||
+            ingested.issues.length > 0
+          ) {
+            return fail(
+              "operation-failed",
+              ingested.issues[0]?.message ?? "The job description contains no extractable text.",
+            );
+          }
+          const textContent = ingested.source.chunks
+            .map((chunk: SourceChunk) => chunk.text)
+            .join("\n\n");
+          await writeFile(target, `${textContent}\n`, "utf8");
+        }
+
+        const targetDetails = await stat(target);
+        files.push({
+          id: createHash("sha256")
+            .update(`${targetRelative}:${targetDetails.size}`)
+            .digest("hex")
+            .slice(0, 24),
+          name: "job.md",
+          relativePath: targetRelative,
+          mediaType: "text/markdown",
+          byteLength: targetDetails.size,
+        });
+      } else {
+        const candidateRelative = relative(resolve(workspace.root), resolve(sourcePath)).replaceAll(
+          "\\",
+          "/",
+        );
+        const isInsideWorkspace =
+          candidateRelative === "" ||
+          (!candidateRelative.startsWith("..") && !isAbsolute(candidateRelative));
+        const targetRelative =
+          isInsideWorkspace && candidateRelative.startsWith("evidence/")
             ? candidateRelative
-            : join("evidence", "imported", basename(sourcePath));
-      const target = resolve(workspace.root, targetRelative);
-      rootRelative(workspace.root, target);
-      await mkdir(dirname(target), { recursive: true });
-      if (resolve(sourcePath) !== target) await copyFile(sourcePath, target);
-      files.push({
-        id: createHash("sha256")
-          .update(`${targetRelative}:${details.size}`)
-          .digest("hex")
-          .slice(0, 24),
-        name: basename(target),
-        relativePath: targetRelative,
-        mediaType: extensionForMediaType(extension),
-        byteLength: details.size,
-      });
+            : `evidence/imported/${basename(sourcePath)}`;
+        const target = resolve(workspace.root, targetRelative);
+        rootRelative(workspace.root, target);
+        await mkdir(dirname(target), { recursive: true });
+        if (resolve(sourcePath) !== target) await copyFile(sourcePath, target);
+        files.push({
+          id: createHash("sha256")
+            .update(`${targetRelative}:${details.size}`)
+            .digest("hex")
+            .slice(0, 24),
+          name: basename(target),
+          relativePath: targetRelative,
+          mediaType: extensionForMediaType(extension),
+          byteLength: details.size,
+        });
+      }
     }
     return { files };
   }
@@ -895,7 +951,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               ? defaultExportPath(workspace.root, command.input.runId)
               : resolve(workspace.root, command.input.relativePath);
           rootRelative(workspace.root, outputPath);
-          const exportRelative = relative(resolve(workspace.root, "exports"), outputPath);
+          const exportRelative = relative(
+            resolve(workspace.root, "exports"),
+            outputPath,
+          ).replaceAll("\\", "/");
           if (
             exportRelative === "" ||
             exportRelative.startsWith("..") ||
