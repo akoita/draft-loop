@@ -1,7 +1,7 @@
 {
   "project": "draft-loop",
-  "stage": "retrieval-and-provider-quality",
+  "stage": "real-application-pilot",
   "channel": "alpha",
-  "releaseName": "Retrieval and provider quality",
+  "releaseName": "Real-application pilot",
   "artifactTargets": ["linux-x64", "macos-arm64", "windows-x64"]
 }
