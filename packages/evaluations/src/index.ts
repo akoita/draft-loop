@@ -7,6 +7,7 @@ import {
   readinessDimensions as schemaReadinessDimensions,
 } from "@draft-loop/schemas";
 
+export * from "./pilot.js";
 export * from "./retrieval.js";
 
 export const readinessDimensions = schemaReadinessDimensions;
