@@ -604,3 +604,116 @@ export function createOpenAIAdapter<
 >(client: OpenAIClient, options: ProviderAdapterOptions): OpenAIAdapter<Input, Output> {
   return new OpenAIAdapter<Input, Output>(client, options);
 }
+
+export interface LocalClient {
+  readonly endpoint?: string;
+  readonly fetch?: typeof fetch;
+}
+
+export class LocalModelAdapter<
+  Input extends JsonValue = JsonValue,
+  Output extends JsonValue = JsonValue,
+> {
+  readonly provider = "local" as const;
+  private readonly endpoint: string;
+  private readonly fetchImpl: typeof fetch;
+  private readonly configuredModel: ModelSelection;
+  private readonly pricing: ModelPricing | undefined;
+  private readonly retry: RetryOptions | undefined;
+
+  constructor(client: LocalClient = {}, options: ProviderAdapterOptions) {
+    this.endpoint = client.endpoint ?? "http://127.0.0.1:11434/v1";
+    this.fetchImpl = client.fetch ?? globalThis.fetch;
+    this.configuredModel = options.configuredModel;
+    this.pricing = options.pricing;
+    this.retry = options.retry;
+  }
+
+  async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
+    assertConfiguredModel(this.provider, this.configuredModel, request.model);
+    assertDataExposureAllowed(this.provider, request.dataPolicy);
+
+    const startTime = Date.now();
+    request.onProgress?.({ stage: "started", elapsedMs: 0 });
+
+    const payload = {
+      model: request.model.modelId,
+      messages: [
+        { role: "system", content: request.systemPrompt },
+        { role: "user", content: serializeJson(request.input) },
+      ],
+      response_format: {
+        type: "json_object",
+      },
+      temperature: 0.1,
+    };
+
+    return executeWithRetry(async () => {
+      try {
+        const url = `${this.endpoint.replace(/\/+$/u, "")}/chat/completions`;
+        const res = await this.fetchImpl(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const status = res.status;
+          throw new ProviderAdapterError(
+            this.provider,
+            status >= 500 ? "transient" : status === 429 ? "rate-limit" : "invalid-request",
+            `Local model server returned status ${status}`,
+            { status },
+          );
+        }
+
+        const data = (await res.json()) as {
+          readonly id?: string;
+          readonly choices?: readonly {
+            readonly message?: { readonly content?: string };
+          }[];
+          readonly usage?: {
+            readonly prompt_tokens?: number;
+            readonly completion_tokens?: number;
+            readonly total_tokens?: number;
+          };
+        };
+
+        const content = data.choices?.[0]?.message?.content ?? "";
+        const output = parseJson<Output>(this.provider, content);
+        const inputTokens = data.usage?.prompt_tokens ?? 0;
+        const outputTokens = data.usage?.completion_tokens ?? 0;
+        const accounting = usage(inputTokens, outputTokens, this.pricing);
+        const elapsedMs = Date.now() - startTime;
+
+        request.onProgress?.({
+          stage: "completed",
+          elapsedMs,
+          tokensObserved: accounting.usage.totalTokens,
+        });
+
+        return {
+          output,
+          contextSnapshotId: request.contextSnapshotId,
+          provider: this.provider,
+          company: this.provider,
+          modelId: request.model.modelId,
+          providerRequestId: data.id ?? null,
+          structuredOutputSha256: hashStructuredOutput(output),
+          ...accounting,
+        };
+      } catch (error) {
+        throw normalizeProviderError(this.provider, error);
+      }
+    }, this.retry);
+  }
+}
+
+export function createLocalModelAdapter<
+  Input extends JsonValue = JsonValue,
+  Output extends JsonValue = JsonValue,
+>(client: LocalClient = {}, options: ProviderAdapterOptions): LocalModelAdapter<Input, Output> {
+  return new LocalModelAdapter<Input, Output>(client, options);
+}
