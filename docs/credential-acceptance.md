@@ -4,18 +4,20 @@ Credential lifecycle acceptance runs the packaged Electron application twice on
 Linux x64, macOS arm64, and Windows x64. It uses Electron `safeStorage` from the
 real main process, not a test double.
 
-The first launch verifies environment fallback, sets an app-managed synthetic
-canary, confirms app precedence and provider resolution, then replaces it. The
-second launch verifies restart persistence and resolution of the replacement,
-removes it, and confirms that the original process environment canary becomes
-active. App-managed credentials are resolved explicitly and are never copied
-into `process.env`.
+For both Anthropic and OpenAI, the first launch verifies environment fallback,
+sets an app-managed synthetic canary, confirms app precedence and provider
+resolution, then replaces it. The second launch verifies restart persistence
+and resolution of each replacement, removes both values, and confirms that the
+original process environment canaries become active. App-managed credentials
+are resolved explicitly and are never copied into `process.env`.
 
 The workflow generates high-entropy canaries in the runner process. They are not
 repository constants, provider credentials, or written to evidence. The runner
-checks process output, encrypted credential storage, and the packaged executable
-for plaintext canaries. Its JSON artifact contains only app/OS metadata, the
-reported protection backend, boolean results, and named negative checks.
+checks process output, the populated encrypted credential file before removal,
+credential storage after removal, and the packaged executable for plaintext
+canaries. Its JSON artifact contains only app/OS metadata, Electron safeStorage
+availability/backend, the reported protection for both providers, boolean
+results, and named negative checks.
 
 Run the harness against a packaged executable with:
 
