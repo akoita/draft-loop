@@ -1,7 +1,11 @@
 import { writeFile } from "node:fs/promises";
 import { arch, platform, release } from "node:os";
 
-import type { CredentialProtection } from "../bridge.js";
+import {
+  type CredentialProtection,
+  type CredentialProvider,
+  credentialProviders,
+} from "../bridge.js";
 import { type NativeCredentialStore, resolveCredential } from "./host.js";
 
 export type CredentialAcceptancePhase = "prepare" | "verify";
@@ -11,9 +15,14 @@ export interface CredentialAcceptanceOptions {
   readonly phase: CredentialAcceptancePhase;
   readonly evidencePath: string;
   readonly appVersion: string;
-  readonly initial: string;
-  readonly replacement: string;
-  readonly environment: string;
+  readonly safeStorageAvailable: boolean;
+  readonly selectedStorageBackend: string | null;
+  readonly credentials: Readonly<
+    Record<
+      CredentialProvider,
+      { readonly initial: string; readonly replacement: string; readonly environment: string }
+    >
+  >;
 }
 
 function requireMatch(actual: unknown, expected: unknown, step: string): void {
@@ -27,49 +36,70 @@ function requireAppProtection(value: CredentialProtection): void {
 }
 
 export async function runCredentialAcceptance(options: CredentialAcceptanceOptions): Promise<void> {
-  process.env.ANTHROPIC_API_KEY = options.environment;
+  process.env.ANTHROPIC_API_KEY = options.credentials.anthropic.environment;
+  process.env.OPENAI_API_KEY = options.credentials.openai.environment;
 
   if (options.phase === "prepare") {
-    const initialStatus = await options.store.status("anthropic");
-    requireMatch(initialStatus.source, "env", "initial environment fallback");
-    requireMatch(
-      await resolveCredential(options.store, "anthropic"),
-      options.environment,
-      "fallback use",
-    );
+    for (const provider of credentialProviders) {
+      const values = options.credentials[provider];
+      const initialStatus = await options.store.status(provider);
+      requireMatch(initialStatus.source, "env", `${provider} initial environment fallback`);
+      requireMatch(
+        await resolveCredential(options.store, provider),
+        values.environment,
+        `${provider} fallback use`,
+      );
 
-    requireMatch(await options.store.set("anthropic", options.initial), true, "set");
-    const appStatus = await options.store.status("anthropic");
-    requireMatch(appStatus.source, "app", "app precedence");
-    requireAppProtection(appStatus.protection);
-    requireMatch(await resolveCredential(options.store, "anthropic"), options.initial, "app use");
+      requireMatch(await options.store.set(provider, values.initial), true, `${provider} set`);
+      const appStatus = await options.store.status(provider);
+      requireMatch(appStatus.source, "app", `${provider} app precedence`);
+      requireAppProtection(appStatus.protection);
+      requireMatch(
+        await resolveCredential(options.store, provider),
+        values.initial,
+        `${provider} app use`,
+      );
 
-    requireMatch(await options.store.set("anthropic", options.replacement), true, "replace");
-    requireMatch(
-      await resolveCredential(options.store, "anthropic"),
-      options.replacement,
-      "replacement use",
-    );
+      requireMatch(
+        await options.store.set(provider, values.replacement),
+        true,
+        `${provider} replace`,
+      );
+      requireMatch(
+        await resolveCredential(options.store, provider),
+        values.replacement,
+        `${provider} replacement use`,
+      );
+    }
     return;
   }
 
-  const restarted = await options.store.status("anthropic");
-  requireMatch(restarted.source, "app", "restart persistence");
-  requireAppProtection(restarted.protection);
-  requireMatch(
-    await resolveCredential(options.store, "anthropic"),
-    options.replacement,
-    "restart use",
-  );
-  requireMatch(await options.store.remove("anthropic"), true, "remove");
-  const removed = await options.store.status("anthropic");
-  requireMatch(removed.source, "env", "post-removal environment fallback");
-  requireMatch(removed.protection, "environment", "environment protection projection");
-  requireMatch(
-    await resolveCredential(options.store, "anthropic"),
-    options.environment,
-    "post-removal environment use",
-  );
+  const protections = {} as Record<CredentialProvider, CredentialProtection>;
+  for (const provider of credentialProviders) {
+    const values = options.credentials[provider];
+    const restarted = await options.store.status(provider);
+    requireMatch(restarted.source, "app", `${provider} restart persistence`);
+    requireAppProtection(restarted.protection);
+    protections[provider] = restarted.protection;
+    requireMatch(
+      await resolveCredential(options.store, provider),
+      values.replacement,
+      `${provider} restart use`,
+    );
+    requireMatch(await options.store.remove(provider), true, `${provider} remove`);
+    const removed = await options.store.status(provider);
+    requireMatch(removed.source, "env", `${provider} post-removal environment fallback`);
+    requireMatch(
+      removed.protection,
+      "environment",
+      `${provider} environment protection projection`,
+    );
+    requireMatch(
+      await resolveCredential(options.store, provider),
+      values.environment,
+      `${provider} post-removal environment use`,
+    );
+  }
 
   await writeFile(
     options.evidencePath,
@@ -81,7 +111,11 @@ export async function runCredentialAcceptance(options: CredentialAcceptanceOptio
         platform: platform(),
         osRelease: release(),
         architecture: arch(),
-        protection: restarted.protection,
+        electronSafeStorage: {
+          available: options.safeStorageAvailable,
+          selectedBackend: options.selectedStorageBackend,
+        },
+        protection: protections,
         checks: {
           set: true,
           status: true,

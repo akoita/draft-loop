@@ -1555,7 +1555,12 @@ export function createSafeStorageCredentialStore(options: {
       const stored = await get(provider);
       if (stored !== undefined && stored.length > 0) {
         const encoded = values[provider] ?? "";
-        const backend = options.safeStorage.getSelectedStorageBackend?.();
+        let backend: string | undefined;
+        try {
+          backend = options.safeStorage.getSelectedStorageBackend?.();
+        } catch {
+          backend = undefined;
+        }
         const protection: CredentialProtection = encoded.startsWith("v1:aes-gcm:")
           ? "local-aes-gcm"
           : backend === "basic_text"

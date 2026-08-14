@@ -12,11 +12,19 @@ describe("packaged credential acceptance logic", () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-credential-evidence-"));
     const filename = join(root, "credentials.json");
     const evidencePath = join(root, "evidence.json");
-    const previous = process.env.ANTHROPIC_API_KEY;
+    const previousAnthropic = process.env.ANTHROPIC_API_KEY;
+    const previousOpenai = process.env.OPENAI_API_KEY;
     const secrets = {
-      initial: `initial-${randomUUID()}`,
-      replacement: `replacement-${randomUUID()}`,
-      environment: `environment-${randomUUID()}`,
+      anthropic: {
+        initial: `anthropic-initial-${randomUUID()}`,
+        replacement: `anthropic-replacement-${randomUUID()}`,
+        environment: `anthropic-environment-${randomUUID()}`,
+      },
+      openai: {
+        initial: `openai-initial-${randomUUID()}`,
+        replacement: `openai-replacement-${randomUUID()}`,
+        environment: `openai-environment-${randomUUID()}`,
+      },
     };
     const safeStorage: SafeStorageAdapter = {
       isEncryptionAvailable: () => true,
@@ -30,20 +38,25 @@ describe("packaged credential acceptance logic", () => {
         phase: "prepare",
         evidencePath,
         appVersion: "test",
-        ...secrets,
+        safeStorageAvailable: true,
+        selectedStorageBackend: "kwallet6",
+        credentials: secrets,
       });
       await runCredentialAcceptance({
         store: createSafeStorageCredentialStore({ safeStorage, filename }),
         phase: "verify",
         evidencePath,
         appVersion: "test",
-        ...secrets,
+        safeStorageAvailable: true,
+        selectedStorageBackend: "kwallet6",
+        credentials: secrets,
       });
       const evidence = await readFile(evidencePath, "utf8");
       expect(JSON.parse(evidence)).toMatchObject({
         schemaVersion: 1,
         appVersion: "test",
-        protection: "os-backed",
+        electronSafeStorage: { available: true, selectedBackend: "kwallet6" },
+        protection: { anthropic: "os-backed", openai: "os-backed" },
         checks: {
           restart: true,
           replace: true,
@@ -52,11 +65,15 @@ describe("packaged credential acceptance logic", () => {
           environmentFallback: true,
         },
       });
-      for (const secret of Object.values(secrets)) expect(evidence).not.toContain(secret);
+      for (const providerSecrets of Object.values(secrets)) {
+        for (const secret of Object.values(providerSecrets)) expect(evidence).not.toContain(secret);
+      }
       await expect(readFile(filename, "utf8")).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
-      if (previous === undefined) delete process.env.ANTHROPIC_API_KEY;
-      else process.env.ANTHROPIC_API_KEY = previous;
+      if (previousAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = previousAnthropic;
+      if (previousOpenai === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = previousOpenai;
       await rm(root, { recursive: true, force: true });
     }
   });

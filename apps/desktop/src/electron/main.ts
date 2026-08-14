@@ -113,27 +113,52 @@ app.whenReady().then(() => {
   if (credentialAcceptanceEnabled) {
     const phase = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_PHASE;
     const evidencePath = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_EVIDENCE;
-    const initial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_INITIAL;
-    const replacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_REPLACEMENT;
-    const environment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ENVIRONMENT;
+    const anthropicInitial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ANTHROPIC_INITIAL;
+    const anthropicReplacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ANTHROPIC_REPLACEMENT;
+    const anthropicEnvironment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ANTHROPIC_ENVIRONMENT;
+    const openaiInitial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_OPENAI_INITIAL;
+    const openaiReplacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_OPENAI_REPLACEMENT;
+    const openaiEnvironment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_OPENAI_ENVIRONMENT;
     if (
       (phase !== "prepare" && phase !== "verify") ||
       evidencePath === undefined ||
       credentialAcceptanceStore === undefined ||
-      initial === undefined ||
-      replacement === undefined ||
-      environment === undefined
+      anthropicInitial === undefined ||
+      anthropicReplacement === undefined ||
+      anthropicEnvironment === undefined ||
+      openaiInitial === undefined ||
+      openaiReplacement === undefined ||
+      openaiEnvironment === undefined
     ) {
       throw new Error("Packaged credential acceptance configuration is incomplete.");
+    }
+    let safeStorageAvailable = false;
+    let selectedStorageBackend: string | null = null;
+    try {
+      safeStorageAvailable = safeStorage.isEncryptionAvailable();
+      selectedStorageBackend = safeStorage.getSelectedStorageBackend?.() ?? null;
+    } catch {
+      selectedStorageBackend = null;
     }
     void runCredentialAcceptance({
       store: credentialStore,
       phase: phase as CredentialAcceptancePhase,
       evidencePath: resolve(evidencePath),
       appVersion: app.getVersion(),
-      initial,
-      replacement,
-      environment,
+      safeStorageAvailable,
+      selectedStorageBackend,
+      credentials: {
+        anthropic: {
+          initial: anthropicInitial,
+          replacement: anthropicReplacement,
+          environment: anthropicEnvironment,
+        },
+        openai: {
+          initial: openaiInitial,
+          replacement: openaiReplacement,
+          environment: openaiEnvironment,
+        },
+      },
     })
       .then(() => app.exit(0))
       .catch(() => {

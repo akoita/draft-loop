@@ -24,14 +24,18 @@ function launch(executable, phase, userData, evidencePath, secrets) {
       {
         env: {
           ...process.env,
-          ANTHROPIC_API_KEY: secrets.environment,
+          ANTHROPIC_API_KEY: secrets.anthropicEnvironment,
+          OPENAI_API_KEY: secrets.openaiEnvironment,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE: "1",
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_PHASE: phase,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_EVIDENCE: evidencePath,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_STORE: join(userData, "credentials.json"),
-          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_INITIAL: secrets.initial,
-          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_REPLACEMENT: secrets.replacement,
-          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ENVIRONMENT: secrets.environment,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ANTHROPIC_INITIAL: secrets.anthropicInitial,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ANTHROPIC_REPLACEMENT: secrets.anthropicReplacement,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ANTHROPIC_ENVIRONMENT: secrets.anthropicEnvironment,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_OPENAI_INITIAL: secrets.openaiInitial,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_OPENAI_REPLACEMENT: secrets.openaiReplacement,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_OPENAI_ENVIRONMENT: secrets.openaiEnvironment,
         },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -64,32 +68,37 @@ export async function runCredentialAcceptance(executableInput, evidenceInput) {
   const temporaryRoot = await mkdtemp(join(tmpdir(), "draft-loop-credential-acceptance-"));
   const userData = join(temporaryRoot, "user-data");
   const secrets = {
-    initial: canary("initial"),
-    replacement: canary("replacement"),
-    environment: canary("environment"),
+    anthropicInitial: canary("anthropic-initial"),
+    anthropicReplacement: canary("anthropic-replacement"),
+    anthropicEnvironment: canary("anthropic-environment"),
+    openaiInitial: canary("openai-initial"),
+    openaiReplacement: canary("openai-replacement"),
+    openaiEnvironment: canary("openai-environment"),
   };
 
   try {
     let processOutput = "";
-    for (const phase of phases) {
-      processOutput += await launch(executable, phase, userData, evidencePath, secrets);
-    }
+    processOutput += await launch(executable, phases[0], userData, evidencePath, secrets);
+    const encryptedCredentialStorage = await readFile(join(userData, "credentials.json"), "utf8");
+    assertNoCanaries(encryptedCredentialStorage, secrets, "active credential storage");
+    processOutput += await launch(executable, phases[1], userData, evidencePath, secrets);
     assertNoCanaries(processOutput, secrets, "process output");
     assertNoCanaries(await readFile(executable), secrets, "packaged executable");
-    let credentialFile = "";
+    let credentialFileAfterRemoval = "";
     try {
-      credentialFile = await readFile(join(userData, "credentials.json"), "utf8");
+      credentialFileAfterRemoval = await readFile(join(userData, "credentials.json"), "utf8");
     } catch (error) {
       if (error?.code !== "ENOENT") throw error;
     }
-    assertNoCanaries(credentialFile, secrets, "credential storage");
+    assertNoCanaries(credentialFileAfterRemoval, secrets, "credential storage after removal");
 
     const evidence = JSON.parse(await readFile(evidencePath, "utf8"));
     const sanitized = {
       ...evidence,
       negativeChecks: {
         processOutput: "no-canary",
-        credentialStorage: "no-plaintext-canary",
+        activeCredentialStorage: "no-plaintext-canary",
+        credentialStorageAfterRemoval: "no-canary",
         packagedExecutable: "no-canary",
       },
     };
