@@ -8,6 +8,7 @@ import {
   safeStorage,
   session,
 } from "electron";
+import { type PackagedAcceptancePhase, runPackagedAcceptance } from "./acceptance.js";
 import {
   type CredentialAcceptancePhase,
   runCredentialAcceptance,
@@ -89,11 +90,33 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  const acceptanceEnabled = process.env.DRAFT_LOOP_ACCEPTANCE === "1";
+  const acceptanceRoot = process.env.DRAFT_LOOP_ACCEPTANCE_WORKSPACE;
+  const acceptanceCandidate = process.env.DRAFT_LOOP_ACCEPTANCE_CANDIDATE;
+  const acceptanceEvidence = process.env.DRAFT_LOOP_ACCEPTANCE_EVIDENCE;
+  const acceptancePhase = process.env.DRAFT_LOOP_ACCEPTANCE_PHASE;
+  const acceptanceArtifactChecksum = process.env.DRAFT_LOOP_ACCEPTANCE_ARTIFACT_SHA256;
+  const acceptanceJobUrl = process.env.DRAFT_LOOP_ACCEPTANCE_JOB_URL;
   const credentialAcceptanceEnabled = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE === "1";
   const credentialAcceptanceStore = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_STORE;
   const smokeEnabled = process.env.DRAFT_LOOP_SMOKE === "1";
   const smokeRoot = process.env.DRAFT_LOOP_SMOKE_WORKSPACE;
   const smokePhase = process.env.DRAFT_LOOP_SMOKE_PHASE;
+  if (acceptanceEnabled && (smokeEnabled || credentialAcceptanceEnabled)) {
+    throw new Error("Packaged acceptance cannot run with another packaged test mode.");
+  }
+  if (acceptanceEnabled) {
+    if (
+      acceptanceRoot === undefined ||
+      acceptanceCandidate === undefined ||
+      acceptanceEvidence === undefined ||
+      acceptanceArtifactChecksum === undefined ||
+      acceptanceJobUrl === undefined ||
+      (acceptancePhase !== "prepare" && acceptancePhase !== "resume")
+    ) {
+      throw new Error("Packaged installed-app acceptance configuration is incomplete.");
+    }
+  }
   if (smokeEnabled && (smokeRoot === undefined || smokePhase === undefined)) {
     throw new Error(
       "Packaged smoke requires DRAFT_LOOP_SMOKE_WORKSPACE and DRAFT_LOOP_SMOKE_PHASE.",
@@ -103,6 +126,7 @@ app.whenReady().then(() => {
     throw new Error(`Unsupported packaged smoke phase: ${smokePhase}`);
   }
   const smokeWorkspace = smokeRoot === undefined ? undefined : resolve(smokeRoot);
+  const acceptanceWorkspace = acceptanceRoot === undefined ? undefined : resolve(acceptanceRoot);
   const credentialStore = createSafeStorageCredentialStore({
     safeStorage,
     filename:
@@ -167,16 +191,38 @@ app.whenReady().then(() => {
       });
     return;
   }
+  const acceptanceUrlFetcher = async (input: string): Promise<Response> => {
+    if (input !== acceptanceJobUrl) throw new Error("Unexpected URL in packaged acceptance.");
+    return new Response(
+      "<!doctype html><html><head><title>TypeScript Systems Engineer</title></head><body><h1>TypeScript Systems Engineer</h1><p>Build reliable local-first developer tools with TypeScript, testing, and evidence-backed documentation.</p></body></html>",
+      { status: 200, headers: { "content-type": "text/html; charset=utf-8" } },
+    );
+  };
+  const acceptanceUrlHostnameResolver = async (): Promise<readonly string[]> => ["93.184.216.34"];
   const host = createNativeHost({
     dialogs:
-      smokeEnabled && smokeWorkspace !== undefined
+      acceptanceEnabled && acceptanceWorkspace !== undefined && acceptanceCandidate !== undefined
         ? {
             chooseDirectory: async (mode) =>
-              mode === "create" ? dirname(smokeWorkspace) : smokeWorkspace,
-            chooseFiles: async () => [],
+              mode === "create" ? dirname(acceptanceWorkspace) : acceptanceWorkspace,
+            chooseFiles: async (input) =>
+              input.target === "evidence" ? [acceptanceCandidate] : [],
           }
-        : { chooseDirectory, chooseFiles },
+        : smokeEnabled && smokeWorkspace !== undefined
+          ? {
+              chooseDirectory: async (mode) =>
+                mode === "create" ? dirname(smokeWorkspace) : smokeWorkspace,
+              chooseFiles: async () => [],
+            }
+          : { chooseDirectory, chooseFiles },
     credentials: credentialStore,
+    ...(acceptanceEnabled
+      ? {
+          requireProviderPreflight: true,
+          urlFetcher: acceptanceUrlFetcher,
+          urlHostnameResolver: acceptanceUrlHostnameResolver,
+        }
+      : {}),
     ...(smokeEnabled
       ? {
           onError: (error: unknown, capability: string) => {
@@ -200,6 +246,32 @@ app.whenReady().then(() => {
       .then(() => app.exit(0))
       .catch((error: unknown) => {
         console.error(error instanceof Error ? error.message : "Packaged smoke failed.");
+        app.exit(1);
+      });
+    return;
+  }
+  if (
+    acceptanceEnabled &&
+    acceptanceWorkspace !== undefined &&
+    acceptanceCandidate !== undefined &&
+    acceptanceEvidence !== undefined &&
+    acceptanceArtifactChecksum !== undefined &&
+    acceptanceJobUrl !== undefined &&
+    (acceptancePhase === "prepare" || acceptancePhase === "resume")
+  ) {
+    void runPackagedAcceptance({
+      host,
+      phase: acceptancePhase as PackagedAcceptancePhase,
+      workspaceRoot: acceptanceWorkspace,
+      candidatePath: resolve(acceptanceCandidate),
+      evidencePath: resolve(acceptanceEvidence),
+      appVersion: app.getVersion(),
+      artifactChecksum: acceptanceArtifactChecksum,
+      jobUrl: acceptanceJobUrl,
+    })
+      .then(() => app.exit(0))
+      .catch((error: unknown) => {
+        console.error(error instanceof Error ? error.message : "Packaged acceptance failed.");
         app.exit(1);
       });
     return;

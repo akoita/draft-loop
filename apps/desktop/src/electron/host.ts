@@ -96,6 +96,8 @@ export interface NativeHostOptions {
   readonly credentials?: NativeCredentialStore;
   readonly urlFetcher?: UrlFetcher;
   readonly urlHostnameResolver?: UrlHostnameResolver;
+  /** Acceptance-only switch for exercising the preflight with offline fixtures. */
+  readonly requireProviderPreflight?: boolean;
   readonly onError?: (error: unknown, capability: BridgeCapability) => void;
 }
 
@@ -265,10 +267,11 @@ async function readProviderTransmissionAcknowledgement(
 async function providerTransmissionPreflight(
   descriptor: WorkspaceDescriptor,
   root: string,
+  requireForFixture = false,
 ): Promise<ProviderTransmissionPreflight> {
   const policy = providerTransmissionPolicy(descriptor);
   const fingerprint = providerTransmissionFingerprint(policy);
-  if (descriptor.fixtureMode) {
+  if (descriptor.fixtureMode && !requireForFixture) {
     return { ...policy, required: false, fingerprint, acknowledged: true, acknowledgedAt: null };
   }
   const acknowledgement = await readProviderTransmissionAcknowledgement(root);
@@ -787,6 +790,7 @@ export interface NativeHost {
 
 export function createNativeHost(options: NativeHostOptions): NativeHost {
   const credentials = options.credentials ?? createMemoryCredentialStore();
+  const requireProviderPreflight = options.requireProviderPreflight === true;
   const service =
     options.applicationService ??
     createApplicationService(
@@ -829,7 +833,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   async function requireProviderTransmissionAcknowledgement(
     workspace: ActiveWorkspace,
   ): Promise<ProviderTransmissionPreflight> {
-    const preflight = await providerTransmissionPreflight(workspace.descriptor, workspace.root);
+    const preflight = await providerTransmissionPreflight(
+      workspace.descriptor,
+      workspace.root,
+      requireProviderPreflight,
+    );
     if (preflight.required && !preflight.acknowledged) {
       return fail(
         "operation-failed",
@@ -1081,7 +1089,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     }
     switch (action.type) {
       case "acknowledge-provider-transmission": {
-        const current = await providerTransmissionPreflight(workspace.descriptor, workspace.root);
+        const current = await providerTransmissionPreflight(
+          workspace.descriptor,
+          workspace.root,
+          requireProviderPreflight,
+        );
         if (!current.required) break;
         if (action.fingerprint !== current.fingerprint) {
           return fail(
@@ -1199,7 +1211,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       ...(input.action.type === "start" || input.runId === "pending" ? {} : { runId: input.runId }),
     });
     const setup = await workspaceReadiness(workspace.descriptor, workspace.root);
-    const preflight = await providerTransmissionPreflight(workspace.descriptor, workspace.root);
+    const preflight = await providerTransmissionPreflight(
+      workspace.descriptor,
+      workspace.root,
+      requireProviderPreflight,
+    );
     if (snapshot === undefined) return emptyReviewState(workspace.descriptor, setup, preflight);
     return reviewState(
       workspace.descriptor,
@@ -1285,6 +1301,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             const preflight = await providerTransmissionPreflight(
               workspace.descriptor,
               workspace.root,
+              requireProviderPreflight,
             );
             return {
               ok: true,
@@ -1294,6 +1311,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           const preflight = await providerTransmissionPreflight(
             workspace.descriptor,
             workspace.root,
+            requireProviderPreflight,
           );
           return {
             ok: true,
