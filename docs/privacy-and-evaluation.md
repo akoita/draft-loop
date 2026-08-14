@@ -86,6 +86,11 @@ model, workflow step, bounded attempt count, retry classification, and a provide
 request identifier when supplied separately by the SDK. Provider response bodies
 and exception messages are never copied into run history or the desktop view.
 
+Packaged credential acceptance uses random, process-only synthetic canaries.
+Sanitized evidence records platform metadata, the non-secret protection label,
+boolean lifecycle results, and named leak checks; it does not contain canaries,
+credentials, provider traffic, workspace data, or raw process output.
+
 Structured evidence excerpts and user-visible rationale are product data, not
 operational logs. They remain subject to local retention and the explicit
 provider policy.

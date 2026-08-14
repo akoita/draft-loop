@@ -10,6 +10,7 @@ import {
   createNativeHost,
   createSafeStorageCredentialStore,
   type NativeHostDialogs,
+  resolveCredential,
   type SafeStorageAdapter,
 } from "./host.js";
 
@@ -829,14 +830,22 @@ describe("native host", () => {
         });
 
         // Initially unconfigured
-        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: false,
+          source: "none",
+          protection: "none",
+        });
 
         // Set in-app key
         const setOk = await store.set("anthropic", "sk-ant-test-key");
         expect(setOk).toBe(true);
 
         // Status shows configured in app
-        expect(await store.status("anthropic")).toEqual({ configured: true, source: "app" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: true,
+          source: "app",
+          protection: "os-backed",
+        });
         expect(await store.get?.("anthropic")).toBe("sk-ant-test-key");
 
         // Verify stored file is encrypted
@@ -846,7 +855,11 @@ describe("native host", () => {
         // Remove key
         const removeOk = await store.remove("anthropic");
         expect(removeOk).toBe(true);
-        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: false,
+          source: "none",
+          protection: "none",
+        });
       } finally {
         await rm(parent, { recursive: true, force: true });
       }
@@ -872,22 +885,76 @@ describe("native host", () => {
         });
 
         // Status reports configured via env
-        expect(await store.status("anthropic")).toEqual({ configured: true, source: "env" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: true,
+          source: "env",
+          protection: "environment",
+        });
 
         // Setting in-app key overrides status to app
         await store.set("anthropic", "sk-ant-app-override");
-        expect(await store.status("anthropic")).toEqual({ configured: true, source: "app" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: true,
+          source: "app",
+          protection: "os-backed",
+        });
         expect(await store.get?.("anthropic")).toBe("sk-ant-app-override");
 
         // Removing in-app key reverts status to env
         await store.remove("anthropic");
-        expect(await store.status("anthropic")).toEqual({ configured: true, source: "env" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: true,
+          source: "env",
+          protection: "environment",
+        });
       } finally {
         if (originalEnv === undefined) {
           delete process.env.ANTHROPIC_API_KEY;
         } else {
           process.env.ANTHROPIC_API_KEY = originalEnv;
         }
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
+    it("uses app precedence without mutating the environment and removes cleanly", async () => {
+      const original = process.env.ANTHROPIC_API_KEY;
+      const environmentValue = `environment-${crypto.randomUUID()}`;
+      const appValue = `app-${crypto.randomUUID()}`;
+      process.env.ANTHROPIC_API_KEY = environmentValue;
+      const store = createMemoryCredentialStore();
+      try {
+        await store.set("anthropic", appValue);
+        expect(await resolveCredential(store, "anthropic")).toBe(appValue);
+        expect(process.env.ANTHROPIC_API_KEY).toBe(environmentValue);
+        await store.remove("anthropic");
+        expect(await resolveCredential(store, "anthropic")).toBe(environmentValue);
+        expect(process.env.ANTHROPIC_API_KEY).toBe(environmentValue);
+      } finally {
+        if (original === undefined) delete process.env.ANTHROPIC_API_KEY;
+        else process.env.ANTHROPIC_API_KEY = original;
+      }
+    });
+
+    it("discloses Electron basic_text as weak Linux protection", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-basic-text-"));
+      const store = createSafeStorageCredentialStore({
+        filename: join(parent, "credentials.json"),
+        safeStorage: {
+          isEncryptionAvailable: () => true,
+          getSelectedStorageBackend: () => "basic_text",
+          encryptString: (plain) => Buffer.from(plain),
+          decryptString: (encrypted) => encrypted.toString("utf8"),
+        },
+      });
+      try {
+        await store.set("anthropic", `synthetic-${crypto.randomUUID()}`);
+        expect(await store.status("anthropic")).toEqual({
+          configured: true,
+          source: "app",
+          protection: "basic-text",
+        });
+      } finally {
         await rm(parent, { recursive: true, force: true });
       }
     });
@@ -913,16 +980,32 @@ describe("native host", () => {
         });
 
         // Initially unconfigured
-        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
-        expect(await store.status("openai")).toEqual({ configured: false, source: "none" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: false,
+          source: "none",
+          protection: "none",
+        });
+        expect(await store.status("openai")).toEqual({
+          configured: false,
+          source: "none",
+          protection: "none",
+        });
 
         // Set in-app keys under fallback encryption
         expect(await store.set("anthropic", "sk-ant-fallback-key-123")).toBe(true);
         expect(await store.set("openai", "sk-proj-fallback-key-456")).toBe(true);
 
         // Status shows configured in app
-        expect(await store.status("anthropic")).toEqual({ configured: true, source: "app" });
-        expect(await store.status("openai")).toEqual({ configured: true, source: "app" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: true,
+          source: "app",
+          protection: "local-aes-gcm",
+        });
+        expect(await store.status("openai")).toEqual({
+          configured: true,
+          source: "app",
+          protection: "local-aes-gcm",
+        });
         expect(await store.get?.("anthropic")).toBe("sk-ant-fallback-key-123");
         expect(await store.get?.("openai")).toBe("sk-proj-fallback-key-456");
 
@@ -940,13 +1023,22 @@ describe("native host", () => {
         expect(await reopenedStore.status("anthropic")).toEqual({
           configured: true,
           source: "app",
+          protection: "local-aes-gcm",
         });
         expect(await reopenedStore.get?.("anthropic")).toBe("sk-ant-fallback-key-123");
 
         // Remove key
         expect(await store.remove("anthropic")).toBe(true);
-        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
-        expect(await store.status("openai")).toEqual({ configured: true, source: "app" });
+        expect(await store.status("anthropic")).toEqual({
+          configured: false,
+          source: "none",
+          protection: "none",
+        });
+        expect(await store.status("openai")).toEqual({
+          configured: true,
+          source: "app",
+          protection: "local-aes-gcm",
+        });
       } finally {
         await rm(parent, { recursive: true, force: true });
       }
@@ -968,7 +1060,12 @@ describe("native host", () => {
       });
       expect(setResult).toEqual({
         ok: true,
-        value: { provider: "openai", configured: true, source: "app" },
+        value: {
+          provider: "openai",
+          configured: true,
+          source: "app",
+          protection: "session-memory",
+        },
       });
 
       const statusResult = await host.invoke({
@@ -977,7 +1074,12 @@ describe("native host", () => {
       });
       expect(statusResult).toEqual({
         ok: true,
-        value: { provider: "openai", configured: true, source: "app" },
+        value: {
+          provider: "openai",
+          configured: true,
+          source: "app",
+          protection: "session-memory",
+        },
       });
 
       const removeResult = await host.invoke({
@@ -986,7 +1088,12 @@ describe("native host", () => {
       });
       expect(removeResult).toEqual({
         ok: true,
-        value: { provider: "openai", configured: false, source: "none" },
+        value: {
+          provider: "openai",
+          configured: false,
+          source: "none",
+          protection: "none",
+        },
       });
     });
   });

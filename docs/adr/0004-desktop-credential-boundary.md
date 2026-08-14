@@ -41,7 +41,9 @@ persistence and a separate provider-transmission preflight.
 3. The main process owns credential lookup and persistence through
    `createSafeStorageCredentialStore`. App-managed credentials are stored in
    the Electron user-data directory and environment-provided SDK credentials
-   remain a supported fallback.
+   remain a supported fallback. Provider construction receives an explicit
+   resolver; app-managed keys are never copied into `process.env`, so removal
+   cannot leave a stale app key masquerading as environment configuration.
 4. When Electron reports encryption available, the host encrypts the credential
    through `safeStorage`. Otherwise it uses AES-256-GCM with a locally generated
    key stored separately from the ciphertext and restricts both files to the
@@ -50,6 +52,8 @@ persistence and a separate provider-transmission preflight.
    attacker able to read both local files or control the user session can
    recover the key. The UI and release evidence must not describe that fallback
    as OS-backed storage.
+   Electron's Linux `basic_text` backend is also projected separately and
+   disclosed as weak protection rather than OS-backed encryption.
 6. Credential presence authorizes authentication only. Before the first request
    containing source or draft material, the product must show the data class,
    provider and model, endpoint where applicable, transmission scope, retention
@@ -89,9 +93,9 @@ app-managed credentials also create precedence and rotation behavior that must
 be visible and tested.
 
 The current repository enforces the provider data policy at the adapter
-boundary, but the complete desktop preflight and cross-platform credential
-acceptance remain work for the Integration hardening and outcome validation
-stage.
+boundary and contains a two-launch packaged credential acceptance workflow.
+Cross-platform results remain pending until successful workflow evidence is
+reviewed and linked for every supported target.
 
 ## Follow-up
 

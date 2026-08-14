@@ -8,7 +8,10 @@ import {
   safeStorage,
   session,
 } from "electron";
-
+import {
+  type CredentialAcceptancePhase,
+  runCredentialAcceptance,
+} from "./credential-acceptance.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
 
@@ -86,6 +89,8 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  const credentialAcceptanceEnabled = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE === "1";
+  const credentialAcceptanceStore = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_STORE;
   const smokeEnabled = process.env.DRAFT_LOOP_SMOKE === "1";
   const smokeRoot = process.env.DRAFT_LOOP_SMOKE_WORKSPACE;
   const smokePhase = process.env.DRAFT_LOOP_SMOKE_PHASE;
@@ -98,6 +103,45 @@ app.whenReady().then(() => {
     throw new Error(`Unsupported packaged smoke phase: ${smokePhase}`);
   }
   const smokeWorkspace = smokeRoot === undefined ? undefined : resolve(smokeRoot);
+  const credentialStore = createSafeStorageCredentialStore({
+    safeStorage,
+    filename:
+      credentialAcceptanceEnabled && credentialAcceptanceStore !== undefined
+        ? resolve(credentialAcceptanceStore)
+        : join(app.getPath("userData"), "credentials.json"),
+  });
+  if (credentialAcceptanceEnabled) {
+    const phase = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_PHASE;
+    const evidencePath = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_EVIDENCE;
+    const initial = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_INITIAL;
+    const replacement = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_REPLACEMENT;
+    const environment = process.env.DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_ENVIRONMENT;
+    if (
+      (phase !== "prepare" && phase !== "verify") ||
+      evidencePath === undefined ||
+      credentialAcceptanceStore === undefined ||
+      initial === undefined ||
+      replacement === undefined ||
+      environment === undefined
+    ) {
+      throw new Error("Packaged credential acceptance configuration is incomplete.");
+    }
+    void runCredentialAcceptance({
+      store: credentialStore,
+      phase: phase as CredentialAcceptancePhase,
+      evidencePath: resolve(evidencePath),
+      appVersion: app.getVersion(),
+      initial,
+      replacement,
+      environment,
+    })
+      .then(() => app.exit(0))
+      .catch(() => {
+        console.error("Packaged credential acceptance failed.");
+        app.exit(1);
+      });
+    return;
+  }
   const host = createNativeHost({
     dialogs:
       smokeEnabled && smokeWorkspace !== undefined
@@ -107,10 +151,7 @@ app.whenReady().then(() => {
             chooseFiles: async () => [],
           }
         : { chooseDirectory, chooseFiles },
-    credentials: createSafeStorageCredentialStore({
-      safeStorage,
-      filename: join(app.getPath("userData"), "credentials.json"),
-    }),
+    credentials: credentialStore,
     ...(smokeEnabled
       ? {
           onError: (error: unknown, capability: string) => {

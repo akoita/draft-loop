@@ -1001,6 +1001,11 @@ textarea:focus {
   font-size: 0.9rem;
 }
 
+.credential-protection {
+  color: #9caabd;
+  font-size: 0.82rem;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

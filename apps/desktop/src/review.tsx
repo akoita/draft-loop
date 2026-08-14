@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-
+import type { CredentialStatus } from "./bridge.js";
 import {
   type DesktopReviewState,
   type FindingDecision,
@@ -13,9 +13,7 @@ interface ReviewWorkspaceProps {
   readonly onSelectFiles?: (target: "evidence" | "job-description") => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   readonly errorMessage?: string | null;
-  readonly getCredentialStatus?: (
-    provider: "anthropic" | "openai",
-  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
+  readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
   readonly onSetCredential?: (provider: "anthropic" | "openai", apiKey: string) => Promise<void>;
   readonly onRemoveCredential?: (provider: "anthropic" | "openai") => Promise<void>;
 }
@@ -67,14 +65,18 @@ export function ReviewWorkspace({
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [anthropicStatus, setAnthropicStatus] = useState<{
-    configured: boolean;
-    source: "app" | "env" | "none";
-  }>({ configured: false, source: "none" });
-  const [openaiStatus, setOpenaiStatus] = useState<{
-    configured: boolean;
-    source: "app" | "env" | "none";
-  }>({ configured: false, source: "none" });
+  const emptyCredentialStatus = (provider: "anthropic" | "openai"): CredentialStatus => ({
+    provider,
+    configured: false,
+    source: "none",
+    protection: "none",
+  });
+  const [anthropicStatus, setAnthropicStatus] = useState<CredentialStatus>(() =>
+    emptyCredentialStatus("anthropic"),
+  );
+  const [openaiStatus, setOpenaiStatus] = useState<CredentialStatus>(() =>
+    emptyCredentialStatus("openai"),
+  );
   const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
   const [openaiKeyInput, setOpenaiKeyInput] = useState("");
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
@@ -106,7 +108,7 @@ export function ReviewWorkspace({
     try {
       await onSetCredential(provider, key.trim());
       setCredentialFeedback(
-        `${provider === "anthropic" ? "Anthropic" : "OpenAI"} API key securely saved in app storage.`,
+        `${provider === "anthropic" ? "Anthropic" : "OpenAI"} API key saved in app storage. Review the protection status below.`,
       );
       if (provider === "anthropic") setAnthropicKeyInput("");
       else setOpenaiKeyInput("");
@@ -197,9 +199,8 @@ export function ReviewWorkspace({
             </button>
           </div>
           <p className="modal-copy">
-            Configure your Anthropic and OpenAI API keys directly in the app. Keys are stored
-            encrypted locally using your OS keychain / DPAPI and override system environment
-            variables.
+            App-managed keys override environment variables. Storage protection depends on this
+            operating system and is reported for each key below.
           </p>
           {credentialFeedback ? (
             <div className="feedback-banner" role="status">
@@ -216,6 +217,19 @@ export function ReviewWorkspace({
                     : anthropicStatus.source === "env"
                       ? "Configured via Env"
                       : "Not Configured"}
+                </span>
+                <span className="credential-protection">
+                  {anthropicStatus.protection === "os-backed"
+                    ? "OS-backed encryption"
+                    : anthropicStatus.protection === "basic-text"
+                      ? "Linux basic_text (weak protection)"
+                      : anthropicStatus.protection === "local-aes-gcm"
+                        ? "Local AES fallback (key stored beside app data)"
+                        : anthropicStatus.protection === "environment"
+                          ? "Environment variable"
+                          : anthropicStatus.protection === "session-memory"
+                            ? "Session memory only"
+                            : "No credential"}
                 </span>
               </div>
               <div className="credential-input-group">
@@ -265,6 +279,19 @@ export function ReviewWorkspace({
                     : openaiStatus.source === "env"
                       ? "Configured via Env"
                       : "Not Configured"}
+                </span>
+                <span className="credential-protection">
+                  {openaiStatus.protection === "os-backed"
+                    ? "OS-backed encryption"
+                    : openaiStatus.protection === "basic-text"
+                      ? "Linux basic_text (weak protection)"
+                      : openaiStatus.protection === "local-aes-gcm"
+                        ? "Local AES fallback (key stored beside app data)"
+                        : openaiStatus.protection === "environment"
+                          ? "Environment variable"
+                          : openaiStatus.protection === "session-memory"
+                            ? "Session memory only"
+                            : "No credential"}
                 </span>
               </div>
               <div className="credential-input-group">

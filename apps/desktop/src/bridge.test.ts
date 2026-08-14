@@ -160,9 +160,25 @@ describe("desktop capability bridge", () => {
   it("validates and carries in-app credential operations through the bridge", async () => {
     const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
       if (command.type === "credential.set") {
-        return { ok: true, value: { provider: "openai", configured: true, source: "app" } };
+        return {
+          ok: true,
+          value: {
+            provider: "openai",
+            configured: true,
+            source: "app",
+            protection: "os-backed",
+          },
+        };
       }
-      return { ok: true, value: { provider: "openai", configured: true, source: "env" } };
+      return {
+        ok: true,
+        value: {
+          provider: "openai",
+          configured: true,
+          source: "env",
+          protection: "environment",
+        },
+      };
     });
     const port = createCapabilityPort(bridge(invoke, ["credential.set", "credential.status"]));
 
@@ -173,7 +189,12 @@ describe("desktop capability bridge", () => {
 
     expect(setResult).toEqual({
       ok: true,
-      value: { provider: "openai", configured: true, source: "app" },
+      value: {
+        provider: "openai",
+        configured: true,
+        source: "app",
+        protection: "os-backed",
+      },
     });
     expect(invoke).toHaveBeenCalledWith({
       type: "credential.set",
@@ -187,7 +208,12 @@ describe("desktop capability bridge", () => {
 
     expect(statusResult).toEqual({
       ok: true,
-      value: { provider: "openai", configured: true, source: "env" },
+      value: {
+        provider: "openai",
+        configured: true,
+        source: "env",
+        protection: "environment",
+      },
     });
   });
 

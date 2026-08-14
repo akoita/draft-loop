@@ -1,3 +1,5 @@
+import type { CredentialStatus } from "./bridge.js";
+
 export type ReviewRunState =
   | "collecting"
   | "drafting"
@@ -201,16 +203,12 @@ export interface DesktopReviewPort {
     target: "evidence" | "job-description",
     url: string,
   ) => Promise<DesktopReviewState>;
-  readonly getCredentialStatus?: (
-    provider: "anthropic" | "openai",
-  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
+  readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
   readonly setCredential?: (
     provider: "anthropic" | "openai",
     apiKey: string,
-  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
-  readonly removeCredential?: (
-    provider: "anthropic" | "openai",
-  ) => Promise<{ configured: boolean; source: "app" | "env" | "none" }>;
+  ) => Promise<CredentialStatus>;
+  readonly removeCredential?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
 }
 
 export type ReviewValidationStatus = "blocked" | "warnings" | "clear";
@@ -515,16 +513,18 @@ export function createFixtureReviewPort(): DesktopReviewPort {
     load: async () => createFixtureReviewState(),
     dispatch: async (state, action) => reduceReviewState(state, action),
     getCredentialStatus: async (provider) => ({
+      provider,
       configured: credentials.has(provider),
       source: credentials.has(provider) ? "app" : "none",
+      protection: credentials.has(provider) ? "session-memory" : "none",
     }),
     setCredential: async (provider, apiKey) => {
       credentials.set(provider, apiKey);
-      return { configured: true, source: "app" };
+      return { provider, configured: true, source: "app", protection: "session-memory" };
     },
     removeCredential: async (provider) => {
       credentials.delete(provider);
-      return { configured: false, source: "none" };
+      return { provider, configured: false, source: "none", protection: "none" };
     },
   };
 }

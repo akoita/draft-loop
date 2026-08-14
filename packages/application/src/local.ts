@@ -795,6 +795,7 @@ function providerAgents(
   config: WorkspaceConfig,
   context: ContextSnapshot,
   allowProviderData: boolean,
+  resolveCredential: ProviderCredentialResolver,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const dataPolicy = {
     allowTransmission: allowProviderData,
@@ -814,7 +815,7 @@ function providerAgents(
     );
   }
 
-  function createAdapter(company: string, modelId: string, role: "author" | "critic") {
+  async function createAdapter(company: string, modelId: string, role: "author" | "critic") {
     const provider = providerId(company);
     if (!allowProviderData) {
       throw new ProviderAdapterError(
@@ -825,7 +826,7 @@ function providerAgents(
       );
     }
     if (provider === "anthropic") {
-      const apiKey = process.env.ANTHROPIC_API_KEY;
+      const apiKey = await resolveCredential("anthropic");
       if (apiKey === undefined || apiKey.trim() === "") {
         throw new ProviderAdapterError(
           provider,
@@ -846,7 +847,7 @@ function providerAgents(
         },
       );
     }
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = await resolveCredential("openai");
     if (apiKey === undefined || apiKey.trim() === "") {
       throw new ProviderAdapterError(
         provider,
@@ -892,11 +893,8 @@ function providerAgents(
         outputName: "draft_artifact",
         dataPolicy,
       };
-      const response = await createAdapter(
-        config.authorCompany,
-        config.authorModel,
-        "author",
-      ).execute(request);
+      const adapter = await createAdapter(config.authorCompany, config.authorModel, "author");
+      const response = await adapter.execute(request);
       return responseExecution(response, draftArtifactSchema.parse(response.output));
     },
   } satisfies AuthorAgent;
@@ -927,11 +925,8 @@ function providerAgents(
         outputName: "draft_critique",
         dataPolicy,
       };
-      const response = await createAdapter(
-        config.criticCompany,
-        config.criticModel,
-        "critic",
-      ).execute(request);
+      const adapter = await createAdapter(config.criticCompany, config.criticModel, "critic");
+      const response = await adapter.execute(request);
       return responseExecution(response, parseCritique(response.output));
     },
   } satisfies CriticAgent;
@@ -959,11 +954,12 @@ function engine(
   context: ContextSnapshot,
   allowProviderData: boolean,
   needsAgents: boolean,
+  resolveCredential: ProviderCredentialResolver,
 ): OrchestrationEngine {
   const agents = needsAgents
     ? config.fixtureMode
       ? fixtureAgents(config, context)
-      : providerAgents(config, context, allowProviderData)
+      : providerAgents(config, context, allowProviderData, resolveCredential)
     : noopAgents();
   const store = createStorageRunStore(storage);
   return createOrchestrationEngine({
@@ -1149,7 +1145,10 @@ async function contextForRun(storage: SqliteStorage, runId: string): Promise<Con
 
 export async function startRun(
   rootInput: string,
-  options: { readonly allowProviderData?: boolean } = {},
+  options: {
+    readonly allowProviderData?: boolean;
+    readonly resolveCredential?: ProviderCredentialResolver;
+  } = {},
   io: CliIo = defaultIo,
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
@@ -1167,6 +1166,7 @@ export async function startRun(
       inputs.context,
       options.allowProviderData === true,
       true,
+      options.resolveCredential ?? environmentCredentialResolver,
     );
     const snapshot = await runEngine.start({
       runId,
@@ -1186,7 +1186,11 @@ export async function startRun(
 
 export async function resumeRun(
   rootInput: string,
-  options: { readonly runId?: string; readonly allowProviderData?: boolean } = {},
+  options: {
+    readonly runId?: string;
+    readonly allowProviderData?: boolean;
+    readonly resolveCredential?: ProviderCredentialResolver;
+  } = {},
   io: CliIo = defaultIo,
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
@@ -1196,7 +1200,14 @@ export async function resumeRun(
   const storage = await openStorage(root);
   try {
     const context = await contextForRun(storage, runId);
-    const runEngine = engine(storage, config, context, options.allowProviderData === true, true);
+    const runEngine = engine(
+      storage,
+      config,
+      context,
+      options.allowProviderData === true,
+      true,
+      options.resolveCredential ?? environmentCredentialResolver,
+    );
     preflight(config, io, budget(config));
     const snapshot = await runEngine.resume(runId, { context, budget: budget(config) });
     await saveTypedHistory(storage, config, snapshot);
@@ -1223,7 +1234,7 @@ export async function lifecycleRun(
   const storage = await openStorage(root);
   try {
     const context = await contextForRun(storage, runId);
-    const runEngine = engine(storage, config, context, false, false);
+    const runEngine = engine(storage, config, context, false, false, environmentCredentialResolver);
     const snapshot =
       action === "pause"
         ? await runEngine.pause(runId)
@@ -1471,7 +1482,20 @@ export async function queryWorkspaceEvidence(
 }
 
 /** Concrete local driver shared by CLI and the native desktop host. */
-export function createLocalApplicationDriver(): ApplicationDriver {
+export type ProviderCredentialResolver = (
+  provider: "anthropic" | "openai",
+) => Promise<string | undefined>;
+
+const environmentCredentialResolver: ProviderCredentialResolver = async (provider) =>
+  provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
+
+export function createLocalApplicationDriver(options?: {
+  readonly resolveCredential?: ProviderCredentialResolver;
+}): ApplicationDriver {
+  const credentialOptions =
+    options?.resolveCredential === undefined
+      ? {}
+      : { resolveCredential: options.resolveCredential };
   return {
     initialize: async (command, io) =>
       workspaceDescriptor(resolve(command.root), await initWorkspace(command, io)),
@@ -1480,8 +1504,11 @@ export function createLocalApplicationDriver(): ApplicationDriver {
       startRun(
         command.root,
         command.allowProviderData === undefined
-          ? {}
-          : { allowProviderData: command.allowProviderData },
+          ? credentialOptions
+          : {
+              allowProviderData: command.allowProviderData,
+              ...credentialOptions,
+            },
         io,
       ),
     resume: async (command, io) =>
@@ -1492,6 +1519,7 @@ export function createLocalApplicationDriver(): ApplicationDriver {
           ...(command.allowProviderData === undefined
             ? {}
             : { allowProviderData: command.allowProviderData }),
+          ...credentialOptions,
         },
         io,
       ),
