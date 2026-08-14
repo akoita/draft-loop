@@ -208,7 +208,7 @@ and user decision.
 | `drafting` | The configured author is creating a draft. | `reviewing`, `paused`, `stopped`, `budget-exhausted` |
 | `reviewing` | The independent critic is producing structured findings. | `revising`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted` |
 | `revising` | The author is addressing accepted findings. | `reviewing`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted` |
-| `provider-error` | A provider request failed and the normalized error is available for recovery. | The corresponding active step on explicit retry, `paused`, `stopped` |
+| `provider-error` | A provider request failed and safe provider, model, step, request-id, and attempt metadata is available for recovery. | The corresponding active step on explicit retry (at most three orchestration attempts), `awaiting-approval` when an artifact can return to review, `stopped` |
 | `awaiting-approval` | Checks are complete and the user must decide. | `approved`, `revising`, `paused`, `stopped` |
 | `approved` | The user approved the current artifact. | `exported`, `revising` |
 | `exported` | An approved artifact was rendered locally. | — |
@@ -222,9 +222,11 @@ review early. It must also enter that state after a budget is exhausted so the
 user can inspect the best available artifact. It must not claim readiness when
 high-severity factuality issues remain, critical job requirements are
 unaddressed without an explicit gap, or a new unsupported claim was introduced.
-`provider-error` exists in the orchestration state and retries the recorded step;
-the desktop bridge must expose that state and its recovery action before
-provider-error recovery is considered integrated.
+`provider-error` remains distinct through the application and desktop boundaries.
+The user may retry only a retryable failure below the orchestration limit, return
+an existing artifact to review without deleting failure history, or stop. Each
+provider-transmitting action must pass the current policy acknowledgement; a
+retry does not silently broaden the acknowledged transmission scope.
 
 ## Trust and privacy controls
 

@@ -30,7 +30,7 @@ function descriptor(root: string): WorkspaceDescriptor {
   };
 }
 
-function service(root: string) {
+function service(root: string, snapshotOverrides: Readonly<Record<string, unknown>> = {}) {
   const workspace = descriptor(root);
   const snapshot = {
     schemaVersion: 1,
@@ -89,6 +89,7 @@ function service(root: string) {
     startedAt: "2026-08-12T10:00:00.000Z",
     updatedAt: "2026-08-12T10:00:00.000Z",
     lastError: null,
+    ...snapshotOverrides,
   } as never;
   return {
     service: {
@@ -109,6 +110,113 @@ function service(root: string) {
 }
 
 describe("native host", () => {
+  it("projects safe provider recovery and enforces retry, return, and stop actions", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-provider-error-"));
+    const lastError = {
+      code: "timeout",
+      message: "The provider request failed. You can retry safely.",
+      provider: "openai",
+      modelId: "gpt-5",
+      step: "critic",
+      attempt: 2,
+      maxAttempts: 3,
+      retryable: true,
+      providerRequestId: "request-safe",
+    };
+    const fixture = service(root, { state: "provider-error", currentStep: "critic", lastError });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const review = await host.invoke({ type: "review.load", input: {} });
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          state: "provider-error",
+          providerFailure: {
+            code: "timeout",
+            provider: "openai",
+            model: "gpt-5",
+            step: "critic",
+            attempt: 2,
+            maxAttempts: 3,
+            retryAvailable: true,
+            availableActions: ["retry", "return-to-review", "stop"],
+          },
+        },
+      });
+      expect(JSON.stringify(review)).not.toContain("request-safe");
+
+      const disallowed = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "approve" },
+        },
+      });
+      const disallowedStart = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "pending",
+          action: { type: "start" },
+        },
+      });
+      expect(disallowed).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(disallowedStart).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(fixture.service.start).not.toHaveBeenCalled();
+      expect(fixture.service.lifecycle).not.toHaveBeenCalled();
+
+      await host.invoke({
+        type: "review.dispatch",
+        input: { workspaceId: "workspace-native", runId: "run-native", action: { type: "resume" } },
+      });
+      await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "recover-to-review" },
+        },
+      });
+      await host.invoke({
+        type: "review.dispatch",
+        input: { workspaceId: "workspace-native", runId: "run-native", action: { type: "stop" } },
+      });
+      expect(fixture.service.resume).toHaveBeenCalledOnce();
+      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "recover-review" }),
+        expect.anything(),
+      );
+      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
+        expect.objectContaining({ action: "stop" }),
+        expect.anything(),
+      );
+
+      const exhausted = service(root, {
+        state: "provider-error",
+        currentStep: "critic",
+        lastError: { ...lastError, attempt: 3, retryable: false },
+      });
+      const exhaustedHost = createNativeHost({
+        applicationService: exhausted.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await exhaustedHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const retry = await exhaustedHost.invoke({
+        type: "review.dispatch",
+        input: { workspaceId: "workspace-native", runId: "run-native", action: { type: "resume" } },
+      });
+      expect(retry).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(exhausted.service.resume).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("creates a real workspace without synthetic candidate or job content", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-real-"));
     const root = join(parent, "real-workspace");

@@ -36,4 +36,31 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
 
     expect(html).toContain('aria-label="Edit Summary"');
   });
+
+  it("renders content-free provider recovery choices and blocks approval/export", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "provider-error" as const,
+      providerFailure: {
+        code: "authentication" as const,
+        explanation: "The provider could not authenticate. Check the configured credential.",
+        provider: "anthropic",
+        model: "claude-sonnet-4-5",
+        step: "author" as const,
+        attempt: 1,
+        maxAttempts: 3,
+        retryAvailable: false,
+        availableActions: ["return-to-review", "stop"] as const,
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain('aria-label="provider failure"');
+    expect(html).toContain("The provider could not authenticate");
+    expect(html).toContain("Return to review");
+    expect(html).toContain("Stop run");
+    expect(html).not.toContain(">Retry<");
+    expect(html).toMatch(/Approve artifact[^<]*<\/button>/u);
+    expect(html).toContain("disabled");
+  });
 });

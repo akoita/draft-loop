@@ -7,6 +7,7 @@ export type ReviewRunState =
   | "approved"
   | "exported"
   | "paused"
+  | "provider-error"
   | "stopped"
   | "budget-exhausted";
 
@@ -69,6 +70,30 @@ export interface ProviderExposureView {
   readonly transmissionAllowed: boolean;
   readonly sensitiveData: boolean;
   readonly requestedRetention: "ephemeral-request" | "provider-default" | "not-allowed";
+}
+
+export type ProviderFailureAction = "retry" | "return-to-review" | "stop";
+
+export interface ProviderFailureView {
+  readonly code:
+    | "authentication"
+    | "permission"
+    | "rate-limit"
+    | "timeout"
+    | "cancelled"
+    | "transient"
+    | "invalid-request"
+    | "invalid-response"
+    | "policy"
+    | "unknown";
+  readonly explanation: string;
+  readonly provider: string;
+  readonly model: string;
+  readonly step: "author" | "critic" | "revision";
+  readonly attempt: number;
+  readonly maxAttempts: number;
+  readonly retryAvailable: boolean;
+  readonly availableActions: readonly ProviderFailureAction[];
 }
 
 export interface ProviderTransmissionIdentity {
@@ -134,6 +159,7 @@ export interface DesktopReviewState {
   readonly budgetUsd: number | null;
   readonly providerExposure: ProviderExposureView;
   readonly providerTransmissionPreflight: ProviderTransmissionPreflight;
+  readonly providerFailure: ProviderFailureView | null;
   readonly previousArtifact: ReviewArtifact | null;
   readonly artifact: ReviewArtifact;
   readonly findings: readonly ReviewFinding[];
@@ -155,6 +181,8 @@ export type ReviewAction =
   | { readonly type: "acknowledge-provider-transmission"; readonly fingerprint: string }
   | { readonly type: "start" }
   | { readonly type: "resume" }
+  | { readonly type: "recover-to-review" }
+  | { readonly type: "stop" }
   | { readonly type: "request-revision" }
   | { readonly type: "approve" }
   | { readonly type: "export" };
@@ -271,7 +299,19 @@ export function reduceReviewState(
         ? { ...state, state: "drafting" }
         : state;
     case "resume":
-      return state.state === "paused" ? { ...state, state: "reviewing" } : state;
+      return state.state === "paused" ||
+        (state.state === "provider-error" && state.providerFailure?.retryAvailable === true)
+        ? { ...state, state: "reviewing", providerFailure: null }
+        : state;
+    case "recover-to-review":
+      return state.state === "provider-error" &&
+        state.providerFailure?.availableActions.includes("return-to-review")
+        ? { ...state, state: "awaiting-approval", providerFailure: null }
+        : state;
+    case "stop":
+      return state.state === "provider-error"
+        ? { ...state, state: "stopped", providerFailure: null }
+        : state;
     case "request-revision":
       return state.state === "awaiting-approval"
         ? { ...state, state: "revising", approval: "rejected", round: state.round + 1 }
@@ -408,6 +448,7 @@ export function createFixtureReviewState(): DesktopReviewState {
       retentionPreference: "not-allowed",
       budget: { maxRounds: 2, maxCostUsd: 0.25, maxDurationMs: null },
     },
+    providerFailure: null,
     previousArtifact,
     artifact,
     findings: [

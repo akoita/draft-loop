@@ -74,6 +74,33 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Export Markdown");
   });
 
+  it("shows bounded provider recovery actions without exposing provider payloads", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "provider-error" as const,
+      providerFailure: {
+        code: "timeout" as const,
+        explanation: "The provider did not respond before the request timed out.",
+        provider: "openai",
+        model: "gpt-5",
+        step: "critic" as const,
+        attempt: 2,
+        maxAttempts: 3,
+        retryAvailable: true,
+        availableActions: ["retry", "return-to-review", "stop"] as const,
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Provider request failed");
+    expect(html).toContain("Retry");
+    expect(html).toContain("Return to review");
+    expect(html).toContain("Stop run");
+    expect(reduceReviewState(state, { type: "resume" }).state).toBe("reviewing");
+    expect(reduceReviewState(state, { type: "recover-to-review" }).state).toBe("awaiting-approval");
+    expect(reduceReviewState(state, { type: "stop" }).state).toBe("stopped");
+  });
+
   it("requires an explicit override before approval can be committed", () => {
     const initial = createFixtureReviewState();
     expect(unresolvedBlockingFindings(initial)).toHaveLength(1);

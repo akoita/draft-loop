@@ -627,6 +627,52 @@ export function ReviewWorkspace({
         </div>
       </section>
 
+      {state.state === "provider-error" && state.providerFailure !== null ? (
+        <section
+          className="panel provider-failure-panel"
+          role="alert"
+          aria-label="provider failure"
+        >
+          <p className="eyebrow">Provider request failed</p>
+          <h2>{state.providerFailure.explanation}</h2>
+          <p className="subtle">
+            {state.providerFailure.provider} · {state.providerFailure.model} ·{" "}
+            {state.providerFailure.step} · attempt {state.providerFailure.attempt} of{" "}
+            {state.providerFailure.maxAttempts}
+          </p>
+          <div className="approval-actions">
+            {state.providerFailure.availableActions.includes("retry") ? (
+              <button
+                className="button button-primary"
+                type="button"
+                disabled={!transmissionReady}
+                onClick={() => onAction({ type: "resume" })}
+              >
+                Retry
+              </button>
+            ) : null}
+            {state.providerFailure.availableActions.includes("return-to-review") ? (
+              <button
+                className="button button-outline"
+                type="button"
+                onClick={() => onAction({ type: "recover-to-review" })}
+              >
+                Return to review
+              </button>
+            ) : null}
+            {state.providerFailure.availableActions.includes("stop") ? (
+              <button
+                className="button button-quiet"
+                type="button"
+                onClick={() => onAction({ type: "stop" })}
+              >
+                Stop run
+              </button>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
+
       {state.providerTransmissionPreflight.required &&
       !state.providerTransmissionPreflight.acknowledged
         ? renderProviderTransmissionPreflight()
@@ -768,7 +814,7 @@ export function ReviewWorkspace({
                 >
                   Resume
                 </button>
-              ) : state.state !== "approved" && state.state !== "exported" ? (
+              ) : ["drafting", "reviewing", "revising"].includes(state.state) ? (
                 <button
                   className="button button-quiet"
                   type="button"

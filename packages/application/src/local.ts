@@ -35,6 +35,7 @@ import {
   type ModelRequest,
   type ModelResponse,
   OpenAIAdapter,
+  ProviderAdapterError,
 } from "@draft-loop/providers";
 import {
   extensionForFormat,
@@ -795,42 +796,68 @@ function providerAgents(
   context: ContextSnapshot,
   allowProviderData: boolean,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
-  if (!allowProviderData) {
-    throw new CliUserError(
-      "Provider execution is disabled by default. Re-run with --allow-provider-data after reviewing the data policy, or use --fixture.",
+  const dataPolicy = {
+    allowTransmission: allowProviderData,
+    allowedCompanies: ["anthropic", "openai"] as const,
+    sensitiveData: true,
+    sensitiveDataAcknowledged: allowProviderData,
+    requestedRetention: "ephemeral-request" as const,
+  };
+
+  function providerId(company: string): "anthropic" | "openai" {
+    if (company === "anthropic" || company === "openai") return company;
+    throw new ProviderAdapterError(
+      "anthropic",
+      "invalid-request",
+      "The workspace provider configuration is unsupported.",
+      { retryable: false },
     );
   }
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  const openAiKey = process.env.OPENAI_API_KEY;
-  if (anthropicKey === undefined || openAiKey === undefined) {
-    throw new CliUserError("Live provider mode requires ANTHROPIC_API_KEY and OPENAI_API_KEY.");
-  }
-  const allowedCompanies = ["anthropic", "openai"];
-  if (
-    !allowedCompanies.includes(config.authorCompany) ||
-    !allowedCompanies.includes(config.criticCompany)
-  ) {
-    throw new CliUserError(
-      "Live provider mode currently supports Anthropic and OpenAI cross-company pairing.",
-    );
-  }
-  const anthropic = new Anthropic({ apiKey: anthropicKey });
-  const openai = new OpenAI({ apiKey: openAiKey });
 
   function createAdapter(company: string, modelId: string, role: "author" | "critic") {
-    if (company === "anthropic") {
-      return new AnthropicAdapter<JsonObject, JsonObject>(anthropic as unknown as AnthropicClient, {
-        configuredModel: {
-          company: "anthropic",
-          modelId,
-          role,
-          promptTemplateVersion: `cli-${role}-v1`,
-        },
-      });
+    const provider = providerId(company);
+    if (!allowProviderData) {
+      throw new ProviderAdapterError(
+        provider,
+        "policy",
+        "Provider transmission is not approved for this request.",
+        { retryable: false },
+      );
     }
-    return new OpenAIAdapter<JsonObject, JsonObject>(openai, {
+    if (provider === "anthropic") {
+      const apiKey = process.env.ANTHROPIC_API_KEY;
+      if (apiKey === undefined || apiKey.trim() === "") {
+        throw new ProviderAdapterError(
+          provider,
+          "authentication",
+          "The provider credential is not configured.",
+          { retryable: false },
+        );
+      }
+      return new AnthropicAdapter<JsonObject, JsonObject>(
+        new Anthropic({ apiKey }) as unknown as AnthropicClient,
+        {
+          configuredModel: {
+            company: provider,
+            modelId,
+            role,
+            promptTemplateVersion: `cli-${role}-v1`,
+          },
+        },
+      );
+    }
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (apiKey === undefined || apiKey.trim() === "") {
+      throw new ProviderAdapterError(
+        provider,
+        "authentication",
+        "The provider credential is not configured.",
+        { retryable: false },
+      );
+    }
+    return new OpenAIAdapter<JsonObject, JsonObject>(new OpenAI({ apiKey }), {
       configuredModel: {
-        company: "openai",
+        company: provider,
         modelId,
         role,
         promptTemplateVersion: `cli-${role}-v1`,
@@ -838,15 +865,6 @@ function providerAgents(
     });
   }
 
-  const authorAdapter = createAdapter(config.authorCompany, config.authorModel, "author");
-  const criticAdapter = createAdapter(config.criticCompany, config.criticModel, "critic");
-  const dataPolicy = {
-    allowTransmission: true,
-    allowedCompanies: ["anthropic", "openai"] as const,
-    sensitiveData: true,
-    sensitiveDataAcknowledged: true,
-    requestedRetention: "ephemeral-request" as const,
-  };
   const author = {
     execute: async ({
       executionId,
@@ -874,7 +892,11 @@ function providerAgents(
         outputName: "draft_artifact",
         dataPolicy,
       };
-      const response = await authorAdapter.execute(request);
+      const response = await createAdapter(
+        config.authorCompany,
+        config.authorModel,
+        "author",
+      ).execute(request);
       return responseExecution(response, draftArtifactSchema.parse(response.output));
     },
   } satisfies AuthorAgent;
@@ -905,7 +927,11 @@ function providerAgents(
         outputName: "draft_critique",
         dataPolicy,
       };
-      const response = await criticAdapter.execute(request);
+      const response = await createAdapter(
+        config.criticCompany,
+        config.criticModel,
+        "critic",
+      ).execute(request);
       return responseExecution(response, parseCritique(response.output));
     },
   } satisfies CriticAgent;
@@ -1105,6 +1131,11 @@ function outputSnapshot(snapshot: RunSnapshot, io: CliIo): void {
     const errors = snapshot.findings.filter((finding) => finding.severity === "error").length;
     io.write(`findings: total=${snapshot.findings.length} errors=${errors}`);
   }
+  if (snapshot.lastError !== null) {
+    io.write(
+      `providerFailure: code=${snapshot.lastError.code} provider=${snapshot.lastError.provider} step=${snapshot.lastError.step} attempt=${snapshot.lastError.attempt}/${snapshot.lastError.maxAttempts} retryable=${snapshot.lastError.retryable}`,
+    );
+  }
 }
 
 async function contextForRun(storage: SqliteStorage, runId: string): Promise<ContextSnapshot> {
@@ -1177,7 +1208,7 @@ export async function resumeRun(
   }
 }
 
-type LifecycleAction = "pause" | "stop" | "approve" | "revision";
+type LifecycleAction = "pause" | "stop" | "approve" | "revision" | "recover-review";
 
 export async function lifecycleRun(
   rootInput: string,
@@ -1200,7 +1231,9 @@ export async function lifecycleRun(
           ? await runEngine.stop(runId)
           : action === "approve"
             ? await runEngine.approve(runId)
-            : await runEngine.requestRevision(runId);
+            : action === "revision"
+              ? await runEngine.requestRevision(runId)
+              : await runEngine.recoverToReview(runId);
     await storage.saveDecision({
       id: `decision-${runId}-${action}-${snapshot.round}-${Date.now()}`,
       workspaceId: config.id,
@@ -1213,7 +1246,9 @@ export async function lifecycleRun(
           ? "Approved through the explicit CLI approval command."
           : action === "revision"
             ? "Revision requested through the explicit CLI command."
-            : `${action} requested through the CLI command.`,
+            : action === "recover-review"
+              ? "Returned to review after a provider failure."
+              : `${action} requested through the CLI command.`,
       actor: "user:cli",
       createdAt: timestamp(),
       payload: { action, source: "cli" },
