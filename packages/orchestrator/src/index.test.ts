@@ -378,7 +378,7 @@ describe("durable orchestration", () => {
     expect(failed.lastError).toMatchObject({
       code: "provider-error",
       providerRequestId: null,
-      retryable: true,
+      retryable: false,
     });
     expect(failed.executionHistory[0]).toMatchObject({
       errorCode: "provider-error",
@@ -392,7 +392,9 @@ describe("durable orchestration", () => {
   it("returns an artifact-bearing provider failure to review without erasing history", async () => {
     const { engine, critic } = engineFixture({
       critic: async () =>
-        Promise.reject(Object.assign(new Error("private body"), { code: "permission" })),
+        Promise.reject(
+          Object.assign(new Error("private body"), { code: "permission", retryable: true }),
+        ),
     });
     const failed = await engine.start(request());
 
@@ -400,6 +402,7 @@ describe("durable orchestration", () => {
 
     expect(failed.state).toBe("provider-error");
     expect(failed.artifact).not.toBeNull();
+    expect(failed.lastError).toMatchObject({ code: "permission", retryable: false });
     expect(recovered.state).toBe("awaiting-approval");
     expect(recovered.currentStep).toBeNull();
     expect(recovered.lastError).toEqual(failed.lastError);
