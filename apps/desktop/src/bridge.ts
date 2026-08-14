@@ -71,6 +71,7 @@ export const runStates = [
   "approved",
   "exported",
   "paused",
+  "provider-error",
   "stopped",
   "budget-exhausted",
 ] as const;
@@ -528,6 +529,8 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "pause":
     case "start":
     case "resume":
+    case "recover-to-review":
+    case "stop":
     case "request-revision":
     case "approve":
     case "export":
@@ -773,6 +776,53 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   ) {
     return invalidInput();
   }
+  const providerFailure = value.providerFailure;
+  if (providerFailure !== null && providerFailure !== undefined) {
+    const failure = requireRecord(providerFailure);
+    if (
+      !hasOnlyKeys(failure, [
+        "code",
+        "explanation",
+        "provider",
+        "model",
+        "step",
+        "attempt",
+        "maxAttempts",
+        "retryAvailable",
+        "availableActions",
+      ]) ||
+      typeof failure.availableActions !== "object" ||
+      !Array.isArray(failure.availableActions) ||
+      failure.availableActions.length > 3
+    ) {
+      return invalidInput();
+    }
+    enumValue(failure.code, [
+      "authentication",
+      "permission",
+      "rate-limit",
+      "timeout",
+      "cancelled",
+      "transient",
+      "invalid-request",
+      "invalid-response",
+      "policy",
+      "unknown",
+    ] as const);
+    stringValue(failure.explanation, 500);
+    identifier(failure.provider);
+    identifier(failure.model);
+    enumValue(failure.step, ["author", "critic", "revision"] as const);
+    const attempt = finiteInteger(failure.attempt, 100);
+    const maxAttempts = finiteInteger(failure.maxAttempts, 100);
+    if (attempt < 1 || maxAttempts < 1 || attempt > maxAttempts) return invalidInput();
+    const retryAvailable = booleanValue(failure.retryAvailable);
+    const actions = failure.availableActions.map((action) =>
+      enumValue(action, ["retry", "return-to-review", "stop"] as const),
+    );
+    if (new Set(actions).size !== actions.length) return invalidInput();
+    if (retryAvailable !== actions.includes("retry")) return invalidInput();
+  }
   return value as unknown as DesktopReviewState;
 }
 
@@ -908,7 +958,14 @@ function normalizeResponse(
   try {
     return { ok: true, value: normalizeSuccess(command.type, response.value) };
   } catch (error) {
-    return { ok: false, error: safeBridgeError(error, command.type) };
+    const normalizedError = safeBridgeError(error, command.type);
+    return {
+      ok: false,
+      error:
+        normalizedError.code === "invalid-input"
+          ? bridgeError("operation-failed", command.type)
+          : normalizedError,
+    };
   }
 }
 

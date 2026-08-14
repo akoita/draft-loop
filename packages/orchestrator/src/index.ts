@@ -111,11 +111,21 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly estimatedUsd: number | null;
   readonly completedAt: string;
   readonly errorCode?: string;
+  readonly attempt?: number;
+  readonly maxAttempts?: number;
+  readonly retryable?: boolean;
 }
 
 export interface RunError {
   readonly code: string;
   readonly message: string;
+  readonly provider: string;
+  readonly modelId: string;
+  readonly step: Exclude<OrchestrationStep, null>;
+  readonly attempt: number;
+  readonly maxAttempts: number;
+  readonly retryable: boolean;
+  readonly providerRequestId: string | null;
 }
 
 export interface RunSnapshot {
@@ -146,6 +156,7 @@ export type RunEventType =
   | "step.completed"
   | "execution.reused"
   | "provider.failed"
+  | "provider.recovered"
   | "budget.exhausted"
   | "user.paused"
   | "user.stopped"
@@ -202,6 +213,7 @@ export interface OrchestrationEngine {
   readonly resume: (runId: string, options?: ResumeOptions) => Promise<RunSnapshot>;
   readonly pause: (runId: string) => Promise<RunSnapshot>;
   readonly stop: (runId: string) => Promise<RunSnapshot>;
+  readonly recoverToReview: (runId: string) => Promise<RunSnapshot>;
   readonly approve: (runId: string) => Promise<RunSnapshot>;
   readonly markExported: (runId: string) => Promise<RunSnapshot>;
   readonly requestRevision: (runId: string) => Promise<RunSnapshot>;
@@ -238,6 +250,7 @@ interface AuditRecord {
 }
 
 const terminalStates: ReadonlySet<RunState> = new Set(["approved", "exported", "stopped"]);
+export const MAX_ORCHESTRATION_ATTEMPTS = 3;
 const stepStates: Readonly<Record<Exclude<OrchestrationStep, null>, RunState>> = {
   author: "drafting",
   critic: "reviewing",
@@ -315,15 +328,70 @@ function executionOutputIsCritique(
   return execution.step === "critic";
 }
 
-function providerFailure(value: unknown): RunError {
+const providerErrorCodes = new Set([
+  "authentication",
+  "permission",
+  "rate-limit",
+  "timeout",
+  "cancelled",
+  "transient",
+  "invalid-request",
+  "invalid-response",
+  "policy",
+  "unknown",
+  "provider-error",
+]);
+
+const userRetryableProviderErrorCodes = new Set([
+  "authentication",
+  "rate-limit",
+  "timeout",
+  "transient",
+]);
+
+function safeProviderRequestId(value: unknown): string | null {
+  if (typeof value !== "string" || value.length < 1 || value.length > 128) return null;
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u.test(value)) return null;
+  if (/^(?:sk[-_]|bearer|api[-_]?key)/iu.test(value)) return null;
+  return value;
+}
+
+function providerFailure(
+  value: unknown,
+  context: ContextSnapshot,
+  step: Exclude<OrchestrationStep, null>,
+  attempt: number,
+): RunError {
   const candidate =
-    typeof value === "object" && value !== null ? (value as { readonly code?: unknown }) : {};
+    typeof value === "object" && value !== null
+      ? (value as {
+          readonly code?: unknown;
+          readonly retryable?: unknown;
+          readonly requestId?: unknown;
+        })
+      : {};
+  const selection =
+    step === "critic" ? context.modelConfiguration.critic : context.modelConfiguration.author;
+  const candidateCode =
+    typeof candidate.code === "string" && candidate.code.trim() !== ""
+      ? candidate.code
+      : "provider-error";
+  const code = providerErrorCodes.has(candidateCode) ? candidateCode : "provider-error";
+  const retryable =
+    (candidate.retryable === true || userRetryableProviderErrorCodes.has(code)) &&
+    attempt < MAX_ORCHESTRATION_ATTEMPTS;
   return {
-    code:
-      typeof candidate.code === "string" && candidate.code.trim() !== ""
-        ? candidate.code
-        : "provider-error",
-    message: "The provider execution failed; resume to retry.",
+    code,
+    message: retryable
+      ? "The provider request failed. You can retry safely."
+      : "The provider request failed. Retry is not available.",
+    provider: selection.company,
+    modelId: selection.modelId,
+    step,
+    attempt,
+    maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
+    retryable,
+    providerRequestId: safeProviderRequestId(candidate.requestId),
   };
 }
 
@@ -635,15 +703,23 @@ export function createOrchestrationEngine(
     return updated;
   };
 
-  const recordFailure = async (snapshot: RunSnapshot, error: unknown): Promise<RunSnapshot> => {
-    const failure = providerFailure(error);
+  const recordFailure = async (snapshot: RunSnapshot, failure: RunError): Promise<RunSnapshot> => {
     const updated = {
       ...snapshot,
       state: "provider-error" as const,
       updatedAt: clock(),
       lastError: failure,
     };
-    await saveAndEmit(updated, "provider.failed", { code: failure.code });
+    await saveAndEmit(updated, "provider.failed", {
+      code: failure.code,
+      provider: failure.provider,
+      modelId: failure.modelId,
+      step: failure.step,
+      attempt: failure.attempt,
+      maxAttempts: failure.maxAttempts,
+      retryable: failure.retryable,
+      providerRequestId: failure.providerRequestId,
+    });
     return updated;
   };
 
@@ -693,6 +769,19 @@ export function createOrchestrationEngine(
           execution.round === snapshot.round &&
           execution.step === step,
       ).length + 1;
+    if (attempt > MAX_ORCHESTRATION_ATTEMPTS) {
+      return snapshot.state === "provider-error"
+        ? snapshot
+        : recordFailure(
+            snapshot,
+            providerFailure(
+              { code: snapshot.lastError?.code, retryable: false },
+              context,
+              step,
+              MAX_ORCHESTRATION_ATTEMPTS,
+            ),
+          );
+    }
     const id = executionId(snapshot.runId, snapshot.round, step, attempt);
     await emit(snapshot, "step.started", { step, executionId: id });
     try {
@@ -745,6 +834,9 @@ export function createOrchestrationEngine(
         totalTokens: execution.totalTokens,
         estimatedUsd: execution.estimatedUsd,
         completedAt: execution.completedAt,
+        attempt,
+        maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
+        retryable: false,
       };
       await options.store.saveExecution(record);
       const updated = {
@@ -757,7 +849,7 @@ export function createOrchestrationEngine(
       const saved = await saveAndEmit(updated, "step.completed", { step, executionId: id });
       return completeStep(saved, context, record);
     } catch (error) {
-      const failure = providerFailure(error);
+      const failure = providerFailure(error, context, step, attempt);
       const failedExecution: ExecutionRecord = {
         id,
         runId: snapshot.runId,
@@ -765,15 +857,18 @@ export function createOrchestrationEngine(
         round: snapshot.round,
         step,
         status: "failed",
-        provider: "unknown",
-        modelId: "unknown",
-        providerRequestId: null,
+        provider: failure.provider,
+        modelId: failure.modelId,
+        providerRequestId: failure.providerRequestId,
         inputTokens: 0,
         outputTokens: 0,
         totalTokens: 0,
         estimatedUsd: null,
         completedAt: clock(),
         errorCode: failure.code,
+        attempt,
+        maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
+        retryable: failure.retryable,
       };
       await options.store.saveExecution(failedExecution);
       return recordFailure(
@@ -781,7 +876,7 @@ export function createOrchestrationEngine(
           ...snapshot,
           executionHistory: [...snapshot.executionHistory, failedExecution],
         },
-        error,
+        failure,
       );
     }
   };
@@ -794,7 +889,15 @@ export function createOrchestrationEngine(
     if (executionOutputIsArtifact(execution)) {
       const artifact = execution.output;
       if (artifact === undefined)
-        return recordFailure(snapshot, new Error("missing artifact output"));
+        return recordFailure(
+          snapshot,
+          providerFailure(
+            { code: "invalid-response", retryable: false },
+            context,
+            execution.step,
+            execution.attempt ?? 1,
+          ),
+        );
       const validation = validateDraftArtifact(artifact, {
         requirements: [...context.requirements],
         outputConstraints: {
@@ -818,7 +921,15 @@ export function createOrchestrationEngine(
       typeof execution.output !== "object" ||
       execution.output === null
     )
-      return recordFailure(snapshot, new Error("missing critique output"));
+      return recordFailure(
+        snapshot,
+        providerFailure(
+          { code: "invalid-response", retryable: false },
+          context,
+          execution.step,
+          execution.attempt ?? 1,
+        ),
+      );
     const critiqueIssues = validateCritique(execution.output);
     const combined = [...snapshot.findings, ...critiqueIssues, ...execution.output.findings];
     const evaluation = evaluateReadiness(
@@ -863,6 +974,7 @@ export function createOrchestrationEngine(
   const advance = async (snapshot: RunSnapshot, context: ContextSnapshot): Promise<RunSnapshot> => {
     let current = snapshot;
     if (current.state === "provider-error") {
+      if (current.lastError?.retryable !== true) return immutable(current);
       const resumed = await save({
         ...current,
         state: stepStates[current.currentStep ?? "author"],
@@ -937,7 +1049,11 @@ export function createOrchestrationEngine(
 
   const pause = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
-    if (terminalStates.has(snapshot.state) || snapshot.state === "awaiting-approval")
+    if (
+      terminalStates.has(snapshot.state) ||
+      snapshot.state === "awaiting-approval" ||
+      snapshot.state === "provider-error"
+    )
       throw new Error("Only an active run can be paused.");
     const updated = { ...snapshot, state: "paused" as const, updatedAt: clock() };
     await saveAndEmit(updated, "user.paused");
@@ -947,6 +1063,7 @@ export function createOrchestrationEngine(
 
   const stop = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
+    if (snapshot.state === "stopped") return snapshot;
     if (terminalStates.has(snapshot.state)) throw new Error("The run is already terminal.");
     const updated = {
       ...snapshot,
@@ -956,6 +1073,29 @@ export function createOrchestrationEngine(
     };
     await saveAndEmit(updated, "user.stopped");
     await emit(updated, "state.changed", { to: "stopped" });
+    return updated;
+  };
+
+  const recoverToReview = async (runId: string): Promise<RunSnapshot> => {
+    const snapshot = await loadForAction(runId);
+    if (snapshot.state !== "provider-error") {
+      throw new Error("Only a run with a provider error can return to review.");
+    }
+    if (snapshot.artifact === null) {
+      throw new Error("A draft artifact is required to return to review.");
+    }
+    const updated = {
+      ...snapshot,
+      state: "awaiting-approval" as const,
+      currentStep: null,
+      approval: "pending" as const,
+      updatedAt: clock(),
+    };
+    await saveAndEmit(updated, "provider.recovered", {
+      action: "return-to-review",
+      code: snapshot.lastError?.code ?? "provider-error",
+    });
+    await emit(updated, "state.changed", { to: "awaiting-approval", reason: "provider-recovery" });
     return updated;
   };
 
@@ -1010,7 +1150,18 @@ export function createOrchestrationEngine(
 
   const events = (runId: string): Promise<readonly RunEvent[]> => options.store.listEvents(runId);
 
-  return { start, run: start, resume, pause, stop, approve, markExported, requestRevision, events };
+  return {
+    start,
+    run: start,
+    resume,
+    pause,
+    stop,
+    recoverToReview,
+    approve,
+    markExported,
+    requestRevision,
+    events,
+  };
 }
 
 export interface OrchestrationPort {

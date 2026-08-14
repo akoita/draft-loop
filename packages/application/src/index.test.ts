@@ -90,4 +90,16 @@ describe("application service contract", () => {
       expect.objectContaining({ root: "workspace", targetId: "finding-1" }),
     );
   });
+
+  it("forwards provider recovery through the provider-independent lifecycle boundary", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.lifecycle({ root: "workspace", runId: "run-1", action: "recover-review" });
+
+    expect(underlying.lifecycle).toHaveBeenCalledWith(
+      { root: "workspace", runId: "run-1", action: "recover-review" },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+  });
 });

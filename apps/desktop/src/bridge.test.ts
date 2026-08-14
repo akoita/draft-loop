@@ -7,7 +7,7 @@ import {
   unavailableResult,
   validateBridgeCommand,
 } from "./bridge.js";
-import { createFixtureReviewState } from "./model.js";
+import { createFixtureReviewState, reduceReviewState } from "./model.js";
 import {
   createBridgeReviewPort,
   createBrowserCapabilityPort,
@@ -101,6 +101,26 @@ describe("desktop capability bridge", () => {
           workspaceId: "workspace-1",
           runId: "pending",
           action: { type: "acknowledge-provider-transmission", fingerprint: "stale" },
+        },
+      }),
+    ).toThrow("invalid");
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          action: { type: "recover-to-review" },
+        },
+      }),
+    ).toMatchObject({ input: { action: { type: "recover-to-review" } } });
+    expect(() =>
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          action: { type: "stop", reason: "provider response body" },
         },
       }),
     ).toThrow("invalid");
@@ -212,5 +232,58 @@ describe("desktop capability bridge", () => {
       state: "approved",
     });
     expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects inconsistent provider failure projections from the host", async () => {
+    const baseFailure = {
+      code: "timeout",
+      explanation: "The provider request timed out.",
+      provider: "openai",
+      model: "gpt-5",
+      step: "critic",
+      attempt: 1,
+      maxAttempts: 3,
+      retryAvailable: true,
+      availableActions: ["retry", "return-to-review", "stop"],
+    } as const;
+    for (const providerFailure of [
+      { ...baseFailure, attempt: 0 },
+      { ...baseFailure, attempt: 4 },
+      { ...baseFailure, availableActions: ["retry", "retry"] },
+      { ...baseFailure, retryAvailable: false },
+    ]) {
+      const state = {
+        ...createFixtureReviewState(),
+        state: "provider-error" as const,
+        providerFailure,
+      };
+      const port = createCapabilityPort(
+        bridge(async () => ({ ok: true, value: state }), ["review.load"]),
+      );
+      await expect(
+        port.execute({ type: "review.load", input: { workspaceId: state.workspaceId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+  });
+
+  it("clears provider failure details after local recovery or stop reduction", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "provider-error" as const,
+      providerFailure: {
+        code: "timeout" as const,
+        explanation: "The provider request timed out.",
+        provider: "openai",
+        model: "gpt-5",
+        step: "critic" as const,
+        attempt: 1,
+        maxAttempts: 3,
+        retryAvailable: true,
+        availableActions: ["retry", "return-to-review", "stop"] as const,
+      },
+    };
+
+    expect(reduceReviewState(state, { type: "recover-to-review" }).providerFailure).toBeNull();
+    expect(reduceReviewState(state, { type: "stop" }).providerFailure).toBeNull();
   });
 });

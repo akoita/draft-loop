@@ -86,6 +86,7 @@ export type ProviderErrorCode =
   | "permission"
   | "rate-limit"
   | "timeout"
+  | "cancelled"
   | "transient"
   | "invalid-request"
   | "invalid-response"
@@ -203,7 +204,20 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
     .toLowerCase();
 
   let code: ProviderErrorCode = "unknown";
-  if (status === 401 || combined.includes("authentication") || combined.includes("unauthorized")) {
+  if (
+    combined.includes("aborterror") ||
+    combined.includes("abort_err") ||
+    combined.includes("err_canceled") ||
+    combined.includes("cancelled") ||
+    combined.includes("canceled") ||
+    combined.includes("aborted")
+  ) {
+    code = "cancelled";
+  } else if (
+    status === 401 ||
+    combined.includes("authentication") ||
+    combined.includes("unauthorized")
+  ) {
     code = "authentication";
   } else if (status === 403 || combined.includes("permission") || combined.includes("forbidden")) {
     code = "permission";
@@ -214,12 +228,7 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
     combined.includes("too many requests")
   ) {
     code = "rate-limit";
-  } else if (
-    status === 408 ||
-    combined.includes("timeout") ||
-    combined.includes("timed out") ||
-    combined.includes("aborted")
-  ) {
+  } else if (status === 408 || combined.includes("timeout") || combined.includes("timed out")) {
     code = "timeout";
   } else if (status !== undefined && status >= 500) {
     code = "transient";

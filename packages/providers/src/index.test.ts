@@ -6,6 +6,7 @@ import {
   AnthropicAdapter,
   type AnthropicClient,
   type ModelRequest,
+  normalizeProviderError,
   OpenAIAdapter,
   type OpenAIClient,
   ProviderAdapterError,
@@ -47,6 +48,21 @@ function request(overrides: Partial<ModelRequest> = {}): ModelRequest {
 }
 
 describe("provider-neutral model adapters", () => {
+  it("normalizes explicit Anthropic and OpenAI cancellation signals without retry", () => {
+    const anthropic = normalizeProviderError(
+      "anthropic",
+      Object.assign(new Error("sensitive abort details"), { name: "AbortError" }),
+    );
+    const openai = normalizeProviderError(
+      "openai",
+      Object.assign(new Error("sensitive cancellation details"), { code: "ERR_CANCELED" }),
+    );
+
+    expect(anthropic).toMatchObject({ code: "cancelled", retryable: false });
+    expect(openai).toMatchObject({ code: "cancelled", retryable: false });
+    expect(anthropic.message).not.toContain("sensitive");
+    expect(openai.message).not.toContain("sensitive");
+  });
   it("sends Anthropic's exact model and structured JSON request shape", async () => {
     type Params = Parameters<AnthropicClient["messages"]["create"]>[0];
     const response = {

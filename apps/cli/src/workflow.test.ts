@@ -108,11 +108,41 @@ describe("phase-0 CLI workflow", () => {
     await approvedStorage.close();
   });
 
-  it("does not start live providers without an explicit data-policy approval", async () => {
+  it("records a policy failure without starting live providers", async () => {
     const root = await fixtureWorkspace();
     await initWorkspace({ root, jobDescription: "job.md", sources: "evidence" });
 
-    await expect(startRun(root)).rejects.toThrow("Provider execution is disabled by default");
+    const snapshot = await startRun(root);
+    expect(snapshot).toMatchObject({
+      state: "provider-error",
+      lastError: {
+        code: "policy",
+        provider: "anthropic",
+        step: "author",
+        retryable: false,
+      },
+    });
+  });
+
+  it("records missing live credentials as a durable authentication failure", async () => {
+    const root = await fixtureWorkspace();
+    await initWorkspace({ root, jobDescription: "job.md", sources: "evidence" });
+    const savedAnthropic = process.env.ANTHROPIC_API_KEY;
+    const savedOpenAi = process.env.OPENAI_API_KEY;
+    delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+      const snapshot = await startRun(root, { allowProviderData: true });
+      expect(snapshot).toMatchObject({
+        state: "provider-error",
+        lastError: { code: "authentication", provider: "anthropic", retryable: true },
+      });
+    } finally {
+      if (savedAnthropic === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = savedAnthropic;
+      if (savedOpenAi === undefined) delete process.env.OPENAI_API_KEY;
+      else process.env.OPENAI_API_KEY = savedOpenAi;
+    }
   });
 
   it("records a revision request and resumes the same durable run", async () => {

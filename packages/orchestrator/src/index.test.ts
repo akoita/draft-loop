@@ -280,7 +280,23 @@ describe("durable orchestration", () => {
     const failed = await engine.start(request());
     expect(failed.state).toBe("provider-error");
     expect(failed.executionHistory).toHaveLength(1);
-    expect(failed.executionHistory[0]?.status).toBe("failed");
+    expect(failed.executionHistory[0]).toMatchObject({
+      status: "failed",
+      provider: "anthropic",
+      modelId: "author-test",
+      attempt: 1,
+      maxAttempts: 3,
+      retryable: true,
+    });
+    expect(failed.lastError).toMatchObject({
+      code: "timeout",
+      provider: "anthropic",
+      modelId: "author-test",
+      step: "author",
+      attempt: 1,
+      maxAttempts: 3,
+      retryable: true,
+    });
 
     const resumed = await engine.resume("run-1", { context: context() });
     expect(resumed.state).toBe("awaiting-approval");
@@ -289,6 +305,110 @@ describe("durable orchestration", () => {
       expect.arrayContaining(["run-1:1:author:attempt:1", "run-1:1:author:attempt:2"]),
     );
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("provider.failed");
+  });
+
+  it("bounds orchestration retries at three attempts across persisted resumes", async () => {
+    const failure = Object.assign(new Error("secret provider response"), {
+      code: "transient",
+      retryable: true,
+      requestId: "safe-request-id",
+    });
+    const { engine, author } = engineFixture({ author: async () => Promise.reject(failure) });
+
+    let snapshot = await engine.start(request());
+    snapshot = await engine.resume("run-1", { context: context() });
+    snapshot = await engine.resume("run-1", { context: context() });
+    const afterLimit = await engine.resume("run-1", { context: context() });
+
+    expect(author).toHaveBeenCalledTimes(3);
+    expect(snapshot.lastError).toMatchObject({
+      attempt: 3,
+      maxAttempts: 3,
+      retryable: false,
+      providerRequestId: "safe-request-id",
+    });
+    expect(afterLimit).toEqual(snapshot);
+    expect(JSON.stringify(snapshot)).not.toContain("secret provider response");
+  });
+
+  it("allows bounded authentication recovery after credentials are corrected", async () => {
+    let attempts = 0;
+    const { engine, author } = engineFixture({
+      author: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          throw Object.assign(new Error("credential response body"), {
+            code: "authentication",
+            retryable: false,
+          });
+        }
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+
+    const failed = await engine.start(request());
+    expect(failed.lastError).toMatchObject({
+      code: "authentication",
+      retryable: true,
+      attempt: 1,
+      maxAttempts: 3,
+    });
+
+    const recovered = await engine.resume("run-1", { context: context() });
+    expect(recovered.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(2);
+  });
+
+  it("allowlists failure codes and drops secret-shaped or unbounded provider request ids", async () => {
+    const secretRequestId = `sk-proj-${"secret".repeat(30)}`;
+    const { engine } = engineFixture({
+      author: async () =>
+        Promise.reject(
+          Object.assign(new Error("raw secret provider body"), {
+            code: "sdk-secret-code",
+            retryable: true,
+            requestId: secretRequestId,
+          }),
+        ),
+    });
+
+    const failed = await engine.start(request());
+    const serialized = JSON.stringify({ failed, events: await engine.events("run-1") });
+
+    expect(failed.lastError).toMatchObject({
+      code: "provider-error",
+      providerRequestId: null,
+      retryable: true,
+    });
+    expect(failed.executionHistory[0]).toMatchObject({
+      errorCode: "provider-error",
+      providerRequestId: null,
+    });
+    expect(serialized).not.toContain("sdk-secret-code");
+    expect(serialized).not.toContain(secretRequestId);
+    expect(serialized).not.toContain("raw secret provider body");
+  });
+
+  it("returns an artifact-bearing provider failure to review without erasing history", async () => {
+    const { engine, critic } = engineFixture({
+      critic: async () =>
+        Promise.reject(Object.assign(new Error("private body"), { code: "permission" })),
+    });
+    const failed = await engine.start(request());
+
+    const recovered = await engine.recoverToReview("run-1");
+
+    expect(failed.state).toBe("provider-error");
+    expect(failed.artifact).not.toBeNull();
+    expect(recovered.state).toBe("awaiting-approval");
+    expect(recovered.currentStep).toBeNull();
+    expect(recovered.lastError).toEqual(failed.lastError);
+    expect(recovered.executionHistory).toEqual(failed.executionHistory);
+    expect(critic).toHaveBeenCalledOnce();
+    expect((await engine.events("run-1")).map((event) => event.type)).toContain(
+      "provider.recovered",
+    );
+    await expect(engine.recoverToReview("run-1")).rejects.toThrow(/provider error/i);
   });
 
   it("pauses and stops without running a provider, then resumes a paused run", async () => {
@@ -307,6 +427,10 @@ describe("durable orchestration", () => {
     const stopped = await engine.stop("run-1");
     expect(stopped.state).toBe("stopped");
     expect(stopped.currentStep).toBeNull();
+    expect(await engine.stop("run-1")).toEqual(stopped);
+    expect(
+      (await engine.events("run-1")).filter((event) => event.type === "user.stopped"),
+    ).toHaveLength(1);
   });
 
   it("stops at a cost budget and leaves the best available result awaiting approval", async () => {
@@ -426,6 +550,43 @@ describe("durable orchestration", () => {
         errorCode: "different-error",
       }),
     ).rejects.toThrow(/immutable/);
+  });
+
+  it("restores provider recovery metadata from a fresh storage adapter", async () => {
+    const values = new Map<string, string>();
+    const snapshots: RunSnapshotRecordInput[] = [];
+    const storage = {
+      get: async (key: string) => values.get(key),
+      set: async (key: string, value: string) => {
+        values.set(key, value);
+      },
+      appendAuditEvent: async () => undefined,
+      listAuditEvents: async () => [],
+      saveRunSnapshot: async (input: RunSnapshotRecordInput) => {
+        snapshots.push(input);
+      },
+    };
+    const failed: RunSnapshot = {
+      ...pausedSnapshot(),
+      state: "provider-error",
+      lastError: {
+        code: "timeout",
+        message: "The provider request failed. You can retry safely.",
+        provider: "anthropic",
+        modelId: "author-test",
+        step: "author",
+        attempt: 1,
+        maxAttempts: 3,
+        retryable: true,
+        providerRequestId: "request-1",
+      },
+    };
+
+    await createStorageRunStore(storage).saveRun(failed);
+    const restored = await createStorageRunStore(storage).loadRun("run-1");
+
+    expect(restored).toEqual(failed);
+    expect(snapshots[0]?.lastError).toMatchObject({ code: "timeout", retryable: true });
   });
 
   it("queries retrieval port and passes retrieved evidence to author and critic", async () => {

@@ -133,6 +133,7 @@ export function createCli(): Command {
   for (const [name, description, action] of [
     ["pause", "Pause an active run", "pause"],
     ["stop", "Stop an active run", "stop"],
+    ["recover", "Return to review after a provider failure", "recover-review"],
     ["approve", "Approve a run awaiting review", "approve"],
     ["revise", "Request another author revision", "revision"],
   ] as const) {

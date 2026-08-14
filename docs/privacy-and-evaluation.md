@@ -81,6 +81,11 @@ durations, usage, cost, and error codes. They always include
 responses, credentials, and hidden chain-of-thought must not be written to
 logs, audit records, test fixtures, or error messages.
 
+Provider failures persist only a generic explanation plus safe code, provider,
+model, workflow step, bounded attempt count, retry classification, and a provider
+request identifier when supplied separately by the SDK. Provider response bodies
+and exception messages are never copied into run history or the desktop view.
+
 Structured evidence excerpts and user-visible rationale are product data, not
 operational logs. They remain subject to local retention and the explicit
 provider policy.

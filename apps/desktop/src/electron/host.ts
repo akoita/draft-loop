@@ -40,6 +40,7 @@ import {
 import type {
   DesktopReviewState,
   FindingDecision,
+  ProviderFailureView,
   ProviderTransmissionPolicy,
   ProviderTransmissionPreflight,
   ReviewAction,
@@ -349,9 +350,48 @@ function io(): ApplicationIo {
 }
 
 function runState(snapshot: RunSnapshot): DesktopReviewState["state"] {
-  if (snapshot.state === "provider-error" || snapshot.state === "stopped") return "stopped";
+  if (snapshot.state === "provider-error") return "provider-error";
+  if (snapshot.state === "stopped") return "stopped";
   if (snapshot.state === "collecting" || snapshot.state === "ingesting") return "drafting";
   return snapshot.state;
+}
+
+const providerFailureExplanations: Readonly<Record<ProviderFailureView["code"], string>> = {
+  authentication: "The provider could not authenticate. Check the configured credential.",
+  permission: "The provider denied permission for this request or model.",
+  "rate-limit": "The provider rate limit was reached. Wait briefly before retrying.",
+  timeout: "The provider did not respond before the request timed out.",
+  cancelled: "The provider request was cancelled.",
+  transient: "The provider is temporarily unavailable.",
+  "invalid-request": "The provider rejected the request configuration.",
+  "invalid-response": "The provider returned a response that could not be validated.",
+  policy: "The provider transmission policy prevented this request.",
+  unknown: "The provider request failed for an unknown reason.",
+};
+
+function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
+  if (snapshot.state !== "provider-error" || snapshot.lastError === null) return null;
+  const supportedCodes = Object.keys(providerFailureExplanations) as ProviderFailureView["code"][];
+  const code = supportedCodes.includes(snapshot.lastError.code as ProviderFailureView["code"])
+    ? (snapshot.lastError.code as ProviderFailureView["code"])
+    : "unknown";
+  const retryAvailable =
+    snapshot.lastError.retryable && snapshot.lastError.attempt < snapshot.lastError.maxAttempts;
+  return {
+    code,
+    explanation: providerFailureExplanations[code],
+    provider: snapshot.lastError.provider,
+    model: snapshot.lastError.modelId,
+    step: snapshot.lastError.step,
+    attempt: snapshot.lastError.attempt,
+    maxAttempts: snapshot.lastError.maxAttempts,
+    retryAvailable,
+    availableActions: [
+      ...(retryAvailable ? (["retry"] as const) : []),
+      ...(snapshot.artifact === null ? [] : (["return-to-review"] as const)),
+      "stop" as const,
+    ],
+  };
 }
 
 function reviewArtifact(
@@ -491,7 +531,16 @@ function reviewState(
   setup: WorkspaceReadiness,
   preflight: ProviderTransmissionPreflight,
 ): DesktopReviewState {
-  const artifact = reviewArtifact(snapshot.artifact, overrides);
+  const artifact =
+    snapshot.artifact === null
+      ? {
+          id: "artifact-unavailable",
+          version: 0,
+          createdAt: snapshot.updatedAt,
+          sections: [],
+          claims: [],
+        }
+      : reviewArtifact(snapshot.artifact, overrides);
   const evaluation = snapshot.latestEvaluation;
   return {
     workspaceId: descriptor.id,
@@ -509,6 +558,7 @@ function reviewState(
       requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
     },
     providerTransmissionPreflight: preflight,
+    providerFailure: providerFailure(snapshot),
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
     findings: snapshot.findings.map((_finding, index) => reviewFinding(snapshot, index, overrides)),
@@ -544,6 +594,7 @@ function emptyReviewState(
       requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
     },
     providerTransmissionPreflight: preflight,
+    providerFailure: null,
     previousArtifact: null,
     artifact: {
       id: "artifact-pending",
@@ -1015,15 +1066,21 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
 
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
     const workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
-    if (
-      input.action.type !== "start" &&
-      input.action.type !== "acknowledge-provider-transmission"
-    ) {
-      await loadSnapshot(workspace, input.runId);
-    }
+    const currentSnapshot =
+      input.action.type === "acknowledge-provider-transmission"
+        ? undefined
+        : input.action.type === "start"
+          ? await service.status({ root: workspace.root })
+          : await loadSnapshot(workspace, input.runId);
     let overrides = await readOverrides(workspace.root);
     let exportPath: string | null = null;
     const action: ReviewAction = input.action;
+    if (
+      currentSnapshot?.state === "provider-error" &&
+      !["resume", "recover-to-review", "stop"].includes(action.type)
+    ) {
+      return fail("operation-failed", "This action is not available after a provider failure.");
+    }
     switch (action.type) {
       case "acknowledge-provider-transmission": {
         const current = await providerTransmissionPreflight(workspace.descriptor, workspace.root);
@@ -1087,6 +1144,21 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       case "pause":
       case "request-revision":
       case "approve":
+      case "stop":
+      case "recover-to-review":
+        if (
+          currentSnapshot?.state === "provider-error" &&
+          action.type !== "stop" &&
+          action.type !== "recover-to-review"
+        ) {
+          return fail("operation-failed", "This action is not available after a provider failure.");
+        }
+        if (
+          (action.type === "stop" || action.type === "recover-to-review") &&
+          currentSnapshot?.state !== "provider-error"
+        ) {
+          return fail("operation-failed", "This provider recovery action is not available.");
+        }
         if (action.type === "request-revision") {
           await requireProviderTransmissionAcknowledgement(workspace);
           await syncCredentials();
@@ -1095,12 +1167,24 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           {
             root: workspace.root,
             runId: input.runId,
-            action: action.type === "request-revision" ? "revision" : action.type,
+            action:
+              action.type === "request-revision"
+                ? "revision"
+                : action.type === "recover-to-review"
+                  ? "recover-review"
+                  : action.type,
           },
           io(),
         );
         break;
       case "resume":
+        if (
+          currentSnapshot?.state === "provider-error" &&
+          (currentSnapshot.lastError?.retryable !== true ||
+            currentSnapshot.lastError.attempt >= currentSnapshot.lastError.maxAttempts)
+        ) {
+          return fail("operation-failed", "This provider failure cannot be retried.");
+        }
         await requireProviderTransmissionAcknowledgement(workspace);
         await syncCredentials();
         await service.resume(
