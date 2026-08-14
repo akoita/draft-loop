@@ -105,8 +105,8 @@ export function ReviewWorkspace({
       if (provider === "anthropic") setAnthropicKeyInput("");
       else setOpenaiKeyInput("");
       refreshCredentials();
-    } catch {
-      setCredentialFeedback("Failed to save API key.");
+    } catch (error: unknown) {
+      setCredentialFeedback(error instanceof Error ? error.message : "Failed to save API key.");
     }
   };
 

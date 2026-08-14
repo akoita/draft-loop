@@ -11,12 +11,12 @@ independent critic evaluates it, and a human approves the result.
 apps/cli       apps/desktop
    |
 application ---- orchestrator ---- providers ---- Anthropic / OpenAI SDKs
-   |       \
-   |        evaluations / validation
+   |       \                  \
+   |        evaluations / validation   local OpenAI-compatible endpoint
    |
 schemas ---- domain ---- evidence ---- ingestion
-   |           |
-storage ---- artifacts ---- rendering
+   |           |                    \
+storage/retrieval ---- artifacts ---- rendering   approved URL fetch
 ```
 
 The packaged desktop path adds a native boundary around the same application
@@ -27,16 +27,28 @@ React renderer -> preload NativeBridge -> Electron main host
                                       -> application -> SQLite/orchestrator
 ```
 
-The renderer receives only bounded projections. Native dialogs, workspace
-paths, SQLite handles, provider credentials, and export writes remain in the
-main process. Browser mode intentionally has no such capabilities and keeps a
-deterministic fixture fallback.
+The renderer receives bounded projections for workspace and run state. Native
+dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
+construction, URL fetching, and export writes remain in the main process. The
+renderer can submit an API key only through the allowlisted credential command;
+the main process validates the command and owns encryption, status, removal,
+and environment fallback. Browser mode intentionally has no native filesystem
+or persistent credential capabilities and keeps a deterministic fixture
+fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
 
 - Domain concepts do not depend on provider SDKs, storage engines, or UI
   frameworks.
 - Schemas validate data crossing package and persistence boundaries.
 - Ingestion turns user-selected local sources into normalized material.
+- URL ingestion is a bounded network capability: the user approves the fetch,
+  the host validates the URL and response limits, and the resulting source
+  retains its original/final URL and provenance.
 - Evidence preserves source identifiers and locations for substantive claims.
+- Retrieval is workspace-scoped behind a provider-independent port. SQLite
+  FTS/BM25 is the integrated lexical baseline and supplies selected chunks to
+  live author and critic requests; local vector and hybrid implementations are
+  evaluation components until deletion, retention, isolation, and quality are
+  validated for the product path.
 - The orchestrator owns round sequencing, budgets, pause/stop behavior, and
   user-visible run events; provider adapters own SDK translation only.
 - The application package owns adapter-neutral use cases and command/query
@@ -46,6 +58,9 @@ deterministic fixture fallback.
   scores and structured critique; neither is treated as proof of truth.
 - Storage is local by default. Rendering consumes approved artifacts and does
   not submit them anywhere.
+- Backup/restore, retention purge, and content-free diagnostic export are
+  explicit local operations. Their existence does not imply encrypted storage
+  or validated disaster recovery on every platform.
 - Context snapshots cross the persistence boundary through
   `serializeContextSnapshot` and `parseContextSnapshot`; the Zod schema checks
   version, requirements, evidence checksums, rubric values, and model identity
@@ -131,6 +146,7 @@ and user decision.
 | `drafting` | The configured author is creating a draft. | `reviewing`, `paused`, `stopped`, `budget-exhausted` |
 | `reviewing` | The independent critic is producing structured findings. | `revising`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted` |
 | `revising` | The author is addressing accepted findings. | `reviewing`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted` |
+| `provider-error` | A provider request failed and the normalized error is available for recovery. | The corresponding active step on explicit retry, `paused`, `stopped` |
 | `awaiting-approval` | Checks are complete and the user must decide. | `approved`, `revising`, `paused`, `stopped` |
 | `approved` | The user approved the current artifact. | `exported`, `revising` |
 | `exported` | An approved artifact was rendered locally. | — |
@@ -144,15 +160,21 @@ review early. It must also enter that state after a budget is exhausted so the
 user can inspect the best available artifact. It must not claim readiness when
 high-severity factuality issues remain, critical job requirements are
 unaddressed without an explicit gap, or a new unsupported claim was introduced.
+`provider-error` exists in the orchestration state and retries the recorded step;
+the desktop bridge must expose that state and its recovery action before
+provider-error recovery is considered integrated.
 
 ## Trust and privacy controls
 
-The system keeps evidence links, disagreements, revisions, prompts, responses,
-and decisions recoverable without storing hidden chain-of-thought. Agent output
-is presented as structured, inspectable work product. Provider calls require an
-explicit data policy, and local retention settings must be visible per
-workspace. Human approval is mandatory; job discovery, application submission,
-and uncontrolled external research are outside the MVP.
+The system keeps evidence links, structured findings, approved artifact
+versions, revisions, decisions, provider/model identity, usage, and checksums
+recoverable without storing hidden chain-of-thought. Raw prompts and raw
+provider responses are not operational-log or audit payloads; only structured,
+user-visible work product required by the workflow is retained under the local
+data policy. Provider calls require an explicit data policy, and local retention
+settings must be visible per workspace. Human approval is mandatory; job
+discovery, application submission, and uncontrolled external research are
+outside the MVP.
 
 See [the threat model](threat-model.md) and [privacy and evaluation
 policy](privacy-and-evaluation.md) for the current trust boundaries, redaction
@@ -164,12 +186,20 @@ beside a local SQLite history file, ingests selected local sources, constructs a
 context snapshot, and drives the orchestration engine. Offline fixture agents
 make the lifecycle testable without network access. The desktop renderer uses
 the same adapter-neutral review port through a capability-limited bridge;
-browser mode has no filesystem or credential capabilities and retains only a
-deterministic fixture fallback. Live provider execution is opt-in after the
-data-policy preflight. Approved artifacts are rendered locally to Markdown, controlled
+browser mode has no filesystem or persistent credential capabilities and
+retains only a deterministic fixture fallback. Live provider execution is
+opt-in and the provider boundary enforces the request data policy before the SDK
+call. Completing and validating the full desktop preflight remains current
+roadmap work. Approved artifacts are rendered locally to Markdown, controlled
 DOCX, or controlled PDF. Each renderer consumes the same ordered structured
-artifact; the CLI records artifact version, template version, timestamp,
-format, MIME type, and checksum in the immutable export record.
+artifact; the application records artifact version, template version,
+timestamp, format, MIME type, and checksum in the immutable export record.
+
+Additional artifact schemas, multilingual templates, portfolio ingestion, and
+the local endpoint adapter reuse these boundaries at component level. They are
+not considered integrated or outcome-validated merely because their contracts
+and tests exist; the [roadmap](roadmap.md) records the evidence level for each
+stage.
 
 The `pilot` CLI command uses synthetic local fixtures to validate the phase-0
 mechanics end to end: ingestion, authoring, independent criticism, one bounded

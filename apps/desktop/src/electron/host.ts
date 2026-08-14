@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
 import { copyFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
@@ -320,7 +320,7 @@ function reviewState(
     providerExposure: {
       author: descriptor.author,
       critic: descriptor.critic,
-      transmissionAllowed: false,
+      transmissionAllowed: !descriptor.fixtureMode,
       sensitiveData: true,
       requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
     },
@@ -802,6 +802,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         await service.start({ root: workspace.root, allowProviderData: true }, io());
         break;
       case "finding-decision":
+        await service.recordReviewDecision({
+          root: workspace.root,
+          runId: input.runId,
+          kind: "finding",
+          targetId: action.findingId,
+          decision: action.decision,
+          ...(action.rationale === undefined ? {} : { rationale: action.rationale }),
+        });
         overrides = {
           ...overrides,
           decisions: { ...overrides.decisions, [action.findingId]: action.decision },
@@ -821,12 +829,20 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         await writeOverrides(workspace.root, overrides);
         break;
       case "edit-block":
+        await service.recordReviewDecision({
+          root: workspace.root,
+          runId: input.runId,
+          kind: "edit",
+          targetId: action.blockId,
+          replacementText: action.text,
+        });
         overrides = { ...overrides, edits: { ...overrides.edits, [action.blockId]: action.text } };
         await writeOverrides(workspace.root, overrides);
         break;
       case "pause":
       case "request-revision":
       case "approve":
+        if (action.type === "request-revision") await syncCredentials();
         await service.lifecycle(
           {
             root: workspace.root,
@@ -850,15 +866,15 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         );
         break;
     }
-    const latest = await loadSnapshot(
+    const snapshot = await loadSnapshot(
       workspace,
       input.action.type === "start" ? undefined : input.runId,
     );
     return reviewState(
       workspace.descriptor,
-      latest,
+      snapshot,
       overrides,
-      exportPath,
+      exportPath ?? (await existingExportPath(workspace.root, snapshot.runId)),
       await workspaceReadiness(workspace.descriptor, workspace.root),
     );
   }
@@ -964,7 +980,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               format: safeFormat(command.input.format),
               ...(command.input.relativePath === undefined
                 ? {}
-                : { destinationPath: resolve(workspace.root, command.input.relativePath) }),
+                : { outputPath: resolve(workspace.root, command.input.relativePath) }),
             },
             io(),
           );
@@ -992,12 +1008,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "credential.set": {
           const configured = await credentials.set(command.input.provider, command.input.apiKey);
+          if (!configured) {
+            return fail(
+              "operation-failed",
+              `Failed to save API key for ${command.input.provider}.`,
+            );
+          }
           const status = await credentials.status(command.input.provider);
           return {
             ok: true,
             value: {
               provider: command.input.provider,
-              configured,
+              configured: status.configured,
               source: status.source,
             },
           };
@@ -1060,15 +1082,64 @@ export interface SafeStorageAdapter {
   readonly decryptString: (value: Buffer) => string;
 }
 
+async function getOrCreateLocalKey(keyPath: string): Promise<Buffer> {
+  try {
+    const data = await readFile(keyPath);
+    if (data.length === 32) return data;
+  } catch {
+    // Key file not found or inaccessible
+  }
+  const key = randomBytes(32);
+  await mkdir(dirname(keyPath), { recursive: true });
+  await writeFile(keyPath, key, { mode: 0o600 });
+  return key;
+}
+
+function encryptAesGcm(plain: string, key: Buffer): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
+  const authTag = cipher.getAuthTag();
+  return `v1:aes-gcm:${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`;
+}
+
+function decryptAesGcm(encoded: string, key: Buffer): string | undefined {
+  const parts = encoded.split(":");
+  const [v, algo, ivHex, authTagHex, cipherHex] = parts;
+  if (
+    parts.length !== 5 ||
+    v !== "v1" ||
+    algo !== "aes-gcm" ||
+    ivHex === undefined ||
+    authTagHex === undefined ||
+    cipherHex === undefined
+  ) {
+    return undefined;
+  }
+  const iv = Buffer.from(ivHex, "hex");
+  const authTag = Buffer.from(authTagHex, "hex");
+  const ciphertext = Buffer.from(cipherHex, "hex");
+  if (iv.length !== 12 || authTag.length !== 16) return undefined;
+  try {
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(authTag);
+    return decipher.update(ciphertext, undefined, "utf8") + decipher.final("utf8");
+  } catch {
+    return undefined;
+  }
+}
+
 /**
- * Uses Electron's OS-backed safeStorage encryption for provider credentials.
- * Directly stores user-provided API keys encrypted via safeStorage.
+ * Uses Electron's OS-backed safeStorage encryption for provider credentials when available,
+ * and transparently falls back to local AES-256-GCM encryption with machine/user file permissions.
  */
 export function createSafeStorageCredentialStore(options: {
   readonly safeStorage: SafeStorageAdapter;
   readonly filename: string;
   readonly readSecret?: (provider: CredentialProvider) => Promise<string | undefined>;
 }): NativeCredentialStore {
+  const keyFilename = `${options.filename}.key`;
+
   const load = async (): Promise<Readonly<Record<string, string>>> => {
     try {
       const parsed: unknown = JSON.parse(await readFile(options.filename, "utf8"));
@@ -1078,21 +1149,42 @@ export function createSafeStorageCredentialStore(options: {
       return {};
     }
   };
+
   const save = async (values: Readonly<Record<string, string>>): Promise<void> => {
     await mkdir(dirname(options.filename), { recursive: true });
-    await writeFile(options.filename, `${JSON.stringify(values, null, 2)}\n`, "utf8");
+    await writeFile(options.filename, `${JSON.stringify(values, null, 2)}\n`, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
   };
+
   const get = async (provider: CredentialProvider): Promise<string | undefined> => {
-    if (!options.safeStorage.isEncryptionAvailable()) return undefined;
     const values = await load();
-    const encrypted = values[provider];
-    if (encrypted === undefined) return undefined;
+    const stored = values[provider];
+    if (stored === undefined || stored.length === 0) return undefined;
+
+    if (stored.startsWith("v1:aes-gcm:")) {
+      try {
+        const key = await getOrCreateLocalKey(keyFilename);
+        return decryptAesGcm(stored, key);
+      } catch {
+        return undefined;
+      }
+    }
+
     try {
-      return options.safeStorage.decryptString(Buffer.from(encrypted, "base64"));
+      if (options.safeStorage.isEncryptionAvailable()) {
+        const payload = stored.startsWith("v1:safeStorage:")
+          ? stored.slice("v1:safeStorage:".length)
+          : stored;
+        return options.safeStorage.decryptString(Buffer.from(payload, "base64"));
+      }
     } catch {
       return undefined;
     }
+    return undefined;
   };
+
   return {
     status: async (provider) => {
       const stored = await get(provider);
@@ -1107,15 +1199,34 @@ export function createSafeStorageCredentialStore(options: {
       return { configured: false, source: "none" };
     },
     set: async (provider, apiKey) => {
-      if (!options.safeStorage.isEncryptionAvailable()) return false;
       const secret =
         apiKey !== undefined && apiKey.trim().length > 0
           ? apiKey.trim()
           : await options.readSecret?.(provider);
       if (secret === undefined || secret.length === 0) return false;
+
+      let encoded: string | undefined;
+
+      try {
+        if (options.safeStorage.isEncryptionAvailable()) {
+          const encrypted = options.safeStorage.encryptString(secret);
+          encoded = `v1:safeStorage:${Buffer.from(encrypted).toString("base64")}`;
+        }
+      } catch {
+        encoded = undefined;
+      }
+
+      if (encoded === undefined) {
+        try {
+          const key = await getOrCreateLocalKey(keyFilename);
+          encoded = encryptAesGcm(secret, key);
+        } catch {
+          return false;
+        }
+      }
+
       const values = await load();
-      const encrypted = options.safeStorage.encryptString(secret);
-      await save({ ...values, [provider]: Buffer.from(encrypted).toString("base64") });
+      await save({ ...values, [provider]: encoded });
       return true;
     },
     remove: async (provider) => {

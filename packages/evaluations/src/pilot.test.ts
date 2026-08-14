@@ -134,6 +134,10 @@ const pilotCase: ConsentedPilotCase = {
 };
 
 describe("Consented Real-Application Pilot Harness", () => {
+  it("rejects an empty pilot case list", () => {
+    expect(() => runConsentedPilotHarness([])).toThrow("at least one case");
+  });
+
   it("enforces complete consent and sanitization verification", () => {
     expect(() => validatePilotConsent(consent)).not.toThrow();
 
@@ -163,13 +167,48 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(report.criticEfficiency.totalRejectedFindings).toBe(1);
     expect(report.criticEfficiency.usefulFindingRatio).toBe(0.8);
 
-    expect(report.hypothesisValidation.factualityPreservedOrImproved).toBe(true);
-    expect(report.hypothesisValidation.effortReducedComparedToManual).toBe(true);
+    expect(report.hypothesisValidation.factualityPreservedOrImproved).toBe("pass");
+    expect(report.hypothesisValidation.effortReducedComparedToManual).toBe("pass");
 
     // Markdown report verification
     expect(report.markdownReport).toContain("Real-Application Consented Pilot Summary Report");
     expect(report.markdownReport).toContain("Tri-Variant Quality & Effort Comparison");
     expect(report.markdownReport).toContain("**Useful Finding Ratio:** 80.0%");
+    expect(report.markdownReport).toContain("not independently verified by this harness");
+    expect(report.markdownReport).not.toContain("candidate-sanitized-1");
+  });
+
+  it("reports effort reduction as indeterminate when comparison measurements are missing", () => {
+    const report = runConsentedPilotHarness([
+      pilotCase,
+      {
+        ...pilotCase,
+        id: "pilot-case-missing-effort",
+        userEffort: {
+          "first-draft": { reviewMinutes: 15, editCount: 6, approvalCount: 0 },
+        },
+      },
+    ]);
+
+    expect(report.variants["revised-draft"].averageReviewMinutes).toBe(8);
+    expect(report.variants["manual-baseline"].averageReviewMinutes).toBe(25);
+    expect(report.hypothesisValidation.effortReducedComparedToManual).toBe("indeterminate");
+    expect(report.markdownReport).toContain("**Effort Reduced vs Manual:** INDETERMINATE");
+    expect(report.markdownReport).not.toContain("candidate-sanitized-1");
+  });
+
+  it("reports the useful-finding ratio as indeterminate when no dispositions exist", () => {
+    const report = runConsentedPilotHarness([
+      {
+        ...pilotCase,
+        findingsDisposition: { usefulCount: 0, rejectedCount: 0 },
+      },
+    ]);
+
+    expect(report.criticEfficiency.usefulFindingRatio).toBeNull();
+    expect(report.markdownReport).toContain(
+      "**Useful Finding Ratio:** INDETERMINATE (no findings dispositions recorded)",
+    );
     expect(report.markdownReport).not.toContain("candidate-sanitized-1");
   });
 });

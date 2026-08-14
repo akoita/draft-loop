@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   agentContextReferenceSchema,
+  candidateProfileSchema,
   contextSnapshotInputSchema,
   contextSnapshotSchema,
   draftArtifactSchema,
@@ -304,5 +305,87 @@ describe("structured artifact schemas", () => {
         ],
       }),
     ).toThrow(/decision claim/i);
+  });
+});
+
+describe("candidateProfileSchema", () => {
+  it("validates a complete profile", () => {
+    const result = candidateProfileSchema.parse({
+      id: "profile-1",
+      name: "My Professional Profile",
+      description: "All my work experience",
+      createdAt: "2026-08-14T20:00:00.000Z",
+      updatedAt: "2026-08-14T20:00:00.000Z",
+    });
+    expect(result.id).toBe("profile-1");
+    expect(result.name).toBe("My Professional Profile");
+    expect(result.description).toBe("All my work experience");
+  });
+
+  it("defaults description to empty string", () => {
+    const result = candidateProfileSchema.parse({
+      id: "profile-2",
+      name: "Minimal Profile",
+      createdAt: "2026-08-14T20:00:00.000Z",
+      updatedAt: "2026-08-14T20:00:00.000Z",
+    });
+    expect(result.description).toBe("");
+  });
+
+  it("rejects empty name", () => {
+    expect(() =>
+      candidateProfileSchema.parse({
+        id: "profile-3",
+        name: "",
+        createdAt: "2026-08-14T20:00:00.000Z",
+        updatedAt: "2026-08-14T20:00:00.000Z",
+      }),
+    ).toThrow();
+  });
+
+  it("rejects missing timestamps", () => {
+    expect(() =>
+      candidateProfileSchema.parse({
+        id: "profile-4",
+        name: "Test",
+      }),
+    ).toThrow();
+  });
+});
+
+describe("profileId in schemas", () => {
+  it("accepts profileId in context snapshot", () => {
+    const snapshot = createContextSnapshot({
+      ...validInput(),
+      profileId: "profile-1",
+    });
+    const serialized = serializeContextSnapshot(snapshot);
+    const parsed = parseContextSnapshot(serialized);
+    expect(parsed.profileId).toBe("profile-1");
+  });
+
+  it("accepts profileId in evidence source", () => {
+    const snapshot = createContextSnapshot({
+      ...validInput(),
+      evidenceManifest: [
+        {
+          id: "source-1",
+          path: "/local/candidate/resume.md",
+          mediaType: "text/markdown",
+          checksum,
+          profileId: "profile-1",
+        },
+      ],
+    });
+    const serialized = serializeContextSnapshot(snapshot);
+    const parsed = parseContextSnapshot(serialized);
+    expect(parsed.evidenceManifest[0]?.profileId).toBe("profile-1");
+  });
+
+  it("roundtrips without profileId", () => {
+    const snapshot = createContextSnapshot(validInput());
+    const serialized = serializeContextSnapshot(snapshot);
+    const parsed = parseContextSnapshot(serialized);
+    expect(parsed.profileId).toBeUndefined();
   });
 });

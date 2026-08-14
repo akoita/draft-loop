@@ -82,6 +82,25 @@ export interface QueryEvidenceCommand {
   readonly limit?: number;
 }
 
+export type FindingDecision = "pending" | "accepted" | "rejected" | "deferred" | "overridden";
+
+export type RecordReviewDecisionCommand =
+  | {
+      readonly root: string;
+      readonly runId: string;
+      readonly kind: "finding";
+      readonly targetId: string;
+      readonly decision: FindingDecision;
+      readonly rationale?: string;
+    }
+  | {
+      readonly root: string;
+      readonly runId: string;
+      readonly kind: "edit";
+      readonly targetId: string;
+      readonly replacementText: string;
+    };
+
 export interface ApplicationDriver {
   readonly initialize: (
     command: InitializeWorkspaceCommand,
@@ -97,6 +116,7 @@ export interface ApplicationDriver {
     command: QueryEvidenceCommand,
     io?: ApplicationIo,
   ) => Promise<readonly ScoredEvidenceChunk[]>;
+  readonly recordReviewDecision: (command: RecordReviewDecisionCommand) => Promise<void>;
 }
 
 export interface ApplicationService extends ApplicationDriver {}
@@ -133,6 +153,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.export({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     queryEvidence: async (command, io) =>
       driver.queryEvidence({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    recordReviewDecision: async (command) =>
+      driver.recordReviewDecision({ ...command, root: requireRoot(command.root) }),
   };
   return Object.freeze(service);
 }

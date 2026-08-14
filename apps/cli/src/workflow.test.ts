@@ -8,6 +8,7 @@ import {
   exportRun,
   initWorkspace,
   lifecycleRun,
+  recordReviewDecision,
   resumeRun,
   runPilot,
   startRun,
@@ -63,11 +64,28 @@ describe("phase-0 CLI workflow", () => {
     expect(started.state).toBe("awaiting-approval");
     expect(messages.output.join("\n")).toContain("Provider pairing: author anthropic/");
     expect(messages.output.join("\n")).not.toContain("Synthetic candidate evidence");
+    await recordReviewDecision({
+      root,
+      runId: started.runId,
+      kind: "finding",
+      targetId: `${started.runId}:finding:0:unsupported-claim`,
+      decision: "overridden",
+      rationale: "Candidate verified the claim locally.",
+    });
     const startedStorage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
     await expect(startedStorage.getLatestRunSnapshot(started.runId)).resolves.toMatchObject({
       state: "awaiting-approval",
       runId: started.runId,
     });
+    await expect(startedStorage.listDecisions(started.runId)).resolves.toEqual([
+      expect.objectContaining({
+        type: "reject-finding",
+        actor: "user:desktop",
+        payload: expect.objectContaining({
+          findingId: `${started.runId}:finding:0:unsupported-claim`,
+        }),
+      }),
+    ]);
     await startedStorage.close();
 
     const approved = await lifecycleRun(root, "approve", undefined, messages.value);
@@ -80,11 +98,11 @@ describe("phase-0 CLI workflow", () => {
     expect((await readFile(pdfPath, "utf8")).startsWith("%PDF-1.4")).toBe(true);
 
     const status = await statusRun(root, undefined, messages.value);
-    expect(status?.state).toBe("approved");
+    expect(status?.state).toBe("exported");
     expect(messages.output.join("\n")).toContain("approval=approved");
     const approvedStorage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
     await expect(approvedStorage.getLatestRunSnapshot(started.runId)).resolves.toMatchObject({
-      state: "approved",
+      state: "exported",
       runId: started.runId,
     });
     await approvedStorage.close();

@@ -1,8 +1,10 @@
 # Releasing DraftLoop
 
-DraftLoop produces a versioned release after each roadmap stage. A release is
-created only from the approved `main` branch and becomes the reproducible
-baseline for the next stage.
+DraftLoop intends to produce a versioned release at each roadmap stage exit. A
+release is created only from the approved `main` branch and becomes a
+reproducible baseline for the next stage. Publishing an artifact proves the
+Released evidence level; it does not by itself prove that the product outcome
+was Validated.
 
 ## Release policy
 
@@ -10,9 +12,13 @@ baseline for the next stage.
 - Every workspace package must carry the same version. `pnpm release:check`
   rejects drift before a release can start.
 - `release.json` defines the current roadmap stage, release channel, release
-  name, and supported desktop artifact targets.
-- Alpha and pilot releases are GitHub prereleases. A stable release is the
-  default channel for a production-ready beta or later stage.
+  name, and supported desktop artifact targets. It must agree with the current
+  stage in `docs/roadmap.md` before a release starts.
+- The current Integration hardening and outcome validation channel is `alpha`;
+  alpha and pilot releases are GitHub prereleases.
+- A stable channel is allowed only after the production-beta exit criteria are
+  demonstrated. Implemented beta components or a higher package version do not
+  justify a stable channel on their own.
 - Publishing requires an explicit maintainer decision: the workflow is
   manually dispatched and the publish job uses the `release` environment.
 - Candidate source material, workspace databases, provider credentials, and
@@ -20,8 +26,10 @@ baseline for the next stage.
 - Each release includes a CycloneDX JSON software bill of materials generated
   from the checked-out dependency tree with a pinned Syft version.
 
-Signing, automatic updates, and broader distribution remain later beta-stage
-work. GitHub artifact provenance attestations are opt-in because GitHub only
+Signing, automatic updates, migrations/rollback, and broader distribution
+remain production-beta work. Until they are validated, releases remain alpha
+artifacts and must state those limitations. GitHub artifact provenance
+attestations are opt-in because GitHub only
 supports attestations for private repositories on eligible enterprise plans.
 When enabled, the workflow attests the packaged desktop artifacts after they
 are downloaded into the publishing job.
@@ -77,6 +85,9 @@ headless smoke workflow. The first launch creates a synthetic offline run and
 requests a revision; the second launch reopens the workspace, resumes the run,
 approves the revised draft, and verifies the local export. This keeps the
 packaged host, SQLite runtime, and restart boundary in the release gate.
+This synthetic smoke is implementation and integration evidence. It is not a
+substitute for installed-app acceptance with representative real inputs on each
+supported platform.
 
 To run the same check locally after packaging:
 
@@ -87,8 +98,9 @@ pnpm desktop:smoke -- ./apps/desktop/out/@draft-loop-desktop-linux-x64/@draft-lo
 ## Stage release procedure
 
 1. Update the root version and all workspace package versions in a focused PR.
-2. Update `release.json` to the stage being exited and verify the roadmap
-   issue links and acceptance evidence.
+2. Update `release.json` to the stage being exited and verify that its stage and
+   channel match the roadmap. Review the stage acceptance criteria and evidence
+   links.
 3. Merge the PR into `main` and wait for CI to pass.
 4. Run **Release** from GitHub Actions with the matching version and
    `dry_run=true`. Keep `attest_provenance=false` for a dry run.
@@ -99,8 +111,12 @@ pnpm desktop:smoke -- ./apps/desktop/out/@draft-loop-desktop-linux-x64/@draft-lo
    artifact attestations.
 7. Confirm the GitHub tag, generated notes, attached artifacts, manifest,
    CycloneDX SBOM, and `SHA256SUMS` file. Verify attestations with
-   `gh attestation verify` when enabled, then update `docs/roadmap.md` with
-   the release evidence.
+   `gh attestation verify` when enabled.
+8. Update the roadmap stage evidence with the achieved status level, acceptance
+   results, supported-platform matrix, product measures, release tag, manifest,
+   checksums, known limitations, unresolved risks, and next decision. Do not
+   label the stage Validated when only implementation or synthetic evidence is
+   available.
 
 The workflow builds the packaged desktop application on Linux, macOS, and
 Windows. The CLI remains source-distributed during the alpha stage; a

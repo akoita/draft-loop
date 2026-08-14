@@ -42,6 +42,16 @@ workflow:
   portfolio, and job-description sources with provenance and typed facts;
 - explicit separation of blocking findings, warnings, artifact approval, and
   local export, including persisted override rationales;
+- workspace-scoped SQLite FTS/BM25 retrieval, local vector and hybrid benchmark
+  implementations, provider retries, and content-free progress events;
+- component-level backup/restore, retention purge, diagnostic export, ATS and
+  accessibility checks, multilingual templates, additional artifact schemas,
+  portfolio ingestion, and an OpenAI-compatible local endpoint adapter.
+
+These capabilities are not all validated product outcomes. The current stage is
+integration hardening and outcome validation: cross-platform installed-app
+acceptance with representative real inputs, the complete desktop provider
+preflight, failure recovery, and consented application results remain open.
 
 ## Stack
 
@@ -112,8 +122,12 @@ pnpm --filter @draft-loop/desktop package
 
 The packaged host is offline-first. Creating a real workspace starts empty and
 waits for a target job description and candidate evidence. A separately labeled
-demo workspace starts the deterministic fixture workflow; live provider
-execution remains an explicit, separately designed consent flow.
+demo workspace starts the deterministic fixture workflow. The packaged desktop
+can collect Anthropic and OpenAI API keys through its typed native bridge and
+store them through the host credential store. Live execution remains opt-in and
+provider requests are denied unless the data-exposure policy allows them. The
+desktop preflight and credential-storage behavior still require cross-platform
+acceptance before the workflow is considered validated.
 
 The phase-0 CLI workflow is available with a local workspace manifest:
 
@@ -163,9 +177,11 @@ For development, `pnpm format` applies the Biome formatter. See
 
 ## Project status
 
-DraftLoop is an early-stage private project. The initial use case is a
-job-specific CV, but the contracts are intentionally shaped for other
-evidence-backed drafting and review workflows.
+DraftLoop is an early-stage private project in integration hardening and outcome
+validation. The initial use case is a job-specific CV, but the contracts are
+intentionally shaped for other evidence-backed drafting and review workflows.
+Implemented components beyond the core CV path should not be treated as
+validated or production-ready until the roadmap exit criteria are met.
 
 Human approval remains mandatory. DraftLoop does not submit applications,
 publish documents, or perform uncontrolled web research on a user's behalf.

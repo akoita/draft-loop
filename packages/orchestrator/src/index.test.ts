@@ -228,8 +228,16 @@ describe("durable orchestration", () => {
       result.executionHistory.every((execution) => execution.contextSnapshotId === "context-1"),
     ).toBe(true);
     expect((await engine.approve("run-1")).state).toBe("approved");
+    expect((await engine.markExported("run-1")).state).toBe("exported");
+    expect((await engine.markExported("run-1")).state).toBe("exported");
     expect((await engine.events("run-1")).map((event) => event.type)).toEqual(
-      expect.arrayContaining(["run.created", "step.completed", "state.changed", "user.approved"]),
+      expect.arrayContaining([
+        "run.created",
+        "step.completed",
+        "state.changed",
+        "user.approved",
+        "user.exported",
+      ]),
     );
   });
 

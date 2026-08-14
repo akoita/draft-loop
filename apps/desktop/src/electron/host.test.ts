@@ -102,6 +102,7 @@ function service(root: string) {
         async (command) => command.outputPath ?? join(root, "exports", "run-native.md"),
       ),
       queryEvidence: vi.fn(async () => []),
+      recordReviewDecision: vi.fn(async () => undefined),
     } satisfies ApplicationService,
     snapshot,
   };
@@ -129,6 +130,35 @@ describe("native host", () => {
       await expect(readFile(join(root, "evidence", "resume.md"), "utf8")).rejects.toThrow();
     } finally {
       await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("reports provider transmission as allowed only for a live run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-exposure-"));
+    const fixture = service(root);
+    const liveWorkspace = { ...descriptor(root), fixtureMode: false };
+    fixture.service.readWorkspace.mockResolvedValue(liveWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: liveWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: { providerExposure: { transmissionAllowed: true } },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 
@@ -243,7 +273,7 @@ describe("native host", () => {
       const findingId = (
         review as { readonly value: { readonly findings: readonly [{ readonly id: string }] } }
       ).value.findings[0].id;
-      await host.invoke({
+      const decisionResult = await host.invoke({
         type: "review.dispatch",
         input: {
           workspaceId: "workspace-native",
@@ -256,6 +286,14 @@ describe("native host", () => {
           },
         },
       });
+      expect(decisionResult).toMatchObject({ ok: true });
+      expect(fixture.service.recordReviewDecision).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "finding",
+          targetId: findingId,
+          decision: "overridden",
+        }),
+      );
 
       const restarted = createNativeHost({ dialogs, applicationService: fixture.service });
       await restarted.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
@@ -307,6 +345,39 @@ describe("native host", () => {
     }
   });
 
+  it("forwards a validated custom export path through the application contract", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-export-path-"));
+    const fixture = service(root);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const result = await host.invoke({
+        type: "export.write",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          format: "markdown",
+          relativePath: "exports/custom.md",
+        },
+      });
+
+      expect(result).toMatchObject({ ok: true });
+      expect(fixture.service.export).toHaveBeenCalledWith(
+        expect.objectContaining({ outputPath: join(root, "exports", "custom.md") }),
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("runs the real local driver through approval, export, and restart", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-alpha-"));
     const root = join(parent, "alpha-workspace");
@@ -333,7 +404,7 @@ describe("native host", () => {
       const review = await host.invoke({ type: "review.load", input: { workspaceId } });
       const reviewValue = (review as { readonly value: DesktopReviewState }).value;
       expect(reviewValue.findings).toHaveLength(1);
-      await host.invoke({
+      const persistedDecision = await host.invoke({
         type: "review.dispatch",
         input: {
           workspaceId,
@@ -346,6 +417,7 @@ describe("native host", () => {
           },
         },
       });
+      expect(persistedDecision).toMatchObject({ ok: true });
       const approved = await host.invoke({
         type: "review.dispatch",
         input: {
@@ -366,7 +438,13 @@ describe("native host", () => {
           action: { type: "export" },
         },
       });
-      expect(exported).toMatchObject({ ok: true, value: { approval: "approved" } });
+      expect(exported).toMatchObject({
+        ok: true,
+        value: { approval: "approved", state: "exported" },
+      });
+      expect(await readFile(join(root, ".draft-loop", "review-overrides.json"), "utf8")).toContain(
+        "overridden",
+      );
 
       const restarted = createNativeHost({ dialogs });
       await restarted.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
@@ -374,6 +452,9 @@ describe("native host", () => {
         type: "review.load",
         input: { workspaceId, runId: reviewValue.runId },
       });
+      expect((recovered as { readonly value: DesktopReviewState }).value.findings[0]?.id).toBe(
+        reviewValue.findings[0]?.id,
+      );
       expect(recovered).toMatchObject({
         ok: true,
         value: {
@@ -525,6 +606,66 @@ describe("native host", () => {
         } else {
           process.env.ANTHROPIC_API_KEY = originalEnv;
         }
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
+    it("falls back to local AES-256-GCM encryption when OS safeStorage is unavailable", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-fallback-"));
+      const credFile = join(parent, "credentials.json");
+
+      const unavailableSafeStorage: SafeStorageAdapter = {
+        isEncryptionAvailable: () => false,
+        encryptString: () => {
+          throw new Error("safeStorage unavailable");
+        },
+        decryptString: () => {
+          throw new Error("safeStorage unavailable");
+        },
+      };
+
+      try {
+        const store = createSafeStorageCredentialStore({
+          safeStorage: unavailableSafeStorage,
+          filename: credFile,
+        });
+
+        // Initially unconfigured
+        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
+        expect(await store.status("openai")).toEqual({ configured: false, source: "none" });
+
+        // Set in-app keys under fallback encryption
+        expect(await store.set("anthropic", "sk-ant-fallback-key-123")).toBe(true);
+        expect(await store.set("openai", "sk-proj-fallback-key-456")).toBe(true);
+
+        // Status shows configured in app
+        expect(await store.status("anthropic")).toEqual({ configured: true, source: "app" });
+        expect(await store.status("openai")).toEqual({ configured: true, source: "app" });
+        expect(await store.get?.("anthropic")).toBe("sk-ant-fallback-key-123");
+        expect(await store.get?.("openai")).toBe("sk-proj-fallback-key-456");
+
+        // Verify stored file is encrypted on disk and does not leak plaintext keys
+        const rawContent = await readFile(credFile, "utf8");
+        expect(rawContent).not.toContain("sk-ant-fallback-key-123");
+        expect(rawContent).not.toContain("sk-proj-fallback-key-456");
+        expect(rawContent).toContain("v1:aes-gcm:");
+
+        // Reopening store reloads and decrypts keys accurately
+        const reopenedStore = createSafeStorageCredentialStore({
+          safeStorage: unavailableSafeStorage,
+          filename: credFile,
+        });
+        expect(await reopenedStore.status("anthropic")).toEqual({
+          configured: true,
+          source: "app",
+        });
+        expect(await reopenedStore.get?.("anthropic")).toBe("sk-ant-fallback-key-123");
+
+        // Remove key
+        expect(await store.remove("anthropic")).toBe(true);
+        expect(await store.status("anthropic")).toEqual({ configured: false, source: "none" });
+        expect(await store.status("openai")).toEqual({ configured: true, source: "app" });
+      } finally {
         await rm(parent, { recursive: true, force: true });
       }
     });

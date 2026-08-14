@@ -1,6 +1,7 @@
 # ADR 0002: Electron host for the local desktop alpha
 
-- Status: Accepted
+- Status: Accepted; credential handling superseded by
+  [ADR 0004](0004-desktop-credential-boundary.md)
 - Date: 2026-08-12
 - Decision owners: DraftLoop maintainers
 

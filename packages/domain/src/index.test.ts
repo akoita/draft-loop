@@ -5,6 +5,7 @@ import {
   type ContextSnapshotInput,
   createAgentContextReference,
   createContextSnapshot,
+  createProfile,
   createWorkspace,
   hasProviderDiversity,
   type ModelConfigurationInput,
@@ -220,5 +221,77 @@ describe("domain workspace and context snapshots", () => {
     ["modelConfiguration", { modelConfiguration: undefined }],
   ] as const)("rejects missing %s before a provider call", (_field, override) => {
     expect(() => createContextSnapshot(validInput(override))).toThrow(SemanticValidationError);
+  });
+});
+
+describe("CandidateProfile", () => {
+  it("creates a profile with required fields", () => {
+    const profile = createProfile("profile-1", { name: "My Full Profile" });
+    expect(profile.id).toBe("profile-1");
+    expect(profile.name).toBe("My Full Profile");
+    expect(profile.description).toBe("");
+    expect(profile.createdAt).toBeTruthy();
+    expect(profile.updatedAt).toBeTruthy();
+    expect(profile.createdAt).toBe(profile.updatedAt);
+  });
+
+  it("creates a profile with description", () => {
+    const profile = createProfile("profile-2", {
+      name: "Tech Experience",
+      description: "Open source and professional work",
+    });
+    expect(profile.name).toBe("Tech Experience");
+    expect(profile.description).toBe("Open source and professional work");
+  });
+
+  it("trims whitespace from name and description", () => {
+    const profile = createProfile("p-1", {
+      name: "  Padded Name  ",
+      description: "  Padded Description  ",
+    });
+    expect(profile.name).toBe("Padded Name");
+    expect(profile.description).toBe("Padded Description");
+  });
+
+  it("rejects empty profile id", () => {
+    expect(() => createProfile("", { name: "Test" })).toThrow(/profile id is required/i);
+    expect(() => createProfile("   ", { name: "Test" })).toThrow(/profile id is required/i);
+  });
+
+  it("rejects empty profile name", () => {
+    expect(() => createProfile("p-1", { name: "" })).toThrow(/profile name is required/i);
+    expect(() => createProfile("p-1", { name: "   " })).toThrow(/profile name is required/i);
+  });
+});
+
+describe("profileId propagation", () => {
+  it("carries profileId through evidence sources in a context snapshot", () => {
+    const snapshot = createContextSnapshot(
+      validInput({
+        evidenceManifest: [
+          {
+            id: "source-1",
+            path: "/local/candidate/resume.md",
+            mediaType: "text/markdown",
+            checksum,
+            profileId: "profile-1",
+          },
+        ],
+        profileId: "profile-1",
+      }),
+    );
+    expect(snapshot.profileId).toBe("profile-1");
+    expect(snapshot.evidenceManifest[0]?.profileId).toBe("profile-1");
+  });
+
+  it("omits profileId when not provided", () => {
+    const snapshot = createContextSnapshot(validInput());
+    expect(snapshot.profileId).toBeUndefined();
+    expect(snapshot.evidenceManifest[0]?.profileId).toBeUndefined();
+  });
+
+  it("trims profileId whitespace", () => {
+    const snapshot = createContextSnapshot(validInput({ profileId: "  profile-1  " }));
+    expect(snapshot.profileId).toBe("profile-1");
   });
 });
