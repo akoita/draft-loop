@@ -7,25 +7,87 @@ independent critic evaluates it, and a human approves the result.
 
 ## Boundaries
 
-```text
-apps/cli       apps/desktop
-   |
-application ---- orchestrator ---- providers ---- Anthropic / OpenAI SDKs
-   |       \                  \
-   |        evaluations / validation   local OpenAI-compatible endpoint
-   |
-schemas ---- domain ---- evidence ---- ingestion
-   |           |                    \
-storage/retrieval ---- artifacts ---- rendering   approved URL fetch
+```mermaid
+flowchart TB
+    User([Candidate])
+
+    subgraph Adapters["User-facing adapters"]
+        direction LR
+        CLI["CLI"]
+
+        subgraph Desktop["Desktop · Electron trust boundary"]
+            direction LR
+            Renderer["React renderer<br/>bounded state projections"]
+            Bridge["Preload NativeBridge<br/>frozen, allowlisted IPC"]
+            Host["Electron main host<br/>native capabilities"]
+            Renderer -->|"typed commands"| Bridge
+            Bridge -->|"single IPC channel"| Host
+        end
+    end
+
+    subgraph Application["Shared application boundary"]
+        App["Application contracts<br/>commands · queries · use cases"]
+    end
+
+    subgraph Core["Provider-independent product core"]
+        direction LR
+        Orchestrator["Orchestrator<br/>author–critic loop · budgets · recovery"]
+        Domain["Domain + schemas<br/>workflow state · boundary validation"]
+        Knowledge["Ingestion + evidence<br/>normalized sources · provenance"]
+        Quality["Validation + evaluations<br/>deterministic checks · rubric findings"]
+        Artifacts["Artifacts + rendering<br/>approved structured output"]
+        Orchestrator --> Domain
+        Knowledge --> Domain
+        Orchestrator --> Quality
+        Orchestrator --> Artifacts
+    end
+
+    subgraph Infrastructure["Local and provider adapters"]
+        direction LR
+        Storage[("Local storage + retrieval<br/>SQLite · FTS/BM25 · run history")]
+        Providers["Provider adapters<br/>data-policy enforcement"]
+        Credentials["Credential store<br/>main-process owned"]
+    end
+
+    subgraph External["Explicit external boundaries"]
+        direction LR
+        Models["Anthropic + OpenAI<br/>or local compatible endpoint"]
+        URL["User-approved URL fetch"]
+        Export["Local Markdown · DOCX · PDF"]
+    end
+
+    User --> CLI
+    User --> Renderer
+    CLI --> App
+    Host --> App
+    App --> Orchestrator
+    App --> Knowledge
+    App --> Storage
+    Domain --> Storage
+    Knowledge --> Storage
+    Orchestrator --> Providers
+    Host --> Credentials
+    Credentials -.->|"key lookup; never projected back"| Providers
+    Providers -->|"approved transmission only"| Models
+    Host -->|"validated request"| URL
+    URL --> Knowledge
+    Host -->|"approved artifact only"| Export
+
+    classDef ui fill:#e8f1ff,stroke:#2563eb,color:#172554;
+    classDef boundary fill:#eef2ff,stroke:#4f46e5,color:#1e1b4b;
+    classDef core fill:#ecfdf5,stroke:#059669,color:#064e3b;
+    classDef infra fill:#fff7ed,stroke:#ea580c,color:#7c2d12;
+    classDef external fill:#f8fafc,stroke:#64748b,color:#0f172a;
+    class CLI,Renderer ui;
+    class Bridge,Host,App boundary;
+    class Orchestrator,Domain,Knowledge,Quality,Artifacts core;
+    class Storage,Providers,Credentials infra;
+    class Models,URL,Export external;
 ```
 
-The packaged desktop path adds a native boundary around the same application
-contract:
-
-```text
-React renderer -> preload NativeBridge -> Electron main host
-                                      -> application -> SQLite/orchestrator
-```
+Solid arrows show application data or control flow. The dotted credential edge
+is lookup-only: stored keys are never projected back into the renderer. External
+network and export edges require the visible approvals described below.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK

@@ -67,6 +67,31 @@ preflight, failure recovery, and consented application results remain open.
 
 ## Architecture
 
+```mermaid
+flowchart LR
+    Inputs["Job requirements<br/>+ candidate evidence"]
+    Adapters["CLI or desktop"]
+    Application["Shared application services"]
+    Context["Local ingestion<br/>+ evidence context"]
+    Loop["Bounded author–critic loop"]
+    Models["Anthropic + OpenAI<br/>provider adapters"]
+    Review["Validation<br/>+ human approval"]
+    Export["Local CV export"]
+    Storage[("Local workspace<br/>+ SQLite history")]
+
+    Inputs --> Adapters --> Application
+    Application --> Context --> Loop
+    Loop <-->|"approved model requests"| Models
+    Loop --> Review --> Export
+    Application <--> Storage
+```
+
+At a high level, DraftLoop keeps source material and run history local, sends
+only approved context through provider adapters, and requires human approval
+before local export. See the [detailed architecture](docs/architecture.md) for
+package boundaries, the Electron trust boundary, workflow states, and stopping
+conditions.
+
 The monorepo separates product contracts from adapters:
 
 - `domain` defines framework-free concepts and workflow states.
@@ -85,9 +110,8 @@ The monorepo separates product contracts from adapters:
 - `apps/cli` is the first user-facing adapter.
 - `apps/desktop` is the React desktop UI shell.
 
-See [docs/architecture.md](docs/architecture.md) for the evaluator–optimizer
-workflow, state machine, trust boundaries, and stopping conditions. The key
-decision is recorded in [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md).
+The evaluator–optimizer decision and its trade-offs are recorded in
+[ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md).
 
 See [docs/releasing.md](docs/releasing.md) for the stage-based release policy,
 dry-run workflow, artifact manifest, and maintainer approval boundary.
