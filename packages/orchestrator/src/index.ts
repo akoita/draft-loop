@@ -352,7 +352,11 @@ const userRetryableProviderErrorCodes = new Set([
 function safeProviderRequestId(value: unknown): string | null {
   if (typeof value !== "string" || value.length < 1 || value.length > 128) return null;
   if (!/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u.test(value)) return null;
-  if (/^(?:sk[-_]|bearer|api[-_]?key)/iu.test(value)) return null;
+  if (
+    /(?:^sk[-_]|api[-_]?key|token|secret|password|credential|authorization|bearer)/iu.test(value)
+  ) {
+    return null;
+  }
   return value;
 }
 
@@ -378,8 +382,7 @@ function providerFailure(
       : "provider-error";
   const code = providerErrorCodes.has(candidateCode) ? candidateCode : "provider-error";
   const retryable =
-    (candidate.retryable === true || userRetryableProviderErrorCodes.has(code)) &&
-    attempt < MAX_ORCHESTRATION_ATTEMPTS;
+    userRetryableProviderErrorCodes.has(code) && attempt < MAX_ORCHESTRATION_ATTEMPTS;
   return {
     code,
     message: retryable
