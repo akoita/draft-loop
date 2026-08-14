@@ -133,7 +133,7 @@ describe("native host", () => {
     }
   });
 
-  it("reports provider transmission as allowed only for a live run", async () => {
+  it("fails closed until the current live provider policy is acknowledged and persists safe metadata", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-exposure-"));
     const fixture = service(root);
     const liveWorkspace = { ...descriptor(root), fixtureMode: false };
@@ -155,8 +155,167 @@ describe("native host", () => {
 
       expect(review).toMatchObject({
         ok: true,
-        value: { providerExposure: { transmissionAllowed: true } },
+        value: {
+          providerExposure: { transmissionAllowed: false },
+          providerTransmissionPreflight: {
+            required: true,
+            acknowledged: false,
+            author: { endpoint: "https://api.anthropic.com/v1/messages" },
+            critic: { endpoint: "https://api.openai.com/v1/responses" },
+            excludedScope: ["complete candidate corpus"],
+          },
+        },
       });
+      const fingerprint = (review as { readonly value: DesktopReviewState }).value
+        .providerTransmissionPreflight.fingerprint;
+
+      const denied = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: liveWorkspace.id,
+          runId: "pending",
+          action: { type: "start" },
+        },
+      });
+      expect(denied).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(fixture.service.start).not.toHaveBeenCalled();
+
+      const staleAcknowledgement = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: liveWorkspace.id,
+          runId: "pending",
+          action: {
+            type: "acknowledge-provider-transmission",
+            fingerprint: "0".repeat(64),
+          },
+        },
+      });
+      expect(staleAcknowledgement).toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+
+      const acknowledged = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: liveWorkspace.id,
+          runId: "pending",
+          action: { type: "acknowledge-provider-transmission", fingerprint },
+        },
+      });
+      expect(acknowledged).toMatchObject({
+        ok: true,
+        value: {
+          providerExposure: { transmissionAllowed: true },
+          providerTransmissionPreflight: { acknowledged: true },
+          events: expect.arrayContaining([
+            expect.objectContaining({ label: "Provider transmission policy acknowledged" }),
+          ]),
+        },
+      });
+
+      const persisted = JSON.parse(
+        await readFile(
+          join(root, ".draft-loop", "provider-transmission-acknowledgement.json"),
+          "utf8",
+        ),
+      ) as Record<string, unknown>;
+      expect(Object.keys(persisted).sort()).toEqual([
+        "acknowledgedAt",
+        "fingerprint",
+        "policy",
+        "schemaVersion",
+      ]);
+      expect(JSON.stringify(persisted)).not.toContain("Local draft");
+      expect(JSON.stringify(persisted)).not.toContain("API_KEY");
+
+      const started = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: liveWorkspace.id,
+          runId: "pending",
+          action: { type: "start" },
+        },
+      });
+      expect(started).toMatchObject({ ok: true });
+      expect(fixture.service.start).toHaveBeenCalledWith(
+        { root, allowProviderData: true },
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("restores acknowledgement after restart and invalidates it when workspace policy changes", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-preflight-restart-"));
+    const fixture = service(root);
+    let liveWorkspace = { ...descriptor(root), fixtureMode: false };
+    fixture.service.readWorkspace.mockImplementation(async () => liveWorkspace);
+    const dialogs: NativeHostDialogs = {
+      chooseDirectory: async () => root,
+      chooseFiles: async () => [],
+    };
+    try {
+      const firstHost = createNativeHost({ applicationService: fixture.service, dialogs });
+      await firstHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const initial = await firstHost.invoke({ type: "review.load", input: {} });
+      const initialFingerprint = (initial as { readonly value: DesktopReviewState }).value
+        .providerTransmissionPreflight.fingerprint;
+      await firstHost.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: liveWorkspace.id,
+          runId: "run-native",
+          action: {
+            type: "acknowledge-provider-transmission",
+            fingerprint: initialFingerprint,
+          },
+        },
+      });
+
+      const restarted = createNativeHost({ applicationService: fixture.service, dialogs });
+      await restarted.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const restored = await restarted.invoke({ type: "review.load", input: {} });
+      expect(restored).toMatchObject({
+        ok: true,
+        value: {
+          providerExposure: { transmissionAllowed: true },
+          providerTransmissionPreflight: {
+            fingerprint: initialFingerprint,
+            acknowledged: true,
+          },
+        },
+      });
+
+      liveWorkspace = { ...liveWorkspace, maxRounds: 3 };
+      const staleStart = await restarted.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: liveWorkspace.id,
+          runId: "run-native",
+          action: { type: "resume" },
+        },
+      });
+      expect(staleStart).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(fixture.service.resume).not.toHaveBeenCalled();
+
+      const refreshed = await restarted.invoke({ type: "review.load", input: {} });
+      expect(refreshed).toMatchObject({
+        ok: true,
+        value: {
+          providerExposure: { transmissionAllowed: false },
+          providerTransmissionPreflight: {
+            acknowledged: false,
+            budget: { maxRounds: 3 },
+          },
+        },
+      });
+      expect(
+        (refreshed as { readonly value: DesktopReviewState }).value.providerTransmissionPreflight
+          .fingerprint,
+      ).not.toBe(initialFingerprint);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -269,7 +428,22 @@ describe("native host", () => {
         type: "review.load",
         input: { workspaceId: "workspace-native", runId: "run-native" },
       });
-      expect(review).toMatchObject({ ok: true, value: { findings: [{ decision: "pending" }] } });
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          findings: [{ decision: "pending" }],
+          providerExposure: {
+            transmissionAllowed: false,
+            requestedRetention: "not-allowed",
+          },
+          providerTransmissionPreflight: {
+            required: false,
+            acknowledged: true,
+            dataClass: "synthetic-demo-material",
+            retentionPreference: "not-allowed",
+          },
+        },
+      });
       const findingId = (
         review as { readonly value: { readonly findings: readonly [{ readonly id: string }] } }
       ).value.findings[0].id;

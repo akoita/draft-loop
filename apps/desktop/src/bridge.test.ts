@@ -79,6 +79,31 @@ describe("desktop capability bridge", () => {
         },
       }),
     ).toMatchObject({ type: "review.dispatch", input: { action: { type: "start" } } });
+
+    const fingerprint = "a".repeat(64);
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "pending",
+          action: { type: "acknowledge-provider-transmission", fingerprint },
+        },
+      }),
+    ).toMatchObject({
+      type: "review.dispatch",
+      input: { action: { type: "acknowledge-provider-transmission", fingerprint } },
+    });
+    expect(() =>
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "pending",
+          action: { type: "acknowledge-provider-transmission", fingerprint: "stale" },
+        },
+      }),
+    ).toThrow("invalid");
   });
 
   it("rejects traversal and unbounded export paths before invoking the host", async () => {

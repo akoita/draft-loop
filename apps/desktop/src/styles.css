@@ -443,6 +443,101 @@ textarea:focus {
   font-size: 0.76rem;
 }
 
+.provider-preflight {
+  margin-top: 20px;
+  border: 1px solid #34444e;
+  border-radius: 12px;
+  padding: 20px;
+  background: #141d24;
+}
+
+.provider-preflight-required {
+  border-color: rgba(214, 157, 52, 0.65);
+  background: rgba(84, 59, 23, 0.16);
+}
+
+.preflight-policy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.preflight-policy-grid > div {
+  border: 1px solid #2c3943;
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(16, 22, 28, 0.48);
+}
+
+.preflight-policy-grid dt {
+  margin-bottom: 5px;
+  color: #7bd7cc;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.preflight-policy-grid dd {
+  margin: 0;
+  color: #dce8eb;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.preflight-policy-grid dd span {
+  color: #91a2ad;
+  overflow-wrap: anywhere;
+}
+
+.policy-fingerprint {
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+
+.preflight-scope {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 18px;
+  margin-top: 16px;
+  color: #b7c5cd;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.preflight-scope strong {
+  color: #e9f0f3;
+}
+
+.preflight-scope ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.preflight-acknowledgement {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  border-top: 1px solid #34444e;
+  padding-top: 16px;
+}
+
+.preflight-acknowledgement label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  color: #dce8eb;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.preflight-acknowledgement input {
+  margin-top: 2px;
+}
+
 .compact {
   margin-bottom: 18px;
 }
@@ -793,8 +888,15 @@ textarea:focus {
   .trust-strip,
   .diff-grid,
   .side-column,
-  .setup-grid {
+  .setup-grid,
+  .preflight-policy-grid,
+  .preflight-scope {
     grid-template-columns: 1fr;
+  }
+
+  .preflight-acknowledgement {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .approval-panel {

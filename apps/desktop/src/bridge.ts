@@ -519,6 +519,12 @@ function validateReviewAction(value: unknown): ReviewAction {
         blockId: identifier(action.blockId),
         text: stringValue(action.text, 20_000),
       };
+    case "acknowledge-provider-transmission": {
+      if (!hasOnlyKeys(action, ["type", "fingerprint"])) return invalidInput();
+      const fingerprint = stringValue(action.fingerprint, 64);
+      if (!/^[a-f0-9]{64}$/u.test(fingerprint)) return invalidInput();
+      return { type: action.type, fingerprint };
+    }
     case "pause":
     case "start":
     case "resume":

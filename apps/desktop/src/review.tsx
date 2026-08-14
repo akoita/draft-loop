@@ -80,6 +80,12 @@ export function ReviewWorkspace({
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
+  const [confirmedPolicyFingerprint, setConfirmedPolicyFingerprint] = useState<string | null>(null);
+  const policyConfirmed =
+    confirmedPolicyFingerprint === state.providerTransmissionPreflight.fingerprint;
+  const transmissionReady =
+    !state.providerTransmissionPreflight.required ||
+    state.providerTransmissionPreflight.acknowledged;
 
   const refreshCredentials = useCallback(() => {
     if (getCredentialStatus === undefined) return;
@@ -142,7 +148,7 @@ export function ReviewWorkspace({
             onAction({ type: "approve" });
           }
         } else if (event.key === "r" || event.key === "R") {
-          if (state.state === "awaiting-approval") {
+          if (state.state === "awaiting-approval" && transmissionReady) {
             event.preventDefault();
             onAction({ type: "request-revision" });
           }
@@ -157,7 +163,7 @@ export function ReviewWorkspace({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canApprove, onAction, state.state, settingsOpen]);
+  }, [canApprove, onAction, state.state, settingsOpen, transmissionReady]);
 
   const submitUrl = (target: "evidence" | "job-description"): void => {
     const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
@@ -302,6 +308,120 @@ export function ReviewWorkspace({
     );
   };
 
+  const renderProviderTransmissionPreflight = () => {
+    const preflight = state.providerTransmissionPreflight;
+    return (
+      <section
+        className={`provider-preflight${preflight.required && !preflight.acknowledged ? " provider-preflight-required" : ""}`}
+        aria-labelledby="provider-preflight-title"
+      >
+        <div className="section-heading compact">
+          <div>
+            <p className="eyebrow">Provider transmission preflight</p>
+            <h2 id="provider-preflight-title">
+              {preflight.required ? "Review data leaving this workspace" : "Demo remains local"}
+            </h2>
+          </div>
+          <span className="status-tag">
+            {preflight.required
+              ? preflight.acknowledged
+                ? "Acknowledged"
+                : "Acknowledgement required"
+              : "No network transmission"}
+          </span>
+        </div>
+        <dl className="preflight-policy-grid">
+          <div>
+            <dt>Data class</dt>
+            <dd>{preflight.dataClass}</dd>
+          </div>
+          <div>
+            <dt>Retention preference</dt>
+            <dd>{preflight.retentionPreference}</dd>
+          </div>
+          <div>
+            <dt>Author destination</dt>
+            <dd>
+              {preflight.author.company} · {preflight.author.model}
+              <br />
+              <span>{preflight.author.endpoint}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Critic destination</dt>
+            <dd>
+              {preflight.critic.company} · {preflight.critic.model}
+              <br />
+              <span>{preflight.critic.endpoint}</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Maximum run budget</dt>
+            <dd>
+              {preflight.budget.maxRounds} rounds ·{" "}
+              {preflight.budget.maxCostUsd === null
+                ? "no cost cap"
+                : `$${preflight.budget.maxCostUsd.toFixed(2)}`}{" "}
+              ·{" "}
+              {preflight.budget.maxDurationMs === null
+                ? "no duration cap"
+                : `${preflight.budget.maxDurationMs} ms`}
+            </dd>
+          </div>
+          <div>
+            <dt>Policy fingerprint</dt>
+            <dd className="policy-fingerprint">{preflight.fingerprint}</dd>
+          </div>
+        </dl>
+        <div className="preflight-scope">
+          <strong>Exactly what may be transmitted</strong>
+          <ul>
+            {preflight.transmissionScope.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+          <strong>Never included</strong>
+          <ul>
+            {preflight.excludedScope.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
+        {preflight.required && !preflight.acknowledged ? (
+          <div className="preflight-acknowledgement">
+            <label>
+              <input
+                type="checkbox"
+                checked={policyConfirmed}
+                onChange={(event) =>
+                  setConfirmedPolicyFingerprint(event.target.checked ? preflight.fingerprint : null)
+                }
+              />
+              <span>
+                I reviewed these destinations, data categories, retention preference, and limits.
+              </span>
+            </label>
+            <button
+              className="button button-primary"
+              type="button"
+              disabled={!policyConfirmed}
+              onClick={() =>
+                onAction({
+                  type: "acknowledge-provider-transmission",
+                  fingerprint: preflight.fingerprint,
+                })
+              }
+            >
+              Acknowledge provider transmission
+            </button>
+          </div>
+        ) : preflight.acknowledgedAt === null ? null : (
+          <p className="safe-copy">Acknowledged at {preflight.acknowledgedAt}</p>
+        )}
+      </section>
+    );
+  };
+
   if (state.state === "collecting") {
     return (
       <main className="app-shell">
@@ -427,6 +547,7 @@ export function ReviewWorkspace({
               </button>
             </article>
           </div>
+          {renderProviderTransmissionPreflight()}
           {state.setup.nextSteps.length > 0 ? (
             <div className="setup-next-steps">
               <strong>Next steps</strong>
@@ -442,7 +563,7 @@ export function ReviewWorkspace({
             <button
               className="button button-primary"
               type="button"
-              disabled={!state.setup.ready}
+              disabled={!state.setup.ready || !transmissionReady}
               onClick={() => onAction({ type: "start" })}
             >
               Start author–critic review
@@ -505,6 +626,11 @@ export function ReviewWorkspace({
           </span>
         </div>
       </section>
+
+      {state.providerTransmissionPreflight.required &&
+      !state.providerTransmissionPreflight.acknowledged
+        ? renderProviderTransmissionPreflight()
+        : null}
 
       <section
         className={`validation-banner validation-${findingSummary.status}`}
@@ -637,6 +763,7 @@ export function ReviewWorkspace({
                 <button
                   className="button button-primary"
                   type="button"
+                  disabled={!transmissionReady}
                   onClick={() => onAction({ type: "resume" })}
                 >
                   Resume
@@ -800,7 +927,7 @@ export function ReviewWorkspace({
                 type="button"
                 aria-keyshortcuts="Alt+R"
                 title="Request revision (Alt+R)"
-                disabled={state.state !== "awaiting-approval"}
+                disabled={state.state !== "awaiting-approval" || !transmissionReady}
                 onClick={() => onAction({ type: "request-revision" })}
               >
                 Request revision (Alt+R)
