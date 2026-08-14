@@ -40,6 +40,8 @@ import {
 import type {
   DesktopReviewState,
   FindingDecision,
+  ProviderTransmissionPolicy,
+  ProviderTransmissionPreflight,
   ReviewAction,
   ReviewArtifact,
   ReviewClaim,
@@ -51,7 +53,23 @@ import type {
 
 const configDirectory = ".draft-loop";
 const sourceProvenanceFilename = "source-provenance.json";
+const providerTransmissionAcknowledgementFilename = "provider-transmission-acknowledgement.json";
 const maxImportedFileBytes = 20 * 1024 * 1024;
+
+const transmissionScope = [
+  "job description and requirements",
+  "evidence manifest",
+  "selected retrieved evidence chunks",
+  "current draft and structured findings",
+] as const;
+const excludedTransmissionScope = ["complete candidate corpus"] as const;
+
+interface PersistedProviderTransmissionAcknowledgement {
+  readonly schemaVersion: 1;
+  readonly fingerprint: string;
+  readonly acknowledgedAt: string;
+  readonly policy: ProviderTransmissionPolicy;
+}
 
 export interface NativeHostDialogs {
   readonly chooseDirectory: (mode: "open" | "create") => Promise<string | undefined>;
@@ -124,6 +142,159 @@ function overridesPath(root: string): string {
 
 function sourceProvenancePath(root: string): string {
   return join(root, configDirectory, sourceProvenanceFilename);
+}
+
+function providerTransmissionAcknowledgementPath(root: string): string {
+  return join(root, configDirectory, providerTransmissionAcknowledgementFilename);
+}
+
+function providerEndpoint(company: string, fixtureMode: boolean): string {
+  if (fixtureMode) return "local fixture (no network)";
+  switch (company.trim().toLowerCase()) {
+    case "anthropic":
+      return "https://api.anthropic.com/v1/messages";
+    case "openai":
+      return "https://api.openai.com/v1/responses";
+    default:
+      return fail("operation-failed", `Unsupported live provider company: ${company}.`);
+  }
+}
+
+function providerTransmissionPolicy(descriptor: WorkspaceDescriptor): ProviderTransmissionPolicy {
+  return {
+    dataClass: descriptor.fixtureMode
+      ? "synthetic-demo-material"
+      : "candidate-application-material",
+    transmissionScope,
+    excludedScope: excludedTransmissionScope,
+    author: {
+      ...descriptor.author,
+      endpoint: providerEndpoint(descriptor.author.company, descriptor.fixtureMode),
+    },
+    critic: {
+      ...descriptor.critic,
+      endpoint: providerEndpoint(descriptor.critic.company, descriptor.fixtureMode),
+    },
+    retentionPreference: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
+    budget: {
+      maxRounds: descriptor.maxRounds,
+      maxCostUsd: descriptor.maxCostUsd ?? null,
+      maxDurationMs: descriptor.maxDurationMs ?? null,
+    },
+  };
+}
+
+function providerTransmissionFingerprint(policy: ProviderTransmissionPolicy): string {
+  return createHash("sha256").update(JSON.stringify(policy)).digest("hex");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isProviderIdentity(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return (
+    Object.keys(value).length === 3 &&
+    typeof value.company === "string" &&
+    value.company.length <= 80 &&
+    typeof value.model === "string" &&
+    value.model.length <= 160 &&
+    typeof value.endpoint === "string" &&
+    value.endpoint.length <= 300
+  );
+}
+
+function isProviderTransmissionPolicy(value: unknown): value is ProviderTransmissionPolicy {
+  if (!isRecord(value) || Object.keys(value).length !== 7) return false;
+  const budget = value.budget;
+  return (
+    (value.dataClass === "candidate-application-material" ||
+      value.dataClass === "synthetic-demo-material") &&
+    JSON.stringify(value.transmissionScope) === JSON.stringify(transmissionScope) &&
+    JSON.stringify(value.excludedScope) === JSON.stringify(excludedTransmissionScope) &&
+    isProviderIdentity(value.author) &&
+    isProviderIdentity(value.critic) &&
+    (value.retentionPreference === "ephemeral-request" ||
+      value.retentionPreference === "not-allowed") &&
+    isRecord(budget) &&
+    Object.keys(budget).length === 3 &&
+    Number.isInteger(budget.maxRounds) &&
+    (budget.maxRounds as number) > 0 &&
+    (budget.maxCostUsd === null ||
+      (typeof budget.maxCostUsd === "number" &&
+        Number.isFinite(budget.maxCostUsd) &&
+        budget.maxCostUsd >= 0)) &&
+    (budget.maxDurationMs === null ||
+      (typeof budget.maxDurationMs === "number" &&
+        Number.isInteger(budget.maxDurationMs) &&
+        budget.maxDurationMs > 0))
+  );
+}
+
+async function readProviderTransmissionAcknowledgement(
+  root: string,
+): Promise<PersistedProviderTransmissionAcknowledgement | undefined> {
+  try {
+    const value: unknown = JSON.parse(
+      await readFile(providerTransmissionAcknowledgementPath(root), "utf8"),
+    );
+    if (!isRecord(value) || Object.keys(value).length !== 4) return undefined;
+    if (
+      value.schemaVersion !== 1 ||
+      typeof value.fingerprint !== "string" ||
+      !/^[a-f0-9]{64}$/u.test(value.fingerprint) ||
+      typeof value.acknowledgedAt !== "string" ||
+      value.acknowledgedAt.length > 64 ||
+      !Number.isFinite(Date.parse(value.acknowledgedAt)) ||
+      !isProviderTransmissionPolicy(value.policy)
+    ) {
+      return undefined;
+    }
+    return value as unknown as PersistedProviderTransmissionAcknowledgement;
+  } catch {
+    return undefined;
+  }
+}
+
+async function providerTransmissionPreflight(
+  descriptor: WorkspaceDescriptor,
+  root: string,
+): Promise<ProviderTransmissionPreflight> {
+  const policy = providerTransmissionPolicy(descriptor);
+  const fingerprint = providerTransmissionFingerprint(policy);
+  if (descriptor.fixtureMode) {
+    return { ...policy, required: false, fingerprint, acknowledged: true, acknowledgedAt: null };
+  }
+  const acknowledgement = await readProviderTransmissionAcknowledgement(root);
+  const acknowledged =
+    acknowledgement?.fingerprint === fingerprint &&
+    JSON.stringify(acknowledgement.policy) === JSON.stringify(policy);
+  return {
+    ...policy,
+    required: true,
+    fingerprint,
+    acknowledged,
+    acknowledgedAt: acknowledged ? (acknowledgement?.acknowledgedAt ?? null) : null,
+  };
+}
+
+async function writeProviderTransmissionAcknowledgement(
+  root: string,
+  policy: ProviderTransmissionPolicy,
+  fingerprint: string,
+): Promise<string> {
+  const acknowledgedAt = new Date().toISOString();
+  const value: PersistedProviderTransmissionAcknowledgement = {
+    schemaVersion: 1,
+    fingerprint,
+    acknowledgedAt,
+    policy,
+  };
+  const path = providerTransmissionAcknowledgementPath(root);
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, `${JSON.stringify(value, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  return acknowledgedAt;
 }
 
 function rootRelative(root: string, candidate: string): string {
@@ -261,7 +432,11 @@ function reviewFinding(
   };
 }
 
-function reviewEvents(snapshot: RunSnapshot, overrides: ReviewOverrides): readonly ReviewEvent[] {
+function reviewEvents(
+  snapshot: RunSnapshot,
+  overrides: ReviewOverrides,
+  preflight: ProviderTransmissionPreflight,
+): readonly ReviewEvent[] {
   const events: ReviewEvent[] = [
     {
       id: `${snapshot.runId}:created`,
@@ -291,6 +466,14 @@ function reviewEvents(snapshot: RunSnapshot, overrides: ReviewOverrides): readon
       createdAt: decision.createdAt,
     });
   }
+  if (preflight.acknowledgedAt !== null) {
+    events.push({
+      id: `${snapshot.runId}:provider-transmission:${preflight.fingerprint}`,
+      label: "Provider transmission policy acknowledged",
+      state: "collecting",
+      createdAt: preflight.acknowledgedAt,
+    });
+  }
   events.push({
     id: `${snapshot.runId}:updated:${snapshot.updatedAt}`,
     label: `Run ${snapshot.state.replaceAll("-", " ")}`,
@@ -306,6 +489,7 @@ function reviewState(
   overrides: ReviewOverrides,
   exportPath: string | null,
   setup: WorkspaceReadiness,
+  preflight: ProviderTransmissionPreflight,
 ): DesktopReviewState {
   const artifact = reviewArtifact(snapshot.artifact, overrides);
   const evaluation = snapshot.latestEvaluation;
@@ -320,10 +504,11 @@ function reviewState(
     providerExposure: {
       author: descriptor.author,
       critic: descriptor.critic,
-      transmissionAllowed: !descriptor.fixtureMode,
+      transmissionAllowed: preflight.required && preflight.acknowledged,
       sensitiveData: true,
       requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
     },
+    providerTransmissionPreflight: preflight,
     previousArtifact: previousArtifact(snapshot, artifact),
     artifact,
     findings: snapshot.findings.map((_finding, index) => reviewFinding(snapshot, index, overrides)),
@@ -332,7 +517,7 @@ function reviewState(
       stopReason: evaluation?.stopReason ?? "continue",
       scores: evaluation?.scoreVector ?? {},
     },
-    events: reviewEvents(snapshot, overrides),
+    events: reviewEvents(snapshot, overrides, preflight),
     exportPath,
     setup,
   };
@@ -341,6 +526,7 @@ function reviewState(
 function emptyReviewState(
   descriptor: WorkspaceDescriptor,
   setup: WorkspaceReadiness,
+  preflight: ProviderTransmissionPreflight,
 ): DesktopReviewState {
   return {
     workspaceId: descriptor.id,
@@ -353,10 +539,11 @@ function emptyReviewState(
     providerExposure: {
       author: descriptor.author,
       critic: descriptor.critic,
-      transmissionAllowed: false,
+      transmissionAllowed: preflight.required && preflight.acknowledged,
       sensitiveData: setup.evidenceSourceCount > 0,
       requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
     },
+    providerTransmissionPreflight: preflight,
     previousArtifact: null,
     artifact: {
       id: "artifact-pending",
@@ -371,7 +558,17 @@ function emptyReviewState(
       stopReason: setup.ready ? "ready" : "collecting-inputs",
       scores: {},
     },
-    events: [],
+    events:
+      preflight.acknowledgedAt === null
+        ? []
+        : [
+            {
+              id: `pending:provider-transmission:${preflight.fingerprint}`,
+              label: "Provider transmission policy acknowledged",
+              state: "collecting",
+              createdAt: preflight.acknowledgedAt,
+            },
+          ],
     exportPath: null,
     setup,
   };
@@ -546,6 +743,19 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return active;
   }
 
+  async function refreshWorkspaceDescriptor(workspace: ActiveWorkspace): Promise<ActiveWorkspace> {
+    const descriptor = await service.readWorkspace(workspace.root);
+    if (
+      descriptor.id !== workspace.descriptor.id ||
+      resolve(descriptor.root) !== resolve(workspace.root)
+    ) {
+      return fail("operation-failed", "The open workspace configuration changed unexpectedly.");
+    }
+    const refreshed = { descriptor, root: workspace.root };
+    active = refreshed;
+    return refreshed;
+  }
+
   async function loadSnapshot(workspace: ActiveWorkspace, runId?: string): Promise<RunSnapshot> {
     const snapshot = await service.status({
       root: workspace.root,
@@ -554,6 +764,19 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     if (snapshot === undefined)
       return fail("not-found", "No run has been started in this workspace.");
     return snapshot;
+  }
+
+  async function requireProviderTransmissionAcknowledgement(
+    workspace: ActiveWorkspace,
+  ): Promise<ProviderTransmissionPreflight> {
+    const preflight = await providerTransmissionPreflight(workspace.descriptor, workspace.root);
+    if (preflight.required && !preflight.acknowledged) {
+      return fail(
+        "operation-failed",
+        "Review and acknowledge the current provider transmission policy before this live action.",
+      );
+    }
+    return preflight;
   }
 
   async function createWorkspace(
@@ -791,13 +1014,35 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   }
 
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
-    const workspace = workspaceFor(input.workspaceId);
-    if (input.action.type !== "start") await loadSnapshot(workspace, input.runId);
+    const workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
+    if (
+      input.action.type !== "start" &&
+      input.action.type !== "acknowledge-provider-transmission"
+    ) {
+      await loadSnapshot(workspace, input.runId);
+    }
     let overrides = await readOverrides(workspace.root);
     let exportPath: string | null = null;
     const action: ReviewAction = input.action;
     switch (action.type) {
+      case "acknowledge-provider-transmission": {
+        const current = await providerTransmissionPreflight(workspace.descriptor, workspace.root);
+        if (!current.required) break;
+        if (action.fingerprint !== current.fingerprint) {
+          return fail(
+            "operation-failed",
+            "The provider transmission policy changed. Review the current policy before acknowledging it.",
+          );
+        }
+        await writeProviderTransmissionAcknowledgement(
+          workspace.root,
+          providerTransmissionPolicy(workspace.descriptor),
+          current.fingerprint,
+        );
+        break;
+      }
       case "start":
+        await requireProviderTransmissionAcknowledgement(workspace);
         await syncCredentials();
         await service.start({ root: workspace.root, allowProviderData: true }, io());
         break;
@@ -842,7 +1087,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       case "pause":
       case "request-revision":
       case "approve":
-        if (action.type === "request-revision") await syncCredentials();
+        if (action.type === "request-revision") {
+          await requireProviderTransmissionAcknowledgement(workspace);
+          await syncCredentials();
+        }
         await service.lifecycle(
           {
             root: workspace.root,
@@ -853,6 +1101,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         );
         break;
       case "resume":
+        await requireProviderTransmissionAcknowledgement(workspace);
         await syncCredentials();
         await service.resume(
           { root: workspace.root, runId: input.runId, allowProviderData: true },
@@ -866,16 +1115,20 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         );
         break;
     }
-    const snapshot = await loadSnapshot(
-      workspace,
-      input.action.type === "start" ? undefined : input.runId,
-    );
+    const snapshot = await service.status({
+      root: workspace.root,
+      ...(input.action.type === "start" || input.runId === "pending" ? {} : { runId: input.runId }),
+    });
+    const setup = await workspaceReadiness(workspace.descriptor, workspace.root);
+    const preflight = await providerTransmissionPreflight(workspace.descriptor, workspace.root);
+    if (snapshot === undefined) return emptyReviewState(workspace.descriptor, setup, preflight);
     return reviewState(
       workspace.descriptor,
       snapshot,
       overrides,
       exportPath ?? (await existingExportPath(workspace.root, snapshot.runId)),
-      await workspaceReadiness(workspace.descriptor, workspace.root),
+      setup,
+      preflight,
     );
   }
 
@@ -938,22 +1191,31 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: statusResult(workspace.descriptor.id, snapshot) };
         }
         case "review.load": {
-          const workspace =
+          const selectedWorkspace =
             command.input.workspaceId === undefined
               ? active
               : workspaceFor(command.input.workspaceId);
-          if (workspace === undefined) return fail("not-found", "Open a workspace first.");
+          if (selectedWorkspace === undefined) return fail("not-found", "Open a workspace first.");
+          const workspace = await refreshWorkspaceDescriptor(selectedWorkspace);
           const snapshot = await service.status({
             root: workspace.root,
             ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
           });
           const setup = await workspaceReadiness(workspace.descriptor, workspace.root);
           if (snapshot === undefined) {
+            const preflight = await providerTransmissionPreflight(
+              workspace.descriptor,
+              workspace.root,
+            );
             return {
               ok: true,
-              value: emptyReviewState(workspace.descriptor, setup),
+              value: emptyReviewState(workspace.descriptor, setup, preflight),
             };
           }
+          const preflight = await providerTransmissionPreflight(
+            workspace.descriptor,
+            workspace.root,
+          );
           return {
             ok: true,
             value: reviewState(
@@ -962,6 +1224,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               await readOverrides(workspace.root),
               await existingExportPath(workspace.root, snapshot.runId),
               setup,
+              preflight,
             ),
           };
         }

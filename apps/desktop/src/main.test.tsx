@@ -21,6 +21,23 @@ describe("desktop trust-centered review", () => {
         ready: false,
         nextSteps: ["Add a target job description.", "Add at least one candidate evidence source."],
       },
+      providerTransmissionPreflight: {
+        ...createFixtureReviewState().providerTransmissionPreflight,
+        required: true,
+        acknowledged: false,
+        acknowledgedAt: null,
+        fingerprint: "a".repeat(64),
+        author: {
+          company: "anthropic",
+          model: "claude-sonnet-4-5",
+          endpoint: "https://api.anthropic.com/v1/messages",
+        },
+        critic: {
+          company: "openai",
+          model: "gpt-5",
+          endpoint: "https://api.openai.com/v1/responses",
+        },
+      },
     };
     const html = renderToStaticMarkup(
       <ReviewWorkspace
@@ -35,6 +52,12 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Add job description");
     expect(html).toContain("Review and fetch evidence URL");
     expect(html).toContain("Start author–critic review");
+    expect(html).toContain("Acknowledgement required");
+    expect(html).toContain("selected retrieved evidence chunks");
+    expect(html).toContain("complete candidate corpus");
+    expect(html).toContain("https://api.anthropic.com/v1/messages");
+    expect(html).toContain("Acknowledge provider transmission");
+    expect(html.match(/disabled=""/gu)?.length).toBeGreaterThanOrEqual(2);
   });
 
   it("makes paused progress, provider exposure, and unresolved findings visible", () => {
@@ -42,7 +65,9 @@ describe("desktop trust-centered review", () => {
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 
     expect(html).toContain("paused");
-    expect(html).toContain("Transmission approved");
+    expect(html).toContain("Local only");
+    expect(html).toContain("not-allowed");
+    expect(state.providerTransmissionPreflight.dataClass).toBe("synthetic-demo-material");
     expect(html).toContain("Disagreement · critic-only finding");
     expect(html).toContain("Resolve or override 1 blocking finding before approval.");
     expect(html).toContain('disabled=""');
@@ -104,6 +129,30 @@ describe("desktop trust-centered review", () => {
       decision: "overridden",
     });
     expect(unchanged.findings[0]?.decision).toBe("pending");
+  });
+
+  it("only acknowledges the currently projected provider policy", () => {
+    const initial = {
+      ...createFixtureReviewState(),
+      providerTransmissionPreflight: {
+        ...createFixtureReviewState().providerTransmissionPreflight,
+        required: true,
+        acknowledged: false,
+        fingerprint: "b".repeat(64),
+      },
+    };
+    expect(
+      reduceReviewState(initial, {
+        type: "acknowledge-provider-transmission",
+        fingerprint: "a".repeat(64),
+      }).providerTransmissionPreflight.acknowledged,
+    ).toBe(false);
+    expect(
+      reduceReviewState(initial, {
+        type: "acknowledge-provider-transmission",
+        fingerprint: "b".repeat(64),
+      }).providerTransmissionPreflight.acknowledged,
+    ).toBe(true);
   });
 
   it("keeps export unavailable until after approval", () => {

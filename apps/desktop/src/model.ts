@@ -71,6 +71,38 @@ export interface ProviderExposureView {
   readonly requestedRetention: "ephemeral-request" | "provider-default" | "not-allowed";
 }
 
+export interface ProviderTransmissionIdentity {
+  readonly company: string;
+  readonly model: string;
+  readonly endpoint: string;
+}
+
+export interface ProviderTransmissionPolicy {
+  readonly dataClass: "candidate-application-material" | "synthetic-demo-material";
+  readonly transmissionScope: readonly [
+    "job description and requirements",
+    "evidence manifest",
+    "selected retrieved evidence chunks",
+    "current draft and structured findings",
+  ];
+  readonly excludedScope: readonly ["complete candidate corpus"];
+  readonly author: ProviderTransmissionIdentity;
+  readonly critic: ProviderTransmissionIdentity;
+  readonly retentionPreference: "ephemeral-request" | "not-allowed";
+  readonly budget: {
+    readonly maxRounds: number;
+    readonly maxCostUsd: number | null;
+    readonly maxDurationMs: number | null;
+  };
+}
+
+export interface ProviderTransmissionPreflight extends ProviderTransmissionPolicy {
+  readonly required: boolean;
+  readonly fingerprint: string;
+  readonly acknowledged: boolean;
+  readonly acknowledgedAt: string | null;
+}
+
 export interface ReviewEvaluation {
   readonly ready: boolean;
   readonly stopReason: string;
@@ -101,6 +133,7 @@ export interface DesktopReviewState {
   readonly totalCostUsd: number;
   readonly budgetUsd: number | null;
   readonly providerExposure: ProviderExposureView;
+  readonly providerTransmissionPreflight: ProviderTransmissionPreflight;
   readonly previousArtifact: ReviewArtifact | null;
   readonly artifact: ReviewArtifact;
   readonly findings: readonly ReviewFinding[];
@@ -119,6 +152,7 @@ export type ReviewAction =
     }
   | { readonly type: "edit-block"; readonly blockId: string; readonly text: string }
   | { readonly type: "pause" }
+  | { readonly type: "acknowledge-provider-transmission"; readonly fingerprint: string }
   | { readonly type: "start" }
   | { readonly type: "resume" }
   | { readonly type: "request-revision" }
@@ -216,6 +250,22 @@ export function reduceReviewState(
       return state.state === "approved" || state.state === "exported"
         ? state
         : { ...state, state: "paused" };
+    case "acknowledge-provider-transmission":
+      if (
+        !state.providerTransmissionPreflight.required ||
+        action.fingerprint !== state.providerTransmissionPreflight.fingerprint
+      ) {
+        return state;
+      }
+      return {
+        ...state,
+        providerExposure: { ...state.providerExposure, transmissionAllowed: true },
+        providerTransmissionPreflight: {
+          ...state.providerTransmissionPreflight,
+          acknowledged: true,
+          acknowledgedAt: new Date().toISOString(),
+        },
+      };
     case "start":
       return state.state === "collecting" && state.setup.ready
         ? { ...state, state: "drafting" }
@@ -328,9 +378,35 @@ export function createFixtureReviewState(): DesktopReviewState {
     providerExposure: {
       author: { company: "Anthropic", model: "claude-sonnet-4-5" },
       critic: { company: "OpenAI", model: "gpt-5" },
-      transmissionAllowed: true,
+      transmissionAllowed: false,
       sensitiveData: true,
-      requestedRetention: "ephemeral-request",
+      requestedRetention: "not-allowed",
+    },
+    providerTransmissionPreflight: {
+      required: false,
+      fingerprint: "fixture-local-only",
+      acknowledged: true,
+      acknowledgedAt: null,
+      dataClass: "synthetic-demo-material",
+      transmissionScope: [
+        "job description and requirements",
+        "evidence manifest",
+        "selected retrieved evidence chunks",
+        "current draft and structured findings",
+      ],
+      excludedScope: ["complete candidate corpus"],
+      author: {
+        company: "Anthropic",
+        model: "claude-sonnet-4-5",
+        endpoint: "local fixture (no network)",
+      },
+      critic: {
+        company: "OpenAI",
+        model: "gpt-5",
+        endpoint: "local fixture (no network)",
+      },
+      retentionPreference: "not-allowed",
+      budget: { maxRounds: 2, maxCostUsd: 0.25, maxDurationMs: null },
     },
     previousArtifact,
     artifact,

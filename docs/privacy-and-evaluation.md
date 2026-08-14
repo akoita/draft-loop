@@ -7,13 +7,13 @@ machine unless the user explicitly approves a provider transmission.
 
 ## Data policy
 
-| Data class | Default location | Provider transmission | Retention default |
-| --- | --- | --- | --- |
-| Public | Local workspace | Allowed only through an explicit request policy | Until the user deletes it |
-| Personal | Local workspace | Explicit approval and provider allowlist required | Until the user deletes it |
-| Confidential employer | Local workspace | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it |
-| Secret embedded in candidate material | Never place in source/evaluation fixtures | Not allowed as application content | Do not retain |
-| Provider credential | Electron user-data credential store or provider SDK environment; never the workspace | Used only to authenticate an explicitly approved provider request | Until the user removes it, the environment changes, or app data is deleted |
+| Data class                            | Default location                                                                     | Provider transmission                                                                        | Retention default                                                          |
+| ------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Public                                | Local workspace                                                                      | Allowed only through an explicit request policy                                              | Until the user deletes it                                                  |
+| Personal                              | Local workspace                                                                      | Explicit approval and provider allowlist required                                            | Until the user deletes it                                                  |
+| Confidential employer                 | Local workspace                                                                      | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it                                                  |
+| Secret embedded in candidate material | Never place in source/evaluation fixtures                                            | Not allowed as application content                                                           | Do not retain                                                              |
+| Provider credential                   | Electron user-data credential store or provider SDK environment; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, or app data is deleted |
 
 The provider contract requires `allowTransmission`, an allowlisted provider
 company, and an acknowledgement when a request is sensitive. Provider identity,
@@ -32,6 +32,25 @@ provider retention: not allowed unless explicitly configured
 The application must show the data class, provider, model, and retention choice
 before the first request containing source or draft material. A denied policy
 must fail before the SDK call.
+
+The desktop host computes a canonical provider-transmission preflight from the
+current workspace configuration. It shows the Anthropic and OpenAI company,
+model, and API endpoint identities; the requested ephemeral retention policy;
+round, cost, and duration limits; and the exact allowed categories: job
+description and requirements, an evidence manifest, selected retrieved evidence
+chunks, and the current draft and structured findings. The complete candidate
+corpus is explicitly excluded. A SHA-256 fingerprint binds acknowledgement to
+that projection, so a provider, model, endpoint, retention, scope, or budget
+change requires acknowledgement again.
+
+For live workspaces, the main process stores only the fingerprint, timestamp,
+and policy projection in
+`.draft-loop/provider-transmission-acknowledgement.json`. It reloads the
+workspace descriptor and this metadata before every provider-transmitting
+start, resume, or revision and fails closed when either is invalid or stale.
+The metadata contains no candidate content or credentials, and the
+acknowledgement is visible in review event history. Demo workspaces remain
+local-only and require no acknowledgement.
 
 In the packaged desktop, a key entered in the renderer crosses the allowlisted
 native bridge once and is persisted by the main process. The host prefers
