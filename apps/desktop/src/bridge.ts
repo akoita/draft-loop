@@ -61,6 +61,16 @@ export type CredentialProvider = (typeof credentialProviders)[number];
 export const credentialSources = ["app", "env", "none"] as const;
 export type CredentialSource = (typeof credentialSources)[number];
 
+export const credentialProtections = [
+  "os-backed",
+  "basic-text",
+  "local-aes-gcm",
+  "environment",
+  "session-memory",
+  "none",
+] as const;
+export type CredentialProtection = (typeof credentialProtections)[number];
+
 export const runStates = [
   "collecting",
   "ingesting",
@@ -204,6 +214,8 @@ export interface CredentialStatus {
   readonly provider: CredentialProvider;
   readonly configured: boolean;
   readonly source: CredentialSource;
+  /** Non-secret description of how the active credential is protected. */
+  readonly protection: CredentialProtection;
 }
 
 export type CredentialResult = CredentialStatus;
@@ -910,11 +922,14 @@ function normalizeExportResult(value: unknown): ExportResult {
 
 function normalizeCredentialResult(value: unknown): CredentialResult {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, ["provider", "configured", "source"])) return invalidInput();
+  if (!hasOnlyKeys(result, ["provider", "configured", "source", "protection"])) {
+    return invalidInput();
+  }
   return {
     provider: enumValue(result.provider, credentialProviders),
     configured: booleanValue(result.configured),
     source: enumValue(result.source, credentialSources),
+    protection: enumValue(result.protection, credentialProtections),
   };
 }
 

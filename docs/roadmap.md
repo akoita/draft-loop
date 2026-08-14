@@ -223,6 +223,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Added explicit credential resolution, truthful storage-protection projection, and a packaged two-launch Linux/macOS/Windows credential acceptance matrix for issue #102; platform results remain pending | Removing an app key must not leave it usable through a mutated environment, and implementation infrastructure is not cross-platform validation evidence until its workflow artifacts pass and are reviewed |
 | 2026-08-15 | Implemented normalized provider-error states, bounded recovery, and content-free desktop/CLI projections for issue #101 | Provider failures must remain durable and user-recoverable across the shared application path while preserving the current integration-hardening stage gate for installed-app evidence |
 | 2026-08-15 | Integrated the SQLite lexical retrieval baseline into live orchestration and hardened desktop review/export audit state | Provider requests should receive selected workspace evidence, and user-visible exposure, decisions, and export state must agree with durable history |
 | 2026-08-15 | Reset Now to Integration hardening and outcome validation; introduced Designed/Implemented/Integrated/Validated/Released evidence levels; reclassified later stages as partial or component-level | Repository capabilities had been conflated with validated outcomes, while cross-platform real-input, release, and pilot evidence remained incomplete |

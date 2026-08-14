@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
-import { copyFile, mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
 import {
@@ -23,8 +23,10 @@ import {
   type BridgeCommand,
   type BridgeResult,
   bridgeCapabilities,
+  type CredentialProtection,
   type CredentialProvider,
   type CredentialSource,
+  credentialProviders,
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
@@ -78,9 +80,11 @@ export interface NativeHostDialogs {
 }
 
 export interface NativeCredentialStore {
-  readonly status: (
-    provider: CredentialProvider,
-  ) => Promise<{ configured: boolean; source: CredentialSource }>;
+  readonly status: (provider: CredentialProvider) => Promise<{
+    configured: boolean;
+    source: CredentialSource;
+    protection: CredentialProtection;
+  }>;
   readonly set: (provider: CredentialProvider, apiKey?: string) => Promise<boolean>;
   readonly remove: (provider: CredentialProvider) => Promise<boolean>;
   readonly get?: (provider: CredentialProvider) => Promise<string | undefined>;
@@ -782,10 +786,15 @@ export interface NativeHost {
 }
 
 export function createNativeHost(options: NativeHostOptions): NativeHost {
-  const service =
-    options.applicationService ?? createApplicationService(createLocalApplicationDriver());
-  let active: ActiveWorkspace | undefined;
   const credentials = options.credentials ?? createMemoryCredentialStore();
+  const service =
+    options.applicationService ??
+    createApplicationService(
+      createLocalApplicationDriver({
+        resolveCredential: async (provider) => resolveCredential(credentials, provider),
+      }),
+    );
+  let active: ActiveWorkspace | undefined;
 
   function workspaceFor(id: string): ActiveWorkspace {
     if (active === undefined || active.descriptor.id !== id) {
@@ -1053,17 +1062,6 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
   }
 
-  async function syncCredentials(): Promise<void> {
-    const anthropicKey = await credentials.get?.("anthropic");
-    const openAiKey = await credentials.get?.("openai");
-    if (anthropicKey !== undefined && anthropicKey.trim().length > 0) {
-      process.env.ANTHROPIC_API_KEY = anthropicKey.trim();
-    }
-    if (openAiKey !== undefined && openAiKey.trim().length > 0) {
-      process.env.OPENAI_API_KEY = openAiKey.trim();
-    }
-  }
-
   async function dispatchReview(input: ReviewDispatchInput): Promise<DesktopReviewState> {
     const workspace = await refreshWorkspaceDescriptor(workspaceFor(input.workspaceId));
     const currentSnapshot =
@@ -1100,7 +1098,6 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }
       case "start":
         await requireProviderTransmissionAcknowledgement(workspace);
-        await syncCredentials();
         await service.start({ root: workspace.root, allowProviderData: true }, io());
         break;
       case "finding-decision":
@@ -1161,7 +1158,6 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         if (action.type === "request-revision") {
           await requireProviderTransmissionAcknowledgement(workspace);
-          await syncCredentials();
         }
         await service.lifecycle(
           {
@@ -1186,7 +1182,6 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return fail("operation-failed", "This provider failure cannot be retried.");
         }
         await requireProviderTransmissionAcknowledgement(workspace);
-        await syncCredentials();
         await service.resume(
           { root: workspace.root, runId: input.runId, allowProviderData: true },
           io(),
@@ -1350,6 +1345,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               provider: command.input.provider,
               configured: status.configured,
               source: status.source,
+              protection: status.protection,
             },
           };
         }
@@ -1368,6 +1364,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               provider: command.input.provider,
               configured: status.configured,
               source: status.source,
+              protection: status.protection,
             },
           };
         }
@@ -1380,6 +1377,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               provider: command.input.provider,
               configured: status.configured,
               source: status.source,
+              protection: status.protection,
             },
           };
         }
@@ -1398,14 +1396,14 @@ export function createMemoryCredentialStore(): NativeCredentialStore {
   return {
     status: async (provider) => {
       if (store.has(provider)) {
-        return { configured: true, source: "app" };
+        return { configured: true, source: "app", protection: "session-memory" };
       }
       const envKey =
         provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
       if (envKey !== undefined && envKey.trim().length > 0) {
-        return { configured: true, source: "env" };
+        return { configured: true, source: "env", protection: "environment" };
       }
-      return { configured: false, source: "none" };
+      return { configured: false, source: "none", protection: "none" };
     },
     set: async (provider, apiKey) => {
       if (apiKey !== undefined && apiKey.trim().length > 0) {
@@ -1427,6 +1425,19 @@ export interface SafeStorageAdapter {
   readonly isEncryptionAvailable: () => boolean;
   readonly encryptString: (value: string) => Buffer;
   readonly decryptString: (value: Buffer) => string;
+  readonly getSelectedStorageBackend?: () => string;
+}
+
+export async function resolveCredential(
+  store: NativeCredentialStore,
+  provider: CredentialProvider,
+): Promise<string | undefined> {
+  const managed = (await store.get?.(provider))?.trim();
+  if (managed !== undefined && managed.length > 0) return managed;
+  const environment =
+    provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
+  const normalized = environment?.trim();
+  return normalized === undefined || normalized.length === 0 ? undefined : normalized;
 }
 
 async function getOrCreateLocalKey(keyPath: string): Promise<Buffer> {
@@ -1491,7 +1502,13 @@ export function createSafeStorageCredentialStore(options: {
     try {
       const parsed: unknown = JSON.parse(await readFile(options.filename, "utf8"));
       if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
-      return parsed as Record<string, string>;
+      const record = parsed as Record<string, unknown>;
+      return Object.fromEntries(
+        credentialProviders.flatMap((provider) => {
+          const value = record[provider];
+          return typeof value === "string" && value.length > 0 ? [[provider, value]] : [];
+        }),
+      );
     } catch {
       return {};
     }
@@ -1534,16 +1551,24 @@ export function createSafeStorageCredentialStore(options: {
 
   return {
     status: async (provider) => {
+      const values = await load();
       const stored = await get(provider);
       if (stored !== undefined && stored.length > 0) {
-        return { configured: true, source: "app" };
+        const encoded = values[provider] ?? "";
+        const backend = options.safeStorage.getSelectedStorageBackend?.();
+        const protection: CredentialProtection = encoded.startsWith("v1:aes-gcm:")
+          ? "local-aes-gcm"
+          : backend === "basic_text"
+            ? "basic-text"
+            : "os-backed";
+        return { configured: true, source: "app", protection };
       }
       const envKey =
         provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
       if (envKey !== undefined && envKey.trim().length > 0) {
-        return { configured: true, source: "env" };
+        return { configured: true, source: "env", protection: "environment" };
       }
-      return { configured: false, source: "none" };
+      return { configured: false, source: "none", protection: "none" };
     },
     set: async (provider, apiKey) => {
       const secret =
@@ -1581,7 +1606,12 @@ export function createSafeStorageCredentialStore(options: {
       if (values[provider] === undefined) return false;
       const next = { ...values };
       delete next[provider];
-      await save(next);
+      if (Object.keys(next).length === 0) {
+        await rm(options.filename, { force: true });
+        await rm(keyFilename, { force: true });
+      } else {
+        await save(next);
+      }
       return true;
     },
     get,
