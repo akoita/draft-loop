@@ -43,35 +43,72 @@ export const SECRET_PATTERNS = [
 ];
 
 export function getTrackedFiles(root = rootDir) {
+  let output;
   try {
-    const output = execFileSync("git", ["ls-files", "-z"], {
+    output = execFileSync("git", ["ls-files", "-z"], {
       cwd: root,
       encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
     });
-    return output
-      .split("\0")
-      .filter((f) => f.length > 0)
-      .map((f) => join(root, f));
-  } catch {
-    return [];
+  } catch (error) {
+    throw new Error(`Git tracked-file discovery failed for ${root}`, { cause: error });
   }
+  const files = output
+    .split("\0")
+    .filter((file) => file.length > 0)
+    .map((file) => join(root, file));
+  if (files.length === 0) {
+    throw new Error(`Git tracked-file discovery returned no files for ${root}`);
+  }
+  return files;
 }
 
-export function scanFileForSecrets(filePath, patterns = SECRET_PATTERNS) {
+export function scanFileForSecretsDetailed(filePath, patterns = SECRET_PATTERNS) {
   if (!existsSync(filePath)) {
-    return [];
+    return {
+      findings: [],
+      diagnostic: { file: filePath, reason: "Tracked file is missing." },
+    };
   }
-  const stat = statSync(filePath);
+  let stat;
+  try {
+    stat = statSync(filePath);
+  } catch (error) {
+    return {
+      findings: [],
+      diagnostic: {
+        file: filePath,
+        reason: `Tracked file metadata is unreadable: ${error instanceof Error ? error.message : "unknown error"}`,
+      },
+    };
+  }
+  if (!stat.isFile()) {
+    return {
+      findings: [],
+      diagnostic: { file: filePath, reason: "Tracked path is not a regular file." },
+    };
+  }
   if (stat.size > 2 * 1024 * 1024) {
-    // Skip large binary / generated files
-    return [];
+    return {
+      findings: [],
+      diagnostic: {
+        file: filePath,
+        reason: `Tracked file was skipped because it exceeds the 2 MiB scan limit (${stat.size} bytes).`,
+      },
+    };
   }
 
   let content;
   try {
     content = readFileSync(filePath, "utf8");
-  } catch {
-    return []; // Binary or unreadable
+  } catch (error) {
+    return {
+      findings: [],
+      diagnostic: {
+        file: filePath,
+        reason: `Tracked file is unreadable: ${error instanceof Error ? error.message : "unknown error"}`,
+      },
+    };
   }
 
   const findings = [];
@@ -101,22 +138,44 @@ export function scanFileForSecrets(filePath, patterns = SECRET_PATTERNS) {
     }
   }
 
-  return findings;
+  return { findings };
+}
+
+export function scanFileForSecrets(filePath, patterns = SECRET_PATTERNS) {
+  return scanFileForSecretsDetailed(filePath, patterns).findings;
 }
 
 export function scanRepositoryForSecrets(root = rootDir, patterns = SECRET_PATTERNS) {
-  const files = getTrackedFiles(root);
   const findings = [];
+  const diagnostics = [];
+  let files;
+
+  try {
+    files = getTrackedFiles(root);
+  } catch (error) {
+    diagnostics.push({
+      file: root,
+      reason: error instanceof Error ? error.message : "Git tracked-file discovery failed.",
+    });
+    return { scannedFiles: 0, valid: false, findings, diagnostics };
+  }
+  let scannedFiles = 0;
 
   for (const file of files) {
-    const fileFindings = scanFileForSecrets(file, patterns);
-    findings.push(...fileFindings);
+    const result = scanFileForSecretsDetailed(file, patterns);
+    findings.push(...result.findings);
+    if (result.diagnostic === undefined) {
+      scannedFiles += 1;
+    } else {
+      diagnostics.push(result.diagnostic);
+    }
   }
 
   return {
-    scannedFiles: files.length,
-    valid: findings.length === 0,
+    scannedFiles,
+    valid: findings.length === 0 && diagnostics.length === 0,
     findings,
+    diagnostics,
   };
 }
 
@@ -124,9 +183,14 @@ if (process.argv[1] === __filename) {
   const result = scanRepositoryForSecrets();
   console.log(`Scanned ${result.scannedFiles} tracked files for secrets and API credentials.`);
   if (!result.valid) {
-    console.error(`Secret scanner detected ${result.findings.length} potential secret(s):`);
+    console.error(
+      `Secret scanner failed with ${result.findings.length} potential secret(s) and ${result.diagnostics.length} diagnostic(s):`,
+    );
     for (const finding of result.findings) {
       console.error(`- [${finding.rule}] ${finding.file}:${finding.line}`);
+    }
+    for (const diagnostic of result.diagnostics) {
+      console.error(`- [unscanned] ${diagnostic.file}: ${diagnostic.reason}`);
     }
     process.exit(1);
   }

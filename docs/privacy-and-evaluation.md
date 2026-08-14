@@ -12,7 +12,8 @@ machine unless the user explicitly approves a provider transmission.
 | Public | Local workspace | Allowed only through an explicit request policy | Until the user deletes it |
 | Personal | Local workspace | Explicit approval and provider allowlist required | Until the user deletes it |
 | Confidential employer | Local workspace | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it |
-| Secret or credential | Never place in source/evaluation fixtures | Not allowed as application content | Do not retain |
+| Secret embedded in candidate material | Never place in source/evaluation fixtures | Not allowed as application content | Do not retain |
+| Provider credential | Electron user-data credential store or provider SDK environment; never the workspace | Used only to authenticate an explicitly approved provider request | Until the user removes it, the environment changes, or app data is deleted |
 
 The provider contract requires `allowTransmission`, an allowlisted provider
 company, and an acknowledgement when a request is sensitive. Provider identity,
@@ -31,6 +32,19 @@ provider retention: not allowed unless explicitly configured
 The application must show the data class, provider, model, and retention choice
 before the first request containing source or draft material. A denied policy
 must fail before the SDK call.
+
+In the packaged desktop, a key entered in the renderer crosses the allowlisted
+native bridge once and is persisted by the main process. The host prefers
+Electron `safeStorage`; when unavailable it uses local AES-256-GCM ciphertext
+and a separate local key protected by user file permissions. That fallback is
+not equivalent to an operating-system secret store. Credentials must not enter
+workspace history, backups, diagnostic exports, or provider request content.
+See [ADR 0004](adr/0004-desktop-credential-boundary.md).
+
+Workspace backup, restore, retention purge, and diagnostic export are explicit
+local operations. Purging the primary history does not prove deletion of copies
+the user made through backups or exports; the product must disclose that scope
+and keep diagnostic output content-free.
 
 ## Redaction and logging
 

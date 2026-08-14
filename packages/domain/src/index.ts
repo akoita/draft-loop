@@ -22,6 +22,7 @@ export type JobRequirementId = Brand<string, "JobRequirementId">;
 export type EvidenceSourceId = Brand<string, "EvidenceSourceId">;
 export type ArtifactId = Brand<string, "ArtifactId">;
 export type AgentReferenceId = Brand<string, "AgentReferenceId">;
+export type ProfileId = Brand<string, "ProfileId">;
 
 export interface WorkspaceIdentity {
   readonly id: WorkspaceId;
@@ -37,6 +38,42 @@ export function createWorkspace(id: string): Workspace {
   }
 
   return { id: id as WorkspaceId, state: "collecting" };
+}
+
+/**
+ * A candidate profile is a persistent, independently managed collection of
+ * ingested professional materials (files, URLs, portfolios). Profiles live
+ * across workspaces so the same evidence can be reused for multiple job
+ * applications without re-importing.
+ */
+export interface CandidateProfile {
+  readonly id: ProfileId;
+  readonly name: string;
+  readonly description: string;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+}
+
+export interface CandidateProfileInput {
+  readonly name: string;
+  readonly description?: string;
+}
+
+export function createProfile(id: string, input: CandidateProfileInput): CandidateProfile {
+  if (id.trim() === "") {
+    throw new Error("A profile id is required.");
+  }
+  if (!input.name || input.name.trim() === "") {
+    throw new Error("A profile name is required.");
+  }
+  const now = new Date().toISOString();
+  return {
+    id: id as ProfileId,
+    name: input.name.trim(),
+    description: (input.description ?? "").trim(),
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 export const contextSchemaVersion = 1 as const;
@@ -100,6 +137,7 @@ export interface EvidenceSource {
   readonly path: string;
   readonly mediaType: string;
   readonly checksum: string;
+  readonly profileId?: ProfileId;
 }
 
 export interface EvidenceSourceInput {
@@ -107,6 +145,7 @@ export interface EvidenceSourceInput {
   readonly path?: string;
   readonly mediaType?: string;
   readonly checksum?: string;
+  readonly profileId?: string;
 }
 
 export interface ScoredEvidenceChunk {
@@ -123,6 +162,7 @@ export interface ScoredEvidenceChunk {
 
 export interface RetrievalOptions {
   readonly workspaceId?: string;
+  readonly profileId?: string;
   readonly limit?: number;
   readonly minScore?: number;
 }
@@ -177,6 +217,7 @@ export interface ContextSnapshot {
   readonly readinessRubric: ReadinessRubric;
   readonly evidenceManifest: readonly EvidenceSource[];
   readonly modelConfiguration: ModelConfiguration;
+  readonly profileId?: ProfileId;
 }
 
 export interface ContextSnapshotInput {
@@ -197,6 +238,7 @@ export interface ContextSnapshotInput {
   readonly readinessRubric?: ReadinessRubricInput;
   readonly evidenceManifest?: readonly EvidenceSourceInput[];
   readonly modelConfiguration?: ModelConfigurationInput;
+  readonly profileId?: string;
 }
 
 export interface AgentContextReference {
@@ -646,6 +688,7 @@ function normalizeEvidenceSource(source: EvidenceSourceInput): EvidenceSource {
     path: source.path?.trim() as string,
     mediaType: source.mediaType?.trim() as string,
     checksum: source.checksum as string,
+    ...(source.profileId ? { profileId: source.profileId.trim() as ProfileId } : {}),
   };
 }
 
@@ -724,6 +767,7 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
       critic: normalizeModelSelection(modelConfiguration.critic as ModelSelectionInput),
       requireProviderDiversity: modelConfiguration.requireProviderDiversity ?? true,
     },
+    ...(input.profileId ? { profileId: input.profileId.trim() as ProfileId } : {}),
   };
 
   return cloneAndFreeze(snapshot);

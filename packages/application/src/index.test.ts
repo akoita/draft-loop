@@ -37,6 +37,7 @@ function driver(): ApplicationDriver {
     status: vi.fn(async () => snapshot),
     export: vi.fn(async () => "exports/run-1.md"),
     queryEvidence: vi.fn(async () => []),
+    recordReviewDecision: vi.fn(async () => undefined),
   };
 }
 
@@ -71,5 +72,22 @@ describe("application service contract", () => {
 
     await expect(service.status({ root: "   " })).rejects.toThrow("workspace root is required");
     expect(underlying.status).not.toHaveBeenCalled();
+  });
+
+  it("forwards desktop review decisions through the application boundary", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.recordReviewDecision({
+      root: "workspace",
+      runId: "run-1",
+      kind: "finding",
+      targetId: "finding-1",
+      decision: "accepted",
+    });
+
+    expect(underlying.recordReviewDecision).toHaveBeenCalledWith(
+      expect.objectContaining({ root: "workspace", targetId: "finding-1" }),
+    );
   });
 });

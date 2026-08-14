@@ -55,7 +55,12 @@ import {
   type SqliteStorage,
 } from "@draft-loop/storage";
 import OpenAI from "openai";
-import type { ApplicationDriver, ApplicationIo, WorkspaceDescriptor } from "./index.js";
+import type {
+  ApplicationDriver,
+  ApplicationIo,
+  RecordReviewDecisionCommand,
+  WorkspaceDescriptor,
+} from "./index.js";
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -361,7 +366,6 @@ async function collectSourceFiles(path: string): Promise<readonly string[]> {
 interface PreparedInputs {
   readonly context: ContextSnapshot;
   readonly sources: readonly NormalizedSource[];
-  readonly sourceMaterial: JsonObject;
 }
 
 function requirementLines(jobDescription: string): readonly string[] {
@@ -428,18 +432,7 @@ async function prepareInputs(root: string, config: WorkspaceConfig): Promise<Pre
     })),
     modelConfiguration: modelConfiguration(config),
   });
-  const sourceMaterial = asJsonObject({
-    sources: ingestion.sources.map((source) => ({
-      path: source.source.path,
-      mediaType: source.mediaType,
-      checksum: source.checksum,
-      chunks: source.chunks.map((chunk) => ({
-        locator: chunk.locator,
-        text: chunk.text,
-      })),
-    })),
-  });
-  return { context, sources: ingestion.sources, sourceMaterial };
+  return { context, sources: ingestion.sources };
 }
 
 function modelConfiguration(config: WorkspaceConfig): ModelConfigurationInput {
@@ -800,7 +793,6 @@ function parseCritique(value: JsonObject): Critique {
 function providerAgents(
   config: WorkspaceConfig,
   context: ContextSnapshot,
-  sourceMaterial: JsonObject,
   allowProviderData: boolean,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   if (!allowProviderData) {
@@ -856,7 +848,14 @@ function providerAgents(
     requestedRetention: "ephemeral-request" as const,
   };
   const author = {
-    execute: async ({ executionId, runId, round, currentArtifact, findings }) => {
+    execute: async ({
+      executionId,
+      runId,
+      round,
+      currentArtifact,
+      findings,
+      retrievedEvidence = [],
+    }) => {
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.author,
@@ -867,7 +866,7 @@ function providerAgents(
           runId,
           round,
           context,
-          sourceMaterial,
+          retrievedEvidence,
           currentArtifact,
           findings,
         }),
@@ -880,7 +879,14 @@ function providerAgents(
     },
   } satisfies AuthorAgent;
   const critic = {
-    execute: async ({ executionId, runId, round, artifact, deterministicFindings }) => {
+    execute: async ({
+      executionId,
+      runId,
+      round,
+      artifact,
+      deterministicFindings,
+      retrievedEvidence = [],
+    }) => {
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.critic,
@@ -891,7 +897,7 @@ function providerAgents(
           runId,
           round,
           context,
-          sourceMaterial,
+          retrievedEvidence,
           artifact,
           deterministicFindings,
         }),
@@ -925,20 +931,20 @@ function engine(
   storage: SqliteStorage,
   config: WorkspaceConfig,
   context: ContextSnapshot,
-  sourceMaterial: JsonObject | null,
   allowProviderData: boolean,
   needsAgents: boolean,
 ): OrchestrationEngine {
   const agents = needsAgents
     ? config.fixtureMode
       ? fixtureAgents(config, context)
-      : providerAgents(config, context, sourceMaterial ?? {}, allowProviderData)
+      : providerAgents(config, context, allowProviderData)
     : noopAgents();
   const store = createStorageRunStore(storage);
   return createOrchestrationEngine({
     author: agents.author,
     critic: agents.critic,
     store,
+    retrieval: storage,
     contextResolver: async (contextSnapshotId) => {
       const record = await storage.getContextSnapshot(contextSnapshotId);
       return record === undefined
@@ -1110,19 +1116,6 @@ async function contextForRun(storage: SqliteStorage, runId: string): Promise<Con
   return contextSnapshotSchema.parse(contextRecord.payload) as unknown as ContextSnapshot;
 }
 
-async function sourceMaterialForRun(root: string, config: WorkspaceConfig): Promise<JsonObject> {
-  const files = await collectSourceFiles(pathFromWorkspace(root, config.sourceDirectory));
-  const ingestion = await ingestSources(files.map((path) => ({ path })));
-  return asJsonObject({
-    sources: ingestion.sources.map((source) => ({
-      path: source.source.path,
-      mediaType: source.mediaType,
-      checksum: source.checksum,
-      chunks: source.chunks.map((chunk) => ({ locator: chunk.locator, text: chunk.text })),
-    })),
-  });
-}
-
 export async function startRun(
   rootInput: string,
   options: { readonly allowProviderData?: boolean } = {},
@@ -1141,7 +1134,6 @@ export async function startRun(
       storage,
       config,
       inputs.context,
-      inputs.sourceMaterial,
       options.allowProviderData === true,
       true,
     );
@@ -1173,15 +1165,7 @@ export async function resumeRun(
   const storage = await openStorage(root);
   try {
     const context = await contextForRun(storage, runId);
-    const sourceMaterial = await sourceMaterialForRun(root, config);
-    const runEngine = engine(
-      storage,
-      config,
-      context,
-      sourceMaterial,
-      options.allowProviderData === true,
-      true,
-    );
+    const runEngine = engine(storage, config, context, options.allowProviderData === true, true);
     preflight(config, io, budget(config));
     const snapshot = await runEngine.resume(runId, { context, budget: budget(config) });
     await saveTypedHistory(storage, config, snapshot);
@@ -1208,7 +1192,7 @@ export async function lifecycleRun(
   const storage = await openStorage(root);
   try {
     const context = await contextForRun(storage, runId);
-    const runEngine = engine(storage, config, context, null, false, false);
+    const runEngine = engine(storage, config, context, false, false);
     const snapshot =
       action === "pause"
         ? await runEngine.pause(runId)
@@ -1237,6 +1221,79 @@ export async function lifecycleRun(
     outputEvents(await runEngine.events(runId), io);
     outputSnapshot(snapshot, io);
     return snapshot;
+  } finally {
+    await storage.close();
+  }
+}
+
+function findingDecisionType(
+  decision: Extract<RecordReviewDecisionCommand, { readonly kind: "finding" }>["decision"],
+): "accept-finding" | "reject-finding" | "edit" {
+  switch (decision) {
+    case "accepted":
+      return "accept-finding";
+    case "rejected":
+      return "reject-finding";
+    case "deferred":
+      return "edit";
+    case "overridden":
+      return "reject-finding";
+    case "pending":
+      return "edit";
+  }
+}
+
+export async function recordReviewDecision(command: RecordReviewDecisionCommand): Promise<void> {
+  const root = resolve(command.root);
+  const config = await readWorkspace(root);
+  if (command.runId.trim() === "" || command.targetId.trim() === "") {
+    throw new CliUserError("Review decisions require a run and target identifier.");
+  }
+  const storage = await openStorage(root);
+  try {
+    const snapshot = await createStorageRunStore(storage).loadRun(command.runId);
+    if (snapshot === undefined) throw new CliUserError(`Run ${command.runId} was not found.`);
+    if (snapshot.workspaceId !== config.id) {
+      throw new CliUserError("The review decision does not belong to this workspace.");
+    }
+    if (command.kind === "finding" && !command.targetId.startsWith(`${command.runId}:finding:`)) {
+      throw new CliUserError("The review finding identifier is invalid for this run.");
+    }
+    if (
+      command.kind === "edit" &&
+      !snapshot.artifact?.sections.some((section) =>
+        section.blocks.some((block) => block.id === command.targetId),
+      )
+    ) {
+      throw new CliUserError("The edited block does not exist in the current artifact.");
+    }
+    const createdAt = timestamp();
+    await storage.saveDecision({
+      id: `decision-${command.runId}-${randomUUID()}`,
+      workspaceId: config.id,
+      runId: command.runId,
+      roundId: `${command.runId}:round:${snapshot.round}`,
+      artifactId: snapshot.artifact?.id ?? null,
+      type: command.kind === "edit" ? "edit" : findingDecisionType(command.decision),
+      rationale:
+        command.kind === "edit"
+          ? "Candidate edited an artifact block in the desktop review."
+          : (command.rationale ?? `Candidate marked the finding as ${command.decision}.`),
+      actor: "user:desktop",
+      createdAt,
+      payload:
+        command.kind === "edit"
+          ? {
+              action: "edit-block",
+              blockId: command.targetId,
+              replacementText: command.replacementText,
+            }
+          : {
+              action: "finding-decision",
+              findingId: command.targetId,
+              decision: command.decision,
+            },
+    });
   } finally {
     await storage.close();
   }
@@ -1286,7 +1343,7 @@ export async function exportRun(
     const runStore = createStorageRunStore(storage);
     const snapshot = await runStore.loadRun(runId);
     if (snapshot === undefined) throw new CliUserError(`Run ${runId} was not found.`);
-    if (snapshot.state !== "approved") {
+    if (snapshot.state !== "approved" && snapshot.state !== "exported") {
       throw new CliUserError("Only an approved run can be exported. Review and approve it first.");
     }
     if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
@@ -1325,6 +1382,11 @@ export async function exportRun(
         mimeType: rendered.mimeType,
       },
     });
+    const transitionEngine = createOrchestrationEngine({
+      ...noopAgents(),
+      store: runStore,
+    });
+    await transitionEngine.markExported(runId);
     io.write(
       `Exported approved artifact v${rendered.metadata.artifactVersion} as ${format} to ${outputPath} (sha256 ${outputChecksum})`,
     );
@@ -1409,6 +1471,7 @@ export function createLocalApplicationDriver(): ApplicationDriver {
         command.limit === undefined ? undefined : { limit: command.limit },
         io,
       ),
+    recordReviewDecision: async (command) => recordReviewDecision(command),
   };
 }
 

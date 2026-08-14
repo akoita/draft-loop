@@ -74,9 +74,20 @@ export const evidenceSourceSchema = z.object({
   path: nonEmptyString,
   mediaType: nonEmptyString,
   checksum: checksumSchema,
+  profileId: nonEmptyString.optional(),
 });
 
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
+
+export const candidateProfileSchema = z.object({
+  id: nonEmptyString,
+  name: nonEmptyString,
+  description: z.string().default(""),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+});
+
+export type CandidateProfile = z.infer<typeof candidateProfileSchema>;
 
 export const outputConstraintsSchema = z.object({
   format: z.enum(outputFormats).default("markdown"),
@@ -178,6 +189,7 @@ const contextSnapshotShape = z.object({
   readinessRubric: readinessRubricSchema,
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,
+  profileId: nonEmptyString.optional(),
 });
 
 export const contextSnapshotSchema = contextSnapshotShape.superRefine((snapshot, context) => {
@@ -217,6 +229,7 @@ const contextSnapshotInputShape = z.object({
   readinessRubric: readinessRubricSchema,
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,
+  profileId: nonEmptyString.optional(),
 });
 
 export const contextSnapshotInputSchema = contextSnapshotInputShape.superRefine(

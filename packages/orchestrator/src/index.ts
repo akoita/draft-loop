@@ -150,6 +150,7 @@ export type RunEventType =
   | "user.paused"
   | "user.stopped"
   | "user.approved"
+  | "user.exported"
   | "user.revision-requested";
 
 export interface RunEventInput {
@@ -202,6 +203,7 @@ export interface OrchestrationEngine {
   readonly pause: (runId: string) => Promise<RunSnapshot>;
   readonly stop: (runId: string) => Promise<RunSnapshot>;
   readonly approve: (runId: string) => Promise<RunSnapshot>;
+  readonly markExported: (runId: string) => Promise<RunSnapshot>;
   readonly requestRevision: (runId: string) => Promise<RunSnapshot>;
   readonly events: (runId: string) => Promise<readonly RunEvent[]>;
 }
@@ -973,6 +975,22 @@ export function createOrchestrationEngine(
     return updated;
   };
 
+  const markExported = async (runId: string): Promise<RunSnapshot> => {
+    const snapshot = await loadForAction(runId);
+    if (snapshot.state === "exported") return snapshot;
+    if (snapshot.state !== "approved")
+      throw new Error("Only an approved run can be marked as exported.");
+    const updated = {
+      ...snapshot,
+      state: "exported" as const,
+      currentStep: null,
+      updatedAt: clock(),
+    };
+    await saveAndEmit(updated, "user.exported");
+    await emit(updated, "state.changed", { to: "exported" });
+    return updated;
+  };
+
   const requestRevision = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
@@ -992,7 +1010,7 @@ export function createOrchestrationEngine(
 
   const events = (runId: string): Promise<readonly RunEvent[]> => options.store.listEvents(runId);
 
-  return { start, run: start, resume, pause, stop, approve, requestRevision, events };
+  return { start, run: start, resume, pause, stop, approve, markExported, requestRevision, events };
 }
 
 export interface OrchestrationPort {

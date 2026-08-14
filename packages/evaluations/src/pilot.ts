@@ -31,6 +31,8 @@ export interface PilotVariantSummary {
   readonly averageEditCount: number | null;
 }
 
+export type PilotHypothesisResult = "pass" | "fail" | "indeterminate";
+
 export interface PilotSummaryReport {
   readonly generatedAt: string;
   readonly caseCount: number;
@@ -38,11 +40,11 @@ export interface PilotSummaryReport {
   readonly criticEfficiency: {
     readonly totalUsefulFindings: number;
     readonly totalRejectedFindings: number;
-    readonly usefulFindingRatio: number;
+    readonly usefulFindingRatio: number | null;
   };
   readonly hypothesisValidation: {
-    readonly factualityPreservedOrImproved: boolean;
-    readonly effortReducedComparedToManual: boolean;
+    readonly factualityPreservedOrImproved: PilotHypothesisResult;
+    readonly effortReducedComparedToManual: PilotHypothesisResult;
     readonly recommendations: readonly string[];
   };
   readonly markdownReport: string;
@@ -56,7 +58,7 @@ export function validatePilotConsent(consent: PilotConsentRecord): void {
     !consent.allowAnonymizedBenchmarking
   ) {
     throw new Error(
-      `Pilot case for candidate ${consent.candidateId} lacks full consent and sanitization verification.`,
+      `Pilot case for candidate ${consent.candidateId} lacks full consent and sanitization attestation.`,
     );
   }
 }
@@ -116,7 +118,9 @@ export function generatePilotMarkdownReport(
   lines.push("");
   lines.push(`- **Generated At:** ${report.generatedAt}`);
   lines.push(`- **Consented Cases:** ${report.caseCount}`);
-  lines.push("- **Sanitization & Redaction:** 100% compliant (Zero raw candidate text retained)");
+  lines.push(
+    "- **Sanitization & Redaction:** Attested in consent records for all included cases; not independently verified by this harness",
+  );
   lines.push("");
   lines.push("## Tri-Variant Quality & Effort Comparison");
   lines.push("");
@@ -148,17 +152,17 @@ export function generatePilotMarkdownReport(
   lines.push(`- **Useful Findings:** ${report.criticEfficiency.totalUsefulFindings}`);
   lines.push(`- **Rejected Findings:** ${report.criticEfficiency.totalRejectedFindings}`);
   lines.push(
-    `- **Useful Finding Ratio:** ${(report.criticEfficiency.usefulFindingRatio * 100).toFixed(1)}%`,
+    `- **Useful Finding Ratio:** ${report.criticEfficiency.usefulFindingRatio === null ? "INDETERMINATE (no findings dispositions recorded)" : `${(report.criticEfficiency.usefulFindingRatio * 100).toFixed(1)}%`}`,
   );
 
   lines.push("");
   lines.push("## Hypothesis Validation");
   lines.push("");
   lines.push(
-    `- **Factuality Preserved / Improved:** ${report.hypothesisValidation.factualityPreservedOrImproved ? "PASS" : "FAIL"}`,
+    `- **Factuality Preserved / Improved:** ${report.hypothesisValidation.factualityPreservedOrImproved.toUpperCase()}`,
   );
   lines.push(
-    `- **Effort Reduced vs Manual:** ${report.hypothesisValidation.effortReducedComparedToManual ? "PASS" : "FAIL"}`,
+    `- **Effort Reduced vs Manual:** ${report.hypothesisValidation.effortReducedComparedToManual.toUpperCase()}`,
   );
 
   if (report.hypothesisValidation.recommendations.length > 0) {
@@ -176,6 +180,10 @@ export function runConsentedPilotHarness(
   cases: readonly ConsentedPilotCase[],
   options?: EvaluationHarnessOptions,
 ): PilotSummaryReport {
+  if (cases.length === 0) {
+    throw new Error("A consented pilot requires at least one case.");
+  }
+
   for (const pilotCase of cases) {
     validatePilotConsent(pilotCase.consent);
   }
@@ -197,29 +205,40 @@ export function runConsentedPilotHarness(
     }
   }
   const totalFindings = totalUseful + totalRejected;
-  const usefulFindingRatio = totalFindings > 0 ? totalUseful / totalFindings : 1.0;
+  const usefulFindingRatio = totalFindings > 0 ? totalUseful / totalFindings : null;
 
   const firstAccuracy = variants["first-draft"].averageScores.accuracy;
   const revisedAccuracy = variants["revised-draft"].averageScores.accuracy;
   const firstEvidence = variants["first-draft"].averageScores.evidence;
   const revisedEvidence = variants["revised-draft"].averageScores.evidence;
 
-  const factualityPreservedOrImproved =
-    revisedAccuracy >= firstAccuracy - 0.05 && revisedEvidence >= firstEvidence - 0.05;
+  const factualityPreservedOrImproved: PilotHypothesisResult =
+    revisedAccuracy >= firstAccuracy - 0.05 && revisedEvidence >= firstEvidence - 0.05
+      ? "pass"
+      : "fail";
 
   const manualMinutes = variants["manual-baseline"].averageReviewMinutes;
   const revisedMinutes = variants["revised-draft"].averageReviewMinutes;
-  const effortReducedComparedToManual =
-    manualMinutes !== null && revisedMinutes !== null ? revisedMinutes < manualMinutes : true;
+  const effortMeasurementsComplete = cases.every(
+    (pilotCase) =>
+      pilotCase.userEffort?.["revised-draft"]?.reviewMinutes !== undefined &&
+      pilotCase.userEffort["manual-baseline"]?.reviewMinutes !== undefined,
+  );
+  const effortReducedComparedToManual: PilotHypothesisResult =
+    !effortMeasurementsComplete || manualMinutes === null || revisedMinutes === null
+      ? "indeterminate"
+      : revisedMinutes < manualMinutes
+        ? "pass"
+        : "fail";
 
   const recommendations: string[] = [];
-  if (!factualityPreservedOrImproved) {
+  if (factualityPreservedOrImproved === "fail") {
     recommendations.push("Critic feedback must tighten evidence verification checks.");
   }
-  if (!effortReducedComparedToManual) {
+  if (effortReducedComparedToManual === "fail") {
     recommendations.push("Simplify review diffs to accelerate candidate validation.");
   }
-  if (usefulFindingRatio < 0.7) {
+  if (usefulFindingRatio !== null && usefulFindingRatio < 0.7) {
     recommendations.push(
       "Calibrate critic sensitivity to decrease rejected false-positive findings.",
     );
@@ -232,7 +251,8 @@ export function runConsentedPilotHarness(
     criticEfficiency: {
       totalUsefulFindings: totalUseful,
       totalRejectedFindings: totalRejected,
-      usefulFindingRatio: Number(usefulFindingRatio.toFixed(4)),
+      usefulFindingRatio:
+        usefulFindingRatio === null ? null : Number(usefulFindingRatio.toFixed(4)),
     },
     hypothesisValidation: {
       factualityPreservedOrImproved,
