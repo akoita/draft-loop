@@ -4,6 +4,7 @@ import {
   bridgeCapabilities,
   createCapabilityPort,
   type NativeBridge,
+  safeBridgeError,
   unavailableResult,
   validateBridgeCommand,
 } from "./bridge.js";
@@ -241,6 +242,122 @@ describe("desktop capability bridge", () => {
 
     expect(result).toMatchObject({ ok: false, error: { code: "operation-failed" } });
     expect(JSON.stringify(result)).not.toContain("private candidate");
+  });
+
+  it("preserves only bounded messages from serialized bridge failures", async () => {
+    expect(
+      safeBridgeError(
+        {
+          name: "NativeHostError",
+          code: "not-found",
+          message: "The run has no draft artifact yet.",
+        },
+        "review.dispatch",
+      ),
+    ).toEqual({
+      code: "not-found",
+      message: "The run has no draft artifact yet.",
+      capability: "review.dispatch",
+    });
+    expect(
+      safeBridgeError(
+        { code: "not-found", message: "private candidate content" },
+        "review.dispatch",
+      ),
+    ).toEqual({
+      code: "not-found",
+      message: "The requested desktop resource was not found.",
+      capability: "review.dispatch",
+    });
+
+    const serialized = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: false,
+          error: {
+            code: "permission-denied" as const,
+            message: "The workspace is read-only.",
+            capability: "run.status" as const,
+          },
+        }),
+        ["run.status"],
+      ),
+    );
+    await expect(
+      serialized.execute({ type: "run.status", input: { workspaceId: "workspace-1" } }),
+    ).resolves.toEqual({
+      ok: false,
+      error: {
+        code: "permission-denied",
+        message: "The workspace is read-only.",
+        capability: "run.status",
+      },
+    });
+
+    const thrown = createCapabilityPort(
+      bridge(async () => {
+        throw new Error("private candidate content and secret");
+      }, ["run.status"]),
+    );
+    await expect(
+      thrown.execute({ type: "run.status", input: { workspaceId: "workspace-1" } }),
+    ).resolves.toEqual({
+      ok: false,
+      error: {
+        code: "operation-failed",
+        message: "The desktop operation could not be completed.",
+        capability: "run.status",
+      },
+    });
+
+    for (const message of ["private\ncontent", "x".repeat(501)]) {
+      const invalidSerialized = createCapabilityPort(
+        bridge(
+          async () => ({
+            ok: false,
+            error: { code: "permission-denied" as const, message },
+          }),
+          ["run.status"],
+        ),
+      );
+      await expect(
+        invalidSerialized.execute({ type: "run.status", input: { workspaceId: "workspace-1" } }),
+      ).resolves.toEqual({
+        ok: false,
+        error: {
+          code: "permission-denied",
+          message: "The desktop host denied this operation.",
+          capability: "run.status",
+        },
+      });
+    }
+
+    const mismatchedCapability = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: false,
+          error: {
+            code: "permission-denied" as const,
+            message: "The workspace is read-only.",
+            capability: "workspace.open" as const,
+          },
+        }),
+        ["run.status"],
+      ),
+    );
+    await expect(
+      mismatchedCapability.execute({
+        type: "run.status",
+        input: { workspaceId: "workspace-1" },
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: {
+        code: "permission-denied",
+        message: "The desktop host denied this operation.",
+        capability: "run.status",
+      },
+    });
   });
 
   it("adapts host-backed review load and dispatch into the desktop review port", async () => {

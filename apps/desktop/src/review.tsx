@@ -6,10 +6,12 @@ import {
   type ReviewAction,
   reviewFindingSummary,
 } from "./model.js";
+import type { PendingReviewAction } from "./review-dispatch.js";
 
 interface ReviewWorkspaceProps {
   readonly state: DesktopReviewState;
   readonly onAction: (action: ReviewAction) => void;
+  readonly pendingReviewAction?: PendingReviewAction | null;
   readonly onSelectFiles?: (target: "evidence" | "job-description") => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   readonly errorMessage?: string | null;
@@ -33,6 +35,7 @@ function stateLabel(value: DesktopReviewState["state"]): string {
 export function ReviewWorkspace({
   state,
   onAction,
+  pendingReviewAction,
   onSelectFiles,
   onAddUrl,
   errorMessage,
@@ -590,12 +593,23 @@ export function ReviewWorkspace({
             <button
               className="button button-primary"
               type="button"
-              disabled={!state.setup.ready || !transmissionReady}
+              disabled={
+                !state.setup.ready || !transmissionReady || pendingReviewAction?.action === "start"
+              }
               onClick={() => onAction({ type: "start" })}
             >
-              Start author–critic review
+              {pendingReviewAction?.action === "start"
+                ? "Starting review…"
+                : "Start author–critic review"}
             </button>
           </div>
+          {pendingReviewAction?.action === "start" ? (
+            <p className="pending-action-status" role="status" aria-live="polite">
+              Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
+              {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while the
+              review starts.
+            </p>
+          ) : null}
         </section>
       </main>
     );

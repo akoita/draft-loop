@@ -308,6 +308,9 @@ const errorMessages: Readonly<Record<BridgeErrorCode, string>> = {
   "operation-failed": "The desktop operation could not be completed.",
 };
 
+const bridgeErrorCodes = Object.freeze(Object.keys(errorMessages) as BridgeErrorCode[]);
+const maxBridgeErrorMessageLength = 500;
+
 const fileMediaTypeByExtension: Readonly<Record<SupportedFileExtension, SupportedMediaType>> = {
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ".htm": "text/html",
@@ -681,12 +684,10 @@ export function bridgeError(
   capability?: BridgeCapability,
   customMessage?: string,
 ): BridgeError {
+  const message = bridgeErrorMessage(customMessage);
   return {
     code,
-    message:
-      typeof customMessage === "string" && customMessage.trim().length > 0
-        ? customMessage
-        : errorMessages[code],
+    message: message ?? errorMessages[code],
     ...(capability === undefined ? {} : { capability }),
   };
 }
@@ -700,23 +701,54 @@ export function safeBridgeError(error: unknown, capability?: BridgeCapability): 
     return bridgeError(error.code, capability);
   }
   const customMessage =
-    isRecord(error) && error.name === "NativeHostError" && typeof error.message === "string"
-      ? error.message
+    isRecord(error) && error.name === "NativeHostError"
+      ? bridgeErrorMessage(error.message)
       : undefined;
-  if (isRecord(error) && typeof error.code === "string") {
-    const code = error.code;
-    if (
-      code === "invalid-command" ||
-      code === "invalid-input" ||
-      code === "capability-unavailable" ||
-      code === "permission-denied" ||
-      code === "not-found" ||
-      code === "operation-failed"
-    ) {
-      return bridgeError(code, capability, customMessage);
-    }
+  if (isRecord(error) && isBridgeErrorCode(error.code)) {
+    return bridgeError(error.code, capability, customMessage);
   }
   return bridgeError("operation-failed", capability);
+}
+
+function bridgeErrorMessage(value: unknown): string | undefined {
+  if (
+    typeof value !== "string" ||
+    value.length === 0 ||
+    value.length > maxBridgeErrorMessageLength ||
+    value.trim().length === 0
+  ) {
+    return undefined;
+  }
+  if (
+    [...value].some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint < 0x20 || codePoint === 0x7f || (codePoint >= 0x80 && codePoint <= 0x9f);
+    })
+  ) {
+    return undefined;
+  }
+  return value;
+}
+
+function isBridgeErrorCode(value: unknown): value is BridgeErrorCode {
+  return typeof value === "string" && bridgeErrorCodes.includes(value as BridgeErrorCode);
+}
+
+function safeSerializedBridgeError(error: unknown, capability?: BridgeCapability): BridgeError {
+  if (!isRecord(error) || !hasOnlyKeys(error, ["code", "message", "capability"])) {
+    return safeBridgeError(error, capability);
+  }
+  const message = bridgeErrorMessage(error.message);
+  if (
+    !isBridgeErrorCode(error.code) ||
+    message === undefined ||
+    (error.capability !== undefined &&
+      (!bridgeCapabilities.includes(error.capability as BridgeCapability) ||
+        error.capability !== capability))
+  ) {
+    return safeBridgeError(error, capability);
+  }
+  return bridgeError(error.code, capability, message);
 }
 
 class BridgeValidationError extends Error {
@@ -968,7 +1000,7 @@ function normalizeResponse(
     return { ok: false, error: bridgeError("operation-failed", command.type) };
   }
   if (!response.ok) {
-    return { ok: false, error: safeBridgeError(response.error, command.type) };
+    return { ok: false, error: safeSerializedBridgeError(response.error, command.type) };
   }
   try {
     return { ok: true, value: normalizeSuccess(command.type, response.value) };
