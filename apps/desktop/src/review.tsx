@@ -856,13 +856,7 @@ export function ReviewWorkspace({
                   Resume
                 </button>
               ) : ["drafting", "reviewing", "revising"].includes(state.state) ? (
-                <button
-                  className="button button-quiet"
-                  type="button"
-                  onClick={() => onAction({ type: "pause" })}
-                >
-                  Pause
-                </button>
+                <span className="status-tag">Running</span>
               ) : null}
             </div>
             <ol className="event-list">

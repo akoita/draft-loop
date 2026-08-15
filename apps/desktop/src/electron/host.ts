@@ -799,6 +799,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }),
     );
   let active: ActiveWorkspace | undefined;
+  const backgroundRuns = new Map<string, Promise<void>>();
+
+  function resumeInBackground(workspace: ActiveWorkspace, runId: string): void {
+    const key = `${workspace.descriptor.id}:${runId}`;
+    if (backgroundRuns.has(key)) return;
+    const execution = Promise.resolve()
+      .then(() => service.resume({ root: workspace.root, runId, allowProviderData: true }, io()))
+      .then(() => undefined)
+      .catch((error: unknown) => options.onError?.(error, "review.dispatch"))
+      .finally(() => backgroundRuns.delete(key));
+    backgroundRuns.set(key, execution);
+  }
 
   function workspaceFor(id: string): ActiveWorkspace {
     if (active === undefined || active.descriptor.id !== id) {
@@ -1080,6 +1092,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           : await loadSnapshot(workspace, input.runId);
     let overrides = await readOverrides(workspace.root);
     let exportPath: string | null = null;
+    let dispatchedSnapshot: RunSnapshot | undefined;
     const action: ReviewAction = input.action;
     if (
       currentSnapshot?.state === "provider-error" &&
@@ -1108,10 +1121,15 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         );
         break;
       }
-      case "start":
+      case "start": {
         await requireProviderTransmissionAcknowledgement(workspace);
-        await service.start({ root: workspace.root, allowProviderData: true }, io());
+        dispatchedSnapshot = await service.begin(
+          { root: workspace.root, allowProviderData: true },
+          io(),
+        );
+        resumeInBackground(workspace, dispatchedSnapshot.runId);
         break;
+      }
       case "finding-decision":
         await service.recordReviewDecision({
           root: workspace.root,
@@ -1206,10 +1224,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         );
         break;
     }
-    const snapshot = await service.status({
-      root: workspace.root,
-      ...(input.action.type === "start" || input.runId === "pending" ? {} : { runId: input.runId }),
-    });
+    const snapshot =
+      dispatchedSnapshot ??
+      (await service.status({
+        root: workspace.root,
+        ...(input.action.type === "start" || input.runId === "pending"
+          ? {}
+          : { runId: input.runId }),
+      }));
     const setup = await workspaceReadiness(workspace.descriptor, workspace.root);
     const preflight = await providerTransmissionPreflight(
       workspace.descriptor,

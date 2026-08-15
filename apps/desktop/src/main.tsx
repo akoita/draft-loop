@@ -7,6 +7,13 @@ import { ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import "./styles.css";
 
+const observableRunStates: ReadonlySet<DesktopReviewState["state"]> = new Set([
+  "drafting",
+  "reviewing",
+  "revising",
+]);
+const runRefreshIntervalMs = 750;
+
 export function App({ port }: { readonly port?: DesktopReviewPort }) {
   const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
   const [state, setState] = useState<DesktopReviewState | null>(null);
@@ -17,6 +24,7 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   const [reviewActionDispatcher] = useState(() =>
     createReviewActionDispatcher(setPendingReviewAction),
   );
+  const activeRunState = state?.state;
   const nativeActions = useMemo(
     () => ({
       open: activePort.openWorkspace,
@@ -44,6 +52,36 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
       active = false;
     };
   }, [activePort]);
+
+  useEffect(() => {
+    if (activeRunState === undefined || !observableRunStates.has(activeRunState)) return;
+    let active = true;
+    let loading = false;
+    const refresh = async () => {
+      if (loading) return;
+      loading = true;
+      try {
+        const loaded = await activePort.load();
+        if (active) {
+          setState(loaded);
+          setImportError(null);
+        }
+      } catch (reason: unknown) {
+        if (active) {
+          setImportError(
+            reason instanceof Error ? reason.message : "Review progress could not be refreshed.",
+          );
+        }
+      } finally {
+        loading = false;
+      }
+    };
+    const interval = window.setInterval(() => void refresh(), runRefreshIntervalMs);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [activePort, activeRunState]);
 
   const onAction = (action: ReviewAction) => {
     if (state === null) return;

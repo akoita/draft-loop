@@ -223,6 +223,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Moved desktop provider execution behind an immediate durable run response and active-state refresh for issue #119 | Long provider calls must not hold the initiating IPC request open or leave the installed app looking unresponsive |
 | 2026-08-15 | Added a durable begin-without-execution contract for issue #119 | Desktop progress needs a run identity and persisted initial state before provider work can move outside the initiating IPC request |
 | 2026-08-15 | Added immediate pending-review acknowledgement and bounded serialized bridge-error message preservation for issue #118 | Integration hardening needs duplicate-safe review starts and user-visible recovery without exposing arbitrary thrown error content |
 | 2026-08-15 | Verified the v0.6.0 release candidate from commit `dd933cf81c4161191281108b6f44c3d8cec94f8f` across Linux x64, macOS arm64, and Windows x64; reviewed checksums, SBOM, artifact privacy, smoke results, and package sizes | Issue #105 can close with a reproducible candidate while publication and any Validated or Released claim remain blocked by the consented real-application outcome in issue #104 |

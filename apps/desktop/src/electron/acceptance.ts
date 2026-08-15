@@ -45,6 +45,29 @@ function requireState(actual: string, expected: string, step: string): void {
   }
 }
 
+async function waitForReviewState(
+  host: NativeHost,
+  workspaceId: string,
+  runId: string,
+  expected: string,
+  step: string,
+): Promise<ReviewStateResult> {
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const review = await invoke<ReviewStateResult>(
+      host,
+      { type: "review.load", input: { workspaceId, runId } },
+      `${step} progress`,
+    );
+    if (review.state === expected) return review;
+    if (!["drafting", "reviewing", "revising"].includes(review.state)) {
+      requireState(review.state, expected, step);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`${step} did not reach ${expected} before the acceptance timeout.`);
+}
+
 function workspaceFile(root: string, value: string): string {
   const candidate = resolve(root, value);
   const child = relative(resolve(root), candidate);
@@ -136,7 +159,7 @@ async function prepare(options: PackagedAcceptanceOptions): Promise<void> {
     throw new Error("Provider preflight acknowledgement was not persisted.");
   }
 
-  const started = await invoke<ReviewStateResult>(
+  const beginning = await invoke<ReviewStateResult>(
     options.host,
     {
       type: "review.dispatch",
@@ -144,8 +167,17 @@ async function prepare(options: PackagedAcceptanceOptions): Promise<void> {
     },
     "sanitized author-critic run",
   );
-  requireState(started.state, "awaiting-approval", "sanitized author-critic run");
-  if (started.runId === "pending") throw new Error("Acceptance run did not receive an identifier.");
+  requireState(beginning.state, "drafting", "sanitized author-critic run acknowledgement");
+  if (beginning.runId === "pending") {
+    throw new Error("Acceptance run did not receive an identifier.");
+  }
+  const started = await waitForReviewState(
+    options.host,
+    workspaceId,
+    beginning.runId,
+    "awaiting-approval",
+    "sanitized author-critic run",
+  );
   if (started.artifact.claims.length === 0) {
     throw new Error("Acceptance run did not produce an evidence-backed artifact.");
   }

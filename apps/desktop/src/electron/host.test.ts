@@ -112,6 +112,46 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
 }
 
 describe("native host", () => {
+  it("returns a persisted run before continuing provider execution in the background", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-background-"));
+    let completeResume!: (value: never) => void;
+    const fixture = service(root, {
+      state: "drafting",
+      currentStep: "author",
+      artifact: null,
+      findings: [],
+    });
+    fixture.service.resume.mockImplementationOnce(
+      () => new Promise((resolve) => (completeResume = resolve)),
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const dispatch = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "pending",
+          action: { type: "start" },
+        },
+      });
+
+      expect(dispatch).toMatchObject({
+        ok: true,
+        value: { runId: "run-native", state: "drafting" },
+      });
+      expect(fixture.service.begin).toHaveBeenCalledOnce();
+      expect(fixture.service.start).not.toHaveBeenCalled();
+      await vi.waitFor(() => expect(fixture.service.resume).toHaveBeenCalledOnce());
+    } finally {
+      completeResume?.(fixture.snapshot);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("projects safe provider recovery and enforces retry, return, and stop actions", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-provider-error-"));
     const lastError = {
@@ -349,10 +389,11 @@ describe("native host", () => {
         },
       });
       expect(started).toMatchObject({ ok: true });
-      expect(fixture.service.start).toHaveBeenCalledWith(
+      expect(fixture.service.begin).toHaveBeenCalledWith(
         { root, allowProviderData: true },
         expect.anything(),
       );
+      await vi.waitFor(() => expect(fixture.service.resume).toHaveBeenCalledOnce());
     } finally {
       await rm(root, { recursive: true, force: true });
     }
