@@ -21,6 +21,21 @@ application. Expansion to other application artifacts should follow only after
 this workflow demonstrates better quality or lower user effort on real,
 consented cases.
 
+The reference workflow is approved opportunity URLs and instructions plus a
+persistent local career corpus, followed by an Anthropic first complete draft,
+an independent OpenAI critique, author adjudication and revision, final human
+approval, and professional export. Anthropic as author and OpenAI as critic are
+the default cross-company roles; the architecture keeps provider roles
+configurable while preserving independent review and explicit provider
+identity.
+
+The persistent corpus is a Candidate Knowledge Base (CKB). A candidate normally
+maintains one default CKB across applications, but may create additional
+isolated CKBs and explicitly select one or an approved combination for a run.
+Sources evolve over time; adding, updating, refreshing, or removing career
+material must update normalized facts and retrieval indexes without losing
+provenance.
+
 ## Product principles
 
 - Sources before eloquence: substantive claims remain traceable to user-owned
@@ -29,6 +44,8 @@ consented cases.
 - Local by default: provider transmission is explicit and scoped.
 - Independent review: provider and model identities are visible, and
   cross-company diversity is the default.
+- Durable candidate memory: reusable career material is maintained separately
+  from an individual opportunity and selected explicitly for each application.
 - Measured expansion: new retrieval, providers, and workflows must improve a
   defined outcome rather than only add capability.
 
@@ -68,17 +85,18 @@ Anthropic and OpenAI runs, with explicit provider-policy checks at the provider
 boundary.
 
 Automated tests, offline fixtures, retrieval benchmarks, packaging checks, and
-the packaged Linux smoke workflow provide strong implementation evidence. They
-do not replace cross-platform installed-app acceptance with representative real
-inputs. Windows and macOS real-input results, the complete desktop transmission
-preflight, provider-error recovery, and measured real-application outcomes are
-not yet recorded as validated stage evidence.
+installed-app acceptance on Linux, macOS, and Windows provide strong integration
+evidence. The desktop transmission preflight, provider recovery, credential
+lifecycle, restart behavior, and export path have automated cross-platform
+coverage. They do not replace representative real-input outcome validation; the
+first consented run exposed the quality failure recorded below.
 
 The workspace-scoped SQLite FTS/BM25 baseline is now connected to the local
 orchestration engine, and live provider requests receive retrieved chunks rather
-than the complete ingested candidate corpus. Local vector and hybrid retrieval
-remain evaluation components pending representative comparison and lifecycle
-evidence.
+than the complete ingested candidate corpus. It does not yet provide reusable
+CKB identity, multiple-CKB isolation, continuous source lifecycle, or
+application-level CKB selection. Local vector and hybrid retrieval remain
+evaluation components pending representative comparison and lifecycle evidence.
 
 Several later-stage components also exist: local lexical/vector retrieval,
 provider retry and progress behavior, a consented pilot harness, backup and
@@ -88,11 +106,63 @@ portfolio ingestion. These are component-level implementations or partial
 integrations. They do not establish that the retrieval, pilot, production-beta,
 or controlled-expansion outcomes are complete.
 
+The sanitized first real-application run for issue #104 failed its quality
+baseline: technical export completed, but major CV sections and chronology were
+omitted, seniority changed, and unsupported quantification was introduced. No
+personal CV or opportunity details are recorded here. Export completion is
+therefore not application readiness; the core workflow still needs a complete,
+factual, reviewed result that matches the proven manual baseline.
+
+## Reference workflow and parity target
+
+The private parity baseline is the proven manual workflow using approved
+opportunity URLs and instructions together with a persistent local career
+corpus. For each application, the candidate selects the CKBs the agents may use;
+RAG then recalls the strongest relevant facts and source excerpts. The workflow
+produces a complete factual CV, checks the opportunity requirements, adjudicates
+edits, receives final human approval, and creates a professional export. The
+product target is to automate this sequence while retaining local control,
+source traceability, provider visibility, and the human approval boundary.
+
+The private baseline may contain candidate material that must never enter the
+repository. Repository fixtures, test data, reports, and stage evidence must
+remain sanitized and contain no PII, private CV content, real names, contact
+details, real employers, or private opportunity URLs or instructions.
+
+## Candidate knowledge-base model
+
+A CKB is durable candidate memory, not a per-application upload bucket. It can
+contain previous CVs, career and experience notes, certification references,
+repository and project descriptions, authored work, and candidate-maintained
+facts documents. One default CKB should be sufficient for most candidates;
+additional CKBs support intentional separation, and combining them always
+requires explicit selection.
+
+CKB sources have identity, provenance, versions, checksums, freshness, duplicate
+relationships, and indexing state. Source addition, update, removal, directory
+refresh, retention, deletion, backup, and restore must apply consistently to raw
+material, normalized facts, lexical/vector indexes, and run references. Files
+whose names resemble agent configuration remain untrusted candidate data and
+must never change application instructions, provider policy, or permissions.
+
+RAG is scoped to the CKB IDs and source versions recorded by an application.
+SQLite FTS/BM25 remains the local baseline; local vector or hybrid retrieval is
+enabled only after measured gains in relevant-achievement recall and citation
+accuracy without more unsupported claims. Remote embeddings or vector storage
+require a separate architecture and privacy decision.
+
+Agents may propose bounded internet research when opportunity or candidate
+context is insufficient, but search or fetch requires visible per-research user
+approval. Opportunity research, candidate evidence, and optional public
+corroboration remain distinct source roles. Research cannot create candidate
+experience, contact employers, or submit applications.
+
 ## Roadmap
 
 | Horizon | Stage | Evidence status | Outcome | Remaining gate |
 | --- | --- | --- | --- | --- |
-| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Cross-platform real-input acceptance, desktop provider preflight, recovery evidence, stage release |
+| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Retrieval correction (#132), consented quality rerun (#104), stage release (#106) |
+| Next | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
 | Next | Retrieval and provider quality | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable | Representative quality comparison, deletion/retention proof, integrated cancellation and provider recovery |
 | Next | Real-application pilot | Implemented harness; not outcome-validated | Validate factuality, quality, and user-effort hypotheses | Consented cases, calibrated measures, recorded results and limitations |
 | Later | Production-ready beta | Partial implementation; not production-validated | Distribute a safe, dependable desktop application | Signed installers, safe updates/migrations, platform acceptance, recovery and accessibility evidence |
@@ -125,9 +195,44 @@ targets, at least one consented real application completes without factuality
 regression, provider exposure and recovery are visibly controlled, and an alpha
 release has traceable evidence and known limitations.
 
+### Next — Application-grade CV workflow
+
+Automate the proven private reference workflow before expanding retrieval,
+provider, or application-pilot capability. Issue #143 is the parent for
+milestone v0.7.0 and covers the application-grade path at roadmap level:
+
+- Establish reusable one-or-more Candidate Knowledge Bases and their source
+  lifecycle (#157), then derive the canonical candidate profile from the
+  explicitly selected material (#144).
+- Turn approved opportunity URLs and instructions into an opportunity brief,
+  allow bounded user-approved research, and retrieve from the selected CKBs
+  through measured local-first RAG (#145, #158, #159).
+- Plan requirement-to-achievement coverage and compose a complete CV that
+  preserves facts, required sections, and chronology under an explicit writing
+  policy (#146–#148).
+- Run a structured independent critic, record author adjudication and
+  revision, and enforce a readiness decision before human approval (#149–#151).
+- Produce professional ATS-readable output, measure parity with the private
+  manual baseline, and package the evidence for the v0.7 release (#152–#154).
+
+This ordering is an explicit tradeoff: v0.7 includes only the CKB-scoped,
+measured retrieval and approved research required for workflow parity. Broader
+retrieval/provider optimization and the real-application pilot follow this
+stage. Capability expansion moves later until the core CV workflow demonstrates
+parity with the proven manual process.
+
+**Exit criterion:** One default and optional additional isolated CKBs can be
+maintained and selected without source or retrieval leakage; CKB-scoped RAG and
+approved research support a complete factual CV with a structured independent
+critique, recorded author adjudication and revision, final human approval, and
+professional ATS-readable rendering; measured parity with the private manual
+baseline is demonstrated and v0.7.0 is released with traceable evidence and
+known limitations.
+
 ### Next — Retrieval and provider quality
 
-Improve evidence selection only where measurement shows value.
+Optimize evidence selection and provider behavior only after the v0.7 CKB/RAG
+baseline demonstrates workflow parity.
 
 - Preserve the provider-independent retrieval port and workspace-scoped SQLite
   FTS/BM25 baseline.
@@ -190,19 +295,26 @@ require a separate architecture decision and threat-model update.
 
 ## Explicitly deferred
 
-- A remote vector database before the local retrieval baseline proves value.
+- Remote embeddings or a vector database before the local CKB-scoped retrieval
+  baseline proves value and receives a separate architecture/privacy decision.
 - Cloud sync, accounts, or multi-tenancy during integration hardening.
-- Autonomous job discovery, messaging, publishing, or application submission.
+- Uncontrolled or autonomous web research, job discovery, messaging,
+  publishing, or application submission. Bounded research approved per request
+  remains part of the v0.7 workflow.
 - General availability of additional artifacts before the CV pilot validates
   the core hypothesis.
 
 ## Success measures
 
-The primary product measures are factual accuracy, critical-requirement
-coverage, useful critic findings, review time, manual edits, approval/export
-completion, provider cost, and user confidence. Test count, model count, and
-number of generated documents are health or activity indicators, not product
-success by themselves.
+The primary product measures are factual-invariant violations, required-section
+and chronology preservation, CKB isolation, source/index freshness,
+relevant-achievement recall, citation accuracy, irrelevant retrieval context,
+job-requirement leakage, research-approval compliance, writing-policy
+violations, critical-requirement coverage, useful critic findings, ATS and
+visual readiness, review time, editing effort compared with the private manual
+baseline, approval/export completion, provider cost, and user confidence. Test
+count, model count, and number of generated documents are health or activity
+indicators, not product success by themselves.
 
 ## Stage evidence
 
@@ -230,6 +342,8 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Refined the v0.7 stage with reusable Candidate Knowledge Bases (#157), approved research (#158), and CKB-scoped hybrid RAG (#159) | The proven workflow depends on durable candidate memory that evolves across applications; a per-workspace evidence folder and generic retrieval stage did not explicitly cover one-or-more datasets, continuous updates, safe research, or retrieval isolation |
+| 2026-08-15 | Inserted the Application-grade CV workflow as the next stage for issue #143 and milestone v0.7.0, covering #144–#154 | The sanitized #104 real-run baseline showed that technical export completion is not application readiness, so core workflow parity must precede broader retrieval/provider quality and pilot capability expansion |
 | 2026-08-15 | Reframed candidate claim handling around source traceability rather than objective verification for issue #130 | Private professional experience is commonly not publicly provable; DraftLoop must prevent model invention without pretending to perform recruiter investigations or technical assessment |
 | 2026-08-15 | Hardened the live author boundary and terminal desktop projections for issue #126 | The real-application run exposed that models must propose content while the application owns canonical artifact metadata and evidence resolution, and that failed or stopped runs must not appear completed, validated, or approvable |
 | 2026-08-15 | Extended packaged Linux, macOS, and Windows acceptance with observable execution, interrupted-run recovery, and deterministic in-flight cancellation evidence for issue #119 | The desktop control is only stage evidence when installed artifacts exercise the same background worker and Stop path |
