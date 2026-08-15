@@ -1143,13 +1143,14 @@ async function contextForRun(storage: SqliteStorage, runId: string): Promise<Con
   return contextSnapshotSchema.parse(contextRecord.payload) as unknown as ContextSnapshot;
 }
 
-export async function startRun(
+async function createRun(
   rootInput: string,
   options: {
     readonly allowProviderData?: boolean;
     readonly resolveCredential?: ProviderCredentialResolver;
   } = {},
   io: CliIo = defaultIo,
+  advance = true,
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
   const config = await readWorkspace(root);
@@ -1168,12 +1169,13 @@ export async function startRun(
       true,
       options.resolveCredential ?? environmentCredentialResolver,
     );
-    const snapshot = await runEngine.start({
+    const request = {
       runId,
       workspace: createWorkspace(config.id),
       context: inputs.context,
       budget: runBudget,
-    });
+    };
+    const snapshot = advance ? await runEngine.start(request) : await runEngine.begin(request);
     await saveTypedHistory(storage, config, snapshot);
     await saveWorkspaceConfig(root, { ...config, latestRunId: runId });
     outputEvents(await runEngine.events(runId), io);
@@ -1182,6 +1184,28 @@ export async function startRun(
   } finally {
     await storage.close();
   }
+}
+
+export async function beginRun(
+  rootInput: string,
+  options: {
+    readonly allowProviderData?: boolean;
+    readonly resolveCredential?: ProviderCredentialResolver;
+  } = {},
+  io: CliIo = defaultIo,
+): Promise<RunSnapshot> {
+  return createRun(rootInput, options, io, false);
+}
+
+export async function startRun(
+  rootInput: string,
+  options: {
+    readonly allowProviderData?: boolean;
+    readonly resolveCredential?: ProviderCredentialResolver;
+  } = {},
+  io: CliIo = defaultIo,
+): Promise<RunSnapshot> {
+  return createRun(rootInput, options, io);
 }
 
 export async function resumeRun(
@@ -1500,6 +1524,17 @@ export function createLocalApplicationDriver(options?: {
     initialize: async (command, io) =>
       workspaceDescriptor(resolve(command.root), await initWorkspace(command, io)),
     readWorkspace: async (root) => workspaceDescriptor(resolve(root), await readWorkspace(root)),
+    begin: async (command, io) =>
+      beginRun(
+        command.root,
+        command.allowProviderData === undefined
+          ? credentialOptions
+          : {
+              allowProviderData: command.allowProviderData,
+              ...credentialOptions,
+            },
+        io,
+      ),
     start: async (command, io) =>
       startRun(
         command.root,

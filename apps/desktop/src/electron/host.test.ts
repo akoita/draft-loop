@@ -96,6 +96,7 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
     service: {
       initialize: vi.fn(async () => workspace),
       readWorkspace: vi.fn(async () => workspace),
+      begin: vi.fn(async () => snapshot),
       start: vi.fn(async () => snapshot),
       resume: vi.fn(async () => snapshot),
       lifecycle: vi.fn(async () => snapshot),

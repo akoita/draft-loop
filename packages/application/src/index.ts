@@ -52,6 +52,8 @@ export interface StartRunCommand {
   readonly allowProviderData?: boolean;
 }
 
+export type BeginRunCommand = StartRunCommand;
+
 export interface ResumeRunCommand extends StartRunCommand {
   readonly runId?: string;
 }
@@ -107,6 +109,8 @@ export interface ApplicationDriver {
     io?: ApplicationIo,
   ) => Promise<WorkspaceDescriptor>;
   readonly readWorkspace: (root: string) => Promise<WorkspaceDescriptor>;
+  /** Persist the run and its context without starting provider execution. */
+  readonly begin: (command: BeginRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly start: (command: StartRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly resume: (command: ResumeRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly lifecycle: (command: LifecycleCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
@@ -141,6 +145,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
     initialize: async (command, io) =>
       driver.initialize({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     readWorkspace: async (root) => driver.readWorkspace(requireRoot(root)),
+    begin: async (command, io) =>
+      driver.begin({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     start: async (command, io) =>
       driver.start({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     resume: async (command, io) =>

@@ -214,6 +214,27 @@ function pausedSnapshot(): RunSnapshot {
 }
 
 describe("durable orchestration", () => {
+  it("persists a run identity before invoking either agent", async () => {
+    const { engine, author, critic } = engineFixture();
+
+    const begun = await engine.begin(request());
+
+    expect(begun).toMatchObject({
+      runId: "run-1",
+      state: "drafting",
+      currentStep: "author",
+      artifact: null,
+    });
+    expect(author).not.toHaveBeenCalled();
+    expect(critic).not.toHaveBeenCalled();
+    expect((await engine.events("run-1")).map((event) => event.type)).toEqual(["run.created"]);
+
+    const completed = await engine.resume("run-1", { context: context() });
+    expect(completed.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledOnce();
+    expect(critic).toHaveBeenCalledOnce();
+  });
+
   it("runs author and critic steps, then requires explicit approval", async () => {
     const { engine, author, critic } = engineFixture();
 

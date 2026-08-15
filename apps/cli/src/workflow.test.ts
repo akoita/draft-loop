@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  beginRun,
   type CliIo,
   exportRun,
   initWorkspace,
@@ -47,6 +48,25 @@ afterEach(async () => {
 });
 
 describe("phase-0 CLI workflow", () => {
+  it("persists a run and context before executing the first provider step", async () => {
+    const root = await fixtureWorkspace();
+    await initWorkspace({ root, jobDescription: "job.md", sources: "evidence", fixtureMode: true });
+
+    const begun = await beginRun(root);
+
+    expect(begun).toMatchObject({ state: "drafting", currentStep: "author", artifact: null });
+    expect(await statusRun(root, begun.runId)).toMatchObject({
+      runId: begun.runId,
+      state: "drafting",
+    });
+    const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+    await expect(storage.listExecutions(begun.runId)).resolves.toEqual([]);
+    await storage.close();
+
+    const completed = await resumeRun(root, { runId: begun.runId });
+    expect(completed.state).toBe("awaiting-approval");
+  });
+
   it("runs the offline happy path, records approval, and exports locally", async () => {
     const root = await fixtureWorkspace();
     const messages = io();

@@ -209,6 +209,8 @@ export interface ResumeOptions {
 }
 
 export interface OrchestrationEngine {
+  /** Persist a new run without invoking an author or critic. */
+  readonly begin: (request: OrchestrationRequest) => Promise<RunSnapshot>;
   readonly start: (request: OrchestrationRequest) => Promise<RunSnapshot>;
   readonly resume: (runId: string, options?: ResumeOptions) => Promise<RunSnapshot>;
   readonly pause: (runId: string) => Promise<RunSnapshot>;
@@ -1005,7 +1007,7 @@ export function createOrchestrationEngine(
     return snapshot;
   };
 
-  const start = async (request: OrchestrationRequest): Promise<RunSnapshot> => {
+  const begin = async (request: OrchestrationRequest): Promise<RunSnapshot> => {
     validateOrchestrationRequest(request);
     const budget = validateBudget(request.budget);
     let snapshot = await options.store.loadRun(request.runId);
@@ -1013,6 +1015,11 @@ export function createOrchestrationEngine(
       snapshot = initialSnapshot({ ...request, budget }, clock());
       await saveAndEmit(snapshot, "run.created", { runId: snapshot.runId });
     }
+    return immutable(snapshot);
+  };
+
+  const start = async (request: OrchestrationRequest): Promise<RunSnapshot> => {
+    const snapshot = await begin(request);
     if (
       snapshot.state === "approved" ||
       snapshot.state === "stopped" ||
@@ -1154,6 +1161,7 @@ export function createOrchestrationEngine(
   const events = (runId: string): Promise<readonly RunEvent[]> => options.store.listEvents(runId);
 
   return {
+    begin,
     start,
     run: start,
     resume,

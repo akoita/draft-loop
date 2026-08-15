@@ -223,6 +223,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Added a durable begin-without-execution contract for issue #119 | Desktop progress needs a run identity and persisted initial state before provider work can move outside the initiating IPC request |
 | 2026-08-15 | Added immediate pending-review acknowledgement and bounded serialized bridge-error message preservation for issue #118 | Integration hardening needs duplicate-safe review starts and user-visible recovery without exposing arbitrary thrown error content |
 | 2026-08-15 | Verified the v0.6.0 release candidate from commit `dd933cf81c4161191281108b6f44c3d8cec94f8f` across Linux x64, macOS arm64, and Windows x64; reviewed checksums, SBOM, artifact privacy, smoke results, and package sizes | Issue #105 can close with a reproducible candidate while publication and any Validated or Released claim remain blocked by the consented real-application outcome in issue #104 |
 | 2026-08-15 | Aligned every package manifest to v0.6.0 and corrected release-note traceability to milestone issue #106 for issue #105; publication remains blocked by issue #104 | A reproducible release candidate needs one version source across the monorepo and must link the current stage issue, while a version bump alone cannot satisfy the real-outcome exit criterion |

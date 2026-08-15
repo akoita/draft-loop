@@ -31,6 +31,7 @@ function driver(): ApplicationDriver {
       critic: { company: "openai", model: "critic" },
       fixtureMode: true,
     })),
+    begin: vi.fn(async () => snapshot),
     start: vi.fn(async () => snapshot),
     resume: vi.fn(async () => snapshot),
     lifecycle: vi.fn(async () => snapshot),
@@ -52,6 +53,19 @@ describe("application service contract", () => {
       { root: "workspace" },
       expect.objectContaining({ write: expect.any(Function) }),
     );
+  });
+
+  it("forwards durable run creation without starting provider execution", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.begin({ root: "workspace", allowProviderData: true });
+
+    expect(underlying.begin).toHaveBeenCalledWith(
+      { root: "workspace", allowProviderData: true },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+    expect(underlying.start).not.toHaveBeenCalled();
   });
 
   it("forwards queryEvidence with normalized root", async () => {
