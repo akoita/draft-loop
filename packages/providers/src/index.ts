@@ -97,6 +97,12 @@ export type ProviderErrorCode =
 export interface ProviderErrorMetadata {
   readonly status?: number;
   readonly requestId?: string;
+  readonly diagnostics?: readonly ProviderValidationDiagnostic[];
+}
+
+export interface ProviderValidationDiagnostic {
+  readonly code: string;
+  readonly path: string;
 }
 
 export class ProviderAdapterError extends Error {
@@ -105,6 +111,7 @@ export class ProviderAdapterError extends Error {
   readonly retryable: boolean;
   readonly status: number | null;
   readonly requestId: string | null;
+  readonly diagnostics: readonly ProviderValidationDiagnostic[];
   readonly metadata: ProviderErrorMetadata;
 
   constructor(
@@ -115,6 +122,7 @@ export class ProviderAdapterError extends Error {
       readonly retryable?: boolean;
       readonly status?: number;
       readonly requestId?: string;
+      readonly diagnostics?: readonly ProviderValidationDiagnostic[];
     } = {},
   ) {
     super(message);
@@ -124,9 +132,11 @@ export class ProviderAdapterError extends Error {
     this.retryable = options.retryable ?? isRetryable(code);
     this.status = options.status ?? null;
     this.requestId = options.requestId ?? null;
+    this.diagnostics = options.diagnostics ?? [];
     this.metadata = {
       ...(options.status === undefined ? {} : { status: options.status }),
       ...(options.requestId === undefined ? {} : { requestId: options.requestId }),
+      ...(options.diagnostics === undefined ? {} : { diagnostics: options.diagnostics }),
     };
   }
 }

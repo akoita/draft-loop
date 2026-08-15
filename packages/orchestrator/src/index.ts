@@ -128,6 +128,12 @@ export interface RunError {
   readonly maxAttempts: number;
   readonly retryable: boolean;
   readonly providerRequestId: string | null;
+  readonly diagnostics?: readonly RunErrorDiagnostic[];
+}
+
+export interface RunErrorDiagnostic {
+  readonly code: string;
+  readonly path: string;
 }
 
 export interface RunSnapshot {
@@ -377,6 +383,7 @@ function providerFailure(
           readonly code?: unknown;
           readonly retryable?: unknown;
           readonly requestId?: unknown;
+          readonly diagnostics?: unknown;
         })
       : {};
   const selection =
@@ -388,6 +395,21 @@ function providerFailure(
   const code = providerErrorCodes.has(candidateCode) ? candidateCode : "provider-error";
   const retryable =
     userRetryableProviderErrorCodes.has(code) && attempt < MAX_ORCHESTRATION_ATTEMPTS;
+  const diagnostics = Array.isArray(candidate.diagnostics)
+    ? candidate.diagnostics.slice(0, 8).flatMap((diagnostic): RunErrorDiagnostic[] => {
+        if (typeof diagnostic !== "object" || diagnostic === null) return [];
+        const value = diagnostic as { readonly code?: unknown; readonly path?: unknown };
+        if (
+          typeof value.code !== "string" ||
+          !/^[A-Za-z0-9_-]{1,64}$/u.test(value.code) ||
+          typeof value.path !== "string" ||
+          !/^[A-Za-z0-9_.-]{0,160}$/u.test(value.path)
+        ) {
+          return [];
+        }
+        return [{ code: value.code, path: value.path }];
+      })
+    : [];
   return {
     code,
     message: retryable
@@ -400,6 +422,7 @@ function providerFailure(
     maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
     retryable,
     providerRequestId: safeProviderRequestId(candidate.requestId),
+    diagnostics,
   };
 }
 

@@ -307,6 +307,61 @@ export const artifactDecisionTypes = [
   "approve",
 ] as const;
 
+const authorArtifactClaimProposalSchema = z.strictObject({
+  text: nonEmptyString,
+  substantive: z.boolean(),
+  evidenceChunkIds: z.array(nonEmptyString).superRefine((ids, context) => {
+    const seen = new Set<string>();
+    for (const [index, id] of ids.entries()) {
+      if (seen.has(id)) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "evidence chunk ids must be unique within a claim",
+        });
+      }
+      seen.add(id);
+    }
+  }),
+});
+
+const authorArtifactBlockProposalSchema = z.strictObject({
+  type: z.enum(artifactBlockTypes),
+  text: nonEmptyString,
+  claims: z.array(authorArtifactClaimProposalSchema),
+});
+
+const authorArtifactSectionProposalSchema = z.strictObject({
+  title: nonEmptyString,
+  kind: z.enum(artifactSectionKinds),
+  blocks: z.array(authorArtifactBlockProposalSchema).min(1),
+});
+
+/**
+ * The provider-facing author contract contains content and local evidence
+ * references only. Canonical artifact metadata is assigned by the
+ * application after this proposal has been validated.
+ */
+export const authorArtifactProposalSchema = z.strictObject({
+  sections: z.array(authorArtifactSectionProposalSchema).min(1),
+});
+
+export type AuthorArtifactProposal = z.infer<typeof authorArtifactProposalSchema>;
+
+/**
+ * Keep provider JSON schemas derived from the same Zod contract. The draft-07
+ * form is accepted by both live adapters; the provider boundary does not need
+ * the informational `$schema` property.
+ */
+const authorArtifactProposalJsonSchemaWithMeta = z.toJSONSchema(authorArtifactProposalSchema, {
+  target: "draft-7",
+});
+
+const { $schema: _authorArtifactProposalSchemaMetadata, ...authorArtifactProposalJsonSchemaValue } =
+  authorArtifactProposalJsonSchemaWithMeta;
+
+export const authorArtifactProposalJsonSchema = authorArtifactProposalJsonSchemaValue;
+
 const uniqueStrings = (values: readonly string[]): boolean =>
   new Set(values).size === values.length;
 

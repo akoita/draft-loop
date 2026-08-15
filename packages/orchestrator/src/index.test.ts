@@ -318,8 +318,15 @@ describe("durable orchestration", () => {
       author: async () => {
         attempts += 1;
         if (attempts === 1) {
-          const error = new Error("temporary provider failure") as Error & { code: string };
+          const error = new Error("temporary provider failure") as Error & {
+            code: string;
+            diagnostics: readonly { code: string; path: string }[];
+          };
           error.code = "timeout";
+          error.diagnostics = [
+            { code: "invalid_type", path: "sections.0.blocks" },
+            { code: "unsafe", path: "candidate secret text!" },
+          ];
           throw error;
         }
         return execution(artifact(), "anthropic", "author-test");
@@ -345,6 +352,7 @@ describe("durable orchestration", () => {
       attempt: 1,
       maxAttempts: 3,
       retryable: true,
+      diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
     });
 
     const resumed = await engine.resume("run-1", { context: context() });
