@@ -113,6 +113,10 @@ personal CV or opportunity details are recorded here. Export completion is
 therefore not application readiness; the core workflow still needs a complete,
 factual, reviewed result that matches the proven manual baseline.
 
+The current hardening sequence adds a fail-closed PDF extraction quality gate
+(#168), followed by the independent-critique approval/export gate (#169), before
+the consented quality rerun (#104) and stage release (#106).
+
 ## Reference workflow and parity target
 
 The private parity baseline is the proven manual workflow using approved
@@ -161,7 +165,7 @@ experience, contact employers, or submit applications.
 
 | Horizon | Stage | Evidence status | Outcome | Remaining gate |
 | --- | --- | --- | --- | --- |
-| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Retrieval correction (#132), consented quality rerun (#104), stage release (#106) |
+| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Retrieval correction (#132), PDF extraction quality gate (#168), independent-critique approval/export gate (#169), consented quality rerun (#104), stage release (#106) |
 | Next | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
 | Next | Retrieval and provider quality | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable | Representative quality comparison, deletion/retention proof, integrated cancellation and provider recovery |
 | Next | Real-application pilot | Implemented harness; not outcome-validated | Validate factuality, quality, and user-effort hypotheses | Consented cases, calibrated measures, recorded results and limitations |
@@ -342,6 +346,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Added PDF extraction quality hardening (#168) and placed the independent-critique approval/export gate (#169) before the consented quality rerun (#104) and stage release (#106) | The first real-application failure requires unreliable extracted text to be rejected before indexing or provider exposure, with the remaining quality gates sequenced before outcome validation and release |
 | 2026-08-15 | Refined the v0.7 stage with reusable Candidate Knowledge Bases (#157), approved research (#158), and CKB-scoped hybrid RAG (#159) | The proven workflow depends on durable candidate memory that evolves across applications; a per-workspace evidence folder and generic retrieval stage did not explicitly cover one-or-more datasets, continuous updates, safe research, or retrieval isolation |
 | 2026-08-15 | Inserted the Application-grade CV workflow as the next stage for issue #143 and milestone v0.7.0, covering #144–#154 | The sanitized #104 real-run baseline showed that technical export completion is not application readiness, so core workflow parity must precede broader retrieval/provider quality and pilot capability expansion |
 | 2026-08-15 | Reframed candidate claim handling around source traceability rather than objective verification for issue #130 | Private professional experience is commonly not publicly provable; DraftLoop must prevent model invention without pretending to perform recruiter investigations or technical assessment |

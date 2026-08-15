@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
-import { dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
+import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
 
 import Anthropic from "@anthropic-ai/sdk";
 import {
@@ -115,10 +115,31 @@ export interface PilotReport {
   readonly nextDecision: string;
 }
 
+function safeSourceBasename(sourcePath: string): string {
+  const name = [...basename(sourcePath)]
+    .filter((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return codePoint > 0x1f && (codePoint < 0x7f || codePoint > 0x9f);
+    })
+    .join("")
+    .replace(/["\\]/gu, "")
+    .trim();
+  return name.length > 0 ? name.slice(0, 120) : "selected source";
+}
+
 export class CliUserError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "CliUserError";
+  }
+}
+
+export class SourceIngestionUserError extends CliUserError {
+  constructor(sourcePath: string) {
+    super(
+      `The source file "${safeSourceBasename(sourcePath)}" could not be used. Try another supported text-bearing file or export.`,
+    );
+    this.name = "SourceIngestionUserError";
   }
 }
 
@@ -396,9 +417,14 @@ async function prepareInputs(root: string, config: WorkspaceConfig): Promise<Pre
     throw new CliUserError("No supported local source files were found in the source directory.");
   }
   const ingestion = await ingestSources(files.map((path) => ({ path })));
-  if (ingestion.sources.length === 0) {
-    throw new CliUserError(
-      "Local sources could not be ingested. Check file formats and permissions.",
+  const sourceWithNoChunks = ingestion.sources.find((source) => source.chunks.length === 0);
+  if (
+    ingestion.issues.length > 0 ||
+    ingestion.sources.length === 0 ||
+    sourceWithNoChunks !== undefined
+  ) {
+    throw new SourceIngestionUserError(
+      ingestion.issues[0]?.sourcePath ?? sourceWithNoChunks?.source.path ?? files[0] ?? "source",
     );
   }
   const requirements = requirementLines(jobDescription).map((text, index) => ({

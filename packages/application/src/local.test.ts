@@ -1,13 +1,42 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it } from "vitest";
 
-import { createLocalApplicationDriver } from "./local.js";
+import { createLocalApplicationDriver, SourceIngestionUserError } from "./local.js";
 
 describe("local application driver", () => {
+  it("fails closed before indexing when PDF extraction is unreliable", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-invalid-pdf-"));
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+      await writeFile(
+        join(root, "evidence", "resume.pdf"),
+        "%PDF-1.4\n1 0 obj\n<< /Length 64 >>\nstream\nBT\n(Caf\\303\\251) Tj\nET\nendstream\nendobj\n%%EOF",
+        "utf8",
+      );
+      const driver = createLocalApplicationDriver();
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        { write: () => undefined },
+      );
+
+      const start = driver.start({ root, allowProviderData: false }, { write: () => undefined });
+      await expect(start).rejects.toBeInstanceOf(SourceIngestionUserError);
+      await expect(start).rejects.toMatchObject({
+        name: "SourceIngestionUserError",
+        message:
+          'The source file "resume.pdf" could not be used. Try another supported text-bearing file or export.',
+      });
+      await expect(stat(join(root, ".draft-loop", "history.sqlite"))).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("uses the low-cost cross-provider validation pair for new workspaces", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-default-models-"));
     try {

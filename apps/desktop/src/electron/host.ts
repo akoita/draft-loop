@@ -7,6 +7,7 @@ import {
   type ApplicationService,
   createApplicationService,
   createLocalApplicationDriver,
+  SourceIngestionUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import {
@@ -1598,7 +1599,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }
     } catch (error) {
       options.onError?.(error, command.type);
-      return { ok: false, error: safeBridgeError(error, command.type) };
+      const hostError =
+        error instanceof SourceIngestionUserError
+          ? new NativeHostError("operation-failed", error.message)
+          : error;
+      return { ok: false, error: safeBridgeError(hostError, command.type) };
     }
   }
 

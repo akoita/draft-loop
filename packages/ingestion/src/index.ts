@@ -115,7 +115,8 @@ export type IngestionIssueCode =
   | "response-too-large"
   | "fetch-failure"
   | "unsupported-content-type"
-  | "extracted-content-too-large";
+  | "extracted-content-too-large"
+  | "extracted-content-invalid";
 
 export interface IngestionIssue {
   readonly code: IngestionIssueCode;
@@ -315,6 +316,32 @@ function normalizeText(text: string): string {
     .replace(/\r\n?/g, "\n")
     .replace(/[ \t]+$/gm, "")
     .trimEnd();
+}
+
+function hasInvalidPdfExtractedText(text: string): boolean {
+  for (let index = 0; index < text.length; index += 1) {
+    const codeUnit = text.charCodeAt(index);
+    if (codeUnit >= 0xd800 && codeUnit <= 0xdbff) {
+      const nextCodeUnit = text.charCodeAt(index + 1);
+      if (nextCodeUnit < 0xdc00 || nextCodeUnit > 0xdfff) return true;
+      index += 1;
+      continue;
+    }
+    if (codeUnit >= 0xdc00 && codeUnit <= 0xdfff) return true;
+    if (codeUnit === 0xfffd) return true;
+    if (
+      (codeUnit <= 0x1f && ![0x09, 0x0a, 0x0b, 0x0c, 0x0d].includes(codeUnit)) ||
+      (codeUnit >= 0x7f && codeUnit <= 0x9f)
+    ) {
+      return true;
+    }
+  }
+
+  // These are high-confidence signatures of UTF-8 bytes decoded as Latin-1.
+  // The narrower patterns avoid rejecting legitimate accented or multilingual text.
+  return /(?:Ã[\u0080-\u00bf]|Â[\u0080-\u00bf]|â[\u0080-\u00bf]{2}|ð[\u0080-\u00bf]{3}|ï»¿|ï¿½)/u.test(
+    text,
+  );
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -1312,6 +1339,16 @@ async function normalizeIngestedBytes(
   const extracted = await extractSource(source, mediaType, bytes, sourceChecksum, options);
   const issues = [...extracted.issues];
   let text = extracted.text;
+  if (mediaType === "application/pdf" && text.length > 0 && hasInvalidPdfExtractedText(text)) {
+    text = "";
+    issues.push(
+      issue(
+        "extracted-content-invalid",
+        source.path,
+        "The PDF text extraction produced unreliable text.",
+      ),
+    );
+  }
   if (maxTextCharacters !== undefined && text.length > maxTextCharacters) {
     text = "";
     issues.push(
@@ -1819,7 +1856,11 @@ export async function ingestSources(
 ): Promise<IngestionBatchResult> {
   const results = await Promise.all(sources.map((source) => ingestFile(source, options)));
   return {
-    sources: results.flatMap((result) => (result.source === null ? [] : [result.source])),
+    sources: results.flatMap((result) =>
+      result.source !== null && result.issues.length === 0 && result.source.chunks.length > 0
+        ? [result.source]
+        : [],
+    ),
     issues: results.flatMap((result) => result.issues),
   };
 }

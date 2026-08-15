@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type ApplicationService,
+  CliUserError,
   createLocalApplicationDriver,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
@@ -33,6 +34,10 @@ function descriptor(root: string): WorkspaceDescriptor {
     critic: { company: "openai", model: "gpt-5" },
     fixtureMode: true,
   };
+}
+
+function pdfWithLiteral(literal: string): string {
+  return `%PDF-1.4\n1 0 obj\n<< /Length 64 >>\nstream\nBT\n(${literal}) Tj\nET\nendstream\nendobj\n%%EOF`;
 }
 
 function service(root: string, snapshotOverrides: Readonly<Record<string, unknown>> = {}) {
@@ -124,6 +129,78 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
 }
 
 describe("native host", () => {
+  it("returns actionable content-free guidance when a bad PDF blocks a run", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-invalid-pdf-"));
+    const root = join(parent, "invalid-pdf-workspace");
+    const dialogs: NativeHostDialogs = {
+      chooseDirectory: async () => parent,
+      chooseFiles: async () => [],
+    };
+    try {
+      const host = createNativeHost({ dialogs });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "invalid-pdf-workspace", mode: "real" },
+      });
+      const workspaceId = (
+        created as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+      await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+      await writeFile(
+        join(root, "evidence", "resume.pdf"),
+        pdfWithLiteral("Caf\\303\\251"),
+        "utf8",
+      );
+
+      const started = await host.invoke({ type: "run.start", input: { workspaceId } });
+
+      expect(started).toMatchObject({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          capability: "run.start",
+          message:
+            'The source file "resume.pdf" could not be used. Try another supported text-bearing file or export.',
+        },
+      });
+      expect(JSON.stringify(started)).not.toContain("Caf");
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps other application user errors behind the generic bridge boundary", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-user-error-"));
+    const fixture = service(root);
+    const privateMessage = `Workspace data was missing at ${join(root, "private-source.md")}.`;
+    fixture.service.start.mockRejectedValueOnce(new CliUserError(privateMessage));
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const started = await host.invoke({
+        type: "run.start",
+        input: { workspaceId: "workspace-native" },
+      });
+
+      expect(started).toEqual({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          capability: "run.start",
+          message: "The desktop operation could not be completed.",
+        },
+      });
+      expect(JSON.stringify(started)).not.toContain(privateMessage);
+      expect(JSON.stringify(started)).not.toContain(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("projects retrieval selection counts and fallback readiness", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-retrieval-readiness-"));
     const fixture = service(root);

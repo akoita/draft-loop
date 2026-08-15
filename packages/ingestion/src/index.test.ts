@@ -16,6 +16,10 @@ async function fixture(name: string, content: string | Uint8Array): Promise<stri
   return path;
 }
 
+function pdfWithLiteral(literal: string): string {
+  return `%PDF-1.4\n1 0 obj\n<< /Length 64 >>\nstream\nBT\n/F1 10 Tf\n(${literal}) Tj\nET\nendstream\nendobj\n%%EOF`;
+}
+
 function littleEndian(value: number, length: number): Uint8Array {
   const result = new Uint8Array(length);
   let remaining = value >>> 0;
@@ -184,6 +188,16 @@ describe("local source ingestion", () => {
     expect(docxResult.source?.chunks[0]?.locator).toEqual({ lineStart: 1, lineEnd: 2 });
   });
 
+  it("accepts legitimate accented Unicode from PDF extraction", async () => {
+    const pdfPath = await fixture("accented.pdf", pdfWithLiteral("R\\351sum\\351 and caf\\351"));
+
+    const result = await ingestFile({ path: pdfPath });
+
+    expect(result.issues).toEqual([]);
+    expect(result.source?.text).toBe("Résumé and café");
+    expect(result.source?.chunks).toHaveLength(1);
+  });
+
   it("extracts text from PDF with ToUnicode CMap and hex string text operators", async () => {
     const cmapStream = `1 0 obj\n<< /Length 200 >>\nstream\n/CIDInit /ProcSet findresource begin 12 dict begin begincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n1 begincodespacerange <0000> <FFFF> endcodespacerange\n2 beginbfchar\n<0001> <004A>\n<0002> <0062>\nendbfchar\n1 beginbfrange\n<0003> <0004> <006F>\nendbfrange\nendcmap\nendstream\nendobj`;
     const textStream = `2 0 obj\n<< /Length 100 >>\nstream\nBT\n/F1 12 Tf\n<000100030002> Tj\n[ <0001> 10 <00030002> ] TJ\nET\nendstream\nendobj`;
@@ -201,6 +215,35 @@ describe("local source ingestion", () => {
     const result = await ingestFile({ path: pdfPath });
     expect(result.issues).toEqual([]);
     expect(result.source?.text).toContain("Valid Senior Engineer text");
+  });
+
+  it("rejects PDF extraction containing C0 or C1 controls before chunking", async () => {
+    const c0Path = await fixture("control.pdf", pdfWithLiteral("Reliable\\001text"));
+    const c1Path = await fixture("c1.pdf", pdfWithLiteral("Reliable\\200text"));
+
+    for (const path of [c0Path, c1Path]) {
+      const result = await ingestFile({ path });
+
+      expect(result.issues).toMatchObject([{ code: "extracted-content-invalid" }]);
+      expect(result.source?.text).toBe("");
+      expect(result.source?.chunks).toEqual([]);
+      const batch = await ingestSources([{ path }]);
+      expect(batch.sources).toEqual([]);
+      expect(batch.issues).toMatchObject([{ code: "extracted-content-invalid" }]);
+    }
+  });
+
+  it("rejects high-confidence UTF-8-as-Latin-1 PDF mojibake before chunking", async () => {
+    const path = await fixture("mojibake.pdf", pdfWithLiteral("Caf\\303\\251"));
+
+    const result = await ingestFile({ path });
+
+    expect(result.issues).toMatchObject([{ code: "extracted-content-invalid" }]);
+    expect(result.source?.text).toBe("");
+    expect(result.source?.chunks).toEqual([]);
+    expect(result.issues[0]?.message).not.toContain("Caf");
+    const batch = await ingestSources([{ path }]);
+    expect(batch.sources).toEqual([]);
   });
 
   it("reports malformed binary formats without decoding them as text", async () => {
