@@ -7,11 +7,6 @@ import { ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import "./styles.css";
 
-const observableRunStates: ReadonlySet<DesktopReviewState["state"]> = new Set([
-  "drafting",
-  "reviewing",
-  "revising",
-]);
 const runRefreshIntervalMs = 750;
 
 export function App({ port }: { readonly port?: DesktopReviewPort }) {
@@ -24,7 +19,7 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   const [reviewActionDispatcher] = useState(() =>
     createReviewActionDispatcher(setPendingReviewAction),
   );
-  const activeRunState = state?.state;
+  const activeExecutionStatus = state?.execution.status;
   const nativeActions = useMemo(
     () => ({
       open: activePort.openWorkspace,
@@ -54,7 +49,7 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   }, [activePort]);
 
   useEffect(() => {
-    if (activeRunState === undefined || !observableRunStates.has(activeRunState)) return;
+    if (activeExecutionStatus !== "running") return;
     let active = true;
     let loading = false;
     const refresh = async () => {
@@ -81,7 +76,7 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
       active = false;
       window.clearInterval(interval);
     };
-  }, [activePort, activeRunState]);
+  }, [activePort, activeExecutionStatus]);
 
   const onAction = (action: ReviewAction) => {
     if (state === null) return;

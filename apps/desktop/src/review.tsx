@@ -846,7 +846,26 @@ export function ReviewWorkspace({
                 <p className="eyebrow">Run progress</p>
                 <h2>{stateLabel(state.state)}</h2>
               </div>
-              {state.state === "paused" ? (
+              {state.execution.status === "interrupted" ? (
+                <div className="approval-actions">
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={pendingReviewAction !== null || !transmissionReady}
+                    onClick={() => onAction({ type: "resume" })}
+                  >
+                    Resume interrupted review
+                  </button>
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    disabled={pendingReviewAction !== null}
+                    onClick={() => onAction({ type: "stop" })}
+                  >
+                    Stop review
+                  </button>
+                </div>
+              ) : state.state === "paused" ? (
                 <button
                   className="button button-primary"
                   type="button"
@@ -855,10 +874,32 @@ export function ReviewWorkspace({
                 >
                   Resume
                 </button>
-              ) : ["drafting", "reviewing", "revising"].includes(state.state) ? (
-                <span className="status-tag">Running</span>
+              ) : state.execution.status === "running" ? (
+                <button
+                  className="button button-quiet"
+                  type="button"
+                  disabled={pendingReviewAction !== null}
+                  onClick={() => onAction({ type: "stop" })}
+                >
+                  {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
+                </button>
               ) : null}
             </div>
+            {state.execution.status === "interrupted" ? (
+              <p className="pending-action-status" role="status">
+                This review was interrupted when the previous app session ended. Resume it to
+                continue from the durable step, or stop it without losing history.
+              </p>
+            ) : state.execution.step === null ? null : (
+              <p className="pending-action-status" role="status" aria-live="polite">
+                {state.execution.step} · {state.execution.provider}/{state.execution.model} ·
+                attempt {state.execution.attempt} · elapsed{" "}
+                {Math.floor(state.execution.elapsedMs / 1_000)}s
+                {state.execution.timeoutRemainingMs === null
+                  ? " · no timeout configured"
+                  : ` · timeout in ${Math.ceil(state.execution.timeoutRemainingMs / 1_000)}s`}
+              </p>
+            )}
             <ol className="event-list">
               {state.events.map((event) => (
                 <li key={event.id}>

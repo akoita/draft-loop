@@ -151,10 +151,21 @@ export interface ReviewEvent {
   readonly createdAt: string;
 }
 
+export interface ReviewExecutionView {
+  readonly status: "idle" | "running" | "interrupted";
+  readonly step: "author" | "critic" | "revision" | null;
+  readonly provider: string | null;
+  readonly model: string | null;
+  readonly attempt: number | null;
+  readonly elapsedMs: number;
+  readonly timeoutRemainingMs: number | null;
+}
+
 export interface DesktopReviewState {
   readonly workspaceId: string;
   readonly runId: string;
   readonly state: ReviewRunState;
+  readonly execution: ReviewExecutionView;
   readonly round: number;
   readonly approval: "pending" | "approved" | "rejected";
   readonly totalCostUsd: number;
@@ -275,7 +286,7 @@ export function reduceReviewState(
     case "pause":
       return state.state === "approved" || state.state === "exported"
         ? state
-        : { ...state, state: "paused" };
+        : { ...state, state: "paused", execution: { ...state.execution, status: "idle" } };
     case "acknowledge-provider-transmission":
       if (
         !state.providerTransmissionPreflight.required ||
@@ -294,12 +305,17 @@ export function reduceReviewState(
       };
     case "start":
       return state.state === "collecting" && state.setup.ready
-        ? { ...state, state: "drafting" }
+        ? { ...state, state: "drafting", execution: { ...state.execution, status: "running" } }
         : state;
     case "resume":
       return state.state === "paused" ||
         (state.state === "provider-error" && state.providerFailure?.retryAvailable === true)
-        ? { ...state, state: "reviewing", providerFailure: null }
+        ? {
+            ...state,
+            state: "reviewing",
+            providerFailure: null,
+            execution: { ...state.execution, status: "running" },
+          }
         : state;
     case "recover-to-review":
       return state.state === "provider-error" &&
@@ -307,8 +323,13 @@ export function reduceReviewState(
         ? { ...state, state: "awaiting-approval", providerFailure: null }
         : state;
     case "stop":
-      return state.state === "provider-error"
-        ? { ...state, state: "stopped", providerFailure: null }
+      return state.state === "provider-error" || state.execution.status !== "idle"
+        ? {
+            ...state,
+            state: "stopped",
+            providerFailure: null,
+            execution: { ...state.execution, status: "idle" },
+          }
         : state;
     case "request-revision":
       return state.state === "awaiting-approval"
@@ -409,6 +430,15 @@ export function createFixtureReviewState(): DesktopReviewState {
     workspaceId: "workspace-demo",
     runId: "run-demo-1",
     state: "paused",
+    execution: {
+      status: "idle",
+      step: null,
+      provider: null,
+      model: null,
+      attempt: null,
+      elapsedMs: 0,
+      timeoutRemainingMs: null,
+    },
     round: 2,
     approval: "pending",
     totalCostUsd: 0.042,

@@ -98,7 +98,7 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
       readWorkspace: vi.fn(async () => workspace),
       begin: vi.fn(async () => snapshot),
       start: vi.fn(async () => snapshot),
-      resume: vi.fn(async () => snapshot),
+      resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),
       lifecycle: vi.fn(async () => snapshot),
       status: vi.fn(async () => snapshot),
       export: vi.fn(
@@ -114,7 +114,7 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
 describe("native host", () => {
   it("returns a persisted run before continuing provider execution in the background", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-background-"));
-    let completeResume!: (value: never) => void;
+    let resumeSignal: AbortSignal | undefined;
     const fixture = service(root, {
       state: "drafting",
       currentStep: "author",
@@ -122,7 +122,13 @@ describe("native host", () => {
       findings: [],
     });
     fixture.service.resume.mockImplementationOnce(
-      () => new Promise((resolve) => (completeResume = resolve)),
+      (command: Parameters<ApplicationService["resume"]>[0]) =>
+        new Promise<never>((_, reject) => {
+          resumeSignal = command.signal;
+          command.signal?.addEventListener("abort", () => reject(command.signal?.reason), {
+            once: true,
+          });
+        }),
     );
     const host = createNativeHost({
       applicationService: fixture.service,
@@ -141,13 +147,70 @@ describe("native host", () => {
 
       expect(dispatch).toMatchObject({
         ok: true,
-        value: { runId: "run-native", state: "drafting" },
+        value: {
+          runId: "run-native",
+          state: "drafting",
+          execution: {
+            status: "running",
+            step: "author",
+            provider: "anthropic",
+            model: "claude-sonnet-4-5",
+            attempt: 1,
+          },
+        },
       });
       expect(fixture.service.begin).toHaveBeenCalledOnce();
       expect(fixture.service.start).not.toHaveBeenCalled();
       await vi.waitFor(() => expect(fixture.service.resume).toHaveBeenCalledOnce());
+      const stopped = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "stop" },
+        },
+      });
+      expect(resumeSignal?.aborted).toBe(true);
+      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
+        { root, runId: "run-native", action: "stop" },
+        expect.anything(),
+      );
+      expect(stopped).toMatchObject({ ok: true });
     } finally {
-      completeResume?.(fixture.snapshot);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("projects an active durable run without a worker as interrupted and resumes it once", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-interrupted-"));
+    const fixture = service(root, { state: "revising", currentStep: "revision" });
+    fixture.service.resume.mockImplementationOnce(() => new Promise(() => undefined));
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const interrupted = await host.invoke({ type: "review.load", input: {} });
+      expect(interrupted).toMatchObject({
+        ok: true,
+        value: { execution: { status: "interrupted", step: "revision" } },
+      });
+
+      const resumed = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "resume" },
+        },
+      });
+      expect(resumed).toMatchObject({
+        ok: true,
+        value: { execution: { status: "running", step: "revision" } },
+      });
+      await vi.waitFor(() => expect(fixture.service.resume).toHaveBeenCalledOnce());
+    } finally {
       await rm(root, { recursive: true, force: true });
     }
   });

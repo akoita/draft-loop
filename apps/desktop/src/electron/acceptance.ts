@@ -230,8 +230,15 @@ async function resumeAndExport(options: PackagedAcceptanceOptions): Promise<void
     },
     "run resume",
   );
-  requireState(resumed.state, "awaiting-approval", "run resume");
-  if (resumed.artifact.version < 2 || resumed.findings.length !== 0) {
+  requireState(resumed.state, "revising", "run resume acknowledgement");
+  const completed = await waitForReviewState(
+    options.host,
+    workspaceId,
+    resumed.runId,
+    "awaiting-approval",
+    "run resume",
+  );
+  if (completed.artifact.version < 2 || completed.findings.length !== 0) {
     throw new Error("Resumed acceptance run did not produce a clean revision.");
   }
 
@@ -239,7 +246,7 @@ async function resumeAndExport(options: PackagedAcceptanceOptions): Promise<void
     options.host,
     {
       type: "review.dispatch",
-      input: { workspaceId, runId: status.runId, action: { type: "approve" } },
+      input: { workspaceId, runId: completed.runId, action: { type: "approve" } },
     },
     "final approval",
   );
@@ -250,7 +257,7 @@ async function resumeAndExport(options: PackagedAcceptanceOptions): Promise<void
     options.host,
     {
       type: "review.dispatch",
-      input: { workspaceId, runId: status.runId, action: { type: "export" } },
+      input: { workspaceId, runId: completed.runId, action: { type: "export" } },
     },
     "Markdown export",
   );
@@ -266,7 +273,7 @@ async function resumeAndExport(options: PackagedAcceptanceOptions): Promise<void
           type: "export.write",
           input: {
             workspaceId,
-            runId: status.runId as string,
+            runId: completed.runId,
             format,
             relativePath: `exports/acceptance.${format}`,
           },

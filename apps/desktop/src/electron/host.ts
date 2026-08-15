@@ -49,6 +49,7 @@ import type {
   ReviewArtifact,
   ReviewClaim,
   ReviewEvent,
+  ReviewExecutionView,
   ReviewFinding,
   ReviewSection,
   WorkspaceReadiness,
@@ -104,6 +105,12 @@ export interface NativeHostOptions {
 interface ActiveWorkspace {
   readonly descriptor: WorkspaceDescriptor;
   readonly root: string;
+}
+
+interface BackgroundRun {
+  readonly controller: AbortController;
+  readonly execution: Promise<void>;
+  readonly timeout?: ReturnType<typeof setTimeout>;
 }
 
 interface ReviewOverrides {
@@ -363,6 +370,37 @@ function runState(snapshot: RunSnapshot): DesktopReviewState["state"] {
   return snapshot.state;
 }
 
+const executingRunStates = new Set(["drafting", "reviewing", "revising"]);
+
+function reviewExecution(
+  descriptor: WorkspaceDescriptor,
+  snapshot: RunSnapshot,
+  running: boolean,
+): ReviewExecutionView {
+  const step = snapshot.currentStep;
+  const executing = executingRunStates.has(snapshot.state) && step !== null;
+  const selection = step === "critic" ? descriptor.critic : descriptor.author;
+  const attempt =
+    step === null
+      ? null
+      : snapshot.executionHistory.filter(
+          (execution) => execution.round === snapshot.round && execution.step === step,
+        ).length + 1;
+  const totalElapsedMs = Math.max(0, Date.now() - Date.parse(snapshot.startedAt));
+  return {
+    status: executing ? (running ? "running" : "interrupted") : "idle",
+    step,
+    provider: step === null ? null : selection.company,
+    model: step === null ? null : selection.model,
+    attempt,
+    elapsedMs: executing ? Math.max(0, Date.now() - Date.parse(snapshot.updatedAt)) : 0,
+    timeoutRemainingMs:
+      snapshot.budget.maxDurationMs === undefined
+        ? null
+        : Math.max(0, snapshot.budget.maxDurationMs - totalElapsedMs),
+  };
+}
+
 const providerFailureExplanations: Readonly<Record<ProviderFailureView["code"], string>> = {
   authentication: "The provider could not authenticate. Check the configured credential.",
   permission: "The provider denied permission for this request or model.",
@@ -537,6 +575,7 @@ function reviewState(
   exportPath: string | null,
   setup: WorkspaceReadiness,
   preflight: ProviderTransmissionPreflight,
+  executionRunning = false,
 ): DesktopReviewState {
   const artifact =
     snapshot.artifact === null
@@ -553,6 +592,7 @@ function reviewState(
     workspaceId: descriptor.id,
     runId: snapshot.runId,
     state: runState(snapshot),
+    execution: reviewExecution(descriptor, snapshot, executionRunning),
     round: snapshot.round,
     approval: snapshot.approval,
     totalCostUsd: snapshot.totalCostUsd,
@@ -589,6 +629,15 @@ function emptyReviewState(
     workspaceId: descriptor.id,
     runId: "pending",
     state: "collecting",
+    execution: {
+      status: "idle",
+      step: null,
+      provider: null,
+      model: null,
+      attempt: null,
+      elapsedMs: 0,
+      timeoutRemainingMs: null,
+    },
     round: 0,
     approval: "pending",
     totalCostUsd: 0,
@@ -799,17 +848,61 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }),
     );
   let active: ActiveWorkspace | undefined;
-  const backgroundRuns = new Map<string, Promise<void>>();
+  const backgroundRuns = new Map<string, BackgroundRun>();
 
-  function resumeInBackground(workspace: ActiveWorkspace, runId: string): void {
-    const key = `${workspace.descriptor.id}:${runId}`;
+  function backgroundKey(workspace: ActiveWorkspace, runId: string): string {
+    return `${workspace.descriptor.id}:${runId}`;
+  }
+
+  function resumeInBackground(workspace: ActiveWorkspace, snapshot: RunSnapshot): void {
+    const key = backgroundKey(workspace, snapshot.runId);
     if (backgroundRuns.has(key)) return;
+    const controller = new AbortController();
+    const timeoutRemainingMs =
+      snapshot.budget.maxDurationMs === undefined
+        ? undefined
+        : Math.max(
+            0,
+            snapshot.budget.maxDurationMs - (Date.now() - Date.parse(snapshot.startedAt)),
+          );
+    const timeout =
+      timeoutRemainingMs === undefined
+        ? undefined
+        : setTimeout(
+            () =>
+              controller.abort(new DOMException("Review duration limit reached.", "TimeoutError")),
+            timeoutRemainingMs,
+          );
     const execution = Promise.resolve()
-      .then(() => service.resume({ root: workspace.root, runId, allowProviderData: true }, io()))
+      .then(() =>
+        service.resume(
+          {
+            root: workspace.root,
+            runId: snapshot.runId,
+            allowProviderData: true,
+            signal: controller.signal,
+          },
+          io(),
+        ),
+      )
       .then(() => undefined)
       .catch((error: unknown) => options.onError?.(error, "review.dispatch"))
-      .finally(() => backgroundRuns.delete(key));
-    backgroundRuns.set(key, execution);
+      .finally(() => {
+        if (timeout !== undefined) clearTimeout(timeout);
+        backgroundRuns.delete(key);
+      });
+    backgroundRuns.set(key, {
+      controller,
+      execution,
+      ...(timeout === undefined ? {} : { timeout }),
+    });
+  }
+
+  async function stopBackground(workspace: ActiveWorkspace, runId: string): Promise<void> {
+    const background = backgroundRuns.get(backgroundKey(workspace, runId));
+    if (background === undefined) return;
+    background.controller.abort(new DOMException("Review stopped by the user.", "AbortError"));
+    await background.execution;
   }
 
   function workspaceFor(id: string): ActiveWorkspace {
@@ -1127,7 +1220,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           { root: workspace.root, allowProviderData: true },
           io(),
         );
-        resumeInBackground(workspace, dispatchedSnapshot.runId);
+        resumeInBackground(workspace, dispatchedSnapshot);
         break;
       }
       case "finding-decision":
@@ -1171,19 +1264,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       case "pause":
       case "request-revision":
       case "approve":
-      case "stop":
       case "recover-to-review":
-        if (
-          currentSnapshot?.state === "provider-error" &&
-          action.type !== "stop" &&
-          action.type !== "recover-to-review"
-        ) {
+        if (currentSnapshot?.state === "provider-error" && action.type !== "recover-to-review") {
           return fail("operation-failed", "This action is not available after a provider failure.");
         }
-        if (
-          (action.type === "stop" || action.type === "recover-to-review") &&
-          currentSnapshot?.state !== "provider-error"
-        ) {
+        if (action.type === "recover-to-review" && currentSnapshot?.state !== "provider-error") {
           return fail("operation-failed", "This provider recovery action is not available.");
         }
         if (action.type === "request-revision") {
@@ -1203,6 +1288,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           io(),
         );
         break;
+      case "stop":
+        if (currentSnapshot === undefined) {
+          return fail("operation-failed", "No active review is available to stop.");
+        }
+        await stopBackground(workspace, currentSnapshot.runId);
+        await service.lifecycle(
+          { root: workspace.root, runId: currentSnapshot.runId, action: "stop" },
+          io(),
+        );
+        break;
       case "resume":
         if (
           currentSnapshot?.state === "provider-error" &&
@@ -1212,10 +1307,19 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return fail("operation-failed", "This provider failure cannot be retried.");
         }
         await requireProviderTransmissionAcknowledgement(workspace);
-        await service.resume(
-          { root: workspace.root, runId: input.runId, allowProviderData: true },
-          io(),
-        );
+        if (
+          currentSnapshot !== undefined &&
+          executingRunStates.has(currentSnapshot.state) &&
+          !backgroundRuns.has(backgroundKey(workspace, currentSnapshot.runId))
+        ) {
+          dispatchedSnapshot = currentSnapshot;
+          resumeInBackground(workspace, currentSnapshot);
+        } else {
+          await service.resume(
+            { root: workspace.root, runId: input.runId, allowProviderData: true },
+            io(),
+          );
+        }
         break;
       case "export":
         exportPath = await service.export(
@@ -1246,6 +1350,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       exportPath ?? (await existingExportPath(workspace.root, snapshot.runId)),
       setup,
       preflight,
+      backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),
     );
   }
 
@@ -1344,6 +1449,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               await existingExportPath(workspace.root, snapshot.runId),
               setup,
               preflight,
+              backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),
             ),
           };
         }

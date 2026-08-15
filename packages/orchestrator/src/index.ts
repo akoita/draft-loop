@@ -403,6 +403,16 @@ function providerFailure(
   };
 }
 
+function executionFailure(error: unknown, signal?: AbortSignal): unknown {
+  if (signal?.aborted !== true) return error;
+  const reason = signal.reason;
+  const name =
+    typeof reason === "object" && reason !== null && "name" in reason
+      ? String(reason.name)
+      : "AbortError";
+  return { code: name === "TimeoutError" ? "timeout" : "cancelled", retryable: false };
+}
+
 function validateCritique(value: Critique): readonly ValidationIssue[] {
   if (!Array.isArray(value.findings)) {
     return [
@@ -860,7 +870,7 @@ export function createOrchestrationEngine(
       const saved = await saveAndEmit(updated, "step.completed", { step, executionId: id });
       return completeStep(saved, context, record);
     } catch (error) {
-      const failure = providerFailure(error, context, step, attempt);
+      const failure = providerFailure(executionFailure(error, signal), context, step, attempt);
       const failedExecution: ExecutionRecord = {
         id,
         runId: snapshot.runId,

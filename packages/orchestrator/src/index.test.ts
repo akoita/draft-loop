@@ -241,6 +241,28 @@ describe("durable orchestration", () => {
     expect(critic.mock.calls[0]?.[0]).toMatchObject({ signal: controller.signal });
   });
 
+  it("records an aborted provider step as a content-free cancellation", async () => {
+    const controller = new AbortController();
+    const { engine } = engineFixture({
+      author: async () => {
+        throw controller.signal.reason;
+      },
+    });
+    await engine.begin(request());
+    controller.abort(new DOMException("private cancellation reason", "AbortError"));
+
+    const cancelled = await engine.resume("run-1", {
+      context: context(),
+      signal: controller.signal,
+    });
+
+    expect(cancelled).toMatchObject({
+      state: "provider-error",
+      lastError: { code: "cancelled", retryable: false, step: "author" },
+    });
+    expect(JSON.stringify(cancelled)).not.toContain("private cancellation reason");
+  });
+
   it("runs author and critic steps, then requires explicit approval", async () => {
     const { engine, author, critic } = engineFixture();
 

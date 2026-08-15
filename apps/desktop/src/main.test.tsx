@@ -21,6 +21,46 @@ const collectingState = () => ({
 });
 
 describe("desktop trust-centered review", () => {
+  it("shows live execution details and a stop control", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "reviewing" as const,
+      execution: {
+        status: "running" as const,
+        step: "critic" as const,
+        provider: "openai",
+        model: "gpt-5",
+        attempt: 1,
+        elapsedMs: 4_200,
+        timeoutRemainingMs: 55_000,
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Stop review");
+    expect(html).toContain("critic · openai/gpt-5 · attempt 1 · elapsed 4s · timeout in 55s");
+  });
+
+  it("explains and offers recovery for an interrupted durable run", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "revising" as const,
+      execution: {
+        status: "interrupted" as const,
+        step: "revision" as const,
+        provider: "anthropic",
+        model: "claude-sonnet-4-5",
+        attempt: 1,
+        elapsedMs: 0,
+        timeoutRemainingMs: null,
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Resume interrupted review");
+    expect(html).toContain("previous app session ended");
+  });
+
   it("acknowledges a pending review start without claiming step progress", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace
