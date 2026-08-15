@@ -34,6 +34,7 @@ jobs:
       stage: ${{ steps.metadata.outputs.stage }}
       channel: ${{ steps.metadata.outputs.channel }}
       release_name: ${{ steps.metadata.outputs.release_name }}
+      stage_issue: ${{ steps.metadata.outputs.stage_issue }}
     steps:
       - name: Check out approved main
         uses: actions/checkout@v7
@@ -75,6 +76,7 @@ jobs:
             stage: metadata.stage,
             channel: metadata.channel,
             release_name: metadata.releaseName,
+            stage_issue: String(metadata.stageIssue),
           })) {
             if (typeof value !== "string" || value.length === 0 || value.includes("\n")) {
               throw new Error(`Invalid release metadata output for ${key}.`);
@@ -162,6 +164,7 @@ jobs:
       RELEASE_STAGE: ${{ needs.validate.outputs.stage }}
       RELEASE_CHANNEL: ${{ needs.validate.outputs.channel }}
       RELEASE_NAME: ${{ needs.validate.outputs.release_name }}
+      RELEASE_STAGE_ISSUE: ${{ needs.validate.outputs.stage_issue }}
       DRY_RUN: ${{ inputs.dry_run }}
       ATTEST_PROVENANCE: ${{ inputs.attest_provenance }}
     steps:
@@ -238,7 +241,7 @@ jobs:
             `Source commit: ${process.env.RELEASE_COMMIT}`,
             "",
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
-            `Stage issue: https://github.com/${repository}/issues/46`,
+            `Stage issue: https://github.com/${repository}/issues/${process.env.RELEASE_STAGE_ISSUE}`,
             "SBOM: CycloneDX JSON is attached to the release.",
             ...(process.env.ATTEST_PROVENANCE === "true"
               ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]

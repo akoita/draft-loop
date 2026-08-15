@@ -1,10 +1,11 @@
 # v0.6.0 alpha stage evidence
 
-**Status:** working record — not ready for publication  
-**Stage:** Integration hardening and outcome validation  
-**Reviewed:** 2026-08-15  
-**Release metadata:** `release.json` is aligned to the stage and `alpha`
-channel. Package version remains `0.5.2` until the release gate is complete.
+- **Status:** release-candidate source prepared — publication blocked
+- **Stage:** Integration hardening and outcome validation
+- **Reviewed:** 2026-08-15
+- **Release metadata:** `release.json` is aligned to the stage and `alpha`
+  channel. Package manifests are aligned to `0.6.0`; publication remains
+  blocked until the real-application outcome gate is complete.
 
 This record is intentionally conservative. Automated and sanitized acceptance
 results demonstrate implementation and integration; they do not substitute for
@@ -19,7 +20,7 @@ the consented representative application required by roadmap issue 104.
 | Credential lifecycle and preflight | [Credential protocol](credential-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393186) | Integrated automated lifecycle matrix passed on all three targets | Synthetic canaries do not prove every user environment or provider account |
 | Provider failure recovery | [Recovery implementation PR](https://github.com/akoita/draft-loop/pull/110); repository recovery tests | Implemented and integrated | No live provider outage is claimed by this record |
 | Consent and sanitized outcome reporting | [Pilot protocol](pilot-protocol.md); [outcome-reporting PR](https://github.com/akoita/draft-loop/pull/114) | Reporting path implemented | No real consented application has been recorded yet; [issue 104](https://github.com/akoita/draft-loop/issues/104) remains open |
-| Release artifacts and manifest | [Release procedure](releasing.md); [release contract](../release.json) | Not prepared for v0.6.0 | Version bump, dry-run manifest, platform artifacts, checksums, SBOM, and size review await the outcome gate |
+| Release artifacts and manifest | [Release procedure](releasing.md); [release contract](../release.json) | v0.6.0 source versions aligned; dry run pending | Dry-run manifest, platform artifacts, checksums, SBOM, and size review must be reviewed before publication |
 
 ## Product measures
 
@@ -50,9 +51,10 @@ in [issue 104](https://github.com/akoita/draft-loop/issues/104):
    summary.
 3. Review the factuality, coverage, effort, cost, confidence, and limitation
    results without generalizing beyond the sample.
-4. If the stage exit criterion is met, make a separate focused version-bump PR
-   for `0.6.0`, run the release dry run, inspect all artifacts, and update this
+4. Run the `0.6.0` release dry run, inspect all artifacts, and update this
    record with links to the manifest, checksums, SBOM, and known limitations.
+5. Publish only after the stage exit criterion is met and explicit maintainer
+   approval is confirmed.
 
 Until then, the roadmap stage remains **Integrated; validation incomplete** and
 the repository must not claim a v0.6.0 release.

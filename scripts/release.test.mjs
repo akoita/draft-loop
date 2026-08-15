@@ -44,6 +44,7 @@ function createFixture({ packageVersions = {}, metadata = {} } = {}) {
     stage: "integrated-local-alpha",
     channel: "alpha",
     releaseName: "Integrated local alpha",
+    stageIssue: 46,
     artifactTargets: ["linux-x64", "macos-arm64", "windows-x64"],
     ...metadata,
   });
@@ -169,7 +170,7 @@ describe("release package discovery and checks", () => {
   test("validates required release metadata fields", () => {
     assert.throws(
       () => validateReleaseMetadata({ project: "draft-loop", artifactTargets: [] }),
-      /stage must be a non-empty string[\s\S]*channel must be a non-empty string[\s\S]*releaseName must be a non-empty string[\s\S]*artifactTargets must be a non-empty array/,
+      /stage must be a non-empty string[\s\S]*channel must be a non-empty string[\s\S]*releaseName must be a non-empty string[\s\S]*stageIssue must be a positive integer[\s\S]*artifactTargets must be a non-empty array/,
     );
 
     const rootDirectory = createFixture({ metadata: { project: "other-project" } });
@@ -225,6 +226,7 @@ describe("release manifest artifacts", () => {
     assert.deepEqual(first, second);
     assert.equal(first.schemaVersion, 1);
     assert.equal(first.tag, "v0.1.0");
+    assert.equal(first.stageIssue, 46);
     assert.deepEqual(first.artifactTargets, ["linux-x64", "macos-arm64", "windows-x64"]);
     assert.equal(first.packages[0].path, "package.json");
     assert.equal(first.artifacts[0].path, "release.txt");

@@ -3,5 +3,6 @@
   "stage": "integration-hardening-outcome-validation",
   "channel": "alpha",
   "releaseName": "Integration hardening and outcome validation",
+  "stageIssue": 106,
   "artifactTargets": ["linux-x64", "macos-arm64", "windows-x64"]
 }
