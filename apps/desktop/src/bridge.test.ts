@@ -388,6 +388,7 @@ describe("desktop capability bridge", () => {
       maxAttempts: 3,
       retryAvailable: true,
       availableActions: ["retry", "return-to-review", "stop"],
+      diagnostics: [],
     } as const;
     for (const providerFailure of [
       { ...baseFailure, attempt: 0 },
@@ -423,6 +424,7 @@ describe("desktop capability bridge", () => {
         maxAttempts: 3,
         retryAvailable: true,
         availableActions: ["retry", "return-to-review", "stop"] as const,
+        diagnostics: [],
       },
     };
 

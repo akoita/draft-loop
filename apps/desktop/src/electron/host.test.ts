@@ -227,6 +227,7 @@ describe("native host", () => {
       maxAttempts: 3,
       retryable: true,
       providerRequestId: "request-safe",
+      diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
     };
     const fixture = service(root, { state: "provider-error", currentStep: "critic", lastError });
     const host = createNativeHost({
@@ -240,6 +241,7 @@ describe("native host", () => {
         ok: true,
         value: {
           state: "provider-error",
+          execution: { status: "idle", step: null, attempt: null },
           providerFailure: {
             code: "timeout",
             provider: "openai",
@@ -249,6 +251,7 @@ describe("native host", () => {
             maxAttempts: 3,
             retryAvailable: true,
             availableActions: ["retry", "return-to-review", "stop"],
+            diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
           },
         },
       });
@@ -317,6 +320,73 @@ describe("native host", () => {
       });
       expect(retry).toMatchObject({ ok: false, error: { code: "operation-failed" } });
       expect(exhausted.service.resume).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("projects failed provider executions as failed events", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-failed-event-"));
+    const fixture = service(root, {
+      state: "provider-error",
+      currentStep: "author",
+      artifact: null,
+      findings: [],
+      executionHistory: [
+        {
+          id: "execution-failed",
+          runId: "run-native",
+          contextSnapshotId: "context-native",
+          round: 1,
+          step: "author",
+          status: "failed",
+          provider: "anthropic",
+          modelId: "claude-sonnet-4-5",
+          providerRequestId: null,
+          inputTokens: 0,
+          outputTokens: 0,
+          totalTokens: 0,
+          estimatedUsd: null,
+          completedAt: "2026-08-12T10:00:01.000Z",
+          errorCode: "invalid-response",
+          attempt: 1,
+          maxAttempts: 3,
+          retryable: false,
+        },
+      ],
+      lastError: {
+        code: "invalid-response",
+        message: "The provider request failed. Retry is not available.",
+        provider: "anthropic",
+        modelId: "claude-sonnet-4-5",
+        step: "author",
+        attempt: 1,
+        maxAttempts: 3,
+        retryable: false,
+        providerRequestId: null,
+      },
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const review = await host.invoke({ type: "review.load", input: {} });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          events: expect.arrayContaining([
+            expect.objectContaining({
+              id: "execution-failed",
+              label: "author execution failed",
+              state: "provider-error",
+            }),
+          ]),
+        },
+      });
+      expect(JSON.stringify(review)).not.toContain("author execution completed");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

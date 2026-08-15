@@ -834,6 +834,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
         "maxAttempts",
         "retryAvailable",
         "availableActions",
+        "diagnostics",
       ]) ||
       typeof failure.availableActions !== "object" ||
       !Array.isArray(failure.availableActions) ||
@@ -866,6 +867,18 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     );
     if (new Set(actions).size !== actions.length) return invalidInput();
     if (retryAvailable !== actions.includes("retry")) return invalidInput();
+    if (!Array.isArray(failure.diagnostics) || failure.diagnostics.length > 8) {
+      return invalidInput();
+    }
+    for (const diagnostic of failure.diagnostics) {
+      const item = requireRecord(diagnostic);
+      if (!hasOnlyKeys(item, ["code", "path"])) return invalidInput();
+      const diagnosticCode = stringValue(item.code, 64);
+      const diagnosticPath = stringValue(item.path, 160);
+      if (!/^[A-Za-z0-9_-]+$/u.test(diagnosticCode) || !/^[A-Za-z0-9_.-]*$/u.test(diagnosticPath)) {
+        return invalidInput();
+      }
+    }
   }
   return value as unknown as DesktopReviewState;
 }

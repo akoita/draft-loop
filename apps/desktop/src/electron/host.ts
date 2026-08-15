@@ -389,10 +389,10 @@ function reviewExecution(
   const totalElapsedMs = Math.max(0, Date.now() - Date.parse(snapshot.startedAt));
   return {
     status: executing ? (running ? "running" : "interrupted") : "idle",
-    step,
-    provider: step === null ? null : selection.company,
-    model: step === null ? null : selection.model,
-    attempt,
+    step: executing ? step : null,
+    provider: executing ? selection.company : null,
+    model: executing ? selection.model : null,
+    attempt: executing ? attempt : null,
     elapsedMs: executing ? Math.max(0, Date.now() - Date.parse(snapshot.updatedAt)) : 0,
     timeoutRemainingMs:
       snapshot.budget.maxDurationMs === undefined
@@ -436,6 +436,7 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
       ...(snapshot.artifact === null ? [] : (["return-to-review"] as const)),
       "stop" as const,
     ],
+    diagnostics: snapshot.lastError.diagnostics ?? [],
   };
 }
 
@@ -531,15 +532,17 @@ function reviewEvents(
     },
   ];
   for (const execution of snapshot.executionHistory) {
+    const succeeded = execution.status === "completed";
     events.push({
       id: execution.id,
-      label: `${execution.step} execution completed`,
-      state:
-        execution.step === "author"
+      label: `${execution.step} execution ${succeeded ? "completed" : "failed"}`,
+      state: succeeded
+        ? execution.step === "author"
           ? "drafting"
           : execution.step === "critic"
             ? "reviewing"
-            : "revising",
+            : "revising"
+        : "provider-error",
       createdAt: execution.completedAt,
     });
   }

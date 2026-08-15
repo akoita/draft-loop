@@ -45,11 +45,13 @@ export function ReviewWorkspace({
 }: ReviewWorkspaceProps) {
   const findingSummary = reviewFindingSummary(state);
   const { blocking: blockingFindings, unresolved: unresolvedFindings, warnings } = findingSummary;
+  const hasArtifact = state.artifact.version > 0;
   const claimById = useMemo(
     () => new Map(state.artifact.claims.map((claim) => [claim.id, claim])),
     [state.artifact.claims],
   );
-  const canApprove = state.state === "awaiting-approval" && blockingFindings.length === 0;
+  const canApprove =
+    hasArtifact && state.state === "awaiting-approval" && blockingFindings.length === 0;
   const approvalLabel =
     state.approval === "approved"
       ? findingSummary.status === "clear"
@@ -58,8 +60,9 @@ export function ReviewWorkspace({
           ? `Approved with ${blockingFindings.length} unresolved blocker${blockingFindings.length === 1 ? "" : "s"}`
           : `Approved with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`
       : "Approval pending";
-  const validationLabel =
-    findingSummary.status === "blocked"
+  const validationLabel = !hasArtifact
+    ? "No draft artifact available"
+    : findingSummary.status === "blocked"
       ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
       : findingSummary.status === "warnings"
         ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
@@ -681,6 +684,18 @@ export function ReviewWorkspace({
             {state.providerFailure.step} · attempt {state.providerFailure.attempt} of{" "}
             {state.providerFailure.maxAttempts}
           </p>
+          {state.providerFailure.diagnostics.length > 0 ? (
+            <div className="provider-diagnostics">
+              <strong>Validation details</strong>
+              <ul>
+                {state.providerFailure.diagnostics.map((diagnostic) => (
+                  <li key={`${diagnostic.code}:${diagnostic.path}`}>
+                    {diagnostic.path === "" ? "response" : diagnostic.path}: {diagnostic.code}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="approval-actions">
             {state.providerFailure.availableActions.includes("retry") ? (
               <button
@@ -727,11 +742,13 @@ export function ReviewWorkspace({
       >
         <strong>{validationLabel}</strong>
         <span>
-          {findingSummary.status === "blocked"
-            ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
-            : findingSummary.status === "warnings"
-              ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-              : "All findings have a recorded decision."}
+          {!hasArtifact
+            ? "Complete or recover the author step before reviewing findings or approving an artifact."
+            : findingSummary.status === "blocked"
+              ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+              : findingSummary.status === "warnings"
+                ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+                : "All findings have a recorded decision."}
         </span>
       </section>
 
@@ -874,6 +891,17 @@ export function ReviewWorkspace({
                 >
                   Resume
                 </button>
+              ) : state.state === "stopped" ? (
+                <button
+                  className="button button-primary"
+                  type="button"
+                  disabled={!transmissionReady || pendingReviewAction !== null}
+                  onClick={() => onAction({ type: "start" })}
+                >
+                  {pendingReviewAction?.action === "start"
+                    ? "Starting new review…"
+                    : "Start a new review"}
+                </button>
               ) : state.execution.status === "running" ? (
                 <button
                   className="button button-quiet"
@@ -920,9 +948,11 @@ export function ReviewWorkspace({
                 <h2>Findings</h2>
               </div>
               <span className="count-badge">
-                {unresolvedFindings.length === 0
-                  ? "All resolved"
-                  : `${blockingFindings.length} blocking · ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`}
+                {!hasArtifact
+                  ? "Not evaluated"
+                  : unresolvedFindings.length === 0
+                    ? "All resolved"
+                    : `${blockingFindings.length} blocking · ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`}
               </span>
             </div>
             {state.findings.map((finding) => {
@@ -1017,7 +1047,11 @@ export function ReviewWorkspace({
               {state.exportPath === null ? "not exported" : "exported"} · Validation:{" "}
               {validationLabel}
             </p>
-            {blockingFindings.length > 0 ? (
+            {!hasArtifact ? (
+              <p className="warning-copy">
+                Approval and export are unavailable until the author produces a valid draft.
+              </p>
+            ) : blockingFindings.length > 0 ? (
               <p className="warning-copy">
                 {state.approval === "approved"
                   ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " remains" : "s remain"} unresolved after approval.`

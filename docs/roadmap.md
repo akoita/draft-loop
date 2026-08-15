@@ -223,6 +223,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Hardened the live author boundary and terminal desktop projections for issue #126 | The real-application run exposed that models must propose content while the application owns canonical artifact metadata and evidence resolution, and that failed or stopped runs must not appear completed, validated, or approvable |
 | 2026-08-15 | Extended packaged Linux, macOS, and Windows acceptance with observable execution, interrupted-run recovery, and deterministic in-flight cancellation evidence for issue #119 | The desktop control is only stage evidence when installed artifacts exercise the same background worker and Stop path |
 | 2026-08-15 | Added cancellable desktop workers, explicit interrupted-run recovery, and live provider/step/attempt/elapsed/timeout projection for issue #119 | A long-running review must remain understandable and stoppable, and restart must never imply that a missing worker is still running |
 | 2026-08-15 | Propagated cancellation signals from the application resume contract through orchestration and Anthropic, OpenAI, and local provider requests for issue #119 | A desktop Stop action must be able to abort the actual in-flight request before persisting a terminal run state |

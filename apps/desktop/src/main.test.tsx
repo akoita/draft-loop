@@ -215,6 +215,7 @@ describe("desktop trust-centered review", () => {
         maxAttempts: 3,
         retryAvailable: true,
         availableActions: ["retry", "return-to-review", "stop"] as const,
+        diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
       },
     };
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
@@ -223,9 +224,40 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Retry");
     expect(html).toContain("Return to review");
     expect(html).toContain("Stop run");
+    expect(html).toContain("Validation details");
+    expect(html).toContain("sections.0.blocks: invalid_type");
     expect(reduceReviewState(state, { type: "resume" }).state).toBe("reviewing");
     expect(reduceReviewState(state, { type: "recover-to-review" }).state).toBe("awaiting-approval");
     expect(reduceReviewState(state, { type: "stop" }).state).toBe("stopped");
+  });
+
+  it("does not describe an absent artifact as validated or approvable", () => {
+    const initial = createFixtureReviewState();
+    const state = {
+      ...initial,
+      state: "stopped" as const,
+      artifact: {
+        ...initial.artifact,
+        id: "artifact-unavailable",
+        version: 0,
+        sections: [],
+        claims: [],
+      },
+      previousArtifact: null,
+      findings: [],
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("No draft artifact available");
+    expect(html).toContain("Not evaluated");
+    expect(html).toContain("Start a new review");
+    expect(html).toContain(
+      "Approval and export are unavailable until the author produces a valid draft.",
+    );
+    expect(html).not.toContain("All findings have a recorded decision.");
+    expect(html).not.toContain("No unresolved blocking findings.");
+    expect(html).toMatch(/Approve artifact[^<]*<\/button>/u);
+    expect(html).toContain('disabled=""');
   });
 
   it("requires an explicit override before approval can be committed", () => {

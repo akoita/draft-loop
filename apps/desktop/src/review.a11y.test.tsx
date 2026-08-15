@@ -51,6 +51,7 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
         maxAttempts: 3,
         retryAvailable: false,
         availableActions: ["return-to-review", "stop"] as const,
+        diagnostics: [],
       },
     };
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);

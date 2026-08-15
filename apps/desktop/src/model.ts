@@ -96,6 +96,12 @@ export interface ProviderFailureView {
   readonly maxAttempts: number;
   readonly retryAvailable: boolean;
   readonly availableActions: readonly ProviderFailureAction[];
+  readonly diagnostics: readonly ProviderFailureDiagnostic[];
+}
+
+export interface ProviderFailureDiagnostic {
+  readonly code: string;
+  readonly path: string;
 }
 
 export interface ProviderTransmissionIdentity {
