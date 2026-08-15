@@ -24,6 +24,7 @@ import {
   type Critique,
   createOrchestrationEngine,
   createStorageRunStore,
+  hasCompletedIndependentCritique,
   type OrchestrationEngine,
   type RunBudget,
   type RunEvent,
@@ -1445,6 +1446,9 @@ export async function exportRun(
     if (snapshot === undefined) throw new CliUserError(`Run ${runId} was not found.`);
     if (snapshot.state !== "approved" && snapshot.state !== "exported") {
       throw new CliUserError("Only an approved run can be exported. Review and approve it first.");
+    }
+    if (!hasCompletedIndependentCritique(snapshot)) {
+      throw new CliUserError("A completed independent critic review is required before export.");
     }
     if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
     if (!outputFormats.includes(formatInput as OutputFormat)) {

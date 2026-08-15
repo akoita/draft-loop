@@ -128,6 +128,49 @@ describe("phase-0 CLI workflow", () => {
     await approvedStorage.close();
   });
 
+  it("rejects every export format for an approved legacy snapshot without a current critique", async () => {
+    const root = await fixtureWorkspace();
+    await initWorkspace({
+      root,
+      jobDescription: "job.md",
+      sources: "evidence",
+      fixtureMode: true,
+    });
+
+    const started = await startRun(root);
+    const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+    const runKey = `draft-loop:orchestration:run:${started.runId}`;
+    const serialized = await storage.get(runKey);
+    expect(serialized).toBeDefined();
+    const legacy = JSON.parse(serialized as string) as {
+      readonly executionHistory: readonly { readonly step: string }[];
+    };
+    await storage.set(
+      runKey,
+      JSON.stringify({
+        ...legacy,
+        state: "approved",
+        approval: "approved",
+        executionHistory: legacy.executionHistory.filter(
+          (execution) => execution.step !== "critic",
+        ),
+      }),
+    );
+    await storage.close();
+
+    for (const format of ["markdown", "docx", "pdf"] as const) {
+      await expect(
+        exportRun(
+          root,
+          started.runId,
+          join(root, "exports", `legacy.${format}`),
+          undefined,
+          format,
+        ),
+      ).rejects.toThrow(/completed independent critic review/i);
+    }
+  });
+
   it("records a policy failure without starting live providers", async () => {
     const root = await fixtureWorkspace();
     await initWorkspace({ root, jobDescription: "job.md", sources: "evidence" });

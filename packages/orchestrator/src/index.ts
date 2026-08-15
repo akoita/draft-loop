@@ -341,6 +341,32 @@ function executionOutputIsCritique(
   return execution.step === "critic";
 }
 
+function structurallyValidCritique(output: unknown): output is Critique {
+  return (
+    typeof output === "object" &&
+    output !== null &&
+    !Array.isArray(output) &&
+    Array.isArray((output as { readonly findings?: unknown }).findings)
+  );
+}
+
+export function hasCompletedIndependentCritique(
+  snapshot: Pick<RunSnapshot, "runId" | "contextSnapshotId" | "round" | "executionHistory">,
+): boolean {
+  return (
+    Array.isArray(snapshot.executionHistory) &&
+    snapshot.executionHistory.some(
+      (execution) =>
+        execution.runId === snapshot.runId &&
+        execution.contextSnapshotId === snapshot.contextSnapshotId &&
+        execution.round === snapshot.round &&
+        execution.step === "critic" &&
+        execution.status === "completed" &&
+        structurallyValidCritique(execution.output),
+    )
+  );
+}
+
 const providerErrorCodes = new Set([
   "authentication",
   "permission",
@@ -1198,6 +1224,8 @@ export function createOrchestrationEngine(
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
       throw new Error("Only a run awaiting approval can be approved.");
+    if (!hasCompletedIndependentCritique(snapshot))
+      throw new Error("A completed independent critic review is required before approval.");
     const updated = {
       ...snapshot,
       state: "approved" as const,
@@ -1215,6 +1243,8 @@ export function createOrchestrationEngine(
     if (snapshot.state === "exported") return snapshot;
     if (snapshot.state !== "approved")
       throw new Error("Only an approved run can be marked as exported.");
+    if (!hasCompletedIndependentCritique(snapshot))
+      throw new Error("A completed independent critic review is required before export.");
     const updated = {
       ...snapshot,
       state: "exported" as const,

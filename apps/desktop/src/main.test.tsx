@@ -7,6 +7,7 @@ import {
   unresolvedBlockingFindings,
 } from "./model.js";
 import {
+  canExportReview,
   filterFindingQueue,
   findingQueueCounts,
   initialFindingQueueState,
@@ -462,6 +463,26 @@ describe("desktop trust-centered review", () => {
     const approved = reduceReviewState(readyForApproval, { type: "approve" });
     expect(approved.state).toBe("approved");
     expect(approved.approval).toBe("approved");
+  });
+
+  it("keeps legacy approval unexportable when independent review is incomplete", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "approved" as const,
+      approval: "approved" as const,
+      reviewComplete: false,
+      findings: [],
+    };
+
+    expect(canExportReview(state, null)).toBe(false);
+    expect(reduceReviewState(state, { type: "export" })).toEqual(state);
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+    expect(html).toContain("Independent critique did not complete");
+    expect(html).toContain("Complete an independent critic review before approval or export.");
+    expect(html).toContain("Unavailable until independent critique completes");
+    expect(html).not.toContain("Available now");
+    expect(html).not.toContain("All findings have a recorded decision.");
+    expect(html).toContain('disabled="">Export Markdown (Alt+E)</button>');
   });
 
   it("distinguishes non-blocking warnings from approval blockers", () => {

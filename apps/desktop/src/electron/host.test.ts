@@ -373,6 +373,7 @@ describe("native host", () => {
         ok: true,
         value: {
           state: "provider-error",
+          reviewComplete: false,
           execution: { status: "idle", step: null, attempt: null },
           providerFailure: {
             code: "invalid-response",
@@ -1244,6 +1245,7 @@ describe("native host", () => {
       const review = await host.invoke({ type: "review.load", input: { workspaceId } });
       const reviewValue = (review as { readonly value: DesktopReviewState }).value;
       expect(reviewValue.findings).toHaveLength(1);
+      expect(reviewValue.reviewComplete).toBe(true);
       const persistedDecision = await host.invoke({
         type: "review.dispatch",
         input: {

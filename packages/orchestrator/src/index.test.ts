@@ -9,6 +9,7 @@ import {
   createOrchestrationEngine,
   createStorageRunStore,
   type ExecutionRecord,
+  hasCompletedIndependentCritique,
   InMemoryRunStore,
   type RunSnapshot,
 } from "./index.js";
@@ -148,6 +149,19 @@ function execution<T>(output: T, provider: string, modelId: string): AgentExecut
   };
 }
 
+function critiqueExecution(overrides: Partial<ExecutionRecord> = {}): ExecutionRecord {
+  return {
+    ...execution({ findings: [] }, "openai", "critic-test"),
+    id: "run-1:1:critic:attempt:1",
+    runId: "run-1",
+    contextSnapshotId: "context-1",
+    round: 1,
+    step: "critic",
+    status: "completed",
+    ...overrides,
+  };
+}
+
 function engineFixture(
   options: {
     readonly author?: (request: unknown) => Promise<AgentExecution<DraftArtifact>>;
@@ -215,6 +229,34 @@ function pausedSnapshot(): RunSnapshot {
 }
 
 describe("durable orchestration", () => {
+  it("only recognizes a completed current-round critic with a structured output", () => {
+    const base = {
+      runId: "run-1",
+      contextSnapshotId: "context-1",
+      round: 1,
+      executionHistory: [critiqueExecution()],
+    } satisfies Pick<RunSnapshot, "runId" | "contextSnapshotId" | "round" | "executionHistory">;
+
+    expect(hasCompletedIndependentCritique(base)).toBe(true);
+    const { output: ignoredOutput, ...missingOutput } = critiqueExecution();
+    void ignoredOutput;
+    const invalidExecutions: ExecutionRecord[] = [
+      critiqueExecution({ status: "failed" }),
+      critiqueExecution({ round: 2 }),
+      critiqueExecution({ contextSnapshotId: "context-old" }),
+      critiqueExecution({ step: "author" }),
+      missingOutput,
+    ];
+    for (const execution of invalidExecutions) {
+      expect(
+        hasCompletedIndependentCritique({
+          ...base,
+          executionHistory: [execution],
+        }),
+      ).toBe(false);
+    }
+  });
+
   it("persists a run identity before invoking either agent", async () => {
     const { engine, author, critic } = engineFixture();
 
@@ -534,7 +576,7 @@ describe("durable orchestration", () => {
   });
 
   it("returns an artifact-bearing provider failure to review without erasing history", async () => {
-    const { engine, critic } = engineFixture({
+    const { engine, critic, store } = engineFixture({
       critic: async () =>
         Promise.reject(
           Object.assign(new Error("private body"), { code: "permission", retryable: true }),
@@ -552,6 +594,11 @@ describe("durable orchestration", () => {
     expect(recovered.lastError).toEqual(failed.lastError);
     expect(recovered.executionHistory).toEqual(failed.executionHistory);
     expect(critic).toHaveBeenCalledOnce();
+    await expect(engine.approve("run-1")).rejects.toThrow(/completed independent critic review/i);
+    await store.saveRun({ ...recovered, state: "approved", approval: "approved" });
+    await expect(engine.markExported("run-1")).rejects.toThrow(
+      /completed independent critic review/i,
+    );
     expect((await engine.events("run-1")).map((event) => event.type)).toContain(
       "provider.recovered",
     );

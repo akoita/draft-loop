@@ -17,7 +17,7 @@ import {
   type UrlFetcher,
   type UrlHostnameResolver,
 } from "@draft-loop/ingestion";
-import type { RunSnapshot } from "@draft-loop/orchestrator";
+import { hasCompletedIndependentCritique, type RunSnapshot } from "@draft-loop/orchestrator";
 
 import {
   type BridgeCapability,
@@ -608,6 +608,7 @@ function reviewState(
     execution: reviewExecution(descriptor, snapshot, executionRunning),
     round: snapshot.round,
     approval: snapshot.approval,
+    reviewComplete: hasCompletedIndependentCritique(snapshot),
     totalCostUsd: snapshot.totalCostUsd,
     budgetUsd: descriptor.maxCostUsd ?? null,
     providerExposure: {
@@ -653,6 +654,7 @@ function emptyReviewState(
     },
     round: 0,
     approval: "pending",
+    reviewComplete: false,
     totalCostUsd: 0,
     budgetUsd: descriptor.maxCostUsd ?? null,
     providerExposure: {

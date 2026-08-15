@@ -43,6 +43,13 @@ export interface InitialFindingQueueState {
   readonly expandedFindingId: string | null;
 }
 
+export function canExportReview(
+  state: Pick<DesktopReviewState, "state" | "reviewComplete">,
+  pendingReviewAction: PendingReviewAction | null,
+): boolean {
+  return state.state === "approved" && state.reviewComplete && pendingReviewAction === null;
+}
+
 const findingQueueFilters: ReadonlyArray<{
   readonly id: FindingQueueFilter;
   readonly label: string;
@@ -219,27 +226,35 @@ export function ReviewWorkspace({
     [state.artifact.claims],
   );
   const canApprove =
-    hasArtifact && state.state === "awaiting-approval" && blockingFindings.length === 0;
+    hasArtifact &&
+    state.state === "awaiting-approval" &&
+    state.reviewComplete &&
+    blockingFindings.length === 0;
+  const canExport = canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const approvalLabel =
     state.approval === "approved"
-      ? findingSummary.status === "clear"
-        ? "Artifact approved"
-        : findingSummary.status === "blocked"
-          ? `Approved with ${blockingFindings.length} unresolved blocker${blockingFindings.length === 1 ? "" : "s"}`
-          : `Approved with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`
+      ? !state.reviewComplete
+        ? "Approval recorded; independent critique incomplete"
+        : findingSummary.status === "clear"
+          ? "Artifact approved"
+          : findingSummary.status === "blocked"
+            ? `Approved with ${blockingFindings.length} unresolved blocker${blockingFindings.length === 1 ? "" : "s"}`
+            : `Approved with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`
       : "Approval pending";
   const validationLabel = !hasArtifact
     ? "No draft artifact available"
-    : state.state === "provider-error"
-      ? "Provider recovery remains before approval"
-      : findingSummary.status === "blocked"
-        ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
-        : findingSummary.status === "warnings"
-          ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
-          : "No unresolved findings";
+    : !state.reviewComplete
+      ? "Independent critique did not complete"
+      : state.state === "provider-error"
+        ? "Provider recovery remains before approval"
+        : findingSummary.status === "blocked"
+          ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+          : findingSummary.status === "warnings"
+            ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+            : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
@@ -419,7 +434,7 @@ export function ReviewWorkspace({
             onAction({ type: "request-revision" });
           }
         } else if (event.key === "e" || event.key === "E") {
-          if (state.state === "approved" && pendingReviewAction === null) {
+          if (canExport) {
             event.preventDefault();
             onAction({ type: "export" });
           }
@@ -429,7 +444,7 @@ export function ReviewWorkspace({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canApprove, onAction, pendingReviewAction, state.state, settingsOpen, transmissionReady]);
+  }, [canApprove, canExport, onAction, settingsOpen, state.state, transmissionReady]);
 
   const submitUrl = (target: "evidence" | "job-description"): void => {
     const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
@@ -1044,11 +1059,13 @@ export function ReviewWorkspace({
         <span>
           {!hasArtifact
             ? "Complete or recover the author step before reviewing findings or approving an artifact."
-            : findingSummary.status === "blocked"
-              ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
-              : findingSummary.status === "warnings"
-                ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-                : "All findings have a recorded decision."}
+            : !state.reviewComplete
+              ? "Complete an independent critic review before approval or export."
+              : findingSummary.status === "blocked"
+                ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+                : findingSummary.status === "warnings"
+                  ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+                  : "All findings have a recorded decision."}
         </span>
       </section>
 
@@ -1501,6 +1518,11 @@ export function ReviewWorkspace({
               <p className="warning-copy">
                 Approval and export are unavailable until the author produces a valid draft.
               </p>
+            ) : !state.reviewComplete ? (
+              <p className="warning-copy">
+                Independent critique did not complete. Complete an independent critic review before
+                approval or export.
+              </p>
             ) : blockingFindings.length > 0 ? (
               <p className="warning-copy">
                 {state.approval === "approved"
@@ -1557,7 +1579,13 @@ export function ReviewWorkspace({
                 <strong>Export locally</strong>
                 <span className="export-path" aria-live="polite">
                   {state.exportPath ??
-                    (state.approval === "approved" ? "Available now" : "Available after approval")}
+                    (!state.reviewComplete
+                      ? "Unavailable until independent critique completes"
+                      : canExport
+                        ? "Available now"
+                        : state.state === "approved"
+                          ? "Unavailable while another action is pending"
+                          : "Available after approval")}
                 </span>
               </div>
               <button
@@ -1565,7 +1593,7 @@ export function ReviewWorkspace({
                 type="button"
                 aria-keyshortcuts="Alt+E"
                 title="Export Markdown (Alt+E)"
-                disabled={state.state !== "approved" || pendingReviewAction !== null}
+                disabled={!canExport}
                 onClick={() => onAction({ type: "export" })}
               >
                 {exportPending ? "Exporting Markdown…" : "Export Markdown (Alt+E)"}

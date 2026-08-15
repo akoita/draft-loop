@@ -180,6 +180,7 @@ export interface DesktopReviewState {
   readonly execution: ReviewExecutionView;
   readonly round: number;
   readonly approval: "pending" | "approved" | "rejected";
+  readonly reviewComplete: boolean;
   readonly totalCostUsd: number;
   readonly budgetUsd: number | null;
   readonly providerExposure: ProviderExposureView;
@@ -348,11 +349,13 @@ export function reduceReviewState(
         ? { ...state, state: "revising", approval: "rejected", round: state.round + 1 }
         : state;
     case "approve":
-      return state.state === "awaiting-approval" && unresolvedBlockingFindings(state).length === 0
+      return state.state === "awaiting-approval" &&
+        state.reviewComplete &&
+        unresolvedBlockingFindings(state).length === 0
         ? { ...state, state: "approved", approval: "approved" }
         : state;
     case "export":
-      return state.state === "approved"
+      return state.state === "approved" && state.reviewComplete
         ? { ...state, state: "exported", exportPath: `exports/${state.runId}.md` }
         : state;
   }
@@ -453,6 +456,7 @@ export function createFixtureReviewState(): DesktopReviewState {
     },
     round: 2,
     approval: "pending",
+    reviewComplete: true,
     totalCostUsd: 0.042,
     budgetUsd: 0.25,
     providerExposure: {
