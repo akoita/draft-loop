@@ -81,6 +81,7 @@ export interface ProviderFailureView {
     | "authentication"
     | "permission"
     | "rate-limit"
+    | "quota-exhausted"
     | "timeout"
     | "cancelled"
     | "transient"
@@ -95,6 +96,7 @@ export interface ProviderFailureView {
   readonly attempt: number;
   readonly maxAttempts: number;
   readonly retryAvailable: boolean;
+  readonly retryNotBefore: string | null;
   readonly availableActions: readonly ProviderFailureAction[];
   readonly diagnostics: readonly ProviderFailureDiagnostic[];
 }

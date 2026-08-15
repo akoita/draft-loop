@@ -218,6 +218,7 @@ describe("desktop trust-centered review", () => {
         attempt: 2,
         maxAttempts: 3,
         retryAvailable: true,
+        retryNotBefore: null,
         availableActions: ["retry", "return-to-review", "stop"] as const,
         diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
       },
@@ -241,6 +242,33 @@ describe("desktop trust-centered review", () => {
     expect(reduceReviewState(state, { type: "resume" }).state).toBe("reviewing");
     expect(reduceReviewState(state, { type: "recover-to-review" }).state).toBe("awaiting-approval");
     expect(reduceReviewState(state, { type: "stop" }).state).toBe("stopped");
+  });
+
+  it("keeps retry disabled while the provider cooldown is active", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "provider-error" as const,
+      providerFailure: {
+        code: "rate-limit" as const,
+        explanation: "The provider rate limit was reached. Wait briefly before retrying.",
+        provider: "openai",
+        model: "gpt-5",
+        step: "critic" as const,
+        attempt: 1,
+        maxAttempts: 3,
+        retryAvailable: true,
+        retryNotBefore: new Date(Date.now() + 5_000).toISOString(),
+        availableActions: ["retry", "return-to-review", "stop"] as const,
+        diagnostics: [],
+      },
+    };
+
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Retry in 5 seconds");
+    expect(html).toContain("Retry is paused until the provider retry window opens");
+    expect(html).toContain('disabled=""');
+    expect(html).toContain("Provider recovery remains before approval");
   });
 
   it("shows pending finding feedback and disables every decision button", () => {

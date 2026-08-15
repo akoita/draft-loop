@@ -405,6 +405,8 @@ const providerFailureExplanations: Readonly<Record<ProviderFailureView["code"], 
   authentication: "The provider could not authenticate. Check the configured credential.",
   permission: "The provider denied permission for this request or model.",
   "rate-limit": "The provider rate limit was reached. Wait briefly before retrying.",
+  "quota-exhausted":
+    "The OpenAI quota is exhausted. Add credits or use a different OpenAI project before retrying.",
   timeout: "The provider did not respond before the request timed out.",
   cancelled: "The provider request was cancelled.",
   transient: "The provider is temporarily unavailable.",
@@ -422,6 +424,11 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
     : "unknown";
   const retryAvailable =
     snapshot.lastError.retryable && snapshot.lastError.attempt < snapshot.lastError.maxAttempts;
+  const retryNotBefore =
+    snapshot.lastError.retryNotBefore !== undefined &&
+    Number.isFinite(Date.parse(snapshot.lastError.retryNotBefore))
+      ? new Date(snapshot.lastError.retryNotBefore).toISOString()
+      : null;
   return {
     code,
     explanation: providerFailureExplanations[code],
@@ -431,6 +438,7 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
     attempt: snapshot.lastError.attempt,
     maxAttempts: snapshot.lastError.maxAttempts,
     retryAvailable,
+    retryNotBefore,
     availableActions: [
       ...(retryAvailable ? (["retry"] as const) : []),
       ...(snapshot.artifact === null ? [] : (["return-to-review"] as const)),
@@ -1310,6 +1318,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             currentSnapshot.lastError.attempt >= currentSnapshot.lastError.maxAttempts)
         ) {
           return fail("operation-failed", "This provider failure cannot be retried.");
+        }
+        if (
+          currentSnapshot?.state === "provider-error" &&
+          currentSnapshot.lastError?.retryNotBefore !== undefined &&
+          Date.parse(currentSnapshot.lastError.retryNotBefore) > Date.now()
+        ) {
+          return fail("operation-failed", "Retry is paused until the provider retry window opens.");
         }
         await requireProviderTransmissionAcknowledgement(workspace);
         if (

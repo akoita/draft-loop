@@ -86,6 +86,7 @@ export type ProviderErrorCode =
   | "authentication"
   | "permission"
   | "rate-limit"
+  | "quota-exhausted"
   | "timeout"
   | "cancelled"
   | "transient"
@@ -97,6 +98,7 @@ export type ProviderErrorCode =
 export interface ProviderErrorMetadata {
   readonly status?: number;
   readonly requestId?: string;
+  readonly retryAfterMs?: number;
   readonly diagnostics?: readonly ProviderValidationDiagnostic[];
 }
 
@@ -111,6 +113,7 @@ export class ProviderAdapterError extends Error {
   readonly retryable: boolean;
   readonly status: number | null;
   readonly requestId: string | null;
+  readonly retryAfterMs: number | null;
   readonly diagnostics: readonly ProviderValidationDiagnostic[];
   readonly metadata: ProviderErrorMetadata;
 
@@ -122,6 +125,7 @@ export class ProviderAdapterError extends Error {
       readonly retryable?: boolean;
       readonly status?: number;
       readonly requestId?: string;
+      readonly retryAfterMs?: number;
       readonly diagnostics?: readonly ProviderValidationDiagnostic[];
     } = {},
   ) {
@@ -132,10 +136,12 @@ export class ProviderAdapterError extends Error {
     this.retryable = options.retryable ?? isRetryable(code);
     this.status = options.status ?? null;
     this.requestId = options.requestId ?? null;
+    this.retryAfterMs = sanitizeRetryAfterMs(options.retryAfterMs) ?? null;
     this.diagnostics = options.diagnostics ?? [];
     this.metadata = {
       ...(options.status === undefined ? {} : { status: options.status }),
       ...(options.requestId === undefined ? {} : { requestId: options.requestId }),
+      ...(this.retryAfterMs === null ? {} : { retryAfterMs: this.retryAfterMs }),
       ...(options.diagnostics === undefined ? {} : { diagnostics: options.diagnostics }),
     };
   }
@@ -143,6 +149,13 @@ export class ProviderAdapterError extends Error {
 
 function isRetryable(code: ProviderErrorCode): boolean {
   return code === "rate-limit" || code === "timeout" || code === "transient";
+}
+
+const maxRetryAfterMs = 60_000;
+
+function sanitizeRetryAfterMs(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return undefined;
+  return Math.min(maxRetryAfterMs, Math.round(value));
 }
 
 export function assertDataExposureAllowed(provider: ProviderId, policy: DataExposurePolicy): void {
@@ -183,6 +196,8 @@ interface ProviderErrorLike {
   readonly requestID?: unknown;
   readonly request_id?: unknown;
   readonly _request_id?: unknown;
+  readonly headers?: unknown;
+  readonly error?: unknown;
 }
 
 function errorLike(value: unknown): ProviderErrorLike {
@@ -197,18 +212,67 @@ function nonEmptyString(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 
+function headerValue(headers: unknown, name: string): string | undefined {
+  if (typeof headers !== "object" || headers === null) return undefined;
+  const candidate = headers as {
+    readonly get?: (headerName: string) => unknown;
+    readonly [key: string]: unknown;
+  };
+  if (typeof candidate.get === "function") {
+    try {
+      const value = candidate.get(name);
+      if (typeof value === "string") return value;
+    } catch {
+      return undefined;
+    }
+  }
+  for (const [key, value] of Object.entries(candidate)) {
+    if (key.toLowerCase() !== name.toLowerCase()) continue;
+    return typeof value === "string" || typeof value === "number" ? String(value) : undefined;
+  }
+  return undefined;
+}
+
+function parseRetryAfterMs(details: ProviderErrorLike): number | undefined {
+  const retryAfterMs = headerValue(details.headers, "retry-after-ms");
+  if (retryAfterMs !== undefined) {
+    const numeric = Number(retryAfterMs.trim());
+    const sanitized = sanitizeRetryAfterMs(numeric);
+    if (sanitized !== undefined) return sanitized;
+  }
+
+  const retryAfter = headerValue(details.headers, "retry-after");
+  if (retryAfter === undefined) return undefined;
+  const numeric = Number(retryAfter.trim());
+  if (Number.isFinite(numeric) && numeric >= 0) {
+    return sanitizeRetryAfterMs(numeric * 1_000);
+  }
+  const timestamp = Date.parse(retryAfter);
+  if (!Number.isFinite(timestamp)) return undefined;
+  return sanitizeRetryAfterMs(timestamp - Date.now());
+}
+
 export function normalizeProviderError(provider: ProviderId, error: unknown): ProviderAdapterError {
   if (error instanceof ProviderAdapterError) {
     return error;
   }
 
   const details = errorLike(error);
+  const nested = errorLike(details.error);
   const status = finiteNumber(details.status ?? details.statusCode);
   const requestId =
     nonEmptyString(details.requestID) ??
     nonEmptyString(details.request_id) ??
     nonEmptyString(details._request_id);
-  const combined = [details.code, details.name, details.message]
+  const combined = [
+    details.code,
+    details.name,
+    details.message,
+    nested.code,
+    nested.name,
+    nested.message,
+    nested.error,
+  ]
     .map(nonEmptyString)
     .filter((value): value is string => value !== undefined)
     .join(" ")
@@ -224,6 +288,15 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
     combined.includes("aborted")
   ) {
     code = "cancelled";
+  } else if (
+    provider === "openai" &&
+    (combined.includes("insufficient_quota") ||
+      combined.includes("insufficient quota") ||
+      combined.includes("quota exceeded") ||
+      combined.includes("quota exhausted") ||
+      combined.includes("quota_exhausted"))
+  ) {
+    code = "quota-exhausted";
   } else if (
     status === 401 ||
     combined.includes("authentication") ||
@@ -249,9 +322,11 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
 
   const message =
     code === "unknown" ? "The provider request failed." : `The provider request failed (${code}).`;
+  const retryAfterMs = parseRetryAfterMs(details);
   return new ProviderAdapterError(provider, code, message, {
     ...(status === undefined ? {} : { status }),
     ...(requestId === undefined ? {} : { requestId }),
+    ...(retryAfterMs === undefined ? {} : { retryAfterMs }),
   });
 }
 
@@ -391,7 +466,14 @@ export async function executeWithRetry<T>(
       attempt += 1;
       const exponential = baseDelayMs * 2 ** (attempt - 1);
       const jitter = Math.random() * (baseDelayMs / 2);
-      const delay = Math.min(maxDelayMs, exponential + jitter);
+      const providerDelay = error instanceof ProviderAdapterError ? error.retryAfterMs : null;
+      // Do not retry earlier than the provider requested. Long waits are
+      // returned to the durable orchestration/UI layer instead of hiding an
+      // unresponsive sleep inside one adapter call.
+      if (providerDelay !== null && providerDelay > maxDelayMs) {
+        throw error;
+      }
+      const delay = Math.min(maxDelayMs, providerDelay ?? exponential + jitter);
       await sleep(delay);
     }
   }
@@ -694,11 +776,12 @@ export class LocalModelAdapter<
 
         if (!res.ok) {
           const status = res.status;
+          const retryAfterMs = parseRetryAfterMs({ headers: res.headers });
           throw new ProviderAdapterError(
             this.provider,
             status >= 500 ? "transient" : status === 429 ? "rate-limit" : "invalid-request",
             `Local model server returned status ${status}`,
-            { status },
+            { status, ...(retryAfterMs === undefined ? {} : { retryAfterMs }) },
           );
         }
 

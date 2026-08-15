@@ -833,6 +833,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
         "attempt",
         "maxAttempts",
         "retryAvailable",
+        "retryNotBefore",
         "availableActions",
         "diagnostics",
       ]) ||
@@ -846,6 +847,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
       "authentication",
       "permission",
       "rate-limit",
+      "quota-exhausted",
       "timeout",
       "cancelled",
       "transient",
@@ -862,6 +864,14 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     const maxAttempts = finiteInteger(failure.maxAttempts, 100);
     if (attempt < 1 || maxAttempts < 1 || attempt > maxAttempts) return invalidInput();
     const retryAvailable = booleanValue(failure.retryAvailable);
+    if (
+      failure.retryNotBefore !== null &&
+      (typeof failure.retryNotBefore !== "string" ||
+        failure.retryNotBefore.length > 64 ||
+        !Number.isFinite(Date.parse(failure.retryNotBefore)))
+    ) {
+      return invalidInput();
+    }
     const actions = failure.availableActions.map((action) =>
       enumValue(action, ["retry", "return-to-review", "stop"] as const),
     );

@@ -127,6 +127,8 @@ export interface RunError {
   readonly attempt: number;
   readonly maxAttempts: number;
   readonly retryable: boolean;
+  /** Absolute, content-free time before which a retry must not be attempted. */
+  readonly retryNotBefore?: string;
   readonly providerRequestId: string | null;
   readonly diagnostics?: readonly RunErrorDiagnostic[];
 }
@@ -343,6 +345,7 @@ const providerErrorCodes = new Set([
   "authentication",
   "permission",
   "rate-limit",
+  "quota-exhausted",
   "timeout",
   "cancelled",
   "transient",
@@ -371,17 +374,33 @@ function safeProviderRequestId(value: unknown): string | null {
   return value;
 }
 
+const maxRetryAfterMs = 60_000;
+
+function safeRetryAfterMs(value: unknown): number | undefined {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return undefined;
+  return Math.min(maxRetryAfterMs, Math.round(value));
+}
+
+function retryNotBefore(value: unknown, now: string): string | undefined {
+  const delay = safeRetryAfterMs(value);
+  const nowMs = Date.parse(now);
+  if (delay === undefined || !Number.isFinite(nowMs) || delay === 0) return undefined;
+  return new Date(nowMs + delay).toISOString();
+}
+
 function providerFailure(
   value: unknown,
   context: ContextSnapshot,
   step: Exclude<OrchestrationStep, null>,
   attempt: number,
+  now: string,
 ): RunError {
   const candidate =
     typeof value === "object" && value !== null
       ? (value as {
           readonly code?: unknown;
           readonly retryable?: unknown;
+          readonly retryAfterMs?: unknown;
           readonly requestId?: unknown;
           readonly diagnostics?: unknown;
         })
@@ -395,6 +414,12 @@ function providerFailure(
   const code = providerErrorCodes.has(candidateCode) ? candidateCode : "provider-error";
   const retryable =
     userRetryableProviderErrorCodes.has(code) && attempt < MAX_ORCHESTRATION_ATTEMPTS;
+  // A provider may omit Retry-After. Keep a short durable cooldown for rate
+  // limits so an immediate manual click cannot start another retry burst.
+  const retryAt = retryNotBefore(
+    candidate.retryAfterMs ?? (code === "rate-limit" ? 5_000 : undefined),
+    now,
+  );
   const diagnostics = Array.isArray(candidate.diagnostics)
     ? candidate.diagnostics.slice(0, 8).flatMap((diagnostic): RunErrorDiagnostic[] => {
         if (typeof diagnostic !== "object" || diagnostic === null) return [];
@@ -421,6 +446,7 @@ function providerFailure(
     attempt,
     maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
     retryable,
+    ...(retryAt === undefined ? {} : { retryNotBefore: retryAt }),
     providerRequestId: safeProviderRequestId(candidate.requestId),
     diagnostics,
   };
@@ -821,6 +847,7 @@ export function createOrchestrationEngine(
               context,
               step,
               MAX_ORCHESTRATION_ATTEMPTS,
+              clock(),
             ),
           );
     }
@@ -893,7 +920,13 @@ export function createOrchestrationEngine(
       const saved = await saveAndEmit(updated, "step.completed", { step, executionId: id });
       return completeStep(saved, context, record);
     } catch (error) {
-      const failure = providerFailure(executionFailure(error, signal), context, step, attempt);
+      const failure = providerFailure(
+        executionFailure(error, signal),
+        context,
+        step,
+        attempt,
+        clock(),
+      );
       const failedExecution: ExecutionRecord = {
         id,
         runId: snapshot.runId,
@@ -940,6 +973,7 @@ export function createOrchestrationEngine(
             context,
             execution.step,
             execution.attempt ?? 1,
+            clock(),
           ),
         );
       const validation = validateDraftArtifact(artifact, {
@@ -972,6 +1006,7 @@ export function createOrchestrationEngine(
           context,
           execution.step,
           execution.attempt ?? 1,
+          clock(),
         ),
       );
     const critiqueIssues = validateCritique(execution.output);
@@ -1023,6 +1058,12 @@ export function createOrchestrationEngine(
     let current = snapshot;
     if (current.state === "provider-error") {
       if (current.lastError?.retryable !== true) return immutable(current);
+      if (
+        current.lastError.retryNotBefore !== undefined &&
+        Date.parse(current.lastError.retryNotBefore) > Date.parse(clock())
+      ) {
+        return immutable(current);
+      }
       const resumed = await save({
         ...current,
         state: stepStates[current.currentStep ?? "author"],

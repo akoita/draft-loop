@@ -809,7 +809,7 @@ function providerAgents(
         );
       }
       return new AnthropicAdapter<JsonObject, JsonObject>(
-        new Anthropic({ apiKey }) as unknown as AnthropicClient,
+        new Anthropic({ apiKey, maxRetries: 0 }) as unknown as AnthropicClient,
         {
           configuredModel: {
             company: provider,
@@ -829,7 +829,7 @@ function providerAgents(
         { retryable: false },
       );
     }
-    return new OpenAIAdapter<JsonObject, JsonObject>(new OpenAI({ apiKey }), {
+    return new OpenAIAdapter<JsonObject, JsonObject>(new OpenAI({ apiKey, maxRetries: 0 }), {
       configuredModel: {
         company: provider,
         modelId,

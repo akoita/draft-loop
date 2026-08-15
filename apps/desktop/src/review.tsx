@@ -32,6 +32,17 @@ function stateLabel(value: DesktopReviewState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
+function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
+  if (retryNotBefore === null) return 0;
+  const retryAt = Date.parse(retryNotBefore);
+  return Number.isFinite(retryAt) ? Math.max(0, retryAt - nowMs) : 0;
+}
+
+function retryWaitLabel(waitMs: number): string {
+  const seconds = Math.max(1, Math.ceil(waitMs / 1_000));
+  return `${seconds} second${seconds === 1 ? "" : "s"}`;
+}
+
 function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
   if (claim.status === "disputed") return "source conflict";
   return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
@@ -67,11 +78,13 @@ export function ReviewWorkspace({
       : "Approval pending";
   const validationLabel = !hasArtifact
     ? "No draft artifact available"
-    : findingSummary.status === "blocked"
-      ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
-      : findingSummary.status === "warnings"
-        ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
-        : "No unresolved findings";
+    : state.state === "provider-error"
+      ? "Provider recovery remains before approval"
+      : findingSummary.status === "blocked"
+        ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+        : findingSummary.status === "warnings"
+          ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+          : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
@@ -93,12 +106,29 @@ export function ReviewWorkspace({
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const [confirmedPolicyFingerprint, setConfirmedPolicyFingerprint] = useState<string | null>(null);
   const policyConfirmed =
     confirmedPolicyFingerprint === state.providerTransmissionPreflight.fingerprint;
   const transmissionReady =
     !state.providerTransmissionPreflight.required ||
     state.providerTransmissionPreflight.acknowledged;
+  const retryRemainingMs = retryWaitMs(state.providerFailure?.retryNotBefore ?? null, nowMs);
+
+  useEffect(() => {
+    setNowMs(Date.now());
+    if (state.providerFailure?.retryNotBefore === null || state.providerFailure === null) {
+      return undefined;
+    }
+    const retryAt = Date.parse(state.providerFailure.retryNotBefore);
+    if (!Number.isFinite(retryAt) || retryAt <= Date.now()) return undefined;
+    const timer = window.setInterval(() => {
+      const currentTime = Date.now();
+      setNowMs(currentTime);
+      if (currentTime >= retryAt) window.clearInterval(timer);
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [state.providerFailure?.retryNotBefore, state.providerFailure]);
 
   const refreshCredentials = useCallback(() => {
     if (getCredentialStatus === undefined) return;
@@ -712,10 +742,12 @@ export function ReviewWorkspace({
               <button
                 className="button button-primary"
                 type="button"
-                disabled={!transmissionReady}
+                disabled={
+                  !transmissionReady || retryRemainingMs > 0 || pendingReviewAction !== null
+                }
                 onClick={() => onAction({ type: "resume" })}
               >
-                Retry
+                {retryRemainingMs > 0 ? `Retry in ${retryWaitLabel(retryRemainingMs)}` : "Retry"}
               </button>
             ) : null}
             {state.providerFailure.availableActions.includes("return-to-review") ? (
@@ -737,6 +769,12 @@ export function ReviewWorkspace({
               </button>
             ) : null}
           </div>
+          {retryRemainingMs > 0 ? (
+            <p className="pending-action-status" role="status" aria-live="polite">
+              Retry is paused until the provider retry window opens (
+              {retryWaitLabel(retryRemainingMs)}).
+            </p>
+          ) : null}
         </section>
       ) : null}
 
@@ -1083,6 +1121,10 @@ export function ReviewWorkspace({
               <p className="warning-copy">
                 Approval is available with {warnings.length} unresolved non-blocking warning
                 {warnings.length === 1 ? "" : "s"}. They remain visible after approval.
+              </p>
+            ) : state.state === "provider-error" ? (
+              <p className="warning-copy">
+                No unresolved blocking findings; provider recovery remains before approval.
               </p>
             ) : (
               <p className="safe-copy">

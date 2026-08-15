@@ -387,6 +387,7 @@ describe("desktop capability bridge", () => {
       attempt: 1,
       maxAttempts: 3,
       retryAvailable: true,
+      retryNotBefore: null,
       availableActions: ["retry", "return-to-review", "stop"],
       diagnostics: [],
     } as const;
@@ -423,6 +424,7 @@ describe("desktop capability bridge", () => {
         attempt: 1,
         maxAttempts: 3,
         retryAvailable: true,
+        retryNotBefore: null,
         availableActions: ["retry", "return-to-review", "stop"] as const,
         diagnostics: [],
       },

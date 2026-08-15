@@ -258,12 +258,44 @@ describe("provider-neutral model adapters", () => {
     expect((error as Error).message).not.toContain("secret response body");
   });
 
+  it("normalizes bounded retry timing from provider headers without retaining raw details", () => {
+    const error = normalizeProviderError(
+      "anthropic",
+      Object.assign(new Error("private provider body"), {
+        status: 429,
+        headers: { "Retry-After": "999", "retry-after-ms": "1250" },
+      }),
+    );
+
+    expect(error).toMatchObject({ code: "rate-limit", retryable: true, retryAfterMs: 1250 });
+    expect(error.metadata).toEqual({ status: 429, retryAfterMs: 1250 });
+    expect(JSON.stringify(error)).not.toContain("private provider body");
+
+    const clamped = normalizeProviderError("openai", {
+      status: 429,
+      headers: { "retry-after-ms": "999999" },
+    });
+    expect(clamped.retryAfterMs).toBe(60_000);
+  });
+
+  it("normalizes OpenAI quota exhaustion as a non-retryable provider error", () => {
+    const error = normalizeProviderError("openai", {
+      status: 429,
+      error: { code: "insufficient_quota", message: "private quota response" },
+    });
+
+    expect(error).toMatchObject({ code: "quota-exhausted", retryable: false, status: 429 });
+    expect(error.message).toContain("quota-exhausted");
+    expect(JSON.stringify(error)).not.toContain("private quota response");
+  });
+
   it("retries transient rate-limit errors and recovers when subsequent attempt succeeds", async () => {
     let attempts = 0;
     const sleep = vi.fn(async () => undefined);
     const rateLimitError = Object.assign(new Error("Rate limited"), {
       status: 429,
       requestID: "openai-req-429",
+      headers: { "retry-after-ms": "75" },
     });
     const successResponse = {
       output_text: '{"answer":"recovered"}',
@@ -296,6 +328,8 @@ describe("provider-neutral model adapters", () => {
     expect(result.output).toEqual({ answer: "recovered" });
     expect(attempts).toBe(3);
     expect(sleep).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenNthCalledWith(1, 75);
+    expect(sleep).toHaveBeenNthCalledWith(2, 75);
   });
 
   it("throws when maximum retries are exhausted on persistent rate-limit errors", async () => {
@@ -330,6 +364,39 @@ describe("provider-neutral model adapters", () => {
     });
     expect(attempts).toBe(3); // Initial + 2 retries
     expect(sleep).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns long provider cooldowns to orchestration instead of retrying too early", async () => {
+    let attempts = 0;
+    const sleep = vi.fn(async () => undefined);
+    const create = async () => {
+      attempts += 1;
+      throw Object.assign(new Error("Rate limited"), {
+        status: 429,
+        headers: { "retry-after-ms": "6000" },
+      });
+    };
+    const openAIModel: ModelSelection = {
+      ...model,
+      company: "openai",
+      modelId: "gpt-test-exact",
+      role: "critic",
+      promptTemplateVersion: "critic-v1",
+    };
+    const adapter = new OpenAIAdapter(
+      { responses: { create } },
+      {
+        configuredModel: openAIModel,
+        retry: { maxRetries: 3, maxDelayMs: 5_000, sleep },
+      },
+    );
+
+    await expect(adapter.execute(request({ model: openAIModel }))).rejects.toMatchObject({
+      code: "rate-limit",
+      retryAfterMs: 6_000,
+    });
+    expect(attempts).toBe(1);
+    expect(sleep).not.toHaveBeenCalled();
   });
 
   it("fails immediately without retrying on non-retryable invalid-request errors", async () => {

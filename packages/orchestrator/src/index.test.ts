@@ -153,6 +153,7 @@ function engineFixture(
     readonly author?: (request: unknown) => Promise<AgentExecution<DraftArtifact>>;
     readonly critic?: (request: unknown) => Promise<AgentExecution<Critique>>;
     readonly store?: InMemoryRunStore;
+    readonly now?: () => string;
     readonly retrieval?: {
       readonly queryEvidence: (
         query: string,
@@ -172,7 +173,7 @@ function engineFixture(
     author: { execute: author },
     critic: { execute: critic },
     store,
-    now: () => timestamp,
+    now: options.now ?? (() => timestamp),
     ...(options.retrieval ? { retrieval: options.retrieval as never } : {}),
   });
   return { engine, author, critic, store };
@@ -362,6 +363,59 @@ describe("durable orchestration", () => {
       expect.arrayContaining(["run-1:1:author:attempt:1", "run-1:1:author:attempt:2"]),
     );
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("provider.failed");
+  });
+
+  it("persists an absolute retry time and blocks resume until the provider delay passes", async () => {
+    let now = timestamp;
+    const failure = Object.assign(new Error("private provider body"), {
+      code: "rate-limit",
+      retryAfterMs: 4_000,
+      retryable: true,
+    });
+    let calls = 0;
+    const { engine, author } = engineFixture({
+      now: () => now,
+      author: async () => {
+        calls += 1;
+        if (calls === 1) throw failure;
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+
+    const failed = await engine.start(request());
+    expect(failed.lastError).toMatchObject({
+      code: "rate-limit",
+      retryable: true,
+      retryNotBefore: "2026-08-12T10:00:04.000Z",
+    });
+
+    const early = await engine.resume("run-1", { context: context() });
+    expect(early).toEqual(failed);
+    expect(author).toHaveBeenCalledOnce();
+
+    now = "2026-08-12T10:00:04.000Z";
+    const recovered = await engine.resume("run-1", { context: context() });
+    expect(recovered.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(2);
+  });
+
+  it("applies a durable fallback cooldown when a rate limit omits retry timing", async () => {
+    const failure = Object.assign(new Error("private provider body"), {
+      code: "rate-limit",
+      retryable: true,
+    });
+    const { engine } = engineFixture({
+      author: async () => {
+        throw failure;
+      },
+    });
+
+    const failed = await engine.start(request());
+
+    expect(failed.lastError).toMatchObject({
+      code: "rate-limit",
+      retryNotBefore: "2026-08-12T10:00:05.000Z",
+    });
   });
 
   it("bounds orchestration retries at three attempts across persisted resumes", async () => {

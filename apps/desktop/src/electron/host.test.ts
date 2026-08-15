@@ -230,6 +230,7 @@ describe("native host", () => {
       attempt: 2,
       maxAttempts: 3,
       retryable: true,
+      retryNotBefore: undefined,
       providerRequestId: "request-safe",
       diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
     };
@@ -254,6 +255,7 @@ describe("native host", () => {
             attempt: 2,
             maxAttempts: 3,
             retryAvailable: true,
+            retryNotBefore: null,
             availableActions: ["retry", "return-to-review", "stop"],
             diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
           },
@@ -324,6 +326,32 @@ describe("native host", () => {
       });
       expect(retry).toMatchObject({ ok: false, error: { code: "operation-failed" } });
       expect(exhausted.service.resume).not.toHaveBeenCalled();
+
+      const coolingDown = service(root, {
+        state: "provider-error",
+        currentStep: "critic",
+        lastError: { ...lastError, retryNotBefore: "2999-01-01T00:00:00.000Z" },
+      });
+      const coolingDownHost = createNativeHost({
+        applicationService: coolingDown.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await coolingDownHost.invoke({
+        type: "workspace.open",
+        input: { selection: "native-dialog" },
+      });
+      const earlyRetry = await coolingDownHost.invoke({
+        type: "review.dispatch",
+        input: { workspaceId: "workspace-native", runId: "run-native", action: { type: "resume" } },
+      });
+      expect(earlyRetry).toMatchObject({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          message: "Retry is paused until the provider retry window opens.",
+        },
+      });
+      expect(coolingDown.service.resume).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
