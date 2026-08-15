@@ -175,12 +175,12 @@ describe("desktop trust-centered review", () => {
       />,
     );
 
-    expect(html).toContain("Bring your evidence into the loop");
+    expect(html).toContain("Bring your source material into the loop");
     expect(html).toContain("Add job description");
-    expect(html).toContain("Review and fetch evidence URL");
+    expect(html).toContain("Review and fetch source URL");
     expect(html).toContain("Start author–critic review");
     expect(html).toContain("Acknowledgement required");
-    expect(html).toContain("selected retrieved evidence chunks");
+    expect(html).toContain("selected candidate-source excerpts");
     expect(html).toContain("complete candidate corpus");
     expect(html).toContain("https://api.anthropic.com/v1/messages");
     expect(html).toContain("Acknowledge provider transmission");
@@ -199,6 +199,10 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Resolve or override 1 blocking finding before approval.");
     expect(html).toContain('disabled=""');
     expect(html).toContain("Export Markdown");
+    expect(html).toContain("source linked");
+    expect(html).toContain("not linked to candidate materials");
+    expect(html).not.toContain(">verified<");
+    expect(html).not.toContain(">unverified<");
   });
 
   it("shows bounded provider recovery actions without exposing provider payloads", () => {

@@ -315,7 +315,7 @@ export function validateDraftArtifact(
         code: "unsupported-claim",
         category: "evidence",
         severity: "error",
-        message: "substantive claim has no evidence references",
+        message: "substantive claim is not linked to candidate-provided materials",
         claimId: claim.id,
         sectionId: claim.sectionId,
       });
@@ -327,7 +327,7 @@ export function validateDraftArtifact(
         code: "unsupported-quantification",
         category: "factuality",
         severity: "error",
-        message: "substantive claim contains a metric absent from evidence excerpts",
+        message: "substantive claim contains a metric not linked to candidate-provided materials",
         claimId: claim.id,
         sectionId: claim.sectionId,
       });
@@ -338,7 +338,7 @@ export function validateDraftArtifact(
         code: "inconsistent-date",
         category: "factuality",
         severity: "error",
-        message: "claim and evidence contain non-overlapping years",
+        message: "claim and candidate-provided materials contain non-overlapping years",
         claimId: claim.id,
         sectionId: claim.sectionId,
       });

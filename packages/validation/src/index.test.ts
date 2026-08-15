@@ -61,7 +61,7 @@ function context(
 }
 
 describe("deterministic artifact validation", () => {
-  it("blocks a missing required section and an unsupported substantive claim", () => {
+  it("blocks a missing required section and a claim not linked to candidate-provided materials", () => {
     const result = validateDraftArtifact(
       artifactWithClaim("Built reliable systems.", []),
       context({
@@ -80,10 +80,15 @@ describe("deterministic artifact validation", () => {
         code: "unsupported-claim",
         category: "evidence",
         severity: "error",
+        message: "substantive claim is not linked to candidate-provided materials",
         claimId: "claim-1",
         sectionId: "section-summary",
       }),
     ]);
+    const claimIssue = result.issues.find((issue) => issue.code === "unsupported-claim");
+    expect(claimIssue?.message).not.toMatch(
+      /\b(?:evidence|proof|verification|unproven|objectively unsupported)\b/iu,
+    );
   });
 
   it("treats section title case and whitespace differences as equivalent", () => {
@@ -195,14 +200,22 @@ describe("deterministic artifact validation", () => {
         category: "factuality",
         claimId: "claim-1",
         sectionId: "section-summary",
+        message: "substantive claim contains a metric not linked to candidate-provided materials",
       }),
       expect.objectContaining({
         code: "inconsistent-date",
         category: "factuality",
         claimId: "claim-1",
         sectionId: "section-summary",
+        message: "claim and candidate-provided materials contain non-overlapping years",
       }),
     ]);
+    for (const issue of result.issues) {
+      expect(issue.message).toContain("candidate-provided materials");
+      expect(issue.message).not.toMatch(
+        /\b(?:evidence|proof|verification|unproven|objectively unsupported)\b/iu,
+      );
+    }
 
     const matchingDate = validateDraftArtifact(
       artifactWithClaim("Worked there in 2023.", [evidence("Worked there in 2023.")]),

@@ -8,13 +8,18 @@
 ![OpenAI](https://img.shields.io/badge/provider-OpenAI-412991)
 
 DraftLoop is a local-first, agentic CV-crafting workspace. It combines a job
-description and candidate evidence with an evidence-grounded
+description and candidate-provided source material with a source-grounded
 evaluator–optimizer loop: an author drafts, an independent critic evaluates
 against an explicit rubric, and bounded revisions continue until the candidate
 reviews and approves the result.
 
-The agents are useful participants, not authorities: source evidence stays
+The agents are useful participants, not authorities: candidate sources stay
 traceable, provider exposure is explicit, and export requires human approval.
+
+Traceability does not mean that DraftLoop independently verifies a career. CVs,
+profiles, and private-project descriptions are valid candidate sources. The app
+guards against model-added facts and contradictions; it does not contact past
+employers or replace reference checks, interviews, or technical evaluation.
 
 ## What exists today
 
@@ -69,7 +74,7 @@ preflight, failure recovery, and consented application results remain open.
 
 ```mermaid
 flowchart LR
-    Inputs["Job requirements<br/>+ candidate evidence"]
+    Inputs["Job requirements<br/>+ candidate source material"]
     Adapters["CLI or desktop"]
     Application["Shared application services"]
     Context["Local ingestion<br/>+ evidence context"]
@@ -145,8 +150,8 @@ pnpm --filter @draft-loop/desktop package
 ```
 
 The packaged host is offline-first. Creating a real workspace starts empty and
-waits for a target job description and candidate evidence. A separately labeled
-demo workspace starts the deterministic fixture workflow. The packaged desktop
+waits for a target job description and candidate source material. A separately
+labeled demo workspace starts the deterministic fixture workflow. The packaged desktop
 can collect Anthropic and OpenAI API keys through its typed native bridge and
 store them through the host credential store. Live execution remains opt-in and
 provider requests are denied unless the data-exposure policy allows them. The

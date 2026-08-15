@@ -37,9 +37,9 @@ The desktop host computes a canonical provider-transmission preflight from the
 current workspace configuration. It shows the Anthropic and OpenAI company,
 model, and API endpoint identities; the requested ephemeral retention policy;
 round, cost, and duration limits; and the exact allowed categories: job
-description and requirements, an evidence manifest, selected retrieved evidence
-chunks, and the current draft and structured findings. The complete candidate
-corpus is explicitly excluded. A SHA-256 fingerprint binds acknowledgement to
+description and requirements, a candidate source manifest, selected
+candidate-source excerpts, and the current draft and structured findings. The
+complete candidate corpus is explicitly excluded. A SHA-256 fingerprint binds acknowledgement to
 that projection, so a provider, model, endpoint, retention, scope, or budget
 change requires acknowledgement again.
 

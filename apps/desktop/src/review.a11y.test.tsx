@@ -16,7 +16,7 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
     // Section landmarks
     expect(html).toContain('aria-label="trust and policy summary"');
     expect(html).toContain('aria-label="artifact review"');
-    expect(html).toContain('aria-label="claim to evidence inspection"');
+    expect(html).toContain('aria-label="claim to source inspection"');
     expect(html).toContain('aria-label="critique findings"');
     expect(html).toContain('aria-label="approval and export"');
   });

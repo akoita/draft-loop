@@ -32,6 +32,11 @@ function stateLabel(value: DesktopReviewState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
+function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
+  if (claim.status === "disputed") return "source conflict";
+  return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
+}
+
 export function ReviewWorkspace({
   state,
   onAction,
@@ -462,7 +467,7 @@ export function ReviewWorkspace({
         <header className="topbar">
           <div>
             <p className="eyebrow">DraftLoop / Workspace setup</p>
-            <h1>Bring your evidence into the loop</h1>
+            <h1>Bring your source material into the loop</h1>
           </div>
           <div className="run-identity">
             <button
@@ -481,7 +486,7 @@ export function ReviewWorkspace({
           <h2 id="onboarding-title">Add the sources DraftLoop is allowed to use</h2>
           <p className="onboarding-copy">
             Your files stay in this workspace. DraftLoop will not invent missing experience or start
-            an agent run until the target job and candidate evidence are present.
+            an agent run until the target job and candidate source material are present.
           </p>
           {errorMessage ? (
             <div className="error-banner" role="alert">
@@ -527,7 +532,7 @@ export function ReviewWorkspace({
             </article>
             <article className="setup-card">
               <span className="setup-number">02</span>
-              <strong>Candidate evidence</strong>
+              <strong>Candidate source material</strong>
               <span>
                 {state.setup.evidenceSourceCount === 0
                   ? "Add a CV, portfolio, or other source"
@@ -539,7 +544,7 @@ export function ReviewWorkspace({
                 disabled={onSelectFiles === undefined}
                 onClick={() => onSelectFiles?.("evidence")}
               >
-                Add evidence files
+                Add source files
               </button>
               <label className="url-input-label">
                 <span>Or provide a public URL</span>
@@ -549,7 +554,7 @@ export function ReviewWorkspace({
                   placeholder="https://github.com/…"
                   value={evidenceUrl}
                   onChange={(event) => setEvidenceUrl(event.target.value)}
-                  aria-label="Candidate evidence URL"
+                  aria-label="Candidate source URL"
                 />
               </label>
               <button
@@ -558,7 +563,7 @@ export function ReviewWorkspace({
                 disabled={onAddUrl === undefined || evidenceUrl.trim() === ""}
                 onClick={() => submitUrl("evidence")}
               >
-                Review and fetch evidence URL
+                Review and fetch source URL
               </button>
             </article>
             <article className="setup-card">
@@ -624,7 +629,7 @@ export function ReviewWorkspace({
       <header className="topbar">
         <div>
           <p className="eyebrow">DraftLoop / Review workspace</p>
-          <h1>Evidence before approval</h1>
+          <h1>Sources before approval</h1>
         </div>
         <div className="run-identity">
           <button
@@ -815,14 +820,14 @@ export function ReviewWorkspace({
             </article>
           </div>
 
-          <section className="claims-panel" aria-label="claim to evidence inspection">
+          <section className="claims-panel" aria-label="claim to source inspection">
             <div className="section-heading compact">
               <div>
                 <p className="eyebrow">Traceability</p>
-                <h2>Claims and evidence</h2>
+                <h2>Claims and candidate sources</h2>
               </div>
               <span className="subtle">
-                Evidence links support review; they do not guarantee truth.
+                Source links show where wording came from; they do not independently verify it.
               </span>
             </div>
             <div className="claim-list">
@@ -830,10 +835,12 @@ export function ReviewWorkspace({
                 <article className={`claim-card claim-${claim.status}`} key={claim.id}>
                   <div className="claim-heading">
                     <strong>{claim.text}</strong>
-                    <span className="status-tag">{claim.status}</span>
+                    <span className="status-tag">{claimSourceLabel(claim)}</span>
                   </div>
                   {claim.evidence.length === 0 ? (
-                    <p className="warning-copy">No evidence is linked to this claim.</p>
+                    <p className="warning-copy">
+                      This claim is not linked to the candidate materials supplied to DraftLoop.
+                    </p>
                   ) : (
                     claim.evidence.map((reference) => (
                       <div

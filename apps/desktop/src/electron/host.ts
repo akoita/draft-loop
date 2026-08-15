@@ -62,8 +62,8 @@ const maxImportedFileBytes = 20 * 1024 * 1024;
 
 const transmissionScope = [
   "job description and requirements",
-  "evidence manifest",
-  "selected retrieved evidence chunks",
+  "candidate source manifest",
+  "selected candidate-source excerpts",
   "current draft and structured findings",
 ] as const;
 const excludedTransmissionScope = ["complete candidate corpus"] as const;

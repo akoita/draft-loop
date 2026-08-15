@@ -114,8 +114,8 @@ export interface ProviderTransmissionPolicy {
   readonly dataClass: "candidate-application-material" | "synthetic-demo-material";
   readonly transmissionScope: readonly [
     "job description and requirements",
-    "evidence manifest",
-    "selected retrieved evidence chunks",
+    "candidate source manifest",
+    "selected candidate-source excerpts",
     "current draft and structured findings",
   ];
   readonly excludedScope: readonly ["complete candidate corpus"];
@@ -464,8 +464,8 @@ export function createFixtureReviewState(): DesktopReviewState {
       dataClass: "synthetic-demo-material",
       transmissionScope: [
         "job description and requirements",
-        "evidence manifest",
-        "selected retrieved evidence chunks",
+        "candidate source manifest",
+        "selected candidate-source excerpts",
         "current draft and structured findings",
       ],
       excludedScope: ["complete candidate corpus"],
@@ -491,7 +491,7 @@ export function createFixtureReviewState(): DesktopReviewState {
         code: "unsupported-claim",
         category: "factuality",
         severity: "error",
-        message: "A quantified claim has no linked evidence.",
+        message: "A quantified claim is not linked to candidate-provided source material.",
         decision: "pending",
         agreement: "critic-only",
         claimId: "claim-3",

@@ -921,7 +921,7 @@ describe("native host", () => {
         },
       });
       expect(await readFile(join(root, "exports", `${reviewValue.runId}.md`), "utf8")).toContain(
-        "Evidence-backed",
+        "candidate-provided materials",
       );
     } finally {
       await rm(parent, { recursive: true, force: true });

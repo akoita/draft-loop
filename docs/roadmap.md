@@ -12,7 +12,7 @@ the review date and the change log whenever priorities materially change.
 ## Vision
 
 DraftLoop helps a candidate produce a job-specific CV that is relevant,
-evidence-backed, and genuinely theirs. Independent author and critic agents can
+source-traceable, and genuinely theirs. Independent author and critic agents can
 propose and challenge changes, but the candidate retains control over source
 material, provider exposure, factual claims, and final approval.
 
@@ -23,14 +23,21 @@ consented cases.
 
 ## Product principles
 
-- Evidence before eloquence: substantive claims remain traceable to user-owned
-  sources.
+- Sources before eloquence: substantive claims remain traceable to user-owned
+  candidate materials.
 - Agents advise; people decide: export requires a visible approval boundary.
 - Local by default: provider transmission is explicit and scoped.
 - Independent review: provider and model identities are visible, and
   cross-company diversity is the default.
 - Measured expansion: new retrieval, providers, and workflows must improve a
   defined outcome rather than only add capability.
+
+Candidate-source traceability is not independent factual verification. A CV,
+profile, or private-project description supplied by the candidate is legitimate
+source material even when no public proof exists. DraftLoop prevents model-added
+facts and surfaces contradictions; it does not conduct background checks,
+contact employers, or replace recruiter references, interviews, or technical
+evaluation. Public projects and credentials are optional corroboration.
 
 ## Status model
 
@@ -223,6 +230,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Reframed candidate claim handling around source traceability rather than objective verification for issue #130 | Private professional experience is commonly not publicly provable; DraftLoop must prevent model invention without pretending to perform recruiter investigations or technical assessment |
 | 2026-08-15 | Hardened the live author boundary and terminal desktop projections for issue #126 | The real-application run exposed that models must propose content while the application owns canonical artifact metadata and evidence resolution, and that failed or stopped runs must not appear completed, validated, or approvable |
 | 2026-08-15 | Extended packaged Linux, macOS, and Windows acceptance with observable execution, interrupted-run recovery, and deterministic in-flight cancellation evidence for issue #119 | The desktop control is only stage evidence when installed artifacts exercise the same background worker and Stop path |
 | 2026-08-15 | Added cancellable desktop workers, explicit interrupted-run recovery, and live provider/step/attempt/elapsed/timeout projection for issue #119 | A long-running review must remain understandable and stoppable, and restart must never imply that a missing worker is still running |
