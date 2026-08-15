@@ -11,9 +11,9 @@ was Validated.
 - The root `package.json` version is the release version source of truth.
 - Every workspace package must carry the same version. `pnpm release:check`
   rejects drift before a release can start.
-- `release.json` defines the current roadmap stage, release channel, release
-  name, and supported desktop artifact targets. It must agree with the current
-  stage in `docs/roadmap.md` before a release starts.
+- `release.json` defines the current roadmap stage, stage issue, release
+  channel, release name, and supported desktop artifact targets. It must agree
+  with the current stage in `docs/roadmap.md` before a release starts.
 - The current Integration hardening and outcome validation channel is `alpha`;
   alpha and pilot releases are GitHub prereleases.
 - A stable channel is allowed only after the production-beta exit criteria are

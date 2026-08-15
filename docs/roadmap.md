@@ -223,6 +223,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Aligned every package manifest to v0.6.0 and corrected release-note traceability to milestone issue #106 for issue #105; publication remains blocked by issue #104 | A reproducible release candidate needs one version source across the monorepo and must link the current stage issue, while a version bump alone cannot satisfy the real-outcome exit criterion |
 | 2026-08-15 | Added a truthful v0.6.0 stage-evidence working record for issue #105; release preparation remains gated by the missing real consented outcome in issue #104 | Automated acceptance and release contracts are reviewable, but versioning and publication must wait for the representative product result and its limitations |
 | 2026-08-15 | Added an explicit consented outcome record, sanitized product measures, and a private/public pilot protocol for issue #104; no real application result is claimed yet | The pilot gate must record completion, factuality signals, critical coverage, unsupported claims, effort, rounds, cost, confidence, and adversarial limitations without putting personal or provider content in the repository |
 | 2026-08-15 | Added a sanitized two-launch installed-app acceptance matrix for issue #103 across Linux x64, macOS arm64, and Windows x64 | Cross-platform integration needs workspace, URL provenance, preflight, restart, review, and export evidence without exposing candidate material or contacting live providers |

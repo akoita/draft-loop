@@ -195,6 +195,10 @@ export function validateReleaseMetadata(metadata, { project } = {}) {
     errors.push(`project must match the root package name ${project}`);
   }
 
+  if (!Number.isInteger(metadata.stageIssue) || metadata.stageIssue < 1) {
+    errors.push("stageIssue must be a positive integer");
+  }
+
   if (!Array.isArray(metadata.artifactTargets) || metadata.artifactTargets.length === 0) {
     errors.push("artifactTargets must be a non-empty array");
   } else {
@@ -733,6 +737,7 @@ export function createReleaseManifest({
     stage: checked.releaseMetadata.stage,
     channel: checked.releaseMetadata.channel,
     releaseName: checked.releaseMetadata.releaseName,
+    stageIssue: checked.releaseMetadata.stageIssue,
     commit: normalizeCommit(commit),
     generatedAt: normalizeGeneratedAt(generatedAt),
     runtime: runtime ?? detectRuntime({}, checked.rootPackage),
