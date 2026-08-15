@@ -401,10 +401,7 @@ export function authorArtifactProposalJsonSchemaForEvidence(
     schema.properties.sections.items.properties.blocks.items.properties.claims.items.properties
       .evidenceChunkIds;
 
-  evidenceIdsSchema.uniqueItems = true;
-  if (allowedIds.length === 0) {
-    evidenceIdsSchema.maxItems = 0;
-  } else {
+  if (allowedIds.length > 0) {
     evidenceIdsSchema.items = { type: "string", enum: allowedIds };
   }
 

@@ -77,14 +77,17 @@ describe("live author proposal boundary", () => {
     const serialized = JSON.stringify(schema);
 
     expect(serialized).toContain('"enum":["chunk-2","chunk-1"]');
-    expect(serialized).toContain('"uniqueItems":true');
+    expect(serialized).not.toContain('"uniqueItems"');
+    expect(serialized).not.toContain('"maxItems"');
     expect(JSON.stringify(authorArtifactProposalJsonSchema)).not.toContain('"chunk-1"');
   });
 
-  it("requires empty evidence references when no chunks were retrieved", () => {
+  it("leaves empty evidence enforcement to the prompt and local validation boundary", () => {
     const schema = authorArtifactProposalJsonSchemaForEvidence([]);
+    const serialized = JSON.stringify(schema);
 
-    expect(JSON.stringify(schema)).toContain('"maxItems":0');
+    expect(serialized).not.toContain('"uniqueItems"');
+    expect(serialized).not.toContain('"maxItems"');
   });
 
   it("constructs canonical v1 metadata and maps local evidence", () => {
