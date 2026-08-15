@@ -45,7 +45,7 @@ import {
   renderArtifact,
 } from "@draft-loop/rendering";
 import {
-  authorArtifactProposalJsonSchema,
+  authorArtifactProposalJsonSchemaForEvidence,
   contextSnapshotSchema,
   type DraftArtifact,
 } from "@draft-loop/schemas";
@@ -726,9 +726,9 @@ function invalidAuthorProposalError(
     "invalid-response",
     "The author returned an invalid content proposal.",
     response.providerRequestId === null
-      ? { retryable: false, diagnostics: proposalDiagnostics(error) }
+      ? { retryable: true, diagnostics: proposalDiagnostics(error) }
       : {
-          retryable: false,
+          retryable: true,
           requestId: response.providerRequestId,
           diagnostics: proposalDiagnostics(error),
         },
@@ -864,7 +864,9 @@ function providerAgents(
           currentArtifact,
           findings,
         }),
-        outputSchema: authorArtifactProposalJsonSchema as JsonObject,
+        outputSchema: authorArtifactProposalJsonSchemaForEvidence(
+          retrievedEvidence.map(({ id }) => id),
+        ) as JsonObject,
         outputName: "author_artifact_proposal",
         dataPolicy,
         ...(signal === undefined ? {} : { signal }),

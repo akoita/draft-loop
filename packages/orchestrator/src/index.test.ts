@@ -365,6 +365,39 @@ describe("durable orchestration", () => {
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("provider.failed");
   });
 
+  it("allows a bounded retry when a provider response fails local validation", async () => {
+    let attempts = 0;
+    const { engine, author } = engineFixture({
+      author: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          throw Object.assign(new Error("private invalid response"), {
+            code: "invalid-response",
+            retryable: true,
+            diagnostics: [
+              { code: "custom", path: "sections.0.blocks.0.claims.0.evidenceChunkIds.0" },
+            ],
+          });
+        }
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+
+    const failed = await engine.start(request());
+    expect(failed.lastError).toMatchObject({
+      code: "invalid-response",
+      attempt: 1,
+      maxAttempts: 3,
+      retryable: true,
+      diagnostics: [{ code: "custom", path: "sections.0.blocks.0.claims.0.evidenceChunkIds.0" }],
+    });
+    expect(JSON.stringify(failed)).not.toContain("private invalid response");
+
+    const resumed = await engine.resume("run-1", { context: context() });
+    expect(resumed.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(2);
+  });
+
   it("persists an absolute retry time and blocks resume until the provider delay passes", async () => {
     let now = timestamp;
     const failure = Object.assign(new Error("private provider body"), {

@@ -1,4 +1,7 @@
-import { authorArtifactProposalJsonSchema } from "@draft-loop/schemas";
+import {
+  authorArtifactProposalJsonSchema,
+  authorArtifactProposalJsonSchemaForEvidence,
+} from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -67,6 +70,21 @@ describe("live author proposal boundary", () => {
     expect(serialized).not.toContain("schemaVersion");
     expect(serialized).not.toContain("parentVersionId");
     expect(serialized).not.toContain("createdAt");
+  });
+
+  it("constrains provider evidence references to chunks included in the request", () => {
+    const schema = authorArtifactProposalJsonSchemaForEvidence(["chunk-2", "chunk-1", "chunk-1"]);
+    const serialized = JSON.stringify(schema);
+
+    expect(serialized).toContain('"enum":["chunk-2","chunk-1"]');
+    expect(serialized).toContain('"uniqueItems":true');
+    expect(JSON.stringify(authorArtifactProposalJsonSchema)).not.toContain('"chunk-1"');
+  });
+
+  it("requires empty evidence references when no chunks were retrieved", () => {
+    const schema = authorArtifactProposalJsonSchemaForEvidence([]);
+
+    expect(JSON.stringify(schema)).toContain('"maxItems":0');
   });
 
   it("constructs canonical v1 metadata and maps local evidence", () => {

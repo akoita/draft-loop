@@ -272,7 +272,7 @@ describe("native host", () => {
   it("projects safe provider recovery and enforces retry, return, and stop actions", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-provider-error-"));
     const lastError = {
-      code: "timeout",
+      code: "invalid-response",
       message: "The provider request failed. You can retry safely.",
       provider: "openai",
       modelId: "gpt-5",
@@ -298,7 +298,7 @@ describe("native host", () => {
           state: "provider-error",
           execution: { status: "idle", step: null, attempt: null },
           providerFailure: {
-            code: "timeout",
+            code: "invalid-response",
             provider: "openai",
             model: "gpt-5",
             step: "critic",

@@ -362,6 +362,55 @@ const { $schema: _authorArtifactProposalSchemaMetadata, ...authorArtifactProposa
 
 export const authorArtifactProposalJsonSchema = authorArtifactProposalJsonSchemaValue;
 
+type AuthorProposalJsonSchemaShape = {
+  properties: {
+    sections: {
+      items: {
+        properties: {
+          blocks: {
+            items: {
+              properties: {
+                claims: {
+                  items: {
+                    properties: {
+                      evidenceChunkIds: Record<string, unknown>;
+                    };
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+    };
+  };
+};
+
+/**
+ * Narrow the provider contract to evidence IDs included in this exact request.
+ * The canonical Zod boundary still performs the authoritative local check.
+ */
+export function authorArtifactProposalJsonSchemaForEvidence(
+  evidenceChunkIds: readonly string[],
+): typeof authorArtifactProposalJsonSchema {
+  const schema = structuredClone(
+    authorArtifactProposalJsonSchema,
+  ) as unknown as AuthorProposalJsonSchemaShape;
+  const allowedIds = [...new Set(evidenceChunkIds)];
+  const evidenceIdsSchema =
+    schema.properties.sections.items.properties.blocks.items.properties.claims.items.properties
+      .evidenceChunkIds;
+
+  evidenceIdsSchema.uniqueItems = true;
+  if (allowedIds.length === 0) {
+    evidenceIdsSchema.maxItems = 0;
+  } else {
+    evidenceIdsSchema.items = { type: "string", enum: allowedIds };
+  }
+
+  return schema as unknown as typeof authorArtifactProposalJsonSchema;
+}
+
 const uniqueStrings = (values: readonly string[]): boolean =>
   new Set(values).size === values.length;
 

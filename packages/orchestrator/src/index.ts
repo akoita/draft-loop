@@ -361,6 +361,7 @@ const userRetryableProviderErrorCodes = new Set([
   "rate-limit",
   "timeout",
   "transient",
+  "invalid-response",
 ]);
 
 function safeProviderRequestId(value: unknown): string | null {
