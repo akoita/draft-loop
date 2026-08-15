@@ -874,6 +874,7 @@ function providerAgents(
       currentArtifact,
       findings,
       retrievedEvidence = [],
+      signal,
     }) => {
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
@@ -892,6 +893,7 @@ function providerAgents(
         outputSchema: artifactOutputSchema,
         outputName: "draft_artifact",
         dataPolicy,
+        ...(signal === undefined ? {} : { signal }),
       };
       const adapter = await createAdapter(config.authorCompany, config.authorModel, "author");
       const response = await adapter.execute(request);
@@ -906,6 +908,7 @@ function providerAgents(
       artifact,
       deterministicFindings,
       retrievedEvidence = [],
+      signal,
     }) => {
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
@@ -924,6 +927,7 @@ function providerAgents(
         outputSchema: critiqueOutputSchema,
         outputName: "draft_critique",
         dataPolicy,
+        ...(signal === undefined ? {} : { signal }),
       };
       const adapter = await createAdapter(config.criticCompany, config.criticModel, "critic");
       const response = await adapter.execute(request);
@@ -1214,6 +1218,7 @@ export async function resumeRun(
     readonly runId?: string;
     readonly allowProviderData?: boolean;
     readonly resolveCredential?: ProviderCredentialResolver;
+    readonly signal?: AbortSignal;
   } = {},
   io: CliIo = defaultIo,
 ): Promise<RunSnapshot> {
@@ -1233,7 +1238,11 @@ export async function resumeRun(
       options.resolveCredential ?? environmentCredentialResolver,
     );
     preflight(config, io, budget(config));
-    const snapshot = await runEngine.resume(runId, { context, budget: budget(config) });
+    const snapshot = await runEngine.resume(runId, {
+      context,
+      budget: budget(config),
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
+    });
     await saveTypedHistory(storage, config, snapshot);
     outputEvents(await runEngine.events(runId), io);
     outputSnapshot(snapshot, io);
@@ -1554,6 +1563,7 @@ export function createLocalApplicationDriver(options?: {
           ...(command.allowProviderData === undefined
             ? {}
             : { allowProviderData: command.allowProviderData }),
+          ...(command.signal === undefined ? {} : { signal: command.signal }),
           ...credentialOptions,
         },
         io,

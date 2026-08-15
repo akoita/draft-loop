@@ -65,6 +65,7 @@ describe("provider-neutral model adapters", () => {
   });
   it("sends Anthropic's exact model and structured JSON request shape", async () => {
     type Params = Parameters<AnthropicClient["messages"]["create"]>[0];
+    type Options = Parameters<AnthropicClient["messages"]["create"]>[1];
     const response = {
       id: "msg-1",
       content: [{ type: "text", text: '{"answer":"yes"}' }],
@@ -72,8 +73,10 @@ describe("provider-neutral model adapters", () => {
       usage: { input_tokens: 11, output_tokens: 7 },
     };
     let seen: Params | undefined;
-    const create = (params: Params) => {
+    let seenOptions: Options;
+    const create = (params: Params, options?: Options) => {
       seen = params;
+      seenOptions = options;
       return Object.assign(Promise.resolve(response), {
         withResponse: async () => ({ data: response, request_id: "anthropic-request-1" }),
       }) as ReturnType<AnthropicClient["messages"]["create"]>;
@@ -84,7 +87,8 @@ describe("provider-neutral model adapters", () => {
       pricing: { inputUsdPerMillionTokens: 1, outputUsdPerMillionTokens: 2 },
     });
 
-    const result = await adapter.execute(request());
+    const controller = new AbortController();
+    const result = await adapter.execute(request({ signal: controller.signal }));
 
     expect(seen).toMatchObject({
       model: model.modelId,
@@ -105,10 +109,12 @@ describe("provider-neutral model adapters", () => {
     expect(result.structuredOutputSha256).toBe(
       createHash("sha256").update('{"answer":"yes"}').digest("hex"),
     );
+    expect(seenOptions?.signal).toBe(controller.signal);
   });
 
   it("sends OpenAI Responses input as user data and uses strict JSON schema text format", async () => {
     type Params = Parameters<OpenAIClient["responses"]["create"]>[0];
+    type Options = Parameters<OpenAIClient["responses"]["create"]>[1];
     const response = {
       id: "resp-1",
       model: "gpt-test-exact",
@@ -131,8 +137,10 @@ describe("provider-neutral model adapters", () => {
       _request_id: "openai-request-1",
     };
     let seen: Params | undefined;
-    const create = async (params: Params) => {
+    let seenOptions: Options;
+    const create = async (params: Params, options?: Options) => {
       seen = params;
+      seenOptions = options;
       return response as unknown as Awaited<ReturnType<OpenAIClient["responses"]["create"]>>;
     };
     const client: OpenAIClient = { responses: { create } };
@@ -148,7 +156,10 @@ describe("provider-neutral model adapters", () => {
       pricing: { inputUsdPerMillionTokens: 3, outputUsdPerMillionTokens: 4 },
     });
 
-    const result = await adapter.execute(request({ model: openAIModel }));
+    const controller = new AbortController();
+    const result = await adapter.execute(
+      request({ model: openAIModel, signal: controller.signal }),
+    );
 
     expect(seen).toMatchObject({
       model: openAIModel.modelId,
@@ -171,6 +182,7 @@ describe("provider-neutral model adapters", () => {
       usage: { inputTokens: 13, outputTokens: 5, totalTokens: 18 },
       cost: { estimatedUsd: 0.000059 },
     });
+    expect(seenOptions?.signal).toBe(controller.signal);
   });
 
   it("does not call a provider when transmission is denied or the company is not allowlisted", async () => {

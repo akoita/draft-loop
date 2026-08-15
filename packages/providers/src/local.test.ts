@@ -58,6 +58,7 @@ describe("LocalModelAdapter for Offline Inference", () => {
     );
 
     const progressEvents: unknown[] = [];
+    const controller = new AbortController();
     const request: ModelRequest<{ readonly target: string }> = {
       contextSnapshotId: "snap-local-1",
       model: sampleModel,
@@ -67,6 +68,7 @@ describe("LocalModelAdapter for Offline Inference", () => {
       outputName: "draft",
       dataPolicy: allowedPolicy,
       onProgress: (event) => progressEvents.push(event),
+      signal: controller.signal,
     };
 
     const response = await adapter.execute(request);
@@ -84,6 +86,7 @@ describe("LocalModelAdapter for Offline Inference", () => {
       "http://127.0.0.1:11434/v1/chat/completions",
       expect.objectContaining({
         method: "POST",
+        signal: controller.signal,
       }),
     );
   });

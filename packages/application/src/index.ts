@@ -56,6 +56,7 @@ export type BeginRunCommand = StartRunCommand;
 
 export interface ResumeRunCommand extends StartRunCommand {
   readonly runId?: string;
+  readonly signal?: AbortSignal;
 }
 
 export type LifecycleAction = "pause" | "stop" | "approve" | "revision" | "recover-review";

@@ -223,6 +223,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Propagated cancellation signals from the application resume contract through orchestration and Anthropic, OpenAI, and local provider requests for issue #119 | A desktop Stop action must be able to abort the actual in-flight request before persisting a terminal run state |
 | 2026-08-15 | Moved desktop provider execution behind an immediate durable run response and active-state refresh for issue #119 | Long provider calls must not hold the initiating IPC request open or leave the installed app looking unresponsive |
 | 2026-08-15 | Added a durable begin-without-execution contract for issue #119 | Desktop progress needs a run identity and persisted initial state before provider work can move outside the initiating IPC request |
 | 2026-08-15 | Added immediate pending-review acknowledgement and bounded serialized bridge-error message preservation for issue #118 | Integration hardening needs duplicate-safe review starts and user-visible recovery without exposing arbitrary thrown error content |

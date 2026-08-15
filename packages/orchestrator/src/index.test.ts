@@ -229,10 +229,16 @@ describe("durable orchestration", () => {
     expect(critic).not.toHaveBeenCalled();
     expect((await engine.events("run-1")).map((event) => event.type)).toEqual(["run.created"]);
 
-    const completed = await engine.resume("run-1", { context: context() });
+    const controller = new AbortController();
+    const completed = await engine.resume("run-1", {
+      context: context(),
+      signal: controller.signal,
+    });
     expect(completed.state).toBe("awaiting-approval");
     expect(author).toHaveBeenCalledOnce();
     expect(critic).toHaveBeenCalledOnce();
+    expect(author.mock.calls[0]?.[0]).toMatchObject({ signal: controller.signal });
+    expect(critic.mock.calls[0]?.[0]).toMatchObject({ signal: controller.signal });
   });
 
   it("runs author and critic steps, then requires explicit approval", async () => {

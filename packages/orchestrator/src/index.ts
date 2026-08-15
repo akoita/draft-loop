@@ -73,6 +73,7 @@ export interface AuthorRequest {
   readonly currentArtifact: DraftArtifact | null;
   readonly findings: readonly ValidationIssue[];
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
+  readonly signal?: AbortSignal;
 }
 
 export interface CriticRequest {
@@ -83,6 +84,7 @@ export interface CriticRequest {
   readonly artifact: DraftArtifact;
   readonly deterministicFindings: readonly ValidationIssue[];
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
+  readonly signal?: AbortSignal;
 }
 
 export interface AuthorAgent {
@@ -206,6 +208,7 @@ export interface OrchestrationRequest {
 export interface ResumeOptions {
   readonly context?: ContextSnapshot;
   readonly budget?: RunBudget;
+  readonly signal?: AbortSignal;
 }
 
 export interface OrchestrationEngine {
@@ -731,6 +734,7 @@ export function createOrchestrationEngine(
   const executeStep = async (
     snapshot: RunSnapshot,
     context: ContextSnapshot,
+    signal?: AbortSignal,
   ): Promise<RunSnapshot> => {
     if (snapshot.currentStep === null) return snapshot;
     const step = snapshot.currentStep;
@@ -812,6 +816,7 @@ export function createOrchestrationEngine(
               artifact: snapshot.artifact as DraftArtifact,
               deterministicFindings: snapshot.findings,
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
+              ...(signal === undefined ? {} : { signal }),
             })
           : await options.author.execute({
               executionId: id,
@@ -821,6 +826,7 @@ export function createOrchestrationEngine(
               currentArtifact: snapshot.artifact,
               findings: snapshot.findings,
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
+              ...(signal === undefined ? {} : { signal }),
             });
       const record: ExecutionRecord = {
         id,
@@ -976,7 +982,11 @@ export function createOrchestrationEngine(
     );
   };
 
-  const advance = async (snapshot: RunSnapshot, context: ContextSnapshot): Promise<RunSnapshot> => {
+  const advance = async (
+    snapshot: RunSnapshot,
+    context: ContextSnapshot,
+    signal?: AbortSignal,
+  ): Promise<RunSnapshot> => {
     let current = snapshot;
     if (current.state === "provider-error") {
       if (current.lastError?.retryable !== true) return immutable(current);
@@ -996,7 +1006,7 @@ export function createOrchestrationEngine(
       current.state !== "awaiting-approval" &&
       current.state !== "provider-error"
     ) {
-      current = await executeStep(current, context);
+      current = await executeStep(current, context, signal);
     }
     return immutable(current);
   };
@@ -1054,7 +1064,7 @@ export function createOrchestrationEngine(
       resumed.state === "paused"
         ? { ...resumed, state: stepStates[resumed.currentStep ?? "author"] }
         : resumed;
-    return advance(active, context);
+    return advance(active, context, resumeOptions.signal);
   };
 
   const pause = async (runId: string): Promise<RunSnapshot> => {

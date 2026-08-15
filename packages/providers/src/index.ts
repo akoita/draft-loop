@@ -52,6 +52,7 @@ export interface ModelRequest<Input extends JsonValue = JsonValue> {
   readonly outputName: string;
   readonly dataPolicy: DataExposurePolicy;
   readonly onProgress?: StreamingProgressCallback;
+  readonly signal?: AbortSignal;
 }
 
 export interface ModelCost {
@@ -342,7 +343,10 @@ type AnthropicMessagePromise = PromiseLike<unknown> & {
 
 export interface AnthropicClient {
   readonly messages: {
-    create(parameters: MessageCreateParamsNonStreaming): AnthropicMessagePromise;
+    create(
+      parameters: MessageCreateParamsNonStreaming,
+      options?: { readonly signal?: AbortSignal },
+    ): AnthropicMessagePromise;
   };
 }
 
@@ -473,7 +477,10 @@ export class AnthropicAdapter<
 
     return executeWithRetry(async () => {
       try {
-        const responsePromise = this.client.messages.create(parameters);
+        const responsePromise = this.client.messages.create(
+          parameters,
+          ...(request.signal === undefined ? [] : [{ signal: request.signal }]),
+        );
         const response =
           typeof responsePromise.withResponse === "function"
             ? await responsePromise.withResponse()
@@ -522,7 +529,10 @@ type OpenAIResponseType = import("openai/resources/responses/responses.js").Resp
 
 export interface OpenAIClient {
   readonly responses: {
-    create(parameters: ResponseCreateParamsNonStreaming): PromiseLike<OpenAIResponse>;
+    create(
+      parameters: ResponseCreateParamsNonStreaming,
+      options?: { readonly signal?: AbortSignal },
+    ): PromiseLike<OpenAIResponse>;
   };
 }
 
@@ -572,7 +582,10 @@ export class OpenAIAdapter<
 
     return executeWithRetry(async () => {
       try {
-        const response = await this.client.responses.create(parameters);
+        const response = await this.client.responses.create(
+          parameters,
+          ...(request.signal === undefined ? [] : [{ signal: request.signal }]),
+        );
         const output = parseJson<Output>(this.provider, response.output_text);
         const inputTokens = response.usage?.input_tokens ?? 0;
         const outputTokens = response.usage?.output_tokens ?? 0;
@@ -666,6 +679,7 @@ export class LocalModelAdapter<
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
+          ...(request.signal === undefined ? {} : { signal: request.signal }),
         });
 
         if (!res.ok) {
