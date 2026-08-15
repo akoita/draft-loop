@@ -443,6 +443,17 @@ textarea:focus {
   font-size: 0.76rem;
 }
 
+.pending-action-status {
+  margin: 14px 0 0;
+  border: 1px solid #34444e;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #aebcc8;
+  background: rgba(60, 174, 155, 0.08);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
 .provider-preflight {
   margin-top: 20px;
   border: 1px solid #34444e;

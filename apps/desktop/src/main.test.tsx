@@ -7,8 +7,95 @@ import {
   unresolvedBlockingFindings,
 } from "./model.js";
 import { ReviewWorkspace } from "./review.js";
+import { createReviewActionDispatcher } from "./review-dispatch.js";
+
+const collectingState = () => ({
+  ...createFixtureReviewState(),
+  state: "collecting" as const,
+  runId: "pending",
+  setup: {
+    ...createFixtureReviewState().setup,
+    ready: true,
+    nextSteps: [],
+  },
+});
 
 describe("desktop trust-centered review", () => {
+  it("acknowledges a pending review start without claiming step progress", () => {
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={collectingState()}
+        onAction={() => undefined}
+        pendingReviewAction={{ action: "start", elapsedSeconds: 4 }}
+      />,
+    );
+
+    expect(html).toContain('disabled=""');
+    expect(html).toContain("Starting review…");
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-live="polite"');
+    expect(html).toContain("Elapsed 4 seconds");
+    expect(html).toContain("Keep this window open");
+    expect(html).not.toContain("author step");
+    expect(html).not.toContain("critic step");
+  });
+
+  it("clears the pending projection after deferred success", async () => {
+    let resolveOperation!: () => void;
+    const operation = new Promise<void>((resolve) => {
+      resolveOperation = resolve;
+    });
+    const projections: Array<{ action: "start"; elapsedSeconds: number } | null> = [];
+    const dispatcher = createReviewActionDispatcher(
+      (pending) => projections.push(pending as { action: "start"; elapsedSeconds: number } | null),
+      () => 1_000,
+    );
+
+    expect(dispatcher.dispatch({ type: "start" }, () => operation)).toBe(true);
+    expect(projections.at(-1)).toEqual({ action: "start", elapsedSeconds: 0 });
+    resolveOperation();
+    await operation;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(projections.at(-1)).toBeNull();
+  });
+
+  it("clears the pending projection after deferred failure", async () => {
+    let rejectOperation!: (reason: unknown) => void;
+    const operation = new Promise<void>((_, reject) => {
+      rejectOperation = reject;
+    });
+    const projections: unknown[] = [];
+    const dispatcher = createReviewActionDispatcher((pending) => projections.push(pending));
+
+    expect(dispatcher.dispatch({ type: "start" }, () => operation)).toBe(true);
+    rejectOperation(new Error("provider failure"));
+    await operation.catch(() => undefined);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(projections.at(-1)).toBeNull();
+  });
+
+  it("suppresses duplicate review actions while the first is in flight", async () => {
+    let resolveOperation!: () => void;
+    const operation = new Promise<void>((resolve) => {
+      resolveOperation = resolve;
+    });
+    const dispatcher = createReviewActionDispatcher(() => undefined);
+    let calls = 0;
+    const run = () => {
+      calls += 1;
+      return operation;
+    };
+
+    expect(dispatcher.dispatch({ type: "start" }, run)).toBe(true);
+    expect(dispatcher.dispatch({ type: "start" }, run)).toBe(false);
+    await Promise.resolve();
+    expect(calls).toBe(1);
+    resolveOperation();
+    await operation;
+  });
+
   it("shows honest onboarding for a real workspace without inputs", () => {
     const state = {
       ...createFixtureReviewState(),

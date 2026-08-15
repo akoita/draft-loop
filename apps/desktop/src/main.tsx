@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import type { DesktopReviewPort, DesktopReviewState, ReviewAction } from "./model.js";
 import { createDesktopReviewPort } from "./native.js";
 import { ReviewWorkspace } from "./review.js";
+import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import "./styles.css";
 
 export function App({ port }: { readonly port?: DesktopReviewPort }) {
@@ -12,6 +13,10 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   const [error, setError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingReviewAction, setPendingReviewAction] = useState<PendingReviewAction | null>(null);
+  const [reviewActionDispatcher] = useState(() =>
+    createReviewActionDispatcher(setPendingReviewAction),
+  );
   const nativeActions = useMemo(
     () => ({
       open: activePort.openWorkspace,
@@ -43,15 +48,22 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   const onAction = (action: ReviewAction) => {
     if (state === null) return;
     setImportError(null);
-    void activePort
-      .dispatch(state, action)
-      .then(setState)
-      .catch((reason: unknown) => {
+    reviewActionDispatcher.dispatch(action, async () => {
+      try {
+        setState(await activePort.dispatch(state, action));
+      } catch (reason: unknown) {
         setImportError(
           reason instanceof Error ? reason.message : "The review action could not be completed.",
         );
-      });
+      }
+    });
   };
+
+  useEffect(() => {
+    if (pendingReviewAction === null) return;
+    const interval = window.setInterval(reviewActionDispatcher.updateElapsed, 1_000);
+    return () => window.clearInterval(interval);
+  }, [pendingReviewAction, reviewActionDispatcher]);
 
   const setup = async (action: (() => Promise<DesktopReviewState>) | undefined) => {
     if (action === undefined) return;
@@ -138,6 +150,7 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
       state={state}
       onAction={onAction}
       errorMessage={importError}
+      pendingReviewAction={pendingReviewAction}
       {...(activePort.selectFiles === undefined
         ? {}
         : {
