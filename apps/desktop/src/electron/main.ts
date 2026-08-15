@@ -13,6 +13,7 @@ import {
   type CredentialAcceptancePhase,
   runCredentialAcceptance,
 } from "./credential-acceptance.js";
+import { chooseMarkdownExportPath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
 
@@ -58,15 +59,6 @@ async function chooseFiles(input: {
     title: "Select local evidence",
   });
   return result.canceled ? [] : result.filePaths;
-}
-
-async function chooseMarkdownExportPath(defaultPath: string): Promise<string | undefined> {
-  const result = await dialog.showSaveDialog({
-    defaultPath,
-    filters: [{ name: "Markdown", extensions: ["md"] }],
-    title: "Export approved Markdown",
-  });
-  return result.canceled ? undefined : result.filePath;
 }
 
 function createWindow(): BrowserWindow {
@@ -223,7 +215,12 @@ app.whenReady().then(() => {
                 mode === "create" ? dirname(smokeWorkspace) : smokeWorkspace,
               chooseFiles: async () => [],
             }
-          : { chooseDirectory, chooseFiles, chooseMarkdownExportPath },
+          : {
+              chooseDirectory,
+              chooseFiles,
+              chooseMarkdownExportPath: (defaultPath) =>
+                chooseMarkdownExportPath(mainWindow, defaultPath, dialog),
+            },
     credentials: credentialStore,
     ...(acceptanceEnabled
       ? {
@@ -232,11 +229,11 @@ app.whenReady().then(() => {
           urlHostnameResolver: acceptanceUrlHostnameResolver,
         }
       : {}),
-    ...(smokeEnabled
+    ...(smokeEnabled || !app.isPackaged
       ? {
           onError: (error: unknown, capability: string) => {
             console.error(
-              `packaged smoke host error (${capability}):`,
+              `desktop host error (${capability}):`,
               error instanceof Error ? (error.stack ?? error.message) : error,
             );
           },

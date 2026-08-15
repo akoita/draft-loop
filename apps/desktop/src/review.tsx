@@ -1546,8 +1546,8 @@ export function ReviewWorkspace({
             {exportPending ? (
               <p className="pending-action-status" role="status" aria-live="polite">
                 Exporting Markdown… Elapsed {pendingReviewAction.elapsedSeconds} second
-                {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
-                the approved artifact is written.
+                {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Choose a destination in the
+                Save As dialog; the approved artifact will be written after you confirm.
               </p>
             ) : null}
           </section>

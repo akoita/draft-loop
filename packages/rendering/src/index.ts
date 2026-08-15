@@ -126,6 +126,12 @@ export interface RenderConstraints {
   readonly maxWords?: number;
   readonly maxCharacters?: number;
   readonly maxLength?: number;
+  /**
+   * Allows an explicitly approved artifact to retain substantive claims that
+   * have no source reference. Callers must enforce the human approval gate
+   * before enabling this exception.
+   */
+  readonly allowUnbackedClaims?: boolean;
 }
 
 export interface RenderValidationIssue {
@@ -201,11 +207,13 @@ export function validateArtifactForExport(
   artifact: DraftArtifact,
   constraints: RenderConstraints = {},
 ): readonly RenderValidationIssue[] {
-  const issues: RenderValidationIssue[] = validateArtifactReferences(artifact).map((issue) => ({
-    code: issue.code,
-    message: issue.message,
-    path: issue.path,
-  }));
+  const issues: RenderValidationIssue[] = validateArtifactReferences(artifact)
+    .filter((issue) => !constraints.allowUnbackedClaims || issue.code !== "unbacked-claim")
+    .map((issue) => ({
+      code: issue.code,
+      message: issue.message,
+      path: issue.path,
+    }));
   const sectionNames = new Set(artifact.sections.map((section) => normalize(section.title)));
   for (const requiredSection of constraints.requiredSections ?? []) {
     if (!sectionNames.has(normalize(requiredSection))) {

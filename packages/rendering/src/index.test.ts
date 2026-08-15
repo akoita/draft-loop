@@ -77,4 +77,44 @@ describe("Markdown rendering", () => {
       ArtifactExportValidationError,
     );
   });
+
+  it("allows an approved caller to export unbacked claims without weakening other checks", () => {
+    const unbackedArtifact: DraftArtifact = {
+      ...artifact,
+      sections: artifact.sections.map((section) => ({
+        ...section,
+        blocks: section.blocks.map((block, index) =>
+          section.id === "summary" && index === 0
+            ? { ...block, claimIds: ["claim-unbacked"] }
+            : block,
+        ),
+      })),
+      claims: [
+        {
+          id: "claim-unbacked",
+          text: "TypeScript engineer.",
+          sectionId: "summary",
+          blockId: "b1",
+          substantive: true,
+          status: "unverified",
+          evidence: [],
+        },
+      ],
+    };
+
+    expect(() => renderArtifact(unbackedArtifact, "markdown")).toThrow(
+      ArtifactExportValidationError,
+    );
+    expect(
+      new TextDecoder().decode(
+        renderArtifact(unbackedArtifact, "markdown", { allowUnbackedClaims: true }).content,
+      ),
+    ).toContain("TypeScript engineer.");
+    expect(() =>
+      renderArtifact(unbackedArtifact, "markdown", {
+        allowUnbackedClaims: true,
+        requiredSections: ["Education"],
+      }),
+    ).toThrow(ArtifactExportValidationError);
+  });
 });

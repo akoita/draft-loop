@@ -1425,6 +1425,10 @@ export async function exportRun(
       requiredSections: config.requiredSections,
       ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
       ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
+      // Reaching this point requires durable human approval above. Missing
+      // source references remain visible in review history, but they must not
+      // become a second, hidden approval gate during file rendering.
+      allowUnbackedClaims: true,
       generatedAt: timestamp(),
     });
     await writeFile(outputPath, rendered.content);

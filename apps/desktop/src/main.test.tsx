@@ -503,6 +503,9 @@ describe("desktop trust-centered review", () => {
 
     expect(html).toContain("Exporting Markdown…");
     expect(html).toContain("Elapsed 3 seconds");
+    expect(html).toContain("Choose a destination in the Save As dialog");
+    expect(html).toContain("the approved artifact will be written after you confirm.");
+    expect(html).not.toContain("while the approved artifact is written");
     expect(html).toContain("The Markdown file could not be written.");
     expect(html).toContain('class="error-banner approval-action-error" role="alert"');
     expect(html).toContain('disabled=""');
