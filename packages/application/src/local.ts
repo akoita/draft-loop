@@ -1461,6 +1461,42 @@ export async function exportRun(
   }
 }
 
+export async function latestExportPath(
+  rootInput: string,
+  runId: string,
+  format: OutputFormat,
+): Promise<string | null> {
+  const root = resolve(rootInput);
+  const config = await readWorkspace(root);
+  const storage = await openStorage(root);
+  try {
+    const exports = (await storage.listExports(runId))
+      .filter(
+        (record) =>
+          record.workspaceId === config.id &&
+          record.format === format &&
+          record.status === "completed" &&
+          record.outputPath !== null,
+      )
+      .sort((left, right) => {
+        const createdAt = Date.parse(right.createdAt) - Date.parse(left.createdAt);
+        return createdAt === 0 ? right.id.localeCompare(left.id) : createdAt;
+      });
+    for (const record of exports) {
+      if (record.outputPath === null) continue;
+      const outputPath = pathFromWorkspace(root, record.outputPath);
+      try {
+        if ((await stat(outputPath)).isFile()) return outputPath;
+      } catch {
+        // A durable export record can outlive its output file; keep looking.
+      }
+    }
+    return null;
+  } finally {
+    await storage.close();
+  }
+}
+
 function workspaceDescriptor(root: string, config: WorkspaceConfig): WorkspaceDescriptor {
   return {
     id: config.id,
@@ -1558,6 +1594,8 @@ export function createLocalApplicationDriver(options?: {
     status: async (command, io) => statusRun(command.root, command.runId, io),
     export: async (command, io) =>
       exportRun(command.root, command.runId, command.outputPath, io, command.format ?? "markdown"),
+    latestExportPath: async (command) =>
+      latestExportPath(command.root, command.runId, command.format),
     queryEvidence: async (command, io) =>
       queryWorkspaceEvidence(
         command.root,

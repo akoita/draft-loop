@@ -108,6 +108,7 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
       export: vi.fn(
         async (command) => command.outputPath ?? join(root, "exports", "run-native.md"),
       ),
+      latestExportPath: vi.fn(async () => null),
       queryEvidence: vi.fn(async () => []),
       recordReviewDecision: vi.fn(async () => undefined),
     } satisfies ApplicationService,
@@ -1004,14 +1005,101 @@ describe("native host", () => {
     }
   });
 
+  it("chooses a Markdown Save As path before exporting an approved run", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-save-as-"));
+    const customPath = join(root, "exports", "custom.md");
+    const fixture = service(root, { state: "approved", approval: "approved" });
+    const chooseMarkdownExportPath = vi.fn(async (defaultPath: string) => {
+      expect(defaultPath).toBe(join(root, "exports", "run-native.md"));
+      return customPath;
+    });
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+          chooseMarkdownExportPath,
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const result = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "export" },
+        },
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        value: { state: "approved", approval: "approved", exportPath: customPath },
+      });
+      expect(chooseMarkdownExportPath).toHaveBeenCalledOnce();
+      expect(fixture.service.export).toHaveBeenCalledWith(
+        {
+          root,
+          runId: "run-native",
+          format: "markdown",
+          outputPath: customPath,
+        },
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps approval intact and skips export when Markdown Save As is cancelled", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-save-as-cancel-"));
+    const fixture = service(root, { state: "approved", approval: "approved" });
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+          chooseMarkdownExportPath: async () => undefined,
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const result = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "export" },
+        },
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        value: { state: "approved", approval: "approved", exportPath: null },
+      });
+      expect(fixture.service.export).not.toHaveBeenCalled();
+      expect(fixture.service.lifecycle).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("runs the real local driver through approval, export, and restart", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-alpha-"));
     const root = join(parent, "alpha-workspace");
+    const customExportPath = join(parent, "selected-export.md");
+    let selectedDefaultPath: string | undefined;
     const dialogs = {
       chooseDirectory: vi.fn(async (mode: "open" | "create") =>
         mode === "create" ? parent : root,
       ),
       chooseFiles: vi.fn(async () => []),
+      chooseMarkdownExportPath: vi.fn(async (defaultPath: string) => {
+        selectedDefaultPath = defaultPath;
+        return customExportPath;
+      }),
     };
 
     try {
@@ -1068,6 +1156,10 @@ describe("native host", () => {
         ok: true,
         value: { approval: "approved", state: "exported" },
       });
+      expect(selectedDefaultPath).toBe(join(root, "exports", `${reviewValue.runId}.md`));
+      expect((exported as { readonly value: DesktopReviewState }).value.exportPath).toBe(
+        customExportPath,
+      );
       expect(await readFile(join(root, ".draft-loop", "review-overrides.json"), "utf8")).toContain(
         "overridden",
       );
@@ -1088,8 +1180,9 @@ describe("native host", () => {
           findings: [{ decision: "overridden" }],
         },
       });
-      expect(await readFile(join(root, "exports", `${reviewValue.runId}.md`), "utf8")).toContain(
-        "candidate-provided materials",
+      expect(await readFile(customExportPath, "utf8")).toContain("candidate-provided materials");
+      expect((recovered as { readonly value: DesktopReviewState }).value.exportPath).toBe(
+        customExportPath,
       );
     } finally {
       await rm(parent, { recursive: true, force: true });

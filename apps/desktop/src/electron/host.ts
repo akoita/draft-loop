@@ -78,6 +78,7 @@ interface PersistedProviderTransmissionAcknowledgement {
 export interface NativeHostDialogs {
   readonly chooseDirectory: (mode: "open" | "create") => Promise<string | undefined>;
   readonly chooseFiles: (input: FileSelectInput) => Promise<readonly string[]>;
+  readonly chooseMarkdownExportPath?: (defaultPath: string) => Promise<string | undefined>;
 }
 
 export interface NativeCredentialStore {
@@ -694,16 +695,6 @@ function emptyReviewState(
 
 function defaultExportPath(root: string, runId: string): string {
   return join(root, "exports", `${runId}.md`);
-}
-
-async function existingExportPath(root: string, runId: string): Promise<string | null> {
-  const path = defaultExportPath(root, runId);
-  try {
-    const details = await stat(path);
-    return details.isFile() ? path : null;
-  } catch {
-    return null;
-  }
 }
 
 async function workspaceReadiness(
@@ -1342,10 +1333,23 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         break;
       case "export":
-        exportPath = await service.export(
-          { root: workspace.root, runId: input.runId, format: "markdown" },
-          io(),
-        );
+        {
+          const defaultPath = defaultExportPath(workspace.root, input.runId);
+          const selectedPath =
+            options.dialogs.chooseMarkdownExportPath === undefined
+              ? defaultPath
+              : await options.dialogs.chooseMarkdownExportPath(defaultPath);
+          if (selectedPath === undefined) break;
+          exportPath = await service.export(
+            {
+              root: workspace.root,
+              runId: input.runId,
+              format: "markdown",
+              outputPath: selectedPath,
+            },
+            io(),
+          );
+        }
         break;
     }
     const snapshot =
@@ -1367,7 +1371,12 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       workspace.descriptor,
       snapshot,
       overrides,
-      exportPath ?? (await existingExportPath(workspace.root, snapshot.runId)),
+      exportPath ??
+        (await service.latestExportPath({
+          root: workspace.root,
+          runId: snapshot.runId,
+          format: "markdown",
+        })),
       setup,
       preflight,
       backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),
@@ -1466,7 +1475,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               workspace.descriptor,
               snapshot,
               await readOverrides(workspace.root),
-              await existingExportPath(workspace.root, snapshot.runId),
+              await service.latestExportPath({
+                root: workspace.root,
+                runId: snapshot.runId,
+                format: "markdown",
+              }),
               setup,
               preflight,
               backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),

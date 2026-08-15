@@ -60,6 +60,15 @@ async function chooseFiles(input: {
   return result.canceled ? [] : result.filePaths;
 }
 
+async function chooseMarkdownExportPath(defaultPath: string): Promise<string | undefined> {
+  const result = await dialog.showSaveDialog({
+    defaultPath,
+    filters: [{ name: "Markdown", extensions: ["md"] }],
+    title: "Export approved Markdown",
+  });
+  return result.canceled ? undefined : result.filePath;
+}
+
 function createWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1440,
@@ -214,7 +223,7 @@ app.whenReady().then(() => {
                 mode === "create" ? dirname(smokeWorkspace) : smokeWorkspace,
               chooseFiles: async () => [],
             }
-          : { chooseDirectory, chooseFiles },
+          : { chooseDirectory, chooseFiles, chooseMarkdownExportPath },
     credentials: credentialStore,
     ...(acceptanceEnabled
       ? {

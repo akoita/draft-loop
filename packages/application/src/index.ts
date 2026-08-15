@@ -79,6 +79,12 @@ export interface ExportCommand {
   readonly format?: OutputFormat;
 }
 
+export interface LatestExportPathCommand {
+  readonly root: string;
+  readonly runId: string;
+  readonly format: OutputFormat;
+}
+
 export interface QueryEvidenceCommand {
   readonly root: string;
   readonly query: string;
@@ -117,6 +123,7 @@ export interface ApplicationDriver {
   readonly lifecycle: (command: LifecycleCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly status: (command: StatusCommand, io?: ApplicationIo) => Promise<RunSnapshot | undefined>;
   readonly export: (command: ExportCommand, io?: ApplicationIo) => Promise<string>;
+  readonly latestExportPath: (command: LatestExportPathCommand) => Promise<string | null>;
   readonly queryEvidence: (
     command: QueryEvidenceCommand,
     io?: ApplicationIo,
@@ -158,6 +165,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.status({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     export: async (command, io) =>
       driver.export({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    latestExportPath: async (command) =>
+      driver.latestExportPath({ ...command, root: requireRoot(command.root) }),
     queryEvidence: async (command, io) =>
       driver.queryEvidence({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     recordReviewDecision: async (command) =>

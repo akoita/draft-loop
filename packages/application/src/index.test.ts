@@ -37,6 +37,7 @@ function driver(): ApplicationDriver {
     lifecycle: vi.fn(async () => snapshot),
     status: vi.fn(async () => snapshot),
     export: vi.fn(async () => "exports/run-1.md"),
+    latestExportPath: vi.fn(async () => null),
     queryEvidence: vi.fn(async () => []),
     recordReviewDecision: vi.fn(async () => undefined),
   };
@@ -78,6 +79,19 @@ describe("application service contract", () => {
       { root: "workspace", query: "typescript" },
       expect.objectContaining({ write: expect.any(Function) }),
     );
+  });
+
+  it("forwards the durable latest export path query with normalized root", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.latestExportPath({ root: "workspace", runId: "run-1", format: "markdown" });
+
+    expect(underlying.latestExportPath).toHaveBeenCalledWith({
+      root: "workspace",
+      runId: "run-1",
+      format: "markdown",
+    });
   });
 
   it("rejects empty roots before an adapter can access the filesystem", async () => {

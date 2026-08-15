@@ -51,7 +51,7 @@ function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number
 export function ReviewWorkspace({
   state,
   onAction,
-  pendingReviewAction,
+  pendingReviewAction = null,
   onSelectFiles,
   onAddUrl,
   errorMessage,
@@ -68,6 +68,9 @@ export function ReviewWorkspace({
   );
   const canApprove =
     hasArtifact && state.state === "awaiting-approval" && blockingFindings.length === 0;
+  const exportPending = pendingReviewAction?.action === "export";
+  const approvalExportErrorVisible =
+    errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const approvalLabel =
     state.approval === "approved"
       ? findingSummary.status === "clear"
@@ -196,7 +199,7 @@ export function ReviewWorkspace({
             onAction({ type: "request-revision" });
           }
         } else if (event.key === "e" || event.key === "E") {
-          if (state.state === "approved") {
+          if (state.state === "approved" && pendingReviewAction === null) {
             event.preventDefault();
             onAction({ type: "export" });
           }
@@ -206,7 +209,7 @@ export function ReviewWorkspace({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canApprove, onAction, state.state, settingsOpen, transmissionReady]);
+  }, [canApprove, onAction, pendingReviewAction, state.state, settingsOpen, transmissionReady]);
 
   const submitUrl = (target: "evidence" | "job-description"): void => {
     const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
@@ -1137,7 +1140,7 @@ export function ReviewWorkspace({
                 type="button"
                 aria-keyshortcuts="Alt+A"
                 title="Approve artifact (Alt+A)"
-                disabled={!canApprove}
+                disabled={!canApprove || pendingReviewAction !== null}
                 onClick={() => onAction({ type: "approve" })}
               >
                 Approve artifact (Alt+A)
@@ -1147,16 +1150,25 @@ export function ReviewWorkspace({
                 type="button"
                 aria-keyshortcuts="Alt+R"
                 title="Request revision (Alt+R)"
-                disabled={state.state !== "awaiting-approval" || !transmissionReady}
+                disabled={
+                  state.state !== "awaiting-approval" ||
+                  !transmissionReady ||
+                  pendingReviewAction !== null
+                }
                 onClick={() => onAction({ type: "request-revision" })}
               >
                 Request revision (Alt+R)
               </button>
             </div>
+            {approvalExportErrorVisible ? (
+              <div className="error-banner approval-action-error" role="alert">
+                <p>{errorMessage}</p>
+              </div>
+            ) : null}
             <div className="export-action">
               <div>
                 <strong>Export locally</strong>
-                <span>
+                <span className="export-path" aria-live="polite">
                   {state.exportPath ??
                     (state.approval === "approved" ? "Available now" : "Available after approval")}
                 </span>
@@ -1166,12 +1178,19 @@ export function ReviewWorkspace({
                 type="button"
                 aria-keyshortcuts="Alt+E"
                 title="Export Markdown (Alt+E)"
-                disabled={state.state !== "approved"}
+                disabled={state.state !== "approved" || pendingReviewAction !== null}
                 onClick={() => onAction({ type: "export" })}
               >
-                Export Markdown (Alt+E)
+                {exportPending ? "Exporting Markdown…" : "Export Markdown (Alt+E)"}
               </button>
             </div>
+            {exportPending ? (
+              <p className="pending-action-status" role="status" aria-live="polite">
+                Exporting Markdown… Elapsed {pendingReviewAction.elapsedSeconds} second
+                {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
+                the approved artifact is written.
+              </p>
+            ) : null}
           </section>
         </aside>
       </div>

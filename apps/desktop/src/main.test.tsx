@@ -415,4 +415,34 @@ describe("desktop trust-centered review", () => {
     };
     expect(reduceReviewState(approved, { type: "export" }).state).toBe("exported");
   });
+
+  it("makes an in-flight Markdown export visible and prevents duplicate actions", () => {
+    const initial = createFixtureReviewState();
+    const approved = {
+      ...initial,
+      state: "approved" as const,
+      approval: "approved" as const,
+      findings: initial.findings.map((finding) => ({
+        ...finding,
+        decision: "overridden" as const,
+      })),
+    };
+
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={approved}
+        onAction={() => undefined}
+        pendingReviewAction={{ action: "export", elapsedSeconds: 3 }}
+        errorMessage="The Markdown file could not be written."
+      />,
+    );
+
+    expect(html).toContain("Exporting Markdown…");
+    expect(html).toContain("Elapsed 3 seconds");
+    expect(html).toContain("The Markdown file could not be written.");
+    expect(html).toContain('class="error-banner approval-action-error" role="alert"');
+    expect(html).toContain('disabled=""');
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-live="polite"');
+  });
 });
