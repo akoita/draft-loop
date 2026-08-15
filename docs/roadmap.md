@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document
-**Last reviewed:** 2026-08-15
+**Last reviewed:** 2026-08-16
 **Current stage:** Integration hardening and outcome validation
 
 This document describes product direction, not fixed delivery dates. The
@@ -114,14 +114,12 @@ therefore not application readiness; the core workflow still needs a complete,
 factual, reviewed result that matches the proven manual baseline.
 
 The fail-closed PDF extraction quality gate (#168), independent-critique
-approval/export gate (#169), and critic-only provider recovery path (#173) are
-complete. A failed critic preserves the author draft and can be retried directly
-without entering approval or starting another author round. The repeated
-real-input rerun then exposed an Anthropic author-output completion and
-diagnostics blocker (#175): no draft is available when a bounded structured
-response ends incomplete, and that condition must be distinguished safely from
-proposal-schema validation. Resolve #175 before the consented quality rerun
-(#104), followed by the stage release (#106).
+approval/export gate (#169), critic-only provider recovery path (#173), and
+Anthropic author-output completion diagnostics (#175) are complete. Repeated
+manual validation showed that the fixture-agent acceptance path does not cover
+the real-mode provider adapters and canonical draft pipeline. A deterministic
+full-flow NativeHost regression (#177) is therefore required before another
+consented Electron rerun (#104), followed by the stage release (#106).
 
 ## Reference workflow and parity target
 
@@ -171,7 +169,7 @@ experience, contact employers, or submit applications.
 
 | Horizon | Stage | Evidence status | Outcome | Remaining gate |
 | --- | --- | --- | --- | --- |
-| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Anthropic author completion recovery (#175), consented quality rerun (#104), stage release (#106) |
+| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Real-mode full-draft regression (#177), consented quality rerun (#104), stage release (#106) |
 | Next | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
 | Next | Retrieval and provider quality | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable | Representative quality comparison, deletion/retention proof, integrated cancellation and provider recovery |
 | Next | Real-application pilot | Implemented harness; not outcome-validated | Validate factuality, quality, and user-effort hypotheses | Consented cases, calibrated measures, recorded results and limitations |
@@ -352,6 +350,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-16 | Required a deterministic real-mode full-draft NativeHost regression (#177) before another consented Electron rerun (#104) | The packaged fixture acceptance bypasses the provider adapters and canonical live-author proposal path, so repeated manual testing was discovering integration failures too late |
 | 2026-08-15 | Inserted the repeated Anthropic author-output completion failure (#175) before the consented rerun (#104) | A real-input structured response can end before a complete proposal is available; the product must budget author output explicitly and report safe completion diagnostics before representative validation can continue |
 | 2026-08-15 | Replaced the incomplete-critic approval dead end with bounded critic-only recovery (#173) | A failed independent critic must preserve the completed author draft and retry that exact step; it must not imply approval readiness or force another author round |
 | 2026-08-15 | Completed the independent-critique approval/export gate (#169); the consented quality rerun (#104) is now the next v0.6 gate | Recovered author drafts remain inspectable, but approval and export now require a completed independent critic execution for the current round |

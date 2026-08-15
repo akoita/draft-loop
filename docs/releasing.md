@@ -95,6 +95,29 @@ To run the same check locally after packaging:
 pnpm desktop:smoke -- ./apps/desktop/out/@draft-loop-desktop-linux-x64/@draft-loop-desktop
 ```
 
+Before a release, run the full local validation and then the explicit paid
+live-provider synthetic gate:
+
+```text
+pnpm validate
+pnpm test:e2e:live
+```
+
+The live gate uses synthetic `example.test`-style job and candidate material,
+requires both Anthropic and OpenAI credentials to already be configured in the
+Electron application, and incurs a bounded provider cost. Run this gate before
+manual Electron validation with consented real data; never use real candidate
+material in the synthetic gate.
+
+This same gate also runs in CI. The **Release** workflow runs it as a blocking
+job between source validation and artifact building, so no release artifact is
+built before a real Anthropic-author / OpenAI-critic run has passed. It is
+also independently runnable on demand from the Actions tab via the **Live
+provider E2E** workflow's manual dispatch, for a smoke run outside a release.
+In CI the gate authenticates from the `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`
+repository secrets rather than the Electron credential store. The job fails —
+it never skips — when either secret or provider quota is unavailable.
+
 ## Stage release procedure
 
 1. Update the root version and all workspace package versions in a focused PR.

@@ -15,6 +15,7 @@ import {
 } from "./credential-acceptance.js";
 import { chooseMarkdownExportPath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
+import { type LiveProviderE2EOptions, runLiveProviderE2E } from "./live-e2e.js";
 import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -103,6 +104,14 @@ app.whenReady().then(() => {
   const smokeEnabled = process.env.DRAFT_LOOP_SMOKE === "1";
   const smokeRoot = process.env.DRAFT_LOOP_SMOKE_WORKSPACE;
   const smokePhase = process.env.DRAFT_LOOP_SMOKE_PHASE;
+  const liveE2eEnabled = process.env.DRAFT_LOOP_LIVE_E2E === "1";
+  const liveE2eRoot = process.env.DRAFT_LOOP_LIVE_E2E_WORKSPACE;
+  const liveE2eJob = process.env.DRAFT_LOOP_LIVE_E2E_JOB;
+  const liveE2eCandidate = process.env.DRAFT_LOOP_LIVE_E2E_CANDIDATE;
+  const liveE2eEvidence = process.env.DRAFT_LOOP_LIVE_E2E_EVIDENCE;
+  if (liveE2eEnabled && (acceptanceEnabled || smokeEnabled || credentialAcceptanceEnabled)) {
+    throw new Error("Desktop live E2E cannot run with another desktop test mode.");
+  }
   if (acceptanceEnabled && (smokeEnabled || credentialAcceptanceEnabled)) {
     throw new Error("Packaged acceptance cannot run with another packaged test mode.");
   }
@@ -126,8 +135,24 @@ app.whenReady().then(() => {
   if (smokeEnabled && smokePhase !== "prepare" && smokePhase !== "resume") {
     throw new Error(`Unsupported packaged smoke phase: ${smokePhase}`);
   }
+  if (
+    liveE2eEnabled &&
+    (liveE2eRoot === undefined ||
+      liveE2eJob === undefined ||
+      liveE2eCandidate === undefined ||
+      liveE2eEvidence === undefined)
+  ) {
+    throw new Error(
+      "Desktop live E2E requires DRAFT_LOOP_LIVE_E2E_WORKSPACE, DRAFT_LOOP_LIVE_E2E_JOB, DRAFT_LOOP_LIVE_E2E_CANDIDATE, and DRAFT_LOOP_LIVE_E2E_EVIDENCE.",
+    );
+  }
   const smokeWorkspace = smokeRoot === undefined ? undefined : resolve(smokeRoot);
   const acceptanceWorkspace = acceptanceRoot === undefined ? undefined : resolve(acceptanceRoot);
+  const liveE2eWorkspace = liveE2eRoot === undefined ? undefined : resolve(liveE2eRoot);
+  const liveE2eJobPath = liveE2eJob === undefined ? undefined : resolve(liveE2eJob);
+  const liveE2eCandidatePath =
+    liveE2eCandidate === undefined ? undefined : resolve(liveE2eCandidate);
+  const liveE2eEvidencePath = liveE2eEvidence === undefined ? undefined : resolve(liveE2eEvidence);
   const credentialStore = createSafeStorageCredentialStore({
     safeStorage,
     filename:
@@ -215,12 +240,24 @@ app.whenReady().then(() => {
                 mode === "create" ? dirname(smokeWorkspace) : smokeWorkspace,
               chooseFiles: async () => [],
             }
-          : {
-              chooseDirectory,
-              chooseFiles,
-              chooseMarkdownExportPath: (defaultPath) =>
-                chooseMarkdownExportPath(mainWindow, defaultPath, dialog),
-            },
+          : liveE2eEnabled &&
+              liveE2eWorkspace !== undefined &&
+              liveE2eJobPath !== undefined &&
+              liveE2eCandidatePath !== undefined
+            ? {
+                chooseDirectory: async (mode) =>
+                  mode === "create" ? dirname(liveE2eWorkspace) : liveE2eWorkspace,
+                chooseFiles: async (input) =>
+                  input.target === "job-description" ? [liveE2eJobPath] : [liveE2eCandidatePath],
+                chooseMarkdownExportPath: async () =>
+                  join(liveE2eWorkspace, "exports", "live-e2e.md"),
+              }
+            : {
+                chooseDirectory,
+                chooseFiles,
+                chooseMarkdownExportPath: (defaultPath) =>
+                  chooseMarkdownExportPath(mainWindow, defaultPath, dialog),
+              },
     credentials: credentialStore,
     ...(acceptanceEnabled
       ? {
@@ -229,7 +266,7 @@ app.whenReady().then(() => {
           urlHostnameResolver: acceptanceUrlHostnameResolver,
         }
       : {}),
-    ...(smokeEnabled || !app.isPackaged
+    ...(smokeEnabled || (!app.isPackaged && !liveE2eEnabled)
       ? {
           onError: (error: unknown, capability: string) => {
             console.error(
@@ -252,6 +289,28 @@ app.whenReady().then(() => {
       .then(() => app.exit(0))
       .catch((error: unknown) => {
         console.error(error instanceof Error ? error.message : "Packaged smoke failed.");
+        app.exit(1);
+      });
+    return;
+  }
+  if (
+    liveE2eEnabled &&
+    liveE2eWorkspace !== undefined &&
+    liveE2eJobPath !== undefined &&
+    liveE2eCandidatePath !== undefined &&
+    liveE2eEvidencePath !== undefined
+  ) {
+    const liveOptions: LiveProviderE2EOptions = {
+      host,
+      workspaceRoot: liveE2eWorkspace,
+      jobPath: liveE2eJobPath,
+      candidatePath: liveE2eCandidatePath,
+      evidencePath: liveE2eEvidencePath,
+    };
+    void runLiveProviderE2E(liveOptions)
+      .then(() => app.exit(0))
+      .catch((error: unknown) => {
+        console.error(error instanceof Error ? error.message : "Desktop live E2E failed.");
         app.exit(1);
       });
     return;
