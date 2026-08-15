@@ -113,9 +113,11 @@ personal CV or opportunity details are recorded here. Export completion is
 therefore not application readiness; the core workflow still needs a complete,
 factual, reviewed result that matches the proven manual baseline.
 
-The fail-closed PDF extraction quality gate (#168) and independent-critique
-approval/export gate (#169) are complete. The next gate is the consented quality
-rerun (#104), followed by the stage release (#106).
+The fail-closed PDF extraction quality gate (#168), independent-critique
+approval/export gate (#169), and critic-only provider recovery path (#173) are
+complete. A failed critic preserves the author draft and can be retried directly
+without entering approval or starting another author round. The next gate is the
+consented quality rerun (#104), followed by the stage release (#106).
 
 ## Reference workflow and parity target
 
@@ -346,6 +348,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Replaced the incomplete-critic approval dead end with bounded critic-only recovery (#173) | A failed independent critic must preserve the completed author draft and retry that exact step; it must not imply approval readiness or force another author round |
 | 2026-08-15 | Completed the independent-critique approval/export gate (#169); the consented quality rerun (#104) is now the next v0.6 gate | Recovered author drafts remain inspectable, but approval and export now require a completed independent critic execution for the current round |
 | 2026-08-15 | Completed the PDF extraction quality gate (#168) and kept the independent-critique approval/export gate (#169) before the consented quality rerun (#104) and stage release (#106) | The first real-application failure requires unreliable extracted text to be rejected before indexing or provider exposure, with the remaining hardening gate sequenced before outcome validation and release |
 | 2026-08-15 | Refined the v0.7 stage with reusable Candidate Knowledge Bases (#157), approved research (#158), and CKB-scoped hybrid RAG (#159) | The proven workflow depends on durable candidate memory that evolves across applications; a per-workspace evidence folder and generic retrieval stage did not explicitly cover one-or-more datasets, continuous updates, safe research, or retrieval isolation |

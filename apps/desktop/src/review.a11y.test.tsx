@@ -59,7 +59,7 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
         maxAttempts: 3,
         retryAvailable: false,
         retryNotBefore: null,
-        availableActions: ["return-to-review", "stop"] as const,
+        availableActions: ["stop"] as const,
         diagnostics: [],
       },
     };
@@ -67,7 +67,7 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
 
     expect(html).toContain('aria-label="provider failure"');
     expect(html).toContain("The provider could not authenticate");
-    expect(html).toContain("Return to review");
+    expect(html).not.toContain("Return to review");
     expect(html).toContain("Stop run");
     expect(html).not.toContain(">Retry<");
     expect(html).toMatch(/Approve artifact[^<]*<\/button>/u);

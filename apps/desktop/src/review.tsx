@@ -429,7 +429,7 @@ export function ReviewWorkspace({
             onAction({ type: "approve" });
           }
         } else if (event.key === "r" || event.key === "R") {
-          if (state.state === "awaiting-approval" && transmissionReady) {
+          if (state.state === "awaiting-approval" && state.reviewComplete && transmissionReady) {
             event.preventDefault();
             onAction({ type: "request-revision" });
           }
@@ -444,7 +444,15 @@ export function ReviewWorkspace({
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [canApprove, canExport, onAction, settingsOpen, state.state, transmissionReady]);
+  }, [
+    canApprove,
+    canExport,
+    onAction,
+    settingsOpen,
+    state.reviewComplete,
+    state.state,
+    transmissionReady,
+  ]);
 
   const submitUrl = (target: "evidence" | "job-description"): void => {
     const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
@@ -1013,7 +1021,9 @@ export function ReviewWorkspace({
                 }
                 onClick={() => onAction({ type: "resume" })}
               >
-                {retryRemainingMs > 0 ? `Retry in ${retryWaitLabel(retryRemainingMs)}` : "Retry"}
+                {retryRemainingMs > 0
+                  ? `Retry ${state.providerFailure.step} in ${retryWaitLabel(retryRemainingMs)}`
+                  : `Retry ${state.providerFailure.step}`}
               </button>
             ) : null}
             {state.providerFailure.availableActions.includes("return-to-review") ? (
@@ -1561,6 +1571,7 @@ export function ReviewWorkspace({
                 title="Request revision (Alt+R)"
                 disabled={
                   state.state !== "awaiting-approval" ||
+                  !state.reviewComplete ||
                   !transmissionReady ||
                   pendingReviewAction !== null
                 }

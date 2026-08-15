@@ -366,6 +366,14 @@ function io(): ApplicationIo {
 }
 
 function runState(snapshot: RunSnapshot): DesktopReviewState["state"] {
+  if (
+    snapshot.state === "awaiting-approval" &&
+    snapshot.artifact !== null &&
+    snapshot.lastError?.step === "critic" &&
+    !hasCompletedIndependentCritique(snapshot)
+  ) {
+    return "provider-error";
+  }
   if (snapshot.state === "provider-error") return "provider-error";
   if (snapshot.state === "stopped") return "stopped";
   if (snapshot.state === "collecting" || snapshot.state === "ingesting") return "drafting";
@@ -419,7 +427,17 @@ const providerFailureExplanations: Readonly<Record<ProviderFailureView["code"], 
 };
 
 function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
-  if (snapshot.state !== "provider-error" || snapshot.lastError === null) return null;
+  const legacyCriticRecovery =
+    snapshot.state === "awaiting-approval" &&
+    snapshot.artifact !== null &&
+    snapshot.lastError?.step === "critic" &&
+    !hasCompletedIndependentCritique(snapshot);
+  if (
+    (snapshot.state !== "provider-error" && !legacyCriticRecovery) ||
+    snapshot.lastError === null
+  ) {
+    return null;
+  }
   const supportedCodes = Object.keys(providerFailureExplanations) as ProviderFailureView["code"][];
   const code = supportedCodes.includes(snapshot.lastError.code as ProviderFailureView["code"])
     ? (snapshot.lastError.code as ProviderFailureView["code"])
@@ -441,11 +459,7 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
     maxAttempts: snapshot.lastError.maxAttempts,
     retryAvailable,
     retryNotBefore,
-    availableActions: [
-      ...(retryAvailable ? (["retry"] as const) : []),
-      ...(snapshot.artifact === null ? [] : (["return-to-review"] as const)),
-      "stop" as const,
-    ],
+    availableActions: [...(retryAvailable ? (["retry"] as const) : []), "stop" as const],
     diagnostics: snapshot.lastError.diagnostics ?? [],
   };
 }
@@ -1227,8 +1241,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     let exportPath: string | null = null;
     let dispatchedSnapshot: RunSnapshot | undefined;
     const action: ReviewAction = input.action;
+    const criticRecovery =
+      currentSnapshot !== undefined &&
+      currentSnapshot.artifact !== null &&
+      currentSnapshot.lastError?.step === "critic" &&
+      !hasCompletedIndependentCritique(currentSnapshot) &&
+      (currentSnapshot.state === "provider-error" || currentSnapshot.state === "awaiting-approval");
     if (
-      currentSnapshot?.state === "provider-error" &&
+      (currentSnapshot?.state === "provider-error" || criticRecovery) &&
       !["resume", "recover-to-review", "stop", "finding-decision", "edit-block"].includes(
         action.type,
       )
@@ -1307,7 +1327,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       case "request-revision":
       case "approve":
       case "recover-to-review":
-        if (currentSnapshot?.state === "provider-error" && action.type !== "recover-to-review") {
+        if (
+          (currentSnapshot?.state === "provider-error" || criticRecovery) &&
+          action.type !== "recover-to-review"
+        ) {
           return fail("operation-failed", "This action is not available after a provider failure.");
         }
         if (action.type === "recover-to-review" && currentSnapshot?.state !== "provider-error") {
@@ -1342,14 +1365,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         break;
       case "resume":
         if (
-          currentSnapshot?.state === "provider-error" &&
+          (currentSnapshot?.state === "provider-error" || criticRecovery) &&
           (currentSnapshot.lastError?.retryable !== true ||
             currentSnapshot.lastError.attempt >= currentSnapshot.lastError.maxAttempts)
         ) {
           return fail("operation-failed", "This provider failure cannot be retried.");
         }
         if (
-          currentSnapshot?.state === "provider-error" &&
+          (currentSnapshot?.state === "provider-error" || criticRecovery) &&
           currentSnapshot.lastError?.retryNotBefore !== undefined &&
           Date.parse(currentSnapshot.lastError.retryNotBefore) > Date.now()
         ) {

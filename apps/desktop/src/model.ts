@@ -332,6 +332,7 @@ export function reduceReviewState(
         : state;
     case "recover-to-review":
       return state.state === "provider-error" &&
+        state.reviewComplete &&
         state.providerFailure?.availableActions.includes("return-to-review")
         ? { ...state, state: "awaiting-approval", providerFailure: null }
         : state;
@@ -345,7 +346,7 @@ export function reduceReviewState(
           }
         : state;
     case "request-revision":
-      return state.state === "awaiting-approval"
+      return state.state === "awaiting-approval" && state.reviewComplete
         ? { ...state, state: "revising", approval: "rejected", round: state.round + 1 }
         : state;
     case "approve":

@@ -285,7 +285,7 @@ describe("desktop trust-centered review", () => {
         maxAttempts: 3,
         retryAvailable: true,
         retryNotBefore: null,
-        availableActions: ["retry", "return-to-review", "stop"] as const,
+        availableActions: ["retry", "stop"] as const,
         diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
       },
     };
@@ -300,13 +300,13 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Provider request failed");
     expect(html).toContain('class="error-banner" role="alert"');
     expect(html).toContain("The review action could not be completed.");
-    expect(html).toContain("Retry");
-    expect(html).toContain("Return to review");
+    expect(html).toContain("Retry critic");
+    expect(html).not.toContain("Return to review");
     expect(html).toContain("Stop run");
     expect(html).toContain("Validation details");
     expect(html).toContain("sections.0.blocks: invalid_type");
     expect(reduceReviewState(state, { type: "resume" }).state).toBe("reviewing");
-    expect(reduceReviewState(state, { type: "recover-to-review" }).state).toBe("awaiting-approval");
+    expect(reduceReviewState(state, { type: "recover-to-review" }).state).toBe("provider-error");
     expect(reduceReviewState(state, { type: "stop" }).state).toBe("stopped");
   });
 
@@ -324,14 +324,14 @@ describe("desktop trust-centered review", () => {
         maxAttempts: 3,
         retryAvailable: true,
         retryNotBefore: new Date(Date.now() + 5_000).toISOString(),
-        availableActions: ["retry", "return-to-review", "stop"] as const,
+        availableActions: ["retry", "stop"] as const,
         diagnostics: [],
       },
     };
 
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
 
-    expect(html).toContain("Retry in 5 seconds");
+    expect(html).toContain("Retry critic in 5 seconds");
     expect(html).toContain("Retry is paused until the provider retry window opens");
     expect(html).toContain('disabled=""');
     expect(html).toContain("Provider recovery remains before approval");
@@ -476,6 +476,12 @@ describe("desktop trust-centered review", () => {
 
     expect(canExportReview(state, null)).toBe(false);
     expect(reduceReviewState(state, { type: "export" })).toEqual(state);
+    expect(
+      reduceReviewState({ ...state, state: "awaiting-approval" }, { type: "request-revision" }),
+    ).toEqual({
+      ...state,
+      state: "awaiting-approval",
+    });
     const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
     expect(html).toContain("Independent critique did not complete");
     expect(html).toContain("Complete an independent critic review before approval or export.");

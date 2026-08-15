@@ -346,7 +346,7 @@ describe("native host", () => {
     }
   });
 
-  it("projects safe provider recovery and enforces retry, return, and stop actions", async () => {
+  it("projects safe provider recovery and enforces retry and stop actions", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-provider-error-"));
     const lastError = {
       code: "invalid-response",
@@ -384,7 +384,7 @@ describe("native host", () => {
             maxAttempts: 3,
             retryAvailable: true,
             retryNotBefore: null,
-            availableActions: ["retry", "return-to-review", "stop"],
+            availableActions: ["retry", "stop"],
             diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
           },
         },
@@ -418,21 +418,9 @@ describe("native host", () => {
       });
       await host.invoke({
         type: "review.dispatch",
-        input: {
-          workspaceId: "workspace-native",
-          runId: "run-native",
-          action: { type: "recover-to-review" },
-        },
-      });
-      await host.invoke({
-        type: "review.dispatch",
         input: { workspaceId: "workspace-native", runId: "run-native", action: { type: "stop" } },
       });
       expect(fixture.service.resume).toHaveBeenCalledOnce();
-      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
-        expect.objectContaining({ action: "recover-review" }),
-        expect.anything(),
-      );
       expect(fixture.service.lifecycle).toHaveBeenCalledWith(
         expect.objectContaining({ action: "stop" }),
         expect.anything(),
@@ -480,6 +468,68 @@ describe("native host", () => {
         },
       });
       expect(coolingDown.service.resume).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("projects a legacy incomplete-critic approval state as critic recovery", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-legacy-critic-recovery-"));
+    const fixture = service(root, {
+      state: "awaiting-approval",
+      currentStep: null,
+      lastError: {
+        code: "invalid-response",
+        message: "The provider request failed. You can retry safely.",
+        provider: "openai",
+        modelId: "gpt-5",
+        step: "critic",
+        attempt: 1,
+        maxAttempts: 3,
+        retryable: true,
+        providerRequestId: null,
+      },
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const review = await host.invoke({ type: "review.load", input: {} });
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          state: "provider-error",
+          reviewComplete: false,
+          providerFailure: {
+            step: "critic",
+            retryAvailable: true,
+            availableActions: ["retry", "stop"],
+          },
+        },
+      });
+
+      const revision = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "request-revision" },
+        },
+      });
+      expect(revision).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
+      await host.invoke({
+        type: "review.dispatch",
+        input: { workspaceId: "workspace-native", runId: "run-native", action: { type: "resume" } },
+      });
+      expect(fixture.service.resume).toHaveBeenCalledOnce();
+      expect(fixture.service.lifecycle).not.toHaveBeenCalledWith(
+        expect.objectContaining({ action: "revision" }),
+        expect.anything(),
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

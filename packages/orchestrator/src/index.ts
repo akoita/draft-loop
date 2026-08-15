@@ -1085,6 +1085,18 @@ export function createOrchestrationEngine(
     let current = snapshot;
     if (current.state === "provider-error") {
       if (current.lastError?.retryable !== true) return immutable(current);
+      const attempts = current.executionHistory.filter(
+        (execution) =>
+          execution.runId === current.runId &&
+          execution.round === current.round &&
+          execution.step === current.currentStep,
+      ).length;
+      if (
+        current.currentStep === null ||
+        attempts >= MAX_ORCHESTRATION_ATTEMPTS ||
+        current.lastError.attempt >= current.lastError.maxAttempts
+      )
+        return immutable(current);
       if (
         current.lastError.retryNotBefore !== undefined &&
         Date.parse(current.lastError.retryNotBefore) > Date.parse(clock())
@@ -1152,17 +1164,52 @@ export function createOrchestrationEngine(
       snapshot.state === "exported"
     )
       return snapshot;
-    if (snapshot.state === "awaiting-approval") return snapshot;
+    const legacyCriticRecovery =
+      snapshot.state === "awaiting-approval" &&
+      snapshot.artifact !== null &&
+      !hasCompletedIndependentCritique(snapshot) &&
+      snapshot.lastError?.step === "critic";
+    if (snapshot.state === "awaiting-approval" && !legacyCriticRecovery) return snapshot;
+    if (
+      legacyCriticRecovery &&
+      resumeOptions.context !== undefined &&
+      (resumeOptions.context.id !== snapshot.contextSnapshotId ||
+        resumeOptions.context.workspaceId !== snapshot.workspaceId)
+    ) {
+      throw new Error("The context snapshot does not match the run context.");
+    }
+    if (
+      legacyCriticRecovery &&
+      (snapshot.lastError?.retryable !== true ||
+        snapshot.executionHistory.filter(
+          (execution) =>
+            execution.runId === snapshot.runId &&
+            execution.round === snapshot.round &&
+            execution.step === "critic",
+        ).length >= MAX_ORCHESTRATION_ATTEMPTS ||
+        snapshot.lastError.attempt >= snapshot.lastError.maxAttempts ||
+        (snapshot.lastError.retryNotBefore !== undefined &&
+          Date.parse(snapshot.lastError.retryNotBefore) > Date.parse(clock())))
+    ) {
+      return immutable(snapshot);
+    }
     const context =
       resumeOptions.context ?? (await options.contextResolver?.(snapshot.contextSnapshotId));
     if (context === undefined)
       throw new Error("A context snapshot is required to resume this run.");
+    if (
+      legacyCriticRecovery &&
+      (context.id !== snapshot.contextSnapshotId || context.workspaceId !== snapshot.workspaceId)
+    ) {
+      throw new Error("The context snapshot does not match the run context.");
+    }
     const resumed =
-      resumeOptions.budget === undefined
+      legacyCriticRecovery || resumeOptions.budget === undefined
         ? snapshot
         : { ...snapshot, budget: validateBudget(resumeOptions.budget), updatedAt: clock() };
-    const active =
-      resumed.state === "paused"
+    const active = legacyCriticRecovery
+      ? { ...resumed, state: "provider-error" as const, currentStep: "critic" as const }
+      : resumed.state === "paused"
         ? { ...resumed, state: stepStates[resumed.currentStep ?? "author"] }
         : resumed;
     return advance(active, context, resumeOptions.signal);
@@ -1201,6 +1248,11 @@ export function createOrchestrationEngine(
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "provider-error") {
       throw new Error("Only a run with a provider error can return to review.");
+    }
+    if (!hasCompletedIndependentCritique(snapshot)) {
+      throw new Error(
+        "A completed independent critic review is required before returning to review.",
+      );
     }
     if (snapshot.artifact === null) {
       throw new Error("A draft artifact is required to return to review.");
@@ -1260,6 +1312,11 @@ export function createOrchestrationEngine(
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
       throw new Error("Only a run awaiting approval can request revision.");
+    if (!hasCompletedIndependentCritique(snapshot)) {
+      throw new Error(
+        "A completed independent critic review is required before requesting revision.",
+      );
+    }
     const updated = {
       ...snapshot,
       state: "revising" as const,

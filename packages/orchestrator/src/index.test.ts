@@ -333,6 +333,21 @@ describe("durable orchestration", () => {
     );
   });
 
+  it("allows a reviewed snapshot to request a revision", async () => {
+    const { engine } = engineFixture();
+
+    const reviewed = await engine.start(request());
+    const revision = await engine.requestRevision("run-1");
+
+    expect(reviewed.state).toBe("awaiting-approval");
+    expect(revision).toMatchObject({
+      state: "revising",
+      approval: "rejected",
+      round: 2,
+      currentStep: "revision",
+    });
+  });
+
   it("rejects invalid or cross-workspace context before invoking an agent", async () => {
     const { engine, author, critic } = engineFixture();
     const mismatched = createContextSnapshot({
@@ -405,6 +420,41 @@ describe("durable orchestration", () => {
       expect.arrayContaining(["run-1:1:author:attempt:1", "run-1:1:author:attempt:2"]),
     );
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("provider.failed");
+  });
+
+  it("retries a failed critic without rerunning the author", async () => {
+    const savedArtifact = artifact();
+    let criticAttempts = 0;
+    const { engine, author, critic } = engineFixture({
+      author: async () => execution(savedArtifact, "anthropic", "author-test"),
+      critic: async () => {
+        criticAttempts += 1;
+        if (criticAttempts === 1) {
+          throw Object.assign(new Error("temporary critic failure"), { code: "timeout" });
+        }
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+
+    const failed = await engine.start(request());
+    const recovered = await engine.resume("run-1", { context: context() });
+
+    expect(failed).toMatchObject({ state: "provider-error", round: 1, currentStep: "critic" });
+    expect(recovered).toMatchObject({
+      state: "awaiting-approval",
+      round: 1,
+      contextSnapshotId: "context-1",
+      artifact: savedArtifact,
+    });
+    expect(recovered.executionHistory).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ step: "author", status: "completed" }),
+        expect.objectContaining({ step: "critic", status: "failed", attempt: 1 }),
+        expect.objectContaining({ step: "critic", status: "completed", attempt: 2 }),
+      ]),
+    );
+    expect(author).toHaveBeenCalledOnce();
+    expect(critic).toHaveBeenCalledTimes(2);
   });
 
   it("allows a bounded retry when a provider response fails local validation", async () => {
@@ -575,7 +625,7 @@ describe("durable orchestration", () => {
     expect(serialized).not.toContain("raw secret provider body");
   });
 
-  it("returns an artifact-bearing provider failure to review without erasing history", async () => {
+  it("rejects returning an artifact-bearing provider failure to review without a critique", async () => {
     const { engine, critic, store } = engineFixture({
       critic: async () =>
         Promise.reject(
@@ -584,25 +634,138 @@ describe("durable orchestration", () => {
     });
     const failed = await engine.start(request());
 
-    const recovered = await engine.recoverToReview("run-1");
-
     expect(failed.state).toBe("provider-error");
     expect(failed.artifact).not.toBeNull();
     expect(failed.lastError).toMatchObject({ code: "permission", retryable: false });
-    expect(recovered.state).toBe("awaiting-approval");
-    expect(recovered.currentStep).toBeNull();
-    expect(recovered.lastError).toEqual(failed.lastError);
-    expect(recovered.executionHistory).toEqual(failed.executionHistory);
-    expect(critic).toHaveBeenCalledOnce();
-    await expect(engine.approve("run-1")).rejects.toThrow(/completed independent critic review/i);
-    await store.saveRun({ ...recovered, state: "approved", approval: "approved" });
-    await expect(engine.markExported("run-1")).rejects.toThrow(
+    await expect(engine.recoverToReview("run-1")).rejects.toThrow(
       /completed independent critic review/i,
     );
-    expect((await engine.events("run-1")).map((event) => event.type)).toContain(
-      "provider.recovered",
+    expect(critic).toHaveBeenCalledOnce();
+    expect(await store.loadRun("run-1")).toEqual(failed);
+  });
+
+  it("recovers a legacy awaiting-approval critic failure without invoking the author", async () => {
+    const savedArtifact = artifact();
+    let criticAttempts = 0;
+    const { engine, author, critic, store } = engineFixture({
+      author: async () => execution(savedArtifact, "anthropic", "author-test"),
+      critic: async () => {
+        criticAttempts += 1;
+        if (criticAttempts === 1) {
+          throw Object.assign(new Error("temporary critic failure"), { code: "timeout" });
+        }
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+
+    const failed = await engine.start(request());
+    const legacy = {
+      ...failed,
+      state: "awaiting-approval" as const,
+      currentStep: null,
+      approval: "pending" as const,
+    };
+    await store.saveRun(legacy);
+
+    const recovered = await engine.resume("run-1", {
+      context: context(),
+      budget: { maxRounds: 99, maxCostUsd: 99 },
+    });
+
+    expect(recovered).toMatchObject({
+      state: "awaiting-approval",
+      round: failed.round,
+      contextSnapshotId: failed.contextSnapshotId,
+      artifact: savedArtifact,
+      budget: failed.budget,
+    });
+    expect(recovered.executionHistory).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ step: "author", status: "completed" }),
+        expect.objectContaining({ step: "critic", status: "failed", attempt: 1 }),
+        expect.objectContaining({ step: "critic", status: "completed", attempt: 2 }),
+      ]),
     );
-    await expect(engine.recoverToReview("run-1")).rejects.toThrow(/provider error/i);
+    expect(author).toHaveBeenCalledOnce();
+    expect(critic).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves non-retryable and exhausted legacy critic failures unchanged", async () => {
+    const createLegacy = async (lastError: RunSnapshot["lastError"]) => {
+      const store = new InMemoryRunStore();
+      const failedCritic: ExecutionRecord = {
+        ...critiqueExecution({
+          id: "run-1:1:critic:attempt:3",
+          status: "failed",
+          attempt: 3,
+          maxAttempts: 3,
+          retryable: false,
+        }),
+      };
+      const snapshot: RunSnapshot = {
+        ...pausedSnapshot(),
+        state: "awaiting-approval",
+        currentStep: null,
+        artifact: artifact(),
+        executionHistory: [failedCritic],
+        lastError,
+      };
+      await store.saveRun(snapshot);
+      const { engine, critic } = engineFixture({ store });
+      const unchanged = await engine.resume("run-1", { context: context() });
+      return { critic, snapshot, unchanged };
+    };
+
+    const nonRetryableError: RunSnapshot["lastError"] = {
+      code: "permission",
+      message: "The provider request failed. Retry is not available.",
+      provider: "openai",
+      modelId: "critic-test",
+      step: "critic",
+      attempt: 1,
+      maxAttempts: 3,
+      retryable: false,
+      providerRequestId: null,
+    };
+    const exhaustedError: RunSnapshot["lastError"] = {
+      ...nonRetryableError,
+      attempt: 3,
+      retryable: true,
+    };
+
+    const nonRetryable = await createLegacy(nonRetryableError);
+    const exhausted = await createLegacy(exhaustedError);
+
+    expect(nonRetryable.unchanged).toEqual(nonRetryable.snapshot);
+    expect(exhausted.unchanged).toEqual(exhausted.snapshot);
+    expect(nonRetryable.critic).not.toHaveBeenCalled();
+    expect(exhausted.critic).not.toHaveBeenCalled();
+  });
+
+  it("rejects revision requests from a legacy awaiting-approval snapshot", async () => {
+    const store = new InMemoryRunStore();
+    await store.saveRun({
+      ...pausedSnapshot(),
+      state: "awaiting-approval",
+      currentStep: null,
+      artifact: artifact(),
+      lastError: {
+        code: "timeout",
+        message: "The provider request failed. You can retry safely.",
+        provider: "openai",
+        modelId: "critic-test",
+        step: "critic",
+        attempt: 1,
+        maxAttempts: 3,
+        retryable: true,
+        providerRequestId: null,
+      },
+    });
+    const { engine } = engineFixture({ store });
+
+    await expect(engine.requestRevision("run-1")).rejects.toThrow(
+      /completed independent critic review/i,
+    );
   });
 
   it("pauses and stops without running a provider, then resumes a paused run", async () => {
