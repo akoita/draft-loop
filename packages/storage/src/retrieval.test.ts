@@ -90,6 +90,112 @@ describe("SQLite FTS5 / BM25 Evidence Retrieval", () => {
     await storage.close();
   });
 
+  it("retrieves relevant evidence from a long multi-sentence job description", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "draft-loop-retrieval-long-query-"));
+    const storage = openSqliteStorage(join(dir, "workspace.sqlite"));
+
+    await storage.saveWorkspace(workspace("ws-1"));
+    await storage.saveEvidenceSource(source("src-1", "ws-1"));
+    await storage.saveEvidenceChunk(
+      chunk(
+        "c-relevant",
+        "Built event-driven data pipelines with Python, Airflow, dbt, and ClickHouse.",
+        0,
+        "ws-1",
+        "src-1",
+      ),
+    );
+    await storage.saveEvidenceChunk(
+      chunk("c-unrelated", "Designed accessible React component libraries.", 1, "ws-1", "src-1"),
+    );
+
+    const description = `
+      We are looking for a senior data engineer to join our remote product team.
+      The successful candidate will design reliable event-driven pipelines and operate
+      production analytics systems using Python, Airflow, dbt, and ClickHouse while
+      collaborating with product and infrastructure stakeholders.
+    `;
+    const inspection = await storage.inspectEvidenceRetrieval(description, {
+      workspaceId: "ws-1",
+      limit: 5,
+    });
+
+    expect(inspection.status).toBe("matched");
+    expect(inspection.hits.map((hit) => hit.id)).toContain("c-relevant");
+    expect(inspection.selectedSourceCount).toBe(1);
+    await storage.close();
+  });
+
+  it("bounds and de-duplicates stop-word-heavy queries without collapsing retrieval", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "draft-loop-retrieval-bounded-query-"));
+    const storage = openSqliteStorage(join(dir, "workspace.sqlite"));
+
+    await storage.saveWorkspace(workspace("ws-1"));
+    await storage.saveEvidenceSource(source("src-1", "ws-1"));
+    await storage.saveEvidenceChunk(
+      chunk("c-1", "Operated reliable distributed data platforms.", 0, "ws-1", "src-1"),
+    );
+
+    const noise = Array.from({ length: 200 }, (_, index) => `keyword${index}`).join(" ");
+    const inspection = await storage.inspectEvidenceRetrieval(
+      `the and we are looking for reliable reliable distributed ${noise}`,
+      { workspaceId: "ws-1" },
+    );
+
+    expect(inspection.status).toBe("matched");
+    expect(inspection.hits[0]?.id).toBe("c-1");
+    await storage.close();
+  });
+
+  it("distinguishes an empty index from a deterministic workspace-scoped fallback", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "draft-loop-retrieval-fallback-"));
+    const storage = openSqliteStorage(join(dir, "workspace.sqlite"));
+
+    await storage.saveWorkspace(workspace("ws-empty"));
+    await expect(
+      storage.inspectEvidenceRetrieval("quantum chemistry", { workspaceId: "ws-empty" }),
+    ).resolves.toMatchObject({
+      status: "not-indexed",
+      indexedChunkCount: 0,
+      selectedChunkCount: 0,
+      selectedSourceCount: 0,
+      hits: [],
+    });
+
+    await storage.saveWorkspace(workspace("ws-alpha"));
+    await storage.saveEvidenceSource(source("src-alpha", "ws-alpha"));
+    await storage.saveEvidenceChunk(
+      chunk("alpha-2", "Private platform operations.", 1, "ws-alpha", "src-alpha"),
+    );
+    await storage.saveEvidenceChunk(
+      chunk("alpha-1", "Private backend delivery.", 0, "ws-alpha", "src-alpha"),
+    );
+    await storage.saveWorkspace(workspace("ws-beta"));
+    await storage.saveEvidenceSource(source("src-beta", "ws-beta"));
+    await storage.saveEvidenceChunk(
+      chunk("beta-1", "Other workspace material.", 0, "ws-beta", "src-beta"),
+    );
+
+    const first = await storage.inspectEvidenceRetrieval("quantum chemistry", {
+      workspaceId: "ws-alpha",
+      limit: 1,
+    });
+    const second = await storage.inspectEvidenceRetrieval("quantum chemistry", {
+      workspaceId: "ws-alpha",
+      limit: 1,
+    });
+    expect(first).toMatchObject({
+      status: "fallback",
+      indexedChunkCount: 2,
+      selectedChunkCount: 1,
+      selectedSourceCount: 1,
+    });
+    expect(first.hits.map((hit) => hit.id)).toEqual(["alpha-1"]);
+    expect(second.hits).toEqual(first.hits);
+    expect(first.hits.every((hit) => hit.workspaceId === "ws-alpha")).toBe(true);
+    await storage.close();
+  });
+
   it("strictly enforces workspace isolation in retrieval queries (T-008)", async () => {
     const dir = await mkdtemp(join(tmpdir(), "draft-loop-retrieval-iso-"));
     const storage = openSqliteStorage(join(dir, "workspace.sqlite"));

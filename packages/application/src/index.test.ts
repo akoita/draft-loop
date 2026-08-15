@@ -39,6 +39,13 @@ function driver(): ApplicationDriver {
     export: vi.fn(async () => "exports/run-1.md"),
     latestExportPath: vi.fn(async () => null),
     queryEvidence: vi.fn(async () => []),
+    inspectEvidenceRetrieval: vi.fn<ApplicationDriver["inspectEvidenceRetrieval"]>(async () => ({
+      status: "not-indexed",
+      indexedChunkCount: 0,
+      selectedChunkCount: 0,
+      selectedSourceCount: 0,
+      hits: [],
+    })),
     recordReviewDecision: vi.fn(async () => undefined),
   };
 }
@@ -76,6 +83,18 @@ describe("application service contract", () => {
     await service.queryEvidence({ root: "workspace", query: "typescript" });
 
     expect(underlying.queryEvidence).toHaveBeenCalledWith(
+      { root: "workspace", query: "typescript" },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+  });
+
+  it("forwards retrieval inspection with normalized root", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.inspectEvidenceRetrieval({ root: "workspace", query: "typescript" });
+
+    expect(underlying.inspectEvidenceRetrieval).toHaveBeenCalledWith(
       { root: "workspace", query: "typescript" },
       expect.objectContaining({ write: expect.any(Function) }),
     );

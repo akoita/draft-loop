@@ -1,8 +1,8 @@
-import type { ScoredEvidenceChunk } from "@draft-loop/domain";
+import type { EvidenceRetrievalInspection, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OutputFormat } from "@draft-loop/rendering";
 
-export type { ScoredEvidenceChunk };
+export type { EvidenceRetrievalInspection, ScoredEvidenceChunk };
 
 export interface ApplicationIo {
   readonly write: (line: string) => void;
@@ -128,6 +128,10 @@ export interface ApplicationDriver {
     command: QueryEvidenceCommand,
     io?: ApplicationIo,
   ) => Promise<readonly ScoredEvidenceChunk[]>;
+  readonly inspectEvidenceRetrieval: (
+    command: QueryEvidenceCommand,
+    io?: ApplicationIo,
+  ) => Promise<EvidenceRetrievalInspection>;
   readonly recordReviewDecision: (command: RecordReviewDecisionCommand) => Promise<void>;
 }
 
@@ -169,6 +173,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.latestExportPath({ ...command, root: requireRoot(command.root) }),
     queryEvidence: async (command, io) =>
       driver.queryEvidence({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    inspectEvidenceRetrieval: async (command, io) =>
+      driver.inspectEvidenceRetrieval(
+        { ...command, root: requireRoot(command.root) },
+        normalizeIo(io),
+      ),
     recordReviewDecision: async (command) =>
       driver.recordReviewDecision({ ...command, root: requireRoot(command.root) }),
   };

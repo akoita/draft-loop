@@ -148,6 +148,10 @@ export interface WorkspaceReadiness {
   readonly fixtureMode: boolean;
   readonly jobDescriptionReady: boolean;
   readonly evidenceSourceCount: number;
+  readonly retrievalStatus: "not-indexed" | "matched" | "fallback" | "no-query" | "unavailable";
+  readonly indexedEvidenceChunkCount: number;
+  readonly selectedEvidenceChunkCount: number;
+  readonly selectedEvidenceSourceCount: number;
   readonly ready: boolean;
   readonly nextSteps: readonly string[];
 }
@@ -539,6 +543,10 @@ export function createFixtureReviewState(): DesktopReviewState {
       fixtureMode: true,
       jobDescriptionReady: true,
       evidenceSourceCount: 1,
+      retrievalStatus: "matched",
+      indexedEvidenceChunkCount: 2,
+      selectedEvidenceChunkCount: 1,
+      selectedEvidenceSourceCount: 1,
       ready: true,
       nextSteps: [],
     },

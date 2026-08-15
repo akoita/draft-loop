@@ -110,6 +110,13 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
       ),
       latestExportPath: vi.fn(async () => null),
       queryEvidence: vi.fn(async () => []),
+      inspectEvidenceRetrieval: vi.fn<ApplicationService["inspectEvidenceRetrieval"]>(async () => ({
+        status: "not-indexed",
+        indexedChunkCount: 0,
+        selectedChunkCount: 0,
+        selectedSourceCount: 0,
+        hits: [],
+      })),
       recordReviewDecision: vi.fn(async () => undefined),
     } satisfies ApplicationService,
     snapshot,
@@ -117,6 +124,48 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
 }
 
 describe("native host", () => {
+  it("projects retrieval selection counts and fallback readiness", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-retrieval-readiness-"));
+    const fixture = service(root);
+    fixture.service.inspectEvidenceRetrieval.mockResolvedValue({
+      status: "fallback",
+      indexedChunkCount: 4,
+      selectedChunkCount: 2,
+      selectedSourceCount: 1,
+      hits: [],
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      await writeFile(join(root, "job.md"), "Senior data engineering role", "utf8");
+      await writeFile(join(root, "evidence", "resume.md"), "Candidate experience", "utf8");
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const loaded = await host.invoke({ type: "review.load", input: {} });
+
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          setup: {
+            retrievalStatus: "fallback",
+            indexedEvidenceChunkCount: 4,
+            selectedEvidenceChunkCount: 2,
+            selectedEvidenceSourceCount: 1,
+          },
+        },
+      });
+      expect(fixture.service.inspectEvidenceRetrieval).toHaveBeenCalledWith({
+        root,
+        query: "Senior data engineering role",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns a persisted run before continuing provider execution in the background", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-background-"));
     let resumeSignal: AbortSignal | undefined;

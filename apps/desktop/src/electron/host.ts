@@ -700,23 +700,58 @@ function defaultExportPath(root: string, runId: string): string {
 async function workspaceReadiness(
   descriptor: WorkspaceDescriptor,
   root: string,
+  service: ApplicationService,
 ): Promise<WorkspaceReadiness> {
   const jobPath = resolve(root, descriptor.jobDescriptionPath);
   let jobDescriptionReady = false;
+  let jobDescription = "";
   try {
-    jobDescriptionReady = (await readFile(jobPath, "utf8")).trim().length > 0;
+    jobDescription = (await readFile(jobPath, "utf8")).trim();
+    jobDescriptionReady = jobDescription.length > 0;
   } catch {
     jobDescriptionReady = false;
   }
   const evidenceSourceCount = await countEvidenceFiles(resolve(root, descriptor.sourceDirectory));
+  let retrievalStatus: WorkspaceReadiness["retrievalStatus"] = "not-indexed";
+  let indexedEvidenceChunkCount = 0;
+  let selectedEvidenceChunkCount = 0;
+  let selectedEvidenceSourceCount = 0;
+  if (jobDescriptionReady && evidenceSourceCount > 0) {
+    try {
+      const inspection = await service.inspectEvidenceRetrieval({
+        root,
+        query: jobDescription,
+      });
+      retrievalStatus = inspection.status;
+      indexedEvidenceChunkCount = inspection.indexedChunkCount;
+      selectedEvidenceChunkCount = inspection.selectedChunkCount;
+      selectedEvidenceSourceCount = inspection.selectedSourceCount;
+    } catch {
+      retrievalStatus = "unavailable";
+    }
+  }
   const nextSteps: string[] = [];
   if (!jobDescriptionReady) nextSteps.push("Add a target job description.");
   if (evidenceSourceCount === 0) nextSteps.push("Add at least one candidate evidence source.");
+  if (retrievalStatus === "no-query") {
+    nextSteps.push("Replace the job description with searchable role content.");
+  }
+  if (retrievalStatus === "unavailable") {
+    nextSteps.push("Resolve the local evidence index error before starting a review.");
+  }
   return {
     fixtureMode: descriptor.fixtureMode,
     jobDescriptionReady,
     evidenceSourceCount,
-    ready: jobDescriptionReady && evidenceSourceCount > 0,
+    retrievalStatus,
+    indexedEvidenceChunkCount,
+    selectedEvidenceChunkCount,
+    selectedEvidenceSourceCount,
+    ready:
+      jobDescriptionReady &&
+      evidenceSourceCount > 0 &&
+      retrievalStatus !== "no-query" &&
+      retrievalStatus !== "unavailable",
     nextSteps,
   };
 }
@@ -1360,7 +1395,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           ? {}
           : { runId: input.runId }),
       }));
-    const setup = await workspaceReadiness(workspace.descriptor, workspace.root);
+    const setup = await workspaceReadiness(workspace.descriptor, workspace.root, service);
     const preflight = await providerTransmissionPreflight(
       workspace.descriptor,
       workspace.root,
@@ -1452,7 +1487,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             root: workspace.root,
             ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
           });
-          const setup = await workspaceReadiness(workspace.descriptor, workspace.root);
+          const setup = await workspaceReadiness(workspace.descriptor, workspace.root, service);
           if (snapshot === undefined) {
             const preflight = await providerTransmissionPreflight(
               workspace.descriptor,

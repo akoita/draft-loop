@@ -160,6 +160,16 @@ export interface ScoredEvidenceChunk {
   readonly rank: number;
 }
 
+export type EvidenceRetrievalStatus = "not-indexed" | "matched" | "fallback" | "no-query";
+
+export interface EvidenceRetrievalInspection {
+  readonly status: EvidenceRetrievalStatus;
+  readonly indexedChunkCount: number;
+  readonly selectedChunkCount: number;
+  readonly selectedSourceCount: number;
+  readonly hits: readonly ScoredEvidenceChunk[];
+}
+
 export interface RetrievalOptions {
   readonly workspaceId?: string;
   readonly profileId?: string;

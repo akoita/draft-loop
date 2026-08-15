@@ -12,6 +12,7 @@ import {
   type ContextSnapshot,
   createContextSnapshot,
   createWorkspace,
+  type EvidenceRetrievalInspection,
   type ModelConfigurationInput,
   type ScoredEvidenceChunk,
 } from "@draft-loop/domain";
@@ -1148,6 +1149,12 @@ async function createRun(
   const storage = await openStorage(root);
   try {
     await saveInputs(storage, config, inputs);
+    const retrieval = await storage.inspectEvidenceRetrieval(inputs.context.jobDescription, {
+      workspaceId: config.id,
+    });
+    io.write(
+      `retrieval: status=${retrieval.status} indexedChunks=${retrieval.indexedChunkCount} selectedChunks=${retrieval.selectedChunkCount} selectedSources=${retrieval.selectedSourceCount}`,
+    );
     const runId = `run-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const runBudget = budget(config);
     preflight(config, io, runBudget);
@@ -1540,6 +1547,24 @@ export async function queryWorkspaceEvidence(
   }
 }
 
+export async function inspectWorkspaceEvidenceRetrieval(
+  root: string,
+  query: string,
+  options?: { readonly limit?: number },
+  _io?: ApplicationIo,
+): Promise<EvidenceRetrievalInspection> {
+  const config = await readWorkspace(root);
+  const storage = await openStorage(root);
+  try {
+    return await storage.inspectEvidenceRetrieval(query, {
+      workspaceId: config.id,
+      ...(options?.limit === undefined ? {} : { limit: options.limit }),
+    });
+  } finally {
+    await storage.close();
+  }
+}
+
 /** Concrete local driver shared by CLI and the native desktop host. */
 export type ProviderCredentialResolver = (
   provider: "anthropic" | "openai",
@@ -1602,6 +1627,13 @@ export function createLocalApplicationDriver(options?: {
       latestExportPath(command.root, command.runId, command.format),
     queryEvidence: async (command, io) =>
       queryWorkspaceEvidence(
+        command.root,
+        command.query,
+        command.limit === undefined ? undefined : { limit: command.limit },
+        io,
+      ),
+    inspectEvidenceRetrieval: async (command, io) =>
+      inspectWorkspaceEvidenceRetrieval(
         command.root,
         command.query,
         command.limit === undefined ? undefined : { limit: command.limit },

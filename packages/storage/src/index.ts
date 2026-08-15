@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
 import {
+  type EvidenceRetrievalInspection,
   type RetrievalOptions,
   type RetrievalPort,
   type ScoredEvidenceChunk,
@@ -347,6 +348,54 @@ export interface AuditEvent extends AuditEventInput {
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
 export type EvidenceSearchHit = ScoredEvidenceChunk;
 export type EvidenceSearchOptions = RetrievalOptions;
+
+const maximumEvidenceQueryTerms = 48;
+const evidenceQueryStopWords = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "by",
+  "for",
+  "from",
+  "in",
+  "is",
+  "it",
+  "of",
+  "on",
+  "or",
+  "our",
+  "that",
+  "the",
+  "their",
+  "this",
+  "to",
+  "we",
+  "will",
+  "with",
+  "you",
+  "your",
+]);
+
+function evidenceQueryTerms(query: string): readonly string[] {
+  const rawTokens = query.trim().match(/[\p{L}\p{N}_-]+/gu);
+  if (rawTokens === null) return [];
+  const seen = new Set<string>();
+  const terms: string[] = [];
+  for (const token of rawTokens) {
+    const normalized = token.toLocaleLowerCase("en-US");
+    if (normalized.length < 2 || evidenceQueryStopWords.has(normalized) || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    terms.push(token);
+    if (terms.length === maximumEvidenceQueryTerms) break;
+  }
+  return terms;
+}
 
 export class StorageUnavailableError extends Error {
   constructor(message: string, options?: { readonly cause?: unknown }) {
@@ -1896,26 +1945,73 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort, Retrieval
     query: string,
     optionsOrLimit: EvidenceSearchOptions | number = {},
   ): Promise<readonly EvidenceSearchHit[]> {
+    return (await this.inspectEvidenceRetrieval(query, optionsOrLimit)).hits;
+  }
+
+  public async inspectEvidenceRetrieval(
+    query: string,
+    optionsOrLimit: EvidenceSearchOptions | number = {},
+  ): Promise<EvidenceRetrievalInspection> {
     this.ensureOpen();
     const options = typeof optionsOrLimit === "number" ? { limit: optionsOrLimit } : optionsOrLimit;
     const limit = options.limit ?? 20;
-    const rawTokens = query.trim().match(/[\p{L}\p{N}_-]+/gu);
-    if (!rawTokens || rawTokens.length === 0) {
-      return [];
-    }
-    const terms = rawTokens.map((term) => `"${term.replaceAll('"', '""')}"`).join(" AND ");
     if (options.workspaceId !== undefined) {
       requireNonEmpty(options.workspaceId, "evidence search workspaceId");
     }
     if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
       throw new StorageValidationError("evidence search limit must be an integer from 1 to 100");
     }
-    return this.database
+    const workspaceId = options.workspaceId ?? null;
+    const indexedChunkCount = Number(
+      this.database
+        .prepare(
+          "SELECT COUNT(*) AS count FROM evidence_chunks WHERE (? IS NULL OR workspace_id = ?)",
+        )
+        .get<{ readonly count: number }>(workspaceId, workspaceId)?.count ?? 0,
+    );
+    if (indexedChunkCount === 0) {
+      return {
+        status: "not-indexed",
+        indexedChunkCount,
+        selectedChunkCount: 0,
+        selectedSourceCount: 0,
+        hits: [],
+      };
+    }
+
+    const queryTerms = evidenceQueryTerms(query);
+    if (queryTerms.length === 0) {
+      return {
+        status: "no-query",
+        indexedChunkCount,
+        selectedChunkCount: 0,
+        selectedSourceCount: 0,
+        hits: [],
+      };
+    }
+    const ftsQuery = queryTerms.map((term) => `"${term.replaceAll('"', '""')}"`).join(" OR ");
+    let hits = this.database
       .prepare(
         "SELECT c.id, c.workspace_id, c.source_id, c.ordinal, c.line_start, c.line_end, c.checksum, c.text, c.created_at, bm25(evidence_chunks_fts) AS rank FROM evidence_chunks_fts JOIN evidence_chunks AS c ON c.id = evidence_chunks_fts.chunk_id WHERE evidence_chunks_fts MATCH ? AND (? IS NULL OR c.workspace_id = ?) ORDER BY rank, c.id LIMIT ?",
       )
-      .all(terms, options.workspaceId ?? null, options.workspaceId ?? null, limit)
+      .all(ftsQuery, workspaceId, workspaceId, limit)
       .map((row) => ({ ...evidenceChunkFromRow(row), rank: Number(row.rank) }));
+    const status = hits.length > 0 ? "matched" : "fallback";
+    if (hits.length === 0) {
+      hits = this.database
+        .prepare(
+          "SELECT id, workspace_id, source_id, ordinal, line_start, line_end, checksum, text, created_at, 0 AS rank FROM evidence_chunks WHERE (? IS NULL OR workspace_id = ?) ORDER BY source_id, ordinal, id LIMIT ?",
+        )
+        .all(workspaceId, workspaceId, limit)
+        .map((row) => ({ ...evidenceChunkFromRow(row), rank: Number(row.rank) }));
+    }
+    return {
+      status,
+      indexedChunkCount,
+      selectedChunkCount: hits.length,
+      selectedSourceCount: new Set(hits.map((hit) => hit.sourceId)).size,
+      hits,
+    };
   }
 
   public async queryEvidence(

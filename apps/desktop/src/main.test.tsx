@@ -151,6 +151,10 @@ describe("desktop trust-centered review", () => {
         fixtureMode: false,
         jobDescriptionReady: false,
         evidenceSourceCount: 0,
+        retrievalStatus: "not-indexed" as const,
+        indexedEvidenceChunkCount: 0,
+        selectedEvidenceChunkCount: 0,
+        selectedEvidenceSourceCount: 0,
         ready: false,
         nextSteps: ["Add a target job description.", "Add at least one candidate evidence source."],
       },
@@ -191,6 +195,61 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("https://api.anthropic.com/v1/messages");
     expect(html).toContain("Acknowledge provider transmission");
     expect(html.match(/disabled=""/gu)?.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("distinguishes pending indexing from a bounded no-match fallback", () => {
+    const base = collectingState();
+    const pendingHtml = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={{
+          ...base,
+          setup: {
+            ...base.setup,
+            retrievalStatus: "not-indexed",
+            indexedEvidenceChunkCount: 0,
+            selectedEvidenceChunkCount: 0,
+            selectedEvidenceSourceCount: 0,
+          },
+        }}
+        onAction={() => undefined}
+      />,
+    );
+    const fallbackHtml = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={{
+          ...base,
+          setup: {
+            ...base.setup,
+            retrievalStatus: "fallback",
+            indexedEvidenceChunkCount: 3,
+            selectedEvidenceChunkCount: 2,
+            selectedEvidenceSourceCount: 1,
+          },
+        }}
+        onAction={() => undefined}
+      />,
+    );
+    const activeFallbackHtml = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={{
+          ...createFixtureReviewState(),
+          setup: {
+            ...createFixtureReviewState().setup,
+            retrievalStatus: "fallback",
+            indexedEvidenceChunkCount: 3,
+            selectedEvidenceChunkCount: 2,
+            selectedEvidenceSourceCount: 1,
+          },
+        }}
+        onAction={() => undefined}
+      />,
+    );
+
+    expect(pendingHtml).toContain("Evidence will be indexed when the review starts");
+    expect(fallbackHtml).toContain("No lexical match; 2 bounded fallback excerpts selected");
+    expect(activeFallbackHtml).toContain(
+      "No lexical match; using 2 bounded fallback excerpts from candidate material",
+    );
   });
 
   it("makes paused progress, provider exposure, and unresolved findings visible", () => {

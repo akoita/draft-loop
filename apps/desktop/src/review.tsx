@@ -791,6 +791,19 @@ export function ReviewWorkspace({
                   ? "Add a CV, portfolio, or other source"
                   : `${state.setup.evidenceSourceCount} source${state.setup.evidenceSourceCount === 1 ? "" : "s"} ready`}
               </span>
+              {state.setup.evidenceSourceCount > 0 ? (
+                <span className="setup-retrieval-status" role="status">
+                  {state.setup.retrievalStatus === "matched"
+                    ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                    : state.setup.retrievalStatus === "fallback"
+                      ? `No lexical match; ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected`
+                      : state.setup.retrievalStatus === "no-query"
+                        ? "The job description has no searchable role terms"
+                        : state.setup.retrievalStatus === "unavailable"
+                          ? "Retrieval readiness is unavailable"
+                          : "Evidence will be indexed when the review starts"}
+                </span>
+              ) : null}
               <button
                 className="button button-quiet"
                 type="button"
@@ -927,6 +940,21 @@ export function ReviewWorkspace({
             {state.budgetUsd === null ? "No cap configured" : `$${state.budgetUsd.toFixed(2)} cap`}
           </span>
         </div>
+      </section>
+
+      <section className="panel retrieval-status-panel" aria-label="evidence retrieval status">
+        <strong>Evidence retrieval</strong>
+        <span role="status">
+          {state.setup.retrievalStatus === "matched"
+            ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} candidate source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+            : state.setup.retrievalStatus === "fallback"
+              ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from candidate material`
+              : state.setup.retrievalStatus === "not-indexed"
+                ? "Candidate material is not indexed; no evidence excerpt was selected"
+                : state.setup.retrievalStatus === "no-query"
+                  ? "The job description has no searchable role terms"
+                  : "Retrieval readiness is unavailable"}
+        </span>
       </section>
 
       {errorMessage ? (
