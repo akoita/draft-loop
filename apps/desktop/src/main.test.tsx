@@ -222,9 +222,17 @@ describe("desktop trust-centered review", () => {
         diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
       },
     };
-    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={state}
+        onAction={() => undefined}
+        errorMessage="The review action could not be completed."
+      />,
+    );
 
     expect(html).toContain("Provider request failed");
+    expect(html).toContain('class="error-banner" role="alert"');
+    expect(html).toContain("The review action could not be completed.");
     expect(html).toContain("Retry");
     expect(html).toContain("Return to review");
     expect(html).toContain("Stop run");
@@ -233,6 +241,29 @@ describe("desktop trust-centered review", () => {
     expect(reduceReviewState(state, { type: "resume" }).state).toBe("reviewing");
     expect(reduceReviewState(state, { type: "recover-to-review" }).state).toBe("awaiting-approval");
     expect(reduceReviewState(state, { type: "stop" }).state).toBe("stopped");
+  });
+
+  it("shows pending finding feedback and disables every decision button", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      findings: createFixtureReviewState().findings.map((finding) => ({
+        ...finding,
+        rationale: "Existing rationale for test coverage.",
+      })),
+    };
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={state}
+        onAction={() => undefined}
+        pendingReviewAction={{ action: "finding-decision", elapsedSeconds: 2 }}
+      />,
+    );
+
+    expect(html).toContain('role="status" aria-live="polite"');
+    expect(html).toContain("Saving finding decision… Elapsed 2 seconds.");
+    for (const decision of ["Accept", "Reject", "Defer", "Override"]) {
+      expect(html).toContain(`disabled="">${decision}</button>`);
+    }
   });
 
   it("does not describe an absent artifact as validated or approvable", () => {

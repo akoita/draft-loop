@@ -676,6 +676,12 @@ export function ReviewWorkspace({
         </div>
       </section>
 
+      {errorMessage ? (
+        <div className="error-banner" role="alert">
+          <p>{errorMessage}</p>
+        </div>
+      ) : null}
+
       {state.state === "provider-error" && state.providerFailure !== null ? (
         <section
           className="panel provider-failure-panel"
@@ -962,6 +968,13 @@ export function ReviewWorkspace({
                     : `${blockingFindings.length} blocking · ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`}
               </span>
             </div>
+            {pendingReviewAction?.action === "finding-decision" ? (
+              <p className="pending-action-status" role="status" aria-live="polite">
+                Saving finding decision… Elapsed {pendingReviewAction.elapsedSeconds} second
+                {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
+                the decision is saved.
+              </p>
+            ) : null}
             {state.findings.map((finding) => {
               const claim =
                 finding.claimId === undefined ? undefined : claimById.get(finding.claimId);
@@ -1020,8 +1033,10 @@ export function ReviewWorkspace({
                           type="button"
                           key={decision}
                           disabled={
-                            decision === "overridden" &&
-                            (overrideReasons[finding.id] ?? finding.rationale ?? "").trim() === ""
+                            pendingReviewAction?.action === "finding-decision" ||
+                            (decision === "overridden" &&
+                              (overrideReasons[finding.id] ?? finding.rationale ?? "").trim() ===
+                                "")
                           }
                           onClick={() => {
                             const rationale = (

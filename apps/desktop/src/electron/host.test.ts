@@ -1,7 +1,11 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { ApplicationService, WorkspaceDescriptor } from "@draft-loop/application";
+import {
+  type ApplicationService,
+  createLocalApplicationDriver,
+  type WorkspaceDescriptor,
+} from "@draft-loop/application";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DesktopReviewState } from "../model.js";
@@ -320,6 +324,142 @@ describe("native host", () => {
       });
       expect(retry).toMatchObject({ ok: false, error: { code: "operation-failed" } });
       expect(exhausted.service.resume).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("allows local review decisions after a provider error and persists them through reload", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-real-provider-error-"));
+    await mkdir(join(root, "evidence"), { recursive: true });
+    await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+    await writeFile(
+      join(root, "evidence", "resume.md"),
+      "Synthetic candidate evidence for TypeScript systems engineering.\n",
+      "utf8",
+    );
+    const localDriver = createLocalApplicationDriver();
+    const localIo = { write: () => undefined };
+
+    try {
+      const workspace = await localDriver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          maxRounds: 2,
+          maxCostUsd: 0.25,
+          fixtureMode: true,
+        },
+        localIo,
+      );
+      const started = await localDriver.start({ root, allowProviderData: false }, localIo);
+      expect(started.findings.length).toBeGreaterThan(0);
+      await localDriver.lifecycle({ root, runId: started.runId, action: "revision" }, localIo);
+
+      const configPath = join(root, ".draft-loop", "workspace.json");
+      const config = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
+      await writeFile(
+        configPath,
+        `${JSON.stringify({ ...config, fixtureMode: false }, null, 2)}\n`,
+      );
+      const failed = await localDriver.resume(
+        { root, runId: started.runId, allowProviderData: false },
+        localIo,
+      );
+      expect(failed).toMatchObject({
+        state: "provider-error",
+        artifact: { version: 1 },
+        lastError: { code: "policy" },
+      });
+
+      const dialogs: NativeHostDialogs = {
+        chooseDirectory: async () => root,
+        chooseFiles: async () => [],
+      };
+      const host = createNativeHost({ dialogs });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const loaded = await host.invoke({ type: "review.load", input: {} });
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: { state: "provider-error", findings: [{ decision: "pending" }] },
+      });
+      const loadedValue = (loaded as { readonly ok: true; readonly value: DesktopReviewState })
+        .value;
+      const finding = loadedValue.findings[0];
+      const block = loadedValue.artifact.sections[0]?.blocks[0];
+      expect(finding).toBeDefined();
+      expect(block).toBeDefined();
+      if (finding === undefined || block === undefined) {
+        throw new Error("The deterministic fixture did not produce a finding and artifact block.");
+      }
+
+      const approve = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: workspace.id,
+          runId: started.runId,
+          action: { type: "approve" },
+        },
+      });
+      const start = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: workspace.id,
+          runId: "pending",
+          action: { type: "start" },
+        },
+      });
+      expect(approve).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(start).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
+      const decision = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: workspace.id,
+          runId: started.runId,
+          action: {
+            type: "finding-decision",
+            findingId: finding.id,
+            decision: "accepted",
+          },
+        },
+      });
+      expect(decision).toMatchObject({
+        ok: true,
+        value: { state: "provider-error", findings: [{ decision: "accepted" }] },
+      });
+
+      const editText = "Edited locally while the provider is unavailable.";
+      const edit = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: workspace.id,
+          runId: started.runId,
+          action: { type: "edit-block", blockId: block.id, text: editText },
+        },
+      });
+      expect(edit).toMatchObject({ ok: true, value: { state: "provider-error" } });
+
+      const reloadedHost = createNativeHost({ dialogs });
+      await reloadedHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const reloaded = await reloadedHost.invoke({
+        type: "review.load",
+        input: { workspaceId: workspace.id, runId: started.runId },
+      });
+      expect(reloaded).toMatchObject({
+        ok: true,
+        value: {
+          state: "provider-error",
+          findings: [{ decision: "accepted" }],
+        },
+      });
+      const reloadedValue = (reloaded as { readonly ok: true; readonly value: DesktopReviewState })
+        .value;
+      expect(reloadedValue.artifact.sections[0]?.blocks[0]).toMatchObject({
+        id: block.id,
+        text: editText,
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

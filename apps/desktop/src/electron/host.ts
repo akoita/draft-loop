@@ -1192,7 +1192,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     const action: ReviewAction = input.action;
     if (
       currentSnapshot?.state === "provider-error" &&
-      !["resume", "recover-to-review", "stop"].includes(action.type)
+      !["resume", "recover-to-review", "stop", "finding-decision", "edit-block"].includes(
+        action.type,
+      )
     ) {
       return fail("operation-failed", "This action is not available after a provider failure.");
     }
