@@ -42,7 +42,7 @@ export function createCli(): Command {
     .option("--author-company <company>", "author provider company", "anthropic")
     .option("--author-model <model>", "exact author model id", "claude-sonnet-4-5")
     .option("--critic-company <company>", "critic provider company", "openai")
-    .option("--critic-model <model>", "exact critic model id", "gpt-5")
+    .option("--critic-model <model>", "exact critic model id", "gpt-5.6-luna")
     .option(
       "--required-sections <sections>",
       "comma-separated required output sections",

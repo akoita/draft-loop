@@ -7,7 +7,26 @@ import { describe, expect, it } from "vitest";
 
 import { createLocalApplicationDriver } from "./local.js";
 
-describe("local application export history", () => {
+describe("local application driver", () => {
+  it("uses the low-cost cross-provider validation pair for new workspaces", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-default-models-"));
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+      const driver = createLocalApplicationDriver();
+
+      const workspace = await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence" },
+        { write: () => undefined },
+      );
+
+      expect(workspace.author).toEqual({ company: "anthropic", model: "claude-sonnet-4-5" });
+      expect(workspace.critic).toEqual({ company: "openai", model: "gpt-5.6-luna" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns the newest completed existing export for the requested format", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-latest-export-"));
     const io = { write: () => undefined };

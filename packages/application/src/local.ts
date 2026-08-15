@@ -330,7 +330,7 @@ export async function initWorkspace(
     authorCompany: options.authorCompany?.trim() || "anthropic",
     authorModel: options.authorModel?.trim() || "claude-sonnet-4-5",
     criticCompany: options.criticCompany?.trim() || "openai",
-    criticModel: options.criticModel?.trim() || "gpt-5",
+    criticModel: options.criticModel?.trim() || "gpt-5.6-luna",
     fixtureMode: options.fixtureMode === true,
   };
   parseConfig(config);
