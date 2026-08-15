@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CredentialStatus } from "./bridge.js";
 import {
   type DesktopReviewState,
   type FindingDecision,
   type ReviewAction,
+  type ReviewFinding,
   reviewFindingSummary,
 } from "./model.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
@@ -27,6 +28,157 @@ const decisionLabels: Readonly<Record<FindingDecision, string>> = {
   deferred: "Defer",
   overridden: "Override",
 };
+
+export type FindingQueueFilter = "needs-action" | "blocking" | "warnings" | "resolved";
+
+export interface FindingQueueCounts {
+  readonly needsAction: number;
+  readonly blocking: number;
+  readonly warnings: number;
+  readonly resolved: number;
+}
+
+export interface InitialFindingQueueState {
+  readonly filter: FindingQueueFilter;
+  readonly expandedFindingId: string | null;
+}
+
+const findingQueueFilters: ReadonlyArray<{
+  readonly id: FindingQueueFilter;
+  readonly label: string;
+}> = [
+  { id: "needs-action", label: "Needs action" },
+  { id: "blocking", label: "Blocking" },
+  { id: "warnings", label: "Warnings" },
+  { id: "resolved", label: "Resolved" },
+];
+
+const directFindingDecisions: readonly Exclude<FindingDecision, "pending" | "overridden">[] = [
+  "accepted",
+  "rejected",
+  "deferred",
+];
+
+function isUnresolvedFinding(finding: ReviewFinding): boolean {
+  return finding.decision === "pending" || finding.decision === "deferred";
+}
+
+export function findingQueueCounts(findings: readonly ReviewFinding[]): FindingQueueCounts {
+  let needsAction = 0;
+  let blocking = 0;
+  let warnings = 0;
+  let resolved = 0;
+
+  for (const finding of findings) {
+    if (!isUnresolvedFinding(finding)) {
+      resolved += 1;
+    } else if (finding.severity === "error") {
+      needsAction += 1;
+      blocking += 1;
+    } else {
+      needsAction += 1;
+      warnings += 1;
+    }
+  }
+
+  return { needsAction, blocking, warnings, resolved };
+}
+
+export function defaultFindingQueueFilter(findings: readonly ReviewFinding[]): FindingQueueFilter {
+  return findingQueueCounts(findings).needsAction > 0 ? "needs-action" : "resolved";
+}
+
+export function filterFindingQueue(
+  findings: readonly ReviewFinding[],
+  filter: FindingQueueFilter,
+): readonly ReviewFinding[] {
+  switch (filter) {
+    case "needs-action":
+      return findings.filter(isUnresolvedFinding);
+    case "blocking":
+      return findings.filter(
+        (finding) => isUnresolvedFinding(finding) && finding.severity === "error",
+      );
+    case "warnings":
+      return findings.filter(
+        (finding) => isUnresolvedFinding(finding) && finding.severity === "warning",
+      );
+    case "resolved":
+      return findings.filter((finding) => !isUnresolvedFinding(finding));
+  }
+}
+
+export function findingQueueFilterCount(
+  counts: FindingQueueCounts,
+  filter: FindingQueueFilter,
+): number {
+  switch (filter) {
+    case "needs-action":
+      return counts.needsAction;
+    case "blocking":
+      return counts.blocking;
+    case "warnings":
+      return counts.warnings;
+    case "resolved":
+      return counts.resolved;
+  }
+}
+
+export function initialFindingQueueState(
+  findings: readonly ReviewFinding[],
+): InitialFindingQueueState {
+  const filter = defaultFindingQueueFilter(findings);
+  return {
+    filter,
+    expandedFindingId:
+      filter === "needs-action" ? (filterFindingQueue(findings, filter)[0]?.id ?? null) : null,
+  };
+}
+
+export function nextActionableFindingId(
+  findings: readonly ReviewFinding[],
+  currentFindingId: string,
+): string | null {
+  const actionable = findings.filter(isUnresolvedFinding);
+  if (actionable.length === 0) return null;
+
+  const currentIndex = findings.findIndex((finding) => finding.id === currentFindingId);
+  const following = actionable.filter(
+    (finding) =>
+      finding.id !== currentFindingId &&
+      (currentIndex < 0 ||
+        findings.findIndex((candidate) => candidate.id === finding.id) > currentIndex),
+  );
+  return (
+    following[0]?.id ??
+    actionable.find((finding) => finding.id !== currentFindingId)?.id ??
+    currentFindingId
+  );
+}
+
+export function findingQueueEmptyMessage(
+  filter: FindingQueueFilter,
+  counts: FindingQueueCounts,
+): string {
+  if (filter === "needs-action" && counts.needsAction === 0) {
+    return counts.resolved > 0 ? "All findings are decided." : "No findings need action yet.";
+  }
+  if (filter === "blocking" && counts.blocking === 0) return "No blocking findings need action.";
+  if (filter === "warnings" && counts.warnings === 0) return "No warnings need action.";
+  if (filter === "resolved" && counts.resolved === 0) return "No findings have been resolved yet.";
+  return "No findings match this filter.";
+}
+
+export function isOverrideEditorVisible(
+  editingFindingId: string | null,
+  findingId: string,
+): boolean {
+  return editingFindingId === findingId;
+}
+
+function findingDomId(prefix: string, findingId: string): string {
+  return `${prefix}-${findingId.replace(/[^a-zA-Z0-9_-]/gu, "-")}`;
+}
 
 function stateLabel(value: DesktopReviewState["state"]): string {
   return value.replaceAll("-", " ");
@@ -60,7 +212,7 @@ export function ReviewWorkspace({
   onRemoveCredential,
 }: ReviewWorkspaceProps) {
   const findingSummary = reviewFindingSummary(state);
-  const { blocking: blockingFindings, unresolved: unresolvedFindings, warnings } = findingSummary;
+  const { blocking: blockingFindings, warnings } = findingSummary;
   const hasArtifact = state.artifact.version > 0;
   const claimById = useMemo(
     () => new Map(state.artifact.claims.map((claim) => [claim.id, claim])),
@@ -91,6 +243,23 @@ export function ReviewWorkspace({
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
+  const initialQueueState = useMemo(
+    () => initialFindingQueueState(state.findings),
+    [state.findings],
+  );
+  const [findingFilter, setFindingFilter] = useState<FindingQueueFilter>(
+    () => initialQueueState.filter,
+  );
+  const [expandedFindingId, setExpandedFindingId] = useState<string | null>(
+    () => initialQueueState.expandedFindingId,
+  );
+  const [overrideEditingFindingId, setOverrideEditingFindingId] = useState<string | null>(null);
+  const findingDecisionRequest = useRef<{
+    readonly findingId: string;
+    readonly decision: Exclude<FindingDecision, "pending">;
+  } | null>(null);
+  const findingSummaryButtonRefs = useRef(new Map<string, HTMLButtonElement>());
+  const findingQueueContext = useRef(`${state.workspaceId}:${state.runId}`);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const emptyCredentialStatus = (provider: "anthropic" | "openai"): CredentialStatus => ({
     provider,
@@ -111,12 +280,63 @@ export function ReviewWorkspace({
   const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [confirmedPolicyFingerprint, setConfirmedPolicyFingerprint] = useState<string | null>(null);
+  const queueCounts = findingQueueCounts(state.findings);
+  const filteredFindings = filterFindingQueue(state.findings, findingFilter);
+  const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
+  const previousNeedsActionCount = useRef(queueCounts.needsAction);
   const policyConfirmed =
     confirmedPolicyFingerprint === state.providerTransmissionPreflight.fingerprint;
   const transmissionReady =
     !state.providerTransmissionPreflight.required ||
     state.providerTransmissionPreflight.acknowledged;
   const retryRemainingMs = retryWaitMs(state.providerFailure?.retryNotBefore ?? null, nowMs);
+
+  useEffect(() => {
+    const nextContext = `${state.workspaceId}:${state.runId}`;
+    if (findingQueueContext.current === nextContext) return;
+
+    findingQueueContext.current = nextContext;
+    previousNeedsActionCount.current = queueCounts.needsAction;
+    const nextQueueState = initialFindingQueueState(state.findings);
+    setFindingFilter(nextQueueState.filter);
+    setExpandedFindingId(nextQueueState.expandedFindingId);
+    setOverrideEditingFindingId(null);
+    findingDecisionRequest.current = null;
+  }, [queueCounts.needsAction, state.findings, state.runId, state.workspaceId]);
+
+  useEffect(() => {
+    const previousCount = previousNeedsActionCount.current;
+    previousNeedsActionCount.current = queueCounts.needsAction;
+    if (previousCount !== 0 || queueCounts.needsAction === 0) return;
+
+    setFindingFilter("needs-action");
+    setExpandedFindingId(filterFindingQueue(state.findings, "needs-action")[0]?.id ?? null);
+    setOverrideEditingFindingId(null);
+  }, [queueCounts.needsAction, state.findings]);
+
+  useEffect(() => {
+    if (!findingDecisionPending && findingDecisionRequest.current !== null) {
+      const request = findingDecisionRequest.current;
+      const updatedFinding = state.findings.find((finding) => finding.id === request.findingId);
+      findingDecisionRequest.current = null;
+      if (updatedFinding?.decision !== request.decision) return;
+
+      const visibleFindings = filterFindingQueue(state.findings, findingFilter);
+      const nextFindingId = nextActionableFindingId(visibleFindings, request.findingId);
+      setExpandedFindingId(nextFindingId);
+      setOverrideEditingFindingId(null);
+      if (nextFindingId !== null) {
+        findingSummaryButtonRefs.current.get(nextFindingId)?.focus();
+      }
+    }
+  }, [findingDecisionPending, findingFilter, state.findings]);
+
+  useEffect(() => {
+    if (findingFilter === "needs-action" && queueCounts.needsAction === 0) {
+      setFindingFilter("resolved");
+      setExpandedFindingId(null);
+    }
+  }, [findingFilter, queueCounts.needsAction]);
 
   useEffect(() => {
     setNowMs(Date.now());
@@ -996,110 +1216,249 @@ export function ReviewWorkspace({
           </section>
 
           <section className="panel findings-panel" aria-label="critique findings">
-            <div className="section-heading compact">
-              <div>
-                <p className="eyebrow">Critique</p>
-                <h2>Findings</h2>
+            <div className="findings-queue-header">
+              <div className="section-heading compact">
+                <div>
+                  <p className="eyebrow">Critique triage</p>
+                  <h2>Findings</h2>
+                  <p className="finding-progress" role="status" aria-live="polite">
+                    {queueCounts.resolved} of {state.findings.length} decided
+                    {queueCounts.needsAction > 0
+                      ? ` · ${queueCounts.needsAction} need action`
+                      : " · all findings decided"}
+                  </p>
+                </div>
+                <span className="count-badge">
+                  {!hasArtifact
+                    ? "Not evaluated"
+                    : queueCounts.needsAction === 0
+                      ? "All resolved"
+                      : `${queueCounts.blocking} blocking · ${queueCounts.warnings} warning${queueCounts.warnings === 1 ? "" : "s"}`}
+                </span>
               </div>
-              <span className="count-badge">
-                {!hasArtifact
-                  ? "Not evaluated"
-                  : unresolvedFindings.length === 0
-                    ? "All resolved"
-                    : `${blockingFindings.length} blocking · ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`}
-              </span>
+              <fieldset className="finding-filters">
+                <legend className="sr-only">Finding filters</legend>
+                {findingQueueFilters.map((filter) => {
+                  const count = findingQueueFilterCount(queueCounts, filter.id);
+                  const isSelected = findingFilter === filter.id;
+                  return (
+                    <button
+                      className={`finding-filter${isSelected ? " finding-filter-selected" : ""}`}
+                      type="button"
+                      aria-pressed={isSelected}
+                      aria-controls="finding-queue-list"
+                      key={filter.id}
+                      onClick={() => {
+                        setFindingFilter(filter.id);
+                        setExpandedFindingId(null);
+                        setOverrideEditingFindingId(null);
+                      }}
+                    >
+                      <span>{filter.label}</span>
+                      <span className="finding-filter-count">{count}</span>
+                    </button>
+                  );
+                })}
+              </fieldset>
             </div>
-            {pendingReviewAction?.action === "finding-decision" ? (
+            {findingDecisionPending ? (
               <p className="pending-action-status" role="status" aria-live="polite">
                 Saving finding decision… Elapsed {pendingReviewAction.elapsedSeconds} second
                 {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
                 the decision is saved.
               </p>
             ) : null}
-            {state.findings.map((finding) => {
-              const claim =
-                finding.claimId === undefined ? undefined : claimById.get(finding.claimId);
-              return (
-                <article
-                  className={`finding-card finding-${finding.severity}${
-                    finding.decision === "pending" || finding.decision === "deferred"
-                      ? ""
-                      : " finding-resolved"
-                  }`}
-                  key={finding.id}
-                >
-                  <div className="finding-meta">
-                    <span className={`severity severity-${finding.severity}`}>
-                      {finding.severity === "error" ? "blocking" : "warning"}
-                    </span>
-                    <span>{finding.category}</span>
-                    <span>{finding.code}</span>
-                    <span className={`finding-resolution resolution-${finding.decision}`}>
-                      {decisionLabels[finding.decision]}
-                    </span>
-                  </div>
-                  <p>{finding.message}</p>
-                  {finding.agreement === "critic-only" ? (
-                    <p className="disagreement">Disagreement · critic-only finding</p>
-                  ) : null}
-                  {claim === undefined ? null : (
-                    <p className="linked-claim">Linked claim: {claim.text}</p>
-                  )}
-                  <label className="rationale-input-label">
-                    <span>Override rationale (required for Override)</span>
-                    <input
-                      className="rationale-input"
-                      type="text"
-                      value={overrideReasons[finding.id] ?? finding.rationale ?? ""}
-                      onChange={(event) =>
-                        setOverrideReasons((current) => ({
-                          ...current,
-                          [finding.id]: event.target.value,
-                        }))
-                      }
-                      aria-label={`Override rationale for ${finding.code}`}
-                    />
-                  </label>
-                  <fieldset className="finding-actions" aria-label={`Decision for ${finding.code}`}>
-                    <legend className="sr-only">Decision for {finding.code}</legend>
-                    {(Object.keys(decisionLabels) as FindingDecision[])
-                      .filter((decision) => decision !== "pending")
-                      .map((decision) => (
-                        <button
-                          className={
-                            finding.decision === decision
-                              ? "button button-selected"
-                              : "button button-quiet"
-                          }
-                          type="button"
-                          key={decision}
-                          disabled={
-                            pendingReviewAction?.action === "finding-decision" ||
-                            (decision === "overridden" &&
-                              (overrideReasons[finding.id] ?? finding.rationale ?? "").trim() ===
-                                "")
-                          }
-                          onClick={() => {
-                            const rationale = (
-                              overrideReasons[finding.id] ??
-                              finding.rationale ??
-                              ""
-                            ).trim();
-                            onAction({
-                              type: "finding-decision",
-                              findingId: finding.id,
-                              decision,
-                              ...(decision === "overridden" ? { rationale } : {}),
-                            });
-                          }}
-                        >
-                          {decisionLabels[decision]}
-                        </button>
-                      ))}
-                  </fieldset>
-                </article>
-              );
-            })}
+            <section
+              className="findings-queue-scroll"
+              id="finding-queue-list"
+              aria-label="Findings queue"
+            >
+              {filteredFindings.length === 0 ? (
+                <p className="finding-empty-state" role="status">
+                  {findingQueueEmptyMessage(findingFilter, queueCounts)}
+                </p>
+              ) : null}
+              {filteredFindings.map((finding) => {
+                const claim =
+                  finding.claimId === undefined ? undefined : claimById.get(finding.claimId);
+                const isExpanded = expandedFindingId === finding.id;
+                const summaryId = findingDomId("finding-summary", finding.id);
+                const detailsId = findingDomId("finding-details", finding.id);
+                const isEditingOverride = isOverrideEditorVisible(
+                  overrideEditingFindingId,
+                  finding.id,
+                );
+                const rationale = overrideReasons[finding.id] ?? finding.rationale ?? "";
+
+                return (
+                  <article
+                    className={`finding-row finding-${finding.severity}${
+                      isUnresolvedFinding(finding) ? "" : " finding-resolved"
+                    }`}
+                    key={finding.id}
+                  >
+                    <button
+                      className="finding-summary"
+                      type="button"
+                      id={summaryId}
+                      aria-expanded={isExpanded}
+                      aria-controls={detailsId}
+                      ref={(element) => {
+                        if (element === null) findingSummaryButtonRefs.current.delete(finding.id);
+                        else findingSummaryButtonRefs.current.set(finding.id, element);
+                      }}
+                      onClick={() => {
+                        setExpandedFindingId((current) =>
+                          current === finding.id ? null : finding.id,
+                        );
+                        setOverrideEditingFindingId(null);
+                      }}
+                    >
+                      <span className={`severity severity-${finding.severity}`}>
+                        {finding.severity === "error" ? "blocking" : "warning"}
+                      </span>
+                      <span className="finding-summary-content">
+                        <span className="finding-summary-message">{finding.message}</span>
+                        <span className="finding-summary-meta">
+                          {finding.category} · {finding.code}
+                        </span>
+                      </span>
+                      <span className={`finding-summary-status resolution-${finding.decision}`}>
+                        {decisionLabels[finding.decision]}
+                        <span className="finding-summary-chevron" aria-hidden="true">
+                          {isExpanded ? "⌃" : "⌄"}
+                        </span>
+                      </span>
+                    </button>
+                    {isExpanded ? (
+                      <section
+                        className="finding-details"
+                        id={detailsId}
+                        aria-labelledby={summaryId}
+                      >
+                        {finding.agreement !== "author-and-critic" ? (
+                          <p className="disagreement">Disagreement · {finding.agreement} finding</p>
+                        ) : null}
+                        {claim === undefined ? (
+                          <p className="linked-claim">No linked claim for this finding.</p>
+                        ) : (
+                          <p className="linked-claim">Linked claim: {claim.text}</p>
+                        )}
+                        <fieldset className="finding-actions">
+                          <legend className="sr-only">Decision for {finding.code}</legend>
+                          {directFindingDecisions.map((decision) => (
+                            <button
+                              className={
+                                finding.decision === decision
+                                  ? "button button-selected"
+                                  : "button button-quiet"
+                              }
+                              type="button"
+                              key={decision}
+                              disabled={findingDecisionPending}
+                              onClick={() => {
+                                findingDecisionRequest.current = {
+                                  findingId: finding.id,
+                                  decision,
+                                };
+                                onAction({
+                                  type: "finding-decision",
+                                  findingId: finding.id,
+                                  decision,
+                                });
+                              }}
+                            >
+                              {decisionLabels[decision]}
+                            </button>
+                          ))}
+                          <button
+                            className={
+                              isEditingOverride || finding.decision === "overridden"
+                                ? "button button-selected"
+                                : "button button-quiet"
+                            }
+                            type="button"
+                            disabled={findingDecisionPending}
+                            onClick={() => {
+                              setOverrideReasons((current) =>
+                                current[finding.id] === undefined
+                                  ? { ...current, [finding.id]: finding.rationale ?? "" }
+                                  : current,
+                              );
+                              setOverrideEditingFindingId(finding.id);
+                            }}
+                          >
+                            Override
+                          </button>
+                        </fieldset>
+                        {isEditingOverride ? (
+                          <section
+                            className="override-editor"
+                            aria-label={`Override ${finding.code}`}
+                          >
+                            <label className="rationale-input-label">
+                              <span>Override rationale (required)</span>
+                              <input
+                                className="rationale-input"
+                                type="text"
+                                value={rationale}
+                                disabled={findingDecisionPending}
+                                onChange={(event) =>
+                                  setOverrideReasons((current) => ({
+                                    ...current,
+                                    [finding.id]: event.target.value,
+                                  }))
+                                }
+                                aria-label={`Override rationale for ${finding.code}`}
+                              />
+                            </label>
+                            <div className="override-editor-actions">
+                              <button
+                                className="button button-quiet"
+                                type="button"
+                                disabled={findingDecisionPending}
+                                onClick={() => {
+                                  setOverrideEditingFindingId(null);
+                                  setOverrideReasons((current) => {
+                                    const next = { ...current };
+                                    delete next[finding.id];
+                                    return next;
+                                  });
+                                }}
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                className="button button-primary"
+                                type="button"
+                                disabled={findingDecisionPending || rationale.trim() === ""}
+                                onClick={() => {
+                                  const trimmedRationale = rationale.trim();
+                                  if (trimmedRationale === "") return;
+                                  findingDecisionRequest.current = {
+                                    findingId: finding.id,
+                                    decision: "overridden",
+                                  };
+                                  onAction({
+                                    type: "finding-decision",
+                                    findingId: finding.id,
+                                    decision: "overridden",
+                                    rationale: trimmedRationale,
+                                  });
+                                  setOverrideEditingFindingId(null);
+                                }}
+                              >
+                                Save override
+                              </button>
+                            </div>
+                          </section>
+                        ) : null}
+                      </section>
+                    ) : null}
+                  </article>
+                );
+              })}
+            </section>
           </section>
 
           <section className="panel approval-panel" aria-label="approval and export">

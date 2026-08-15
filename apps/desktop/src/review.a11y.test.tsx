@@ -19,6 +19,14 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
     expect(html).toContain('aria-label="claim to source inspection"');
     expect(html).toContain('aria-label="critique findings"');
     expect(html).toContain('aria-label="approval and export"');
+
+    // Compact finding triage remains keyboard and screen-reader navigable.
+    expect(html).toContain('<legend class="sr-only">Finding filters</legend>');
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('aria-label="Findings queue"');
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('aria-controls="finding-details-finding-unsupported-claim"');
+    expect(html).toContain('aria-labelledby="finding-summary-finding-unsupported-claim"');
   });
 
   it("exposes keyboard shortcuts with aria-keyshortcuts on interactive action triggers", () => {

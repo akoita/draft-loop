@@ -6,7 +6,13 @@ import {
   reviewFindingSummary,
   unresolvedBlockingFindings,
 } from "./model.js";
-import { ReviewWorkspace } from "./review.js";
+import {
+  filterFindingQueue,
+  findingQueueCounts,
+  initialFindingQueueState,
+  isOverrideEditorVisible,
+  ReviewWorkspace,
+} from "./review.js";
 import { createReviewActionDispatcher } from "./review-dispatch.js";
 
 const collectingState = () => ({
@@ -292,6 +298,64 @@ describe("desktop trust-centered review", () => {
     for (const decision of ["Accept", "Reject", "Defer", "Override"]) {
       expect(html).toContain(`disabled="">${decision}</button>`);
     }
+  });
+
+  it("summarizes and filters findings as an actionable review queue", () => {
+    const findings = createFixtureReviewState().findings;
+
+    expect(findingQueueCounts(findings)).toEqual({
+      needsAction: 2,
+      blocking: 1,
+      warnings: 1,
+      resolved: 0,
+    });
+    expect(filterFindingQueue(findings, "blocking").map((finding) => finding.id)).toEqual([
+      "finding-unsupported-claim",
+    ]);
+    expect(initialFindingQueueState(findings)).toEqual({
+      filter: "needs-action",
+      expandedFindingId: "finding-unsupported-claim",
+    });
+
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={createFixtureReviewState()} onAction={() => undefined} />,
+    );
+    expect(html).toContain("0 of 2 decided · 2 need action");
+    expect(html).toContain("Needs action");
+    expect(html).toContain("Blocking");
+    expect(html).toContain("Warnings");
+    expect(html).toContain("Resolved");
+    expect(html.match(/aria-expanded="true"/gu)).toHaveLength(1);
+    expect(html.match(/aria-expanded="false"/gu)).toHaveLength(1);
+    expect(html).not.toContain("Override rationale (required)");
+  });
+
+  it("keeps fully resolved findings compact by default", () => {
+    const initial = createFixtureReviewState();
+    const resolved = {
+      ...initial,
+      findings: initial.findings.map((finding, index) => ({
+        ...finding,
+        decision: index === 0 ? ("accepted" as const) : ("rejected" as const),
+      })),
+    };
+
+    expect(initialFindingQueueState(resolved.findings)).toEqual({
+      filter: "resolved",
+      expandedFindingId: null,
+    });
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={resolved} onAction={() => undefined} />,
+    );
+    expect(html).toContain("2 of 2 decided · all findings decided");
+    expect(html.match(/aria-expanded="false"/gu)).toHaveLength(2);
+    expect(html).not.toContain("Linked claim:");
+  });
+
+  it("reveals override rationale only for the explicitly edited finding", () => {
+    expect(isOverrideEditorVisible("finding-a", "finding-a")).toBe(true);
+    expect(isOverrideEditorVisible("finding-a", "finding-b")).toBe(false);
+    expect(isOverrideEditorVisible(null, "finding-a")).toBe(false);
   });
 
   it("does not describe an absent artifact as validated or approvable", () => {
