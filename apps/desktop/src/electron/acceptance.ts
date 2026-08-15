@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { arch, platform, release } from "node:os";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 
@@ -222,6 +222,15 @@ async function resumeAndExport(options: PackagedAcceptanceOptions): Promise<void
   if (status.runId === null) throw new Error("Persisted acceptance workspace has no run.");
   requireState(status.state, "revising", "persisted run status");
 
+  const interrupted = await invoke<ReviewStateResult>(
+    options.host,
+    { type: "review.load", input: { workspaceId, runId: status.runId } },
+    "interrupted run projection",
+  );
+  if (interrupted.execution.status !== "interrupted") {
+    throw new Error("Persisted active run was not explained as interrupted after restart.");
+  }
+
   const resumed = await invoke<ReviewStateResult>(
     options.host,
     {
@@ -231,6 +240,9 @@ async function resumeAndExport(options: PackagedAcceptanceOptions): Promise<void
     "run resume",
   );
   requireState(resumed.state, "revising", "run resume acknowledgement");
+  if (resumed.execution.status !== "running") {
+    throw new Error("Resumed run did not expose active background execution.");
+  }
   const completed = await waitForReviewState(
     options.host,
     workspaceId,
@@ -241,6 +253,69 @@ async function resumeAndExport(options: PackagedAcceptanceOptions): Promise<void
   if (completed.artifact.version < 2 || completed.findings.length !== 0) {
     throw new Error("Resumed acceptance run did not produce a clean revision.");
   }
+
+  const cancellationName = `${basename(options.workspaceRoot)}-cancellation`;
+  const cancellationRoot = resolve(dirname(options.workspaceRoot), cancellationName);
+  const cancellationWorkspace = await invoke<WorkspaceResult>(
+    options.host,
+    { type: "workspace.create", input: { name: cancellationName, mode: "demo" } },
+    "cancellation workspace creation",
+  );
+  const cancellationInitial = await invoke<ReviewStateResult>(
+    options.host,
+    { type: "review.load", input: { workspaceId: cancellationWorkspace.workspace.id } },
+    "cancellation workspace load",
+  );
+  const cancellationAcknowledged = await invoke<ReviewStateResult>(
+    options.host,
+    {
+      type: "review.dispatch",
+      input: {
+        workspaceId: cancellationWorkspace.workspace.id,
+        runId: "pending",
+        action: {
+          type: "acknowledge-provider-transmission",
+          fingerprint: cancellationInitial.providerTransmissionPreflight.fingerprint,
+        },
+      },
+    },
+    "cancellation provider acknowledgement",
+  );
+  const cancellationBeginning = await invoke<ReviewStateResult>(
+    options.host,
+    {
+      type: "review.dispatch",
+      input: {
+        workspaceId: cancellationWorkspace.workspace.id,
+        runId: cancellationAcknowledged.runId,
+        action: { type: "start" },
+      },
+    },
+    "cancellation run start",
+  );
+  if (cancellationBeginning.execution.status !== "running") {
+    throw new Error("Cancellation fixture did not expose active execution.");
+  }
+  const stopped = await invoke<ReviewStateResult>(
+    options.host,
+    {
+      type: "review.dispatch",
+      input: {
+        workspaceId: cancellationWorkspace.workspace.id,
+        runId: cancellationBeginning.runId,
+        action: { type: "stop" },
+      },
+    },
+    "in-flight run cancellation",
+  );
+  requireState(stopped.state, "stopped", "in-flight run cancellation");
+  await rm(cancellationRoot, { recursive: true, force: true });
+
+  await invoke<WorkspaceResult>(
+    options.host,
+    { type: "workspace.open", input: { selection: "native-dialog" } },
+    "acceptance workspace reopen after cancellation",
+  );
 
   const approved = await invoke<ReviewStateResult>(
     options.host,
@@ -334,8 +409,11 @@ async function writeAcceptanceEvidence(options: PackagedAcceptanceOptions): Prom
           provenance: true,
           providerPreflight: true,
           authorCriticRun: true,
+          observableProgress: true,
+          inFlightCancellation: true,
           revision: true,
           restartResume: true,
+          interruptedRunExplanation: true,
           approval: true,
           exportMarkdown: true,
           exportDocx: true,

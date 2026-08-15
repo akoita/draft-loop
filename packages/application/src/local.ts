@@ -597,17 +597,36 @@ function fixtureAgents(
   readonly author: AuthorAgent;
   readonly critic: CriticAgent;
 } {
+  const waitForFixtureStep = (signal?: AbortSignal): Promise<void> =>
+    new Promise((resolveDelay, reject) => {
+      if (signal?.aborted === true) {
+        reject(signal.reason);
+        return;
+      }
+      const timer = setTimeout(() => {
+        signal?.removeEventListener("abort", onAbort);
+        resolveDelay();
+      }, 500);
+      const onAbort = () => {
+        clearTimeout(timer);
+        reject(signal?.reason);
+      };
+      signal?.addEventListener("abort", onAbort, { once: true });
+    });
   return {
     author: {
-      execute: async ({ currentArtifact }) =>
-        execution(
+      execute: async ({ currentArtifact, signal }) => {
+        await waitForFixtureStep(signal);
+        return execution(
           fixtureArtifact(context, currentArtifact),
           config.authorCompany,
           config.authorModel,
-        ),
+        );
+      },
     },
     critic: {
-      execute: async ({ artifact }) => {
+      execute: async ({ artifact, signal }) => {
+        await waitForFixtureStep(signal);
         const firstClaim = artifact.claims[0];
         const findings: Critique["findings"] =
           artifact.version === 1 && firstClaim !== undefined

@@ -223,6 +223,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Extended packaged Linux, macOS, and Windows acceptance with observable execution, interrupted-run recovery, and deterministic in-flight cancellation evidence for issue #119 | The desktop control is only stage evidence when installed artifacts exercise the same background worker and Stop path |
 | 2026-08-15 | Added cancellable desktop workers, explicit interrupted-run recovery, and live provider/step/attempt/elapsed/timeout projection for issue #119 | A long-running review must remain understandable and stoppable, and restart must never imply that a missing worker is still running |
 | 2026-08-15 | Propagated cancellation signals from the application resume contract through orchestration and Anthropic, OpenAI, and local provider requests for issue #119 | A desktop Stop action must be able to abort the actual in-flight request before persisting a terminal run state |
 | 2026-08-15 | Moved desktop provider execution behind an immediate durable run response and active-state refresh for issue #119 | Long provider calls must not hold the initiating IPC request open or leave the installed app looking unresponsive |
