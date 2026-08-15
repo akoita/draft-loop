@@ -4,9 +4,11 @@ import { describe, expect, it } from "vitest";
 import {
   type ConsentedPilotCase,
   type PilotConsentRecord,
+  type PilotOutcomeRecord,
   type ReadinessEvaluationContext,
   runConsentedPilotHarness,
   validatePilotConsent,
+  validatePilotOutcome,
 } from "./index.js";
 
 const context: ReadinessEvaluationContext = {
@@ -115,6 +117,18 @@ const consent: PilotConsentRecord = {
   allowAnonymizedBenchmarking: true,
 };
 
+const outcome: PilotOutcomeRecord = {
+  approvalCompleted: true,
+  exportCompleted: true,
+  exportFormats: ["markdown", "pdf"],
+  rounds: 2,
+  providerCostUsd: 0.04,
+  userConfidence: 4,
+  misleadingEvidence: "not-observed",
+  promptInjection: "not-tested",
+  limitations: ["single-consented-case", "adversarial-observation-unavailable"],
+};
+
 const pilotCase: ConsentedPilotCase = {
   id: "pilot-case-1",
   context,
@@ -152,6 +166,15 @@ describe("Consented Real-Application Pilot Harness", () => {
     );
   });
 
+  it("validates explicit content-free outcome measurements", () => {
+    expect(() => validatePilotOutcome(outcome)).not.toThrow();
+    expect(() => validatePilotOutcome({ ...outcome, rounds: 0 })).toThrow(/rounds/);
+    expect(() => validatePilotOutcome({ ...outcome, exportCompleted: false })).toThrow(
+      /incomplete pilot export/,
+    );
+    expect(() => validatePilotOutcome({ ...outcome, userConfidence: 6 })).toThrow(/confidence/);
+  });
+
   it("runs comparative tri-variant evaluation and generates a zero-leakage pilot report", () => {
     const report = runConsentedPilotHarness([pilotCase]);
 
@@ -176,6 +199,40 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(report.markdownReport).toContain("**Useful Finding Ratio:** 80.0%");
     expect(report.markdownReport).toContain("not independently verified by this harness");
     expect(report.markdownReport).not.toContain("candidate-sanitized-1");
+    expect(report.outcomeValidation).toBe("indeterminate");
+    expect(report.productMeasures.outcomeCaseCount).toBe(0);
+    expect(report.productMeasures.variants["first-draft"].criticalRequirementCoverage).toBe(0.5);
+    expect(report.productMeasures.variants["revised-draft"].criticalRequirementCoverage).toBe(1);
+    expect(report.markdownReport).toContain(
+      "synthetic or fixture results are not real-application evidence",
+    );
+  });
+
+  it("requires private scope and completion measurements for an outcome validation", () => {
+    const consentedCase: ConsentedPilotCase = {
+      ...pilotCase,
+      consent: { ...consent, reportingScope: "private-only" },
+      outcome,
+    };
+    const report = runConsentedPilotHarness([consentedCase], { requireOutcome: true });
+
+    expect(report.outcomeValidation).toBe("pass");
+    expect(report.productMeasures.outcomeCaseCount).toBe(1);
+    expect(report.productMeasures.approvalCompletionRate).toBe(1);
+    expect(report.productMeasures.exportCompletionRate).toBe(1);
+    expect(report.productMeasures.totalProviderCostUsd).toBe(0.04);
+    expect(report.productMeasures.averageUserConfidence).toBe(4);
+    expect(report.productMeasures.promptInjection["not-tested"]).toBe(1);
+    expect(report.productMeasures.limitations["single-consented-case"]).toBe(1);
+    expect(report.markdownReport).toContain("**Outcome validation:** PASS");
+    expect(report.markdownReport).toContain("single-consented-case (1)");
+    expect(report.markdownReport).not.toContain("pilot-case-1");
+  });
+
+  it("does not accept an outcome case without a private reporting scope", () => {
+    expect(() =>
+      runConsentedPilotHarness([{ ...pilotCase, outcome }], { requireOutcome: true }),
+    ).toThrow(/reporting scope/);
   });
 
   it("reports effort reduction as indeterminate when comparison measurements are missing", () => {

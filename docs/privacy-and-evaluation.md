@@ -110,6 +110,14 @@ first-to-revised: a revised draft must not regress a dimension or readiness
 under the configured tolerance. The manual baseline is a comparison reference,
 not an automatically declared ground truth.
 
+For the real-application gate, the harness can require a private reporting
+scope and a content-free outcome record containing approval/export completion,
+rounds, provider cost, user confidence, and bounded misleading-evidence and
+prompt-injection observations. It also reports deterministic critical-
+requirement coverage and unsupported-claim counts without copying source text.
+Follow the [consented outcome pilot protocol](pilot-protocol.md); a synthetic
+fixture or an incomplete outcome remains indeterminate evidence.
+
 Fixtures must be synthetic and must not contain real candidate documents,
 provider responses, credentials, employer secrets, or hidden reasoning. A
 quality regression raises `EvaluationRegressionError`; security and quality

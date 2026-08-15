@@ -1,3 +1,5 @@
+import { validateDraftArtifact } from "@draft-loop/validation";
+
 import {
   compareEvaluationCase,
   type EvaluationCase,
@@ -7,6 +9,23 @@ import {
   readinessDimensions,
 } from "./index.js";
 
+export const pilotExportFormats = ["markdown", "docx", "pdf"] as const;
+export type PilotExportFormat = (typeof pilotExportFormats)[number];
+
+export const pilotObservationStates = ["not-tested", "not-observed", "observed"] as const;
+export type PilotObservationState = (typeof pilotObservationStates)[number];
+
+export const pilotLimitationCodes = [
+  "single-consented-case",
+  "manual-baseline-unavailable",
+  "provider-cost-unavailable",
+  "user-confidence-unavailable",
+  "adversarial-observation-unavailable",
+] as const;
+export type PilotLimitationCode = (typeof pilotLimitationCodes)[number];
+
+export type PilotReportingScope = "private-only" | "anonymized-public";
+
 export interface PilotConsentRecord {
   readonly candidateId: string;
   readonly consentedAt: string;
@@ -14,10 +33,29 @@ export interface PilotConsentRecord {
   readonly piiRedacted: boolean;
   readonly employerSecretsRedacted: boolean;
   readonly allowAnonymizedBenchmarking: boolean;
+  /** Kept in the private consent record; it is never copied to the report. */
+  readonly reportingScope?: PilotReportingScope;
+}
+
+/**
+ * Content-free measures recorded after a user completes a real application.
+ * Null means that the measure was explicitly unavailable, not zero.
+ */
+export interface PilotOutcomeRecord {
+  readonly approvalCompleted: boolean;
+  readonly exportCompleted: boolean;
+  readonly exportFormats: readonly PilotExportFormat[];
+  readonly rounds: number;
+  readonly providerCostUsd: number | null;
+  readonly userConfidence: number | null;
+  readonly misleadingEvidence: PilotObservationState;
+  readonly promptInjection: PilotObservationState;
+  readonly limitations: readonly PilotLimitationCode[];
 }
 
 export interface ConsentedPilotCase extends EvaluationCase {
   readonly consent: PilotConsentRecord;
+  readonly outcome?: PilotOutcomeRecord;
   readonly findingsDisposition?: {
     readonly usefulCount: number;
     readonly rejectedCount: number;
@@ -33,6 +71,11 @@ export interface PilotVariantSummary {
 
 export type PilotHypothesisResult = "pass" | "fail" | "indeterminate";
 
+export interface PilotVariantSafetyMeasures {
+  readonly criticalRequirementCoverage: number | null;
+  readonly unsupportedClaimCount: number | null;
+}
+
 export interface PilotSummaryReport {
   readonly generatedAt: string;
   readonly caseCount: number;
@@ -46,6 +89,19 @@ export interface PilotSummaryReport {
     readonly factualityPreservedOrImproved: PilotHypothesisResult;
     readonly effortReducedComparedToManual: PilotHypothesisResult;
     readonly recommendations: readonly string[];
+  };
+  readonly outcomeValidation: PilotHypothesisResult;
+  readonly productMeasures: {
+    readonly outcomeCaseCount: number;
+    readonly approvalCompletionRate: number | null;
+    readonly exportCompletionRate: number | null;
+    readonly averageRounds: number | null;
+    readonly totalProviderCostUsd: number | null;
+    readonly averageUserConfidence: number | null;
+    readonly variants: Record<EvaluationVariant, PilotVariantSafetyMeasures>;
+    readonly misleadingEvidence: Record<PilotObservationState, number>;
+    readonly promptInjection: Record<PilotObservationState, number>;
+    readonly limitations: Record<PilotLimitationCode, number>;
   };
   readonly markdownReport: string;
 }
@@ -61,6 +117,55 @@ export function validatePilotConsent(consent: PilotConsentRecord): void {
       `Pilot case for candidate ${consent.candidateId} lacks full consent and sanitization attestation.`,
     );
   }
+}
+
+export function validatePilotOutcome(outcome: PilotOutcomeRecord): void {
+  if (!Number.isInteger(outcome.rounds) || outcome.rounds < 1) {
+    throw new RangeError("Pilot outcome rounds must be a positive integer.");
+  }
+  if (
+    outcome.providerCostUsd !== null &&
+    (!Number.isFinite(outcome.providerCostUsd) || outcome.providerCostUsd < 0)
+  ) {
+    throw new RangeError("Pilot outcome provider cost must be null or a non-negative number.");
+  }
+  if (
+    outcome.userConfidence !== null &&
+    (!Number.isInteger(outcome.userConfidence) ||
+      outcome.userConfidence < 1 ||
+      outcome.userConfidence > 5)
+  ) {
+    throw new RangeError("Pilot outcome user confidence must be null or an integer from 1 to 5.");
+  }
+  if (outcome.exportCompleted && outcome.exportFormats.length === 0) {
+    throw new Error("A completed pilot export must include at least one format.");
+  }
+  if (!outcome.exportCompleted && outcome.exportFormats.length > 0) {
+    throw new Error("An incomplete pilot export cannot include exported formats.");
+  }
+  if (outcome.exportFormats.some((format) => !pilotExportFormats.includes(format))) {
+    throw new Error("Pilot outcome export formats must be supported local formats.");
+  }
+  if (outcome.limitations.length === 0) {
+    throw new Error("Pilot outcome limitations must be recorded explicitly.");
+  }
+  if (
+    !pilotObservationStates.includes(outcome.misleadingEvidence) ||
+    !pilotObservationStates.includes(outcome.promptInjection)
+  ) {
+    throw new Error("Pilot adversarial observations must use a supported observation state.");
+  }
+}
+
+function validatePilotOutcomeCase(pilotCase: ConsentedPilotCase): void {
+  validatePilotConsent(pilotCase.consent);
+  if (pilotCase.consent.reportingScope === undefined) {
+    throw new Error("A real pilot case must record its permitted reporting scope privately.");
+  }
+  if (pilotCase.outcome === undefined) {
+    throw new Error("A real pilot case must record a content-free outcome measurement.");
+  }
+  validatePilotOutcome(pilotCase.outcome);
 }
 
 function computeVariantSummary(
@@ -108,6 +213,66 @@ function computeVariantSummary(
       reviewCount > 0 ? Number((totalReviewMinutes / reviewCount).toFixed(1)) : null,
     averageEditCount: editCount > 0 ? Number((totalEdits / editCount).toFixed(1)) : null,
   };
+}
+
+function emptyObservationCounts(): Record<PilotObservationState, number> {
+  return { "not-tested": 0, "not-observed": 0, observed: 0 };
+}
+
+function emptyLimitationCounts(): Record<PilotLimitationCode, number> {
+  return Object.fromEntries(pilotLimitationCodes.map((code) => [code, 0])) as Record<
+    PilotLimitationCode,
+    number
+  >;
+}
+
+function safetyMeasures(
+  variant: EvaluationVariant,
+  cases: readonly ConsentedPilotCase[],
+): PilotVariantSafetyMeasures {
+  let criticalRequirements = 0;
+  let coveredCriticalRequirements = 0;
+  let unsupportedClaims = 0;
+
+  for (const pilotCase of cases) {
+    const artifact =
+      variant === "first-draft"
+        ? pilotCase.firstDraft
+        : variant === "revised-draft"
+          ? pilotCase.revisedDraft
+          : pilotCase.manualBaseline;
+    const validation = validateDraftArtifact(artifact, pilotCase.context);
+    const uncovered = new Set(
+      validation.issues
+        .filter((issue) => issue.code === "uncovered-requirement")
+        .map((issue) => issue.requirementId),
+    );
+    const critical = pilotCase.context.requirements.filter(
+      (requirement) => requirement.priority === "critical",
+    );
+    criticalRequirements += critical.length;
+    coveredCriticalRequirements += critical.filter(
+      (requirement) => !uncovered.has(requirement.id),
+    ).length;
+    unsupportedClaims += validation.issues.filter(
+      (issue) => issue.code === "unsupported-claim",
+    ).length;
+  }
+
+  return {
+    criticalRequirementCoverage:
+      criticalRequirements === 0
+        ? null
+        : Number((coveredCriticalRequirements / criticalRequirements).toFixed(4)),
+    unsupportedClaimCount: unsupportedClaims,
+  };
+}
+
+function averageNullable(values: readonly (number | null)[]): number | null {
+  const available = values.filter((value): value is number => value !== null);
+  return available.length === 0
+    ? null
+    : Number((available.reduce((total, value) => total + value, 0) / available.length).toFixed(2));
 }
 
 export function generatePilotMarkdownReport(
@@ -173,19 +338,70 @@ export function generatePilotMarkdownReport(
     }
   }
 
+  lines.push("");
+  lines.push("## Consented application outcome");
+  lines.push("");
+  lines.push(`- **Outcome validation:** ${report.outcomeValidation.toUpperCase()}`);
+  if (report.productMeasures.outcomeCaseCount === 0) {
+    lines.push(
+      "- **Evidence status:** INDETERMINATE — no consented application outcome was supplied; synthetic or fixture results are not real-application evidence.",
+    );
+  } else {
+    lines.push(
+      `- **Approval completion:** ${((report.productMeasures.approvalCompletionRate ?? 0) * 100).toFixed(1)}% of recorded outcome cases`,
+    );
+    lines.push(
+      `- **Export completion:** ${((report.productMeasures.exportCompletionRate ?? 0) * 100).toFixed(1)}% of recorded outcome cases`,
+    );
+    lines.push(`- **Average rounds:** ${report.productMeasures.averageRounds ?? "N/A"}`);
+    lines.push(
+      `- **Total provider cost (USD):** ${report.productMeasures.totalProviderCostUsd ?? "N/A"}`,
+    );
+    lines.push(
+      `- **Average user confidence (1–5):** ${report.productMeasures.averageUserConfidence ?? "N/A"}`,
+    );
+  }
+  lines.push(
+    `- **Critical-requirement coverage (first / revised / manual):** ${report.productMeasures.variants["first-draft"].criticalRequirementCoverage ?? "N/A"} / ${report.productMeasures.variants["revised-draft"].criticalRequirementCoverage ?? "N/A"} / ${report.productMeasures.variants["manual-baseline"].criticalRequirementCoverage ?? "N/A"}`,
+  );
+  lines.push(
+    `- **Unsupported-claim counts (first / revised / manual):** ${report.productMeasures.variants["first-draft"].unsupportedClaimCount ?? "N/A"} / ${report.productMeasures.variants["revised-draft"].unsupportedClaimCount ?? "N/A"} / ${report.productMeasures.variants["manual-baseline"].unsupportedClaimCount ?? "N/A"}`,
+  );
+  lines.push(
+    `- **Misleading-evidence observation:** ${report.productMeasures.misleadingEvidence.observed > 0 ? "OBSERVED" : report.productMeasures.misleadingEvidence["not-tested"] > 0 ? "NOT TESTED" : "NOT OBSERVED"}`,
+  );
+  lines.push(
+    `- **Prompt-injection observation:** ${report.productMeasures.promptInjection.observed > 0 ? "OBSERVED" : report.productMeasures.promptInjection["not-tested"] > 0 ? "NOT TESTED" : "NOT OBSERVED"}`,
+  );
+  const recordedLimitations = Object.entries(report.productMeasures.limitations)
+    .filter(([, count]) => count > 0)
+    .map(([code, count]) => `${code} (${count})`);
+  lines.push(
+    `- **Recorded limitations:** ${recordedLimitations.length > 0 ? recordedLimitations.join(", ") : "none recorded"}`,
+  );
+  lines.push(
+    "- **Limitation:** This report is a sanitized measurement summary, not proof that the product generalizes beyond the recorded sample.",
+  );
+
   return lines.join("\n");
+}
+
+export interface PilotHarnessOptions extends EvaluationHarnessOptions {
+  /** Require private scope and outcome measures for every supplied case. */
+  readonly requireOutcome?: boolean;
 }
 
 export function runConsentedPilotHarness(
   cases: readonly ConsentedPilotCase[],
-  options?: EvaluationHarnessOptions,
+  options?: PilotHarnessOptions,
 ): PilotSummaryReport {
   if (cases.length === 0) {
     throw new Error("A consented pilot requires at least one case.");
   }
 
   for (const pilotCase of cases) {
-    validatePilotConsent(pilotCase.consent);
+    if (options?.requireOutcome) validatePilotOutcomeCase(pilotCase);
+    else validatePilotConsent(pilotCase.consent);
   }
 
   const comparisons = cases.map((pilotCase) => compareEvaluationCase(pilotCase, options));
@@ -244,6 +460,66 @@ export function runConsentedPilotHarness(
     );
   }
 
+  const outcomes = cases.flatMap((pilotCase) =>
+    pilotCase.outcome === undefined ? [] : [pilotCase.outcome],
+  );
+  const outcomeCaseCount = outcomes.length;
+  const allOutcomesComplete =
+    outcomeCaseCount === cases.length &&
+    outcomes.every((outcome) => outcome.approvalCompleted && outcome.exportCompleted);
+  const outcomeValidation: PilotHypothesisResult =
+    outcomeCaseCount === 0
+      ? "indeterminate"
+      : allOutcomesComplete && factualityPreservedOrImproved === "pass"
+        ? "pass"
+        : "fail";
+  const misleadingEvidence = emptyObservationCounts();
+  const promptInjection = emptyObservationCounts();
+  const limitations = emptyLimitationCounts();
+  for (const outcome of outcomes) {
+    misleadingEvidence[outcome.misleadingEvidence]++;
+    promptInjection[outcome.promptInjection]++;
+    for (const limitation of outcome.limitations) {
+      limitations[limitation]++;
+    }
+  }
+  const totalProviderCostUsd =
+    outcomes.length > 0 && outcomes.every((outcome) => outcome.providerCostUsd !== null)
+      ? Number(
+          outcomes.reduce((total, outcome) => total + (outcome.providerCostUsd ?? 0), 0).toFixed(4),
+        )
+      : null;
+  const productMeasures = {
+    outcomeCaseCount,
+    approvalCompletionRate:
+      outcomeCaseCount === 0
+        ? null
+        : Number(
+            (
+              outcomes.filter((outcome) => outcome.approvalCompleted).length / outcomeCaseCount
+            ).toFixed(4),
+          ),
+    exportCompletionRate:
+      outcomeCaseCount === 0
+        ? null
+        : Number(
+            (
+              outcomes.filter((outcome) => outcome.exportCompleted).length / outcomeCaseCount
+            ).toFixed(4),
+          ),
+    averageRounds: averageNullable(outcomes.map((outcome) => outcome.rounds)),
+    totalProviderCostUsd,
+    averageUserConfidence: averageNullable(outcomes.map((outcome) => outcome.userConfidence)),
+    variants: {
+      "first-draft": safetyMeasures("first-draft", cases),
+      "revised-draft": safetyMeasures("revised-draft", cases),
+      "manual-baseline": safetyMeasures("manual-baseline", cases),
+    },
+    misleadingEvidence,
+    promptInjection,
+    limitations,
+  } satisfies PilotSummaryReport["productMeasures"];
+
   const baseReport = {
     generatedAt: new Date().toISOString(),
     caseCount: cases.length,
@@ -259,6 +535,8 @@ export function runConsentedPilotHarness(
       effortReducedComparedToManual,
       recommendations,
     },
+    outcomeValidation,
+    productMeasures,
   };
 
   return {
