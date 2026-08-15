@@ -895,6 +895,7 @@ function providerAgents(
           retrievedEvidence.map(({ id }) => id),
         ) as JsonObject,
         outputName: "author_artifact_proposal",
+        maxOutputTokens: 8192,
         dataPolicy,
         ...(signal === undefined ? {} : { signal }),
       };
@@ -942,6 +943,7 @@ function providerAgents(
         }),
         outputSchema: critiqueOutputSchema,
         outputName: "draft_critique",
+        maxOutputTokens: 4096,
         dataPolicy,
         ...(signal === undefined ? {} : { signal }),
       };

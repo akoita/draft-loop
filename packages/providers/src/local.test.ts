@@ -66,6 +66,7 @@ describe("LocalModelAdapter for Offline Inference", () => {
       input: { target: "Staff Engineer" },
       outputSchema: { type: "object" },
       outputName: "draft",
+      maxOutputTokens: 1234,
       dataPolicy: allowedPolicy,
       onProgress: (event) => progressEvents.push(event),
       signal: controller.signal,
@@ -89,6 +90,8 @@ describe("LocalModelAdapter for Offline Inference", () => {
         signal: controller.signal,
       }),
     );
+    const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toMatchObject({ max_tokens: 1234 });
   });
 
   it("enforces data exposure policy before reaching the local server", async () => {

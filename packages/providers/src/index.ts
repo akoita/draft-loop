@@ -50,9 +50,30 @@ export interface ModelRequest<Input extends JsonValue = JsonValue> {
   readonly input: Input;
   readonly outputSchema: JsonSchema;
   readonly outputName: string;
+  /** Maximum number of output tokens the provider may generate. */
+  readonly maxOutputTokens?: number;
   readonly dataPolicy: DataExposurePolicy;
   readonly onProgress?: StreamingProgressCallback;
   readonly signal?: AbortSignal;
+}
+
+const defaultMaxOutputTokens = 4096;
+const maximumMaxOutputTokens = 32_768;
+
+function resolveMaxOutputTokens(provider: ProviderId, value: number | undefined): number {
+  const resolved = value ?? defaultMaxOutputTokens;
+  if (!Number.isSafeInteger(resolved) || resolved < 1 || resolved > maximumMaxOutputTokens) {
+    throw new ProviderAdapterError(
+      provider,
+      "invalid-request",
+      "The output-token budget is invalid.",
+      {
+        retryable: false,
+        diagnostics: [{ code: "invalid_output_token_budget", path: "maxOutputTokens" }],
+      },
+    );
+  }
+  return resolved;
 }
 
 export interface ModelCost {
@@ -346,13 +367,20 @@ function hashStructuredOutput(value: JsonValue): string {
   return createHash("sha256").update(serializeJson(value), "utf8").digest("hex");
 }
 
-function parseJson<Output extends JsonValue>(provider: ProviderId, text: string): Output {
-  if (text.trim() === "") {
+function parseJson<Output extends JsonValue>(
+  provider: ProviderId,
+  text: unknown,
+  outputPath = "output",
+): Output {
+  if (typeof text !== "string" || text.trim() === "") {
     throw new ProviderAdapterError(
       provider,
       "invalid-response",
       "The provider returned no structured output.",
-      { retryable: false },
+      {
+        retryable: false,
+        diagnostics: [{ code: "missing_output", path: outputPath }],
+      },
     );
   }
 
@@ -363,7 +391,10 @@ function parseJson<Output extends JsonValue>(provider: ProviderId, text: string)
       provider,
       "invalid-response",
       "The provider returned invalid JSON output.",
-      { retryable: false },
+      {
+        retryable: false,
+        diagnostics: [{ code: "invalid_json", path: outputPath }],
+      },
     );
   }
 }
@@ -481,6 +512,7 @@ export async function executeWithRetry<T>(
 
 function anthropicMessageData(value: unknown): {
   readonly content: readonly { readonly type: string; readonly text?: string }[];
+  readonly stop_reason: unknown;
   readonly usage: { readonly input_tokens: number; readonly output_tokens: number };
 } {
   if (typeof value !== "object" || value === null) {
@@ -492,6 +524,7 @@ function anthropicMessageData(value: unknown): {
   }
   const response = value as {
     readonly content?: unknown;
+    readonly stop_reason?: unknown;
     readonly usage?: unknown;
   };
   if (
@@ -529,8 +562,28 @@ function anthropicMessageData(value: unknown): {
   }
   return {
     content,
+    stop_reason: response.stop_reason,
     usage: { input_tokens: usageValue.input_tokens, output_tokens: usageValue.output_tokens },
   };
+}
+
+function anthropicStopReasonError(stopReason: unknown): ProviderAdapterError {
+  const code =
+    stopReason === "max_tokens" ||
+    stopReason === "refusal" ||
+    stopReason === "pause_turn" ||
+    stopReason === "model_context_window_exceeded"
+      ? stopReason
+      : "unexpected_stop_reason";
+  return new ProviderAdapterError(
+    "anthropic",
+    "invalid-response",
+    "The provider did not complete the structured response.",
+    {
+      retryable: false,
+      diagnostics: [{ code, path: "stop_reason" }],
+    },
+  );
 }
 
 export class AnthropicAdapter<
@@ -553,13 +606,14 @@ export class AnthropicAdapter<
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
+    const maxOutputTokens = resolveMaxOutputTokens(this.provider, request.maxOutputTokens);
 
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
     const parameters: MessageCreateParamsNonStreaming = {
       model: request.model.modelId,
-      max_tokens: 4096,
+      max_tokens: maxOutputTokens,
       system: request.systemPrompt,
       messages: [{ role: "user", content: serializeJson(request.input) }],
       output_config: {
@@ -578,16 +632,22 @@ export class AnthropicAdapter<
             ? await responsePromise.withResponse()
             : { data: await responsePromise, request_id: null };
         const message = anthropicMessageData(response.data);
+        if (message.stop_reason !== "end_turn") {
+          throw anthropicStopReasonError(message.stop_reason);
+        }
         const textBlock = message.content.find((block) => block.type === "text");
-        if (textBlock?.text === undefined) {
+        if (typeof textBlock?.text !== "string" || textBlock.text.trim() === "") {
           throw new ProviderAdapterError(
             this.provider,
             "invalid-response",
             "The provider returned no structured text output.",
-            { retryable: false },
+            {
+              retryable: false,
+              diagnostics: [{ code: "missing_text", path: "content" }],
+            },
           );
         }
-        const output = parseJson<Output>(this.provider, textBlock.text);
+        const output = parseJson<Output>(this.provider, textBlock.text, "content");
         const accounting = usage(
           message.usage.input_tokens,
           message.usage.output_tokens,
@@ -648,12 +708,14 @@ export class OpenAIAdapter<
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
+    const maxOutputTokens = resolveMaxOutputTokens(this.provider, request.maxOutputTokens);
 
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
     const parameters: ResponseCreateParamsNonStreaming = {
       model: request.model.modelId,
+      max_output_tokens: maxOutputTokens,
       instructions: request.systemPrompt,
       input: [
         {
@@ -678,7 +740,7 @@ export class OpenAIAdapter<
           parameters,
           ...(request.signal === undefined ? [] : [{ signal: request.signal }]),
         );
-        const output = parseJson<Output>(this.provider, response.output_text);
+        const output = parseJson<Output>(this.provider, response.output_text, "output_text");
         const inputTokens = response.usage?.input_tokens ?? 0;
         const outputTokens = response.usage?.output_tokens ?? 0;
         const accounting = usage(inputTokens, outputTokens, this.pricing);
@@ -746,12 +808,14 @@ export class LocalModelAdapter<
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
+    const maxOutputTokens = resolveMaxOutputTokens(this.provider, request.maxOutputTokens);
 
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
     const payload = {
       model: request.model.modelId,
+      max_tokens: maxOutputTokens,
       messages: [
         { role: "system", content: request.systemPrompt },
         { role: "user", content: serializeJson(request.input) },

@@ -70,6 +70,7 @@ describe("provider-neutral model adapters", () => {
       id: "msg-1",
       content: [{ type: "text", text: '{"answer":"yes"}' }],
       model: model.modelId,
+      stop_reason: "end_turn",
       usage: { input_tokens: 11, output_tokens: 7 },
     };
     let seen: Params | undefined;
@@ -88,10 +89,13 @@ describe("provider-neutral model adapters", () => {
     });
 
     const controller = new AbortController();
-    const result = await adapter.execute(request({ signal: controller.signal }));
+    const result = await adapter.execute(
+      request({ signal: controller.signal, maxOutputTokens: 8192 }),
+    );
 
     expect(seen).toMatchObject({
       model: model.modelId,
+      max_tokens: 8192,
       system: request().systemPrompt,
       messages: [{ role: "user", content: JSON.stringify(request().input) }],
       output_config: { format: { type: "json_schema", schema } },
@@ -163,6 +167,7 @@ describe("provider-neutral model adapters", () => {
 
     expect(seen).toMatchObject({
       model: openAIModel.modelId,
+      max_output_tokens: 4096,
       instructions: request().systemPrompt,
       input: [
         {
@@ -185,6 +190,135 @@ describe("provider-neutral model adapters", () => {
     expect(seenOptions?.signal).toBe(controller.signal);
   });
 
+  it("fails closed on Anthropic max_tokens truncation before JSON parsing", async () => {
+    const response = {
+      content: [{ type: "text", text: '{"answer":' }],
+      model: model.modelId,
+      stop_reason: "max_tokens",
+      usage: { input_tokens: 11, output_tokens: 4096 },
+    };
+    const client: AnthropicClient = {
+      messages: {
+        create: () =>
+          ({
+            withResponse: async () => ({ data: response, request_id: "anthropic-truncated" }),
+          }) as never,
+      },
+    };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+    const error = await adapter.execute(request()).catch((value: unknown) => value);
+
+    expect(error).toMatchObject({
+      code: "invalid-response",
+      retryable: false,
+      diagnostics: [{ code: "max_tokens", path: "stop_reason" }],
+    });
+    expect(error).not.toMatchObject({
+      diagnostics: expect.arrayContaining([{ code: "invalid_json" }]),
+    });
+  });
+
+  it.each(["refusal", "pause_turn", "model_context_window_exceeded"] as const)(
+    "rejects Anthropic non-completion stop_reason %s without parsing output",
+    async (stopReason) => {
+      const response = {
+        content: [{ type: "text", text: '{"answer":"not-used"}' }],
+        model: model.modelId,
+        stop_reason: stopReason,
+        usage: { input_tokens: 11, output_tokens: 7 },
+      };
+      const client: AnthropicClient = {
+        messages: {
+          create: () =>
+            ({
+              withResponse: async () => ({ data: response, request_id: "anthropic-incomplete" }),
+            }) as never,
+        },
+      };
+      const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+      await expect(adapter.execute(request())).rejects.toMatchObject({
+        code: "invalid-response",
+        retryable: false,
+        diagnostics: [{ code: stopReason, path: "stop_reason" }],
+      });
+    },
+  );
+
+  it("reports an unexpected Anthropic stop_reason safely", async () => {
+    const response = {
+      content: [{ type: "text", text: '{"answer":"not-used"}' }],
+      model: model.modelId,
+      stop_reason: "stop_sequence",
+      usage: { input_tokens: 11, output_tokens: 7 },
+    };
+    const client: AnthropicClient = {
+      messages: {
+        create: () =>
+          ({
+            withResponse: async () => ({ data: response, request_id: "anthropic-unexpected" }),
+          }) as never,
+      },
+    };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+    await expect(adapter.execute(request())).rejects.toMatchObject({
+      diagnostics: [{ code: "unexpected_stop_reason", path: "stop_reason" }],
+    });
+  });
+
+  it("reports missing Anthropic text without exposing response content", async () => {
+    const response = {
+      content: [],
+      model: model.modelId,
+      stop_reason: "end_turn",
+      usage: { input_tokens: 11, output_tokens: 0 },
+    };
+    const client: AnthropicClient = {
+      messages: {
+        create: () =>
+          ({
+            withResponse: async () => ({ data: response, request_id: "anthropic-missing-text" }),
+          }) as never,
+      },
+    };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+    const error = await adapter.execute(request()).catch((value: unknown) => value);
+
+    expect(error).toMatchObject({
+      diagnostics: [{ code: "missing_text", path: "content" }],
+    });
+    expect(JSON.stringify(error)).not.toContain("not-used");
+  });
+
+  it("reports malformed Anthropic JSON without exposing the raw output", async () => {
+    const rawOutput = '{"answer":';
+    const response = {
+      content: [{ type: "text", text: rawOutput }],
+      model: model.modelId,
+      stop_reason: "end_turn",
+      usage: { input_tokens: 11, output_tokens: 7 },
+    };
+    const client: AnthropicClient = {
+      messages: {
+        create: () =>
+          ({
+            withResponse: async () => ({ data: response, request_id: "anthropic-invalid-json" }),
+          }) as never,
+      },
+    };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+    const error = await adapter.execute(request()).catch((value: unknown) => value);
+
+    expect(error).toMatchObject({
+      diagnostics: [{ code: "invalid_json", path: "content" }],
+    });
+    expect(JSON.stringify(error)).not.toContain(rawOutput);
+  });
+
   it("does not call a provider when transmission is denied or the company is not allowlisted", async () => {
     const create = vi.fn<AnthropicClient["messages"]["create"]>();
     const client: AnthropicClient = { messages: { create } };
@@ -196,6 +330,19 @@ describe("provider-neutral model adapters", () => {
     await expect(
       adapter.execute(request({ dataPolicy: { ...policy, allowedCompanies: ["openai"] } })),
     ).rejects.toMatchObject({ code: "policy", retryable: false });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("rejects an invalid output-token budget before calling the provider", async () => {
+    const create = vi.fn<AnthropicClient["messages"]["create"]>();
+    const client: AnthropicClient = { messages: { create } };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+    await expect(adapter.execute(request({ maxOutputTokens: 0 }))).rejects.toMatchObject({
+      code: "invalid-request",
+      retryable: false,
+      diagnostics: [{ code: "invalid_output_token_budget", path: "maxOutputTokens" }],
+    });
     expect(create).not.toHaveBeenCalled();
   });
 
@@ -439,6 +586,7 @@ describe("provider-neutral model adapters", () => {
       id: "msg-progress",
       content: [{ type: "text", text: '{"answer":"streamed"}' }],
       model: model.modelId,
+      stop_reason: "end_turn",
       usage: { input_tokens: 15, output_tokens: 8 },
     };
     const client: AnthropicClient = {

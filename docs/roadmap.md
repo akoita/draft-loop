@@ -116,8 +116,12 @@ factual, reviewed result that matches the proven manual baseline.
 The fail-closed PDF extraction quality gate (#168), independent-critique
 approval/export gate (#169), and critic-only provider recovery path (#173) are
 complete. A failed critic preserves the author draft and can be retried directly
-without entering approval or starting another author round. The next gate is the
-consented quality rerun (#104), followed by the stage release (#106).
+without entering approval or starting another author round. The repeated
+real-input rerun then exposed an Anthropic author-output completion and
+diagnostics blocker (#175): no draft is available when a bounded structured
+response ends incomplete, and that condition must be distinguished safely from
+proposal-schema validation. Resolve #175 before the consented quality rerun
+(#104), followed by the stage release (#106).
 
 ## Reference workflow and parity target
 
@@ -167,7 +171,7 @@ experience, contact employers, or submit applications.
 
 | Horizon | Stage | Evidence status | Outcome | Remaining gate |
 | --- | --- | --- | --- | --- |
-| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Consented quality rerun (#104), stage release (#106) |
+| Now | Integration hardening and outcome validation | Integrated; validation incomplete | Complete a representative application safely and recoverably in the packaged desktop app | Anthropic author completion recovery (#175), consented quality rerun (#104), stage release (#106) |
 | Next | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
 | Next | Retrieval and provider quality | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable | Representative quality comparison, deletion/retention proof, integrated cancellation and provider recovery |
 | Next | Real-application pilot | Implemented harness; not outcome-validated | Validate factuality, quality, and user-effort hypotheses | Consented cases, calibrated measures, recorded results and limitations |
@@ -348,6 +352,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-15 | Inserted the repeated Anthropic author-output completion failure (#175) before the consented rerun (#104) | A real-input structured response can end before a complete proposal is available; the product must budget author output explicitly and report safe completion diagnostics before representative validation can continue |
 | 2026-08-15 | Replaced the incomplete-critic approval dead end with bounded critic-only recovery (#173) | A failed independent critic must preserve the completed author draft and retry that exact step; it must not imply approval readiness or force another author round |
 | 2026-08-15 | Completed the independent-critique approval/export gate (#169); the consented quality rerun (#104) is now the next v0.6 gate | Recovered author drafts remain inspectable, but approval and export now require a completed independent critic execution for the current round |
 | 2026-08-15 | Completed the PDF extraction quality gate (#168) and kept the independent-critique approval/export gate (#169) before the consented quality rerun (#104) and stage release (#106) | The first real-application failure requires unreliable extracted text to be rejected before indexing or provider exposure, with the remaining hardening gate sequenced before outcome validation and release |
