@@ -36,6 +36,16 @@ pnpm validate
 Before sharing a change, formatting, linting, typechecking, and tests must pass.
 Keep tests close to the package boundary they protect.
 
+## Change delivery
+
+Every change reaches `main` through a pull request. Work on a branch, push it,
+and open a PR; never merge, fast-forward, rebase, or push directly to `main`,
+including locally. A green local gate is a precondition for opening the PR, not
+a substitute for review or for the checks that run on it.
+
+Resolve conflicts on the branch rather than on `main`, and say in the PR body
+which side of any conflict was taken and why.
+
 ## Data, privacy, and model rules
 
 - Keep candidate material and run history local by default. Do not upload or

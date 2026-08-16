@@ -70,7 +70,7 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
     expect(html).not.toContain("Return to review");
     expect(html).toContain("Stop run");
     expect(html).not.toContain(">Retry<");
-    expect(html).toMatch(/Approve artifact[^<]*<\/button>/u);
-    expect(html).toContain("disabled");
+    expect(html).toContain("Approve artifact");
+    expect(html).toMatch(/aria-keyshortcuts="Alt\+A"[^>]*disabled=""/u);
   });
 });

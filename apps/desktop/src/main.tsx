@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import type { DesktopReviewPort, DesktopReviewState, ReviewAction } from "./model.js";
 import { createDesktopReviewPort } from "./native.js";
-import { ReviewWorkspace } from "./review.js";
+import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import "./styles.css";
 
@@ -118,8 +118,12 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
     const createDemoWorkspace = nativeActions.createDemo;
     return (
       <main className="app-shell">
-        <section className="panel">
-          <p className="eyebrow">DraftLoop / First run</p>
+        <section className="panel boot-panel">
+          <div className="boot-brand">
+            <BrandMark />
+            <span className="brand-name">DraftLoop</span>
+          </div>
+          <p className="eyebrow">First run</p>
           <h1>Set up a review workspace</h1>
           <p>{error}</p>
           {openWorkspace === undefined &&
@@ -171,8 +175,14 @@ export function App({ port }: { readonly port?: DesktopReviewPort }) {
   if (state === null) {
     return (
       <main className="app-shell">
-        <section className="panel">
-          <p>Loading local review workspace…</p>
+        <section className="panel boot-panel">
+          <div className="boot-brand">
+            <BrandMark />
+            <span className="brand-name">DraftLoop</span>
+          </div>
+          <p className="boot-loading" role="status" aria-live="polite">
+            Loading local review workspace…
+          </p>
         </section>
       </main>
     );

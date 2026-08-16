@@ -443,8 +443,8 @@ describe("desktop trust-centered review", () => {
     );
     expect(html).not.toContain("All findings have a recorded decision.");
     expect(html).not.toContain("No unresolved blocking findings.");
-    expect(html).toMatch(/Approve artifact[^<]*<\/button>/u);
-    expect(html).toContain('disabled=""');
+    expect(html).toContain("Approve artifact");
+    expect(html).toMatch(/aria-keyshortcuts="Alt\+A"[^>]*disabled=""/u);
   });
 
   it("requires an explicit override before approval can be committed", () => {
@@ -488,7 +488,8 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Unavailable until independent critique completes");
     expect(html).not.toContain("Available now");
     expect(html).not.toContain("All findings have a recorded decision.");
-    expect(html).toContain('disabled="">Export Markdown (Alt+E)</button>');
+    expect(html).toContain("Export Markdown");
+    expect(html).toMatch(/aria-keyshortcuts="Alt\+E"[^>]*disabled=""/u);
   });
 
   it("distinguishes non-blocking warnings from approval blockers", () => {

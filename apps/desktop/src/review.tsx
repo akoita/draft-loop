@@ -191,6 +191,209 @@ function stateLabel(value: DesktopReviewState["state"]): string {
   return value.replaceAll("-", " ");
 }
 
+const loopSteps = ["Draft", "Critique", "Revise", "Approve"] as const;
+
+/** Where the run currently sits on the author–critic loop, for the rail readout. */
+export function loopStageIndex(state: DesktopReviewState): number {
+  switch (state.state) {
+    case "collecting":
+      return -1;
+    case "drafting":
+      return 0;
+    case "reviewing":
+      return 1;
+    case "revising":
+      return 2;
+    case "awaiting-approval":
+      return 3;
+    case "approved":
+    case "exported":
+      return loopSteps.length;
+    default:
+      if (state.execution.step === "author") return 0;
+      if (state.execution.step === "critic") return 1;
+      if (state.execution.step === "revision") return 2;
+      return state.reviewComplete ? 3 : 1;
+  }
+}
+
+/** DraftLoop mark: the author–critic loop, drawn as a returning spiral. */
+export function BrandMark({ className = "rail-mark" }: { readonly className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M21 12a9 9 0 1 1-3.6-7.2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M7.6 12a4.4 4.4 0 1 0 4.4-4.4"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M10.2 13.8a3.6 3.6 0 0 0 5.1 0l3-3a3.6 3.6 0 1 0-5.1-5.1l-1.2 1.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+      <path
+        d="M13.8 10.2a3.6 3.6 0 0 0-5.1 0l-3 3a3.6 3.6 0 1 0 5.1 5.1l1.2-1.2"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function WorkspaceIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l1.8 2H19a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19 18H5a1.5 1.5 0 0 1-1.5-1.5v-9Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function KeyIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <circle cx="8" cy="12" r="3.4" stroke="currentColor" strokeWidth="1.6" />
+      <path
+        d="M11.4 12H20M17.5 12v2.6M14.5 12v1.8"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M8.5 6.5 17 12l-8.5 5.5V6.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function SideRail({ onOpenSettings }: { readonly onOpenSettings: () => void }) {
+  return (
+    <nav className="side-rail" aria-label="Workspace sections">
+      <BrandMark />
+      <a className="rail-button" href="#artifact-review" title="Go to the draft">
+        <span className="sr-only">Go to the draft</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <rect
+            x="4.5"
+            y="3"
+            width="15"
+            height="18"
+            rx="2"
+            stroke="currentColor"
+            strokeWidth="1.6"
+          />
+          <path
+            d="M8.5 8h7M8.5 12h7M8.5 16h4"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
+      </a>
+      <a className="rail-button" href="#finding-queue-list" title="Go to the findings queue">
+        <span className="sr-only">Go to the findings queue</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <path
+            d="M4 6h16M4 12h16M4 18h10"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
+      </a>
+      <span className="rail-spacer" />
+      <button
+        className="rail-button"
+        type="button"
+        title="Provider API keys"
+        aria-label="Provider API keys"
+        onClick={onOpenSettings}
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+          <circle cx="8" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.6" />
+          <path
+            d="M11.6 12H21M18 12v3M15 12v2.2"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          />
+        </svg>
+      </button>
+    </nav>
+  );
+}
+
+function LoopRail({
+  activeIndex,
+  round,
+}: {
+  readonly activeIndex: number;
+  readonly round: number;
+}) {
+  return (
+    <div className="loop-rail">
+      <ol className="loop-steps" aria-label="Author–critic loop stage">
+        {loopSteps.map((label, index) => (
+          <li
+            className={`loop-step${index < activeIndex ? " loop-step-done" : ""}${
+              index === activeIndex ? " loop-step-active" : ""
+            }`}
+            key={label}
+            {...(index === activeIndex ? { "aria-current": "step" as const } : {})}
+          >
+            <span className="loop-node" aria-hidden="true">
+              {index < activeIndex ? "✓" : ""}
+            </span>
+            <span>{label}</span>
+          </li>
+        ))}
+      </ol>
+      <svg
+        className="loop-arc"
+        viewBox="0 0 100 12"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+        focusable="false"
+      >
+        <path
+          d="M97 1C97 11 3 11 3 1"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          strokeDasharray="3 3"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <span className="loop-round">↺ round {round}</span>
+    </div>
+  );
+}
+
 function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
   if (retryNotBefore === null) return 0;
   const retryAt = Date.parse(retryNotBefore);
@@ -200,6 +403,126 @@ function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
 function retryWaitLabel(waitMs: number): string {
   const seconds = Math.max(1, Math.ceil(waitMs / 1_000));
   return `${seconds} second${seconds === 1 ? "" : "s"}`;
+}
+
+const credentialSourceLabels: Readonly<Record<CredentialStatus["source"], string>> = {
+  app: "Configured in app",
+  env: "Configured via env",
+  none: "Not configured",
+};
+
+const credentialProtectionLabels: Readonly<Record<CredentialStatus["protection"], string>> = {
+  "os-backed": "OS-backed encryption",
+  "basic-text": "Linux basic_text (weak protection)",
+  "local-aes-gcm": "Local AES fallback (key stored beside app data)",
+  environment: "Environment variable",
+  "session-memory": "Session memory only",
+  none: "No credential",
+};
+
+interface CredentialRowProps {
+  readonly title: string;
+  readonly placeholder: string;
+  readonly status: CredentialStatus;
+  readonly value: string;
+  readonly revealed: boolean;
+  readonly onReveal: (next: boolean) => void;
+  readonly onChange: (next: string) => void;
+  readonly onSave: () => void;
+  readonly onRemove: () => void;
+}
+
+function CredentialRow({
+  title,
+  placeholder,
+  status,
+  value,
+  revealed,
+  onReveal,
+  onChange,
+  onSave,
+  onRemove,
+}: CredentialRowProps) {
+  return (
+    <section className="credential-row" aria-label={title}>
+      <div className="credential-row-header">
+        <strong>{title}</strong>
+        <span className={`status-badge status-${status.source}`}>
+          {credentialSourceLabels[status.source]}
+        </span>
+        <span className="credential-protection">
+          {credentialProtectionLabels[status.protection]}
+        </span>
+      </div>
+      <div className="credential-input-group">
+        <input
+          className="url-input"
+          type={revealed ? "text" : "password"}
+          placeholder={status.configured ? "••••••••••••••••••••••••" : placeholder}
+          value={value}
+          autoComplete="off"
+          spellCheck={false}
+          onChange={(event) => onChange(event.target.value)}
+          aria-label={title}
+        />
+        <button
+          className="button button-quiet"
+          type="button"
+          aria-pressed={revealed}
+          onClick={() => onReveal(!revealed)}
+        >
+          {revealed ? "Hide" : "Show"}
+        </button>
+        <button
+          className="button button-primary"
+          type="button"
+          disabled={value.trim() === ""}
+          onClick={onSave}
+        >
+          Save
+        </button>
+        {status.source === "app" ? (
+          <button className="button button-danger" type="button" onClick={onRemove}>
+            Remove
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function claimSectionTitle(
+  artifact: DesktopReviewState["artifact"],
+  claimId: string,
+): string | null {
+  for (const section of artifact.sections) {
+    if (section.blocks.some((block) => block.claimIds.includes(claimId))) return section.title;
+  }
+  return null;
+}
+
+function claimBlockId(artifact: DesktopReviewState["artifact"], claimId: string): string | null {
+  for (const section of artifact.sections) {
+    for (const block of section.blocks) {
+      if (block.claimIds.includes(claimId)) return block.id;
+    }
+  }
+  return null;
+}
+
+/** A draft line is "sourced" only when every claim it asserts links to candidate material. */
+function blockSourceState(
+  block: DesktopReviewState["artifact"]["sections"][number]["blocks"][number],
+  claimById: ReadonlyMap<string, DesktopReviewState["artifact"]["claims"][number]>,
+): "none" | "sourced" | "unsourced" {
+  if (block.claimIds.length === 0) return "none";
+  return block.claimIds
+    .map((id) => claimById.get(id))
+    .every(
+      (claim) => claim !== undefined && claim.status !== "disputed" && claim.evidence.length > 0,
+    )
+    ? "sourced"
+    : "unsourced";
 }
 
 function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
@@ -275,7 +598,10 @@ export function ReviewWorkspace({
   } | null>(null);
   const findingSummaryButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const findingQueueContext = useRef(`${state.workspaceId}:${state.runId}`);
+  const [linkedClaimId, setLinkedClaimId] = useState<string | null>(null);
+  const draftBlockRefs = useRef(new Map<string, HTMLTextAreaElement>());
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsDialogRef = useRef<HTMLDivElement | null>(null);
   const emptyCredentialStatus = (provider: "anthropic" | "openai"): CredentialStatus => ({
     provider,
     configured: false,
@@ -305,6 +631,28 @@ export function ReviewWorkspace({
     !state.providerTransmissionPreflight.required ||
     state.providerTransmissionPreflight.acknowledged;
   const retryRemainingMs = retryWaitMs(state.providerFailure?.retryNotBefore ?? null, nowMs);
+  const gateConditions: readonly { id: string; label: string; met: boolean }[] = [
+    { id: "draft", label: "Draft artifact produced", met: hasArtifact },
+    { id: "critique", label: "Independent critique completed", met: state.reviewComplete },
+    {
+      id: "blocking",
+      label: "Blocking findings resolved or overridden",
+      met: hasArtifact && blockingFindings.length === 0,
+    },
+    ...(state.providerTransmissionPreflight.required
+      ? [
+          {
+            id: "transmission",
+            label: "Provider transmission acknowledged",
+            met: state.providerTransmissionPreflight.acknowledged,
+          },
+        ]
+      : []),
+  ];
+  const budgetRatio =
+    state.budgetUsd === null || state.budgetUsd <= 0
+      ? null
+      : Math.min(1, state.totalCostUsd / state.budgetUsd);
 
   useEffect(() => {
     const nextContext = `${state.workspaceId}:${state.runId}`;
@@ -410,17 +758,57 @@ export function ReviewWorkspace({
     }
   };
 
+  // The credential dialog owns the focus ring while it is open: focus moves in,
+  // Tab cycles inside it, Escape closes it from anywhere, and focus returns.
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
-      if (isInput) return;
+    if (!settingsOpen) return undefined;
 
-      if (event.key === "Escape" && settingsOpen) {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusableElements = (): readonly HTMLElement[] =>
+      Array.from(
+        settingsDialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
+    focusableElements()[0]?.focus();
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         event.preventDefault();
         setSettingsOpen(false);
         return;
       }
+      if (event.key !== "Tab") return;
+
+      const elements = focusableElements();
+      const first = elements[0];
+      const last = elements.at(-1);
+      if (first === undefined || last === undefined) return;
+
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !settingsDialogRef.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleDialogKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleDialogKeyDown, true);
+      previouslyFocused?.focus();
+    };
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (settingsOpen) return;
+      const target = event.target as HTMLElement | null;
+      const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
+      if (isInput) return;
 
       if (event.altKey || event.metaKey) {
         if (event.key === "a" || event.key === "A") {
@@ -464,6 +852,7 @@ export function ReviewWorkspace({
 
   const renderSettingsModal = () => {
     if (!settingsOpen) return null;
+    // No dismiss-on-backdrop: a stray click must not discard a half-typed key.
     return (
       <div className="modal-backdrop">
         <div
@@ -471,11 +860,13 @@ export function ReviewWorkspace({
           role="dialog"
           aria-modal="true"
           aria-labelledby="settings-dialog-title"
+          aria-describedby="settings-dialog-copy"
+          ref={settingsDialogRef}
         >
           <div className="modal-header">
             <div>
               <p className="eyebrow">DraftLoop / Credentials</p>
-              <h2 id="settings-dialog-title">Provider API Keys</h2>
+              <h2 id="settings-dialog-title">Provider API keys</h2>
             </div>
             <button
               className="button button-quiet"
@@ -483,9 +874,10 @@ export function ReviewWorkspace({
               onClick={() => setSettingsOpen(false)}
             >
               Close
+              <kbd>Esc</kbd>
             </button>
           </div>
-          <p className="modal-copy">
+          <p className="modal-copy" id="settings-dialog-copy">
             App-managed keys override environment variables. Storage protection depends on this
             operating system and is reported for each key below.
           </p>
@@ -495,127 +887,28 @@ export function ReviewWorkspace({
             </div>
           ) : null}
           <div className="credential-sections">
-            <div className="credential-row">
-              <div className="credential-row-header">
-                <strong>Anthropic API Key (Claude)</strong>
-                <span className={`status-badge status-${anthropicStatus.source}`}>
-                  {anthropicStatus.source === "app"
-                    ? "Configured in App"
-                    : anthropicStatus.source === "env"
-                      ? "Configured via Env"
-                      : "Not Configured"}
-                </span>
-                <span className="credential-protection">
-                  {anthropicStatus.protection === "os-backed"
-                    ? "OS-backed encryption"
-                    : anthropicStatus.protection === "basic-text"
-                      ? "Linux basic_text (weak protection)"
-                      : anthropicStatus.protection === "local-aes-gcm"
-                        ? "Local AES fallback (key stored beside app data)"
-                        : anthropicStatus.protection === "environment"
-                          ? "Environment variable"
-                          : anthropicStatus.protection === "session-memory"
-                            ? "Session memory only"
-                            : "No credential"}
-                </span>
-              </div>
-              <div className="credential-input-group">
-                <input
-                  className="url-input"
-                  type={showAnthropicKey ? "text" : "password"}
-                  placeholder={
-                    anthropicStatus.configured ? "••••••••••••••••••••••••" : "sk-ant-api03-…"
-                  }
-                  value={anthropicKeyInput}
-                  onChange={(event) => setAnthropicKeyInput(event.target.value)}
-                  aria-label="Anthropic API Key"
-                />
-                <button
-                  className="button button-quiet"
-                  type="button"
-                  onClick={() => setShowAnthropicKey((prev) => !prev)}
-                >
-                  {showAnthropicKey ? "Hide" : "Show"}
-                </button>
-                <button
-                  className="button button-primary"
-                  type="button"
-                  disabled={anthropicKeyInput.trim() === ""}
-                  onClick={() => void handleSaveCredential("anthropic", anthropicKeyInput)}
-                >
-                  Save
-                </button>
-                {anthropicStatus.source === "app" ? (
-                  <button
-                    className="button button-outline"
-                    type="button"
-                    onClick={() => void handleRemoveCredential("anthropic")}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            <div className="credential-row">
-              <div className="credential-row-header">
-                <strong>OpenAI API Key (GPT)</strong>
-                <span className={`status-badge status-${openaiStatus.source}`}>
-                  {openaiStatus.source === "app"
-                    ? "Configured in App"
-                    : openaiStatus.source === "env"
-                      ? "Configured via Env"
-                      : "Not Configured"}
-                </span>
-                <span className="credential-protection">
-                  {openaiStatus.protection === "os-backed"
-                    ? "OS-backed encryption"
-                    : openaiStatus.protection === "basic-text"
-                      ? "Linux basic_text (weak protection)"
-                      : openaiStatus.protection === "local-aes-gcm"
-                        ? "Local AES fallback (key stored beside app data)"
-                        : openaiStatus.protection === "environment"
-                          ? "Environment variable"
-                          : openaiStatus.protection === "session-memory"
-                            ? "Session memory only"
-                            : "No credential"}
-                </span>
-              </div>
-              <div className="credential-input-group">
-                <input
-                  className="url-input"
-                  type={showOpenaiKey ? "text" : "password"}
-                  placeholder={openaiStatus.configured ? "••••••••••••••••••••••••" : "sk-proj-…"}
-                  value={openaiKeyInput}
-                  onChange={(event) => setOpenaiKeyInput(event.target.value)}
-                  aria-label="OpenAI API Key"
-                />
-                <button
-                  className="button button-quiet"
-                  type="button"
-                  onClick={() => setShowOpenaiKey((prev) => !prev)}
-                >
-                  {showOpenaiKey ? "Hide" : "Show"}
-                </button>
-                <button
-                  className="button button-primary"
-                  type="button"
-                  disabled={openaiKeyInput.trim() === ""}
-                  onClick={() => void handleSaveCredential("openai", openaiKeyInput)}
-                >
-                  Save
-                </button>
-                {openaiStatus.source === "app" ? (
-                  <button
-                    className="button button-outline"
-                    type="button"
-                    onClick={() => void handleRemoveCredential("openai")}
-                  >
-                    Remove
-                  </button>
-                ) : null}
-              </div>
-            </div>
+            <CredentialRow
+              title="Anthropic API key (Claude)"
+              placeholder="sk-ant-api03-…"
+              status={anthropicStatus}
+              value={anthropicKeyInput}
+              revealed={showAnthropicKey}
+              onReveal={setShowAnthropicKey}
+              onChange={setAnthropicKeyInput}
+              onSave={() => void handleSaveCredential("anthropic", anthropicKeyInput)}
+              onRemove={() => void handleRemoveCredential("anthropic")}
+            />
+            <CredentialRow
+              title="OpenAI API key (GPT)"
+              placeholder="sk-proj-…"
+              status={openaiStatus}
+              value={openaiKeyInput}
+              revealed={showOpenaiKey}
+              onReveal={setShowOpenaiKey}
+              onChange={setOpenaiKeyInput}
+              onSave={() => void handleSaveCredential("openai", openaiKeyInput)}
+              onRemove={() => void handleRemoveCredential("openai")}
+            />
           </div>
         </div>
       </div>
@@ -737,453 +1030,632 @@ export function ReviewWorkspace({
   };
 
   if (state.state === "collecting") {
+    const modelKeysReady =
+      state.setup.fixtureMode || (anthropicStatus.configured && openaiStatus.configured);
     return (
+      <div className="app-frame">
+        <SideRail onOpenSettings={() => setSettingsOpen(true)} />
+        <main className="app-shell app-shell-single">
+          {renderSettingsModal()}
+          <div className="main-column">
+            <header className="app-bar">
+              <div className="brand">
+                <span className="brand-context">DraftLoop / Workspace setup</span>
+                <h1>Bring your source material into the loop</h1>
+              </div>
+              <div className="run-identity">
+                <span className="meta-chip">
+                  <WorkspaceIcon />
+                  {state.workspaceId}
+                </span>
+                <span className="state-pill state-collecting">Collecting inputs</span>
+                <button
+                  className="button button-quiet button-credentials"
+                  type="button"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <KeyIcon />
+                  API keys
+                </button>
+              </div>
+            </header>
+            <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
+              <p className="eyebrow">Before the first run</p>
+              <h2 id="onboarding-title">Add the sources DraftLoop is allowed to use</h2>
+              <p className="onboarding-copy">
+                Your files stay in this workspace. DraftLoop will not invent missing experience or
+                start an agent run until the target job and candidate source material are present.
+              </p>
+              {errorMessage ? (
+                <div className="error-banner" role="alert">
+                  <p>{errorMessage}</p>
+                </div>
+              ) : null}
+              <div className="setup-grid">
+                <article
+                  className={`setup-card${state.setup.jobDescriptionReady ? " setup-card-ready" : ""}`}
+                >
+                  <div className="setup-card-head">
+                    <span className="setup-number">01</span>
+                    <span
+                      className={`setup-state${state.setup.jobDescriptionReady ? " setup-state-ready" : ""}`}
+                    >
+                      {state.setup.jobDescriptionReady ? "Ready" : "Required"}
+                    </span>
+                  </div>
+                  <strong>Target job description</strong>
+                  <span>
+                    {state.setup.jobDescriptionReady
+                      ? "Ready for review"
+                      : "Required input missing"}
+                  </span>
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    disabled={onSelectFiles === undefined}
+                    onClick={() => onSelectFiles?.("job-description")}
+                  >
+                    {state.setup.jobDescriptionReady
+                      ? "Replace job description"
+                      : "Add job description"}
+                  </button>
+                  <label className="url-input-label">
+                    <span>Or provide a public URL</span>
+                    <input
+                      className="url-input"
+                      type="url"
+                      placeholder="https://…"
+                      value={jobUrl}
+                      onChange={(event) => setJobUrl(event.target.value)}
+                      aria-label="Target job description URL"
+                    />
+                  </label>
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    disabled={onAddUrl === undefined || jobUrl.trim() === ""}
+                    onClick={() => submitUrl("job-description")}
+                  >
+                    Review and fetch job URL
+                  </button>
+                </article>
+                <article
+                  className={`setup-card${state.setup.evidenceSourceCount > 0 ? " setup-card-ready" : ""}`}
+                >
+                  <div className="setup-card-head">
+                    <span className="setup-number">02</span>
+                    <span
+                      className={`setup-state${state.setup.evidenceSourceCount > 0 ? " setup-state-ready" : ""}`}
+                    >
+                      {state.setup.evidenceSourceCount > 0 ? "Ready" : "Required"}
+                    </span>
+                  </div>
+                  <strong>Candidate source material</strong>
+                  <span>
+                    {state.setup.evidenceSourceCount === 0
+                      ? "Add a CV, portfolio, or other source"
+                      : `${state.setup.evidenceSourceCount} source${state.setup.evidenceSourceCount === 1 ? "" : "s"} ready`}
+                  </span>
+                  {state.setup.evidenceSourceCount > 0 ? (
+                    <span className="setup-retrieval-status" role="status">
+                      {state.setup.retrievalStatus === "matched"
+                        ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                        : state.setup.retrievalStatus === "fallback"
+                          ? `No lexical match; ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected`
+                          : state.setup.retrievalStatus === "no-query"
+                            ? "The job description has no searchable role terms"
+                            : state.setup.retrievalStatus === "unavailable"
+                              ? "Retrieval readiness is unavailable"
+                              : "Evidence will be indexed when the review starts"}
+                    </span>
+                  ) : null}
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    disabled={onSelectFiles === undefined}
+                    onClick={() => onSelectFiles?.("evidence")}
+                  >
+                    Add source files
+                  </button>
+                  <label className="url-input-label">
+                    <span>Or provide a public URL</span>
+                    <input
+                      className="url-input"
+                      type="url"
+                      placeholder="https://github.com/…"
+                      value={evidenceUrl}
+                      onChange={(event) => setEvidenceUrl(event.target.value)}
+                      aria-label="Candidate source URL"
+                    />
+                  </label>
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    disabled={onAddUrl === undefined || evidenceUrl.trim() === ""}
+                    onClick={() => submitUrl("evidence")}
+                  >
+                    Review and fetch source URL
+                  </button>
+                </article>
+                <article className={`setup-card${modelKeysReady ? " setup-card-ready" : ""}`}>
+                  <div className="setup-card-head">
+                    <span className="setup-number">03</span>
+                    <span className={`setup-state${modelKeysReady ? " setup-state-ready" : ""}`}>
+                      {state.setup.fixtureMode
+                        ? "Not needed"
+                        : modelKeysReady
+                          ? "Ready"
+                          : "Required"}
+                    </span>
+                  </div>
+                  <strong>Model API keys</strong>
+                  <span>
+                    {state.setup.fixtureMode
+                      ? "Demo mode (no keys required)"
+                      : anthropicStatus.configured && openaiStatus.configured
+                        ? "Anthropic & OpenAI configured"
+                        : "Configure keys for live review"}
+                  </span>
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    onClick={() => setSettingsOpen(true)}
+                  >
+                    Manage API keys
+                  </button>
+                </article>
+              </div>
+              {renderProviderTransmissionPreflight()}
+              {state.setup.nextSteps.length > 0 ? (
+                <div className="setup-next-steps">
+                  <strong>Next steps</strong>
+                  <ul>
+                    {state.setup.nextSteps.map((step) => (
+                      <li key={step}>{step}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+              <div className="onboarding-footer">
+                <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
+                <button
+                  className="button button-primary"
+                  type="button"
+                  disabled={
+                    !state.setup.ready ||
+                    !transmissionReady ||
+                    pendingReviewAction?.action === "start"
+                  }
+                  onClick={() => onAction({ type: "start" })}
+                >
+                  {pendingReviewAction?.action === "start"
+                    ? "Starting review…"
+                    : "Start author–critic review"}
+                </button>
+              </div>
+              {pendingReviewAction?.action === "start" ? (
+                <p className="pending-action-status" role="status" aria-live="polite">
+                  Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
+                  {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
+                  the review starts.
+                </p>
+              ) : null}
+            </section>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-frame">
+      <SideRail onOpenSettings={() => setSettingsOpen(true)} />
       <main className="app-shell">
         {renderSettingsModal()}
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">DraftLoop / Workspace setup</p>
-            <h1>Bring your source material into the loop</h1>
-          </div>
-          <div className="run-identity">
-            <button
-              className="button button-quiet button-credentials"
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-            >
-              API Keys
-            </button>
-            <span>{state.workspaceId}</span>
-            <span className="state-pill state-collecting">Collecting inputs</span>
-          </div>
-        </header>
-        <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
-          <p className="eyebrow">Before the first run</p>
-          <h2 id="onboarding-title">Add the sources DraftLoop is allowed to use</h2>
-          <p className="onboarding-copy">
-            Your files stay in this workspace. DraftLoop will not invent missing experience or start
-            an agent run until the target job and candidate source material are present.
-          </p>
+        <div className="main-column">
+          <header className="app-bar">
+            <div className="brand">
+              <span className="brand-context">DraftLoop / Review workspace</span>
+              <h1>Sources before approval</h1>
+            </div>
+            <div className="run-identity">
+              <span className="meta-chip">
+                <WorkspaceIcon />
+                {state.workspaceId}
+              </span>
+              <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
+              <span className="approval-pill">{approvalLabel}</span>
+              <span className="meta-chip">Round {state.round}</span>
+              <button
+                className="button button-quiet button-credentials"
+                type="button"
+                onClick={() => setSettingsOpen(true)}
+              >
+                API keys
+              </button>
+            </div>
+          </header>
+
+          <section className="instrument-panel" aria-label="run instrumentation">
+            <div className="loop-band">
+              <LoopRail activeIndex={loopStageIndex(state)} round={state.round} />
+              <div className="loop-band-meta">
+                <span className="label">Elapsed cost</span>
+                <strong>
+                  ${state.totalCostUsd.toFixed(3)}
+                  {state.budgetUsd === null ? "" : ` / $${state.budgetUsd.toFixed(2)}`}
+                </strong>
+              </div>
+            </div>
+
+            <section className="trust-strip" aria-label="trust and policy summary">
+              <div>
+                <span className="trust-icon" aria-hidden="true">
+                  {state.providerExposure.author.company.slice(0, 1).toUpperCase()}
+                </span>
+                <div className="trust-body">
+                  <span className="label">Author</span>
+                  <strong>{state.providerExposure.author.company}</strong>
+                  <span>{state.providerExposure.author.model}</span>
+                </div>
+              </div>
+              <div>
+                <span className="trust-icon" aria-hidden="true">
+                  {state.providerExposure.critic.company.slice(0, 1).toUpperCase()}
+                </span>
+                <div className="trust-body">
+                  <span className="label">Independent critic</span>
+                  <strong>{state.providerExposure.critic.company}</strong>
+                  <span>{state.providerExposure.critic.model}</span>
+                </div>
+              </div>
+              <div>
+                <span className="trust-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                    <path
+                      d="M12 3 4.8 6v5.4c0 4.3 2.9 8.3 7.2 9.6 4.3-1.3 7.2-5.3 7.2-9.6V6L12 3Z"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </span>
+                <div className="trust-body">
+                  <span className="label">Data policy</span>
+                  <strong>
+                    {state.providerExposure.transmissionAllowed
+                      ? "Transmission approved"
+                      : "Local only"}
+                  </strong>
+                  <span>
+                    {state.providerExposure.requestedRetention} · sensitive material{" "}
+                    {state.providerExposure.sensitiveData ? "present" : "absent"}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <span className="trust-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                    <rect
+                      x="3"
+                      y="6"
+                      width="18"
+                      height="12"
+                      rx="2"
+                      stroke="currentColor"
+                      strokeWidth="1.6"
+                    />
+                    <path d="M3 10h18" stroke="currentColor" strokeWidth="1.6" />
+                    <circle cx="17" cy="14" r="1.2" fill="currentColor" />
+                  </svg>
+                </span>
+                <div className="trust-body">
+                  <span className="label">Budget</span>
+                  <strong className="numeric">${state.totalCostUsd.toFixed(3)} used</strong>
+                  <span>
+                    {state.budgetUsd === null
+                      ? "No cap configured"
+                      : `$${state.budgetUsd.toFixed(2)} cap`}
+                  </span>
+                  {budgetRatio === null ? null : (
+                    <span
+                      className={`cost-meter${budgetRatio > 0.75 ? " cost-meter-high" : ""}`}
+                      aria-hidden="true"
+                    >
+                      <span style={{ width: `${Math.round(budgetRatio * 100)}%` }} />
+                    </span>
+                  )}
+                </div>
+              </div>
+            </section>
+
+            <section className="retrieval-strip" aria-label="evidence retrieval status">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                <path
+                  d="M4 7h16M4 12h16M4 17h9"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <strong>Evidence retrieval</strong>
+              <span role="status">
+                {state.setup.retrievalStatus === "matched"
+                  ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} candidate source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                  : state.setup.retrievalStatus === "fallback"
+                    ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from candidate material`
+                    : state.setup.retrievalStatus === "not-indexed"
+                      ? "Candidate material is not indexed; no evidence excerpt was selected"
+                      : state.setup.retrievalStatus === "no-query"
+                        ? "The job description has no searchable role terms"
+                        : "Retrieval readiness is unavailable"}
+              </span>
+            </section>
+          </section>
+
           {errorMessage ? (
             <div className="error-banner" role="alert">
               <p>{errorMessage}</p>
             </div>
           ) : null}
-          <div className="setup-grid">
-            <article className="setup-card">
-              <span className="setup-number">01</span>
-              <strong>Target job description</strong>
-              <span>
-                {state.setup.jobDescriptionReady ? "Ready for review" : "Required input missing"}
-              </span>
-              <button
-                className="button button-quiet"
-                type="button"
-                disabled={onSelectFiles === undefined}
-                onClick={() => onSelectFiles?.("job-description")}
-              >
-                {state.setup.jobDescriptionReady
-                  ? "Replace job description"
-                  : "Add job description"}
-              </button>
-              <label className="url-input-label">
-                <span>Or provide a public URL</span>
-                <input
-                  className="url-input"
-                  type="url"
-                  placeholder="https://…"
-                  value={jobUrl}
-                  onChange={(event) => setJobUrl(event.target.value)}
-                  aria-label="Target job description URL"
-                />
-              </label>
-              <button
-                className="button button-outline"
-                type="button"
-                disabled={onAddUrl === undefined || jobUrl.trim() === ""}
-                onClick={() => submitUrl("job-description")}
-              >
-                Review and fetch job URL
-              </button>
-            </article>
-            <article className="setup-card">
-              <span className="setup-number">02</span>
-              <strong>Candidate source material</strong>
-              <span>
-                {state.setup.evidenceSourceCount === 0
-                  ? "Add a CV, portfolio, or other source"
-                  : `${state.setup.evidenceSourceCount} source${state.setup.evidenceSourceCount === 1 ? "" : "s"} ready`}
-              </span>
-              {state.setup.evidenceSourceCount > 0 ? (
-                <span className="setup-retrieval-status" role="status">
-                  {state.setup.retrievalStatus === "matched"
-                    ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
-                    : state.setup.retrievalStatus === "fallback"
-                      ? `No lexical match; ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected`
-                      : state.setup.retrievalStatus === "no-query"
-                        ? "The job description has no searchable role terms"
-                        : state.setup.retrievalStatus === "unavailable"
-                          ? "Retrieval readiness is unavailable"
-                          : "Evidence will be indexed when the review starts"}
-                </span>
-              ) : null}
-              <button
-                className="button button-quiet"
-                type="button"
-                disabled={onSelectFiles === undefined}
-                onClick={() => onSelectFiles?.("evidence")}
-              >
-                Add source files
-              </button>
-              <label className="url-input-label">
-                <span>Or provide a public URL</span>
-                <input
-                  className="url-input"
-                  type="url"
-                  placeholder="https://github.com/…"
-                  value={evidenceUrl}
-                  onChange={(event) => setEvidenceUrl(event.target.value)}
-                  aria-label="Candidate source URL"
-                />
-              </label>
-              <button
-                className="button button-outline"
-                type="button"
-                disabled={onAddUrl === undefined || evidenceUrl.trim() === ""}
-                onClick={() => submitUrl("evidence")}
-              >
-                Review and fetch source URL
-              </button>
-            </article>
-            <article className="setup-card">
-              <span className="setup-number">03</span>
-              <strong>Model API keys</strong>
-              <span>
-                {state.setup.fixtureMode
-                  ? "Demo mode (no keys required)"
-                  : anthropicStatus.configured && openaiStatus.configured
-                    ? "Anthropic & OpenAI configured"
-                    : "Configure keys for live review"}
-              </span>
-              <button
-                className="button button-quiet"
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-              >
-                Manage API keys
-              </button>
-            </article>
-          </div>
-          {renderProviderTransmissionPreflight()}
-          {state.setup.nextSteps.length > 0 ? (
-            <div className="setup-next-steps">
-              <strong>Next steps</strong>
-              <ul>
-                {state.setup.nextSteps.map((step) => (
-                  <li key={step}>{step}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <div className="onboarding-footer">
-            <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
-            <button
-              className="button button-primary"
-              type="button"
-              disabled={
-                !state.setup.ready || !transmissionReady || pendingReviewAction?.action === "start"
-              }
-              onClick={() => onAction({ type: "start" })}
+
+          {state.state === "provider-error" && state.providerFailure !== null ? (
+            <section
+              className="panel provider-failure-panel"
+              role="alert"
+              aria-label="provider failure"
             >
-              {pendingReviewAction?.action === "start"
-                ? "Starting review…"
-                : "Start author–critic review"}
-            </button>
-          </div>
-          {pendingReviewAction?.action === "start" ? (
-            <p className="pending-action-status" role="status" aria-live="polite">
-              Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
-              {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while the
-              review starts.
-            </p>
-          ) : null}
-        </section>
-      </main>
-    );
-  }
-
-  return (
-    <main className="app-shell">
-      {renderSettingsModal()}
-      <header className="topbar">
-        <div>
-          <p className="eyebrow">DraftLoop / Review workspace</p>
-          <h1>Sources before approval</h1>
-        </div>
-        <div className="run-identity">
-          <button
-            className="button button-quiet button-credentials"
-            type="button"
-            onClick={() => setSettingsOpen(true)}
-          >
-            API Keys
-          </button>
-          <span>{state.workspaceId}</span>
-          <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
-          <span className="approval-pill">{approvalLabel}</span>
-          <span>Round {state.round}</span>
-        </div>
-      </header>
-
-      <section className="trust-strip" aria-label="trust and policy summary">
-        <div>
-          <span className="label">Author</span>
-          <strong>{state.providerExposure.author.company}</strong>
-          <span>{state.providerExposure.author.model}</span>
-        </div>
-        <div>
-          <span className="label">Independent critic</span>
-          <strong>{state.providerExposure.critic.company}</strong>
-          <span>{state.providerExposure.critic.model}</span>
-        </div>
-        <div>
-          <span className="label">Data policy</span>
-          <strong>
-            {state.providerExposure.transmissionAllowed ? "Transmission approved" : "Local only"}
-          </strong>
-          <span>
-            {state.providerExposure.requestedRetention} · sensitive material{" "}
-            {state.providerExposure.sensitiveData ? "present" : "absent"}
-          </span>
-        </div>
-        <div>
-          <span className="label">Budget</span>
-          <strong>${state.totalCostUsd.toFixed(3)} used</strong>
-          <span>
-            {state.budgetUsd === null ? "No cap configured" : `$${state.budgetUsd.toFixed(2)} cap`}
-          </span>
-        </div>
-      </section>
-
-      <section className="panel retrieval-status-panel" aria-label="evidence retrieval status">
-        <strong>Evidence retrieval</strong>
-        <span role="status">
-          {state.setup.retrievalStatus === "matched"
-            ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} candidate source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
-            : state.setup.retrievalStatus === "fallback"
-              ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from candidate material`
-              : state.setup.retrievalStatus === "not-indexed"
-                ? "Candidate material is not indexed; no evidence excerpt was selected"
-                : state.setup.retrievalStatus === "no-query"
-                  ? "The job description has no searchable role terms"
-                  : "Retrieval readiness is unavailable"}
-        </span>
-      </section>
-
-      {errorMessage ? (
-        <div className="error-banner" role="alert">
-          <p>{errorMessage}</p>
-        </div>
-      ) : null}
-
-      {state.state === "provider-error" && state.providerFailure !== null ? (
-        <section
-          className="panel provider-failure-panel"
-          role="alert"
-          aria-label="provider failure"
-        >
-          <p className="eyebrow">Provider request failed</p>
-          <h2>{state.providerFailure.explanation}</h2>
-          <p className="subtle">
-            {state.providerFailure.provider} · {state.providerFailure.model} ·{" "}
-            {state.providerFailure.step} · attempt {state.providerFailure.attempt} of{" "}
-            {state.providerFailure.maxAttempts}
-          </p>
-          {state.providerFailure.diagnostics.length > 0 ? (
-            <div className="provider-diagnostics">
-              <strong>Validation details</strong>
-              <ul>
-                {state.providerFailure.diagnostics.map((diagnostic) => (
-                  <li key={`${diagnostic.code}:${diagnostic.path}`}>
-                    {diagnostic.path === "" ? "response" : diagnostic.path}: {diagnostic.code}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-          <div className="approval-actions">
-            {state.providerFailure.availableActions.includes("retry") ? (
-              <button
-                className="button button-primary"
-                type="button"
-                disabled={
-                  !transmissionReady || retryRemainingMs > 0 || pendingReviewAction !== null
-                }
-                onClick={() => onAction({ type: "resume" })}
-              >
-                {retryRemainingMs > 0
-                  ? `Retry ${state.providerFailure.step} in ${retryWaitLabel(retryRemainingMs)}`
-                  : `Retry ${state.providerFailure.step}`}
-              </button>
-            ) : null}
-            {state.providerFailure.availableActions.includes("return-to-review") ? (
-              <button
-                className="button button-outline"
-                type="button"
-                onClick={() => onAction({ type: "recover-to-review" })}
-              >
-                Return to review
-              </button>
-            ) : null}
-            {state.providerFailure.availableActions.includes("stop") ? (
-              <button
-                className="button button-quiet"
-                type="button"
-                onClick={() => onAction({ type: "stop" })}
-              >
-                Stop run
-              </button>
-            ) : null}
-          </div>
-          {retryRemainingMs > 0 ? (
-            <p className="pending-action-status" role="status" aria-live="polite">
-              Retry is paused until the provider retry window opens (
-              {retryWaitLabel(retryRemainingMs)}).
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {state.providerTransmissionPreflight.required &&
-      !state.providerTransmissionPreflight.acknowledged
-        ? renderProviderTransmissionPreflight()
-        : null}
-
-      <section
-        className={`validation-banner validation-${findingSummary.status}`}
-        aria-label="validation status"
-        role="status"
-        aria-live="polite"
-      >
-        <strong>{validationLabel}</strong>
-        <span>
-          {!hasArtifact
-            ? "Complete or recover the author step before reviewing findings or approving an artifact."
-            : !state.reviewComplete
-              ? "Complete an independent critic review before approval or export."
-              : findingSummary.status === "blocked"
-                ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
-                : findingSummary.status === "warnings"
-                  ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-                  : "All findings have a recorded decision."}
-        </span>
-      </section>
-
-      <div className="workspace-grid">
-        <section className="review-column" aria-label="artifact review">
-          <div className="section-heading">
-            <div>
-              <p className="eyebrow">Artifact review</p>
-              <h2>Version {state.artifact.version}</h2>
-            </div>
-            <span className="subtle">Agent output is a draft, not proof.</span>
-          </div>
-
-          <div className="diff-grid">
-            <article className="artifact-pane previous-pane">
-              <div className="pane-heading">
-                <span>Previous version</span>
-                <span>
-                  {state.previousArtifact === null ? "None" : `v${state.previousArtifact.version}`}
-                </span>
-              </div>
-              {state.previousArtifact === null ? (
-                <p className="empty-state">This is the first artifact version.</p>
-              ) : (
-                state.previousArtifact.sections.map((section) => (
-                  <section className="artifact-section" key={section.id}>
-                    <h3>{section.title}</h3>
-                    {section.blocks.map((block) => (
-                      <p className={block.type === "bullet" ? "bullet" : ""} key={block.id}>
-                        {block.text}
-                      </p>
+              <p className="eyebrow">Provider request failed</p>
+              <h2>{state.providerFailure.explanation}</h2>
+              <p className="subtle">
+                {state.providerFailure.provider} · {state.providerFailure.model} ·{" "}
+                {state.providerFailure.step} · attempt {state.providerFailure.attempt} of{" "}
+                {state.providerFailure.maxAttempts}
+              </p>
+              {state.providerFailure.diagnostics.length > 0 ? (
+                <div className="provider-diagnostics">
+                  <strong>Validation details</strong>
+                  <ul>
+                    {state.providerFailure.diagnostics.map((diagnostic) => (
+                      <li key={`${diagnostic.code}:${diagnostic.path}`}>
+                        {diagnostic.path === "" ? "response" : diagnostic.path}: {diagnostic.code}
+                      </li>
                     ))}
-                  </section>
-                ))
-              )}
-            </article>
-            <article className="artifact-pane current-pane">
-              <div className="pane-heading">
-                <span>Current draft</span>
-                <span>v{state.artifact.version} · editable</span>
+                  </ul>
+                </div>
+              ) : null}
+              <div className="approval-actions">
+                {state.providerFailure.availableActions.includes("retry") ? (
+                  <button
+                    className="button button-primary"
+                    type="button"
+                    disabled={
+                      !transmissionReady || retryRemainingMs > 0 || pendingReviewAction !== null
+                    }
+                    onClick={() => onAction({ type: "resume" })}
+                  >
+                    {retryRemainingMs > 0
+                      ? `Retry ${state.providerFailure.step} in ${retryWaitLabel(retryRemainingMs)}`
+                      : `Retry ${state.providerFailure.step}`}
+                  </button>
+                ) : null}
+                {state.providerFailure.availableActions.includes("return-to-review") ? (
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    onClick={() => onAction({ type: "recover-to-review" })}
+                  >
+                    Return to review
+                  </button>
+                ) : null}
+                {state.providerFailure.availableActions.includes("stop") ? (
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    onClick={() => onAction({ type: "stop" })}
+                  >
+                    Stop run
+                  </button>
+                ) : null}
               </div>
-              {state.artifact.sections.map((section) => (
-                <section className="artifact-section" key={section.id}>
-                  <h3>{section.title}</h3>
-                  {section.blocks.map((block) => (
-                    <label className="editable-block" key={block.id}>
-                      <span className="sr-only">Edit {section.title}</span>
-                      <textarea
-                        aria-label={`Edit ${section.title}`}
-                        value={block.text}
-                        rows={block.type === "bullet" ? 3 : 4}
-                        onChange={(event) =>
-                          onAction({
-                            type: "edit-block",
-                            blockId: block.id,
-                            text: event.target.value,
-                          })
-                        }
-                      />
-                    </label>
-                  ))}
-                </section>
-              ))}
-            </article>
-          </div>
+              {retryRemainingMs > 0 ? (
+                <p className="pending-action-status" role="status" aria-live="polite">
+                  Retry is paused until the provider retry window opens (
+                  {retryWaitLabel(retryRemainingMs)}).
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
-          <section className="claims-panel" aria-label="claim to source inspection">
-            <div className="section-heading compact">
+          {state.providerTransmissionPreflight.required &&
+          !state.providerTransmissionPreflight.acknowledged
+            ? renderProviderTransmissionPreflight()
+            : null}
+
+          <section
+            className={`validation-banner validation-${findingSummary.status}`}
+            aria-label="validation status"
+            role="status"
+            aria-live="polite"
+          >
+            <strong>{validationLabel}</strong>
+            <span>
+              {!hasArtifact
+                ? "Complete or recover the author step before reviewing findings or approving an artifact."
+                : !state.reviewComplete
+                  ? "Complete an independent critic review before approval or export."
+                  : findingSummary.status === "blocked"
+                    ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+                    : findingSummary.status === "warnings"
+                      ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+                      : "All findings have a recorded decision."}
+            </span>
+          </section>
+
+          <section className="review-column" aria-label="artifact review" id="artifact-review">
+            <div className="section-heading">
               <div>
-                <p className="eyebrow">Traceability</p>
-                <h2>Claims and candidate sources</h2>
+                <p className="eyebrow">Draft under review</p>
+                <h2>Version {state.artifact.version}</h2>
               </div>
               <span className="subtle">
-                Source links show where wording came from; they do not independently verify it.
+                Edits you make here are part of the artifact you approve.
               </span>
             </div>
-            <div className="claim-list">
-              {state.artifact.claims.map((claim) => (
-                <article className={`claim-card claim-${claim.status}`} key={claim.id}>
-                  <div className="claim-heading">
-                    <strong>{claim.text}</strong>
-                    <span className="status-tag">{claimSourceLabel(claim)}</span>
-                  </div>
-                  {claim.evidence.length === 0 ? (
-                    <p className="warning-copy">
-                      This claim is not linked to the candidate materials supplied to DraftLoop.
-                    </p>
-                  ) : (
-                    claim.evidence.map((reference) => (
-                      <div
-                        className={`evidence-row evidence-${reference.status}`}
-                        key={`${reference.sourcePath}-${reference.locator}`}
-                      >
-                        <span aria-hidden="true">↳</span>
-                        <span>
-                          <strong>{reference.sourcePath}</strong> · {reference.locator}
-                          <br />
-                          {reference.excerpt}
-                        </span>
-                        <span className="status-tag">{reference.status}</span>
-                      </div>
-                    ))
-                  )}
-                </article>
-              ))}
+
+            <div className="diff-grid">
+              <article className="artifact-pane previous-pane">
+                <div className="pane-heading">
+                  <span>Previous version</span>
+                  <span>
+                    {state.previousArtifact === null
+                      ? "None"
+                      : `v${state.previousArtifact.version}`}
+                  </span>
+                </div>
+                {state.previousArtifact === null ? (
+                  <p className="empty-state">This is the first artifact version.</p>
+                ) : (
+                  state.previousArtifact.sections.map((section) => (
+                    <section className="artifact-section" key={section.id}>
+                      <h3>{section.title}</h3>
+                      {section.blocks.map((block) => (
+                        <p className={block.type === "bullet" ? "bullet" : ""} key={block.id}>
+                          {block.text}
+                        </p>
+                      ))}
+                    </section>
+                  ))
+                )}
+              </article>
+              <span className="diff-arrow" aria-hidden="true">
+                →
+              </span>
+              <article className="artifact-pane current-pane">
+                <div className="pane-heading">
+                  <span>Current draft</span>
+                  <span>v{state.artifact.version} · editable</span>
+                </div>
+                {state.artifact.sections.map((section) => (
+                  <section className="artifact-section" key={section.id}>
+                    <h3>{section.title}</h3>
+                    {section.blocks.map((block) => {
+                      const sourceState = blockSourceState(block, claimById);
+                      const isLinked =
+                        linkedClaimId !== null && block.claimIds.includes(linkedClaimId);
+                      return (
+                        <label
+                          className={`editable-block editable-block-${sourceState}${
+                            isLinked ? " editable-block-linked" : ""
+                          }`}
+                          key={block.id}
+                        >
+                          <span className="sr-only">Edit {section.title}</span>
+                          <textarea
+                            aria-label={`Edit ${section.title}`}
+                            value={block.text}
+                            rows={block.type === "bullet" ? 3 : 4}
+                            ref={(element) => {
+                              if (element === null) draftBlockRefs.current.delete(block.id);
+                              else draftBlockRefs.current.set(block.id, element);
+                            }}
+                            onFocus={() => setLinkedClaimId(block.claimIds[0] ?? null)}
+                            onBlur={() => setLinkedClaimId(null)}
+                            onMouseEnter={() => setLinkedClaimId(block.claimIds[0] ?? null)}
+                            onMouseLeave={() => setLinkedClaimId(null)}
+                            onChange={(event) =>
+                              onAction({
+                                type: "edit-block",
+                                blockId: block.id,
+                                text: event.target.value,
+                              })
+                            }
+                          />
+                        </label>
+                      );
+                    })}
+                  </section>
+                ))}
+              </article>
             </div>
+
+            <section className="claims-panel" aria-label="claim to source inspection">
+              <div className="section-heading compact">
+                <div>
+                  <p className="eyebrow">Traceability</p>
+                  <h2>Claims and candidate sources</h2>
+                </div>
+                <span className="subtle">
+                  Source links show where wording came from; they do not independently verify it.
+                </span>
+              </div>
+              <div className="claim-list">
+                {state.artifact.claims.map((claim) => {
+                  const draftBlockId = claimBlockId(state.artifact, claim.id);
+                  return (
+                    <article
+                      className={`claim-card claim-${claim.status}${
+                        linkedClaimId === claim.id ? " claim-linked" : ""
+                      }`}
+                      key={claim.id}
+                    >
+                      <div className="claim-heading">
+                        <strong>{claim.text}</strong>
+                        <span className="claim-heading-actions">
+                          {draftBlockId === null ? null : (
+                            <button
+                              className="claim-locate"
+                              type="button"
+                              title="Show the draft line this claim comes from"
+                              onMouseEnter={() => setLinkedClaimId(claim.id)}
+                              onMouseLeave={() => setLinkedClaimId(null)}
+                              onFocus={() => setLinkedClaimId(claim.id)}
+                              onBlur={() => setLinkedClaimId(null)}
+                              onClick={() => {
+                                const target = draftBlockRefs.current.get(draftBlockId);
+                                target?.scrollIntoView({ block: "center", behavior: "smooth" });
+                                target?.focus();
+                              }}
+                            >
+                              <LinkIcon />
+                              <span className="sr-only">Show the draft line for: {claim.text}</span>
+                            </button>
+                          )}
+                          <span className="status-tag">{claimSourceLabel(claim)}</span>
+                        </span>
+                      </div>
+                      {claimSectionTitle(state.artifact, claim.id) === null ? null : (
+                        <span className="claim-section-tag">
+                          {claimSectionTitle(state.artifact, claim.id)}
+                        </span>
+                      )}
+                      {claim.evidence.length === 0 ? (
+                        <p className="warning-copy">
+                          This claim is not linked to the candidate materials supplied to DraftLoop.
+                        </p>
+                      ) : (
+                        claim.evidence.map((reference) => (
+                          <div
+                            className={`evidence-row evidence-${reference.status}`}
+                            key={`${reference.sourcePath}-${reference.locator}`}
+                          >
+                            <span aria-hidden="true">↳</span>
+                            <span>
+                              <strong>{reference.sourcePath}</strong> · {reference.locator}
+                              <br />
+                              {reference.excerpt}
+                            </span>
+                            <span className="status-tag">{reference.status}</span>
+                          </div>
+                        ))
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
           </section>
-        </section>
+        </div>
 
         <aside className="side-column">
           <section className="panel progress-panel" aria-label="run progress">
@@ -1218,6 +1690,7 @@ export function ReviewWorkspace({
                   disabled={!transmissionReady}
                   onClick={() => onAction({ type: "resume" })}
                 >
+                  <PlayIcon />
                   Resume
                 </button>
               ) : state.state === "stopped" ? (
@@ -1374,14 +1847,16 @@ export function ReviewWorkspace({
                       </span>
                       <span className="finding-summary-content">
                         <span className="finding-summary-message">{finding.message}</span>
+                      </span>
+                      <span className="finding-summary-footer">
+                        <span className={`finding-summary-status resolution-${finding.decision}`}>
+                          {decisionLabels[finding.decision]}
+                          <span className="finding-summary-chevron" aria-hidden="true">
+                            {isExpanded ? "⌃" : "⌄"}
+                          </span>
+                        </span>
                         <span className="finding-summary-meta">
                           {finding.category} · {finding.code}
-                        </span>
-                      </span>
-                      <span className={`finding-summary-status resolution-${finding.decision}`}>
-                        {decisionLabels[finding.decision]}
-                        <span className="finding-summary-chevron" aria-hidden="true">
-                          {isExpanded ? "⌃" : "⌄"}
                         </span>
                       </span>
                     </button>
@@ -1553,6 +2028,22 @@ export function ReviewWorkspace({
                 No unresolved blocking findings. The final decision remains yours.
               </p>
             )}
+            <ul className="gate-checklist">
+              {gateConditions.map((condition) => (
+                <li
+                  className={`gate-item ${condition.met ? "gate-met" : "gate-blocked"}`}
+                  key={condition.id}
+                >
+                  <span className="gate-mark" aria-hidden="true">
+                    {condition.met ? "✓" : "!"}
+                  </span>
+                  <span>
+                    {condition.label}
+                    <span className="sr-only">{condition.met ? " — met" : " — not met"}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
             <div className="approval-actions">
               <button
                 className="button button-primary"
@@ -1562,7 +2053,8 @@ export function ReviewWorkspace({
                 disabled={!canApprove || pendingReviewAction !== null}
                 onClick={() => onAction({ type: "approve" })}
               >
-                Approve artifact (Alt+A)
+                Approve artifact
+                <kbd>Alt+A</kbd>
               </button>
               <button
                 className="button button-quiet"
@@ -1577,7 +2069,8 @@ export function ReviewWorkspace({
                 }
                 onClick={() => onAction({ type: "request-revision" })}
               >
-                Request revision (Alt+R)
+                Request revision
+                <kbd>Alt+R</kbd>
               </button>
             </div>
             {approvalExportErrorVisible ? (
@@ -1607,7 +2100,14 @@ export function ReviewWorkspace({
                 disabled={!canExport}
                 onClick={() => onAction({ type: "export" })}
               >
-                {exportPending ? "Exporting Markdown…" : "Export Markdown (Alt+E)"}
+                {exportPending ? (
+                  "Exporting Markdown…"
+                ) : (
+                  <>
+                    Export Markdown
+                    <kbd>Alt+E</kbd>
+                  </>
+                )}
               </button>
             </div>
             {exportPending ? (
@@ -1619,7 +2119,7 @@ export function ReviewWorkspace({
             ) : null}
           </section>
         </aside>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

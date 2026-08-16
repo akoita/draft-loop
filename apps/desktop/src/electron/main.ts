@@ -22,6 +22,9 @@ declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
 const bridgeChannel = "draft-loop:bridge";
+
+/** Paint the window in the renderer's own ground so launch does not flash. */
+const windowGround = "#0f1319";
 let mainWindow: BrowserWindow | undefined;
 
 function rendererUrl(): string | undefined {
@@ -68,6 +71,7 @@ function createWindow(): BrowserWindow {
     height: 980,
     minWidth: 1024,
     minHeight: 720,
+    backgroundColor: windowGround,
     webPreferences: {
       preload: join(__dirname, "preload.js"),
       contextIsolation: true,
