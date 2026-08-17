@@ -1218,6 +1218,11 @@ export function ReviewWorkspace({
               ) : null}
               <div className="onboarding-footer">
                 <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
+                <span>
+                  {state.setup.requiredSections.length > 0
+                    ? `Required sections: ${state.setup.requiredSections.join(", ")}`
+                    : "No required sections"}
+                </span>
                 <button
                   className="button button-primary"
                   type="button"

@@ -1,3 +1,4 @@
+import { defaultRequiredSections } from "@draft-loop/application";
 import { Command } from "commander";
 import packageJson from "../package.json";
 
@@ -46,7 +47,7 @@ export function createCli(): Command {
     .option(
       "--required-sections <sections>",
       "comma-separated required output sections",
-      "Summary,Experience",
+      defaultRequiredSections.join(","),
     )
     .option("--max-rounds <number>", "maximum author/critic rounds", integerOption, 3)
     .option("--max-cost-usd <number>", "maximum estimated provider cost", numberOption)

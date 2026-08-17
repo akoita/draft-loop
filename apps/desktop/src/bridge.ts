@@ -107,6 +107,11 @@ export interface WorkspaceCreateInput {
   readonly authorModel?: string;
   /** Exact critic model id. Omitted uses the workspace default. */
   readonly criticModel?: string;
+  /**
+   * Sections the CV must contain, matching the CLI's `--required-sections`.
+   * Omitted uses the workspace default.
+   */
+  readonly requiredSections?: readonly string[];
 }
 
 export interface RunStatusInput {

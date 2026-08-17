@@ -72,6 +72,26 @@ const configFilename = "workspace.json";
 const databaseFilename = "history.sqlite";
 const timestamp = (): string => new Date().toISOString();
 
+/**
+ * The sections a workspace requires unless the candidate chooses otherwise.
+ *
+ * A missing required section is an error-severity finding, and an error finding
+ * makes a run not-ready, so this list is what gives the completeness check its
+ * reach. Requiring too little fails silently: a CV missing whole sections is
+ * reported as complete. Requiring too much fails loudly and recoverably, since
+ * the finding is visible and the candidate can narrow the list. That asymmetry
+ * is why the default is the CV skeleton rather than a minimal pair.
+ *
+ * The value is exported so the CLI default, the desktop default, and this
+ * module cannot drift apart.
+ */
+export const defaultRequiredSections: readonly string[] = Object.freeze([
+  "Summary",
+  "Experience",
+  "Education",
+  "Skills",
+]);
+
 export interface WorkspaceConfig {
   readonly schemaVersion: 1;
   readonly id: string;
@@ -344,7 +364,7 @@ export async function initWorkspace(
       options.truthfulnessPolicy?.trim() ||
       "Use statements from candidate-provided materials; do not invent facts absent from them.",
     outputFormat: "markdown",
-    requiredSections: options.requiredSections ?? ["Summary", "Experience"],
+    requiredSections: options.requiredSections ?? [...defaultRequiredSections],
     maxRounds: options.maxRounds ?? 3,
     ...(options.maxCostUsd === undefined ? {} : { maxCostUsd: options.maxCostUsd }),
     ...(options.maxDurationMs === undefined ? {} : { maxDurationMs: options.maxDurationMs }),
@@ -569,8 +589,12 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
   const requirementText = context.requirements.map((requirement) => requirement.text).join("; ");
   const summarySectionId = `summary-${suffix}`;
   const experienceSectionId = `experience-${suffix}`;
+  const educationSectionId = `education-${suffix}`;
+  const skillsSectionId = `skills-${suffix}`;
   const summaryBlockId = `summary-block-${suffix}`;
   const experienceBlockId = `experience-block-${suffix}`;
+  const educationBlockId = `education-block-${suffix}`;
+  const skillsBlockId = `skills-block-${suffix}`;
   const summaryClaimId = `summary-claim-${suffix}`;
   const summaryText = `Profile aligned to candidate-provided materials and requirements: ${requirementText}`;
   const input: NewArtifactInput = {
@@ -597,6 +621,34 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
             id: experienceBlockId,
             type: "bullet",
             text: "Candidate source material is retained locally and should be reviewed before approval.",
+            claimIds: [],
+          },
+        ],
+      },
+      {
+        id: educationSectionId,
+        title: "Education",
+        kind: "education",
+        order: 2,
+        blocks: [
+          {
+            id: educationBlockId,
+            type: "bullet",
+            text: "Education entries are taken from candidate-provided materials and are not inferred.",
+            claimIds: [],
+          },
+        ],
+      },
+      {
+        id: skillsSectionId,
+        title: "Skills",
+        kind: "skills",
+        order: 3,
+        blocks: [
+          {
+            id: skillsBlockId,
+            type: "bullet",
+            text: "Skills are listed only where candidate-provided materials support them.",
             claimIds: [],
           },
         ],

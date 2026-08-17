@@ -764,6 +764,7 @@ async function workspaceReadiness(
     indexedEvidenceChunkCount,
     selectedEvidenceChunkCount,
     selectedEvidenceSourceCount,
+    requiredSections: [...descriptor.requiredSections],
     ready:
       jobDescriptionReady &&
       evidenceSourceCount > 0 &&
@@ -1009,7 +1010,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   async function createWorkspace(
     name: string,
     mode: "real" | "demo" = "demo",
-    models: { readonly authorModel?: string; readonly criticModel?: string } = {},
+    models: {
+      readonly authorModel?: string;
+      readonly criticModel?: string;
+      readonly requiredSections?: readonly string[];
+    } = {},
   ): Promise<{ workspace: { id: string; name: string } }> {
     const parent = await options.dialogs.chooseDirectory("create");
     if (parent === undefined) return fail("permission-denied", "Workspace creation was cancelled.");
@@ -1040,6 +1045,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           maxRounds: 2,
           ...(models.authorModel === undefined ? {} : { authorModel: models.authorModel }),
           ...(models.criticModel === undefined ? {} : { criticModel: models.criticModel }),
+          ...(models.requiredSections === undefined
+            ? {}
+            : { requiredSections: models.requiredSections }),
         },
         io(),
       );
@@ -1468,6 +1476,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               ...(command.input.criticModel === undefined
                 ? {}
                 : { criticModel: command.input.criticModel }),
+              ...(command.input.requiredSections === undefined
+                ? {}
+                : { requiredSections: command.input.requiredSections }),
             }),
           };
         case "run.status": {

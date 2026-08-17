@@ -152,6 +152,8 @@ export interface WorkspaceReadiness {
   readonly indexedEvidenceChunkCount: number;
   readonly selectedEvidenceChunkCount: number;
   readonly selectedEvidenceSourceCount: number;
+  /** Sections this workspace requires, so the candidate can see them before a run. */
+  readonly requiredSections: readonly string[];
   readonly ready: boolean;
   readonly nextSteps: readonly string[];
 }
@@ -552,6 +554,7 @@ export function createFixtureReviewState(): DesktopReviewState {
       indexedEvidenceChunkCount: 2,
       selectedEvidenceChunkCount: 1,
       selectedEvidenceSourceCount: 1,
+      requiredSections: ["Summary", "Experience"],
       ready: true,
       nextSteps: [],
     },

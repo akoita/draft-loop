@@ -5,7 +5,11 @@ import { join } from "node:path";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it } from "vitest";
 
-import { createLocalApplicationDriver, SourceIngestionUserError } from "./local.js";
+import {
+  createLocalApplicationDriver,
+  defaultRequiredSections,
+  SourceIngestionUserError,
+} from "./local.js";
 
 describe("local application driver", () => {
   it("fails closed before indexing when PDF extraction is unreliable", async () => {
@@ -51,6 +55,47 @@ describe("local application driver", () => {
 
       expect(workspace.author).toEqual({ company: "anthropic", model: "claude-sonnet-4-5" });
       expect(workspace.critic).toEqual({ company: "openai", model: "gpt-5.6-luna" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("lets the candidate widen the required sections explicitly", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-required-sections-"));
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+      const driver = createLocalApplicationDriver();
+
+      const workspace = await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          requiredSections: ["Summary", "Experience", "Education", "Skills"],
+        },
+        { write: () => undefined },
+      );
+
+      expect(workspace.requiredSections).toEqual(["Summary", "Experience", "Education", "Skills"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the documented default when the candidate does not choose", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-narrow-sections-"));
+    try {
+      await mkdir(join(root, "evidence"), { recursive: true });
+      await writeFile(join(root, "job.md"), "TypeScript systems engineer\n", "utf8");
+      const driver = createLocalApplicationDriver();
+
+      const workspace = await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence" },
+        { write: () => undefined },
+      );
+
+      expect(workspace.requiredSections).toEqual([...defaultRequiredSections]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

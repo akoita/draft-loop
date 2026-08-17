@@ -110,6 +110,28 @@ function authorProposal(version: number, chunkId: string): JsonRecord {
           },
         ],
       },
+      {
+        title: "Education",
+        kind: "education",
+        blocks: [
+          {
+            type: "bullet",
+            text: "Studied software engineering with a focus on testing and accessibility.",
+            claims: [],
+          },
+        ],
+      },
+      {
+        title: "Skills",
+        kind: "skills",
+        blocks: [
+          {
+            type: "bullet",
+            text: "TypeScript, Node.js, automated testing, accessibility, technical writing.",
+            claims: [],
+          },
+        ],
+      },
     ],
   };
 }
@@ -441,6 +463,8 @@ describe("full real-mode native host draft workflow", () => {
       expect(firstReview.artifact.sections.map((section) => section.title)).toEqual([
         "Summary",
         "Experience",
+        "Education",
+        "Skills",
       ]);
       expect(firstReview.artifact.claims.every((claim) => claim.evidence.length > 0)).toBe(true);
 
@@ -486,6 +510,8 @@ describe("full real-mode native host draft workflow", () => {
       expect(finalReview.artifact.sections.map((section) => section.title)).toEqual([
         "Summary",
         "Experience",
+        "Education",
+        "Skills",
       ]);
       expect(finalReview.artifact.claims.every((claim) => claim.evidence.length > 0)).toBe(true);
 

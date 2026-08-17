@@ -156,6 +156,7 @@ describe("desktop trust-centered review", () => {
         indexedEvidenceChunkCount: 0,
         selectedEvidenceChunkCount: 0,
         selectedEvidenceSourceCount: 0,
+        requiredSections: ["Summary", "Experience"],
         ready: false,
         nextSteps: ["Add a target job description.", "Add at least one candidate evidence source."],
       },
