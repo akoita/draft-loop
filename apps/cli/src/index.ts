@@ -2,6 +2,7 @@ import { defaultRequiredSections } from "@draft-loop/application";
 import { Command } from "commander";
 import packageJson from "../package.json";
 
+import { generateSanitizedPilotReport } from "./pilot-report.js";
 import { applicationService, runPilot, safeErrorMessage, workspaceRoot } from "./workflow.js";
 
 function numberOption(value: string): number {
@@ -94,6 +95,17 @@ export function createCli(): Command {
     .argument("[workspace]", "new pilot workspace directory", "./draft-loop-pilot")
     .action(async (workspace: string) => {
       await runPilot(workspaceRoot(workspace));
+    });
+
+  command
+    .command("pilot-report")
+    .description(
+      "Generate the sanitized consented-pilot summary from a private case file held outside the repository",
+    )
+    .argument("<case-file>", "path to the private consented case file")
+    .argument("[output]", "where to write the sanitized Markdown summary", "./pilot-report.md")
+    .action(async (caseFile: string, output: string) => {
+      await generateSanitizedPilotReport({ casePath: caseFile, outputPath: output });
     });
 
   command

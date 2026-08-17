@@ -10,6 +10,7 @@
     { "path": "../../packages/application" },
     { "path": "../../packages/artifacts" },
     { "path": "../../packages/domain" },
+    { "path": "../../packages/evaluations" },
     { "path": "../../packages/ingestion" },
     { "path": "../../packages/orchestrator" },
     { "path": "../../packages/providers" },

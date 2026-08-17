@@ -35,11 +35,25 @@ confidence, bounded adversarial observations, and structured limitations:
 - every limitation that applies, including a single-case sample or an
   unavailable cost, confidence, or adversarial observation.
 
-Run `runConsentedPilotHarness(cases, { requireOutcome: true })` only after the
-private scope and outcome records are complete. The harness also computes
-critical-requirement coverage and deterministic unsupported-claim counts for
-the first draft, revised draft, and manual baseline. These are signals for the
-review, not truth proofs.
+Assemble the private case file outside the repository, then run:
+
+```text
+pnpm --filter @draft-loop/cli start pilot-report <private-case-file> [output.md]
+```
+
+The command refuses a case file that sits inside any git repository, because
+that file carries the drafts and the manual baseline. It runs
+`runConsentedPilotHarness(cases, { requireOutcome: true })` and writes only the
+generated Markdown summary; nothing from the case file reaches the output.
+
+The harness also computes critical-requirement coverage and deterministic
+unsupported-claim counts for the first draft, revised draft, and manual
+baseline. These are signals for the review, not truth proofs.
+
+Each case supplies `context`, `firstDraft`, `revisedDraft`, and
+`manualBaseline` as draft artifacts, plus the consent and outcome records. The
+manual baseline is authored by the candidate rather than parsed from a
+document, so the candidate controls exactly what it asserts.
 
 ## Reporting and decision gate
 

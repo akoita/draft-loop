@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@draft-loop/application": "workspace:*",
+    "@draft-loop/evaluations": "workspace:*",
     "commander": "15.0.0"
   },
   "devDependencies": {

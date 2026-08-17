@@ -59,6 +59,9 @@ importers:
       '@draft-loop/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@draft-loop/evaluations':
+        specifier: workspace:*
+        version: link:../../packages/evaluations
       commander:
         specifier: 15.0.0
         version: 15.0.0
