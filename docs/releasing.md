@@ -109,6 +109,12 @@ Electron application, and incurs a bounded provider cost. Run this gate before
 manual Electron validation with consented real data; never use real candidate
 material in the synthetic gate.
 
+This gate is a release step and not a development loop. Day-to-day work on the
+author-critic flow belongs in fixture mode, which spends nothing — see
+[CONTRIBUTING.md](../CONTRIBUTING.md). Running the gate during ordinary
+iteration is what exhausts the provider budget this release validation depends
+on.
+
 The gate runs `claude-haiku-4-5` as author and `gpt-5.6-luna` as critic. These
 are deliberately the cheapest models that still exercise the real provider path,
 because the gate's purpose is to prove the path works, not to measure output
