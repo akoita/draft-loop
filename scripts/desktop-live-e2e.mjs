@@ -15,8 +15,21 @@ Without a packaged executable the gate runs the desktop dev app and requires
 Anthropic and OpenAI credentials already configured in Electron.
 With a packaged executable the gate runs headless and requires ANTHROPIC_API_KEY
 and OPENAI_API_KEY in the environment.
+
+The gate bills real provider usage. It runs the cheapest verified cross-company
+pair by default; override either side with DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL or
+DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL.
 `;
 const PACKAGED_CREDENTIAL_VARIABLES = Object.freeze(["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]);
+const AUTHOR_MODEL_VARIABLE = "DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL";
+const CRITIC_MODEL_VARIABLE = "DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL";
+/**
+ * The gate exercises the real provider path, so it should run the cheapest
+ * models that still do so rather than the workspace defaults. Anthropic and
+ * OpenAI remain the cross-company pair, so provider-diversity is unaffected.
+ */
+const DEFAULT_AUTHOR_MODEL = "claude-haiku-4-5";
+const DEFAULT_CRITIC_MODEL = "gpt-5.6-luna";
 const PACKAGED_LAUNCH_ARGUMENTS = Object.freeze(["--headless", "--disable-gpu", "--no-sandbox"]);
 const jobContent = `# Synthetic Platform Engineer role
 
@@ -75,6 +88,20 @@ export function parseArguments(argumentsList) {
   return { help: false, keep, executable: positionals[0], evidence: positionals[1] };
 }
 
+/**
+ * Resolves the author and critic models the gate will run. An empty or
+ * whitespace-only override falls back to the default rather than propagating an
+ * empty model id to the desktop host.
+ */
+export function resolveGateModels(environment = process.env) {
+  const author = environment[AUTHOR_MODEL_VARIABLE]?.trim();
+  const critic = environment[CRITIC_MODEL_VARIABLE]?.trim();
+  return {
+    author: author === undefined || author === "" ? DEFAULT_AUTHOR_MODEL : author,
+    critic: critic === undefined || critic === "" ? DEFAULT_CRITIC_MODEL : critic,
+  };
+}
+
 function assertPackagedCredentials() {
   for (const variable of PACKAGED_CREDENTIAL_VARIABLES) {
     const value = process.env[variable];
@@ -105,7 +132,7 @@ async function writeSyntheticInputs(paths) {
   await chmod(paths.candidate, 0o600);
 }
 
-function launchLiveE2E(paths, executable) {
+function launchLiveE2E(paths, executable, models = resolveGateModels()) {
   return new Promise((resolveLaunch, rejectLaunch) => {
     const packaged = executable !== undefined;
     const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
@@ -130,6 +157,8 @@ function launchLiveE2E(paths, executable) {
         DRAFT_LOOP_LIVE_E2E_JOB: paths.job,
         DRAFT_LOOP_LIVE_E2E_CANDIDATE: paths.candidate,
         DRAFT_LOOP_LIVE_E2E_EVIDENCE: paths.report,
+        [AUTHOR_MODEL_VARIABLE]: models.author,
+        [CRITIC_MODEL_VARIABLE]: models.critic,
       },
       stdio: ["ignore", "ignore", "pipe"],
       detached: process.platform !== "win32",
@@ -214,11 +243,15 @@ export async function runLiveE2E(
     candidate: join(temporaryRoot, "candidate.md"),
     report: evidencePath ?? join(temporaryRoot, "report.json"),
   };
+  const models = resolveGateModels();
   let failure;
 
   try {
     await writeSyntheticInputs(paths);
-    await launchLiveE2E(paths, packagedExecutable);
+    stdout.write(
+      `Live-provider gate: billing real provider usage; author ${models.author}, critic ${models.critic}.\n`,
+    );
+    await launchLiveE2E(paths, packagedExecutable, models);
     const report = JSON.parse(await readFile(paths.report, "utf8"));
     assertSanitizedReport(report, paths);
     const reportDetails = await stat(paths.report);

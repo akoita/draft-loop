@@ -99,6 +99,14 @@ export interface WorkspaceCreateInput {
   readonly name: string;
   /** Real workspaces are empty; demo mode is explicit and deterministic. */
   readonly mode?: "real" | "demo";
+  /**
+   * Exact author model id. Omitted uses the workspace default, matching the
+   * CLI's `--author-model`. Companies are not overridable here: Anthropic and
+   * OpenAI remain the default cross-company pair.
+   */
+  readonly authorModel?: string;
+  /** Exact critic model id. Omitted uses the workspace default. */
+  readonly criticModel?: string;
 }
 
 export interface RunStatusInput {

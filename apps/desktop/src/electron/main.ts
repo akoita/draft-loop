@@ -113,6 +113,8 @@ app.whenReady().then(() => {
   const liveE2eJob = process.env.DRAFT_LOOP_LIVE_E2E_JOB;
   const liveE2eCandidate = process.env.DRAFT_LOOP_LIVE_E2E_CANDIDATE;
   const liveE2eEvidence = process.env.DRAFT_LOOP_LIVE_E2E_EVIDENCE;
+  const liveE2eAuthorModel = process.env.DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL?.trim();
+  const liveE2eCriticModel = process.env.DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL?.trim();
   if (liveE2eEnabled && (acceptanceEnabled || smokeEnabled || credentialAcceptanceEnabled)) {
     throw new Error("Desktop live E2E cannot run with another desktop test mode.");
   }
@@ -310,6 +312,12 @@ app.whenReady().then(() => {
       jobPath: liveE2eJobPath,
       candidatePath: liveE2eCandidatePath,
       evidencePath: liveE2eEvidencePath,
+      ...(liveE2eAuthorModel === undefined || liveE2eAuthorModel === ""
+        ? {}
+        : { authorModel: liveE2eAuthorModel }),
+      ...(liveE2eCriticModel === undefined || liveE2eCriticModel === ""
+        ? {}
+        : { criticModel: liveE2eCriticModel }),
     };
     void runLiveProviderE2E(liveOptions)
       .then(() => app.exit(0))

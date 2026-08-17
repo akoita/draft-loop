@@ -1009,6 +1009,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   async function createWorkspace(
     name: string,
     mode: "real" | "demo" = "demo",
+    models: { readonly authorModel?: string; readonly criticModel?: string } = {},
   ): Promise<{ workspace: { id: string; name: string } }> {
     const parent = await options.dialogs.chooseDirectory("create");
     if (parent === undefined) return fail("permission-denied", "Workspace creation was cancelled.");
@@ -1037,6 +1038,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           sources: "evidence",
           fixtureMode: mode === "demo",
           maxRounds: 2,
+          ...(models.authorModel === undefined ? {} : { authorModel: models.authorModel }),
+          ...(models.criticModel === undefined ? {} : { criticModel: models.criticModel }),
         },
         io(),
       );
@@ -1458,7 +1461,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         case "workspace.create":
           return {
             ok: true,
-            value: await createWorkspace(command.input.name, command.input.mode ?? "demo"),
+            value: await createWorkspace(command.input.name, command.input.mode ?? "demo", {
+              ...(command.input.authorModel === undefined
+                ? {}
+                : { authorModel: command.input.authorModel }),
+              ...(command.input.criticModel === undefined
+                ? {}
+                : { criticModel: command.input.criticModel }),
+            }),
           };
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);

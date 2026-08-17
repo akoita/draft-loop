@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 import { afterEach, describe, test } from "node:test";
-import { main, parseArguments } from "./desktop-live-e2e.mjs";
+import { main, parseArguments, resolveGateModels } from "./desktop-live-e2e.mjs";
 
 const anthropicVariable = "ANTHROPIC_API_KEY";
 const openaiVariable = "OPENAI_API_KEY";
@@ -34,6 +34,49 @@ function setCredentials({ anthropic, openai }) {
   if (openai === undefined) delete process.env[openaiVariable];
   else process.env[openaiVariable] = openai;
 }
+
+describe("resolveGateModels", () => {
+  test("defaults to the cheapest verified cross-company pair", () => {
+    assert.deepEqual(resolveGateModels({}), {
+      author: "claude-haiku-4-5",
+      critic: "gpt-5.6-luna",
+    });
+  });
+
+  test("honours both overrides", () => {
+    assert.deepEqual(
+      resolveGateModels({
+        DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-sonnet-4-5",
+        DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-5",
+      }),
+      { author: "claude-sonnet-4-5", critic: "gpt-5" },
+    );
+  });
+
+  test("overrides each side independently", () => {
+    assert.deepEqual(resolveGateModels({ DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-5" }), {
+      author: "claude-haiku-4-5",
+      critic: "gpt-5",
+    });
+  });
+
+  test("treats blank and whitespace-only overrides as unset", () => {
+    assert.deepEqual(
+      resolveGateModels({
+        DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "",
+        DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "   ",
+      }),
+      { author: "claude-haiku-4-5", critic: "gpt-5.6-luna" },
+    );
+  });
+
+  test("trims surrounding whitespace from an override", () => {
+    assert.equal(
+      resolveGateModels({ DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "  claude-opus-4-8  " }).author,
+      "claude-opus-4-8",
+    );
+  });
+});
 
 function createTemporaryDirectory() {
   const directory = mkdtempSync(join(tmpdir(), "draft-loop-live-e2e-test-"));

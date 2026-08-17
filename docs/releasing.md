@@ -109,6 +109,21 @@ Electron application, and incurs a bounded provider cost. Run this gate before
 manual Electron validation with consented real data; never use real candidate
 material in the synthetic gate.
 
+The gate runs `claude-haiku-4-5` as author and `gpt-5.6-luna` as critic. These
+are deliberately the cheapest models that still exercise the real provider path,
+because the gate's purpose is to prove the path works, not to measure output
+quality. They remain a cross-company pair, so provider diversity is unchanged.
+Override either side for a run without editing code:
+
+```text
+DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-4-5 pnpm test:e2e:live
+DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-5 pnpm test:e2e:live
+```
+
+The gate prints the pair it is about to bill before launching. If a cheap model
+ever proves unreliable on the synthetic material, override it for that run and
+change the default here rather than leaving the gate flaky.
+
 This same gate also runs in CI. The **Release** workflow runs it as a blocking
 job between source validation and artifact building, so no release artifact is
 built before a real Anthropic-author / OpenAI-critic run has passed. It is

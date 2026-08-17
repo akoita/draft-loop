@@ -29,6 +29,10 @@ export interface LiveProviderE2EOptions {
   readonly evidencePath: string;
   readonly timeoutMs?: number;
   readonly pollIntervalMs?: number;
+  /** Exact author model id. Omitted uses the workspace default. */
+  readonly authorModel?: string;
+  /** Exact critic model id. Omitted uses the workspace default. */
+  readonly criticModel?: string;
 }
 
 export interface LiveProviderE2EReport {
@@ -266,7 +270,12 @@ export async function runLiveProviderE2E(options: LiveProviderE2EOptions): Promi
     options.host,
     {
       type: "workspace.create",
-      input: { name: basename(workspaceRoot) || "draft-loop-live-e2e", mode: "real" },
+      input: {
+        name: basename(workspaceRoot) || "draft-loop-live-e2e",
+        mode: "real",
+        ...(options.authorModel === undefined ? {} : { authorModel: options.authorModel }),
+        ...(options.criticModel === undefined ? {} : { criticModel: options.criticModel }),
+      },
     },
     "workspace creation",
   );
