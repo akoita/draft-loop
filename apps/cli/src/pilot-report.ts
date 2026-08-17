@@ -22,9 +22,18 @@ export interface PilotReportOptions {
   readonly outputPath: string;
 }
 
-async function isDirectory(path: string): Promise<boolean> {
+/**
+ * Whether `.git` is present, as either a directory or a file.
+ *
+ * A plain clone has a `.git` directory, but a linked worktree and a submodule
+ * both have a `.git` *file* pointing elsewhere. Testing only for a directory
+ * silently fails to detect a repository in exactly the layouts agents use
+ * most, so this checks for existence rather than type.
+ */
+async function hasGitEntry(directory: string): Promise<boolean> {
   try {
-    return (await stat(path)).isDirectory();
+    await stat(join(directory, ".git"));
+    return true;
   } catch {
     return false;
   }
@@ -41,7 +50,7 @@ async function isDirectory(path: string): Promise<boolean> {
 export async function enclosingRepository(path: string): Promise<string | undefined> {
   let current = dirname(resolve(path));
   for (;;) {
-    if (await isDirectory(join(current, ".git"))) return current;
+    if (await hasGitEntry(current)) return current;
     const parent = dirname(current);
     if (parent === current) return undefined;
     current = parent;

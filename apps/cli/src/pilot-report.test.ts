@@ -42,6 +42,23 @@ describe("consented pilot report runner", () => {
     }
   });
 
+  it("detects a linked worktree, where .git is a file rather than a directory", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-pilot-worktree-"));
+    try {
+      // A linked worktree and a submodule both use a .git file pointing elsewhere.
+      await writeFile(join(root, ".git"), "gitdir: /somewhere/.git/worktrees/example\n", "utf8");
+      const casePath = join(root, "case.json");
+      await writeFile(casePath, "[]", "utf8");
+
+      expect(await enclosingRepository(casePath)).toBe(root);
+      await expect(
+        generateSanitizedPilotReport({ casePath, outputPath: join(root, "report.md") }),
+      ).rejects.toThrow(/inside the repository/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns undefined when no repository encloses the path", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-pilot-no-repo-"));
     try {
