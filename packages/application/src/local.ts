@@ -14,6 +14,8 @@ import {
   createWorkspace,
   type EvidenceRetrievalInspection,
   type ModelConfigurationInput,
+  maximumIndependenceOverrideRationaleLength,
+  maximumModelLineageLength,
   type ScoredEvidenceChunk,
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
@@ -115,6 +117,23 @@ export interface WorkspaceConfig {
   readonly criticCompany: string;
   readonly criticModel: string;
   /**
+   * The weights the author descends from, when the derived default is wrong.
+   *
+   * Absent means `<company>:<modelId>`. Set it when two vendors serve one base
+   * model, so the pairing is refused instead of silently recorded as
+   * independent.
+   */
+  readonly authorLineage?: string;
+  /** The weights the critic descends from; see `authorLineage`. */
+  readonly criticLineage?: string;
+  /**
+   * Why one lineage on both sides is acceptable for this workspace.
+   *
+   * Present only when the candidate deliberately overrode the independence
+   * block. It is recorded with every run this workspace produces.
+   */
+  readonly independenceOverrideRationale?: string;
+  /**
    * Base URL of the OpenAI-compatible server used when a company is `local`.
    *
    * Absent means the adapter's own default (Ollama on `http://127.0.0.1:11434/v1`);
@@ -208,6 +227,27 @@ function requireNonEmptyString(record: Record<string, unknown>, key: string): st
   return value.trim();
 }
 
+/**
+ * Read an optional configured string, trimmed and bounded.
+ *
+ * The message never echoes the value: workspace.json is editable by hand, so a
+ * rejected field is attacker-choosable text on its way to logs and UI.
+ */
+function boundedOptionalString(
+  record: Record<string, unknown>,
+  key: string,
+  maximumLength: number,
+): string | undefined {
+  const value = record[key];
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || value.trim() === "" || value.trim().length > maximumLength) {
+    throw new CliUserError(
+      `Workspace configuration field ${key} must be a non-empty string of at most ${maximumLength} characters.`,
+    );
+  }
+  return value.trim();
+}
+
 function requirePositiveInteger(record: Record<string, unknown>, key: string): number {
   const value = record[key];
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
@@ -254,6 +294,13 @@ function parseConfig(value: unknown): WorkspaceConfig {
   ) {
     throw new CliUserError("Workspace budget values are invalid.");
   }
+  const authorLineage = boundedOptionalString(record, "authorLineage", maximumModelLineageLength);
+  const criticLineage = boundedOptionalString(record, "criticLineage", maximumModelLineageLength);
+  const independenceOverrideRationale = boundedOptionalString(
+    record,
+    "independenceOverrideRationale",
+    maximumIndependenceOverrideRationaleLength,
+  );
   const localEndpoint = record.localEndpoint;
   if (localEndpoint !== undefined) {
     if (typeof localEndpoint !== "string" || !isLoopbackEndpoint(localEndpoint.trim())) {
@@ -286,6 +333,9 @@ function parseConfig(value: unknown): WorkspaceConfig {
     authorModel: requireNonEmptyString(record, "authorModel"),
     criticCompany: requireNonEmptyString(record, "criticCompany"),
     criticModel: requireNonEmptyString(record, "criticModel"),
+    ...(authorLineage === undefined ? {} : { authorLineage }),
+    ...(criticLineage === undefined ? {} : { criticLineage }),
+    ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
     ...(typeof localEndpoint === "string" ? { localEndpoint: localEndpoint.trim() } : {}),
     fixtureMode: record.fixtureMode === true,
     ...(typeof record.latestRunId === "string" && record.latestRunId.trim() !== ""
@@ -350,6 +400,9 @@ export interface InitWorkspaceOptions {
   readonly authorModel?: string;
   readonly criticCompany?: string;
   readonly criticModel?: string;
+  readonly authorLineage?: string;
+  readonly criticLineage?: string;
+  readonly independenceOverrideRationale?: string;
   readonly localEndpoint?: string;
   readonly maxRounds?: number;
   readonly maxCostUsd?: number;
@@ -398,6 +451,11 @@ export async function initWorkspace(
     authorModel: options.authorModel?.trim() || "claude-sonnet-4-5",
     criticCompany: options.criticCompany?.trim() || "openai",
     criticModel: options.criticModel?.trim() || "gpt-5.6-luna",
+    ...(options.authorLineage?.trim() ? { authorLineage: options.authorLineage.trim() } : {}),
+    ...(options.criticLineage?.trim() ? { criticLineage: options.criticLineage.trim() } : {}),
+    ...(options.independenceOverrideRationale?.trim()
+      ? { independenceOverrideRationale: options.independenceOverrideRationale.trim() }
+      : {}),
     ...(options.localEndpoint?.trim() ? { localEndpoint: options.localEndpoint.trim() } : {}),
     fixtureMode: options.fixtureMode === true,
   };
@@ -526,14 +584,19 @@ function modelConfiguration(config: WorkspaceConfig): ModelConfigurationInput {
       modelId: config.authorModel,
       role: "author",
       promptTemplateVersion: "cli-author-v1",
+      ...(config.authorLineage === undefined ? {} : { lineage: config.authorLineage }),
     },
     critic: {
       company: config.criticCompany,
       modelId: config.criticModel,
       role: "critic",
       promptTemplateVersion: "cli-critic-v1",
+      ...(config.criticLineage === undefined ? {} : { lineage: config.criticLineage }),
     },
     requireProviderDiversity: true,
+    ...(config.independenceOverrideRationale === undefined
+      ? {}
+      : { independenceOverrideRationale: config.independenceOverrideRationale }),
   };
 }
 
@@ -874,6 +937,31 @@ function parseCritique(value: JsonObject): Critique {
   };
 }
 
+/**
+ * The snapshot as the author and critic see it.
+ *
+ * The independence record and the lineage labels are operator prose about
+ * model choice, written for an auditor. Sending them would put free text the
+ * candidate never wrote into the model input, which is both a category error
+ * and an injection surface, and would gain the model nothing it cannot read
+ * from `company` and `modelId`.
+ */
+function modelFacingContext(context: ContextSnapshot): ContextSnapshot {
+  const configuration = context.modelConfiguration;
+  const withoutLineage = <T extends { readonly lineage?: string }>(selection: T): T => {
+    const { lineage: _lineage, ...rest } = selection;
+    return rest as T;
+  };
+  return {
+    ...context,
+    modelConfiguration: {
+      author: withoutLineage(configuration.author),
+      critic: withoutLineage(configuration.critic),
+      requireProviderDiversity: configuration.requireProviderDiversity,
+    },
+  };
+}
+
 function providerAgents(
   config: WorkspaceConfig,
   context: ContextSnapshot,
@@ -895,10 +983,9 @@ function providerAgents(
    * `local` is the literal company string the local adapter checks itself
    * (`assertConfiguredModel` compares it to its own `provider`), so a
    * lineage-shaped value such as `local-glm` would be rejected as an invalid
-   * request. That also means two different local models read as one company to
-   * `hasProviderDiversity`, so a local author paired with a local critic fails
-   * the cross-company check while `anthropic` + `local` passes. Issue #186
-   * covers moving independence onto model lineage; do not work around it here.
+   * request. Independence no longer rides on this string: it is decided by
+   * model lineage, so two different local models pair legitimately while still
+   * presenting one company to the adapter.
    */
   function providerId(company: string): "anthropic" | "openai" | "local" {
     if (company === "anthropic" || company === "openai" || company === "local") return company;
@@ -981,6 +1068,7 @@ function providerAgents(
     });
   }
 
+  const promptContext = modelFacingContext(context);
   const author = {
     execute: async ({
       executionId,
@@ -1000,7 +1088,7 @@ function providerAgents(
           executionId,
           runId,
           round,
-          context,
+          context: promptContext,
           retrievedEvidence,
           currentArtifact,
           findings,
@@ -1050,7 +1138,7 @@ function providerAgents(
           executionId,
           runId,
           round,
-          context,
+          context: promptContext,
           retrievedEvidence,
           artifact,
           deterministicFindings,

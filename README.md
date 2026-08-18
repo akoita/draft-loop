@@ -29,9 +29,11 @@ workflow:
 - canonical workspace, requirements, evidence, rubric, and model configuration
   contracts;
 - Zod schemas for persisted and exchanged context;
-- Anthropic and OpenAI adapters with strict structured-output requests;
-- provider-diversity checks, data-exposure policy enforcement, normalized
-  provider errors, usage/cost metadata, and deterministic tests;
+- Anthropic, OpenAI, and loopback-only local adapters with strict
+  structured-output requests;
+- independent-review checks by model lineage, data-exposure policy
+  enforcement, normalized provider errors, usage/cost metadata, and
+  deterministic tests;
 - local privacy guardrails, credential redaction, content-free operational
   events, a repository-grounded threat model, and a first/revised/manual
   evaluation comparison gate;
@@ -102,8 +104,9 @@ The monorepo separates product contracts from adapters:
 - `domain` defines framework-free concepts and workflow states.
 - `schemas` validates exchanged and persisted structures.
 - `orchestrator` coordinates rounds without knowing provider SDK details.
-- `providers` contains Anthropic/OpenAI adapter boundaries and provider
-  diversity checks.
+- `providers` contains the Anthropic, OpenAI, and local adapter boundaries and
+  the data-exposure policy they enforce. Independent review is decided in
+  `domain` by model lineage, not by provider company.
 - `ingestion` and `evidence` normalize local sources and connect claims to
   evidence.
 - `validation`, `evaluations`, and `artifacts` check and represent drafts.

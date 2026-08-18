@@ -119,6 +119,23 @@ async function providerWorkspace(prefix: string): Promise<string> {
   return root;
 }
 
+/** Reads the independence a run recorded on its context snapshot. */
+async function recordedIndependentReview(
+  root: string,
+  contextSnapshotId: string,
+): Promise<unknown> {
+  const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+  try {
+    const record = await storage.getContextSnapshot(contextSnapshotId);
+    const payload = record?.payload as
+      | { readonly modelConfiguration?: { readonly independentReview?: unknown } }
+      | undefined;
+    return payload?.modelConfiguration?.independentReview;
+  } finally {
+    await storage.close();
+  }
+}
+
 describe("local application driver", () => {
   it("fails closed before indexing when PDF extraction is unreliable", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-invalid-pdf-"));
@@ -468,14 +485,32 @@ describe("local application driver", () => {
     }
   });
 
-  it("still reads two local models as one company for the diversity rule", async () => {
-    // Documented limitation, not a design: `hasProviderDiversity` compares
-    // company strings, and both sides of a local pairing are the literal
-    // "local". Issue #186 moves independence onto model lineage.
+  it("runs two different local models as author and critic", async () => {
+    // The concrete outcome of moving independence onto lineage: a workspace
+    // with no hosted provider credit can still get an independent critique.
     const root = await providerWorkspace("draft-loop-local-pairing-");
+    const io = { write: () => undefined };
+    const credentialCalls: string[] = [];
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly model: string;
+        readonly messages: readonly { readonly content: string }[];
+      };
+      const serialized = body.messages[1]?.content ?? "";
+      return body.model === "qwen3-coder-30b"
+        ? localCompletion(authorProposal(evidenceChunkId(serialized)), "local-author-1")
+        : localCompletion({ findings: [] }, "local-critic-1");
+    });
     const driver = createLocalApplicationDriver({
+      resolveCredential: async (provider) => {
+        credentialCalls.push(provider);
+        return "unused";
+      },
       providerClientFactories: {
-        local: () => ({ fetch: (async () => localCompletion({}, "x")) as unknown as typeof fetch }),
+        local: (endpoint) => ({
+          ...(endpoint === undefined ? {} : { endpoint }),
+          fetch: localFetch as unknown as typeof fetch,
+        }),
       },
     });
 
@@ -491,14 +526,187 @@ describe("local application driver", () => {
           criticModel: "gpt-oss-20b",
           localEndpoint: "http://127.0.0.1:8080/v1",
         },
-        { write: () => undefined },
+        io,
       );
 
       expect(workspace.author).toEqual({ company: "local", model: "qwen3-coder-30b" });
       expect(workspace.critic).toEqual({ company: "local", model: "gpt-oss-20b" });
+
+      const snapshot = await driver.start({ root, allowProviderData: true }, io);
+
+      expect(snapshot.state).toBe("awaiting-approval");
+      expect(credentialCalls).toEqual([]);
+      expect(await recordedIndependentReview(root, snapshot.contextSnapshotId)).toEqual({
+        authorLineage: "local:qwen3-coder-30b",
+        criticLineage: "local:gpt-oss-20b",
+        lineagesDistinct: true,
+        required: true,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses one local model reviewing itself", async () => {
+    const root = await providerWorkspace("draft-loop-shared-lineage-");
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: (async () => localCompletion({}, "x")) as unknown as typeof fetch }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        { write: () => undefined },
+      );
+
       await expect(
         driver.start({ root, allowProviderData: true }, { write: () => undefined }),
-      ).rejects.toThrow(/different model companies/u);
+      ).rejects.toThrow(/different model lineages/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses two vendors the candidate declared as one lineage", async () => {
+    const root = await providerWorkspace("draft-loop-declared-lineage-");
+    const driver = createLocalApplicationDriver({
+      resolveCredential: async () => "fake-key",
+      providerClientFactories: { anthropic: () => anthropicCritiqueClient([]) },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "anthropic",
+          authorModel: "claude-sonnet-4-5",
+          authorLineage: "gpt-oss-20b",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+          criticLineage: "GPT-OSS-20B",
+        },
+        { write: () => undefined },
+      );
+
+      await expect(
+        driver.start({ root, allowProviderData: true }, { write: () => undefined }),
+      ).rejects.toThrow(/different model lineages/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("records the rationale that let one lineage review itself, and never sends it", async () => {
+    const root = await providerWorkspace("draft-loop-override-rationale-");
+    const io = { write: () => undefined };
+    const rationale = "One model, two prompt templates: a deliberate self-review experiment.";
+    const sentBodies: string[] = [];
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = String(init.body);
+      sentBodies.push(body);
+      const parsed = JSON.parse(body) as {
+        readonly messages: readonly { readonly content: string }[];
+      };
+      const serialized = parsed.messages[1]?.content ?? "";
+      return sentBodies.length === 1
+        ? localCompletion(authorProposal(evidenceChunkId(serialized)), "local-author-1")
+        : localCompletion({ findings: [] }, "local-critic-1");
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: (endpoint) => ({
+          ...(endpoint === undefined ? {} : { endpoint }),
+          fetch: localFetch as unknown as typeof fetch,
+        }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+          independenceOverrideRationale: rationale,
+        },
+        io,
+      );
+
+      const config = JSON.parse(
+        await readFile(join(root, ".draft-loop", "workspace.json"), "utf8"),
+      ) as JsonRecord;
+      expect(config.independenceOverrideRationale).toBe(rationale);
+
+      const snapshot = await driver.start({ root, allowProviderData: true }, io);
+
+      expect(snapshot.state).toBe("awaiting-approval");
+      expect(await recordedIndependentReview(root, snapshot.contextSnapshotId)).toEqual({
+        authorLineage: "local:qwen3-coder-30b",
+        criticLineage: "local:qwen3-coder-30b",
+        lineagesDistinct: false,
+        required: true,
+        overrideRationale: rationale,
+      });
+      // Operator prose about model choice is an auditor's field, not model input.
+      expect(sentBodies.length).toBeGreaterThan(0);
+      for (const body of sentBodies) {
+        expect(body).not.toContain("independentReview");
+        expect(body).not.toContain("self-review experiment");
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses an unusable override rationale without echoing it", async () => {
+    const root = await providerWorkspace("draft-loop-bad-rationale-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        { write: () => undefined },
+      );
+      const configPath = join(root, ".draft-loop", "workspace.json");
+      const config = JSON.parse(await readFile(configPath, "utf8")) as JsonRecord;
+      const secret = "s".repeat(501);
+      await writeFile(
+        configPath,
+        JSON.stringify({ ...config, independenceOverrideRationale: secret }, null, 2),
+        "utf8",
+      );
+
+      const failure = driver.readWorkspace(root);
+      await expect(failure).rejects.toBeInstanceOf(CliUserError);
+      await expect(failure).rejects.toThrow(/independenceOverrideRationale/u);
+      await expect(failure).rejects.not.toThrow(new RegExp(secret, "u"));
     } finally {
       await rm(root, { recursive: true, force: true });
     }

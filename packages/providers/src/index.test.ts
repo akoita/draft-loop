@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { ModelSelection } from "@draft-loop/domain";
+import { hasIndependentReview, type ModelSelection } from "@draft-loop/domain";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -615,7 +615,7 @@ describe("provider-neutral model adapters", () => {
     });
   });
 
-  it("preserves the provider-diversity compatibility helper", () => {
+  it("keeps the provider-company helper separate from independent review", () => {
     const critic: ModelSelection = {
       ...model,
       company: "openai",
@@ -625,5 +625,11 @@ describe("provider-neutral model adapters", () => {
     };
     expect(usesDifferentProviders(model, critic)).toBe(true);
     expect(usesDifferentProviders(model, { ...model, role: "critic" })).toBe(false);
+
+    // Same company, different weights: one provider receives the material, and
+    // the review is still independent. The two questions must not be conflated.
+    const sibling: ModelSelection = { ...model, modelId: "other-exact", role: "critic" };
+    expect(usesDifferentProviders(model, sibling)).toBe(false);
+    expect(hasIndependentReview(model, sibling)).toBe(true);
   });
 });

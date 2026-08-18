@@ -6,6 +6,15 @@ import type { ResponseCreateParamsNonStreaming } from "openai/resources/response
 export type ProviderId = ModelCompany;
 export type { AgentRole, ModelSelection };
 
+/**
+ * Whether two selections are served by different provider companies.
+ *
+ * This is a data-exposure question — who receives candidate material — and it
+ * is deliberately not the independent-review check. Independence is decided by
+ * model lineage in `@draft-loop/domain`'s `hasIndependentReview`; comparing
+ * companies both refuses two models from one company and accepts two vendors
+ * serving one set of weights. Do not reuse this as an independence gate.
+ */
 export function usesDifferentProviders(author: ModelSelection, critic: ModelSelection): boolean {
   return author.company.trim() !== critic.company.trim();
 }

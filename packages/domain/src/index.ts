@@ -187,11 +187,35 @@ export interface RetrievalPort {
 export type AgentRole = "author" | "critic";
 export type ModelCompany = "anthropic" | "openai" | (string & {});
 
+/**
+ * The longest accepted model-lineage label.
+ *
+ * A lineage is a short identifier a person types once and reads later; a bound
+ * keeps a persisted snapshot and every surface that renders it predictable.
+ */
+export const maximumModelLineageLength = 200;
+
+/**
+ * The longest accepted independence-override rationale.
+ *
+ * Long enough for a paragraph explaining why a shared lineage is acceptable,
+ * short enough that the value stays a note rather than a document.
+ */
+export const maximumIndependenceOverrideRationaleLength = 500;
+
 export interface ModelSelection {
   readonly company: ModelCompany;
   readonly modelId: string;
   readonly role: AgentRole;
   readonly promptTemplateVersion: string;
+  /**
+   * The weights this selection descends from, as claimed by the operator.
+   *
+   * Optional: when absent a lineage is derived from company and model id, so a
+   * workspace written before lineages existed keeps its current behaviour. See
+   * `deriveModelLineage`.
+   */
+  readonly lineage?: string;
 }
 
 export interface ModelSelectionInput {
@@ -199,18 +223,60 @@ export interface ModelSelectionInput {
   readonly modelId?: string;
   readonly role?: AgentRole;
   readonly promptTemplateVersion?: string;
+  readonly lineage?: string;
+}
+
+/**
+ * What independence was claimed for a run, and whether the claim held.
+ *
+ * Recorded on the context snapshot rather than recomputed by readers: the
+ * selections can be edited after a run, and an audit needs what was true when
+ * the run was configured.
+ */
+export interface IndependentReviewRecord {
+  readonly authorLineage: string;
+  readonly criticLineage: string;
+  readonly lineagesDistinct: boolean;
+  /** Whether independent review was demanded for this run. */
+  readonly required: boolean;
+  /** Present only when a shared lineage was actually overridden. */
+  readonly overrideRationale?: string;
 }
 
 export interface ModelConfiguration {
   readonly author: ModelSelection;
   readonly critic: ModelSelection;
+  /**
+   * Historic field name for "require independent review".
+   *
+   * Kept because it is persisted in every existing context snapshot; the
+   * property it now gates is lineage distinctness, not company distinctness.
+   */
   readonly requireProviderDiversity: boolean;
+  /**
+   * Absent on snapshots written before independence became a recorded property.
+   */
+  readonly independentReview?: IndependentReviewRecord;
 }
 
 export interface ModelConfigurationInput {
   readonly author?: ModelSelectionInput;
   readonly critic?: ModelSelectionInput;
   readonly requireProviderDiversity?: boolean;
+  /**
+   * Why a shared author and critic lineage is acceptable for this run.
+   *
+   * Supplying one is the only way past the independence gate; it is recorded
+   * with the run so a reader of the artifact can judge the choice.
+   */
+  readonly independenceOverrideRationale?: string;
+  /**
+   * Accepted so a canonical snapshot re-validates as its own input.
+   *
+   * A snapshot that once passed the gate carries its override in the record
+   * rather than in the raw field, and must not be refused on the way back in.
+   */
+  readonly independentReview?: IndependentReviewRecord;
 }
 
 export interface ContextSnapshot {
@@ -478,6 +544,24 @@ function validateModelSelection(
       "a prompt-template version is required.",
     );
   }
+  if (selection.lineage !== undefined) {
+    // Deliberately does not echo the value: this message reaches logs and UI.
+    if (!isNonEmptyString(selection.lineage)) {
+      addIssue(
+        issues,
+        "invalid-value",
+        `${field}.lineage`,
+        "must be a non-empty model lineage when provided.",
+      );
+    } else if (selection.lineage.trim().length > maximumModelLineageLength) {
+      addIssue(
+        issues,
+        "invalid-value",
+        `${field}.lineage`,
+        `must be at most ${maximumModelLineageLength} characters.`,
+      );
+    }
+  }
   return true;
 }
 
@@ -509,8 +593,6 @@ function validateModelConfiguration(
     issues,
   );
   const requireDiversity = configuration.requireProviderDiversity ?? true;
-  const authorCompany = (configuration.author as ModelSelectionInput).company;
-  const criticCompany = (configuration.critic as ModelSelectionInput).company;
   if (typeof requireDiversity !== "boolean") {
     addIssue(
       issues,
@@ -519,21 +601,28 @@ function validateModelConfiguration(
       "must be a boolean.",
     );
   }
-  if (
-    requireDiversity === true &&
-    hasAuthor &&
-    hasCritic &&
-    isNonEmptyString(authorCompany) &&
-    isNonEmptyString(criticCompany) &&
-    authorCompany.trim() === criticCompany.trim()
-  ) {
+
+  const rationaleInput = configuration.independenceOverrideRationale;
+  const rationaleProblem = independenceOverrideRationaleProblem(rationaleInput);
+  if (rationaleProblem !== undefined) {
     addIssue(
       issues,
-      "provider-diversity-required",
-      "modelConfiguration",
-      "author and critic must use different model companies in cross-company mode.",
+      "invalid-value",
+      "modelConfiguration.independenceOverrideRationale",
+      rationaleProblem,
     );
   }
+  const recordedRationale = recordedOverrideRationale(configuration);
+
+  if (requireDiversity !== true || !hasAuthor || !hasCritic) return;
+  const author = configuration.author as ModelSelectionInput;
+  const critic = configuration.critic as ModelSelectionInput;
+  if (!isNonEmptyString(author.company) || !isNonEmptyString(critic.company)) return;
+  if (!isNonEmptyString(author.modelId) || !isNonEmptyString(critic.modelId)) return;
+  if (deriveModelLineage(author) !== deriveModelLineage(critic)) return;
+  if (rationaleProblem === undefined && isNonEmptyString(rationaleInput)) return;
+  if (recordedRationale !== undefined) return;
+  addIssue(issues, "provider-diversity-required", "modelConfiguration", sharedLineageMessage);
 }
 
 function validateRubric(input: ContextSnapshotInput, issues: SemanticValidationIssue[]): void {
@@ -708,27 +797,174 @@ function normalizeModelSelection(selection: ModelSelectionInput): ModelSelection
     modelId: selection.modelId?.trim() as string,
     role: selection.role as AgentRole,
     promptTemplateVersion: selection.promptTemplateVersion?.trim() as string,
+    ...(isNonEmptyString(selection.lineage)
+      ? { lineage: normalizeLineageLabel(selection.lineage) }
+      : {}),
   };
 }
 
-export function hasProviderDiversity(author: ModelSelection, critic: ModelSelection): boolean {
-  return author.company.trim() !== critic.company.trim();
+function normalizeModelConfiguration(configuration: ModelConfigurationInput): ModelConfiguration {
+  const author = normalizeModelSelection(configuration.author as ModelSelectionInput);
+  const critic = normalizeModelSelection(configuration.critic as ModelSelectionInput);
+  const required = configuration.requireProviderDiversity ?? true;
+  const rationale =
+    configuration.independenceOverrideRationale ??
+    recordedOverrideRationale(configuration as unknown as Record<string, unknown>);
+  return {
+    author,
+    critic,
+    requireProviderDiversity: required,
+    independentReview: describeIndependentReview(author, critic, {
+      required,
+      ...(rationale === undefined ? {} : { overrideRationale: rationale }),
+    }),
+  };
 }
 
-export function assertProviderDiversity(
-  author: ModelSelection,
-  critic: ModelSelection,
-  required = true,
-): void {
-  if (required && !hasProviderDiversity(author, critic)) {
+/**
+ * Fold away differences that are spelling rather than lineage.
+ *
+ * `Local-A`, `local-a `, and `local  a` are one claim, not three; without this
+ * a typo would read as independence, which is the failure mode this whole
+ * mechanism exists to avoid.
+ */
+export function normalizeLineageLabel(value: string): string {
+  return value.trim().replace(/\s+/gu, " ").toLowerCase();
+}
+
+/** The fields a lineage can be read or derived from, declared or persisted. */
+export interface ModelLineageSource {
+  readonly company?: string | undefined;
+  readonly modelId?: string | undefined;
+  readonly lineage?: string | undefined;
+}
+
+/**
+ * The lineage a selection claims, declared or derived.
+ *
+ * The derived form is `<company>:<modelId>`, which is what keeps existing
+ * workspaces working without migration: `anthropic` and `openai` selections
+ * still differ, and `claude-opus-5` now differs from `claude-haiku-4-5`.
+ *
+ * This is the only place a lineage is computed. A lineage is a claim, never a
+ * measurement: nothing here can tell whether two labels denote the same
+ * weights, which is why the claim is recorded rather than trusted.
+ */
+export function deriveModelLineage(selection: ModelLineageSource): string {
+  const declared = selection.lineage;
+  if (typeof declared === "string" && declared.trim() !== "") {
+    return normalizeLineageLabel(declared);
+  }
+  return `${normalizeLineageLabel(selection.company ?? "")}:${normalizeLineageLabel(selection.modelId ?? "")}`;
+}
+
+const sharedLineageMessage =
+  "author and critic must use different model lineages; record an independence override rationale to proceed with one lineage.";
+
+function independenceOverrideRationaleProblem(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  // No branch echoes the value: it is user prose that travels into logs and UI.
+  if (typeof value !== "string" || value.trim() === "") {
+    return "must be a non-empty rationale when provided.";
+  }
+  if (value.trim().length > maximumIndependenceOverrideRationaleLength) {
+    return `must be at most ${maximumIndependenceOverrideRationaleLength} characters.`;
+  }
+  return undefined;
+}
+
+/**
+ * Normalize a rationale for persistence, or throw when it is unusable.
+ */
+export function normalizeIndependenceOverrideRationale(value: string): string {
+  const problem = independenceOverrideRationaleProblem(value);
+  if (problem !== undefined) {
     throw new SemanticValidationError([
       {
-        code: "provider-diversity-required",
-        field: "modelConfiguration",
-        message: "author and critic must use different model companies in cross-company mode.",
+        code: "invalid-value",
+        field: "modelConfiguration.independenceOverrideRationale",
+        message: problem,
       },
     ]);
   }
+  return value.trim();
+}
+
+/**
+ * The override a configuration already carries in its recorded independence.
+ *
+ * Undefined when there is none, or when the recorded value is unusable, so a
+ * malformed record can never widen the gate.
+ */
+function recordedOverrideRationale(configuration: Record<string, unknown>): string | undefined {
+  const record = configuration.independentReview;
+  if (!isRecord(record)) return undefined;
+  const rationale = record.overrideRationale;
+  if (independenceOverrideRationaleProblem(rationale) !== undefined) return undefined;
+  return typeof rationale === "string" ? rationale.trim() : undefined;
+}
+
+export interface IndependentReviewOptions {
+  readonly required?: boolean;
+  readonly overrideRationale?: string;
+}
+
+/** Whether the critic descends from different weights than the author. */
+export function hasIndependentReview(author: ModelSelection, critic: ModelSelection): boolean {
+  return deriveModelLineage(author) !== deriveModelLineage(critic);
+}
+
+/**
+ * What to record about independence for a given pairing.
+ *
+ * `overrideRationale` is present only when an override was load-bearing, so a
+ * reader never sees a rationale implying a block that never happened.
+ */
+export function describeIndependentReview(
+  author: ModelSelection,
+  critic: ModelSelection,
+  options: IndependentReviewOptions = {},
+): IndependentReviewRecord {
+  const required = options.required ?? true;
+  const authorLineage = deriveModelLineage(author);
+  const criticLineage = deriveModelLineage(critic);
+  const lineagesDistinct = authorLineage !== criticLineage;
+  const overridden = required && !lineagesDistinct && options.overrideRationale !== undefined;
+  return {
+    authorLineage,
+    criticLineage,
+    lineagesDistinct,
+    required,
+    ...(overridden
+      ? {
+          overrideRationale: normalizeIndependenceOverrideRationale(
+            options.overrideRationale as string,
+          ),
+        }
+      : {}),
+  };
+}
+
+export function assertIndependentReview(
+  author: ModelSelection,
+  critic: ModelSelection,
+  options: IndependentReviewOptions = {},
+): void {
+  const required = options.required ?? true;
+  if (!required || hasIndependentReview(author, critic)) return;
+  if (options.overrideRationale !== undefined) {
+    // Throws when the rationale is unusable, so an unusable one never counts
+    // as an override.
+    normalizeIndependenceOverrideRationale(options.overrideRationale);
+    return;
+  }
+  throw new SemanticValidationError([
+    {
+      code: "provider-diversity-required",
+      field: "modelConfiguration",
+      message: sharedLineageMessage,
+    },
+  ]);
 }
 
 export function createContextSnapshot(input: ContextSnapshotInput): ContextSnapshot {
@@ -772,11 +1008,7 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
       credibility: input.readinessRubric?.credibility as number,
     },
     evidenceManifest: (input.evidenceManifest ?? []).map(normalizeEvidenceSource),
-    modelConfiguration: {
-      author: normalizeModelSelection(modelConfiguration.author as ModelSelectionInput),
-      critic: normalizeModelSelection(modelConfiguration.critic as ModelSelectionInput),
-      requireProviderDiversity: modelConfiguration.requireProviderDiversity ?? true,
-    },
+    modelConfiguration: normalizeModelConfiguration(modelConfiguration),
     ...(input.profileId ? { profileId: input.profileId.trim() as ProfileId } : {}),
   };
 

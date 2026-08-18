@@ -19,6 +19,12 @@ export interface InitializeWorkspaceCommand {
   readonly authorModel?: string;
   readonly criticCompany?: string;
   readonly criticModel?: string;
+  /** The weights the author descends from; derived from company and model id when absent. */
+  readonly authorLineage?: string;
+  /** The weights the critic descends from; derived from company and model id when absent. */
+  readonly criticLineage?: string;
+  /** Why one lineage on both sides is acceptable; recorded with every run. */
+  readonly independenceOverrideRationale?: string;
   /** Loopback base URL of the local inference server, when a company is `local`. */
   readonly localEndpoint?: string;
   readonly maxRounds?: number;

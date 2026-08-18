@@ -1,5 +1,8 @@
 import {
   contextSchemaVersion,
+  deriveModelLineage,
+  maximumIndependenceOverrideRationaleLength,
+  maximumModelLineageLength,
   outputFormats,
   readinessDimensions,
   requirementPriorities,
@@ -105,15 +108,34 @@ export const modelSelectionSchema = z.object({
   modelId: nonEmptyString,
   role: z.enum(["author", "critic"]),
   promptTemplateVersion: nonEmptyString,
+  /** Derived from company and model id when absent; see `deriveModelLineage`. */
+  lineage: nonEmptyString.max(maximumModelLineageLength).optional(),
 });
 
 export type ModelSelection = z.infer<typeof modelSelectionSchema>;
+
+/** What independence was claimed for a run, and whether the claim held. */
+export const independentReviewSchema = z.object({
+  authorLineage: nonEmptyString,
+  criticLineage: nonEmptyString,
+  lineagesDistinct: z.boolean(),
+  required: z.boolean(),
+  overrideRationale: nonEmptyString.max(maximumIndependenceOverrideRationaleLength).optional(),
+});
+
+export type IndependentReview = z.infer<typeof independentReviewSchema>;
 
 export const modelConfigurationSchema = z
   .object({
     author: modelSelectionSchema,
     critic: modelSelectionSchema,
+    /** Historic name; the property it gates is lineage distinctness. */
     requireProviderDiversity: z.boolean().default(true),
+    independenceOverrideRationale: nonEmptyString
+      .max(maximumIndependenceOverrideRationaleLength)
+      .optional(),
+    /** Absent on snapshots written before independence became recorded. */
+    independentReview: independentReviewSchema.optional(),
   })
   .superRefine((configuration, context) => {
     if (configuration.author.role !== "author") {
@@ -132,12 +154,15 @@ export const modelConfigurationSchema = z
     }
     if (
       configuration.requireProviderDiversity &&
-      configuration.author.company === configuration.critic.company
+      configuration.independenceOverrideRationale === undefined &&
+      configuration.independentReview?.overrideRationale === undefined &&
+      deriveModelLineage(configuration.author) === deriveModelLineage(configuration.critic)
     ) {
       context.addIssue({
         code: "custom",
-        path: ["critic", "company"],
-        message: "author and critic must use different model companies in cross-company mode",
+        path: ["critic", "lineage"],
+        message:
+          "author and critic must use different model lineages; record an independenceOverrideRationale to proceed with one lineage",
       });
     }
   });

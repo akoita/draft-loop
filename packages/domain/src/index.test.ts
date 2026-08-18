@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  assertProviderDiversity,
+  assertIndependentReview,
   type ContextSnapshotInput,
   createAgentContextReference,
   createContextSnapshot,
   createProfile,
   createWorkspace,
-  hasProviderDiversity,
+  deriveModelLineage,
+  describeIndependentReview,
+  hasIndependentReview,
   type ModelConfigurationInput,
   type ModelSelection,
+  maximumIndependenceOverrideRationaleLength,
   SemanticValidationError,
   workflowStates,
 } from "./index.js";
@@ -124,7 +127,19 @@ describe("domain workspace and context snapshots", () => {
     expect(critic.role).toBe("critic");
   });
 
-  it("rejects same-company pairings when cross-company mode is required", () => {
+  it("derives a lineage from company and model id when none is declared", () => {
+    expect(deriveModelLineage({ company: "Anthropic", modelId: "Claude-Opus-5" })).toBe(
+      "anthropic:claude-opus-5",
+    );
+    expect(deriveModelLineage({ company: " anthropic ", modelId: "claude-haiku-4-5" })).toBe(
+      "anthropic:claude-haiku-4-5",
+    );
+    expect(
+      deriveModelLineage({ company: "vendor-a", modelId: "hosted-oss", lineage: " Base  Model " }),
+    ).toBe("base model");
+  });
+
+  it("rejects a shared lineage when independent review is required", () => {
     const configuration = validInput().modelConfiguration as ModelConfigurationInput;
     const input = validInput({
       modelConfiguration: {
@@ -132,29 +147,147 @@ describe("domain workspace and context snapshots", () => {
         critic: {
           ...configuration.critic,
           company: "anthropic",
+          modelId: "claude-opus-exact",
         },
       },
     });
 
-    expect(() => createContextSnapshot(input)).toThrow(/different model companies/i);
+    expect(() => createContextSnapshot(input)).toThrow(/different model lineages/i);
     const author = configuration.author as ModelSelection;
     const critic = { ...author, role: "critic" } as ModelSelection;
-    expect(hasProviderDiversity(author, critic)).toBe(false);
-    expect(() => assertProviderDiversity(author, critic)).toThrow(/different model companies/i);
+    expect(hasIndependentReview(author, critic)).toBe(false);
+    expect(() => assertIndependentReview(author, critic)).toThrow(/different model lineages/i);
   });
 
-  it("treats provider company whitespace as non-distinct", () => {
+  it("refuses two vendors that declare one shared lineage", () => {
     const configuration = validInput().modelConfiguration as ModelConfigurationInput;
-    const author = {
-      ...configuration.author,
-      company: " anthropic ",
-    } as ModelSelection;
-    const critic = {
-      ...configuration.critic,
-      company: "anthropic",
-    } as ModelSelection;
+    const input = validInput({
+      modelConfiguration: {
+        ...configuration,
+        author: { ...configuration.author, lineage: "gpt-oss-20b" },
+        critic: { ...configuration.critic, lineage: "gpt-oss-20b" },
+      },
+    });
 
-    expect(hasProviderDiversity(author, critic)).toBe(false);
+    expect(() => createContextSnapshot(input)).toThrow(/different model lineages/i);
+  });
+
+  it("accepts two models from one company with different lineages", () => {
+    const configuration = validInput().modelConfiguration as ModelConfigurationInput;
+    const snapshot = createContextSnapshot(
+      validInput({
+        modelConfiguration: {
+          ...configuration,
+          author: { ...configuration.author, company: "anthropic", modelId: "claude-opus-5" },
+          critic: { ...configuration.critic, company: "anthropic", modelId: "claude-haiku-4-5" },
+        },
+      }),
+    );
+
+    expect(snapshot.modelConfiguration.independentReview).toEqual({
+      authorLineage: "anthropic:claude-opus-5",
+      criticLineage: "anthropic:claude-haiku-4-5",
+      lineagesDistinct: true,
+      required: true,
+    });
+  });
+
+  it("keeps an existing cross-company pairing independent", () => {
+    const snapshot = createContextSnapshot(validInput());
+
+    expect(snapshot.modelConfiguration.independentReview).toEqual({
+      authorLineage: "anthropic:claude-opus-exact",
+      criticLineage: "openai:gpt-exact",
+      lineagesDistinct: true,
+      required: true,
+    });
+  });
+
+  it("records a shared lineage that a rationale overrode", () => {
+    const configuration = validInput().modelConfiguration as ModelConfigurationInput;
+    const snapshot = createContextSnapshot(
+      validInput({
+        modelConfiguration: {
+          ...configuration,
+          critic: { ...configuration.critic, company: "anthropic", modelId: "claude-opus-exact" },
+          independenceOverrideRationale: "  Comparing two prompt templates on one model.  ",
+        },
+      }),
+    );
+
+    expect(snapshot.modelConfiguration.independentReview).toEqual({
+      authorLineage: "anthropic:claude-opus-exact",
+      criticLineage: "anthropic:claude-opus-exact",
+      lineagesDistinct: false,
+      required: true,
+      overrideRationale: "Comparing two prompt templates on one model.",
+    });
+  });
+
+  it("does not record a rationale that overrode nothing", () => {
+    const configuration = validInput().modelConfiguration as ModelConfigurationInput;
+    const snapshot = createContextSnapshot(
+      validInput({
+        modelConfiguration: {
+          ...configuration,
+          independenceOverrideRationale: "Not needed here.",
+        },
+      }),
+    );
+
+    expect(snapshot.modelConfiguration.independentReview?.overrideRationale).toBeUndefined();
+    expect(snapshot.modelConfiguration.independentReview?.lineagesDistinct).toBe(true);
+  });
+
+  it("rejects an unusable override rationale without echoing it", () => {
+    const configuration = validInput().modelConfiguration as ModelConfigurationInput;
+    const secret = "x".repeat(maximumIndependenceOverrideRationaleLength + 1);
+    const build = (rationale: unknown): ContextSnapshotInput =>
+      validInput({
+        modelConfiguration: {
+          ...configuration,
+          critic: { ...configuration.critic, company: "anthropic", modelId: "claude-opus-exact" },
+          independenceOverrideRationale: rationale as string,
+        },
+      });
+
+    expect(() => createContextSnapshot(build("   "))).toThrow(/non-empty rationale/i);
+    expect(() => createContextSnapshot(build(42))).toThrow(/non-empty rationale/i);
+    try {
+      createContextSnapshot(build(secret));
+      throw new Error("an over-long rationale must be refused.");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SemanticValidationError);
+      expect((error as Error).message).toMatch(/at most 500 characters/i);
+      expect((error as Error).message).not.toContain(secret);
+    }
+  });
+
+  it("rejects a lineage that is empty or over-long", () => {
+    const configuration = validInput().modelConfiguration as ModelConfigurationInput;
+    const withLineage = (lineage: string): ContextSnapshotInput =>
+      validInput({
+        modelConfiguration: { ...configuration, author: { ...configuration.author, lineage } },
+      });
+
+    expect(() => createContextSnapshot(withLineage("  "))).toThrow(/non-empty model lineage/i);
+    expect(() => createContextSnapshot(withLineage("l".repeat(201)))).toThrow(
+      /at most 200 characters/i,
+    );
+  });
+
+  it("treats lineage whitespace and casing as one claim", () => {
+    const configuration = validInput().modelConfiguration as ModelConfigurationInput;
+    const author = { ...configuration.author, lineage: " Local-A " } as ModelSelection;
+    const critic = { ...configuration.critic, lineage: "local-a" } as ModelSelection;
+
+    expect(hasIndependentReview(author, critic)).toBe(false);
+    expect(describeIndependentReview(author, critic, { required: false })).toEqual({
+      authorLineage: "local-a",
+      criticLineage: "local-a",
+      lineagesDistinct: false,
+      required: false,
+    });
   });
 
   it("rejects duplicate normalized requirement and evidence source ids", () => {

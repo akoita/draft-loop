@@ -130,17 +130,91 @@ describe("canonical context snapshot schemas", () => {
     expect(() => contextSnapshotInputSchema.parse({ ...validInput(), language: " " })).toThrow();
   });
 
-  it("rejects same-company model pairings only when cross-company mode is required", () => {
+  it("rejects a shared lineage only when independent review is required", () => {
     const base = validInput().modelConfiguration as ModelConfigurationInput;
-    const sameCompany = {
+    const sharedLineage = {
       ...base,
-      critic: { ...base.critic, company: "anthropic" },
+      critic: { ...base.critic, company: "anthropic", modelId: "claude-opus-exact" },
     };
 
-    expect(() => modelConfigurationSchema.parse(sameCompany)).toThrow(/different model companies/i);
+    expect(() => modelConfigurationSchema.parse(sharedLineage)).toThrow(
+      /different model lineages/i,
+    );
     expect(
-      modelConfigurationSchema.parse({ ...sameCompany, requireProviderDiversity: false }),
+      modelConfigurationSchema.parse({ ...sharedLineage, requireProviderDiversity: false }),
     ).toMatchObject({ requireProviderDiversity: false });
+  });
+
+  it("accepts two models from one company and refuses two vendors of one lineage", () => {
+    const base = validInput().modelConfiguration as ModelConfigurationInput;
+
+    expect(
+      modelConfigurationSchema.parse({
+        ...base,
+        author: { ...base.author, company: "anthropic", modelId: "claude-opus-5" },
+        critic: { ...base.critic, company: "anthropic", modelId: "claude-haiku-4-5" },
+      }),
+    ).toMatchObject({ critic: { modelId: "claude-haiku-4-5" } });
+
+    expect(() =>
+      modelConfigurationSchema.parse({
+        ...base,
+        author: { ...base.author, lineage: "gpt-oss-20b" },
+        critic: { ...base.critic, lineage: "gpt-oss-20b" },
+      }),
+    ).toThrow(/different model lineages/i);
+  });
+
+  it("lets a recorded rationale override a shared lineage and bounds the rationale", () => {
+    const base = validInput().modelConfiguration as ModelConfigurationInput;
+    const sharedLineage = {
+      ...base,
+      critic: { ...base.critic, company: "anthropic", modelId: "claude-opus-exact" },
+    };
+
+    expect(
+      modelConfigurationSchema.parse({
+        ...sharedLineage,
+        independenceOverrideRationale: "One model, two prompt templates, deliberately compared.",
+      }),
+    ).toMatchObject({
+      independenceOverrideRationale: "One model, two prompt templates, deliberately compared.",
+    });
+    expect(() =>
+      modelConfigurationSchema.parse({ ...sharedLineage, independenceOverrideRationale: "  " }),
+    ).toThrow();
+    expect(() =>
+      modelConfigurationSchema.parse({
+        ...sharedLineage,
+        independenceOverrideRationale: "r".repeat(501),
+      }),
+    ).toThrow();
+  });
+
+  it("carries the recorded independence through a canonical snapshot round trip", () => {
+    const snapshot = createContextSnapshot(validInput());
+    const parsed = contextSnapshotSchema.parse(snapshot);
+
+    expect(parsed.modelConfiguration.independentReview).toEqual({
+      authorLineage: "anthropic:claude-opus-exact",
+      criticLineage: "openai:gpt-exact",
+      lineagesDistinct: true,
+      required: true,
+    });
+    expect(
+      contextSnapshotSchema.parse(
+        JSON.parse(
+          JSON.stringify({
+            ...snapshot,
+            modelConfiguration: {
+              author: snapshot.modelConfiguration.author,
+              critic: snapshot.modelConfiguration.critic,
+              requireProviderDiversity: true,
+            },
+          }),
+        ),
+      ).modelConfiguration.independentReview,
+    ).toBeUndefined();
   });
 
   it("requires the author and critic roles on their corresponding selections", () => {
