@@ -389,6 +389,50 @@ function identifier(value: unknown): string {
   return result;
 }
 
+/**
+ * An exact provider model id such as `claude-haiku-4-5`, `gpt-5.6-luna`, or a
+ * provider-qualified `us.anthropic.claude-...`. These strings reach a provider
+ * adapter, so the charset stays conservative.
+ */
+function modelId(value: unknown): string {
+  const result = stringValue(value, 128).trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(result)) {
+    return invalidInput();
+  }
+  return result;
+}
+
+/**
+ * A human-readable CV section title such as `Summary` or `Work Experience`.
+ * Titles are compared against generated headings, so the charset stays close
+ * to what a heading can hold.
+ */
+function sectionTitle(value: unknown): string {
+  const result = stringValue(value, 64).trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9 -]{0,63}$/u.test(result)) {
+    return invalidInput();
+  }
+  return result;
+}
+
+/**
+ * An empty list is rejected rather than accepted as "no requirements": the
+ * application-layer config check only rejects bad entries, so an empty list
+ * would pass it and silently disable the completeness check. Duplicates fail
+ * loudly instead of being de-duplicated, because a caller sending them has a
+ * bug.
+ */
+function sectionTitles(value: unknown): readonly string[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > 12) {
+    return invalidInput();
+  }
+  const titles = value.map((entry) => sectionTitle(entry));
+  if (new Set(titles).size !== titles.length) {
+    return invalidInput();
+  }
+  return titles;
+}
+
 function workspaceName(value: unknown): string {
   const result = stringValue(value, 120);
   if (
@@ -452,6 +496,14 @@ function optionalIdentifier(value: unknown): string | undefined {
   return value === undefined ? undefined : identifier(value);
 }
 
+function optionalModelId(value: unknown): string | undefined {
+  return value === undefined ? undefined : modelId(value);
+}
+
+function optionalSectionTitles(value: unknown): readonly string[] | undefined {
+  return value === undefined ? undefined : sectionTitles(value);
+}
+
 function optionalRelativePath(value: unknown): string | undefined {
   return value === undefined ? undefined : relativePath(value);
 }
@@ -473,12 +525,20 @@ function validateWorkspaceOpenInput(value: unknown): WorkspaceOpenInput {
 
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["name", "mode"])) return invalidInput();
+  if (!hasOnlyKeys(input, ["name", "mode", "authorModel", "criticModel", "requiredSections"])) {
+    return invalidInput();
+  }
   const mode =
     input.mode === undefined ? undefined : enumValue(input.mode, ["real", "demo"] as const);
+  const authorModel = optionalModelId(input.authorModel);
+  const criticModel = optionalModelId(input.criticModel);
+  const requiredSections = optionalSectionTitles(input.requiredSections);
   return {
     name: workspaceName(input.name),
     ...(mode === undefined ? {} : { mode }),
+    ...(authorModel === undefined ? {} : { authorModel }),
+    ...(criticModel === undefined ? {} : { criticModel }),
+    ...(requiredSections === undefined ? {} : { requiredSections }),
   };
 }
 

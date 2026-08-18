@@ -7,7 +7,24 @@ on:
         description: "Git ref or commit SHA to validate; defaults to the triggering ref"
         required: false
         type: string
+      author_model:
+        description: "Overrides the gate's default author model id; leave empty to use the default"
+        required: false
+        type: string
+      critic_model:
+        description: "Overrides the gate's default critic model id; leave empty to use the default"
+        required: false
+        type: string
   workflow_dispatch:
+    inputs:
+      author_model:
+        description: "Overrides the gate's default author model id; leave empty to use the default"
+        required: false
+        type: string
+      critic_model:
+        description: "Overrides the gate's default critic model id; leave empty to use the default"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -62,6 +79,8 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: ${{ inputs.author_model }}
+          DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: ${{ inputs.critic_model }}
         run: pnpm test:e2e:live -- "${{ steps.executable.outputs.path }}" "live-evidence/linux-x64.json"
 
       - name: Upload sanitized evidence

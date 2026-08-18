@@ -132,10 +132,14 @@ change the default here rather than leaving the gate flaky.
 
 This same gate also runs in CI. The **Release** workflow runs it as a blocking
 job between source validation and artifact building, so no release artifact is
-built before a real Anthropic-author / OpenAI-critic run has passed. It is
-also independently runnable on demand from the Actions tab via the **Live
-provider E2E** workflow's manual dispatch, for a smoke run outside a release.
-In CI the gate authenticates from the `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`
+built before a real Anthropic-author / OpenAI-critic run has passed. A release
+run always uses the gate's default model pair; it does not expose the
+override. It is also independently runnable on demand from the Actions tab via
+the **Live provider E2E** workflow's manual dispatch, for a smoke run outside
+a release. That manual dispatch accepts optional `author_model` and
+`critic_model` inputs that map to the same override environment variables
+described above; leaving either empty runs the gate's default pair. In CI the
+gate authenticates from the `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`
 repository secrets rather than the Electron credential store. The job fails —
 it never skips — when either secret or provider quota is unavailable.
 

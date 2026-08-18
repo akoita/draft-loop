@@ -1,10 +1,17 @@
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
+import { CliUserError } from "@draft-loop/application";
 import { type ConsentedPilotCase, runConsentedPilotHarness } from "@draft-loop/evaluations";
 
-/** A user-correctable problem. Never carries case-file content. */
-export class PilotReportUserError extends Error {
+/**
+ * A user-correctable problem. Never carries case-file content.
+ *
+ * It extends `CliUserError` so the top-level formatter prints the message
+ * verbatim rather than truncating a long repository path into the generic
+ * fallback, which would drop the only actionable part of the message.
+ */
+export class PilotReportUserError extends CliUserError {
   constructor(message: string) {
     super(message);
     this.name = "PilotReportUserError";
@@ -18,8 +25,14 @@ export interface PilotReportIo {
 export interface PilotReportOptions {
   /** Absolute path to the private case file. Must live outside any repository. */
   readonly casePath: string;
-  /** Where the sanitized Markdown summary is written. */
-  readonly outputPath: string;
+  /**
+   * Where the sanitized Markdown summary is written.
+   *
+   * When omitted it defaults to `pilot-report.md` beside the case file, which
+   * this command has already proven sits outside any repository. An explicit
+   * path is honoured exactly as given, including one inside a repository.
+   */
+  readonly outputPath?: string;
 }
 
 /**
@@ -125,7 +138,10 @@ export async function generateSanitizedPilotReport(
 
   const cases = parsePilotCases(raw);
   const report = runConsentedPilotHarness(cases, { requireOutcome: true });
-  const outputPath = resolve(options.outputPath);
+  const outputPath =
+    options.outputPath === undefined
+      ? join(dirname(casePath), "pilot-report.md")
+      : resolve(options.outputPath);
   await writeFile(outputPath, `${report.markdownReport.trimEnd()}\n`, {
     encoding: "utf8",
     mode: 0o600,

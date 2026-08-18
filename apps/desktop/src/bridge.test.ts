@@ -127,6 +127,143 @@ describe("desktop capability bridge", () => {
     ).toThrow("invalid");
   });
 
+  it("accepts the workspace.create shape the live provider E2E gate sends", () => {
+    // Regression: `authorModel`/`criticModel` were added to WorkspaceCreateInput and
+    // to the host handler without being added to the validator allowlist, so the
+    // live gate failed at workspace creation before reaching any provider.
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: {
+          name: "draft-loop-live-e2e",
+          mode: "real",
+          authorModel: "claude-haiku-4-5",
+          criticModel: "gpt-5.6-luna",
+        },
+      }),
+    ).toEqual({
+      type: "workspace.create",
+      input: {
+        name: "draft-loop-live-e2e",
+        mode: "real",
+        authorModel: "claude-haiku-4-5",
+        criticModel: "gpt-5.6-luna",
+      },
+    });
+  });
+
+  it("keeps workspace.create model ids optional, bounded, and trimmed", () => {
+    const withoutModels = validateBridgeCommand({
+      type: "workspace.create",
+      input: { name: "candidate", mode: "real" },
+    });
+    expect(withoutModels).toEqual({
+      type: "workspace.create",
+      input: { name: "candidate", mode: "real" },
+    });
+    expect(Object.keys(withoutModels.input)).toEqual(["name", "mode"]);
+
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: {
+          name: "candidate",
+          authorModel: "  us.anthropic.claude-sonnet-4-5  ",
+          criticModel: "gpt-5.6-luna",
+        },
+      }),
+    ).toEqual({
+      type: "workspace.create",
+      input: {
+        name: "candidate",
+        authorModel: "us.anthropic.claude-sonnet-4-5",
+        criticModel: "gpt-5.6-luna",
+      },
+    });
+
+    for (const authorModel of [
+      "",
+      "   ",
+      42,
+      null,
+      "a".repeat(129),
+      "gpt 5.6 luna",
+      "claude/haiku",
+      "-leading-hyphen",
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "workspace.create",
+          input: { name: "candidate", mode: "real", authorModel },
+        }),
+      ).toThrow("invalid");
+    }
+
+    expect(() =>
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "candidate", mode: "real", criticModel: "gpt$5" },
+      }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "candidate", mode: "real", model: "gpt-5.6-luna" },
+      }),
+    ).toThrow("invalid");
+  });
+
+  it("accepts workspace.create required sections and rejects an empty list", () => {
+    // Regression: `requiredSections` was added to WorkspaceCreateInput and to the
+    // host handler without being added to the validator allowlist, so the path
+    // #190 built - bridge to service.initialize - rejected every call.
+    const accepted = validateBridgeCommand({
+      type: "workspace.create",
+      input: {
+        name: "candidate",
+        mode: "real",
+        requiredSections: ["  Summary  ", "Work Experience", "Education", "Skills"],
+      },
+    });
+    expect(accepted).toEqual({
+      type: "workspace.create",
+      input: {
+        name: "candidate",
+        mode: "real",
+        requiredSections: ["Summary", "Work Experience", "Education", "Skills"],
+      },
+    });
+
+    const omitted = validateBridgeCommand({
+      type: "workspace.create",
+      input: { name: "candidate", mode: "real" },
+    });
+    expect(Object.keys(omitted.input)).toEqual(["name", "mode"]);
+
+    for (const requiredSections of [
+      [],
+      "Summary",
+      {},
+      Array.from({ length: 13 }, (_, index) => `Section ${index}`),
+      ["Summary", ""],
+      ["Summary", "   "],
+      ["Summary", 42],
+      ["Summary", null],
+      ["Summary", "a".repeat(65)],
+      ["Summary", "Skills / Tools"],
+      ["Summary", "-leading-hyphen"],
+      ["Summary", "Summary"],
+      ["Summary", "  Summary  "],
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "workspace.create",
+          input: { name: "candidate", mode: "real", requiredSections },
+        }),
+      ).toThrow("invalid");
+    }
+  });
+
   it("rejects traversal and unbounded export paths before invoking the host", async () => {
     const invoke = vi.fn<NativeBridge["invoke"]>();
     const port = createCapabilityPort(bridge(invoke));

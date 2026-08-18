@@ -46,6 +46,10 @@ that file carries the drafts and the manual baseline. It runs
 `runConsentedPilotHarness(cases, { requireOutcome: true })` and writes only the
 generated Markdown summary; nothing from the case file reaches the output.
 
+Omitting `[output.md]` writes `pilot-report.md` beside the case file, which the
+command has already proven sits outside any repository. An explicit path is
+honoured exactly as given, including one inside the repository.
+
 The harness also computes critical-requirement coverage and deterministic
 unsupported-claim counts for the first draft, revised draft, and manual
 baseline. These are signals for the review, not truth proofs.

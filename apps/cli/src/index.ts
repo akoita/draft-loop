@@ -103,9 +103,15 @@ export function createCli(): Command {
       "Generate the sanitized consented-pilot summary from a private case file held outside the repository",
     )
     .argument("<case-file>", "path to the private consented case file")
-    .argument("[output]", "where to write the sanitized Markdown summary", "./pilot-report.md")
-    .action(async (caseFile: string, output: string) => {
-      await generateSanitizedPilotReport({ casePath: caseFile, outputPath: output });
+    .argument(
+      "[output]",
+      "where to write the sanitized Markdown summary (default: next to the case file)",
+    )
+    .action(async (caseFile: string, output: string | undefined) => {
+      await generateSanitizedPilotReport({
+        casePath: caseFile,
+        ...(output === undefined ? {} : { outputPath: output }),
+      });
     });
 
   command
