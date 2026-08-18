@@ -7,7 +7,13 @@
  * projections.
  */
 
-import type { DesktopReviewState, ReviewAction } from "./model.js";
+import type {
+  DesktopReviewState,
+  IndependentReviewView,
+  ProviderExposureView,
+  ProviderFailureView,
+  ReviewAction,
+} from "./model.js";
 
 export const bridgeCapabilities = [
   "workspace.open",
@@ -105,6 +111,17 @@ function inputKeys<Input extends object>() {
     },
   ): Keys => keys;
 }
+
+/**
+ * The same guard, for the allowlists that police host responses.
+ *
+ * An alias rather than a second copy: the drift and the failure are identical,
+ * only the direction of travel differs. Without it a field added to a result
+ * interface reaches the renderer through an allowlist that has never heard of
+ * it, and the host's honest answer is rejected as invalid at runtime with
+ * nothing in the build to say so.
+ */
+const resultKeys = inputKeys;
 
 export interface WorkspaceOpenInput {
   /** The native host owns the folder picker; no filesystem path crosses this API. */
@@ -250,6 +267,9 @@ export interface WorkspaceResult {
   readonly workspace: WorkspaceSummary;
 }
 
+const workspaceResultKeys = resultKeys<WorkspaceResult>()(["workspace"]);
+const workspaceSummaryKeys = resultKeys<WorkspaceSummary>()(["id", "name"]);
+
 export interface RunStatus {
   readonly workspaceId: string;
   readonly runId: string | null;
@@ -257,6 +277,52 @@ export interface RunStatus {
   readonly round: number;
   readonly approval: RunApproval;
 }
+
+const runStatusResultKeys = resultKeys<RunStatus>()([
+  "workspaceId",
+  "runId",
+  "state",
+  "round",
+  "approval",
+]);
+
+/**
+ * The review state crosses the bridge whole rather than field by field, so
+ * these guard the parts this module actually inspects. `providerExposure` is
+ * inspected because it carries the independence claim a person reads just
+ * before approving, and prose that reaches that panel is validated like any
+ * other value from the host.
+ */
+const providerExposureResultKeys = resultKeys<ProviderExposureView>()([
+  "author",
+  "critic",
+  "transmissionAllowed",
+  "sensitiveData",
+  "requestedRetention",
+  "independentReview",
+]);
+
+const independentReviewResultKeys = resultKeys<IndependentReviewView>()([
+  "authorLineage",
+  "criticLineage",
+  "lineagesDistinct",
+  "required",
+  "overrideRationale",
+]);
+
+const providerFailureResultKeys = resultKeys<ProviderFailureView>()([
+  "code",
+  "explanation",
+  "provider",
+  "model",
+  "step",
+  "attempt",
+  "maxAttempts",
+  "retryAvailable",
+  "retryNotBefore",
+  "availableActions",
+  "diagnostics",
+]);
 
 export type ReviewStateResult = DesktopReviewState;
 
@@ -272,6 +338,15 @@ export interface FileSelectResult {
   readonly files: readonly SelectedFile[];
 }
 
+const fileSelectResultKeys = resultKeys<FileSelectResult>()(["files"]);
+const selectedFileKeys = resultKeys<SelectedFile>()([
+  "id",
+  "name",
+  "relativePath",
+  "mediaType",
+  "byteLength",
+]);
+
 export interface SourceAddUrlResult {
   readonly sourcePath: string;
   readonly originalUrl: string;
@@ -281,6 +356,15 @@ export interface SourceAddUrlResult {
   readonly mediaType: SupportedMediaType;
 }
 
+const sourceAddUrlResultKeys = resultKeys<SourceAddUrlResult>()([
+  "sourcePath",
+  "originalUrl",
+  "finalUrl",
+  "kind",
+  "extractionStatus",
+  "mediaType",
+]);
+
 export interface ExportResult {
   readonly exportId: string;
   readonly workspaceId: string;
@@ -288,6 +372,14 @@ export interface ExportResult {
   readonly format: ExportFormat;
   readonly relativePath: string;
 }
+
+const exportResultKeys = resultKeys<ExportResult>()([
+  "exportId",
+  "workspaceId",
+  "runId",
+  "format",
+  "relativePath",
+]);
 
 export interface CredentialStatus {
   readonly provider: CredentialProvider;
@@ -298,6 +390,13 @@ export interface CredentialStatus {
 }
 
 export type CredentialResult = CredentialStatus;
+
+const credentialResultKeys = resultKeys<CredentialResult>()([
+  "provider",
+  "configured",
+  "source",
+  "protection",
+]);
 
 export interface BridgeCommandInputMap {
   "workspace.open": WorkspaceOpenInput;
@@ -409,6 +508,19 @@ const exportExtensionByFormat: Readonly<Record<ExportFormat, string>> = {
 
 const commandNames = new Set<BridgeCommandName>(bridgeCapabilities);
 
+/**
+ * Ceilings for the recorded independence claim.
+ *
+ * The domain owns the real limits; these are this module's own bound on how
+ * much host-supplied text may reach the trust panel. The lineage ceiling is
+ * deliberately looser than the domain's 200-character limit on a *declared*
+ * lineage, because a derived one is `company:modelId` and is bounded only by
+ * those two fields. Refusing a lineage the domain accepted would fail the
+ * whole review load over a label.
+ */
+const maximumLineageLength = 512;
+const maximumOverrideRationaleLength = 500;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -431,6 +543,30 @@ function stringValue(value: unknown, maxLength: number): string {
     return invalidInput();
   }
   if ([...value].some((character) => character < " " || character === "\u007f")) {
+    return invalidInput();
+  }
+  return value;
+}
+
+/**
+ * A bounded paragraph of operator prose.
+ *
+ * Unlike `stringValue` this admits newlines and tabs: the independence
+ * override rationale is something a person wrote for an auditor, and the
+ * domain trims it rather than flattening it, so refusing a line break here
+ * would reject a claim the domain already accepted. Every other control
+ * character is still refused.
+ */
+function proseValue(value: unknown, maxLength: number): string {
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > maxLength) {
+    return invalidInput();
+  }
+  if (
+    [...value].some(
+      (character) =>
+        (character < " " && character !== "\n" && character !== "\t") || character === "\u007f",
+    )
+  ) {
     return invalidInput();
   }
   return value;
@@ -919,8 +1055,9 @@ function displayName(value: unknown): string {
 
 function normalizeWorkspaceResult(value: unknown): WorkspaceResult {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, ["workspace"])) return invalidInput();
+  if (!hasOnlyKeys(result, workspaceResultKeys)) return invalidInput();
   const workspace = requireRecord(result.workspace);
+  if (!hasOnlyKeys(workspace, workspaceSummaryKeys)) return invalidInput();
   return {
     workspace: {
       id: identifier(workspace.id),
@@ -931,9 +1068,7 @@ function normalizeWorkspaceResult(value: unknown): WorkspaceResult {
 
 function normalizeRunStatus(value: unknown): RunStatus {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, ["workspaceId", "runId", "state", "round", "approval"])) {
-    return invalidInput();
-  }
+  if (!hasOnlyKeys(result, runStatusResultKeys)) return invalidInput();
   const runId = result.runId === null ? null : identifier(result.runId);
   return {
     workspaceId: identifier(result.workspaceId),
@@ -954,23 +1089,25 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   ) {
     return invalidInput();
   }
+  const exposure = requireRecord(value.providerExposure);
+  if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
+  const independentReview = exposure.independentReview;
+  if (independentReview !== null && independentReview !== undefined) {
+    const record = requireRecord(independentReview);
+    if (!hasOnlyKeys(record, independentReviewResultKeys)) return invalidInput();
+    stringValue(record.authorLineage, maximumLineageLength);
+    stringValue(record.criticLineage, maximumLineageLength);
+    booleanValue(record.lineagesDistinct);
+    booleanValue(record.required);
+    if (record.overrideRationale !== null) {
+      proseValue(record.overrideRationale, maximumOverrideRationaleLength);
+    }
+  }
   const providerFailure = value.providerFailure;
   if (providerFailure !== null && providerFailure !== undefined) {
     const failure = requireRecord(providerFailure);
     if (
-      !hasOnlyKeys(failure, [
-        "code",
-        "explanation",
-        "provider",
-        "model",
-        "step",
-        "attempt",
-        "maxAttempts",
-        "retryAvailable",
-        "retryNotBefore",
-        "availableActions",
-        "diagnostics",
-      ]) ||
+      !hasOnlyKeys(failure, providerFailureResultKeys) ||
       typeof failure.availableActions !== "object" ||
       !Array.isArray(failure.availableActions) ||
       failure.availableActions.length > 3
@@ -1030,7 +1167,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
 function normalizeFileResult(value: unknown): FileSelectResult {
   const result = requireRecord(value);
   if (
-    !hasOnlyKeys(result, ["files"]) ||
+    !hasOnlyKeys(result, fileSelectResultKeys) ||
     !Array.isArray(result.files) ||
     result.files.length > 100
   ) {
@@ -1039,9 +1176,7 @@ function normalizeFileResult(value: unknown): FileSelectResult {
   return {
     files: result.files.map((item) => {
       const file = requireRecord(item);
-      if (!hasOnlyKeys(file, ["id", "name", "relativePath", "mediaType", "byteLength"])) {
-        return invalidInput();
-      }
+      if (!hasOnlyKeys(file, selectedFileKeys)) return invalidInput();
       const path = relativePath(file.relativePath);
       const name = pathSegment(file.name);
       const extension = `.${name.split(".").at(-1)?.toLowerCase() ?? ""}`;
@@ -1065,16 +1200,7 @@ function normalizeFileResult(value: unknown): FileSelectResult {
 
 function normalizeSourceAddUrlResult(value: unknown): SourceAddUrlResult {
   const result = requireRecord(value);
-  if (
-    !hasOnlyKeys(result, [
-      "sourcePath",
-      "originalUrl",
-      "finalUrl",
-      "kind",
-      "extractionStatus",
-      "mediaType",
-    ])
-  ) {
+  if (!hasOnlyKeys(result, sourceAddUrlResultKeys)) {
     return invalidInput();
   }
   return {
@@ -1089,9 +1215,7 @@ function normalizeSourceAddUrlResult(value: unknown): SourceAddUrlResult {
 
 function normalizeExportResult(value: unknown): ExportResult {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, ["exportId", "workspaceId", "runId", "format", "relativePath"])) {
-    return invalidInput();
-  }
+  if (!hasOnlyKeys(result, exportResultKeys)) return invalidInput();
   const format = enumValue(result.format, exportFormats);
   const path = relativePath(result.relativePath);
   if (
@@ -1111,9 +1235,7 @@ function normalizeExportResult(value: unknown): ExportResult {
 
 function normalizeCredentialResult(value: unknown): CredentialResult {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, ["provider", "configured", "source", "protection"])) {
-    return invalidInput();
-  }
+  if (!hasOnlyKeys(result, credentialResultKeys)) return invalidInput();
   return {
     provider: enumValue(result.provider, credentialProviders),
     configured: booleanValue(result.configured),

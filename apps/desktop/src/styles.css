@@ -945,6 +945,51 @@ input[type="checkbox"] {
   background: var(--amber);
 }
 
+/* A run that recorded no independence claim, and a run that never demanded one,
+   are neither a pass nor a warning. They take the desk's own neutral ink so that
+   teal keeps meaning "as claimed" and amber keeps meaning "not independent". */
+.trust-badge-unrecorded {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
+.trust-badge-unrecorded .trust-badge-mark {
+  color: var(--text-1);
+  background: var(--surface-4);
+}
+
+/* The recorded reason a shared lineage was allowed through. It shares the amber
+   ground of the badge it explains, and sits full width because a reader has to
+   be able to weigh it rather than skim past it. */
+.trust-override {
+  grid-column: 1 / -1;
+  min-width: 0;
+  border: 1px solid var(--amber-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  background: var(--amber-wash);
+}
+
+/* Not .label: --text-4 does not clear AA on the amber wash, so the strongest
+   ink carries this one. */
+.trust-override-label {
+  display: block;
+  margin-bottom: var(--space-1);
+  color: var(--text-1);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.trust-override p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .cost-meter {
   height: 3px;
   margin-top: var(--space-2);

@@ -6,6 +6,7 @@ import {
   CliUserError,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
+  type IndependentReviewRecord,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import { describe, expect, it, vi } from "vitest";
@@ -41,7 +42,20 @@ function pdfWithLiteral(literal: string): string {
   return `%PDF-1.4\n1 0 obj\n<< /Length 64 >>\nstream\nBT\n(${literal}) Tj\nET\nendstream\nendobj\n%%EOF`;
 }
 
-function service(root: string, snapshotOverrides: Readonly<Record<string, unknown>> = {}) {
+/** What the fixture workspace's author/critic pairing records for a run. */
+const recordedIndependence: IndependentReviewRecord = {
+  authorLineage: "anthropic:claude-sonnet-4-5",
+  criticLineage: "openai:gpt-5",
+  lineagesDistinct: true,
+  required: true,
+};
+
+function service(
+  root: string,
+  snapshotOverrides: Readonly<Record<string, unknown>> = {},
+  /** `null` stands for a run that recorded no independence claim at all. */
+  independentReview: IndependentReviewRecord | null = recordedIndependence,
+) {
   const workspace = descriptor(root);
   const snapshot = {
     schemaVersion: 1,
@@ -124,6 +138,9 @@ function service(root: string, snapshotOverrides: Readonly<Record<string, unknow
         hits: [],
       })),
       recordReviewDecision: vi.fn(async () => undefined),
+      readIndependentReview: vi.fn<ApplicationService["readIndependentReview"]>(
+        async () => independentReview ?? undefined,
+      ),
     } satisfies ApplicationService,
     snapshot,
   };
@@ -1198,6 +1215,118 @@ describe("native host", () => {
       );
     } finally {
       await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("carries the run's recorded independence, rationale included, into the review state", async () => {
+    // The approval surface must read what the run recorded, not recompute it:
+    // two vendors serving one lineage would otherwise be reported independent.
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-independence-"));
+    const rationale = "One lineage on both sides: a deliberate self-review experiment.";
+    const fixture = service(
+      root,
+      {},
+      {
+        authorLineage: "gpt-oss-20b",
+        criticLineage: "gpt-oss-20b",
+        lineagesDistinct: false,
+        required: true,
+        overrideRationale: rationale,
+      },
+    );
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const loaded = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      });
+
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          providerExposure: {
+            independentReview: {
+              authorLineage: "gpt-oss-20b",
+              criticLineage: "gpt-oss-20b",
+              lineagesDistinct: false,
+              required: true,
+              overrideRationale: rationale,
+            },
+          },
+        },
+      });
+      expect(fixture.service.readIndependentReview).toHaveBeenCalledWith({
+        root,
+        runId: "run-native",
+      });
+
+      const dispatched = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "pause" },
+        },
+      });
+
+      expect(dispatched).toMatchObject({
+        ok: true,
+        value: { providerExposure: { independentReview: { overrideRationale: rationale } } },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports no recorded independence rather than failing the review view", async () => {
+    // A run started before independence was recorded, and a read that fails
+    // outright, both mean "nothing recorded". Neither is "not independent",
+    // and neither may cost the reader the rest of the review.
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-no-independence-"));
+    const fixture = service(root, {}, null);
+    const errors: unknown[] = [];
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+        onError: (error) => errors.push(error),
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const loaded = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      });
+
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          runId: "run-native",
+          providerExposure: { independentReview: null, transmissionAllowed: false },
+        },
+      });
+      expect(errors).toEqual([]);
+
+      fixture.service.readIndependentReview.mockRejectedValueOnce(
+        new Error("The run context snapshot is missing."),
+      );
+      const afterFailure = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      });
+
+      expect(afterFailure).toMatchObject({
+        ok: true,
+        value: { runId: "run-native", providerExposure: { independentReview: null } },
+      });
+      expect(errors).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 

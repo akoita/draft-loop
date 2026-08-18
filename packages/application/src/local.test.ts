@@ -547,6 +547,37 @@ describe("local application driver", () => {
     }
   });
 
+  it("reports no recorded independence rather than failing when there is no run", async () => {
+    // An approval surface asks this question before a run exists and after a
+    // run id it cannot resolve. Both are honest "nothing recorded" answers,
+    // not errors: failing here would take the whole review view down with it.
+    const root = await providerWorkspace("draft-loop-independence-missing-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "gpt-oss-20b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        { write: () => undefined },
+      );
+
+      expect(await driver.readIndependentReview({ root })).toBeUndefined();
+      expect(
+        await driver.readIndependentReview({ root, runId: "run-does-not-exist" }),
+      ).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("refuses one local model reviewing itself", async () => {
     const root = await providerWorkspace("draft-loop-shared-lineage-");
     const driver = createLocalApplicationDriver({
@@ -665,6 +696,17 @@ describe("local application driver", () => {
         required: true,
         overrideRationale: rationale,
       });
+      // The same record, through the boundary an approval surface reads it by.
+      expect(await driver.readIndependentReview({ root })).toEqual({
+        authorLineage: "local:qwen3-coder-30b",
+        criticLineage: "local:qwen3-coder-30b",
+        lineagesDistinct: false,
+        required: true,
+        overrideRationale: rationale,
+      });
+      expect(await driver.readIndependentReview({ root, runId: snapshot.runId })).toEqual(
+        await driver.readIndependentReview({ root }),
+      );
       // Operator prose about model choice is an auditor's field, not model input.
       expect(sentBodies.length).toBeGreaterThan(0);
       for (const body of sentBodies) {

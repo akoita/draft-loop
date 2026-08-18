@@ -8,6 +8,7 @@ import {
   createApplicationService,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
+  type IndependentReviewRecord,
   SourceIngestionUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
@@ -44,6 +45,7 @@ import {
 import type {
   DesktopReviewState,
   FindingDecision,
+  IndependentReviewView,
   ProviderFailureView,
   ProviderTransmissionPolicy,
   ProviderTransmissionPreflight,
@@ -618,9 +620,30 @@ function reviewEvents(
   return events;
 }
 
+/**
+ * The recorded independence claim, in the renderer's vocabulary.
+ *
+ * The absent rationale becomes an explicit `null` rather than a missing key so
+ * that "no override was needed" survives the bridge as a value a reader can
+ * see, instead of as the absence of one.
+ */
+function independentReviewView(
+  record: IndependentReviewRecord | undefined,
+): IndependentReviewView | null {
+  if (record === undefined) return null;
+  return {
+    authorLineage: record.authorLineage,
+    criticLineage: record.criticLineage,
+    lineagesDistinct: record.lineagesDistinct,
+    required: record.required,
+    overrideRationale: record.overrideRationale ?? null,
+  };
+}
+
 function reviewState(
   descriptor: WorkspaceDescriptor,
   snapshot: RunSnapshot,
+  independentReview: IndependentReviewView | null,
   overrides: ReviewOverrides,
   exportPath: string | null,
   setup: WorkspaceReadiness,
@@ -654,6 +677,7 @@ function reviewState(
       transmissionAllowed: preflight.required && preflight.acknowledged,
       sensitiveData: true,
       requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
+      independentReview,
     },
     providerTransmissionPreflight: preflight,
     providerFailure: providerFailure(snapshot),
@@ -700,6 +724,8 @@ function emptyReviewState(
       transmissionAllowed: preflight.required && preflight.acknowledged,
       sensitiveData: setup.evidenceSourceCount > 0,
       requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
+      /** No run means no recorded claim; nothing here can be invented. */
+      independentReview: null,
     },
     providerTransmissionPreflight: preflight,
     providerFailure: null,
@@ -1011,6 +1037,29 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     if (snapshot === undefined)
       return fail("not-found", "No run has been started in this workspace.");
     return snapshot;
+  }
+
+  /**
+   * The independence recorded for a run, for the approval surface.
+   *
+   * A failure here degrades to "nothing recorded" instead of failing the whole
+   * review load: the review view is the product's main surface, and losing it
+   * because one trust field could not be read would be the worse failure. The
+   * error still reaches the host's error channel rather than vanishing.
+   */
+  async function independentReviewFor(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<IndependentReviewView | null> {
+    try {
+      return independentReviewView(
+        await service.readIndependentReview({ root: workspace.root, runId }),
+      );
+    } catch (error) {
+      options.onError?.(error, capability);
+      return null;
+    }
   }
 
   async function requireProviderTransmissionAcknowledgement(
@@ -1465,6 +1514,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return reviewState(
       workspace.descriptor,
       snapshot,
+      await independentReviewFor(workspace, snapshot.runId, "review.dispatch"),
       overrides,
       exportPath ??
         (await service.latestExportPath({
@@ -1579,6 +1629,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             value: reviewState(
               workspace.descriptor,
               snapshot,
+              await independentReviewFor(workspace, snapshot.runId, "review.load"),
               await readOverrides(workspace.root),
               await service.latestExportPath({
                 root: workspace.root,

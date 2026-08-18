@@ -514,6 +514,102 @@ describe("desktop capability bridge", () => {
     expect(invoke).toHaveBeenCalledTimes(2);
   });
 
+  it("carries the recorded independence claim, rationale included, back to the renderer", async () => {
+    // The result normalizers keep hand-written allowlists. A field that the
+    // host reports and the allowlist has never heard of would not reach the
+    // trust panel, which is why this asserts the whole record survives.
+    const fixture = createFixtureReviewState();
+    const rationale = "One lineage on both sides.\nA deliberate self-review experiment.";
+    const state = {
+      ...fixture,
+      providerExposure: {
+        ...fixture.providerExposure,
+        independentReview: {
+          authorLineage: "gpt-oss-20b",
+          criticLineage: "gpt-oss-20b",
+          lineagesDistinct: false,
+          required: true,
+          overrideRationale: rationale,
+        },
+      },
+    };
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: state }), ["review.load"]),
+    );
+
+    await expect(
+      port.execute({ type: "review.load", input: { workspaceId: state.workspaceId } }),
+    ).resolves.toEqual({ ok: true, value: state });
+
+    const withoutOverride = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: fixture }), ["review.load"]),
+    );
+
+    await expect(
+      withoutOverride.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: {
+        providerExposure: {
+          independentReview: { lineagesDistinct: true, overrideRationale: null },
+        },
+      },
+    });
+  });
+
+  it("rejects independence claims the host could not honestly have recorded", async () => {
+    const fixture = createFixtureReviewState();
+    for (const independentReview of [
+      {
+        authorLineage: "",
+        criticLineage: "b",
+        lineagesDistinct: true,
+        required: true,
+        overrideRationale: null,
+      },
+      {
+        authorLineage: "a",
+        criticLineage: "b",
+        lineagesDistinct: "yes",
+        required: true,
+        overrideRationale: null,
+      },
+      {
+        authorLineage: "a",
+        criticLineage: "b",
+        lineagesDistinct: true,
+        required: true,
+        overrideRationale: "r".repeat(501),
+      },
+      {
+        authorLineage: "a",
+        criticLineage: "b",
+        lineagesDistinct: true,
+        required: true,
+        overrideRationale: "control\u0007char",
+      },
+      {
+        authorLineage: "a",
+        criticLineage: "b",
+        lineagesDistinct: true,
+        required: true,
+        overrideRationale: null,
+        verdict: "independent",
+      },
+    ]) {
+      const state = {
+        ...fixture,
+        providerExposure: { ...fixture.providerExposure, independentReview },
+      };
+      const port = createCapabilityPort(
+        bridge(async () => ({ ok: true, value: state }), ["review.load"]),
+      );
+      await expect(
+        port.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+  });
+
   it("rejects inconsistent provider failure projections from the host", async () => {
     const baseFailure = {
       code: "timeout",

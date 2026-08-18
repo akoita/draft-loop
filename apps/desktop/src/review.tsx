@@ -12,6 +12,7 @@ import { type DiffOp, diffWords } from "./diff.js";
 import {
   type DesktopReviewState,
   type FindingDecision,
+  type IndependentReviewView,
   type ReviewAction,
   type ReviewArtifact,
   type ReviewBlock,
@@ -448,6 +449,78 @@ function LoopRail({
       <span className="loop-round">↺ round {round}</span>
     </div>
   );
+}
+
+/** How the trust panel presents a recorded independence claim. */
+type IndependenceTone = "independent" | "shared" | "unrecorded";
+
+interface IndependenceSummary {
+  readonly tone: IndependenceTone;
+  readonly mark: string;
+  readonly detail: string;
+  readonly overrideRationale: string | null;
+}
+
+/**
+ * Read the run's recorded independence claim, rather than re-deriving one.
+ *
+ * This panel used to compare provider companies. That proxy is wrong in both
+ * directions, and the damaging direction is that it reports "independent" for
+ * two vendors serving one open-weights base model, on the surface a person
+ * reads immediately before approving. Independence is now model lineage and it
+ * is recorded by the domain (ADR 0005), so the only correct thing to do here is
+ * report the record.
+ *
+ * A lineage is an operator label that nothing verifies, so no branch may read
+ * as proof, and no shared lineage may read as independent whatever rationale
+ * was recorded against it. An absent record is its own state: it is not
+ * evidence of independence and not evidence against it.
+ */
+function independenceSummary(view: IndependentReviewView | null): IndependenceSummary {
+  if (view === null) {
+    return {
+      tone: "unrecorded",
+      mark: "not recorded",
+      detail:
+        "No lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.",
+      overrideRationale: null,
+    };
+  }
+  if (!view.required) {
+    return {
+      tone: "unrecorded",
+      mark: "not required",
+      detail: `Independent review was not required for this run; the claimed lineages ${
+        view.lineagesDistinct ? "differ" : "are the same"
+      }.`,
+      overrideRationale: null,
+    };
+  }
+  if (view.lineagesDistinct) {
+    return {
+      tone: "independent",
+      mark: "lineages differ",
+      detail:
+        "Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.",
+      overrideRationale: null,
+    };
+  }
+  if (view.overrideRationale !== null) {
+    return {
+      tone: "shared",
+      mark: "overridden",
+      detail:
+        "Author and critic share one lineage, so this critique was not independent; the run proceeded on a recorded rationale.",
+      overrideRationale: view.overrideRationale,
+    };
+  }
+  return {
+    tone: "shared",
+    mark: "not independent",
+    detail:
+      "Author and critic share one lineage, and no override rationale was recorded, so this critique was not independent.",
+    overrideRationale: null,
+  };
 }
 
 function retryWaitMs(retryNotBefore: string | null, nowMs: number): number {
@@ -1168,9 +1241,8 @@ export function ReviewWorkspace({
     state.budgetUsd === null || state.budgetUsd <= 0
       ? null
       : Math.min(1, state.totalCostUsd / state.budgetUsd);
-  // Provider diversity is a product constraint, so the trust facts state it plainly.
-  const providerDiversityMet =
-    state.providerExposure.author.company !== state.providerExposure.critic.company;
+  // Independence is what the run recorded, never something this renderer infers.
+  const independence = independenceSummary(state.providerExposure.independentReview);
 
   useEffect(() => {
     const nextContext = `${state.workspaceId}:${state.runId}`;
@@ -2902,26 +2974,40 @@ export function ReviewWorkspace({
           </section>
 
           <section className="trust-strip" aria-label="trust and policy summary">
+            {/* The lineage qualifies the identity it belongs to, so it is read here
+                with the company and the model rather than apart from them. */}
             <div className="trust-fact">
               <span className="label">Author</span>
               <strong>{state.providerExposure.author.company}</strong>
               <span>{state.providerExposure.author.model}</span>
+              {state.providerExposure.independentReview === null ? null : (
+                <span>
+                  claimed lineage {state.providerExposure.independentReview.authorLineage}
+                </span>
+              )}
             </div>
             <div className="trust-fact">
               <span className="label">Critic</span>
               <strong>{state.providerExposure.critic.company}</strong>
               <span>{state.providerExposure.critic.model}</span>
+              {state.providerExposure.independentReview === null ? null : (
+                <span>
+                  claimed lineage {state.providerExposure.independentReview.criticLineage}
+                </span>
+              )}
             </div>
-            <div
-              className={`trust-badge${providerDiversityMet ? " trust-badge-independent" : " trust-badge-shared"}`}
-            >
-              <span className="trust-badge-mark">
-                {providerDiversityMet ? "independent" : "same company"}
-              </span>
-              <span>
-                {providerDiversityMet ? "author and critic differ" : "provider diversity not met"}
-              </span>
+            <div className={`trust-badge trust-badge-${independence.tone}`}>
+              <span className="trust-badge-mark">{independence.mark}</span>
+              <span>{independence.detail}</span>
             </div>
+            {/* Operator prose, shown because a person about to approve has to weigh it.
+                It is displayed locally and is never part of any provider request. */}
+            {independence.overrideRationale === null ? null : (
+              <div className="trust-override">
+                <span className="trust-override-label">Override rationale</span>
+                <p>{independence.overrideRationale}</p>
+              </div>
+            )}
             <div className="trust-fact">
               <span className="label">Data policy</span>
               <strong>

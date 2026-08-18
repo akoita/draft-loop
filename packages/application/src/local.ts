@@ -13,6 +13,7 @@ import {
   createContextSnapshot,
   createWorkspace,
   type EvidenceRetrievalInspection,
+  type IndependentReviewRecord,
   type ModelConfigurationInput,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
@@ -1645,6 +1646,42 @@ export async function statusRun(
   }
 }
 
+/**
+ * The independence a run recorded when it was configured.
+ *
+ * Read from the run's persisted context snapshot rather than recomputed from
+ * the workspace configuration: the author and critic selections can be edited
+ * after a run, and a reader of the run needs what was true at the time.
+ *
+ * Returns `undefined` rather than throwing for every honest "nothing recorded"
+ * case — no run yet, an unknown run, a run whose context predates independence
+ * being recorded — because the callers are display surfaces that must be able
+ * to say the claim is missing instead of failing the whole view.
+ */
+export async function readRunIndependentReview(
+  rootInput: string,
+  runIdInput?: string,
+): Promise<IndependentReviewRecord | undefined> {
+  const root = resolve(rootInput);
+  const config = await readWorkspace(root);
+  const runId = runIdInput ?? config.latestRunId;
+  if (runId === undefined) return undefined;
+  const storage = await openStorage(root);
+  try {
+    const runStore = createStorageRunStore(storage);
+    const snapshot = await runStore.loadRun(runId);
+    if (snapshot === undefined) return undefined;
+    const contextRecord = await storage.getContextSnapshot(snapshot.contextSnapshotId);
+    if (contextRecord === undefined) return undefined;
+    const context = contextSnapshotSchema.parse(
+      contextRecord.payload,
+    ) as unknown as ContextSnapshot;
+    return context.modelConfiguration.independentReview;
+  } finally {
+    await storage.close();
+  }
+}
+
 export async function exportRun(
   rootInput: string,
   runIdInput: string | undefined,
@@ -1914,6 +1951,7 @@ export function createLocalApplicationDriver(
         io,
       ),
     recordReviewDecision: async (command) => recordReviewDecision(command),
+    readIndependentReview: async (command) => readRunIndependentReview(command.root, command.runId),
   };
 }
 

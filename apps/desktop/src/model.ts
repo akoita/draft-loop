@@ -66,12 +66,36 @@ export interface ReviewFinding {
   readonly sectionId?: string;
 }
 
+/**
+ * What independence the run recorded, as the approval surface must read it.
+ *
+ * Mirrors the domain's `IndependentReviewRecord` structurally rather than
+ * importing it: this model is the renderer's own vocabulary and carries no
+ * dependency on the domain package. It is a claim the operator made, not a
+ * measurement, so every field is reported rather than reduced to a verdict.
+ */
+export interface IndependentReviewView {
+  readonly authorLineage: string;
+  readonly criticLineage: string;
+  readonly lineagesDistinct: boolean;
+  /** Whether independent review was demanded for this run. */
+  readonly required: boolean;
+  /** Operator prose; present only when a shared lineage was actually overridden. */
+  readonly overrideRationale: string | null;
+}
+
 export interface ProviderExposureView {
   readonly author: { readonly company: string; readonly model: string };
   readonly critic: { readonly company: string; readonly model: string };
   readonly transmissionAllowed: boolean;
   readonly sensitiveData: boolean;
   readonly requestedRetention: "ephemeral-request" | "provider-default" | "not-allowed";
+  /**
+   * Null when the run recorded no independence claim, which is the honest
+   * reading for a run started before independence was recorded. It is not the
+   * same as "not independent", and a reader must not collapse the two.
+   */
+  readonly independentReview: IndependentReviewView | null;
 }
 
 export type ProviderFailureAction = "retry" | "return-to-review" | "stop";
@@ -468,6 +492,13 @@ export function createFixtureReviewState(): DesktopReviewState {
       transmissionAllowed: false,
       sensitiveData: true,
       requestedRetention: "not-allowed",
+      independentReview: {
+        authorLineage: "anthropic:claude-sonnet-4-5",
+        criticLineage: "openai:gpt-5",
+        lineagesDistinct: true,
+        required: true,
+        overrideRationale: null,
+      },
     },
     providerTransmissionPreflight: {
       required: false,

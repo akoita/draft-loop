@@ -1,8 +1,12 @@
-import type { EvidenceRetrievalInspection, ScoredEvidenceChunk } from "@draft-loop/domain";
+import type {
+  EvidenceRetrievalInspection,
+  IndependentReviewRecord,
+  ScoredEvidenceChunk,
+} from "@draft-loop/domain";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OutputFormat } from "@draft-loop/rendering";
 
-export type { EvidenceRetrievalInspection, ScoredEvidenceChunk };
+export type { EvidenceRetrievalInspection, IndependentReviewRecord, ScoredEvidenceChunk };
 
 export interface ApplicationIo {
   readonly write: (line: string) => void;
@@ -143,6 +147,18 @@ export interface ApplicationDriver {
     io?: ApplicationIo,
   ) => Promise<EvidenceRetrievalInspection>;
   readonly recordReviewDecision: (command: RecordReviewDecisionCommand) => Promise<void>;
+  /**
+   * What independence a run recorded when it was configured.
+   *
+   * Separate from `status` because it is read from the run's context snapshot
+   * rather than from the run itself, and because a reader must be able to ask
+   * without driving the run. Resolves to `undefined` when the workspace has no
+   * run, the run is unknown, or the run predates independence being recorded:
+   * an approval surface has to be able to say "not recorded" rather than fail.
+   */
+  readonly readIndependentReview: (
+    command: StatusCommand,
+  ) => Promise<IndependentReviewRecord | undefined>;
 }
 
 export interface ApplicationService extends ApplicationDriver {}
@@ -190,6 +206,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
       ),
     recordReviewDecision: async (command) =>
       driver.recordReviewDecision({ ...command, root: requireRoot(command.root) }),
+    readIndependentReview: async (command) =>
+      driver.readIndependentReview({ ...command, root: requireRoot(command.root) }),
   };
   return Object.freeze(service);
 }

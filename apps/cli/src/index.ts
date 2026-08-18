@@ -2,8 +2,17 @@ import { defaultRequiredSections } from "@draft-loop/application";
 import { Command } from "commander";
 import packageJson from "../package.json";
 
+import { independentReviewLines } from "./independent-review.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
-import { applicationService, runPilot, safeErrorMessage, workspaceRoot } from "./workflow.js";
+import {
+  type ApplicationIo,
+  type ApplicationService,
+  applicationService,
+  runPilot,
+  type StatusCommand,
+  safeErrorMessage,
+  workspaceRoot,
+} from "./workflow.js";
 
 function numberOption(value: string): number {
   const parsed = Number(value);
@@ -25,7 +34,30 @@ function boolOption(options: Record<string, unknown>, key: string): boolean {
   return options[key] === true;
 }
 
-export function createCli(): Command {
+/** Status lines are user-facing output, so they go to stdout rather than stderr. */
+const stdoutIo: ApplicationIo = {
+  write: (line) => {
+    process.stdout.write(`${line}\n`);
+  },
+};
+
+export interface CliDependencies {
+  /** The application boundary the commands drive; replaced in tests. */
+  readonly service?: ApplicationService;
+  /** Where status lines are written; replaced in tests. */
+  readonly io?: ApplicationIo;
+}
+
+export function createCli(dependencies: CliDependencies = {}): Command {
+  const service = dependencies.service ?? applicationService;
+  const io = dependencies.io ?? stdoutIo;
+
+  /** Reports the recorded independence claim, including that there is none. */
+  const writeIndependentReview = async (statusCommand: StatusCommand): Promise<void> => {
+    const record = await service.readIndependentReview(statusCommand);
+    for (const line of independentReviewLines(record)) io.write(line);
+  };
+
   const command = new Command()
     .name("draft-loop")
     .description("Local-first CV drafting and review workspace")
@@ -46,6 +78,18 @@ export function createCli(): Command {
     .option("--critic-company <company>", "critic provider company", "openai")
     .option("--critic-model <model>", "exact critic model id", "gpt-5.6-luna")
     .option(
+      "--author-lineage <lineage>",
+      "weights the author descends from; defaults to <company>:<model>",
+    )
+    .option(
+      "--critic-lineage <lineage>",
+      "weights the critic descends from; defaults to <company>:<model>",
+    )
+    .option(
+      "--independence-override-rationale <text>",
+      "why one lineage on both sides is acceptable; recorded with every run",
+    )
+    .option(
       "--local-endpoint <url>",
       "loopback base URL of the local model server, used when a company is 'local'",
     )
@@ -61,7 +105,7 @@ export function createCli(): Command {
     .option("--max-characters <number>", "maximum output characters", integerOption)
     .option("--fixture", "use deterministic offline agents")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await applicationService.initialize({
+      await service.initialize({
         root: workspaceRoot(workspace),
         jobDescription: options.jobDescription as string,
         sources: options.sources as string,
@@ -76,6 +120,15 @@ export function createCli(): Command {
         authorModel: options.authorModel as string,
         criticCompany: options.criticCompany as string,
         criticModel: options.criticModel as string,
+        ...(options.authorLineage === undefined
+          ? {}
+          : { authorLineage: options.authorLineage as string }),
+        ...(options.criticLineage === undefined
+          ? {}
+          : { criticLineage: options.criticLineage as string }),
+        ...(options.independenceOverrideRationale === undefined
+          ? {}
+          : { independenceOverrideRationale: options.independenceOverrideRationale as string }),
         ...(options.localEndpoint === undefined
           ? {}
           : { localEndpoint: options.localEndpoint as string }),
@@ -126,8 +179,10 @@ export function createCli(): Command {
     .description("Open a workspace and show its safe status")
     .argument("[workspace]", "workspace directory", ".")
     .action(async (workspace: string) => {
-      await applicationService.readWorkspace(workspaceRoot(workspace));
-      await applicationService.status({ root: workspaceRoot(workspace) });
+      const root = workspaceRoot(workspace);
+      await service.readWorkspace(root);
+      await service.status({ root }, io);
+      await writeIndependentReview({ root });
     });
 
   command
@@ -136,7 +191,7 @@ export function createCli(): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await applicationService.start({
+      await service.start({
         root: workspaceRoot(workspace),
         allowProviderData: boolOption(options, "allowProviderData"),
       });
@@ -149,7 +204,7 @@ export function createCli(): Command {
     .option("--run-id <id>", "run id to resume")
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await applicationService.resume({
+      await service.resume({
         root: workspaceRoot(workspace),
         ...(options.runId === undefined ? {} : { runId: options.runId as string }),
         allowProviderData: boolOption(options, "allowProviderData"),
@@ -169,7 +224,7 @@ export function createCli(): Command {
       .argument("[workspace]", "workspace directory", ".")
       .option("--run-id <id>", "run id to update")
       .action(async (workspace: string, options: Record<string, unknown>) => {
-        await applicationService.lifecycle({
+        await service.lifecycle({
           root: workspaceRoot(workspace),
           action,
           ...(options.runId === undefined ? {} : { runId: options.runId as string }),
@@ -183,10 +238,12 @@ export function createCli(): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option("--run-id <id>", "run id to inspect")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await applicationService.status({
+      const statusCommand: StatusCommand = {
         root: workspaceRoot(workspace),
         ...(options.runId === undefined ? {} : { runId: options.runId as string }),
-      });
+      };
+      await service.status(statusCommand, io);
+      await writeIndependentReview(statusCommand);
     });
 
   command
@@ -197,7 +254,7 @@ export function createCli(): Command {
     .option("--output <path>", "local output path")
     .option("--format <format>", "output format: markdown, pdf, or docx", "markdown")
     .action(async (workspace: string, options: Record<string, unknown>) => {
-      await applicationService.export({
+      await service.export({
         root: workspaceRoot(workspace),
         ...(options.runId === undefined ? {} : { runId: options.runId as string }),
         ...(options.output === undefined ? {} : { outputPath: options.output as string }),

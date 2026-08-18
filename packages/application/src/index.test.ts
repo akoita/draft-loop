@@ -47,6 +47,12 @@ function driver(): ApplicationDriver {
       hits: [],
     })),
     recordReviewDecision: vi.fn(async () => undefined),
+    readIndependentReview: vi.fn<ApplicationDriver["readIndependentReview"]>(async () => ({
+      authorLineage: "anthropic:author",
+      criticLineage: "openai:critic",
+      lineagesDistinct: true,
+      required: true,
+    })),
   };
 }
 
@@ -136,6 +142,29 @@ describe("application service contract", () => {
     expect(underlying.recordReviewDecision).toHaveBeenCalledWith(
       expect.objectContaining({ root: "workspace", targetId: "finding-1" }),
     );
+  });
+
+  it("forwards the recorded independence question with a validated root", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await expect(
+      service.readIndependentReview({ root: "workspace", runId: "run-1" }),
+    ).resolves.toEqual({
+      authorLineage: "anthropic:author",
+      criticLineage: "openai:critic",
+      lineagesDistinct: true,
+      required: true,
+    });
+    expect(underlying.readIndependentReview).toHaveBeenCalledWith({
+      root: "workspace",
+      runId: "run-1",
+    });
+
+    await expect(service.readIndependentReview({ root: "  " })).rejects.toThrow(
+      "workspace root is required",
+    );
+    expect(underlying.readIndependentReview).toHaveBeenCalledTimes(1);
   });
 
   it("forwards provider recovery through the provider-independent lifecycle boundary", async () => {

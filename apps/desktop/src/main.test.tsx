@@ -2,6 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import {
   createFixtureReviewState,
+  type IndependentReviewView,
   reduceReviewState,
   reviewFindingSummary,
   unresolvedBlockingFindings,
@@ -599,5 +600,134 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain('disabled=""');
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
+  });
+});
+
+/**
+ * The trust strip is the last thing a person reads before approving, so its
+ * independence claim must be the record the run kept. It used to be a company
+ * comparison computed here, which reported "independent" for two vendors
+ * serving one base model — the exact over-claim ADR 0005 was written to remove.
+ */
+describe("desktop trust strip independence", () => {
+  const withIndependence = (independentReview: IndependentReviewView | null) => {
+    const fixture = createFixtureReviewState();
+    return {
+      ...fixture,
+      providerExposure: { ...fixture.providerExposure, independentReview },
+    };
+  };
+  const render = (independentReview: IndependentReviewView | null) =>
+    renderToStaticMarkup(
+      <ReviewWorkspace state={withIndependence(independentReview)} onAction={() => undefined} />,
+    );
+
+  it("reports distinct lineages as a claim rather than as proof", () => {
+    const html = render({
+      authorLineage: "anthropic:claude-sonnet-4-5",
+      criticLineage: "openai:gpt-5",
+      lineagesDistinct: true,
+      required: true,
+      overrideRationale: null,
+    });
+
+    expect(html).toContain("trust-badge-independent");
+    expect(html).toContain("lineages differ");
+    expect(html).toContain(
+      "Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.",
+    );
+    expect(html).toContain("claimed lineage");
+    expect(html).toContain("anthropic:claude-sonnet-4-5");
+    expect(html).toContain("openai:gpt-5");
+    expect(html).not.toContain("Override rationale");
+  });
+
+  it("never presents an overridden shared lineage as independent", () => {
+    // Two companies, one lineage: the false accept the company comparison made
+    // silently. The badge must not read as independent in any form.
+    const html = render({
+      authorLineage: "openweights:llama-4-70b",
+      criticLineage: "openweights:llama-4-70b",
+      lineagesDistinct: false,
+      required: true,
+      overrideRationale: "No second lineage is available offline; a human reviewed the critique.",
+    });
+
+    expect(html).toContain("trust-badge-shared");
+    expect(html).not.toContain("trust-badge-independent");
+    expect(html).not.toContain("lineages differ");
+    expect(html).toContain("overridden");
+    expect(html).toContain(
+      "Author and critic share one lineage, so this critique was not independent; the run proceeded on a recorded rationale.",
+    );
+    expect(html).toContain("Override rationale");
+    expect(html).toContain(
+      "No second lineage is available offline; a human reviewed the critique.",
+    );
+    // The renderer no longer says anything about companies.
+    expect(html).not.toContain("same company");
+    expect(html).not.toContain("provider diversity not met");
+  });
+
+  it("says a shared lineage with no rationale was not independent", () => {
+    const html = render({
+      authorLineage: "local:mistral-small",
+      criticLineage: "local:mistral-small",
+      lineagesDistinct: false,
+      required: true,
+      overrideRationale: null,
+    });
+
+    expect(html).toContain("trust-badge-shared");
+    expect(html).not.toContain("trust-badge-independent");
+    expect(html).toContain("not independent");
+    expect(html).toContain(
+      "Author and critic share one lineage, and no override rationale was recorded, so this critique was not independent.",
+    );
+    expect(html).not.toContain("Override rationale");
+  });
+
+  it("says nothing was recorded when the run carries no independence claim", () => {
+    const html = render(null);
+
+    expect(html).toContain("trust-badge-unrecorded");
+    expect(html).not.toContain("trust-badge-independent");
+    expect(html).not.toContain("trust-badge-shared");
+    expect(html).toContain("not recorded");
+    expect(html).toContain(
+      "No lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.",
+    );
+    expect(html).not.toContain("claimed lineage");
+    expect(html).not.toContain("Override rationale");
+  });
+
+  it("keeps independence not being required distinct from independence holding", () => {
+    const notRequiredAndShared = render({
+      authorLineage: "local:mistral-small",
+      criticLineage: "local:mistral-small",
+      lineagesDistinct: false,
+      required: false,
+      overrideRationale: null,
+    });
+
+    expect(notRequiredAndShared).toContain("trust-badge-unrecorded");
+    expect(notRequiredAndShared).not.toContain("trust-badge-independent");
+    expect(notRequiredAndShared).toContain("not required");
+    expect(notRequiredAndShared).toContain(
+      "Independent review was not required for this run; the claimed lineages are the same.",
+    );
+
+    const notRequiredAndDistinct = render({
+      authorLineage: "anthropic:claude-sonnet-4-5",
+      criticLineage: "openai:gpt-5",
+      lineagesDistinct: true,
+      required: false,
+      overrideRationale: null,
+    });
+
+    expect(notRequiredAndDistinct).not.toContain("trust-badge-independent");
+    expect(notRequiredAndDistinct).toContain(
+      "Independent review was not required for this run; the claimed lineages differ.",
+    );
   });
 });
