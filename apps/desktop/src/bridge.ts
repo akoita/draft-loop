@@ -89,10 +89,29 @@ export const runStates = [
 export type BridgeRunState = (typeof runStates)[number];
 export type RunApproval = "pending" | "approved" | "rejected";
 
+/**
+ * Binds a validator's runtime key list to its input interface.
+ *
+ * The runtime list stays the single source of truth (types are erased, so it
+ * cannot be derived from `keyof`), and this helper makes drift a compile error
+ * in both directions: an interface key missing from the list, and a list entry
+ * the interface does not declare. `keyof` reports optional and readonly keys
+ * too, so `?` and `readonly` members are covered.
+ */
+function inputKeys<Input extends object>() {
+  return <const Keys extends readonly (keyof Input & string)[]>(
+    keys: Keys & {
+      readonly [Key in Exclude<keyof Input, Keys[number]>]: "add this key to the runtime key list";
+    },
+  ): Keys => keys;
+}
+
 export interface WorkspaceOpenInput {
   /** The native host owns the folder picker; no filesystem path crosses this API. */
   readonly selection?: "native-dialog";
 }
+
+const workspaceOpenKeys = inputKeys<WorkspaceOpenInput>()(["selection"]);
 
 export interface WorkspaceCreateInput {
   /** A display name only. The native host owns the destination folder picker. */
@@ -114,24 +133,40 @@ export interface WorkspaceCreateInput {
   readonly requiredSections?: readonly string[];
 }
 
+const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
+  "name",
+  "mode",
+  "authorModel",
+  "criticModel",
+  "requiredSections",
+]);
+
 export interface RunStatusInput {
   readonly workspaceId: string;
   readonly runId?: string;
 }
 
+const runStatusKeys = inputKeys<RunStatusInput>()(["workspaceId", "runId"]);
+
 export interface RunStartInput {
   readonly workspaceId: string;
 }
+
+const runStartKeys = inputKeys<RunStartInput>()(["workspaceId"]);
 
 export interface RunLifecycleInput {
   readonly workspaceId: string;
   readonly runId: string;
 }
 
+const runLifecycleKeys = inputKeys<RunLifecycleInput>()(["workspaceId", "runId"]);
+
 export interface ReviewLoadInput {
   readonly workspaceId?: string;
   readonly runId?: string;
 }
+
+const reviewLoadKeys = inputKeys<ReviewLoadInput>()(["workspaceId", "runId"]);
 
 export interface ReviewDispatchInput {
   readonly workspaceId: string;
@@ -139,12 +174,21 @@ export interface ReviewDispatchInput {
   readonly action: ReviewAction;
 }
 
+const reviewDispatchKeys = inputKeys<ReviewDispatchInput>()(["workspaceId", "runId", "action"]);
+
 export interface FileSelectInput {
   readonly workspaceId: string;
   readonly extensions?: readonly SupportedFileExtension[];
   readonly multiple?: boolean;
   readonly target?: "evidence" | "job-description";
 }
+
+const fileSelectKeys = inputKeys<FileSelectInput>()([
+  "workspaceId",
+  "extensions",
+  "multiple",
+  "target",
+]);
 
 export interface SourceAddUrlInput {
   readonly workspaceId: string;
@@ -154,6 +198,13 @@ export interface SourceAddUrlInput {
   readonly approved: boolean;
 }
 
+const sourceAddUrlKeys = inputKeys<SourceAddUrlInput>()([
+  "workspaceId",
+  "url",
+  "target",
+  "approved",
+]);
+
 export interface ExportWriteInput {
   readonly workspaceId: string;
   readonly runId: string;
@@ -161,6 +212,13 @@ export interface ExportWriteInput {
   /** Workspace-relative and, when supplied, restricted to the exports folder. */
   readonly relativePath?: string;
 }
+
+const exportWriteKeys = inputKeys<ExportWriteInput>()([
+  "workspaceId",
+  "runId",
+  "format",
+  "relativePath",
+]);
 
 export interface CredentialStatusInput {
   readonly provider: CredentialProvider;
@@ -171,9 +229,17 @@ export interface CredentialSetInput {
   readonly apiKey: string;
 }
 
+const credentialSetKeys = inputKeys<CredentialSetInput>()(["provider", "apiKey"]);
+
 export interface CredentialRemoveInput {
   readonly provider: CredentialProvider;
 }
+
+/**
+ * credential.status and credential.remove share one validator, so the guard
+ * covers both interfaces: either one gaining a key breaks the build.
+ */
+const credentialKeys = inputKeys<CredentialStatusInput & CredentialRemoveInput>()(["provider"]);
 
 export interface WorkspaceSummary {
   readonly id: string;
@@ -517,7 +583,7 @@ function requireRecord(value: unknown): Record<string, unknown> {
 
 function validateWorkspaceOpenInput(value: unknown): WorkspaceOpenInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["selection"])) return invalidInput();
+  if (!hasOnlyKeys(input, workspaceOpenKeys)) return invalidInput();
   const selection = input.selection;
   if (selection !== undefined && selection !== "native-dialog") return invalidInput();
   return selection === undefined ? {} : { selection };
@@ -525,9 +591,7 @@ function validateWorkspaceOpenInput(value: unknown): WorkspaceOpenInput {
 
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["name", "mode", "authorModel", "criticModel", "requiredSections"])) {
-    return invalidInput();
-  }
+  if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
   const mode =
     input.mode === undefined ? undefined : enumValue(input.mode, ["real", "demo"] as const);
   const authorModel = optionalModelId(input.authorModel);
@@ -544,7 +608,7 @@ function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
 
 function validateRunStatusInput(value: unknown): RunStatusInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "runId"])) return invalidInput();
+  if (!hasOnlyKeys(input, runStatusKeys)) return invalidInput();
   const runId = optionalIdentifier(input.runId);
   return {
     workspaceId: identifier(input.workspaceId),
@@ -554,13 +618,13 @@ function validateRunStatusInput(value: unknown): RunStatusInput {
 
 function validateRunStartInput(value: unknown): RunStartInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId"])) return invalidInput();
+  if (!hasOnlyKeys(input, runStartKeys)) return invalidInput();
   return { workspaceId: identifier(input.workspaceId) };
 }
 
 function validateRunLifecycleInput(value: unknown): RunLifecycleInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "runId"])) return invalidInput();
+  if (!hasOnlyKeys(input, runLifecycleKeys)) return invalidInput();
   return {
     workspaceId: identifier(input.workspaceId),
     runId: identifier(input.runId),
@@ -569,7 +633,7 @@ function validateRunLifecycleInput(value: unknown): RunLifecycleInput {
 
 function validateReviewLoadInput(value: unknown): ReviewLoadInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "runId"])) return invalidInput();
+  if (!hasOnlyKeys(input, reviewLoadKeys)) return invalidInput();
   const workspaceId = optionalIdentifier(input.workspaceId);
   const runId = optionalIdentifier(input.runId);
   return {
@@ -631,7 +695,7 @@ function validateReviewAction(value: unknown): ReviewAction {
 
 function validateReviewDispatchInput(value: unknown): ReviewDispatchInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "runId", "action"])) return invalidInput();
+  if (!hasOnlyKeys(input, reviewDispatchKeys)) return invalidInput();
   return {
     workspaceId: identifier(input.workspaceId),
     runId: identifier(input.runId),
@@ -641,8 +705,7 @@ function validateReviewDispatchInput(value: unknown): ReviewDispatchInput {
 
 function validateFileSelectInput(value: unknown): FileSelectInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "extensions", "multiple", "target"]))
-    return invalidInput();
+  if (!hasOnlyKeys(input, fileSelectKeys)) return invalidInput();
   const extensions = input.extensions;
   if (extensions !== undefined && !Array.isArray(extensions)) return invalidInput();
   const normalizedExtensions = extensions?.map((extension) =>
@@ -669,7 +732,7 @@ function validateFileSelectInput(value: unknown): FileSelectInput {
 
 function validateSourceAddUrlInput(value: unknown): SourceAddUrlInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "url", "target", "approved"])) return invalidInput();
+  if (!hasOnlyKeys(input, sourceAddUrlKeys)) return invalidInput();
   if (input.approved !== true) return invalidInput();
   return {
     workspaceId: identifier(input.workspaceId),
@@ -681,9 +744,7 @@ function validateSourceAddUrlInput(value: unknown): SourceAddUrlInput {
 
 function validateExportWriteInput(value: unknown): ExportWriteInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["workspaceId", "runId", "format", "relativePath"])) {
-    return invalidInput();
-  }
+  if (!hasOnlyKeys(input, exportWriteKeys)) return invalidInput();
   const path = optionalRelativePath(input.relativePath);
   if (path !== undefined && !path.startsWith("exports/")) return invalidInput();
   const format = enumValue(input.format, exportFormats);
@@ -700,13 +761,13 @@ function validateExportWriteInput(value: unknown): ExportWriteInput {
 
 function validateCredentialInput(value: unknown): CredentialStatusInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["provider"])) return invalidInput();
+  if (!hasOnlyKeys(input, credentialKeys)) return invalidInput();
   return { provider: enumValue(input.provider, credentialProviders) };
 }
 
 function validateCredentialSetInput(value: unknown): CredentialSetInput {
   const input = requireRecord(value);
-  if (!hasOnlyKeys(input, ["provider", "apiKey"])) return invalidInput();
+  if (!hasOnlyKeys(input, credentialSetKeys)) return invalidInput();
   const provider = enumValue(input.provider, credentialProviders);
   if (typeof input.apiKey !== "string" || input.apiKey.trim().length === 0) return invalidInput();
   return { provider, apiKey: input.apiKey.trim() };
