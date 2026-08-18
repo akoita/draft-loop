@@ -476,6 +476,24 @@ interface IndependenceSummary {
  * was recorded against it. An absent record is its own state: it is not
  * evidence of independence and not evidence against it.
  */
+/**
+ * The approval-gate label for the recorded independence claim.
+ *
+ * The gate states what the run recorded. A shared lineage that proceeded on a
+ * rationale is reported as overridden rather than met, so the checklist never
+ * reads as though an independent critique happened when the record says it did
+ * not.
+ */
+function independenceGateLabel(view: IndependentReviewView | null): string {
+  if (view === null) return "Independence claim recorded";
+  if (!view.required) return "Independent review not required for this run";
+  if (view.lineagesDistinct) return "Author and critic lineages differ, as claimed";
+  if (view.overrideRationale !== null) {
+    return "Shared lineage overridden on a recorded rationale; critique was not independent";
+  }
+  return "Author and critic share one lineage; critique was not independent";
+}
+
 function independenceSummary(view: IndependentReviewView | null): IndependenceSummary {
   if (view === null) {
     return {
@@ -1221,7 +1239,16 @@ export function ReviewWorkspace({
   const retryRemainingMs = retryWaitMs(state.providerFailure?.retryNotBefore ?? null, nowMs);
   const gateConditions: readonly { id: string; label: string; met: boolean }[] = [
     { id: "draft", label: "Draft artifact produced", met: hasArtifact },
-    { id: "critique", label: "Independent critique completed", met: state.reviewComplete },
+    // `reviewComplete` measures that a critique finished, not that it was
+    // independent. Calling it "independent" here would restate the over-claim
+    // the trust strip was corrected to avoid: an overridden shared-lineage run
+    // completes a critique that was, by its own record, not independent.
+    { id: "critique", label: "Critique completed", met: state.reviewComplete },
+    {
+      id: "independence",
+      label: independenceGateLabel(state.providerExposure.independentReview),
+      met: state.providerExposure.independentReview?.lineagesDistinct === true,
+    },
     {
       id: "blocking",
       label: "Blocking findings resolved or overridden",

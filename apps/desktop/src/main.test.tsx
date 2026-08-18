@@ -609,6 +609,67 @@ describe("desktop trust-centered review", () => {
  * comparison computed here, which reported "independent" for two vendors
  * serving one base model — the exact over-claim ADR 0005 was written to remove.
  */
+describe("desktop approval gate independence", () => {
+  const withIndependence = (independentReview: IndependentReviewView | null) => {
+    const fixture = createFixtureReviewState();
+    return {
+      ...fixture,
+      providerExposure: { ...fixture.providerExposure, independentReview },
+    };
+  };
+  const render = (independentReview: IndependentReviewView | null) =>
+    renderToStaticMarkup(
+      <ReviewWorkspace state={withIndependence(independentReview)} onAction={() => undefined} />,
+    );
+
+  it("never labels a completed critique as independent", () => {
+    // `reviewComplete` says a critique finished, not that it was independent.
+    const html = render({
+      authorLineage: "openweights:llama-4-70b",
+      criticLineage: "openweights:llama-4-70b",
+      lineagesDistinct: false,
+      required: true,
+      overrideRationale: "Comparing two deployments of one base model on purpose.",
+    });
+
+    expect(html).not.toContain("Independent critique completed");
+    expect(html).toContain("Critique completed");
+  });
+
+  it("reports an overridden shared lineage as not independent at the gate", () => {
+    const html = render({
+      authorLineage: "openweights:llama-4-70b",
+      criticLineage: "openweights:llama-4-70b",
+      lineagesDistinct: false,
+      required: true,
+      overrideRationale: "Comparing two deployments of one base model on purpose.",
+    });
+
+    expect(html).toContain(
+      "Shared lineage overridden on a recorded rationale; critique was not independent",
+    );
+  });
+
+  it("reports distinct lineages at the gate as a claim", () => {
+    const html = render({
+      authorLineage: "anthropic:claude-sonnet-4-5",
+      criticLineage: "openai:gpt-5",
+      lineagesDistinct: true,
+      required: true,
+      overrideRationale: null,
+    });
+
+    expect(html).toContain("Author and critic lineages differ, as claimed");
+  });
+
+  it("does not claim independence at the gate when nothing was recorded", () => {
+    const html = render(null);
+
+    expect(html).not.toContain("Independent critique completed");
+    expect(html).toContain("Independence claim recorded");
+  });
+});
+
 describe("desktop trust strip independence", () => {
   const withIndependence = (independentReview: IndependentReviewView | null) => {
     const fixture = createFixtureReviewState();
