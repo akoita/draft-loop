@@ -19,3 +19,8 @@ data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
+
+# Agent tooling state and nested worktrees
+.claude/
+.codex/
+.entire/
