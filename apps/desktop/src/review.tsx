@@ -1,9 +1,20 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type { CredentialStatus } from "./bridge.js";
+import { type DiffOp, diffWords } from "./diff.js";
 import {
   type DesktopReviewState,
   type FindingDecision,
   type ReviewAction,
+  type ReviewArtifact,
+  type ReviewBlock,
   type ReviewFinding,
   reviewFindingSummary,
 } from "./model.js";
@@ -65,6 +76,38 @@ const directFindingDecisions: readonly Exclude<FindingDecision, "pending" | "ove
   "rejected",
   "deferred",
 ];
+
+/** One key, one decision. Bare letters, because deciding is the repetitive act here. */
+const findingDecisionKeys: Readonly<
+  Record<string, Exclude<FindingDecision, "pending" | "overridden">>
+> = {
+  a: "accepted",
+  r: "rejected",
+  d: "deferred",
+};
+
+/** One entry in the command palette: an action of this workspace, reachable by its name. */
+interface PaletteCommand {
+  readonly id: string;
+  readonly label: string;
+  /** What the command does, or the shortcut it mirrors. */
+  readonly note: string;
+  /** Why the command cannot run right now, or null when it can. */
+  readonly disabledReason: string | null;
+  readonly run: () => void;
+}
+
+/** Narrows the palette by a plain substring of the command's own words. */
+function matchPaletteCommands(
+  commands: readonly PaletteCommand[],
+  query: string,
+): readonly PaletteCommand[] {
+  const needle = query.trim().toLowerCase();
+  if (needle === "") return commands;
+  return commands.filter((command) =>
+    `${command.label} ${command.note}`.toLowerCase().includes(needle),
+  );
+}
 
 function isUnresolvedFinding(finding: ReviewFinding): boolean {
   return finding.decision === "pending" || finding.decision === "deferred";
@@ -256,33 +299,6 @@ function LinkIcon() {
   );
 }
 
-function WorkspaceIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path
-        d="M3.5 7.5A1.5 1.5 0 0 1 5 6h4l1.8 2H19a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 19 18H5a1.5 1.5 0 0 1-1.5-1.5v-9Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function KeyIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <circle cx="8" cy="12" r="3.4" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M11.4 12H20M17.5 12v2.6M14.5 12v1.8"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function PlayIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
@@ -291,49 +307,89 @@ function PlayIcon() {
   );
 }
 
-function SideRail({ onOpenSettings }: { readonly onOpenSettings: () => void }) {
+/**
+ * The rail is a table of contents for the workspace, not a toolbar: four destinations, each
+ * one place a reviewer actually goes. It carries no section-in-view state, because the draft
+ * and the queue scroll in two independent columns and are almost always both on screen —
+ * an "active" mark there would be decoration that lies. `onOpenSources` is null before a run
+ * exists, when there is no document, no queue and no traceability to reach.
+ */
+function SideRail({
+  onOpenSources,
+  onOpenSettings,
+}: {
+  readonly onOpenSources: (() => void) | null;
+  readonly onOpenSettings: () => void;
+}) {
   return (
     <nav className="side-rail" aria-label="Workspace sections">
       <BrandMark />
-      <a className="rail-button" href="#artifact-review" title="Go to the draft">
-        <span className="sr-only">Go to the draft</span>
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-          <rect
-            x="4.5"
-            y="3"
-            width="15"
-            height="18"
-            rx="2"
-            stroke="currentColor"
-            strokeWidth="1.6"
-          />
-          <path
-            d="M8.5 8h7M8.5 12h7M8.5 16h4"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
-      </a>
-      <a className="rail-button" href="#finding-queue-list" title="Go to the findings queue">
-        <span className="sr-only">Go to the findings queue</span>
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-          <path
-            d="M4 6h16M4 12h16M4 18h10"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-          />
-        </svg>
-      </a>
+      {onOpenSources === null ? null : (
+        <>
+          <a className="rail-button" href="#artifact-review" title="Document — the draft">
+            <span className="sr-only">Document — the draft</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+              <rect
+                x="4.5"
+                y="3"
+                width="15"
+                height="18"
+                rx="2"
+                stroke="currentColor"
+                strokeWidth="1.6"
+              />
+              <path
+                d="M8.5 8h7M8.5 12h7M8.5 16h4"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </a>
+          <a className="rail-button" href="#finding-queue-list" title="Findings — the queue">
+            <span className="sr-only">Findings — the queue</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+              <path
+                d="M4 6h16M4 12h16M4 18h10"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+              />
+            </svg>
+          </a>
+          <button
+            className="rail-button"
+            type="button"
+            title="Sources — claim traceability"
+            onClick={onOpenSources}
+          >
+            <span className="sr-only">Sources — claim traceability</span>
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+              <path
+                d="M12 4.5 3.8 8.2 12 11.9l8.2-3.7L12 4.5Z"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M4.4 12.2 12 15.6l7.6-3.4M4.4 16.1 12 19.5l7.6-3.4"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+        </>
+      )}
       <span className="rail-spacer" />
       <button
         className="rail-button"
         type="button"
-        title="Provider API keys"
-        aria-label="Provider API keys"
+        title="Keys — provider API keys"
         onClick={onOpenSettings}
       >
+        <span className="sr-only">Keys — provider API keys</span>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
           <circle cx="8" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.6" />
           <path
@@ -491,6 +547,70 @@ function CredentialRow({
   );
 }
 
+/**
+ * A modal owns the focus ring while it is open: focus moves in, Tab cycles inside it, Escape
+ * closes it from anywhere, and focus returns to wherever the reviewer was. One implementation,
+ * so the credential dialog and the command palette cannot drift apart.
+ */
+function useModalFocusTrap(
+  open: boolean,
+  dialogRef: RefObject<HTMLElement | null>,
+  onClose: () => void,
+): void {
+  // The close callback is read at event time, so a new closure each render does not
+  // re-run the trap and steal focus back to the top of the dialog.
+  const closeRef = useRef(onClose);
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const focusableElements = (): readonly HTMLElement[] =>
+      Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), [href], select, textarea, [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      );
+
+    focusableElements()[0]?.focus();
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const elements = focusableElements();
+      const first = elements[0];
+      const last = elements.at(-1);
+      if (first === undefined || last === undefined) return;
+
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialogRef.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleDialogKeyDown, true);
+    return () => {
+      document.removeEventListener("keydown", handleDialogKeyDown, true);
+      previouslyFocused?.focus();
+    };
+  }, [dialogRef, open]);
+}
+
+// Measuring a textarea needs a layout, and the server render has none.
+const useSheetLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 function claimSectionTitle(
   artifact: DesktopReviewState["artifact"],
   claimId: string,
@@ -525,6 +645,356 @@ function blockSourceState(
     : "unsourced";
 }
 
+/** One draft line as it stands across two versions, ready to be marked up on the sheet. */
+export interface DraftBlockPair {
+  readonly key: string;
+  /** The current block, or null when this line survives only in the previous version. */
+  readonly block: ReviewBlock | null;
+  /** The matching previous text, or null when this line is wholly new. */
+  readonly previousText: string | null;
+  readonly text: string;
+}
+
+/** One section of the draft, with its lines already paired across the two versions. */
+export interface DraftSectionPair {
+  readonly key: string;
+  readonly title: string;
+  readonly removed: boolean;
+  readonly blocks: readonly DraftBlockPair[];
+}
+
+interface VersionPair<T> {
+  readonly current: T | null;
+  readonly previous: T | null;
+}
+
+/**
+ * Lines up two versions of one ordered list. Ids are authoritative; whatever they leave
+ * unmatched falls back to `fallbackMatches` in document order, because a revision may rewrite
+ * a line without keeping its id and a reader still pairs the two versions by position.
+ * Records that exist only in the previous version come back as removals, in their old place.
+ */
+function alignVersions<T extends { readonly id: string }>(
+  current: readonly T[],
+  previous: readonly T[],
+  fallbackMatches: (currentItem: T, previousItem: T) => boolean,
+): readonly VersionPair<T>[] {
+  const previousIndexById = new Map(previous.map((item, index) => [item.id, index]));
+  const taken = new Set<number>();
+  const matches: (number | null)[] = current.map((item) => {
+    const index = previousIndexById.get(item.id);
+    if (index === undefined || taken.has(index)) return null;
+    taken.add(index);
+    return index;
+  });
+  current.forEach((item, index) => {
+    if (matches[index] !== null) return;
+    for (let candidate = 0; candidate < previous.length; candidate += 1) {
+      const previousItem = previous[candidate];
+      if (previousItem === undefined || taken.has(candidate)) continue;
+      if (!fallbackMatches(item, previousItem)) continue;
+      taken.add(candidate);
+      matches[index] = candidate;
+      return;
+    }
+  });
+
+  const pairs: VersionPair<T>[] = [];
+  let cursor = 0;
+  const emitRemovedBefore = (limit: number): void => {
+    for (; cursor < limit; cursor += 1) {
+      const previousItem = previous[cursor];
+      if (previousItem !== undefined && !taken.has(cursor)) {
+        pairs.push({ current: null, previous: previousItem });
+      }
+    }
+  };
+  current.forEach((item, index) => {
+    const match = matches[index] ?? null;
+    if (match === null) {
+      pairs.push({ current: item, previous: null });
+      return;
+    }
+    emitRemovedBefore(match);
+    cursor = match + 1;
+    pairs.push({ current: item, previous: previous[match] ?? null });
+  });
+  emitRemovedBefore(previous.length);
+  return pairs;
+}
+
+/** Pairs the lines of one section across two versions, keeping removals in document order. */
+export function pairDraftBlocks(
+  currentBlocks: readonly ReviewBlock[],
+  previousBlocks: readonly ReviewBlock[],
+): readonly DraftBlockPair[] {
+  const pairs: DraftBlockPair[] = [];
+  for (const pair of alignVersions(currentBlocks, previousBlocks, () => true)) {
+    if (pair.current === null) {
+      if (pair.previous === null) continue;
+      pairs.push({
+        key: `removed-${pair.previous.id}`,
+        block: null,
+        previousText: pair.previous.text,
+        text: pair.previous.text,
+      });
+      continue;
+    }
+    pairs.push({
+      key: pair.current.id,
+      block: pair.current,
+      previousText: pair.previous === null ? null : pair.previous.text,
+      text: pair.current.text,
+    });
+  }
+  return pairs;
+}
+
+/** Pairs the whole draft across two versions. Sections match by id, then by title. */
+export function pairDraftSections(
+  artifact: ReviewArtifact,
+  previousArtifact: ReviewArtifact | null,
+): readonly DraftSectionPair[] {
+  const sections: DraftSectionPair[] = [];
+  for (const pair of alignVersions(
+    artifact.sections,
+    previousArtifact?.sections ?? [],
+    (section, previousSection) => section.title === previousSection.title,
+  )) {
+    if (pair.current === null) {
+      if (pair.previous === null) continue;
+      sections.push({
+        key: `removed-${pair.previous.id}`,
+        title: pair.previous.title,
+        removed: true,
+        blocks: pairDraftBlocks([], pair.previous.blocks),
+      });
+      continue;
+    }
+    sections.push({
+      key: pair.current.id,
+      title: pair.current.title,
+      removed: false,
+      blocks: pairDraftBlocks(pair.current.blocks, pair.previous?.blocks ?? []),
+    });
+  }
+  return sections;
+}
+
+interface RedlineOp {
+  readonly key: string;
+  readonly kind: "equal" | "insert" | "delete";
+  readonly text: string;
+}
+
+/** How much of a line a word-level alignment must preserve before it is worth showing. */
+export const REDLINE_MIN_RETENTION = 0.5;
+/** Below two separate edit regions the alignment already reads as one clean replacement. */
+export const REDLINE_MIN_EDIT_REGIONS = 2;
+
+/**
+ * Non-whitespace characters. Word tokenisation leaves nearly every space in an `equal` op,
+ * so counting whitespace would make every alignment look far better preserved than it is.
+ */
+function inkLength(text: string): number {
+  return text.replace(/\s+/gu, "").length;
+}
+
+export interface RedlineShape {
+  /** Maximal runs of insert/delete ops, uninterrupted by an `equal` op carrying any ink. */
+  readonly editRegions: number;
+  /** Share of the longer version's ink characters that survived the revision, 0…1. */
+  readonly retention: number;
+}
+
+/** A pure read of how fragmented a word-level alignment is. Deterministic in the ops alone. */
+export function redlineShape(ops: readonly DiffOp[]): RedlineShape {
+  let equalInk = 0;
+  let previousInk = 0;
+  let nextInk = 0;
+  let editRegions = 0;
+  let insideRegion = false;
+
+  for (const op of ops) {
+    const ink = inkLength(op.text);
+    if (op.kind === "equal") {
+      equalInk += ink;
+      previousInk += ink;
+      nextInk += ink;
+      if (ink > 0) insideRegion = false;
+      continue;
+    }
+    if (op.kind === "delete") previousInk += ink;
+    else nextInk += ink;
+    if (ink > 0 && !insideRegion) {
+      editRegions += 1;
+      insideRegion = true;
+    }
+  }
+
+  const longest = Math.max(previousInk, nextInk);
+  return { editRegions, retention: longest === 0 ? 1 : equalInk / longest };
+}
+
+/**
+ * A rewritten sentence aligns into interleaved scraps that read worse than either version
+ * alone, so past a fragmentation threshold the line is marked up the way a proof-reader would:
+ * strike the old sentence whole, write the new one under it. Returns the input unchanged —
+ * by identity, so the caller can tell — whenever the word-level marks still carry meaning.
+ */
+export function collapseFragmentedRedline(ops: readonly DiffOp[]): readonly DiffOp[] {
+  const shape = redlineShape(ops);
+  if (shape.editRegions < REDLINE_MIN_EDIT_REGIONS || shape.retention >= REDLINE_MIN_RETENTION) {
+    return ops;
+  }
+
+  let previousText = "";
+  let nextText = "";
+  for (const op of ops) {
+    if (op.kind !== "insert") previousText += op.text;
+    if (op.kind !== "delete") nextText += op.text;
+  }
+
+  const collapsed: DiffOp[] = [];
+  if (previousText !== "") collapsed.push({ kind: "delete", text: previousText });
+  if (nextText !== "") collapsed.push({ kind: "insert", text: nextText });
+  return collapsed;
+}
+
+/**
+ * The marked-up reading view of one draft line. A null `previousText` means the line is new,
+ * so the redline marks all of it as an insertion. The alignment is memoised on this line's own
+ * two texts: typing in one line must not re-diff the rest of the sheet.
+ */
+function BlockRedline({
+  previousText,
+  text,
+  showChanges,
+}: {
+  readonly previousText: string | null;
+  readonly text: string;
+  readonly showChanges: boolean;
+}) {
+  const redline = useMemo<{
+    readonly replaced: boolean;
+    readonly ops: readonly RedlineOp[];
+  } | null>(() => {
+    if (!showChanges) return null;
+    const aligned = diffWords(previousText ?? "", text);
+    const marks = collapseFragmentedRedline(aligned);
+    let offset = 0;
+    return {
+      replaced: marks !== aligned,
+      ops: marks.map((op) => {
+        const key = `${op.kind}-${offset}`;
+        offset += op.text.length;
+        return { key, kind: op.kind, text: op.text };
+      }),
+    };
+  }, [previousText, showChanges, text]);
+
+  if (redline === null) return text;
+  const marks = redline.ops.map((op) =>
+    op.kind === "equal" ? (
+      <span key={op.key}>{op.text}</span>
+    ) : op.kind === "insert" ? (
+      <ins className="redline-ins" key={op.key}>
+        {op.text}
+      </ins>
+    ) : (
+      <del className="redline-del" key={op.key}>
+        {op.text}
+      </del>
+    ),
+  );
+  // A whole-line replacement is set as two stacked lines, so each version still reads as a
+  // sentence instead of as one run-on paragraph.
+  if (redline.replaced) return <span className="redline-replacement">{marks}</span>;
+  return <>{marks}</>;
+}
+
+/** One unresolved finding, tied to the draft line whose wording it judges. */
+interface MarginNote {
+  readonly finding: ReviewFinding;
+  readonly blockId: string;
+}
+
+/** Where each margin note sits beside the paper, once the sheet has been measured. */
+interface MarginNotePlacement {
+  /** Note top, in pixels from the top of the paper, after collision avoidance. */
+  readonly tops: ReadonlyMap<string, number>;
+  /** The line the note actually judges, so a pushed note keeps a slanted connector. */
+  readonly anchors: ReadonlyMap<string, number>;
+  /** Notes pushed clear off the foot of the page; they collapse into the "more" affordance. */
+  readonly overflow: readonly string[];
+  /** Foot of the lowest placed note, so the margin column can be given a real height. */
+  readonly contentBottom: number;
+}
+
+interface MarginNoteLayout extends MarginNotePlacement {
+  readonly columnHeight: number;
+}
+
+/** Clear space between two stacked notes. */
+const MARGIN_NOTE_GUTTER = 10;
+/** Space kept free at the foot of the margin for the "+N more" affordance. */
+const MARGIN_MORE_RESERVE = 44;
+/** Where the connector meets the note, measured from the note's own top edge. */
+const MARGIN_NOTE_ATTACH = 13;
+
+interface MarginNoteBox {
+  readonly id: string;
+  readonly anchor: number;
+  readonly height: number;
+}
+
+/**
+ * Stacks the notes down the margin. A note sits beside its own line whenever there is room;
+ * otherwise it is pushed just clear of the note above, and its connector slants to say so.
+ * A note may hang past the foot of the paper, the way marginalia does; a note pushed so far
+ * that it no longer starts beside any line is reported as overflow instead.
+ */
+export function placeMarginNotes(
+  boxes: readonly MarginNoteBox[],
+  available: number,
+): MarginNotePlacement {
+  const ordered = [...boxes].sort((left, right) => left.anchor - right.anchor);
+  const tops = new Map<string, number>();
+  const anchors = new Map<string, number>();
+  const overflow: string[] = [];
+  let cursor = 0;
+  let contentBottom = 0;
+  let spilled = false;
+
+  for (const box of ordered) {
+    const top = Math.max(box.anchor, cursor);
+    if (spilled || top > available) {
+      spilled = true;
+      overflow.push(box.id);
+      continue;
+    }
+    tops.set(box.id, top);
+    anchors.set(box.id, box.anchor);
+    contentBottom = Math.max(contentBottom, top + box.height);
+    cursor = top + box.height + MARGIN_NOTE_GUTTER;
+  }
+
+  return { tops, anchors, overflow, contentBottom };
+}
+
+function sameMarginLayout(left: MarginNoteLayout | null, right: MarginNoteLayout): boolean {
+  if (left === null) return false;
+  if (left.tops.size !== right.tops.size) return false;
+  if (left.columnHeight !== right.columnHeight) return false;
+  if (left.overflow.length !== right.overflow.length) return false;
+  if (left.overflow.some((id, index) => right.overflow[index] !== id)) return false;
+  for (const [id, top] of right.tops) {
+    if (left.tops.get(id) !== top) return false;
+    if (left.anchors.get(id) !== right.anchors.get(id)) return false;
+  }
+  return true;
+}
+
 function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
   if (claim.status === "disputed") return "source conflict";
   return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
@@ -557,16 +1027,6 @@ export function ReviewWorkspace({
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
-  const approvalLabel =
-    state.approval === "approved"
-      ? !state.reviewComplete
-        ? "Approval recorded; independent critique incomplete"
-        : findingSummary.status === "clear"
-          ? "Artifact approved"
-          : findingSummary.status === "blocked"
-            ? `Approved with ${blockingFindings.length} unresolved blocker${blockingFindings.length === 1 ? "" : "s"}`
-            : `Approved with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`
-      : "Approval pending";
   const validationLabel = !hasArtifact
     ? "No draft artifact available"
     : !state.reviewComplete
@@ -598,10 +1058,45 @@ export function ReviewWorkspace({
   } | null>(null);
   const findingSummaryButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const findingQueueContext = useRef(`${state.workspaceId}:${state.runId}`);
+  const overrideInputRefs = useRef(new Map<string, HTMLInputElement>());
   const [linkedClaimId, setLinkedClaimId] = useState<string | null>(null);
   const draftBlockRefs = useRef(new Map<string, HTMLTextAreaElement>());
+  const draftBlockShellRefs = useRef(new Map<string, HTMLDivElement>());
+  // The margin: findings drawn beside the line they judge, the way a proof-reader marks a
+  // manuscript. Position is measured, never guessed, so a note never drifts off its sentence.
+  const sheetRef = useRef<HTMLElement | null>(null);
+  const marginColumnRef = useRef<HTMLDivElement | null>(null);
+  const marginNoteRefs = useRef(new Map<string, HTMLLIElement>());
+  const [marginLayout, setMarginLayout] = useState<MarginNoteLayout | null>(null);
+  // Which finding the reviewer is pointing at, wherever they are pointing at it from.
+  const [activeFindingId, setActiveFindingId] = useState<string | null>(null);
+  const queueFocusRequest = useRef<{
+    readonly findingId: string;
+    readonly target: "summary" | "override";
+  } | null>(null);
+  // A draft line is a two-state cell: a marked-up reading view, or the editor. Only one line
+  // is open at a time, and which one is session-local UI state, not part of the run.
+  const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
+  const [draftView, setDraftView] = useState<"changes" | "full">("changes");
+  const [compareOpen, setCompareOpen] = useState(false);
+  // Which draft lines this reviewer changed in this session. Session-local UI
+  // state: it says what a signature would cover, and is not part of the run.
+  const [editedBlockIds, setEditedBlockIds] = useState<ReadonlySet<string>>(() => new Set());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsDialogRef = useRef<HTMLDivElement | null>(null);
+  // The command palette: every action in this workspace reachable by name, with the reason
+  // written on any action that cannot run yet.
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  const paletteDialogRef = useRef<HTMLDivElement | null>(null);
+  const paletteInputRef = useRef<HTMLInputElement | null>(null);
+  // Where a palette command wants focus to land. Applied after the palette has returned focus
+  // to wherever the reviewer was, so the destination wins.
+  const paletteFocusRequest = useRef<HTMLElement | null>(null);
+  const traceabilityRef = useRef<HTMLDetailsElement | null>(null);
+  const traceabilitySummaryRef = useRef<HTMLElement | null>(null);
+  const reviewColumnRef = useRef<HTMLElement | null>(null);
+  const findingQueueRef = useRef<HTMLElement | null>(null);
   const emptyCredentialStatus = (provider: "anthropic" | "openai"): CredentialStatus => ({
     provider,
     configured: false,
@@ -619,6 +1114,26 @@ export function ReviewWorkspace({
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
+  const hasPreviousArtifact = state.previousArtifact !== null;
+  // Nothing to compare against on a first version, so the redline is unavailable, not empty.
+  const showChanges = hasPreviousArtifact && draftView === "changes";
+  const compareVisible = hasPreviousArtifact && compareOpen;
+  const draftSections = useMemo(
+    () => pairDraftSections(state.artifact, state.previousArtifact),
+    [state.artifact, state.previousArtifact],
+  );
+  // A finding earns a place in the margin only when it names a claim that resolves to a line
+  // on the page. Everything else stays in the queue, which remains the complete list.
+  const marginNotes = useMemo<readonly MarginNote[]>(() => {
+    const notes: MarginNote[] = [];
+    for (const finding of state.findings) {
+      if (!isUnresolvedFinding(finding) || finding.claimId === undefined) continue;
+      const blockId = claimBlockId(state.artifact, finding.claimId);
+      if (blockId === null) continue;
+      notes.push({ finding, blockId });
+    }
+    return notes;
+  }, [state.artifact, state.findings]);
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [confirmedPolicyFingerprint, setConfirmedPolicyFingerprint] = useState<string | null>(null);
   const queueCounts = findingQueueCounts(state.findings);
@@ -653,6 +1168,9 @@ export function ReviewWorkspace({
     state.budgetUsd === null || state.budgetUsd <= 0
       ? null
       : Math.min(1, state.totalCostUsd / state.budgetUsd);
+  // Provider diversity is a product constraint, so the trust facts state it plainly.
+  const providerDiversityMet =
+    state.providerExposure.author.company !== state.providerExposure.critic.company;
 
   useEffect(() => {
     const nextContext = `${state.workspaceId}:${state.runId}`;
@@ -664,6 +1182,8 @@ export function ReviewWorkspace({
     setFindingFilter(nextQueueState.filter);
     setExpandedFindingId(nextQueueState.expandedFindingId);
     setOverrideEditingFindingId(null);
+    setEditedBlockIds(new Set());
+    setEditingBlockId(null);
     findingDecisionRequest.current = null;
   }, [queueCounts.needsAction, state.findings, state.runId, state.workspaceId]);
 
@@ -716,6 +1236,95 @@ export function ReviewWorkspace({
     return () => window.clearInterval(timer);
   }, [state.providerFailure?.retryNotBefore, state.providerFailure]);
 
+  // A draft line takes exactly the height of its own text, so the sheet shows
+  // no blank filler under a short summary.
+  const draftBlockText = state.artifact.sections
+    .flatMap((section) => section.blocks.map((block) => block.text))
+    .join("\u001f");
+
+  useSheetLayoutEffect(() => {
+    for (const textarea of draftBlockRefs.current.values()) {
+      // A hidden editor has no layout to measure; it is sized when its line opens.
+      if (textarea.hidden) continue;
+      textarea.style.height = "auto";
+      // These boxes are border-box, and scrollHeight excludes the border.
+      const frame = textarea.offsetHeight - textarea.clientHeight;
+      textarea.style.height = `${textarea.scrollHeight + frame}px`;
+    }
+  }, [draftBlockText, editingBlockId]);
+
+  // Opening a line moves the caret into it, however the line was opened.
+  useEffect(() => {
+    if (editingBlockId === null) return;
+    draftBlockRefs.current.get(editingBlockId)?.focus();
+  }, [editingBlockId]);
+
+  // The margin is measured, not laid out by the flow: a note has to line up with a sentence
+  // inside the paper, and only the browser knows where that sentence ended up.
+  useSheetLayoutEffect(() => {
+    const sheet = sheetRef.current;
+    const column = marginColumnRef.current;
+    if (sheet === null || column === null || marginNotes.length === 0) {
+      setMarginLayout(null);
+      return undefined;
+    }
+
+    const measure = (): void => {
+      // Below the narrow breakpoint the margin is removed altogether and the queue is the
+      // only view of findings, so there is nothing to place.
+      if (column.offsetParent === null) {
+        setMarginLayout(null);
+        return;
+      }
+      const sheetTop = sheet.getBoundingClientRect().top;
+      const boxes: MarginNoteBox[] = [];
+      for (const note of marginNotes) {
+        const shell = draftBlockShellRefs.current.get(note.blockId);
+        const element = marginNoteRefs.current.get(note.finding.id);
+        if (shell === undefined || element === undefined) continue;
+        boxes.push({
+          id: note.finding.id,
+          anchor: shell.getBoundingClientRect().top - sheetTop,
+          height: element.offsetHeight,
+        });
+      }
+
+      const height = sheet.offsetHeight;
+      const placement = placeMarginNotes(boxes, height);
+      // The margin grows to hold its notes, so a short page still shows them beside the
+      // sentence; only once something has spilled is room kept for the "more" affordance.
+      const next: MarginNoteLayout = {
+        ...placement,
+        columnHeight: Math.max(
+          height,
+          placement.contentBottom + (placement.overflow.length > 0 ? MARGIN_MORE_RESERVE : 0),
+        ),
+      };
+      setMarginLayout((current) => (sameMarginLayout(current, next) ? current : next));
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(sheet);
+    observer.observe(column);
+    return () => observer.disconnect();
+  }, [compareVisible, draftBlockText, editingBlockId, editedBlockIds, marginNotes, showChanges]);
+
+  // Reaching the queue from the margin: the row is expanded first, then focused, because the
+  // control being focused may only have been rendered by that expansion.
+  useEffect(() => {
+    const request = queueFocusRequest.current;
+    if (request === null) return;
+    const element =
+      request.target === "override"
+        ? overrideInputRefs.current.get(request.findingId)
+        : findingSummaryButtonRefs.current.get(request.findingId);
+    if (element === undefined) return;
+    queueFocusRequest.current = null;
+    element.scrollIntoView({ block: "nearest" });
+    element.focus();
+  });
+
   const refreshCredentials = useCallback(() => {
     if (getCredentialStatus === undefined) return;
     void getCredentialStatus("anthropic")
@@ -758,57 +1367,101 @@ export function ReviewWorkspace({
     }
   };
 
-  // The credential dialog owns the focus ring while it is open: focus moves in,
-  // Tab cycles inside it, Escape closes it from anywhere, and focus returns.
-  useEffect(() => {
-    if (!settingsOpen) return undefined;
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const closePalette = useCallback(() => setPaletteOpen(false), []);
+  useModalFocusTrap(settingsOpen, settingsDialogRef, closeSettings);
+  useModalFocusTrap(paletteOpen, paletteDialogRef, closePalette);
 
-    const previouslyFocused = document.activeElement as HTMLElement | null;
-    const focusableElements = (): readonly HTMLElement[] =>
-      Array.from(
-        settingsDialogRef.current?.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), [href], select, textarea, [tabindex]:not([tabindex="-1"])',
-        ) ?? [],
+  const submitUrl = (target: "evidence" | "job-description"): void => {
+    const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
+    if (value === "" || onAddUrl === undefined) return;
+    onAddUrl(target, value);
+    if (target === "job-description") setJobUrl("");
+    else setEvidenceUrl("");
+  };
+
+  // The margin and the queue are two views of one set of objects, so every route into a
+  // finding runs through the same three calls and lands the reviewer in the same place.
+  const revealFindingInQueue = useCallback(
+    (findingId: string, target: "summary" | "override" = "summary"): void => {
+      const visible = filterFindingQueue(state.findings, findingFilter).some(
+        (finding) => finding.id === findingId,
       );
+      if (!visible) setFindingFilter("needs-action");
+      setExpandedFindingId(findingId);
+      setActiveFindingId(findingId);
+      queueFocusRequest.current = { findingId, target };
+    },
+    [findingFilter, state.findings],
+  );
 
-    focusableElements()[0]?.focus();
+  // One decision path for both views: the same action, the same "advance to the next
+  // actionable finding" bookkeeping, whichever control the reviewer reached for.
+  const decideFinding = useCallback(
+    (findingId: string, decision: Exclude<FindingDecision, "pending" | "overridden">): void => {
+      findingDecisionRequest.current = { findingId, decision };
+      onAction({ type: "finding-decision", findingId, decision });
+    },
+    [onAction],
+  );
 
-    const handleDialogKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        setSettingsOpen(false);
-        return;
-      }
-      if (event.key !== "Tab") return;
+  const beginOverride = useCallback((finding: ReviewFinding): void => {
+    setOverrideReasons((current) =>
+      current[finding.id] === undefined
+        ? { ...current, [finding.id]: finding.rationale ?? "" }
+        : current,
+    );
+    setOverrideEditingFindingId(finding.id);
+  }, []);
 
-      const elements = focusableElements();
-      const first = elements[0];
-      const last = elements.at(-1);
-      if (first === undefined || last === undefined) return;
+  // The palette belongs to a run: before one exists there is no draft, no queue and no
+  // traceability, and a list of commands that cannot run is not a command list.
+  const paletteAvailable = state.state !== "collecting";
 
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !settingsDialogRef.current?.contains(active))) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
+  const openPalette = useCallback((): void => {
+    setPaletteQuery("");
+    setPaletteOpen(true);
+  }, []);
 
-    document.addEventListener("keydown", handleDialogKeyDown, true);
-    return () => {
-      document.removeEventListener("keydown", handleDialogKeyDown, true);
-      previouslyFocused?.focus();
-    };
-  }, [settingsOpen]);
+  const openTraceability = (): void => {
+    const details = traceabilityRef.current;
+    if (details === null) return;
+    details.open = true;
+    const summary = traceabilitySummaryRef.current;
+    summary?.scrollIntoView({ block: "center" });
+    summary?.focus();
+  };
 
+  // Triage from the keyboard. The bare letters act on the finding the queue is on; the
+  // artifact gate keeps its Alt chords, so approving is never one keystroke away.
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (settingsOpen) return;
+      if (settingsOpen || paletteOpen) return;
       const target = event.target as HTMLElement | null;
-      const isInput = target?.tagName === "INPUT" || target?.tagName === "TEXTAREA";
-      if (isInput) return;
+
+      // Escape leaves the override editor even from inside its own input: that is the one
+      // place a reviewer is typing and still expects a key to answer.
+      if (event.key === "Escape" && overrideEditingFindingId !== null) {
+        event.preventDefault();
+        const editingFindingId = overrideEditingFindingId;
+        setOverrideEditingFindingId(null);
+        findingSummaryButtonRefs.current.get(editingFindingId)?.focus();
+        return;
+      }
+
+      const typing =
+        target?.tagName === "INPUT" ||
+        target?.tagName === "TEXTAREA" ||
+        target?.isContentEditable === true ||
+        editingBlockId !== null;
+      if (typing) return;
+
+      if ((event.ctrlKey || event.metaKey) && (event.key === "k" || event.key === "K")) {
+        if (!paletteAvailable) return;
+        event.preventDefault();
+        openPalette();
+        return;
+      }
 
       if (event.altKey || event.metaKey) {
         if (event.key === "a" || event.key === "A") {
@@ -827,27 +1480,467 @@ export function ReviewWorkspace({
             onAction({ type: "export" });
           }
         }
+        return;
       }
+
+      // A half-typed rationale owns the queue until it is saved or abandoned.
+      if (event.ctrlKey || event.shiftKey || overrideEditingFindingId !== null) return;
+
+      const queue = filterFindingQueue(state.findings, findingFilter);
+      if (queue.length === 0) return;
+      const active = document.activeElement;
+      const focusedId =
+        queue.find((finding) => findingSummaryButtonRefs.current.get(finding.id) === active)?.id ??
+        null;
+      // Selection follows the expanded row, and falls back to the summary button that holds
+      // focus, so a row collapsed with Enter can still be decided where it stands.
+      const currentId =
+        expandedFindingId !== null && queue.some((finding) => finding.id === expandedFindingId)
+          ? expandedFindingId
+          : focusedId;
+      const currentIndex =
+        currentId === null ? -1 : queue.findIndex((finding) => finding.id === currentId);
+
+      const step = (delta: number): void => {
+        const nextIndex =
+          currentIndex === -1
+            ? delta > 0
+              ? 0
+              : queue.length - 1
+            : Math.min(queue.length - 1, Math.max(0, currentIndex + delta));
+        const next = queue[nextIndex];
+        if (next === undefined) return;
+        setExpandedFindingId(next.id);
+        setActiveFindingId(next.id);
+        setLinkedClaimId(next.claimId ?? null);
+        const button = findingSummaryButtonRefs.current.get(next.id);
+        button?.scrollIntoView({ block: "nearest" });
+        button?.focus();
+      };
+
+      if (event.key === "j" || event.key === "J" || event.key === "ArrowDown") {
+        event.preventDefault();
+        step(1);
+        return;
+      }
+      if (event.key === "k" || event.key === "K" || event.key === "ArrowUp") {
+        event.preventDefault();
+        step(-1);
+        return;
+      }
+      if (event.key === "Enter") {
+        // A focused control already answers Enter itself; only the page-level case is ours.
+        const nativeTarget =
+          target?.tagName === "BUTTON" || target?.tagName === "A" || target?.tagName === "SUMMARY";
+        if (nativeTarget || currentId === null) return;
+        event.preventDefault();
+        setExpandedFindingId((current) => (current === currentId ? null : currentId));
+        findingSummaryButtonRefs.current.get(currentId)?.focus();
+        return;
+      }
+      if (event.key === "Escape") {
+        if (expandedFindingId === null) return;
+        event.preventDefault();
+        const collapsedId = expandedFindingId;
+        setExpandedFindingId(null);
+        findingSummaryButtonRefs.current.get(collapsedId)?.focus();
+        return;
+      }
+
+      const finding = currentIndex === -1 ? undefined : queue[currentIndex];
+      if (finding === undefined || findingDecisionPending) return;
+
+      if (event.key === "o" || event.key === "O") {
+        event.preventDefault();
+        beginOverride(finding);
+        revealFindingInQueue(finding.id, "override");
+        return;
+      }
+      const decision = findingDecisionKeys[event.key.toLowerCase()];
+      if (decision === undefined) return;
+      event.preventDefault();
+      decideFinding(finding.id, decision);
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
+    beginOverride,
     canApprove,
     canExport,
+    decideFinding,
+    editingBlockId,
+    expandedFindingId,
+    findingDecisionPending,
+    findingFilter,
     onAction,
+    openPalette,
+    overrideEditingFindingId,
+    paletteAvailable,
+    paletteOpen,
+    revealFindingInQueue,
     settingsOpen,
+    state.findings,
     state.reviewComplete,
     state.state,
     transmissionReady,
   ]);
 
-  const submitUrl = (target: "evidence" | "job-description"): void => {
-    const value = target === "job-description" ? jobUrl.trim() : evidenceUrl.trim();
-    if (value === "" || onAddUrl === undefined) return;
-    onAddUrl(target, value);
-    if (target === "job-description") setJobUrl("");
-    else setEvidenceUrl("");
+  // A palette command that moves focus lands after the dialog has handed focus back to
+  // wherever the reviewer was, so the destination wins over the restore.
+  useEffect(() => {
+    const target = paletteFocusRequest.current;
+    if (target === null) return;
+    paletteFocusRequest.current = null;
+    target.scrollIntoView({ block: "start" });
+    target.focus();
+  });
+
+  const pendingActionReason =
+    pendingReviewAction === null ? null : "Another review action is already running.";
+  const revisionReason = !hasArtifact
+    ? "No draft artifact available yet."
+    : !state.reviewComplete
+      ? "Independent critique has not completed."
+      : state.state !== "awaiting-approval"
+        ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
+        : !transmissionReady
+          ? "Provider transmission has not been acknowledged."
+          : pendingActionReason;
+  const comparisonReason = hasPreviousArtifact
+    ? null
+    : "There is no previous version to compare with.";
+  const paletteCommands: readonly PaletteCommand[] = [
+    {
+      id: "approve",
+      label: "Approve artifact",
+      note: "Alt+A",
+      disabledReason: !hasArtifact
+        ? "No draft artifact available yet."
+        : !state.reviewComplete
+          ? "Independent critique has not completed."
+          : blockingFindings.length > 0
+            ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " still needs" : "s still need"} a decision.`
+            : state.state !== "awaiting-approval"
+              ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
+              : pendingActionReason,
+      run: () => onAction({ type: "approve" }),
+    },
+    {
+      id: "request-revision",
+      label: "Request revision",
+      note: "Alt+R",
+      disabledReason: revisionReason,
+      run: () => onAction({ type: "request-revision" }),
+    },
+    {
+      id: "export",
+      label: "Export Markdown",
+      note: "Alt+E",
+      disabledReason: canExport
+        ? null
+        : !state.reviewComplete
+          ? "Independent critique has not completed."
+          : state.state !== "approved"
+            ? "The artifact has not been approved."
+            : (pendingActionReason ?? "Export is unavailable right now."),
+      run: () => onAction({ type: "export" }),
+    },
+    {
+      id: "resume",
+      label: "Resume",
+      note: "Continue this run from its durable step",
+      disabledReason:
+        state.execution.status !== "interrupted" && state.state !== "paused"
+          ? "This run is neither paused nor interrupted."
+          : !transmissionReady
+            ? "Provider transmission has not been acknowledged."
+            : pendingActionReason,
+      run: () => onAction({ type: "resume" }),
+    },
+    {
+      id: "stop",
+      label: "Stop",
+      note: "End this run without losing its history",
+      disabledReason:
+        state.execution.status !== "running" && state.execution.status !== "interrupted"
+          ? "Nothing is running to stop."
+          : pendingActionReason,
+      run: () => onAction({ type: "stop" }),
+    },
+    {
+      id: "start",
+      label: "Start a new review",
+      note: "Run the author–critic loop again",
+      disabledReason:
+        state.state !== "stopped"
+          ? "A review is already under way."
+          : !transmissionReady
+            ? "Provider transmission has not been acknowledged."
+            : pendingActionReason,
+      run: () => onAction({ type: "start" }),
+    },
+    {
+      id: "draft-view",
+      label: showChanges ? "Read the full draft" : "Read changes only",
+      note: showChanges
+        ? "Drop the change marks and read the draft as it stands"
+        : "Mark every word that changed since the previous version",
+      disabledReason: comparisonReason,
+      run: () => setDraftView(showChanges ? "full" : "changes"),
+    },
+    {
+      id: "compare",
+      label:
+        state.previousArtifact === null
+          ? "Compare with the previous version"
+          : `Compare with v${state.previousArtifact.version}`,
+      note: compareVisible
+        ? "Close the previous version beside the draft"
+        : "Open the previous version beside the draft",
+      disabledReason: comparisonReason,
+      run: () => setCompareOpen((current) => !current),
+    },
+    {
+      id: "sources",
+      label: "Open claim traceability",
+      note: "Show where each claim's wording came from",
+      disabledReason: null,
+      run: () => openTraceability(),
+    },
+    {
+      id: "keys",
+      label: "Open provider API keys",
+      note: "Manage the Anthropic and OpenAI credentials",
+      disabledReason: null,
+      run: () => setSettingsOpen(true),
+    },
+    {
+      id: "go-draft",
+      label: "Go to the draft",
+      note: "Move to the document under review",
+      disabledReason: null,
+      run: () => {
+        paletteFocusRequest.current = reviewColumnRef.current;
+      },
+    },
+    {
+      id: "go-findings",
+      label: "Go to the findings queue",
+      note: "Move to critique triage",
+      disabledReason: null,
+      run: () => {
+        const first = filteredFindings[0];
+        const summary =
+          first === undefined ? undefined : findingSummaryButtonRefs.current.get(first.id);
+        paletteFocusRequest.current = summary ?? findingQueueRef.current;
+      },
+    },
+  ];
+  const paletteMatches = matchPaletteCommands(paletteCommands, paletteQuery);
+
+  const runPaletteCommand = (command: PaletteCommand): void => {
+    if (command.disabledReason !== null) return;
+    command.run();
+    setPaletteOpen(false);
+  };
+
+  const focusPaletteCommand = (index: number): void => {
+    const elements = Array.from(
+      paletteDialogRef.current?.querySelectorAll<HTMLButtonElement>(".palette-command") ?? [],
+    );
+    if (elements.length === 0) return;
+    elements[Math.min(elements.length - 1, Math.max(0, index))]?.focus();
+  };
+
+  // One critique finding, written beside the sentence it judges. The four decision controls
+  // dispatch exactly what the queue dispatches; Override hands off to the queue, which is
+  // where the required rationale is typed.
+  const renderMarginNote = (note: MarginNote) => {
+    const finding = note.finding;
+    const top = marginLayout?.tops.get(finding.id);
+    const anchor = marginLayout?.anchors.get(finding.id);
+    const hidden = marginLayout !== null && top === undefined;
+    const active = activeFindingId === finding.id || expandedFindingId === finding.id;
+    const highlight = () => {
+      setActiveFindingId(finding.id);
+      setLinkedClaimId(finding.claimId ?? null);
+    };
+    const clearHighlight = () => {
+      setActiveFindingId((current) => (current === finding.id ? null : current));
+      setLinkedClaimId(null);
+    };
+
+    return (
+      <li
+        className={`margin-note margin-note-${finding.severity}${active ? " margin-note-active" : ""}${
+          hidden ? " margin-note-spilled" : ""
+        }`}
+        key={finding.id}
+        {...(top === undefined ? {} : { style: { top: `${top}px` } })}
+        ref={(element) => {
+          if (element === null) marginNoteRefs.current.delete(finding.id);
+          else marginNoteRefs.current.set(finding.id, element);
+        }}
+      >
+        {top === undefined || anchor === undefined ? null : (
+          <span
+            className="margin-note-elbow"
+            aria-hidden="true"
+            style={{
+              top: `${anchor - top}px`,
+              height: `${Math.max(0, MARGIN_NOTE_ATTACH - (anchor - top))}px`,
+            }}
+          />
+        )}
+        <button
+          className="margin-note-head"
+          type="button"
+          onClick={() => revealFindingInQueue(finding.id)}
+          onMouseEnter={highlight}
+          onMouseLeave={clearHighlight}
+          onFocus={highlight}
+          onBlur={clearHighlight}
+        >
+          <span className="margin-note-kind">
+            <span className="margin-note-severity">
+              {finding.severity === "error" ? "Blocking" : "Warning"}
+            </span>
+            <span className="margin-note-category">{finding.category}</span>
+          </span>
+          <span className="margin-note-message">{finding.message}</span>
+        </button>
+        <span className="margin-note-actions">
+          {directFindingDecisions.map((decision) => (
+            <button
+              className="margin-note-action"
+              type="button"
+              key={decision}
+              disabled={findingDecisionPending}
+              onFocus={highlight}
+              onBlur={clearHighlight}
+              onClick={() => decideFinding(finding.id, decision)}
+            >
+              {decisionLabels[decision]}
+            </button>
+          ))}
+          <button
+            className="margin-note-action"
+            type="button"
+            disabled={findingDecisionPending}
+            onFocus={highlight}
+            onBlur={clearHighlight}
+            onClick={() => {
+              beginOverride(finding);
+              revealFindingInQueue(finding.id, "override");
+            }}
+          >
+            Override
+          </button>
+        </span>
+      </li>
+    );
+  };
+
+  // One draft line on the sheet. The reading view carries the marks; the editor is present in
+  // the markup at all times and revealed when the line is opened, so the line keeps its label.
+  const renderDraftBlock = (sectionTitle: string, pair: DraftBlockPair) => {
+    const block = pair.block;
+    if (block === null) {
+      return (
+        <div className="editable-block editable-block-removed" key={pair.key}>
+          <div className="block-view block-view-removed">
+            <del className="redline-del">{pair.text}</del>
+          </div>
+        </div>
+      );
+    }
+
+    const sourceState = blockSourceState(block, claimById);
+    const isLinked = linkedClaimId !== null && block.claimIds.includes(linkedClaimId);
+    const isEditing = editingBlockId === block.id;
+    const isEdited = editedBlockIds.has(block.id);
+    const highlightClaim = () => setLinkedClaimId(block.claimIds[0] ?? null);
+    const openLine = () => {
+      highlightClaim();
+      setEditingBlockId(block.id);
+    };
+
+    return (
+      <div
+        className={`editable-block editable-block-${sourceState}${
+          isLinked ? " editable-block-linked" : ""
+        }`}
+        key={pair.key}
+        ref={(element) => {
+          if (element === null) draftBlockShellRefs.current.delete(block.id);
+          else draftBlockShellRefs.current.set(block.id, element);
+        }}
+      >
+        {sourceState === "unsourced" || isEdited ? (
+          <span className="block-margin">
+            {sourceState === "unsourced" ? (
+              <span className="block-margin-dot" aria-hidden="true" />
+            ) : null}
+            {isEdited ? <span className="block-edited-flag">edited</span> : null}
+          </span>
+        ) : null}
+        <div className="block-view" hidden={isEditing}>
+          <BlockRedline
+            previousText={pair.previousText}
+            showChanges={showChanges}
+            text={block.text}
+          />
+        </div>
+        {/* The whole line is the affordance. A real control carries the keyboard and pointer
+            behaviour, which leaves the marked-up text above it as ordinary document text: a
+            button labelled with the line would have flattened the change marks away. */}
+        <button
+          className="block-open"
+          type="button"
+          aria-label={`Edit ${sectionTitle} text`}
+          title={`Edit ${sectionTitle} text`}
+          hidden={isEditing}
+          onClick={openLine}
+          onFocus={openLine}
+          onMouseEnter={highlightClaim}
+          onMouseLeave={() => setLinkedClaimId(null)}
+        />
+        {sourceState === "none" ? null : (
+          <span className="sr-only">
+            {sourceState === "sourced" ? "source linked" : "not linked to candidate materials"}
+          </span>
+        )}
+        <textarea
+          aria-label={`Edit ${sectionTitle}`}
+          hidden={!isEditing}
+          value={block.text}
+          // One row is the floor; the layout effect grows it to its text.
+          rows={1}
+          ref={(element) => {
+            if (element === null) draftBlockRefs.current.delete(block.id);
+            else draftBlockRefs.current.set(block.id, element);
+          }}
+          onFocus={highlightClaim}
+          onBlur={() => {
+            setLinkedClaimId(null);
+            setEditingBlockId((current) => (current === block.id ? null : current));
+          }}
+          onMouseEnter={highlightClaim}
+          onMouseLeave={() => setLinkedClaimId(null)}
+          onChange={(event) => {
+            setEditedBlockIds((current) =>
+              current.has(block.id) ? current : new Set(current).add(block.id),
+            );
+            onAction({
+              type: "edit-block",
+              blockId: block.id,
+              text: event.target.value,
+            });
+          }}
+        />
+      </div>
+    );
   };
 
   const renderSettingsModal = () => {
@@ -910,6 +2003,89 @@ export function ReviewWorkspace({
               onRemove={() => void handleRemoveCredential("openai")}
             />
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Every action of this workspace, reachable by its name. A command that cannot run stays in
+  // the list and says why, because "the button is missing" is not an explanation.
+  const renderCommandPalette = () => {
+    if (!paletteOpen) return null;
+    return (
+      <div className="modal-backdrop">
+        <div
+          className="modal-card palette-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="command-palette-title"
+          ref={paletteDialogRef}
+        >
+          <div className="palette-header">
+            <h2 id="command-palette-title">Commands</h2>
+            <span className="subtle">
+              Type to narrow · ↑↓ to move · Enter to run · Esc to close
+            </span>
+          </div>
+          <label className="palette-search">
+            <span className="sr-only">Filter commands</span>
+            <input
+              className="url-input palette-input"
+              type="text"
+              placeholder="Search commands…"
+              value={paletteQuery}
+              autoComplete="off"
+              spellCheck={false}
+              ref={paletteInputRef}
+              onChange={(event) => setPaletteQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  focusPaletteCommand(0);
+                } else if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  focusPaletteCommand(paletteMatches.length - 1);
+                } else if (event.key === "Enter") {
+                  event.preventDefault();
+                  const first = paletteMatches[0];
+                  if (first !== undefined) runPaletteCommand(first);
+                }
+              }}
+            />
+          </label>
+          {paletteMatches.length === 0 ? (
+            <p className="palette-empty" role="status">
+              No command matches that search.
+            </p>
+          ) : (
+            <ul className="palette-list">
+              {paletteMatches.map((command, index) => (
+                <li key={command.id}>
+                  <button
+                    className="palette-command"
+                    type="button"
+                    aria-disabled={command.disabledReason !== null}
+                    onClick={() => runPaletteCommand(command)}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowDown") {
+                        event.preventDefault();
+                        focusPaletteCommand(index + 1);
+                      } else if (event.key === "ArrowUp") {
+                        event.preventDefault();
+                        if (index === 0) paletteInputRef.current?.focus();
+                        else focusPaletteCommand(index - 1);
+                      }
+                    }}
+                  >
+                    <span className="palette-command-label">{command.label}</span>
+                    <span className="palette-command-note">
+                      {command.disabledReason ?? command.note}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
     );
@@ -1034,37 +2210,26 @@ export function ReviewWorkspace({
       state.setup.fixtureMode || (anthropicStatus.configured && openaiStatus.configured);
     return (
       <div className="app-frame">
-        <SideRail onOpenSettings={() => setSettingsOpen(true)} />
+        <SideRail onOpenSources={null} onOpenSettings={() => setSettingsOpen(true)} />
         <main className="app-shell app-shell-single">
           {renderSettingsModal()}
           <div className="main-column">
-            <header className="app-bar">
-              <div className="brand">
-                <span className="brand-context">DraftLoop / Workspace setup</span>
-                <h1>Bring your source material into the loop</h1>
+            <header className="spine">
+              <div className="spine-identity">
+                <h1 title={state.workspaceId}>{state.workspaceId}</h1>
+                <div className="spine-identity-meta">
+                  <span className="state-pill state-collecting">Collecting inputs</span>
+                </div>
               </div>
-              <div className="run-identity">
-                <span className="meta-chip">
-                  <WorkspaceIcon />
-                  {state.workspaceId}
-                </span>
-                <span className="state-pill state-collecting">Collecting inputs</span>
-                <button
-                  className="button button-quiet button-credentials"
-                  type="button"
-                  onClick={() => setSettingsOpen(true)}
-                >
-                  <KeyIcon />
-                  API keys
-                </button>
-              </div>
+              <div className="spine-loop" />
             </header>
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               <p className="eyebrow">Before the first run</p>
-              <h2 id="onboarding-title">Add the sources DraftLoop is allowed to use</h2>
+              <h2 id="onboarding-title">Bring your source material into the loop</h2>
               <p className="onboarding-copy">
-                Your files stay in this workspace. DraftLoop will not invent missing experience or
-                start an agent run until the target job and candidate source material are present.
+                Add the sources DraftLoop is allowed to use. Your files stay in this workspace.
+                DraftLoop will not invent missing experience or start an agent run until the target
+                job and candidate source material are present.
               </p>
               {errorMessage ? (
                 <div className="error-banner" role="alert">
@@ -1254,149 +2419,47 @@ export function ReviewWorkspace({
 
   return (
     <div className="app-frame">
-      <SideRail onOpenSettings={() => setSettingsOpen(true)} />
+      <SideRail onOpenSources={openTraceability} onOpenSettings={() => setSettingsOpen(true)} />
       <main className="app-shell">
         {renderSettingsModal()}
+        {renderCommandPalette()}
         <div className="main-column">
-          <header className="app-bar">
-            <div className="brand">
-              <span className="brand-context">DraftLoop / Review workspace</span>
-              <h1>Sources before approval</h1>
+          <header className="spine">
+            <div className="spine-identity">
+              <h1 title={state.workspaceId}>{state.workspaceId}</h1>
+              <div className="spine-identity-meta">
+                <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
+                <span className="meta-chip">Round {state.round}</span>
+              </div>
             </div>
-            <div className="run-identity">
-              <span className="meta-chip">
-                <WorkspaceIcon />
-                {state.workspaceId}
-              </span>
-              <span className={`state-pill state-${state.state}`}>{stateLabel(state.state)}</span>
-              <span className="approval-pill">{approvalLabel}</span>
-              <span className="meta-chip">Round {state.round}</span>
-              <button
-                className="button button-quiet button-credentials"
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-              >
-                API keys
-              </button>
-            </div>
-          </header>
-
-          <section className="instrument-panel" aria-label="run instrumentation">
-            <div className="loop-band">
+            <div className="spine-loop">
               <LoopRail activeIndex={loopStageIndex(state)} round={state.round} />
-              <div className="loop-band-meta">
-                <span className="label">Elapsed cost</span>
-                <strong>
+            </div>
+            <div className="spine-meta">
+              <div className="spine-versions">
+                {state.previousArtifact === null ? null : (
+                  <span className="spine-version">v{state.previousArtifact.version}</span>
+                )}
+                <span className="spine-version spine-version-current">
+                  v{state.artifact.version}
+                </span>
+              </div>
+              <div className="spine-cost">
+                <span className="numeric">
                   ${state.totalCostUsd.toFixed(3)}
                   {state.budgetUsd === null ? "" : ` / $${state.budgetUsd.toFixed(2)}`}
-                </strong>
+                </span>
+                {budgetRatio === null ? null : (
+                  <span
+                    className={`cost-meter${budgetRatio > 0.75 ? " cost-meter-high" : ""}`}
+                    aria-hidden="true"
+                  >
+                    <span style={{ width: `${Math.round(budgetRatio * 100)}%` }} />
+                  </span>
+                )}
               </div>
             </div>
-
-            <section className="trust-strip" aria-label="trust and policy summary">
-              <div>
-                <span className="trust-icon" aria-hidden="true">
-                  {state.providerExposure.author.company.slice(0, 1).toUpperCase()}
-                </span>
-                <div className="trust-body">
-                  <span className="label">Author</span>
-                  <strong>{state.providerExposure.author.company}</strong>
-                  <span>{state.providerExposure.author.model}</span>
-                </div>
-              </div>
-              <div>
-                <span className="trust-icon" aria-hidden="true">
-                  {state.providerExposure.critic.company.slice(0, 1).toUpperCase()}
-                </span>
-                <div className="trust-body">
-                  <span className="label">Independent critic</span>
-                  <strong>{state.providerExposure.critic.company}</strong>
-                  <span>{state.providerExposure.critic.model}</span>
-                </div>
-              </div>
-              <div>
-                <span className="trust-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                    <path
-                      d="M12 3 4.8 6v5.4c0 4.3 2.9 8.3 7.2 9.6 4.3-1.3 7.2-5.3 7.2-9.6V6L12 3Z"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </span>
-                <div className="trust-body">
-                  <span className="label">Data policy</span>
-                  <strong>
-                    {state.providerExposure.transmissionAllowed
-                      ? "Transmission approved"
-                      : "Local only"}
-                  </strong>
-                  <span>
-                    {state.providerExposure.requestedRetention} · sensitive material{" "}
-                    {state.providerExposure.sensitiveData ? "present" : "absent"}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <span className="trust-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                    <rect
-                      x="3"
-                      y="6"
-                      width="18"
-                      height="12"
-                      rx="2"
-                      stroke="currentColor"
-                      strokeWidth="1.6"
-                    />
-                    <path d="M3 10h18" stroke="currentColor" strokeWidth="1.6" />
-                    <circle cx="17" cy="14" r="1.2" fill="currentColor" />
-                  </svg>
-                </span>
-                <div className="trust-body">
-                  <span className="label">Budget</span>
-                  <strong className="numeric">${state.totalCostUsd.toFixed(3)} used</strong>
-                  <span>
-                    {state.budgetUsd === null
-                      ? "No cap configured"
-                      : `$${state.budgetUsd.toFixed(2)} cap`}
-                  </span>
-                  {budgetRatio === null ? null : (
-                    <span
-                      className={`cost-meter${budgetRatio > 0.75 ? " cost-meter-high" : ""}`}
-                      aria-hidden="true"
-                    >
-                      <span style={{ width: `${Math.round(budgetRatio * 100)}%` }} />
-                    </span>
-                  )}
-                </div>
-              </div>
-            </section>
-
-            <section className="retrieval-strip" aria-label="evidence retrieval status">
-              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-                <path
-                  d="M4 7h16M4 12h16M4 17h9"
-                  stroke="currentColor"
-                  strokeWidth="1.6"
-                  strokeLinecap="round"
-                />
-              </svg>
-              <strong>Evidence retrieval</strong>
-              <span role="status">
-                {state.setup.retrievalStatus === "matched"
-                  ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} candidate source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
-                  : state.setup.retrievalStatus === "fallback"
-                    ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from candidate material`
-                    : state.setup.retrievalStatus === "not-indexed"
-                      ? "Candidate material is not indexed; no evidence excerpt was selected"
-                      : state.setup.retrievalStatus === "no-query"
-                        ? "The job description has no searchable role terms"
-                        : "Retrieval readiness is unavailable"}
-              </span>
-            </section>
-          </section>
+          </header>
 
           {errorMessage ? (
             <div className="error-banner" role="alert">
@@ -1497,167 +2560,257 @@ export function ReviewWorkspace({
             </span>
           </section>
 
-          <section className="review-column" aria-label="artifact review" id="artifact-review">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Draft under review</p>
-                <h2>Version {state.artifact.version}</h2>
+          {/* A jump target, so "go to the draft" can land focus here and not only scroll. */}
+          <section
+            className="review-column"
+            aria-label="artifact review"
+            id="artifact-review"
+            tabIndex={-1}
+            ref={reviewColumnRef}
+          >
+            <div className="doc-toolbar">
+              <div className="section-heading">
+                <div>
+                  <p className="eyebrow">Draft under review</p>
+                  <h2>Version {state.artifact.version}</h2>
+                </div>
               </div>
-              <span className="subtle">
+              <section className="retrieval-strip" aria-label="evidence retrieval status">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <path
+                    d="M4 7h16M4 12h16M4 17h9"
+                    stroke="currentColor"
+                    strokeWidth="1.6"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <strong>Evidence retrieval</strong>
+                <span role="status">
+                  {state.setup.retrievalStatus === "matched"
+                    ? `${state.setup.selectedEvidenceChunkCount} relevant excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} selected from ${state.setup.selectedEvidenceSourceCount} candidate source${state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}`
+                    : state.setup.retrievalStatus === "fallback"
+                      ? `No lexical match; using ${state.setup.selectedEvidenceChunkCount} bounded fallback excerpt${state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"} from candidate material`
+                      : state.setup.retrievalStatus === "not-indexed"
+                        ? "Candidate material is not indexed; no evidence excerpt was selected"
+                        : state.setup.retrievalStatus === "no-query"
+                          ? "The job description has no searchable role terms"
+                          : "Retrieval readiness is unavailable"}
+                </span>
+              </section>
+              <div className="doc-toolbar-views">
+                <fieldset className="view-toggle">
+                  <legend className="sr-only">Draft view</legend>
+                  <button
+                    className="view-toggle-option"
+                    type="button"
+                    aria-pressed={showChanges}
+                    disabled={!hasPreviousArtifact}
+                    title={
+                      hasPreviousArtifact
+                        ? "Mark every word that changed since the previous version"
+                        : "There is no previous version to compare with."
+                    }
+                    onClick={() => setDraftView("changes")}
+                  >
+                    Changes only
+                  </button>
+                  <button
+                    className="view-toggle-option"
+                    type="button"
+                    aria-pressed={!showChanges}
+                    title="Read the draft as it stands, without change marks"
+                    onClick={() => setDraftView("full")}
+                  >
+                    Full draft
+                  </button>
+                </fieldset>
+                {state.previousArtifact === null ? (
+                  <span className="empty-state doc-toolbar-empty">
+                    This is the first artifact version.
+                  </span>
+                ) : (
+                  <button
+                    className="button button-quiet doc-compare-toggle"
+                    type="button"
+                    aria-pressed={compareVisible}
+                    onClick={() => setCompareOpen((current) => !current)}
+                  >
+                    Compare with v{state.previousArtifact.version}
+                  </button>
+                )}
+              </div>
+              <span className="subtle doc-toolbar-note">
                 Edits you make here are part of the artifact you approve.
               </span>
             </div>
 
-            <div className="diff-grid">
-              <article className="artifact-pane previous-pane">
-                <div className="pane-heading">
-                  <span>Previous version</span>
-                  <span>
-                    {state.previousArtifact === null
-                      ? "None"
-                      : `v${state.previousArtifact.version}`}
-                  </span>
+            <div className={`doc-grid${compareVisible ? " doc-grid-compare" : ""}`}>
+              {compareVisible && state.previousArtifact !== null ? (
+                <div className="diff-column">
+                  <div className="pane-heading">
+                    <span>Previous version</span>
+                    <span>v{state.previousArtifact.version}</span>
+                  </div>
+                  <article className="artifact-pane previous-pane">
+                    {state.previousArtifact.sections.map((section) => (
+                      <section className="artifact-section" key={section.id}>
+                        <h3>{section.title}</h3>
+                        {section.blocks.map((block) => (
+                          <p className={block.type === "bullet" ? "bullet" : ""} key={block.id}>
+                            {block.text}
+                          </p>
+                        ))}
+                      </section>
+                    ))}
+                  </article>
                 </div>
-                {state.previousArtifact === null ? (
-                  <p className="empty-state">This is the first artifact version.</p>
-                ) : (
-                  state.previousArtifact.sections.map((section) => (
-                    <section className="artifact-section" key={section.id}>
-                      <h3>{section.title}</h3>
-                      {section.blocks.map((block) => (
-                        <p className={block.type === "bullet" ? "bullet" : ""} key={block.id}>
-                          {block.text}
-                        </p>
-                      ))}
-                    </section>
-                  ))
-                )}
-              </article>
-              <span className="diff-arrow" aria-hidden="true">
-                →
-              </span>
-              <article className="artifact-pane current-pane">
+              ) : null}
+              <div className="diff-column diff-column-current">
                 <div className="pane-heading">
                   <span>Current draft</span>
-                  <span>v{state.artifact.version} · editable</span>
+                  <span>
+                    v{state.artifact.version} · {showChanges ? "redline · editable" : "editable"}
+                  </span>
                 </div>
-                {state.artifact.sections.map((section) => (
-                  <section className="artifact-section" key={section.id}>
-                    <h3>{section.title}</h3>
-                    {section.blocks.map((block) => {
-                      const sourceState = blockSourceState(block, claimById);
-                      const isLinked =
-                        linkedClaimId !== null && block.claimIds.includes(linkedClaimId);
+                {/* The sheet: the document itself, on the desk, with the critique written in
+                    its right margin. The margin follows the paper in DOM order on purpose —
+                    reading down the draft must not tab through five controls per finding
+                    before reaching the next sentence. */}
+                <div className="sheet-stage">
+                  <article className="artifact-pane current-pane sheet" ref={sheetRef}>
+                    {draftSections.map((section) => {
+                      // The full draft is what stands now, so removed lines belong to the redline.
+                      const blocks = showChanges
+                        ? section.blocks
+                        : section.blocks.filter((pair) => pair.block !== null);
+                      if (blocks.length === 0) return null;
                       return (
-                        <label
-                          className={`editable-block editable-block-${sourceState}${
-                            isLinked ? " editable-block-linked" : ""
+                        <section
+                          className={`artifact-section${
+                            section.removed ? " artifact-section-removed" : ""
                           }`}
-                          key={block.id}
+                          key={section.key}
                         >
-                          <span className="sr-only">Edit {section.title}</span>
-                          <textarea
-                            aria-label={`Edit ${section.title}`}
-                            value={block.text}
-                            rows={block.type === "bullet" ? 3 : 4}
-                            ref={(element) => {
-                              if (element === null) draftBlockRefs.current.delete(block.id);
-                              else draftBlockRefs.current.set(block.id, element);
-                            }}
-                            onFocus={() => setLinkedClaimId(block.claimIds[0] ?? null)}
-                            onBlur={() => setLinkedClaimId(null)}
-                            onMouseEnter={() => setLinkedClaimId(block.claimIds[0] ?? null)}
-                            onMouseLeave={() => setLinkedClaimId(null)}
-                            onChange={(event) =>
-                              onAction({
-                                type: "edit-block",
-                                blockId: block.id,
-                                text: event.target.value,
-                              })
-                            }
-                          />
-                        </label>
+                          <h3>{section.title}</h3>
+                          {blocks.map((pair) => renderDraftBlock(section.title, pair))}
+                        </section>
                       );
                     })}
-                  </section>
-                ))}
-              </article>
+                  </article>
+                  <div
+                    className="sheet-margin"
+                    ref={marginColumnRef}
+                    {...(marginLayout === null
+                      ? {}
+                      : { style: { height: `${marginLayout.columnHeight}px` } })}
+                  >
+                    <ul
+                      className={`margin-notes${marginLayout === null ? "" : " margin-notes-placed"}`}
+                      aria-label="Findings in the draft margin"
+                    >
+                      {marginNotes.map((note) => renderMarginNote(note))}
+                    </ul>
+                    {marginLayout !== null && marginLayout.overflow.length > 0 ? (
+                      <button
+                        className="margin-more"
+                        type="button"
+                        onClick={() => {
+                          const first = marginLayout.overflow[0];
+                          if (first !== undefined) revealFindingInQueue(first);
+                        }}
+                      >
+                        +{marginLayout.overflow.length} more in the queue
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
             </div>
 
+            {/* Traceability is an inspection, not a third copy of the draft: it stays one
+                disclosure away, closed until a reviewer asks where wording came from. */}
             <section className="claims-panel" aria-label="claim to source inspection">
-              <div className="section-heading compact">
-                <div>
-                  <p className="eyebrow">Traceability</p>
-                  <h2>Claims and candidate sources</h2>
-                </div>
-                <span className="subtle">
-                  Source links show where wording came from; they do not independently verify it.
-                </span>
-              </div>
-              <div className="claim-list">
-                {state.artifact.claims.map((claim) => {
-                  const draftBlockId = claimBlockId(state.artifact, claim.id);
-                  return (
-                    <article
-                      className={`claim-card claim-${claim.status}${
-                        linkedClaimId === claim.id ? " claim-linked" : ""
-                      }`}
-                      key={claim.id}
-                    >
-                      <div className="claim-heading">
-                        <strong>{claim.text}</strong>
-                        <span className="claim-heading-actions">
-                          {draftBlockId === null ? null : (
-                            <button
-                              className="claim-locate"
-                              type="button"
-                              title="Show the draft line this claim comes from"
-                              onMouseEnter={() => setLinkedClaimId(claim.id)}
-                              onMouseLeave={() => setLinkedClaimId(null)}
-                              onFocus={() => setLinkedClaimId(claim.id)}
-                              onBlur={() => setLinkedClaimId(null)}
-                              onClick={() => {
-                                const target = draftBlockRefs.current.get(draftBlockId);
-                                target?.scrollIntoView({ block: "center", behavior: "smooth" });
-                                target?.focus();
-                              }}
+              <details className="claims-disclosure" ref={traceabilityRef}>
+                <summary className="claims-disclosure-summary" ref={traceabilitySummaryRef}>
+                  <span className="claims-disclosure-title">
+                    <span className="eyebrow">Traceability</span>
+                    <h2>Claims and candidate sources</h2>
+                  </span>
+                  <span className="subtle">
+                    Source links show where wording came from; they do not independently verify it.
+                  </span>
+                </summary>
+                <div className="claim-list">
+                  {state.artifact.claims.map((claim) => {
+                    const draftBlockId = claimBlockId(state.artifact, claim.id);
+                    return (
+                      <article
+                        className={`claim-card claim-${claim.status}${
+                          linkedClaimId === claim.id ? " claim-linked" : ""
+                        }`}
+                        key={claim.id}
+                      >
+                        <div className="claim-heading">
+                          <strong>{claim.text}</strong>
+                          <span className="claim-heading-actions">
+                            {draftBlockId === null ? null : (
+                              <button
+                                className="claim-locate"
+                                type="button"
+                                title="Show the draft line this claim comes from"
+                                onMouseEnter={() => setLinkedClaimId(claim.id)}
+                                onMouseLeave={() => setLinkedClaimId(null)}
+                                onFocus={() => setLinkedClaimId(claim.id)}
+                                onBlur={() => setLinkedClaimId(null)}
+                                onClick={() => {
+                                  draftBlockShellRefs.current
+                                    .get(draftBlockId)
+                                    ?.scrollIntoView({ block: "center", behavior: "smooth" });
+                                  // Opening the line moves the caret into it.
+                                  setEditingBlockId(draftBlockId);
+                                  draftBlockRefs.current.get(draftBlockId)?.focus();
+                                }}
+                              >
+                                <LinkIcon />
+                                <span className="sr-only">
+                                  Show the draft line for: {claim.text}
+                                </span>
+                              </button>
+                            )}
+                            <span className="status-tag">{claimSourceLabel(claim)}</span>
+                          </span>
+                        </div>
+                        {claimSectionTitle(state.artifact, claim.id) === null ? null : (
+                          <span className="claim-section-tag">
+                            {claimSectionTitle(state.artifact, claim.id)}
+                          </span>
+                        )}
+                        {claim.evidence.length === 0 ? (
+                          <p className="warning-copy">
+                            This claim is not linked to the candidate materials supplied to
+                            DraftLoop.
+                          </p>
+                        ) : (
+                          claim.evidence.map((reference) => (
+                            <div
+                              className={`evidence-row evidence-${reference.status}`}
+                              key={`${reference.sourcePath}-${reference.locator}`}
                             >
-                              <LinkIcon />
-                              <span className="sr-only">Show the draft line for: {claim.text}</span>
-                            </button>
-                          )}
-                          <span className="status-tag">{claimSourceLabel(claim)}</span>
-                        </span>
-                      </div>
-                      {claimSectionTitle(state.artifact, claim.id) === null ? null : (
-                        <span className="claim-section-tag">
-                          {claimSectionTitle(state.artifact, claim.id)}
-                        </span>
-                      )}
-                      {claim.evidence.length === 0 ? (
-                        <p className="warning-copy">
-                          This claim is not linked to the candidate materials supplied to DraftLoop.
-                        </p>
-                      ) : (
-                        claim.evidence.map((reference) => (
-                          <div
-                            className={`evidence-row evidence-${reference.status}`}
-                            key={`${reference.sourcePath}-${reference.locator}`}
-                          >
-                            <span aria-hidden="true">↳</span>
-                            <span>
-                              <strong>{reference.sourcePath}</strong> · {reference.locator}
-                              <br />
-                              {reference.excerpt}
-                            </span>
-                            <span className="status-tag">{reference.status}</span>
-                          </div>
-                        ))
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
+                              <span aria-hidden="true">↳</span>
+                              <span>
+                                <strong>{reference.sourcePath}</strong> · {reference.locator}
+                                <br />
+                                {reference.excerpt}
+                              </span>
+                              <span className="status-tag">{reference.status}</span>
+                            </div>
+                          ))
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              </details>
             </section>
           </section>
         </div>
@@ -1748,6 +2901,52 @@ export function ReviewWorkspace({
             </ol>
           </section>
 
+          <section className="trust-strip" aria-label="trust and policy summary">
+            <div className="trust-fact">
+              <span className="label">Author</span>
+              <strong>{state.providerExposure.author.company}</strong>
+              <span>{state.providerExposure.author.model}</span>
+            </div>
+            <div className="trust-fact">
+              <span className="label">Critic</span>
+              <strong>{state.providerExposure.critic.company}</strong>
+              <span>{state.providerExposure.critic.model}</span>
+            </div>
+            <div
+              className={`trust-badge${providerDiversityMet ? " trust-badge-independent" : " trust-badge-shared"}`}
+            >
+              <span className="trust-badge-mark">
+                {providerDiversityMet ? "independent" : "same company"}
+              </span>
+              <span>
+                {providerDiversityMet ? "author and critic differ" : "provider diversity not met"}
+              </span>
+            </div>
+            <div className="trust-fact">
+              <span className="label">Data policy</span>
+              <strong>
+                {state.providerExposure.transmissionAllowed
+                  ? "Transmission approved"
+                  : "Local only"}
+              </strong>
+              <span>
+                {state.providerExposure.requestedRetention} · sensitive material{" "}
+                {state.providerExposure.sensitiveData ? "present" : "absent"}
+              </span>
+            </div>
+            <div className="trust-fact">
+              <span className="label">Evidence</span>
+              <strong className="numeric">
+                {state.setup.selectedEvidenceChunkCount} excerpt
+                {state.setup.selectedEvidenceChunkCount === 1 ? "" : "s"}
+              </strong>
+              <span>
+                from {state.setup.selectedEvidenceSourceCount} source
+                {state.setup.selectedEvidenceSourceCount === 1 ? "" : "s"}
+              </span>
+            </div>
+          </section>
+
           <section className="panel findings-panel" aria-label="critique findings">
             <div className="findings-queue-header">
               <div className="section-heading compact">
@@ -1805,6 +3004,8 @@ export function ReviewWorkspace({
               className="findings-queue-scroll"
               id="finding-queue-list"
               aria-label="Findings queue"
+              tabIndex={-1}
+              ref={findingQueueRef}
             >
               {filteredFindings.length === 0 ? (
                 <p className="finding-empty-state" role="status">
@@ -1827,7 +3028,7 @@ export function ReviewWorkspace({
                   <article
                     className={`finding-row finding-${finding.severity}${
                       isUnresolvedFinding(finding) ? "" : " finding-resolved"
-                    }`}
+                    }${activeFindingId === finding.id ? " finding-row-active" : ""}`}
                     key={finding.id}
                   >
                     <button
@@ -1839,6 +3040,22 @@ export function ReviewWorkspace({
                       ref={(element) => {
                         if (element === null) findingSummaryButtonRefs.current.delete(finding.id);
                         else findingSummaryButtonRefs.current.set(finding.id, element);
+                      }}
+                      onMouseEnter={() => {
+                        setActiveFindingId(finding.id);
+                        setLinkedClaimId(finding.claimId ?? null);
+                      }}
+                      onMouseLeave={() => {
+                        setActiveFindingId((current) => (current === finding.id ? null : current));
+                        setLinkedClaimId(null);
+                      }}
+                      onFocus={() => {
+                        setActiveFindingId(finding.id);
+                        setLinkedClaimId(finding.claimId ?? null);
+                      }}
+                      onBlur={() => {
+                        setActiveFindingId((current) => (current === finding.id ? null : current));
+                        setLinkedClaimId(null);
                       }}
                       onClick={() => {
                         setExpandedFindingId((current) =>
@@ -1891,17 +3108,7 @@ export function ReviewWorkspace({
                               type="button"
                               key={decision}
                               disabled={findingDecisionPending}
-                              onClick={() => {
-                                findingDecisionRequest.current = {
-                                  findingId: finding.id,
-                                  decision,
-                                };
-                                onAction({
-                                  type: "finding-decision",
-                                  findingId: finding.id,
-                                  decision,
-                                });
-                              }}
+                              onClick={() => decideFinding(finding.id, decision)}
                             >
                               {decisionLabels[decision]}
                             </button>
@@ -1914,14 +3121,7 @@ export function ReviewWorkspace({
                             }
                             type="button"
                             disabled={findingDecisionPending}
-                            onClick={() => {
-                              setOverrideReasons((current) =>
-                                current[finding.id] === undefined
-                                  ? { ...current, [finding.id]: finding.rationale ?? "" }
-                                  : current,
-                              );
-                              setOverrideEditingFindingId(finding.id);
-                            }}
+                            onClick={() => beginOverride(finding)}
                           >
                             Override
                           </button>
@@ -1938,6 +3138,11 @@ export function ReviewWorkspace({
                                 type="text"
                                 value={rationale}
                                 disabled={findingDecisionPending}
+                                ref={(element) => {
+                                  if (element === null)
+                                    overrideInputRefs.current.delete(finding.id);
+                                  else overrideInputRefs.current.set(finding.id, element);
+                                }}
                                 onChange={(event) =>
                                   setOverrideReasons((current) => ({
                                     ...current,
@@ -1994,6 +3199,41 @@ export function ReviewWorkspace({
                 );
               })}
             </section>
+            {/* The keys, written down. A shortcut nobody can see is a shortcut nobody uses. */}
+            <footer className="finding-hints">
+              <span className="finding-hint">
+                <kbd>J</kbd>
+                <kbd>K</kbd> move
+              </span>
+              <span className="finding-hint">
+                <kbd>Enter</kbd> open
+              </span>
+              <span className="finding-hint">
+                <kbd>A</kbd> accept
+              </span>
+              <span className="finding-hint">
+                <kbd>R</kbd> reject
+              </span>
+              <span className="finding-hint">
+                <kbd>D</kbd> defer
+              </span>
+              <span className="finding-hint">
+                <kbd>O</kbd> override
+              </span>
+              <span className="finding-hint">
+                <kbd>Esc</kbd> close
+              </span>
+              <button
+                className="finding-hint finding-hint-command"
+                type="button"
+                aria-keyshortcuts="Control+K Meta+K"
+                title="Open the command palette"
+                onClick={openPalette}
+              >
+                <kbd>Ctrl/⌘</kbd>
+                <kbd>K</kbd> commands
+              </button>
+            </footer>
           </section>
 
           <section className="panel approval-panel" aria-label="approval and export">
@@ -2049,6 +3289,12 @@ export function ReviewWorkspace({
                 </li>
               ))}
             </ul>
+            {editedBlockIds.size > 0 ? (
+              <p className="gate-edit-note">
+                Approving signs v{state.artifact.version} including {editedBlockIds.size} of your
+                edit{editedBlockIds.size === 1 ? "" : "s"}.
+              </p>
+            ) : null}
             <div className="approval-actions">
               <button
                 className="button button-primary"
