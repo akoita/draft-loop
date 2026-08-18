@@ -34,6 +34,8 @@ import {
   AnthropicAdapter,
   type AnthropicClient,
   type JsonObject,
+  type LocalClient,
+  LocalModelAdapter,
   type ModelRequest,
   type ModelResponse,
   OpenAIAdapter,
@@ -66,6 +68,7 @@ import type {
   RecordReviewDecisionCommand,
   WorkspaceDescriptor,
 } from "./index.js";
+import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -111,6 +114,15 @@ export interface WorkspaceConfig {
   readonly authorModel: string;
   readonly criticCompany: string;
   readonly criticModel: string;
+  /**
+   * Base URL of the OpenAI-compatible server used when a company is `local`.
+   *
+   * Absent means the adapter's own default (Ollama on `http://127.0.0.1:11434/v1`);
+   * llama.cpp usually serves `http://127.0.0.1:8080/v1` instead, which is why
+   * this is configurable at all. Always a loopback address: see
+   * `./local-endpoint.js`.
+   */
+  readonly localEndpoint?: string;
   readonly fixtureMode: boolean;
   readonly latestRunId?: string;
 }
@@ -242,6 +254,16 @@ function parseConfig(value: unknown): WorkspaceConfig {
   ) {
     throw new CliUserError("Workspace budget values are invalid.");
   }
+  const localEndpoint = record.localEndpoint;
+  if (localEndpoint !== undefined) {
+    if (typeof localEndpoint !== "string" || !isLoopbackEndpoint(localEndpoint.trim())) {
+      // Deliberately does not echo the configured value: the message travels to
+      // logs and UI surfaces, and a rejected endpoint is attacker-chosen text.
+      throw new CliUserError(
+        "Workspace configuration localEndpoint must be an http or https URL on this machine (localhost, ::1, or 127.0.0.0/8).",
+      );
+    }
+  }
   return {
     schemaVersion: 1,
     id: requireNonEmptyString(record, "id"),
@@ -264,6 +286,7 @@ function parseConfig(value: unknown): WorkspaceConfig {
     authorModel: requireNonEmptyString(record, "authorModel"),
     criticCompany: requireNonEmptyString(record, "criticCompany"),
     criticModel: requireNonEmptyString(record, "criticModel"),
+    ...(typeof localEndpoint === "string" ? { localEndpoint: localEndpoint.trim() } : {}),
     fixtureMode: record.fixtureMode === true,
     ...(typeof record.latestRunId === "string" && record.latestRunId.trim() !== ""
       ? { latestRunId: record.latestRunId.trim() }
@@ -327,6 +350,7 @@ export interface InitWorkspaceOptions {
   readonly authorModel?: string;
   readonly criticCompany?: string;
   readonly criticModel?: string;
+  readonly localEndpoint?: string;
   readonly maxRounds?: number;
   readonly maxCostUsd?: number;
   readonly maxDurationMs?: number;
@@ -374,6 +398,7 @@ export async function initWorkspace(
     authorModel: options.authorModel?.trim() || "claude-sonnet-4-5",
     criticCompany: options.criticCompany?.trim() || "openai",
     criticModel: options.criticModel?.trim() || "gpt-5.6-luna",
+    ...(options.localEndpoint?.trim() ? { localEndpoint: options.localEndpoint.trim() } : {}),
     fixtureMode: options.fixtureMode === true,
   };
   parseConfig(config);
@@ -382,6 +407,10 @@ export async function initWorkspace(
   io.write(
     `Provider pairing: author ${config.authorCompany}/${config.authorModel}; critic ${config.criticCompany}/${config.criticModel}`,
   );
+  if (config.authorCompany === "local" || config.criticCompany === "local") {
+    // "local" is a claim about where material goes, so say the address out loud.
+    io.write(`Local model endpoint: ${config.localEndpoint ?? defaultLocalModelEndpoint}`);
+  }
   io.write(
     `Execution mode: ${config.fixtureMode ? "offline fixture" : "provider (requires --allow-provider-data)"}`,
   );
@@ -854,14 +883,25 @@ function providerAgents(
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const dataPolicy = {
     allowTransmission: allowProviderData,
-    allowedCompanies: ["anthropic", "openai"] as const,
+    allowedCompanies: ["anthropic", "openai", "local"] as const,
     sensitiveData: true,
     sensitiveDataAcknowledged: allowProviderData,
     requestedRetention: "ephemeral-request" as const,
   };
 
-  function providerId(company: string): "anthropic" | "openai" {
-    if (company === "anthropic" || company === "openai") return company;
+  /**
+   * The companies this driver can build an adapter for.
+   *
+   * `local` is the literal company string the local adapter checks itself
+   * (`assertConfiguredModel` compares it to its own `provider`), so a
+   * lineage-shaped value such as `local-glm` would be rejected as an invalid
+   * request. That also means two different local models read as one company to
+   * `hasProviderDiversity`, so a local author paired with a local critic fails
+   * the cross-company check while `anthropic` + `local` passes. Issue #186
+   * covers moving independence onto model lineage; do not work around it here.
+   */
+  function providerId(company: string): "anthropic" | "openai" | "local" {
+    if (company === "anthropic" || company === "openai" || company === "local") return company;
     throw new ProviderAdapterError(
       "anthropic",
       "invalid-request",
@@ -873,12 +913,30 @@ function providerAgents(
   async function createAdapter(company: string, modelId: string, role: "author" | "critic") {
     const provider = providerId(company);
     if (!allowProviderData) {
+      // A local model is still a model: the candidate approves that their
+      // material is handed to one, even when it never leaves the machine.
       throw new ProviderAdapterError(
         provider,
         "policy",
         "Provider transmission is not approved for this request.",
         { retryable: false },
       );
+    }
+    if (provider === "local") {
+      // No credential is resolved here, on purpose: a local server has no
+      // account, and requiring a key would reintroduce the usage-credit
+      // dependency this path exists to remove.
+      const client: LocalClient =
+        providerClientFactories?.local?.(config.localEndpoint) ??
+        (config.localEndpoint === undefined ? {} : { endpoint: config.localEndpoint });
+      return new LocalModelAdapter<JsonObject, JsonObject>(client, {
+        configuredModel: {
+          company: provider,
+          modelId,
+          role,
+          promptTemplateVersion: `cli-${role}-v1`,
+        },
+      });
     }
     if (provider === "anthropic") {
       const apiKey = await resolveCredential("anthropic");
@@ -1627,6 +1685,7 @@ function workspaceDescriptor(root: string, config: WorkspaceConfig): WorkspaceDe
     ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
     author: { company: config.authorCompany, model: config.authorModel },
     critic: { company: config.criticCompany, model: config.criticModel },
+    ...(config.localEndpoint === undefined ? {} : { localEndpoint: config.localEndpoint }),
     fixtureMode: config.fixtureMode,
     ...(config.latestRunId === undefined ? {} : { latestRunId: config.latestRunId }),
   };
@@ -1676,9 +1735,14 @@ export type ProviderCredentialResolver = (
 export interface ProviderClientFactories {
   readonly anthropic?: (apiKey: string) => AnthropicClient;
   readonly openai?: (apiKey: string) => OpenAIClient;
+  /**
+   * Builds the local transport. Receives the workspace's configured endpoint,
+   * or `undefined` when the workspace leaves the adapter default in place.
+   */
+  readonly local?: (endpoint: string | undefined) => LocalClient;
 }
 
-export type { AnthropicClient, OpenAIClient };
+export type { AnthropicClient, LocalClient, OpenAIClient };
 
 export interface LocalApplicationDriverOptions {
   readonly resolveCredential?: ProviderCredentialResolver;

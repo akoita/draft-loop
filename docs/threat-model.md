@@ -87,10 +87,23 @@ Runtime controls are deny-by-default provider egress, a fingerprinted and
 durable desktop transmission acknowledgement that is revalidated from current
 workspace configuration before live start/resume/revision, explicit URL approval,
 validated bridge commands, encrypted credential storage with a documented
-fallback, provider diversity visibility, bounded rounds/cost/time, structured
+fallback, a loopback-only endpoint rule for the `local` provider company,
+provider diversity visibility, bounded rounds/cost/time, structured
 outputs, source references, human approval, local retention, and content-free
 operational events. These controls reduce impact but do not make model output or
 the local machine authoritative.
+
+The `local` provider company is a claim that candidate material never leaves
+this machine, and every downstream surface — the desktop transmission
+preflight, the run audit trail, the workspace labels — repeats that claim
+without rechecking it. A configured local endpoint is therefore accepted only
+when it is an `http`/`https` URL whose host is `localhost`, `::1`, or an
+address in `127.0.0.0/8`, and never when it carries embedded credentials, which
+are unnecessary for a local server and are the usual way to make a remote host
+read as a local one. The rule is enforced at workspace load as well as at
+creation, so a hand-edited `workspace.json` is refused. Hosts that merely
+resolve to a loopback address are rejected, because resolution cannot be
+verified at that point.
 
 Build-time controls are strict TypeScript, schema validation, linting,
 deterministic tests, lockfile review, secret-free synthetic fixtures, security

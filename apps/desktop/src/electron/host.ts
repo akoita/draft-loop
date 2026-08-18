@@ -7,6 +7,7 @@ import {
   type ApplicationService,
   createApplicationService,
   createLocalApplicationDriver,
+  defaultLocalModelEndpoint,
   SourceIngestionUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
@@ -164,13 +165,27 @@ function providerTransmissionAcknowledgementPath(root: string): string {
   return join(root, configDirectory, providerTransmissionAcknowledgementFilename);
 }
 
-function providerEndpoint(company: string, fixtureMode: boolean): string {
+/**
+ * The address the preflight promises material will be sent to.
+ *
+ * This string is what the candidate reads before approving transmission, so it
+ * has to be the address actually used. For `local` that is the workspace's
+ * configured endpoint, not a representative default: a workspace pointed at
+ * llama.cpp on `:8080` must not be shown Ollama's `:11434`.
+ */
+function providerEndpoint(
+  company: string,
+  fixtureMode: boolean,
+  localEndpoint: string | undefined,
+): string {
   if (fixtureMode) return "local fixture (no network)";
   switch (company.trim().toLowerCase()) {
     case "anthropic":
       return "https://api.anthropic.com/v1/messages";
     case "openai":
       return "https://api.openai.com/v1/responses";
+    case "local":
+      return localEndpoint ?? defaultLocalModelEndpoint;
     default:
       return fail("operation-failed", `Unsupported live provider company: ${company}.`);
   }
@@ -185,11 +200,19 @@ function providerTransmissionPolicy(descriptor: WorkspaceDescriptor): ProviderTr
     excludedScope: excludedTransmissionScope,
     author: {
       ...descriptor.author,
-      endpoint: providerEndpoint(descriptor.author.company, descriptor.fixtureMode),
+      endpoint: providerEndpoint(
+        descriptor.author.company,
+        descriptor.fixtureMode,
+        descriptor.localEndpoint,
+      ),
     },
     critic: {
       ...descriptor.critic,
-      endpoint: providerEndpoint(descriptor.critic.company, descriptor.fixtureMode),
+      endpoint: providerEndpoint(
+        descriptor.critic.company,
+        descriptor.fixtureMode,
+        descriptor.localEndpoint,
+      ),
     },
     retentionPreference: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
     budget: {

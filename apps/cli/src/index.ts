@@ -46,6 +46,10 @@ export function createCli(): Command {
     .option("--critic-company <company>", "critic provider company", "openai")
     .option("--critic-model <model>", "exact critic model id", "gpt-5.6-luna")
     .option(
+      "--local-endpoint <url>",
+      "loopback base URL of the local model server, used when a company is 'local'",
+    )
+    .option(
       "--required-sections <sections>",
       "comma-separated required output sections",
       defaultRequiredSections.join(","),
@@ -72,6 +76,9 @@ export function createCli(): Command {
         authorModel: options.authorModel as string,
         criticCompany: options.criticCompany as string,
         criticModel: options.criticModel as string,
+        ...(options.localEndpoint === undefined
+          ? {}
+          : { localEndpoint: options.localEndpoint as string }),
         requiredSections: (options.requiredSections as string)
           .split(",")
           .map((section) => section.trim())

@@ -19,6 +19,8 @@ export interface InitializeWorkspaceCommand {
   readonly authorModel?: string;
   readonly criticCompany?: string;
   readonly criticModel?: string;
+  /** Loopback base URL of the local inference server, when a company is `local`. */
+  readonly localEndpoint?: string;
   readonly maxRounds?: number;
   readonly maxCostUsd?: number;
   readonly maxDurationMs?: number;
@@ -43,6 +45,8 @@ export interface WorkspaceDescriptor {
   readonly maxCharacters?: number;
   readonly author: { readonly company: string; readonly model: string };
   readonly critic: { readonly company: string; readonly model: string };
+  /** Where a `local` company sends material; absent when no local endpoint is configured. */
+  readonly localEndpoint?: string;
   readonly fixtureMode: boolean;
   readonly latestRunId?: string;
 }
@@ -185,3 +189,4 @@ export function createApplicationService(driver: ApplicationDriver): Application
 }
 
 export * from "./local.js";
+export * from "./local-endpoint.js";

@@ -1,15 +1,123 @@
-import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { type AnthropicClient, createLocalModelAdapter } from "@draft-loop/providers";
 import { openSqliteStorage } from "@draft-loop/storage";
-import { describe, expect, it } from "vitest";
-
+import { describe, expect, it, vi } from "vitest";
 import {
+  CliUserError,
   createLocalApplicationDriver,
   defaultRequiredSections,
+  type ProviderClientFactories,
   SourceIngestionUserError,
 } from "./local.js";
+import { defaultLocalModelEndpoint } from "./local-endpoint.js";
+
+interface JsonRecord {
+  readonly [key: string]: unknown;
+}
+
+/** Reads the evidence chunk the author must cite out of a serialized request. */
+function evidenceChunkId(serialized: string): string {
+  const input = JSON.parse(serialized) as {
+    readonly retrievedEvidence?: readonly { readonly id?: unknown }[];
+  };
+  const first = input.retrievedEvidence?.[0];
+  if (first === undefined || typeof first.id !== "string" || first.id.trim() === "") {
+    throw new Error("The fake local transport received no serialized evidence chunk.");
+  }
+  return first.id;
+}
+
+function authorProposal(chunkId: string): JsonRecord {
+  const summary = "TypeScript engineer building local-first tools with deterministic testing.";
+  const experience = "Built local-first TypeScript tools with deterministic testing.";
+  return {
+    sections: [
+      {
+        title: "Summary",
+        kind: "summary",
+        blocks: [
+          {
+            type: "paragraph",
+            text: summary,
+            claims: [{ text: summary, substantive: true, evidenceChunkIds: [chunkId] }],
+          },
+        ],
+      },
+      {
+        title: "Experience",
+        kind: "experience",
+        blocks: [
+          {
+            type: "bullet",
+            text: experience,
+            claims: [{ text: experience, substantive: true, evidenceChunkIds: [chunkId] }],
+          },
+        ],
+      },
+      {
+        title: "Education",
+        kind: "education",
+        blocks: [{ type: "bullet", text: "Studied software engineering.", claims: [] }],
+      },
+      {
+        title: "Skills",
+        kind: "skills",
+        blocks: [{ type: "bullet", text: "TypeScript, Node.js, automated testing.", claims: [] }],
+      },
+    ],
+  };
+}
+
+/** An OpenAI-compatible chat completion, as a local llama.cpp or Ollama server returns it. */
+function localCompletion(output: JsonRecord, id: string): unknown {
+  return {
+    ok: true,
+    status: 200,
+    json: async () => ({
+      id,
+      choices: [{ message: { content: JSON.stringify(output) } }],
+      usage: { prompt_tokens: 120, completion_tokens: 40, total_tokens: 160 },
+    }),
+  };
+}
+
+function anthropicCritiqueClient(findings: readonly JsonRecord[]): AnthropicClient {
+  return {
+    messages: {
+      create: () => {
+        const response = {
+          id: "anthropic-critic-1",
+          content: [{ type: "text", text: JSON.stringify({ findings }) }],
+          model: "claude-sonnet-4-5",
+          stop_reason: "end_turn",
+          usage: { input_tokens: 90, output_tokens: 20 },
+        };
+        return Object.assign(Promise.resolve(response), {
+          withResponse: async () => ({ data: response, request_id: "anthropic-critic-1" }),
+        }) as ReturnType<AnthropicClient["messages"]["create"]>;
+      },
+    },
+  };
+}
+
+async function providerWorkspace(prefix: string): Promise<string> {
+  const root = await mkdtemp(join(tmpdir(), prefix));
+  await mkdir(join(root, "evidence"), { recursive: true });
+  await writeFile(
+    join(root, "job.md"),
+    "Build TypeScript local-first tools with deterministic testing.\n",
+    "utf8",
+  );
+  await writeFile(
+    join(root, "evidence", "resume.md"),
+    "Built local-first TypeScript tools with deterministic testing.\n",
+    "utf8",
+  );
+  return root;
+}
 
 describe("local application driver", () => {
   it("fails closed before indexing when PDF extraction is unreliable", async () => {
@@ -153,6 +261,244 @@ describe("local application driver", () => {
       await expect(
         driver.latestExportPath({ root, runId: snapshot.runId, format: "markdown" }),
       ).resolves.toBe(olderPath);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+  it("drafts through a local model server without resolving any credential", async () => {
+    const root = await providerWorkspace("draft-loop-local-provider-");
+    const io = { write: () => undefined };
+    const credentialCalls: string[] = [];
+    const requestedEndpoints: (string | undefined)[] = [];
+    const fetchCalls: string[] = [];
+    const localFetch = vi.fn(async (url: string, init: RequestInit) => {
+      fetchCalls.push(url);
+      const body = JSON.parse(String(init.body)) as {
+        readonly model: string;
+        readonly messages: readonly { readonly content: string }[];
+      };
+      expect(body.model).toBe("qwen3-coder-30b");
+      const serialized = body.messages[1]?.content ?? "";
+      return localCompletion(authorProposal(evidenceChunkId(serialized)), "local-1");
+    });
+    const providerClientFactories: ProviderClientFactories = {
+      anthropic: () => anthropicCritiqueClient([]),
+      local: (endpoint) => {
+        requestedEndpoints.push(endpoint);
+        return {
+          ...(endpoint === undefined ? {} : { endpoint }),
+          fetch: localFetch as unknown as typeof fetch,
+        };
+      },
+    };
+    const driver = createLocalApplicationDriver({
+      resolveCredential: async (provider) => {
+        credentialCalls.push(provider);
+        return "fake-anthropic-key";
+      },
+      providerClientFactories,
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        io,
+      );
+
+      const snapshot = await driver.start({ root, allowProviderData: true }, io);
+
+      expect(snapshot.state).toBe("awaiting-approval");
+      // The workspace endpoint reached the transport; the Ollama default did not.
+      expect(requestedEndpoints).toEqual(["http://127.0.0.1:8080/v1"]);
+      expect(fetchCalls).toEqual(["http://127.0.0.1:8080/v1/chat/completions"]);
+      // A local server has no account, so the local author asked for no key.
+      expect(credentialCalls).toEqual(["anthropic"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves the endpoint to the adapter when the workspace configures none", async () => {
+    const root = await providerWorkspace("draft-loop-local-default-endpoint-");
+    const io = { write: () => undefined };
+    const requestedEndpoints: (string | undefined)[] = [];
+    const driver = createLocalApplicationDriver({
+      resolveCredential: async () => "fake-anthropic-key",
+      providerClientFactories: {
+        anthropic: () => anthropicCritiqueClient([]),
+        local: (endpoint) => {
+          requestedEndpoints.push(endpoint);
+          return { fetch: (async () => localCompletion({}, "local-1")) as unknown as typeof fetch };
+        },
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        io,
+      );
+      await driver.start({ root, allowProviderData: true }, io);
+
+      expect(requestedEndpoints).toEqual([undefined]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the advertised default endpoint identical to the adapter's own", async () => {
+    // The desktop preflight names this address before a request is made, so a
+    // change to the adapter default must not leave that promise stale.
+    const calls: string[] = [];
+    const adapter = createLocalModelAdapter(
+      {
+        fetch: (async (url: string) => {
+          calls.push(url);
+          return localCompletion({ findings: [] }, "local-default");
+        }) as unknown as typeof fetch,
+      },
+      {
+        configuredModel: {
+          company: "local",
+          modelId: "qwen3-coder-30b",
+          role: "critic",
+          promptTemplateVersion: "cli-critic-v1",
+        },
+      },
+    );
+
+    await adapter.execute({
+      contextSnapshotId: "context-1",
+      model: {
+        company: "local",
+        modelId: "qwen3-coder-30b",
+        role: "critic",
+        promptTemplateVersion: "cli-critic-v1",
+      },
+      systemPrompt: "",
+      input: {},
+      outputSchema: {},
+      outputName: "critique",
+      dataPolicy: {
+        allowTransmission: true,
+        allowedCompanies: ["local"],
+        sensitiveData: false,
+        sensitiveDataAcknowledged: false,
+      },
+    });
+
+    expect(calls).toEqual([`${defaultLocalModelEndpoint}/chat/completions`]);
+  });
+
+  it("refuses a local endpoint that would send candidate material off this machine", async () => {
+    const root = await providerWorkspace("draft-loop-local-remote-endpoint-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      const initialize = driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          localEndpoint: "https://models.evil.test/v1",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        { write: () => undefined },
+      );
+
+      await expect(initialize).rejects.toBeInstanceOf(CliUserError);
+      await expect(initialize).rejects.toThrow(/localhost, ::1, or 127\.0\.0\.0\/8/u);
+      // The rejected value is attacker-chosen text, so it is not echoed back.
+      await expect(initialize).rejects.not.toThrow(/evil\.test/u);
+      await expect(stat(join(root, ".draft-loop", "workspace.json"))).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a stored local endpoint that is no longer loopback", async () => {
+    const root = await providerWorkspace("draft-loop-local-tampered-endpoint-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        { write: () => undefined },
+      );
+      const configPath = join(root, ".draft-loop", "workspace.json");
+      const config = JSON.parse(await readFile(configPath, "utf8")) as Record<string, unknown>;
+      await writeFile(
+        configPath,
+        JSON.stringify({ ...config, localEndpoint: "http://127.0.0.1@evil.test/v1" }, null, 2),
+        "utf8",
+      );
+
+      await expect(driver.readWorkspace(root)).rejects.toBeInstanceOf(CliUserError);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reads two local models as one company for the diversity rule", async () => {
+    // Documented limitation, not a design: `hasProviderDiversity` compares
+    // company strings, and both sides of a local pairing are the literal
+    // "local". Issue #186 moves independence onto model lineage.
+    const root = await providerWorkspace("draft-loop-local-pairing-");
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: (async () => localCompletion({}, "x")) as unknown as typeof fetch }),
+      },
+    });
+
+    try {
+      const workspace = await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "gpt-oss-20b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        { write: () => undefined },
+      );
+
+      expect(workspace.author).toEqual({ company: "local", model: "qwen3-coder-30b" });
+      expect(workspace.critic).toEqual({ company: "local", model: "gpt-oss-20b" });
+      await expect(
+        driver.start({ root, allowProviderData: true }, { write: () => undefined }),
+      ).rejects.toThrow(/different model companies/u);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

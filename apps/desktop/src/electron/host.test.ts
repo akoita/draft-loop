@@ -5,6 +5,7 @@ import {
   type ApplicationService,
   CliUserError,
   createLocalApplicationDriver,
+  defaultLocalModelEndpoint,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
 import { describe, expect, it, vi } from "vitest";
@@ -759,6 +760,84 @@ describe("native host", () => {
       await expect(readFile(join(root, "evidence", "resume.md"), "utf8")).rejects.toThrow();
     } finally {
       await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("names the configured local endpoint in the transmission preflight", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-local-endpoint-"));
+    const fixture = service(root);
+    // llama.cpp serves :8080, Ollama serves :11434. Showing the wrong one would
+    // make the preflight a guess about where candidate material goes.
+    const localWorkspace = {
+      ...descriptor(root),
+      fixtureMode: false,
+      critic: { company: "local", model: "qwen3-coder-30b" },
+      localEndpoint: "http://127.0.0.1:8080/v1",
+    };
+    fixture.service.readWorkspace.mockResolvedValue(localWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: localWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          providerTransmissionPreflight: {
+            author: { company: "anthropic", endpoint: "https://api.anthropic.com/v1/messages" },
+            critic: { company: "local", endpoint: "http://127.0.0.1:8080/v1" },
+          },
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to the adapter default endpoint when a local workspace configures none", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-local-default-"));
+    const fixture = service(root);
+    const localWorkspace = {
+      ...descriptor(root),
+      fixtureMode: false,
+      critic: { company: "local", model: "qwen3-coder-30b" },
+    };
+    fixture.service.readWorkspace.mockResolvedValue(localWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: localWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          providerTransmissionPreflight: {
+            critic: { company: "local", endpoint: defaultLocalModelEndpoint },
+          },
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 
