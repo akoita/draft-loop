@@ -152,6 +152,17 @@ describe("desktop capability bridge", () => {
     });
   });
 
+  it("accepts a namespaced local model id, which names weights rather than a path", () => {
+    // Ollama serves ids like these, and refusing them made real local models
+    // unreachable from a workspace. A model id reaches a provider only as the
+    // `model` field of a JSON body: never a URL path, never a filename.
+    for (const authorModel of ["hf.co/user/model:Q4", "library/llama3:8b"]) {
+      expect(
+        validateBridgeCommand({ type: "workspace.create", input: { name: "w", authorModel } }),
+      ).toEqual({ type: "workspace.create", input: { name: "w", authorModel } });
+    }
+  });
+
   it("keeps workspace.create model ids optional, bounded, and trimmed", () => {
     const withoutModels = validateBridgeCommand({
       type: "workspace.create",
@@ -188,8 +199,13 @@ describe("desktop capability bridge", () => {
       null,
       "a".repeat(129),
       "gpt 5.6 luna",
-      "claude/haiku",
       "-leading-hyphen",
+      // Namespaced ids are valid now; only traversal shapes are refused.
+      "../../etc/passwd",
+      "a/../../b",
+      "a//b",
+      "trailing/",
+      "/leading",
     ]) {
       expect(() =>
         validateBridgeCommand({

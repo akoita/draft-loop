@@ -780,7 +780,14 @@ function identifier(value: unknown): string {
  */
 function modelId(value: unknown): string {
   const result = stringValue(value, 128).trim();
-  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u.test(result)) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/u.test(result)) {
+    return invalidInput();
+  }
+  // A namespaced id such as `hf.co/user/model:Q4` is a name, never a path. It
+  // reaches a provider only as the `model` field of a JSON body, but an id that
+  // cannot be mistaken for a traversal keeps that true if it is ever placed
+  // somewhere that resolves one.
+  if (result.includes("..") || result.includes("//") || result.endsWith("/")) {
     return invalidInput();
   }
   return result;

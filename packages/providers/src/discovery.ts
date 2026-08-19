@@ -53,7 +53,11 @@ export const maximumDiscoveredModelIdLength = 128;
  * character, HTML — is dropped. Real ids (`claude-sonnet-4-5`, `gpt-5`,
  * `us.anthropic.claude-3`, `llama3.2:3b`) fit inside it.
  */
-const modelIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/u;
+// Kept in step with the desktop bridge's `modelId` rule: an id this drops is
+// one a workspace would refuse, so offering it would be offering a dead end.
+const modelIdPattern = /^[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}$/u;
+const traversalShaped = (id: string): boolean =>
+  id.includes("..") || id.includes("//") || id.endsWith("/");
 
 /**
  * The largest response body that will be parsed.
@@ -248,6 +252,7 @@ function parseModelList(provider: ProviderId, body: unknown): ModelCatalogue {
     if (typeof id !== "string") continue;
     const trimmed = id.trim();
     if (trimmed.length > maximumDiscoveredModelIdLength || !modelIdPattern.test(trimmed)) continue;
+    if (traversalShaped(trimmed)) continue;
     if (seen.has(trimmed)) continue;
     seen.add(trimmed);
     models.push({ id: trimmed });
