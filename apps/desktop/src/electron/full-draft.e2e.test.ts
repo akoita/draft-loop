@@ -630,5 +630,5 @@ describe("full real-mode native host draft workflow", () => {
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
-  }, 10_000);
+  });
 });

@@ -33,5 +33,5 @@ describe("packaged desktop smoke workflow", () => {
     }
 
     expect(dialogs.chooseDirectory).toHaveBeenCalledWith("open");
-  }, 10_000);
+  });
 });

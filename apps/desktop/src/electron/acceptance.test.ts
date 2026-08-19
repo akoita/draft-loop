@@ -58,5 +58,5 @@ describe("packaged installed-app acceptance workflow", () => {
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
-  }, 10_000);
+  });
 });
