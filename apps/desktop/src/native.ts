@@ -5,7 +5,13 @@ import {
   bridgeError,
   type CapabilityPort,
   createCapabilityPort,
+  type ModelCandidate,
+  type ModelCompany,
+  type ModelDiscoveryProvider,
+  type ModelsListResult,
+  type ModelsPreviewIndependenceResult,
   type NativeBridge,
+  type WorkspaceCreateInput,
 } from "./bridge.js";
 import {
   createFixtureReviewPort,
@@ -15,6 +21,80 @@ import {
 } from "./model.js";
 
 export type { NativeBridge } from "./bridge.js";
+
+/**
+ * What a person chose for a workspace before it existed.
+ *
+ * A subset of `WorkspaceCreateInput`, holding only the fields the setup form
+ * collects. Every field is optional and an omitted one keeps the workspace
+ * default, so a caller that names nothing still creates the workspace the
+ * single create button always created.
+ */
+export interface WorkspaceModelSelection {
+  readonly authorCompany?: ModelCompany;
+  readonly authorModel?: string;
+  readonly criticCompany?: ModelCompany;
+  readonly criticModel?: string;
+  readonly localEndpoint?: string;
+  readonly independenceOverrideRationale?: string;
+}
+
+/**
+ * The setup form's own view of a port: choosing models, and asking about them.
+ *
+ * `createWorkspace` is widened here rather than in `DesktopReviewPort` so that
+ * a fixture port written against the narrower signature stays assignable; a
+ * function that ignores the second argument satisfies one that offers it.
+ * `listModels` and `previewIndependence` are present only when the host
+ * actually offers the capability, so an absent one is a fact the form can
+ * report rather than a call that fails later.
+ */
+export interface WorkspaceSetupCapabilities {
+  readonly createWorkspace?: (
+    name: string,
+    selection?: WorkspaceModelSelection,
+  ) => Promise<DesktopReviewState>;
+  readonly listModels?: (provider: ModelDiscoveryProvider) => Promise<ModelsListResult>;
+  readonly previewIndependence?: (
+    author: ModelCandidate,
+    critic: ModelCandidate,
+  ) => Promise<ModelsPreviewIndependenceResult>;
+}
+
+export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
+  WorkspaceSetupCapabilities;
+
+/**
+ * Fills `workspace.create` in from a form's strings.
+ *
+ * A field left blank means "keep the workspace default", so a blank is dropped
+ * rather than sent as an empty string the boundary would refuse. Trimming
+ * happens here because a person typing a model id into a form leaves spaces
+ * behind and the boundary's `modelId` rule does not forgive them.
+ */
+export function workspaceCreateInput(
+  name: string,
+  selection?: WorkspaceModelSelection,
+): WorkspaceCreateInput {
+  const named = (value: string | undefined): string | undefined => {
+    const trimmed = value?.trim() ?? "";
+    return trimmed === "" ? undefined : trimmed;
+  };
+  const authorModel = named(selection?.authorModel);
+  const criticModel = named(selection?.criticModel);
+  const localEndpoint = named(selection?.localEndpoint);
+  const rationale = named(selection?.independenceOverrideRationale);
+  return {
+    name: name.trim(),
+    mode: "real",
+    ...(selection?.authorCompany === undefined ? {} : { authorCompany: selection.authorCompany }),
+    ...(authorModel === undefined ? {} : { authorModel }),
+    ...(selection?.criticCompany === undefined ? {} : { criticCompany: selection.criticCompany }),
+    ...(criticModel === undefined ? {} : { criticModel }),
+    ...(localEndpoint === undefined ? {} : { localEndpoint }),
+    ...(rationale === undefined ? {} : { independenceOverrideRationale: rationale }),
+  };
+}
 
 /**
  * Browser mode is intentionally capability-empty. It does not emulate a file
@@ -54,7 +134,7 @@ function unwrap<Value>(result: BridgeResult<Value>): Value {
   throw new DesktopBridgeError(result.error.code, result.error.message);
 }
 
-export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopReviewPort {
+export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopSetupPort {
   const load = async (): Promise<DesktopReviewState> => {
     const result = await capabilityPort.execute({ type: "review.load", input: {} });
     return unwrap(result);
@@ -80,9 +160,12 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopR
       );
       return refresh();
     },
-    createWorkspace: async (name) => {
+    createWorkspace: async (name, selection) => {
       unwrap(
-        await capabilityPort.execute({ type: "workspace.create", input: { name, mode: "real" } }),
+        await capabilityPort.execute({
+          type: "workspace.create",
+          input: workspaceCreateInput(name, selection),
+        }),
       );
       return refresh();
     },
@@ -144,11 +227,28 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopR
       });
       return unwrap(result);
     },
+    ...(capabilityPort.hasCapability("models.list")
+      ? {
+          listModels: async (provider: ModelDiscoveryProvider) =>
+            unwrap(await capabilityPort.execute({ type: "models.list", input: { provider } })),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("models.preview-independence")
+      ? {
+          previewIndependence: async (author: ModelCandidate, critic: ModelCandidate) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "models.preview-independence",
+                input: { author, critic },
+              }),
+            ),
+        }
+      : {}),
   };
 }
 
 /** Uses a host-backed review port when available and a fixture only in browser mode. */
-export function createDesktopReviewPort(): DesktopReviewPort {
+export function createDesktopReviewPort(): DesktopSetupPort {
   const capabilityPort = createNativeCapabilityPort(getNativeBridge());
   return capabilityPort.hasCapability("review.load") &&
     capabilityPort.hasCapability("review.dispatch")

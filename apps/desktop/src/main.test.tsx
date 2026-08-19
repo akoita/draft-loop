@@ -1,5 +1,22 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import type { ModelCompany } from "./bridge.js";
+import {
+  type IndependencePreviewState,
+  independencePreviewSummary,
+  initialWorkspaceSetupDraft,
+  type ModelDiscoveryState,
+  modelDiscoveryNote,
+  modelInputMode,
+  otherModelOptionValue,
+  requiresLocalEndpoint,
+  sharedLineageBlocksCreation,
+  type WorkspaceSetupDraft,
+  WorkspaceSetupForm,
+  workspaceModelSelection,
+  workspaceSetupBlocker,
+  workspaceSetupFailureMessage,
+} from "./main.js";
 import {
   createFixtureReviewState,
   type IndependentReviewView,
@@ -7,6 +24,7 @@ import {
   reviewFindingSummary,
   unresolvedBlockingFindings,
 } from "./model.js";
+import { DesktopBridgeError, workspaceCreateInput } from "./native.js";
 import {
   canExportReview,
   filterFindingQueue,
@@ -790,5 +808,306 @@ describe("desktop trust strip independence", () => {
     expect(notRequiredAndDistinct).toContain(
       "Independent review was not required for this run; the claimed lineages differ.",
     );
+  });
+});
+
+/**
+ * Choosing the two models before the workspace exists.
+ *
+ * The form is presentational and every answer it shows arrives as a prop, so
+ * these render it directly rather than driving `App`: what is worth asserting
+ * is the wording and the blocking, not React's own effect scheduling.
+ */
+describe("desktop workspace setup", () => {
+  const ready = (
+    authorLineage: string,
+    criticLineage: string,
+    lineagesDistinct: boolean,
+  ): IndependencePreviewState => ({
+    status: "ready",
+    result: { authorLineage, criticLineage, lineagesDistinct },
+  });
+
+  const idleDiscovery: Readonly<Record<ModelCompany, ModelDiscoveryState>> = {
+    anthropic: { status: "idle" },
+    openai: { status: "idle" },
+    local: { status: "idle" },
+  };
+
+  const renderForm = (
+    draft: WorkspaceSetupDraft,
+    preview: IndependencePreviewState,
+    discovery: Readonly<Record<ModelCompany, ModelDiscoveryState>> = idleDiscovery,
+  ) =>
+    renderToStaticMarkup(
+      <WorkspaceSetupForm
+        draft={draft}
+        discovery={discovery}
+        preview={preview}
+        typingOwnModel={{ author: false, critic: false }}
+        busy={false}
+        onDraftChange={() => undefined}
+        onTypeOwnModel={() => undefined}
+        onCreate={() => undefined}
+        onCreateDemo={() => undefined}
+        onOpen={() => undefined}
+      />,
+    );
+
+  const named: WorkspaceSetupDraft = {
+    ...initialWorkspaceSetupDraft,
+    authorModel: "claude-sonnet-4-5",
+    criticModel: "gpt-5",
+  };
+
+  it("offers a company and a model for each side, and keeps the demo path", () => {
+    const html = renderForm(initialWorkspaceSetupDraft, { status: "idle" });
+
+    expect(html).toContain("Author model");
+    expect(html).toContain("Critic model");
+    expect(html).toContain('aria-label="Author company"');
+    expect(html).toContain('aria-label="Critic company"');
+    expect(html).toContain('aria-label="Author model"');
+    expect(html).toContain('aria-label="Critic model"');
+    for (const company of ["anthropic", "openai", "local"]) {
+      expect(html).toContain(`value="${company}"`);
+    }
+    expect(html).toContain("Create workspace");
+    expect(html).toContain("Try demo workspace");
+    expect(html).toContain("Open workspace");
+    // Nothing is claimed about a pairing that has not been named yet.
+    expect(html).toContain(
+      "Name an author model and a critic model, and this will say whether the pairing counts as independent.",
+    );
+    expect(html).not.toContain("as claimed");
+  });
+
+  it("lists discovered models and keeps a way to name one that is not listed", () => {
+    const html = renderForm(named, ready("anthropic:claude-sonnet-4-5", "openai:gpt-5", true), {
+      ...idleDiscovery,
+      anthropic: {
+        status: "ready",
+        models: ["claude-sonnet-4-5", "claude-haiku-4-5"],
+        source: "live",
+        truncated: false,
+      },
+    });
+
+    expect(html).toContain('<option value="claude-haiku-4-5">claude-haiku-4-5</option>');
+    expect(html).toContain(`<option value="${otherModelOptionValue}">Other model…</option>`);
+    expect(html).toContain("2 models listed by the provider");
+  });
+
+  it("falls back to a typed model id and says why discovery failed", () => {
+    const failed: ModelDiscoveryState = {
+      status: "unavailable",
+      reason: "No API key is configured for this provider. Add one before listing its models.",
+    };
+
+    expect(modelInputMode("anthropic", failed, false, false)).toBe("text");
+    expect(modelDiscoveryNote("anthropic", failed, false)).toBe(
+      "Models could not be listed. No API key is configured for this provider. Add one before listing its models. Type the model id instead; this does not stop the workspace being created.",
+    );
+    expect(
+      modelInputMode(
+        "anthropic",
+        { status: "ready", models: [], source: "live", truncated: false },
+        false,
+        false,
+      ),
+    ).toBe("text");
+    expect(modelInputMode("anthropic", { status: "idle" }, false, false)).toBe("text");
+
+    const html = renderForm(named, { status: "idle" }, { ...idleDiscovery, anthropic: failed });
+    expect(html).toContain("No API key is configured for this provider.");
+    expect(html).toContain("this does not stop the workspace being created");
+    // A discovery failure never disables creation.
+    expect(html).not.toContain('type="submit" disabled=""');
+  });
+
+  it("reveals a local endpoint field and states what a local address may be", () => {
+    const local: WorkspaceSetupDraft = { ...named, authorCompany: "local", authorModel: "qwen3" };
+
+    expect(requiresLocalEndpoint(initialWorkspaceSetupDraft)).toBe(false);
+    expect(requiresLocalEndpoint(local)).toBe(true);
+    const html = renderForm(local, ready("local:qwen3", "openai:gpt-5", true));
+
+    expect(html).toContain('aria-label="Local model server address"');
+    expect(html).toContain("only a loopback address is accepted");
+    expect(html).toContain("http://127.0.0.1:11434/v1");
+  });
+
+  it("stops asking a local server for models once the workspace names its own", () => {
+    const listed: ModelDiscoveryState = {
+      status: "ready",
+      models: ["qwen3-coder-30b"],
+      source: "live",
+      truncated: false,
+    };
+
+    expect(modelInputMode("local", listed, false, false)).toBe("list");
+    expect(modelInputMode("local", listed, true, false)).toBe("text");
+    expect(modelDiscoveryNote("local", listed, true)).toContain(
+      "Model discovery can only ask the default local server until this workspace exists",
+    );
+  });
+
+  it("turns a refused local address into something correctable", () => {
+    const local: WorkspaceSetupDraft = {
+      ...named,
+      criticCompany: "local",
+      criticModel: "qwen3",
+      localEndpoint: "http://10.0.0.4:11434/v1",
+    };
+
+    expect(
+      workspaceSetupFailureMessage(
+        new DesktopBridgeError("invalid-input", "The desktop command input is invalid."),
+        local,
+      ),
+    ).toBe(
+      "The desktop command input is invalid. Check the local model server address: it must be on this machine, such as http://127.0.0.1:11434/v1, and carry no username or password.",
+    );
+    expect(
+      workspaceSetupFailureMessage(
+        new DesktopBridgeError("operation-failed", "The desktop operation could not be completed."),
+        local,
+      ),
+    ).toBe("The desktop operation could not be completed.");
+    expect(
+      workspaceSetupFailureMessage(
+        new DesktopBridgeError("invalid-input", "The desktop command input is invalid."),
+        named,
+      ),
+    ).toBe("The desktop command input is invalid.");
+  });
+
+  it("reports distinct lineages as a claim rather than as proof", () => {
+    const html = renderForm(named, ready("anthropic:claude-sonnet-4-5", "openai:gpt-5", true));
+
+    expect(html).toContain("trust-badge-independent");
+    expect(html).toContain("lineages differ");
+    expect(html).toContain(
+      "Author and critic lineages differ, as claimed. A lineage is an operator label that nothing verifies; two labels can name the same weights.",
+    );
+    expect(html).toContain(
+      "Claimed lineages: author anthropic:claude-sonnet-4-5; critic openai:gpt-5",
+    );
+    expect(html).not.toContain("Why is one lineage on both sides acceptable?");
+    expect(html).not.toContain('type="submit" disabled=""');
+  });
+
+  it("blocks a shared lineage and unblocks it on a recorded rationale", () => {
+    const shared = ready("anthropic:claude-sonnet-4-5", "anthropic:claude-sonnet-4-5", false);
+
+    expect(sharedLineageBlocksCreation(shared, "")).toBe(true);
+    expect(workspaceSetupBlocker(named, shared)).toBe(
+      "Record why one lineage on both sides is acceptable before creating the workspace.",
+    );
+    const blocked = renderForm(named, shared);
+    expect(blocked).toContain("trust-badge-shared");
+    expect(blocked).not.toContain("trust-badge-independent");
+    expect(blocked).toContain(
+      "Author and critic would share one lineage, so this critique would not be independent. Choose a different model on one side, or record why one lineage on both sides is acceptable.",
+    );
+    expect(blocked).toContain("Why is one lineage on both sides acceptable? (required)");
+    expect(blocked).toContain('aria-label="Independence override rationale"');
+    expect(blocked).toContain('type="submit" disabled=""');
+
+    const rationale = "One vendor is the only offline route; a person reads every critique.";
+    const overridden: WorkspaceSetupDraft = {
+      ...named,
+      independenceOverrideRationale: rationale,
+    };
+    expect(sharedLineageBlocksCreation(shared, rationale)).toBe(false);
+    expect(workspaceSetupBlocker(overridden, shared)).toBeNull();
+    const proceeds = renderForm(overridden, shared);
+    expect(proceeds).toContain(
+      "Author and critic would share one lineage, so this critique would not be independent; the workspace will record your rationale.",
+    );
+    expect(proceeds).not.toContain("trust-badge-independent");
+    expect(proceeds).not.toContain('type="submit" disabled=""');
+    expect(workspaceModelSelection(overridden).independenceOverrideRationale).toBe(rationale);
+  });
+
+  it("never works the verdict out for itself", () => {
+    // Two identical selections the domain reported as distinct, and two
+    // different companies it reported as one lineage. A renderer that compared
+    // anything itself would contradict the record in one of these.
+    const identical: WorkspaceSetupDraft = {
+      ...initialWorkspaceSetupDraft,
+      criticCompany: "anthropic",
+      authorModel: "claude-sonnet-4-5",
+      criticModel: "claude-sonnet-4-5",
+    };
+    expect(renderForm(identical, ready("house-a", "house-b", true))).toContain(
+      "Author and critic lineages differ, as claimed",
+    );
+    expect(
+      renderForm(named, ready("openweights:llama-4-70b", "openweights:llama-4-70b", false)),
+    ).toContain("would share one lineage");
+  });
+
+  it("does not claim anything when the pairing could not be checked", () => {
+    const summary = independencePreviewSummary(
+      { status: "unavailable", reason: "This host cannot check a pairing." },
+      "",
+    );
+
+    expect(summary.tone).toBe("unrecorded");
+    expect(summary.detail).toContain("This pairing could not be checked.");
+    expect(summary.detail).toContain("the run itself refuses a shared lineage");
+    expect(summary.lineages).toBeNull();
+    expect(independencePreviewSummary({ status: "loading" }, "").mark).toBe("checking");
+
+    const html = renderForm(named, { status: "unavailable", reason: "Nothing answered." });
+    expect(html).toContain("trust-badge-unrecorded");
+    // An unanswerable check must never stop a workspace being created.
+    expect(html).not.toContain('type="submit" disabled=""');
+  });
+
+  it("requires a name and both models before creating anything", () => {
+    expect(workspaceSetupBlocker({ ...named, name: "  " }, { status: "idle" })).toBe(
+      "Name the workspace before creating it.",
+    );
+    expect(workspaceSetupBlocker(initialWorkspaceSetupDraft, { status: "idle" })).toBe(
+      "Name an author model and a critic model before creating the workspace.",
+    );
+    expect(workspaceSetupBlocker(named, { status: "idle" })).toBeNull();
+  });
+
+  it("sends only what a person actually chose", () => {
+    expect(workspaceCreateInput("  spaced-workspace  ", workspaceModelSelection(named))).toEqual({
+      name: "spaced-workspace",
+      mode: "real",
+      authorCompany: "anthropic",
+      authorModel: "claude-sonnet-4-5",
+      criticCompany: "openai",
+      criticModel: "gpt-5",
+    });
+    expect(
+      workspaceCreateInput(
+        "local-workspace",
+        workspaceModelSelection({
+          ...named,
+          authorCompany: "local",
+          authorModel: " qwen3-coder-30b ",
+          localEndpoint: " http://127.0.0.1:11434/v1 ",
+          independenceOverrideRationale: "  ",
+        }),
+      ),
+    ).toEqual({
+      name: "local-workspace",
+      mode: "real",
+      authorCompany: "local",
+      authorModel: "qwen3-coder-30b",
+      criticCompany: "openai",
+      criticModel: "gpt-5",
+      localEndpoint: "http://127.0.0.1:11434/v1",
+    });
+    expect(workspaceCreateInput("draft-loop-workspace")).toEqual({
+      name: "draft-loop-workspace",
+      mode: "real",
+    });
   });
 });

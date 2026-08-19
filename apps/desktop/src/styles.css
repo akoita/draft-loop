@@ -216,6 +216,7 @@ body {
 
 button,
 input,
+select,
 textarea {
   font: inherit;
 }
@@ -432,6 +433,7 @@ kbd::after {
 input[type="text"],
 input[type="url"],
 input[type="password"],
+select,
 textarea {
   width: 100%;
   border: 1px solid var(--border-strong);
@@ -454,8 +456,19 @@ textarea::placeholder {
 }
 
 input:focus,
+select:focus,
 textarea:focus {
   border-color: var(--teal-line);
+}
+
+/* A select is a control the desk owns, so it reads like the inputs beside it
+   rather than like the platform's own widget. The height is stated because a
+   select does not take its box from padding the way an input does, and the
+   two sit side by side. */
+select {
+  min-height: 32px;
+  color-scheme: inherit;
+  font-family: inherit;
 }
 
 textarea {
@@ -3161,6 +3174,97 @@ input[type="checkbox"] {
   border-radius: 50%;
   animation: spin 900ms linear infinite;
   content: "";
+}
+
+/* =========================================================================
+   Workspace setup
+
+   Choosing the two models before a workspace exists. The panel is narrow by
+   design, so the two sides are one auto-fitting grid rather than a fixed pair:
+   below roughly 560px of panel they stack, and nothing is ever squeezed to the
+   width of a model id.
+   ========================================================================= */
+
+.setup-form {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.setup-field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* The field's own name. Every other line inside a field is help text, so the
+   label takes the strongest ink and the note below it takes the quietest that
+   still clears AA on this ground. */
+.setup-field > span:first-child {
+  color: var(--text-2);
+  font-size: var(--text-micro);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.setup-sides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: var(--space-3);
+}
+
+.setup-side {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-4) var(--space-4);
+  background: var(--surface-2);
+}
+
+.setup-side > legend {
+  padding: 0 var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.setup-note {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-micro);
+  font-weight: 400;
+  letter-spacing: normal;
+  line-height: 1.5;
+  text-transform: none;
+  overflow-wrap: anywhere;
+}
+
+/* What is standing between this form and a workspace. Amber, because it is the
+   same "you cannot proceed yet" the finding queue uses, not an error. */
+.setup-blocker {
+  color: var(--amber);
+}
+
+/* The independence verdict wears the trust strip's own badge so the words a
+   person reads here are the words they read again at the approval gate. It is
+   not inside that grid, so the alignment comes back here. */
+.setup-independence {
+  align-items: flex-start;
+}
+
+.setup-lineages {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  overflow-wrap: anywhere;
 }
 
 /* =========================================================================
