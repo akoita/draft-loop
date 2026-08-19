@@ -840,22 +840,192 @@ export interface ModelLineageSource {
 }
 
 /**
+ * Region segments a cloud route can prefix onto a model id.
+ *
+ * A cross-region inference profile says where a request is served, which is
+ * routing and not weights: `us.anthropic.claude-...` and
+ * `eu.anthropic.claude-...` are one model reached twice.
+ */
+const cloudRouteRegions: ReadonlySet<string> = new Set(["us", "us-gov", "eu", "apac", "global"]);
+
+/**
+ * Vendor segments a marketplace route can qualify a model id with.
+ *
+ * These are the namespaces a reseller uses to say whose weights it serves, as
+ * in `anthropic.claude-...` or `meta.llama3-...`. Recovering the vendor is what
+ * lets a resold route meet the direct one: the reseller's company string
+ * (`bedrock`) records who bills for the call, not who trained the model.
+ *
+ * A name that does not belong here can only affect a model id literally shaped
+ * `name.rest`, and the result is always recoverable by declaring a lineage.
+ */
+const cloudRouteVendors: ReadonlySet<string> = new Set([
+  "ai21",
+  "amazon",
+  "anthropic",
+  "cohere",
+  "deepseek",
+  "google",
+  "meta",
+  "mistral",
+  "openai",
+  "qwen",
+]);
+
+/** A model id with recognized provider-route decoration removed. */
+export interface CanonicalModelId {
+  /** The vendor the route named, when it named one. */
+  readonly vendor?: string;
+  /** What remains of the id once recognized decoration is stripped. */
+  readonly baseModelId: string;
+}
+
+/** Whether a stripped remainder is still a model id rather than a fragment. */
+function keepsAModelName(rest: string): boolean {
+  return /[a-z]/u.test(rest);
+}
+
+/**
+ * Recover the base model id a provider route decorates.
+ *
+ * Route decoration is everything a host adds to say how it serves a model
+ * rather than which model it is: a region segment, a vendor segment, a
+ * deployment version, a dated snapshot, a moving `latest` pointer. Stripping it
+ * is what makes `claude-sonnet-4-5`, `claude-sonnet-4-5-20250929`, and
+ * `us.anthropic.claude-sonnet-4-5-20250929-v1:0` one lineage.
+ *
+ * Every rule is anchored on a literal shape, never on a guess about what a
+ * family name means, because over-merging is the worse failure here: it refuses
+ * a legitimate pairing. Nothing that distinguishes family, size, or major
+ * version is ever stripped, so `claude-opus-5` and `claude-sonnet-4-5` stay
+ * apart, as do `llama-3-8b` and `llama-4-70b`.
+ */
+export function canonicalizeModelId(modelId: string): CanonicalModelId {
+  const normalized = normalizeLineageLabel(modelId);
+  if (normalized === "") return { baseModelId: "" };
+
+  // Route prefix. Segments are consumed left to right and only when they are
+  // recognized, so an id whose dots are version punctuation — `gpt-4.1`,
+  // `llama-3.1-8b` — keeps every segment it has.
+  const segments = normalized.split(".");
+  let index = 0;
+  let vendor: string | undefined;
+  const segmentAt = (position: number): string =>
+    segments.length - position >= 2 ? (segments[position] ?? "") : "";
+  if (cloudRouteRegions.has(segmentAt(index))) {
+    index += 1;
+  }
+  const vendorSegment = segmentAt(index);
+  if (cloudRouteVendors.has(vendorSegment)) {
+    vendor = vendorSegment;
+    index += 1;
+  }
+  // Dots that were not route segments are left alone. `gpt-5.6-luna` and
+  // `llama3.2` spell a version with a dot, and rewriting that punctuation would
+  // change the recorded lineage of ids that carry no route decoration at all.
+  let rest = segments.slice(index).join(".");
+
+  // Suffix decoration, innermost last. The loop reruns because a real id can
+  // carry several layers at once, as in `...-20250929-v1:0`.
+  for (;;) {
+    // A deployment version tag such as `:0`, or a context variant such as
+    // `:200k`. Both name a way of serving one set of weights.
+    const withoutVersionTag = rest.replace(/:[a-z0-9]+$/u, "");
+    if (withoutVersionTag !== rest && withoutVersionTag !== "") {
+      rest = withoutVersionTag;
+      continue;
+    }
+    // A marketplace revision such as `-v1`. Guarded on the remainder still
+    // carrying a digit, so the `-v2` in `claude-v2` — which is the model's own
+    // version, not the route's — survives.
+    const withoutRevision = rest.replace(/-v\d+$/u, "");
+    if (withoutRevision !== rest && /\d/u.test(withoutRevision)) {
+      rest = withoutRevision;
+      continue;
+    }
+    // A dated snapshot, compact (`-20250929`) or dashed (`-2024-08-06`). Both
+    // are pinned releases of the id that precedes them.
+    const withoutDate = rest
+      .replace(/-(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])$/u, "")
+      .replace(/-(?:19|20)\d{2}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])$/u, "");
+    if (withoutDate !== rest && keepsAModelName(withoutDate)) {
+      rest = withoutDate;
+      continue;
+    }
+    // A moving pointer. `-latest` names whichever snapshot is current, so it
+    // belongs with the snapshots rather than beside them.
+    const withoutPointer = rest.replace(/-latest$/u, "");
+    if (withoutPointer !== rest && keepsAModelName(withoutPointer)) {
+      rest = withoutPointer;
+      continue;
+    }
+    break;
+  }
+
+  return { ...(vendor === undefined ? {} : { vendor }), baseModelId: rest };
+}
+
+/**
+ * Model ids whose lineage the id itself cannot reveal.
+ *
+ * Keyed on the normalized model id and valued with the lineage it resolves to,
+ * whatever company serves it: an alias identifies weights, and who bills for
+ * the call does not change them. Route decoration needs no entry here —
+ * `canonicalizeModelId` recovers it — so this table is only for names that
+ * share no visible structure with the model they serve.
+ *
+ * The bar for an entry is evidence, not plausibility. A wrong entry refuses a
+ * legitimate pairing, and mappings between vendor ids and base weights go stale
+ * quickly, so an entry is added only with a comment saying what it is based on.
+ *
+ * The table is empty. That is a statement about the evidence available here,
+ * not about the world: **an absent entry is not evidence that two models are
+ * independent**, only that this table cannot say. Two hosts serving one base
+ * model under unrelated names still pass the gate, which is why the lineage
+ * claim is recorded at the approval boundary rather than trusted.
+ */
+const curatedModelLineages: ReadonlyMap<string, string> = new Map<string, string>([]);
+
+/**
+ * The curated lineage for a model id, or undefined when the table has none.
+ *
+ * Undefined means unknown, never independent; see `curatedModelLineages`.
+ */
+export function curatedModelLineage(modelId: string): string | undefined {
+  return curatedModelLineages.get(normalizeLineageLabel(modelId));
+}
+
+/**
  * The lineage a selection claims, declared or derived.
+ *
+ * Precedence is declared, then curated, then derived. A declared lineage always
+ * wins, so a curated answer an operator disagrees with is recoverable by
+ * declaring one; the derived form is the fallback for everything unrecognized.
  *
  * The derived form is `<company>:<modelId>`, which is what keeps existing
  * workspaces working without migration: `anthropic` and `openai` selections
- * still differ, and `claude-opus-5` now differs from `claude-haiku-4-5`.
+ * still differ, and `claude-opus-5` differs from `claude-haiku-4-5`. The
+ * curated layer rewrites either half of that form when the id says so — a route
+ * that names its vendor replaces the company, because `bedrock` describes the
+ * bill and `anthropic` describes the weights — and leaves both halves alone for
+ * an id it does not recognize.
  *
  * This is the only place a lineage is computed. A lineage is a claim, never a
  * measurement: nothing here can tell whether two labels denote the same
- * weights, which is why the claim is recorded rather than trusted.
+ * weights, which is why the claim is recorded rather than trusted. The curated
+ * layer narrows the gap between the claim and the weights; it does not close
+ * it, and two models it cannot relate are not thereby independent.
  */
 export function deriveModelLineage(selection: ModelLineageSource): string {
   const declared = selection.lineage;
   if (typeof declared === "string" && declared.trim() !== "") {
     return normalizeLineageLabel(declared);
   }
-  return `${normalizeLineageLabel(selection.company ?? "")}:${normalizeLineageLabel(selection.modelId ?? "")}`;
+  const modelId = normalizeLineageLabel(selection.modelId ?? "");
+  const curated = curatedModelLineage(modelId);
+  if (curated !== undefined) return curated;
+  const { vendor, baseModelId } = canonicalizeModelId(modelId);
+  return `${vendor ?? normalizeLineageLabel(selection.company ?? "")}:${baseModelId}`;
 }
 
 const sharedLineageMessage =

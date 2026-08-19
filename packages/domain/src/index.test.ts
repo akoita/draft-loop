@@ -3,10 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   assertIndependentReview,
   type ContextSnapshotInput,
+  canonicalizeModelId,
   createAgentContextReference,
   createContextSnapshot,
   createProfile,
   createWorkspace,
+  curatedModelLineage,
   deriveModelLineage,
   describeIndependentReview,
   hasIndependentReview,
@@ -354,6 +356,176 @@ describe("domain workspace and context snapshots", () => {
     ["modelConfiguration", { modelConfiguration: undefined }],
   ] as const)("rejects missing %s before a provider call", (_field, override) => {
     expect(() => createContextSnapshot(validInput(override))).toThrow(SemanticValidationError);
+  });
+});
+
+function selection(
+  company: string,
+  modelId: string,
+  role: "author" | "critic" = "author",
+  lineage?: string,
+): ModelSelection {
+  return {
+    company,
+    modelId,
+    role,
+    promptTemplateVersion: `${role}-v1`,
+    ...(lineage === undefined ? {} : { lineage }),
+  } as ModelSelection;
+}
+
+describe("model id canonicalization", () => {
+  it("recovers one base model id from every route to one model", () => {
+    expect(canonicalizeModelId("claude-sonnet-4-5")).toEqual({
+      baseModelId: "claude-sonnet-4-5",
+    });
+    expect(canonicalizeModelId("claude-sonnet-4-5-20250929")).toEqual({
+      baseModelId: "claude-sonnet-4-5",
+    });
+    expect(canonicalizeModelId("us.anthropic.claude-sonnet-4-5-20250929-v1:0")).toEqual({
+      vendor: "anthropic",
+      baseModelId: "claude-sonnet-4-5",
+    });
+    expect(canonicalizeModelId(" EU.Anthropic.Claude-Sonnet-4-5-Latest ")).toEqual({
+      vendor: "anthropic",
+      baseModelId: "claude-sonnet-4-5",
+    });
+    expect(canonicalizeModelId("gpt-4o-2024-08-06")).toEqual({ baseModelId: "gpt-4o" });
+  });
+
+  it("leaves an id it does not recognize exactly as it found it", () => {
+    for (const modelId of [
+      "claude-opus-exact",
+      "gpt-exact",
+      "gpt-5.6-luna",
+      "llama3.2",
+      "qwen3-coder-30b",
+      "gpt-oss-20b",
+      "mistral-small",
+      "gpt-4.1",
+      "llama-3.1-8b",
+    ]) {
+      expect(canonicalizeModelId(modelId)).toEqual({ baseModelId: modelId });
+    }
+  });
+
+  it("keeps a version that names the model rather than the route", () => {
+    // `-v2` is what the model is called; stripping it would fold every Claude
+    // generation into one lineage.
+    expect(canonicalizeModelId("anthropic.claude-v2:1:200k")).toEqual({
+      vendor: "anthropic",
+      baseModelId: "claude-v2",
+    });
+    expect(canonicalizeModelId("claude-v2")).toEqual({ baseModelId: "claude-v2" });
+  });
+
+  it("never collapses models that differ in family, size, or version", () => {
+    const lineages = [
+      "us.anthropic.claude-opus-5-20250929-v1:0",
+      "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "meta.llama-3-8b-instruct-v1:0",
+      "meta.llama-4-70b-instruct-v1:0",
+    ].map((modelId) => JSON.stringify(canonicalizeModelId(modelId)));
+
+    expect(new Set(lineages).size).toBe(lineages.length);
+  });
+});
+
+describe("curated model lineage", () => {
+  it("has no exact-match entry to offer, which is not a claim of independence", () => {
+    expect(curatedModelLineage("us.anthropic.claude-sonnet-4-5-20250929-v1:0")).toBeUndefined();
+    expect(curatedModelLineage("gpt-oss-20b")).toBeUndefined();
+  });
+
+  it("resolves a resold route and a direct one to a single lineage", () => {
+    const author = selection("anthropic", "claude-sonnet-4-5", "author");
+    const critic = selection("bedrock", "us.anthropic.claude-sonnet-4-5-20250929-v1:0", "critic");
+
+    expect(deriveModelLineage(author)).toBe("anthropic:claude-sonnet-4-5");
+    expect(deriveModelLineage(critic)).toBe("anthropic:claude-sonnet-4-5");
+    expect(hasIndependentReview(author, critic)).toBe(false);
+    expect(() => assertIndependentReview(author, critic)).toThrow(/different model lineages/i);
+  });
+
+  it("refuses the resold pairing in a snapshot and records why", () => {
+    const configuration = validInput().modelConfiguration as ModelConfigurationInput;
+    const resold: ModelConfigurationInput = {
+      ...configuration,
+      author: { ...configuration.author, company: "anthropic", modelId: "claude-sonnet-4-5" },
+      critic: {
+        ...configuration.critic,
+        company: "bedrock",
+        modelId: "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      },
+    };
+
+    expect(() => createContextSnapshot(validInput({ modelConfiguration: resold }))).toThrow(
+      /different model lineages/i,
+    );
+
+    const snapshot = createContextSnapshot(
+      validInput({
+        modelConfiguration: {
+          ...resold,
+          independenceOverrideRationale: "Comparing one model's own critique of itself.",
+        },
+      }),
+    );
+    expect(snapshot.modelConfiguration.independentReview).toEqual({
+      authorLineage: "anthropic:claude-sonnet-4-5",
+      criticLineage: "anthropic:claude-sonnet-4-5",
+      lineagesDistinct: false,
+      required: true,
+      overrideRationale: "Comparing one model's own critique of itself.",
+    });
+  });
+
+  it("lets a declared lineage overrule the curated answer", () => {
+    const author = selection("anthropic", "claude-sonnet-4-5", "author");
+    const critic = selection(
+      "bedrock",
+      "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+      "critic",
+      " Fine-Tuned  Sonnet ",
+    );
+
+    expect(deriveModelLineage(critic)).toBe("fine-tuned sonnet");
+    expect(hasIndependentReview(author, critic)).toBe(true);
+  });
+
+  it("keeps genuinely different models independent through every route", () => {
+    const opus = selection("bedrock", "us.anthropic.claude-opus-5-20250929-v1:0", "author");
+    const sonnet = selection("anthropic", "claude-sonnet-4-5", "critic");
+    expect(hasIndependentReview(opus, sonnet)).toBe(true);
+
+    const small = selection("bedrock", "meta.llama-3-8b-instruct-v1:0", "author");
+    const large = selection("bedrock", "meta.llama-4-70b-instruct-v1:0", "critic");
+    expect(hasIndependentReview(small, large)).toBe(true);
+  });
+
+  it("derives company:modelId unchanged for an id it does not recognize", () => {
+    expect(deriveModelLineage({ company: "openai", modelId: "gpt-5.6-luna" })).toBe(
+      "openai:gpt-5.6-luna",
+    );
+    expect(deriveModelLineage({ company: "local", modelId: "qwen3-coder-30b" })).toBe(
+      "local:qwen3-coder-30b",
+    );
+    expect(deriveModelLineage({ company: "Anthropic", modelId: "Claude-Opus-Exact" })).toBe(
+      "anthropic:claude-opus-exact",
+    );
+    expect(deriveModelLineage({})).toBe(":");
+  });
+
+  it("keeps the default anthropic and openai pairing independent", () => {
+    const author = selection("anthropic", "claude-sonnet-4-5", "author");
+    const critic = selection("openai", "gpt-5", "critic");
+
+    expect(describeIndependentReview(author, critic)).toEqual({
+      authorLineage: "anthropic:claude-sonnet-4-5",
+      criticLineage: "openai:gpt-5",
+      lineagesDistinct: true,
+      required: true,
+    });
   });
 });
 
