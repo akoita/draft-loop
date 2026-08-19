@@ -136,6 +136,48 @@ async function recordedIndependentReview(
   }
 }
 
+async function workspaceConfig(root: string): Promise<JsonRecord> {
+  return JSON.parse(
+    await readFile(join(root, ".draft-loop", "workspace.json"), "utf8"),
+  ) as JsonRecord;
+}
+
+/** The author and critic a run wrote into its own context snapshot. */
+async function recordedModelConfiguration(
+  root: string,
+  contextSnapshotId: string,
+): Promise<unknown> {
+  const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+  try {
+    const record = await storage.getContextSnapshot(contextSnapshotId);
+    const payload = record?.payload as
+      | { readonly modelConfiguration?: Record<string, unknown> }
+      | undefined;
+    return payload?.modelConfiguration;
+  } finally {
+    await storage.close();
+  }
+}
+
+/** A workspace whose author and critic are two distinct local models. */
+async function localPairingWorkspace(prefix: string): Promise<string> {
+  const root = await providerWorkspace(prefix);
+  await createLocalApplicationDriver().initialize(
+    {
+      root,
+      jobDescription: "job.md",
+      sources: "evidence",
+      authorCompany: "local",
+      authorModel: "qwen3-coder-30b",
+      criticCompany: "local",
+      criticModel: "gpt-oss-20b",
+      localEndpoint: "http://127.0.0.1:8080/v1",
+    },
+    { write: () => undefined },
+  );
+  return root;
+}
+
 describe("local application driver", () => {
   it("fails closed before indexing when PDF extraction is unreliable", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-invalid-pdf-"));
@@ -749,6 +791,454 @@ describe("local application driver", () => {
       await expect(failure).rejects.toBeInstanceOf(CliUserError);
       await expect(failure).rejects.toThrow(/independenceOverrideRationale/u);
       await expect(failure).rejects.not.toThrow(new RegExp(secret, "u"));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("workspace model reconfiguration", () => {
+  const silent = { write: () => undefined };
+
+  it("replaces every part of the pairing an existing workspace uses next", async () => {
+    const root = await providerWorkspace("draft-loop-reconfigure-fields-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "anthropic",
+          authorModel: "claude-sonnet-4-5",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+        },
+        silent,
+      );
+
+      const descriptor = await driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "anthropic",
+          criticModel: "claude-opus-4-1",
+          authorLineage: "qwen:qwen3-coder",
+          criticLineage: "anthropic:claude-opus",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        silent,
+      );
+
+      expect(descriptor.author).toEqual({ company: "local", model: "qwen3-coder-30b" });
+      expect(descriptor.critic).toEqual({ company: "anthropic", model: "claude-opus-4-1" });
+      expect(descriptor.localEndpoint).toBe("http://127.0.0.1:8080/v1");
+      expect(await workspaceConfig(root)).toMatchObject({
+        authorCompany: "local",
+        authorModel: "qwen3-coder-30b",
+        criticCompany: "anthropic",
+        criticModel: "claude-opus-4-1",
+        authorLineage: "qwen:qwen3-coder",
+        criticLineage: "anthropic:claude-opus",
+        localEndpoint: "http://127.0.0.1:8080/v1",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a company no adapter exists for, without echoing it", async () => {
+    const root = await localPairingWorkspace("draft-loop-reconfigure-company-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      const failure = driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "bedrock",
+          authorModel: "claude-sonnet-4-5",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+        },
+        silent,
+      );
+      await expect(failure).rejects.toBeInstanceOf(CliUserError);
+      await expect(failure).rejects.toThrow(/authorCompany/u);
+      await expect(failure).rejects.not.toThrow(/bedrock/u);
+      // The refusal left the configuration it already had in place.
+      expect(await workspaceConfig(root)).toMatchObject({
+        authorCompany: "local",
+        authorModel: "qwen3-coder-30b",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses an endpoint that would send candidate material off this machine", async () => {
+    const root = await localPairingWorkspace("draft-loop-reconfigure-endpoint-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      const failure = driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "gpt-oss-20b",
+          localEndpoint: "http://10.0.0.4:11434/v1",
+        },
+        silent,
+      );
+      await expect(failure).rejects.toBeInstanceOf(CliUserError);
+      await expect(failure).rejects.toThrow(/localEndpoint/u);
+      await expect(failure).rejects.not.toThrow(/10\.0\.0\.4/u);
+      expect(await workspaceConfig(root)).toMatchObject({
+        localEndpoint: "http://127.0.0.1:8080/v1",
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a lineage longer than the domain keeps, without echoing it", async () => {
+    const root = await localPairingWorkspace("draft-loop-reconfigure-lineage-");
+    const driver = createLocalApplicationDriver();
+    const overlong = "l".repeat(201);
+
+    try {
+      const failure = driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "gpt-oss-20b",
+          authorLineage: overlong,
+        },
+        silent,
+      );
+      await expect(failure).rejects.toBeInstanceOf(CliUserError);
+      await expect(failure).rejects.toThrow(/authorLineage/u);
+      await expect(failure).rejects.not.toThrow(new RegExp(overlong, "u"));
+      expect(await workspaceConfig(root)).not.toHaveProperty("authorLineage");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses an empty override rationale rather than recording a blank claim", async () => {
+    const root = await localPairingWorkspace("draft-loop-reconfigure-blank-rationale-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      const failure = driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          independenceOverrideRationale: "   ",
+        },
+        silent,
+      );
+      await expect(failure).rejects.toBeInstanceOf(CliUserError);
+      await expect(failure).rejects.toThrow(/independenceOverrideRationale/u);
+      expect(await workspaceConfig(root)).toMatchObject({ criticModel: "gpt-oss-20b" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses one lineage on both sides unless a rationale is supplied with it", async () => {
+    const root = await localPairingWorkspace("draft-loop-reconfigure-independence-");
+    const driver = createLocalApplicationDriver();
+    const rationale = "Offline machine with one usable model; the critic prompt differs.";
+
+    try {
+      const refused = driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+        },
+        silent,
+      );
+      await expect(refused).rejects.toBeInstanceOf(CliUserError);
+      await expect(refused).rejects.toThrow(/lineage/u);
+      expect(await workspaceConfig(root)).toMatchObject({ criticModel: "gpt-oss-20b" });
+
+      await driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          independenceOverrideRationale: rationale,
+        },
+        silent,
+      );
+
+      expect(await workspaceConfig(root)).toMatchObject({
+        criticModel: "qwen3-coder-30b",
+        independenceOverrideRationale: rationale,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let a rationale written for one pairing survive into another", async () => {
+    // The rationale justifies one specific pairing. Carrying it forward would
+    // record a justification nobody gave for the pair actually configured.
+    const root = await localPairingWorkspace("draft-loop-reconfigure-stale-rationale-");
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          independenceOverrideRationale: "One model on an offline machine.",
+        },
+        silent,
+      );
+      expect(await workspaceConfig(root)).toHaveProperty("independenceOverrideRationale");
+
+      await driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        silent,
+      );
+
+      const config = await workspaceConfig(root);
+      expect(config).not.toHaveProperty("independenceOverrideRationale");
+      // The rest of the replaced configuration goes with it.
+      expect(config).not.toHaveProperty("localEndpoint");
+      expect(config).toMatchObject({ criticCompany: "anthropic" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to change the models under a run that is executing", async () => {
+    const root = await providerWorkspace("draft-loop-reconfigure-in-flight-");
+    let releaseAuthor: () => void = () => undefined;
+    const authorReached = Promise.withResolvers<void>();
+    const authorReleased = new Promise<void>((resolve) => {
+      releaseAuthor = resolve;
+    });
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly model: string;
+        readonly messages: readonly { readonly content: string }[];
+      };
+      const serialized = body.messages[1]?.content ?? "";
+      if (body.model === "qwen3-coder-30b") {
+        authorReached.resolve();
+        await authorReleased;
+        return localCompletion(authorProposal(evidenceChunkId(serialized)), "local-author-1");
+      }
+      return localCompletion({ findings: [] }, "local-critic-1");
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: (endpoint) => ({
+          ...(endpoint === undefined ? {} : { endpoint }),
+          fetch: localFetch as unknown as typeof fetch,
+        }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "gpt-oss-20b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        silent,
+      );
+      const running = driver.start({ root, allowProviderData: true }, silent);
+      await authorReached.promise;
+
+      const refused = driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "anthropic",
+          authorModel: "claude-sonnet-4-5",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+        },
+        silent,
+      );
+      await expect(refused).rejects.toBeInstanceOf(CliUserError);
+      await expect(refused).rejects.toThrow(/executing/u);
+
+      releaseAuthor();
+      const snapshot = await running;
+      expect(snapshot.state).toBe("awaiting-approval");
+      expect(await workspaceConfig(root)).toMatchObject({ authorCompany: "local" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves an existing run recording the pair it actually used", async () => {
+    // The run that stopped because a critic's credit ran out must keep naming
+    // that critic; only the next run reads the workspace configuration.
+    const root = await providerWorkspace("draft-loop-reconfigure-run-history-");
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly model: string;
+        readonly messages: readonly { readonly content: string }[];
+      };
+      const serialized = body.messages[1]?.content ?? "";
+      return body.model === "qwen3-coder-30b"
+        ? localCompletion(authorProposal(evidenceChunkId(serialized)), "local-author-1")
+        : localCompletion({ findings: [] }, "local-critic-1");
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: (endpoint) => ({
+          ...(endpoint === undefined ? {} : { endpoint }),
+          fetch: localFetch as unknown as typeof fetch,
+        }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "gpt-oss-20b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        silent,
+      );
+      const first = await driver.start({ root, allowProviderData: true }, silent);
+      const beforeConfiguration = await recordedModelConfiguration(root, first.contextSnapshotId);
+      const beforeIndependence = await driver.readIndependentReview({ root, runId: first.runId });
+
+      const descriptor = await driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "gpt-oss-20b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        silent,
+      );
+
+      expect(descriptor.author).toEqual({ company: "local", model: "gpt-oss-20b" });
+      // The run that already happened is untouched, byte for byte.
+      expect(await recordedModelConfiguration(root, first.contextSnapshotId)).toEqual(
+        beforeConfiguration,
+      );
+      expect(await driver.readIndependentReview({ root, runId: first.runId })).toEqual(
+        beforeIndependence,
+      );
+      // It still names the pair that ran it, not the pair configured since.
+      expect(beforeConfiguration).toMatchObject({
+        author: { company: "local", modelId: "qwen3-coder-30b" },
+        critic: { company: "local", modelId: "gpt-oss-20b" },
+      });
+      expect(first.state).toBe("awaiting-approval");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("builds the next run's context from the models configured by then", async () => {
+    // Run creation reads the workspace afresh, so the pairing a run records is
+    // whatever was configured at the moment it was created -- which is what
+    // makes retrying with a different critic possible at all.
+    const root = await providerWorkspace("draft-loop-reconfigure-next-run-");
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly model: string;
+        readonly messages: readonly { readonly content: string }[];
+      };
+      const serialized = body.messages[1]?.content ?? "";
+      return body.model === "gpt-oss-20b"
+        ? localCompletion(authorProposal(evidenceChunkId(serialized)), "local-author-1")
+        : localCompletion({ findings: [] }, "local-critic-1");
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: (endpoint) => ({
+          ...(endpoint === undefined ? {} : { endpoint }),
+          fetch: localFetch as unknown as typeof fetch,
+        }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen3-coder-30b",
+          criticCompany: "local",
+          criticModel: "gpt-oss-20b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        silent,
+      );
+      await driver.reconfigureModels(
+        {
+          root,
+          authorCompany: "local",
+          authorModel: "gpt-oss-20b",
+          criticCompany: "local",
+          criticModel: "qwen3-coder-30b",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        silent,
+      );
+
+      const snapshot = await driver.start({ root, allowProviderData: true }, silent);
+
+      expect(snapshot.state).toBe("awaiting-approval");
+      expect(await recordedModelConfiguration(root, snapshot.contextSnapshotId)).toMatchObject({
+        author: { company: "local", modelId: "gpt-oss-20b", role: "author" },
+        critic: { company: "local", modelId: "qwen3-coder-30b", role: "critic" },
+      });
+      expect(await driver.readIndependentReview({ root })).toEqual({
+        authorLineage: "local:gpt-oss-20b",
+        criticLineage: "local:qwen3-coder-30b",
+        lineagesDistinct: true,
+        required: true,
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

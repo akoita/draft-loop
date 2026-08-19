@@ -1733,6 +1733,26 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           const { name, mode, ...models } = command.input;
           return { ok: true, value: await createWorkspace(name, mode ?? "demo", models) };
         }
+        case "workspace.configure-models": {
+          // The pairing travels as one piece: the application replaces the whole
+          // model configuration rather than merging, so a rationale cannot outlive
+          // the pairing it justified.
+          const { workspaceId, ...models } = command.input;
+          const workspace = workspaceFor(workspaceId);
+          const descriptor = await service.reconfigureModels({ root: workspace.root, ...models });
+          active = { ...workspace, descriptor };
+          return {
+            ok: true,
+            value: {
+              workspaceId: descriptor.id,
+              authorCompany: descriptor.author.company,
+              authorModel: descriptor.author.model,
+              criticCompany: descriptor.critic.company,
+              criticModel: descriptor.critic.model,
+              localEndpoint: descriptor.localEndpoint ?? null,
+            },
+          };
+        }
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);
           return {

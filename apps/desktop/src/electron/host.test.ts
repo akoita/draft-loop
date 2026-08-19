@@ -120,6 +120,7 @@ function service(
     service: {
       initialize: vi.fn(async () => workspace),
       readWorkspace: vi.fn(async () => workspace),
+      reconfigureModels: vi.fn<ApplicationService["reconfigureModels"]>(async () => workspace),
       begin: vi.fn(async () => snapshot),
       start: vi.fn(async () => snapshot),
       resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),

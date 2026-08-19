@@ -9,15 +9,18 @@ import {
   type NewArtifactInput,
 } from "@draft-loop/artifacts";
 import {
+  assertIndependentReview,
   type ContextSnapshot,
   createContextSnapshot,
   createWorkspace,
   type EvidenceRetrievalInspection,
   type IndependentReviewRecord,
   type ModelConfigurationInput,
+  type ModelSelection,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
   type ScoredEvidenceChunk,
+  SemanticValidationError,
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
@@ -97,6 +100,19 @@ export const defaultRequiredSections: readonly string[] = Object.freeze([
   "Education",
   "Skills",
 ]);
+
+/**
+ * The provider companies a workspace may name.
+ *
+ * This driver refuses to build an adapter for anything else, so a company
+ * outside this list is an invalid configuration rather than an option this
+ * build declined to offer. It is checked where the configuration is parsed,
+ * which is every path that writes one, so creating a workspace and later
+ * changing its models cannot disagree about what is acceptable.
+ */
+export const supportedModelCompanies = ["anthropic", "openai", "local"] as const;
+
+export type SupportedModelCompany = (typeof supportedModelCompanies)[number];
 
 export interface WorkspaceConfig {
   readonly schemaVersion: 1;
@@ -249,6 +265,23 @@ function boundedOptionalString(
   return value.trim();
 }
 
+/**
+ * Read a configured provider company, restricted to the ones this driver runs.
+ *
+ * The message names the accepted companies but never the rejected value:
+ * workspace.json is editable by hand, so a refused company is attacker-choosable
+ * text on its way to logs and UI.
+ */
+function requireSupportedCompany(record: Record<string, unknown>, key: string): string {
+  const value = requireNonEmptyString(record, key);
+  if (!(supportedModelCompanies as readonly string[]).includes(value)) {
+    throw new CliUserError(
+      `Workspace configuration field ${key} must be one of: ${supportedModelCompanies.join(", ")}.`,
+    );
+  }
+  return value;
+}
+
 function requirePositiveInteger(record: Record<string, unknown>, key: string): number {
   const value = record[key];
   if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
@@ -330,9 +363,9 @@ function parseConfig(value: unknown): WorkspaceConfig {
     ...(maxDurationMs === undefined ? {} : { maxDurationMs }),
     ...(maxWords === undefined ? {} : { maxWords }),
     ...(maxCharacters === undefined ? {} : { maxCharacters }),
-    authorCompany: requireNonEmptyString(record, "authorCompany"),
+    authorCompany: requireSupportedCompany(record, "authorCompany"),
     authorModel: requireNonEmptyString(record, "authorModel"),
-    criticCompany: requireNonEmptyString(record, "criticCompany"),
+    criticCompany: requireSupportedCompany(record, "criticCompany"),
     criticModel: requireNonEmptyString(record, "criticModel"),
     ...(authorLineage === undefined ? {} : { authorLineage }),
     ...(criticLineage === undefined ? {} : { criticLineage }),
@@ -476,6 +509,144 @@ export async function initWorkspace(
   return config;
 }
 
+/**
+ * The complete model configuration an existing workspace can be given.
+ *
+ * Every field of the pairing is here because it is replaced wholesale rather
+ * than merged. A merge would let an independence override rationale written to
+ * justify one specific pairing survive a change of pairing, and a lineage
+ * declared for one model outlive it; requiring the whole configuration makes
+ * that impossible by construction rather than by care.
+ */
+export interface WorkspaceModelReconfiguration {
+  readonly authorCompany: string;
+  readonly authorModel: string;
+  readonly criticCompany: string;
+  readonly criticModel: string;
+  /** The weights the author descends from; derived from company and model id when absent. */
+  readonly authorLineage?: string;
+  /** The weights the critic descends from; derived from company and model id when absent. */
+  readonly criticLineage?: string;
+  /** Why one lineage on both sides is acceptable for this new pairing. */
+  readonly independenceOverrideRationale?: string;
+  /** Loopback base URL of the local inference server, when a company is `local`. */
+  readonly localEndpoint?: string;
+}
+
+/**
+ * The run states in which a provider step is in flight.
+ *
+ * Exactly the states the orchestrator sets while an author, critic, or revision
+ * step is running. `provider-error` and `paused` are deliberately absent: a run
+ * halted because a critic's credit ran out is the reason changing the models
+ * exists at all, and refusing there would leave the workspace with no way out.
+ */
+const executingRunStates: ReadonlySet<string> = new Set(["drafting", "reviewing", "revising"]);
+
+/**
+ * Every run this workspace has ever begun.
+ *
+ * Read from the audit trail rather than from `latestRunId` or the `runs`
+ * projection, because both are written only once a run has come back: a first
+ * run still in flight appears in neither, and that is precisely the run whose
+ * models must not be changed underneath it. The orchestrator appends a
+ * run-snapshot event on every state change, so a run that has reached a
+ * provider step is always here.
+ */
+async function begunRunIds(
+  storage: SqliteStorage,
+  workspaceId: string,
+): Promise<readonly string[]> {
+  const runIds = new Set<string>();
+  for (const event of await storage.listAuditEvents(workspaceId)) {
+    if (event.eventType === "run-snapshot.appended") runIds.add(event.entityId);
+  }
+  return [...runIds];
+}
+
+async function assertNoRunExecuting(root: string, config: WorkspaceConfig): Promise<void> {
+  try {
+    await stat(databasePath(root));
+  } catch {
+    // No history file, so no run has ever been started here, and opening
+    // storage would create a database only to prove it.
+    return;
+  }
+  const storage = await openStorage(root);
+  let executing = false;
+  try {
+    const runStore = createStorageRunStore(storage);
+    for (const runId of await begunRunIds(storage, config.id)) {
+      const snapshot = await runStore.loadRun(runId);
+      if (snapshot !== undefined && executingRunStates.has(snapshot.state)) {
+        executing = true;
+        break;
+      }
+    }
+  } finally {
+    await storage.close();
+  }
+  if (executing) {
+    throw new CliUserError(
+      "A run is executing in this workspace. Pause or stop it before changing the models.",
+    );
+  }
+}
+
+/**
+ * Replace the author and critic an existing workspace will use next.
+ *
+ * Runs already recorded are untouched: each replays its own persisted context
+ * snapshot, so the run that failed goes on naming the pair that failed it. Only
+ * the next run reads this, because run creation builds its snapshot from the
+ * configuration as it stands at that moment.
+ *
+ * Nothing is written until the whole replacement has been validated and the
+ * domain has accepted the pairing, so a refusal leaves the workspace with the
+ * configuration it already had rather than half of a new one.
+ */
+export async function reconfigureWorkspaceModels(
+  rootInput: string,
+  models: WorkspaceModelReconfiguration,
+  io: CliIo = defaultIo,
+): Promise<WorkspaceConfig> {
+  const root = resolve(rootInput);
+  const config = await readWorkspace(root);
+  await assertNoRunExecuting(root, config);
+  // Destructured out rather than overwritten: an optional field left in place
+  // by a spread is exactly how a stale rationale would survive a new pairing.
+  const {
+    authorLineage: _authorLineage,
+    criticLineage: _criticLineage,
+    independenceOverrideRationale: _independenceOverrideRationale,
+    localEndpoint: _localEndpoint,
+    ...retained
+  } = config;
+  const next = parseConfig({
+    ...retained,
+    authorCompany: models.authorCompany,
+    authorModel: models.authorModel,
+    criticCompany: models.criticCompany,
+    criticModel: models.criticModel,
+    ...(models.authorLineage === undefined ? {} : { authorLineage: models.authorLineage }),
+    ...(models.criticLineage === undefined ? {} : { criticLineage: models.criticLineage }),
+    ...(models.independenceOverrideRationale === undefined
+      ? {}
+      : { independenceOverrideRationale: models.independenceOverrideRationale }),
+    ...(models.localEndpoint === undefined ? {} : { localEndpoint: models.localEndpoint }),
+  });
+  assertConfiguredIndependence(next);
+  await saveWorkspaceConfig(root, next);
+  io.write(
+    `Provider pairing: author ${next.authorCompany}/${next.authorModel}; critic ${next.criticCompany}/${next.criticModel}`,
+  );
+  if (next.authorCompany === "local" || next.criticCompany === "local") {
+    // "local" is a claim about where material goes, so say the address out loud.
+    io.write(`Local model endpoint: ${next.localEndpoint ?? defaultLocalModelEndpoint}`);
+  }
+  return next;
+}
+
 async function collectSourceFiles(path: string): Promise<readonly string[]> {
   const details = await stat(path);
   if (details.isFile()) {
@@ -578,27 +749,62 @@ async function prepareInputs(root: string, config: WorkspaceConfig): Promise<Pre
   return { context, sources: ingestion.sources };
 }
 
+/**
+ * One side of the workspace's pairing, as the domain expects to receive it.
+ *
+ * Built here rather than inline so the selection a run records and the
+ * selection the independence gate judges are the same object: a second copy
+ * would let a workspace pass a check on a pairing it does not actually use.
+ */
+function modelSelection(config: WorkspaceConfig, role: "author" | "critic"): ModelSelection {
+  const company = role === "author" ? config.authorCompany : config.criticCompany;
+  const modelId = role === "author" ? config.authorModel : config.criticModel;
+  const lineage = role === "author" ? config.authorLineage : config.criticLineage;
+  return {
+    company,
+    modelId,
+    role,
+    promptTemplateVersion: `cli-${role}-v1`,
+    ...(lineage === undefined ? {} : { lineage }),
+  };
+}
+
 function modelConfiguration(config: WorkspaceConfig): ModelConfigurationInput {
   return {
-    author: {
-      company: config.authorCompany,
-      modelId: config.authorModel,
-      role: "author",
-      promptTemplateVersion: "cli-author-v1",
-      ...(config.authorLineage === undefined ? {} : { lineage: config.authorLineage }),
-    },
-    critic: {
-      company: config.criticCompany,
-      modelId: config.criticModel,
-      role: "critic",
-      promptTemplateVersion: "cli-critic-v1",
-      ...(config.criticLineage === undefined ? {} : { lineage: config.criticLineage }),
-    },
+    author: modelSelection(config, "author"),
+    critic: modelSelection(config, "critic"),
     requireProviderDiversity: true,
     ...(config.independenceOverrideRationale === undefined
       ? {}
       : { independenceOverrideRationale: config.independenceOverrideRationale }),
   };
+}
+
+/**
+ * Refuse a pairing the domain would refuse, before it is written down.
+ *
+ * The rule is not restated here: `assertIndependentReview` is the same check
+ * `createContextSnapshot` makes when a run is built, so a configuration this
+ * accepts is one a run can actually be started from. Asking early only moves
+ * the refusal to the moment the choice is made; asking here as well as there
+ * is not a second rule, it is the same one called sooner.
+ */
+function assertConfiguredIndependence(config: WorkspaceConfig): void {
+  try {
+    assertIndependentReview(modelSelection(config, "author"), modelSelection(config, "critic"), {
+      required: true,
+      ...(config.independenceOverrideRationale === undefined
+        ? {}
+        : { overrideRationale: config.independenceOverrideRationale }),
+    });
+  } catch (error) {
+    if (error instanceof SemanticValidationError) {
+      // The domain's own wording, so the two cannot drift; it names no
+      // configured value, only what the pairing must satisfy.
+      throw new CliUserError(error.issues.map((issue) => issue.message).join(" "));
+    }
+    throw error;
+  }
 }
 
 async function saveInputs(
@@ -972,7 +1178,7 @@ function providerAgents(
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const dataPolicy = {
     allowTransmission: allowProviderData,
-    allowedCompanies: ["anthropic", "openai", "local"] as const,
+    allowedCompanies: supportedModelCompanies,
     sensitiveData: true,
     sensitiveDataAcknowledged: allowProviderData,
     requestedRetention: "ephemeral-request" as const,
@@ -1892,6 +2098,11 @@ export function createLocalApplicationDriver(
     initialize: async (command, io) =>
       workspaceDescriptor(resolve(command.root), await initWorkspace(command, io)),
     readWorkspace: async (root) => workspaceDescriptor(resolve(root), await readWorkspace(root)),
+    reconfigureModels: async (command, io) =>
+      workspaceDescriptor(
+        resolve(command.root),
+        await reconfigureWorkspaceModels(command.root, command, io),
+      ),
     begin: async (command, io) =>
       beginRun(
         command.root,

@@ -22,6 +22,44 @@ function bridge(
   return { capabilities, invoke };
 }
 
+describe("workspace model reconfiguration", () => {
+  const base = {
+    workspaceId: "ws-1",
+    authorCompany: "anthropic",
+    authorModel: "claude-haiku-4-5",
+    criticCompany: "openai",
+    criticModel: "gpt-5.3-codex",
+  };
+  const configure = (input: Record<string, unknown>) =>
+    validateBridgeCommand({ type: "workspace.configure-models", input });
+
+  it("accepts a replacement pairing, including a local critic on loopback", () => {
+    expect(configure(base).type).toBe("workspace.configure-models");
+    expect(
+      configure({
+        ...base,
+        criticCompany: "local",
+        criticModel: "qwen3-coder-30b",
+        localEndpoint: "http://127.0.0.1:8080/v1",
+      }).type,
+    ).toBe("workspace.configure-models");
+  });
+
+  it("refuses what workspace creation refuses, on the same terms", () => {
+    // Reconfiguration is the same decision as creation, so it must not become a
+    // way around the rules creation enforces.
+    for (const input of [
+      { ...base, criticCompany: "bedrock" },
+      { ...base, criticCompany: "local", localEndpoint: "https://models.evil.test/v1" },
+      { ...base, independenceOverrideRationale: "   " },
+      { ...base, authorLineage: "x".repeat(500) },
+      { ...base, nope: 1 },
+    ]) {
+      expect(() => configure(input)).toThrow();
+    }
+  });
+});
+
 describe("desktop capability bridge", () => {
   it("accepts allowlisted commands and rejects unknown or extra fields", () => {
     expect(

@@ -40,6 +40,31 @@ export interface InitializeWorkspaceCommand {
   readonly fixtureMode?: boolean;
 }
 
+/**
+ * The models an existing workspace should use from its next run onward.
+ *
+ * Unlike `InitializeWorkspaceCommand` the pairing fields are required, because
+ * the configuration is replaced whole rather than merged: an omitted lineage or
+ * rationale means "this pairing has none", never "keep whatever the last
+ * pairing had". A rationale justifies one specific pairing, so carrying one
+ * across a change of models would record a justification nobody gave.
+ */
+export interface ReconfigureWorkspaceModelsCommand {
+  readonly root: string;
+  readonly authorCompany: string;
+  readonly authorModel: string;
+  readonly criticCompany: string;
+  readonly criticModel: string;
+  /** The weights the author descends from; derived from company and model id when absent. */
+  readonly authorLineage?: string;
+  /** The weights the critic descends from; derived from company and model id when absent. */
+  readonly criticLineage?: string;
+  /** Why one lineage on both sides is acceptable for this new pairing. */
+  readonly independenceOverrideRationale?: string;
+  /** Loopback base URL of the local inference server, when a company is `local`. */
+  readonly localEndpoint?: string;
+}
+
 export interface WorkspaceDescriptor {
   readonly id: string;
   readonly root: string;
@@ -130,6 +155,18 @@ export interface ApplicationDriver {
     io?: ApplicationIo,
   ) => Promise<WorkspaceDescriptor>;
   readonly readWorkspace: (root: string) => Promise<WorkspaceDescriptor>;
+  /**
+   * Replace the models an existing workspace will use from its next run.
+   *
+   * Runs already recorded keep the pairing they ran with; only run creation
+   * reads this, and it reads the configuration afresh. Refused while a run is
+   * executing, because changing the pairing under a run in flight would make
+   * the run's own record of what it used untrue.
+   */
+  readonly reconfigureModels: (
+    command: ReconfigureWorkspaceModelsCommand,
+    io?: ApplicationIo,
+  ) => Promise<WorkspaceDescriptor>;
   /** Persist the run and its context without starting provider execution. */
   readonly begin: (command: BeginRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly start: (command: StartRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
@@ -183,6 +220,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
     initialize: async (command, io) =>
       driver.initialize({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     readWorkspace: async (root) => driver.readWorkspace(requireRoot(root)),
+    reconfigureModels: async (command, io) =>
+      driver.reconfigureModels({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     begin: async (command, io) =>
       driver.begin({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     start: async (command, io) =>

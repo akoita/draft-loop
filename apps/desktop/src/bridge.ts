@@ -18,6 +18,7 @@ import type {
 export const bridgeCapabilities = [
   "workspace.open",
   "workspace.create",
+  "workspace.configure-models",
   "run.status",
   "run.start",
   "run.pause",
@@ -212,6 +213,44 @@ const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
   "requiredSections",
 ]);
 
+/**
+ * The models an already-created workspace should use from its next run.
+ *
+ * Unlike `WorkspaceCreateInput` the pairing is required in full, because the
+ * host replaces the configuration whole rather than merging it. An omitted
+ * lineage or rationale means "this pairing has none": a rationale justifies one
+ * specific pairing, so letting one survive a change of models would leave a
+ * justification standing for a choice nobody made. A renderer that wants to
+ * change one side still sends both, which is also what the person is looking at.
+ */
+export interface WorkspaceConfigureModelsInput {
+  readonly workspaceId: string;
+  readonly authorCompany: ModelCompany;
+  readonly authorModel: string;
+  readonly criticCompany: ModelCompany;
+  readonly criticModel: string;
+  /** The weights the author descends from; the domain derives one when absent. */
+  readonly authorLineage?: string;
+  /** The weights the critic descends from, on the same terms. */
+  readonly criticLineage?: string;
+  /** Loopback base URL of the model server used when a company is `local`. */
+  readonly localEndpoint?: string;
+  /** Why one lineage on both sides is acceptable for this pairing. */
+  readonly independenceOverrideRationale?: string;
+}
+
+const workspaceConfigureModelsKeys = inputKeys<WorkspaceConfigureModelsInput>()([
+  "workspaceId",
+  "authorCompany",
+  "authorModel",
+  "criticCompany",
+  "criticModel",
+  "authorLineage",
+  "criticLineage",
+  "localEndpoint",
+  "independenceOverrideRationale",
+]);
+
 export interface RunStatusInput {
   readonly workspaceId: string;
   readonly runId?: string;
@@ -375,6 +414,33 @@ export interface WorkspaceResult {
 
 const workspaceResultKeys = resultKeys<WorkspaceResult>()(["workspace"]);
 const workspaceSummaryKeys = resultKeys<WorkspaceSummary>()(["id", "name"]);
+
+/**
+ * The pairing a workspace is configured with after a change.
+ *
+ * Reported back rather than assumed, so a renderer shows what was written
+ * instead of what it asked for; the two differ whenever the host trimmed,
+ * refused, or dropped something. `localEndpoint` is here because "local" is a
+ * claim about where candidate material goes, and a surface that says so must be
+ * able to name the address.
+ */
+export interface WorkspaceModelsResult {
+  readonly workspaceId: string;
+  readonly authorCompany: ModelCompany;
+  readonly authorModel: string;
+  readonly criticCompany: ModelCompany;
+  readonly criticModel: string;
+  readonly localEndpoint: string | null;
+}
+
+const workspaceModelsResultKeys = resultKeys<WorkspaceModelsResult>()([
+  "workspaceId",
+  "authorCompany",
+  "authorModel",
+  "criticCompany",
+  "criticModel",
+  "localEndpoint",
+]);
 
 export interface RunStatus {
   readonly workspaceId: string;
@@ -567,6 +633,7 @@ const maximumDiscoveredModels = 200;
 export interface BridgeCommandInputMap {
   "workspace.open": WorkspaceOpenInput;
   "workspace.create": WorkspaceCreateInput;
+  "workspace.configure-models": WorkspaceConfigureModelsInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -587,6 +654,7 @@ export interface BridgeCommandInputMap {
 export interface BridgeCommandOutputMap {
   "workspace.open": WorkspaceResult;
   "workspace.create": WorkspaceResult;
+  "workspace.configure-models": WorkspaceModelsResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -1009,6 +1077,36 @@ function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   };
 }
 
+/**
+ * The whole pairing, or nothing.
+ *
+ * Every part of the model configuration is required here even though the
+ * application would accept fewer fields, because this command replaces rather
+ * than merges: accepting a partial input at the boundary would invite a caller
+ * to send one side and expect the other to be kept.
+ */
+function validateWorkspaceConfigureModelsInput(value: unknown): WorkspaceConfigureModelsInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, workspaceConfigureModelsKeys)) return invalidInput();
+  const authorLineage = optionalLineageLabel(input.authorLineage);
+  const criticLineage = optionalLineageLabel(input.criticLineage);
+  const localEndpoint = optionalLocalEndpointUrl(input.localEndpoint);
+  const independenceOverrideRationale = optionalOverrideRationale(
+    input.independenceOverrideRationale,
+  );
+  return {
+    workspaceId: identifier(input.workspaceId),
+    authorCompany: enumValue(input.authorCompany, modelCompanies),
+    authorModel: modelId(input.authorModel),
+    criticCompany: enumValue(input.criticCompany, modelCompanies),
+    criticModel: modelId(input.criticModel),
+    ...(authorLineage === undefined ? {} : { authorLineage }),
+    ...(criticLineage === undefined ? {} : { criticLineage }),
+    ...(localEndpoint === undefined ? {} : { localEndpoint }),
+    ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
+  };
+}
+
 function validateRunStatusInput(value: unknown): RunStatusInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, runStatusKeys)) return invalidInput();
@@ -1219,6 +1317,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "workspace.open", input: validateWorkspaceOpenInput(command.input) };
     case "workspace.create":
       return { type: "workspace.create", input: validateWorkspaceCreateInput(command.input) };
+    case "workspace.configure-models":
+      return {
+        type: "workspace.configure-models",
+        input: validateWorkspaceConfigureModelsInput(command.input),
+      };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
     case "run.start":
@@ -1369,6 +1472,19 @@ function normalizeWorkspaceResult(value: unknown): WorkspaceResult {
       id: identifier(workspace.id),
       name: displayName(workspace.name),
     },
+  };
+}
+
+function normalizeWorkspaceModelsResult(value: unknown): WorkspaceModelsResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, workspaceModelsResultKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(result.workspaceId),
+    authorCompany: enumValue(result.authorCompany, modelCompanies),
+    authorModel: modelId(result.authorModel),
+    criticCompany: enumValue(result.criticCompany, modelCompanies),
+    criticModel: modelId(result.criticModel),
+    localEndpoint: result.localEndpoint === null ? null : localEndpointUrl(result.localEndpoint),
   };
 }
 
@@ -1607,6 +1723,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "workspace.open":
     case "workspace.create":
       return normalizeWorkspaceResult(value);
+    case "workspace.configure-models":
+      return normalizeWorkspaceModelsResult(value);
     case "run.status":
     case "run.start":
     case "run.pause":
