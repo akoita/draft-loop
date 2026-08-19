@@ -1919,4 +1919,274 @@ describe("native host", () => {
       });
     });
   });
+  describe("model discovery", () => {
+    /** A transport that answers from memory. No test here reaches a socket. */
+    function catalogueFetch(body: unknown, status = 200) {
+      return vi.fn(
+        async (_url: string, _init: RequestInit) =>
+          ({
+            ok: status >= 200 && status < 300,
+            status,
+            headers: new Headers(),
+            text: async () => JSON.stringify(body),
+          }) as unknown as Response,
+      );
+    }
+
+    /** The headers one discovery call carried, so a test can see the credential
+     * reaching the provider and nowhere else. */
+    function sentHeaders(
+      discoveryFetch: ReturnType<typeof catalogueFetch>,
+      index: number,
+    ): Record<string, string> {
+      const call = discoveryFetch.mock.calls.at(index);
+      return (call?.[1].headers ?? {}) as Record<string, string>;
+    }
+
+    function hostWith(
+      discoveryFetch: ReturnType<typeof catalogueFetch>,
+      extras: {
+        readonly credentials?: ReturnType<typeof createMemoryCredentialStore>;
+        readonly applicationService?: ApplicationService;
+        readonly root?: string;
+        readonly now?: () => number;
+      } = {},
+    ) {
+      return createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => extras.root,
+          chooseFiles: async () => [],
+        },
+        ...(extras.credentials === undefined ? {} : { credentials: extras.credentials }),
+        ...(extras.applicationService === undefined
+          ? {}
+          : { applicationService: extras.applicationService }),
+        modelDiscovery: {
+          fetch: discoveryFetch as unknown as typeof fetch,
+          ...(extras.now === undefined ? {} : { now: extras.now }),
+        },
+      });
+    }
+
+    /** A workspace whose local company points wherever the test says. */
+    function localWorkspaceService(root: string, localEndpoint: string): ApplicationService {
+      const fixture = service(root);
+      const workspace = { ...descriptor(root), localEndpoint };
+      return {
+        ...fixture.service,
+        initialize: vi.fn(async () => workspace),
+        readWorkspace: vi.fn(async () => workspace),
+      };
+    }
+
+    it("lists the models a configured credential can reach without exposing it", async () => {
+      const apiKey = "sk-ant-super-secret-value";
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("anthropic", apiKey);
+      const discoveryFetch = catalogueFetch({
+        data: [{ id: "claude-sonnet-4-5" }, { id: "claude-haiku-4-5" }],
+        has_more: false,
+      });
+      const host = hostWith(discoveryFetch, { credentials, now: () => 1_760_000_000_000 });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "anthropic" } });
+
+      expect(result).toEqual({
+        ok: true,
+        value: {
+          provider: "anthropic",
+          models: [{ id: "claude-sonnet-4-5" }, { id: "claude-haiku-4-5" }],
+          truncated: false,
+          source: "live",
+          retrievedAt: "2025-10-09T08:53:20.000Z",
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain(apiKey);
+      expect(sentHeaders(discoveryFetch, 0)["x-api-key"]).toBe(apiKey);
+    });
+
+    it("refuses to list a provider that has no credential, without calling out", async () => {
+      vi.stubEnv("OPENAI_API_KEY", "");
+      try {
+        const discoveryFetch = catalogueFetch({ data: [] });
+        const host = hostWith(discoveryFetch, { credentials: createMemoryCredentialStore() });
+
+        const result = await host.invoke({ type: "models.list", input: { provider: "openai" } });
+
+        expect(result).toMatchObject({
+          ok: false,
+          error: {
+            code: "permission-denied",
+            capability: "models.list",
+            message:
+              "No API key is configured for this provider. Add one before listing its models.",
+          },
+        });
+        expect(discoveryFetch).not.toHaveBeenCalled();
+      } finally {
+        vi.unstubAllEnvs();
+      }
+    });
+
+    it("asks the local server the open workspace actually points at", async () => {
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-host-local-models-"));
+      const discoveryFetch = catalogueFetch({ data: [{ id: "llama3.2:3b" }] });
+      const host = hostWith(discoveryFetch, {
+        root,
+        applicationService: localWorkspaceService(root, "http://127.0.0.1:8080/v1"),
+      });
+      try {
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+        const result = await host.invoke({ type: "models.list", input: { provider: "local" } });
+
+        expect(result).toMatchObject({
+          ok: true,
+          value: { provider: "local", models: [{ id: "llama3.2:3b" }] },
+        });
+        expect(discoveryFetch.mock.calls[0]?.[0]).toBe("http://127.0.0.1:8080/v1/models");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("refuses a local endpoint that is not on this machine before contacting it", async () => {
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-host-remote-local-"));
+      const discoveryFetch = catalogueFetch({ data: [{ id: "llama3.2:3b" }] });
+      const host = hostWith(discoveryFetch, {
+        root,
+        applicationService: localWorkspaceService(root, "https://models.evil.test/v1"),
+      });
+      try {
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+        const result = await host.invoke({ type: "models.list", input: { provider: "local" } });
+
+        expect(result).toMatchObject({
+          ok: false,
+          error: {
+            code: "permission-denied",
+            capability: "models.list",
+            message:
+              "The configured local model endpoint is not on this machine, so it was not contacted.",
+          },
+        });
+        expect(discoveryFetch).not.toHaveBeenCalled();
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    it("answers a repeat request from cache and re-asks once it expires", async () => {
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("openai", "sk-openai-secret");
+      const discoveryFetch = catalogueFetch({ data: [{ id: "gpt-5" }] });
+      let clock = 1_760_000_000_000;
+      const host = hostWith(discoveryFetch, { credentials, now: () => clock });
+
+      const first = await host.invoke({ type: "models.list", input: { provider: "openai" } });
+      const cached = await host.invoke({ type: "models.list", input: { provider: "openai" } });
+
+      expect(first).toMatchObject({ ok: true, value: { source: "live" } });
+      expect(cached).toMatchObject({
+        ok: true,
+        value: {
+          source: "cache",
+          models: [{ id: "gpt-5" }],
+          retrievedAt: "2025-10-09T08:53:20.000Z",
+        },
+      });
+      expect(discoveryFetch).toHaveBeenCalledTimes(1);
+
+      const refreshed = await host.invoke({
+        type: "models.list",
+        input: { provider: "openai", refresh: true },
+      });
+      expect(refreshed).toMatchObject({ ok: true, value: { source: "live" } });
+      expect(discoveryFetch).toHaveBeenCalledTimes(2);
+
+      clock += 5 * 60_000 + 1;
+      const afterExpiry = await host.invoke({ type: "models.list", input: { provider: "openai" } });
+      expect(afterExpiry).toMatchObject({ ok: true, value: { source: "live" } });
+      expect(discoveryFetch).toHaveBeenCalledTimes(3);
+    });
+
+    it("forgets a cached catalogue when the credential behind it changes", async () => {
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("openai", "sk-openai-first");
+      const discoveryFetch = catalogueFetch({ data: [{ id: "gpt-5" }] });
+      const host = hostWith(discoveryFetch, { credentials });
+
+      await host.invoke({ type: "models.list", input: { provider: "openai" } });
+      await host.invoke({
+        type: "credential.set",
+        input: { provider: "openai", apiKey: "sk-openai-second" },
+      });
+      const afterChange = await host.invoke({ type: "models.list", input: { provider: "openai" } });
+
+      expect(afterChange).toMatchObject({ ok: true, value: { source: "live" } });
+      expect(discoveryFetch).toHaveBeenCalledTimes(2);
+      expect(sentHeaders(discoveryFetch, 1).authorization).toBe("Bearer sk-openai-second");
+    });
+
+    it("drops model ids the workspace could never accept", async () => {
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("anthropic", "sk-ant-secret");
+      const discoveryFetch = catalogueFetch({
+        data: [
+          { id: "claude-sonnet-4-5" },
+          { id: "../../etc/passwd" },
+          { id: "x".repeat(500) },
+          { id: { nested: "object" } },
+        ],
+      });
+      const host = hostWith(discoveryFetch, { credentials });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "anthropic" } });
+
+      expect(result).toMatchObject({
+        ok: true,
+        value: { models: [{ id: "claude-sonnet-4-5" }] },
+      });
+    });
+
+    it("explains a rejected credential without repeating what the provider said", async () => {
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("anthropic", "sk-ant-stale");
+      const discoveryFetch = catalogueFetch(
+        { error: { message: "invalid x-api-key sk-ant-stale" } },
+        401,
+      );
+      const host = hostWith(discoveryFetch, { credentials });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "anthropic" } });
+
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: "permission-denied",
+          capability: "models.list",
+          message: "The provider could not authenticate. Check the configured credential.",
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain("sk-ant-stale");
+    });
+
+    it("reports a provider that answered with something other than a model list", async () => {
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("anthropic", "sk-ant-secret");
+      const host = hostWith(catalogueFetch({ data: "everything" }), { credentials });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "anthropic" } });
+
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          capability: "models.list",
+          message: "The provider returned a response that could not be validated.",
+        },
+      });
+    });
+  });
 });

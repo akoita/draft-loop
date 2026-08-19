@@ -906,3 +906,12 @@ export function createLocalModelAdapter<
 >(client: LocalClient = {}, options: ProviderAdapterOptions): LocalModelAdapter<Input, Output> {
   return new LocalModelAdapter<Input, Output>(client, options);
 }
+
+/**
+ * Model discovery: which model ids a configured credential can actually reach.
+ *
+ * Re-exported here because this package publishes one entry point. Discovery
+ * only uses this module's error types inside function bodies, so the cycle is
+ * resolved before anything reads it.
+ */
+export * from "./discovery.js";

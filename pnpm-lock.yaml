@@ -81,6 +81,9 @@ importers:
       '@draft-loop/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      '@draft-loop/providers':
+        specifier: workspace:*
+        version: link:../../packages/providers
       better-sqlite3:
         specifier: 13.0.3
         version: 13.0.3

@@ -9,6 +9,7 @@ import {
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
   type IndependentReviewRecord,
+  isLoopbackEndpoint,
   SourceIngestionUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
@@ -20,6 +21,13 @@ import {
   type UrlHostnameResolver,
 } from "@draft-loop/ingestion";
 import { hasCompletedIndependentCritique, type RunSnapshot } from "@draft-loop/orchestrator";
+import {
+  listAnthropicModels,
+  listLocalModels,
+  listOpenAIModels,
+  type ModelCatalogue,
+  ProviderAdapterError,
+} from "@draft-loop/providers";
 
 import {
   type BridgeCapability,
@@ -33,6 +41,8 @@ import {
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
+  type ModelsListInput,
+  type ModelsListResult,
   type ReviewDispatchInput,
   type SelectedFile,
   type SourceAddUrlInput,
@@ -96,12 +106,26 @@ export interface NativeCredentialStore {
   readonly get?: (provider: CredentialProvider) => Promise<string | undefined>;
 }
 
+/**
+ * How the host reaches a provider's models list.
+ *
+ * Both members exist so nothing here has to be taken on trust in a test: the
+ * transport is injected rather than assumed, so no test can reach a real
+ * provider, and the clock is injected so the catalogue cache's expiry can be
+ * observed instead of waited out.
+ */
+export interface NativeModelDiscoveryOptions {
+  readonly fetch?: typeof fetch;
+  readonly now?: () => number;
+}
+
 export interface NativeHostOptions {
   readonly applicationService?: ApplicationService;
   readonly dialogs: NativeHostDialogs;
   readonly credentials?: NativeCredentialStore;
   readonly urlFetcher?: UrlFetcher;
   readonly urlHostnameResolver?: UrlHostnameResolver;
+  readonly modelDiscovery?: NativeModelDiscoveryOptions;
   /** Acceptance-only switch for exercising the preflight with offline fixtures. */
   readonly requireProviderPreflight?: boolean;
   readonly onError?: (error: unknown, capability: BridgeCapability) => void;
@@ -130,6 +154,28 @@ interface ReviewDecisionHistoryEntry {
   readonly decision: FindingDecision;
   readonly rationale?: string;
   readonly createdAt: string;
+}
+
+/**
+ * How long a listed catalogue is reused.
+ *
+ * Providers add models on the order of weeks, so re-asking on every keystroke
+ * of a selector would spend a person's rate limit to learn nothing. Five
+ * minutes keeps a newly added local model within reach of an impatient user,
+ * and `refresh` exists for one who does not want to wait at all. Nothing is
+ * written to disk: persisting a catalogue is the selector item's problem, and
+ * inventing schema for it here would be a decision made in the wrong place.
+ */
+const modelCatalogueCacheTtlMs = 5 * 60_000;
+
+/** Which catalogue to read, with the address already checked for `local`. */
+type ModelDiscoveryTarget =
+  | { readonly provider: "anthropic" | "openai" }
+  | { readonly provider: "local"; readonly endpoint: string };
+
+interface CachedModelCatalogue {
+  readonly result: ModelsListResult;
+  readonly expiresAt: number;
 }
 
 const emptyOverrides: ReviewOverrides = { decisions: {}, rationales: {}, edits: {}, history: [] };
@@ -450,6 +496,27 @@ const providerFailureExplanations: Readonly<Record<ProviderFailureView["code"], 
   policy: "The provider transmission policy prevented this request.",
   unknown: "The provider request failed for an unknown reason.",
 };
+
+/**
+ * Turns a discovery failure into a bridge error a person can act on.
+ *
+ * The provider's own message is discarded and replaced by the same content-free
+ * explanation an execution failure of that kind already shows. Whatever a
+ * provider or a local server put in its body -- including anything echoed back
+ * from the request -- does not reach the renderer.
+ */
+function modelDiscoveryFailure(error: unknown): never {
+  const code = error instanceof ProviderAdapterError ? error.code : "unknown";
+  const explanation =
+    providerFailureExplanations[code as ProviderFailureView["code"]] ??
+    providerFailureExplanations.unknown;
+  return fail(
+    code === "authentication" || code === "permission" || code === "policy"
+      ? "permission-denied"
+      : "operation-failed",
+    explanation,
+  );
+}
 
 function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
   const legacyCriticRecovery =
@@ -1007,6 +1074,85 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     if (background === undefined) return;
     background.controller.abort(new DOMException("Review stopped by the user.", "AbortError"));
     await background.execution;
+  }
+
+  const modelCatalogues = new Map<string, CachedModelCatalogue>();
+  const discoveryNow = () => options.modelDiscovery?.now?.() ?? Date.now();
+
+  /**
+   * The address a `local` catalogue is read from, checked before anything is
+   * sent to it.
+   *
+   * The workspace loader already refuses a non-loopback endpoint, and this
+   * refuses it again: `local` is a promise that nothing leaves the machine,
+   * and a promise nobody re-checks at the point of use is the kind that gets
+   * quietly broken by a future caller with a descriptor from somewhere else.
+   * The rule itself is not restated here -- it stays in the application layer,
+   * where the configured-endpoint path reads it too.
+   */
+  function localCatalogueEndpoint(workspaceId: string | undefined): string {
+    const workspace = workspaceId === undefined ? active : workspaceFor(workspaceId);
+    const endpoint = workspace?.descriptor.localEndpoint ?? defaultLocalModelEndpoint;
+    if (!isLoopbackEndpoint(endpoint)) {
+      return fail(
+        "permission-denied",
+        "The configured local model endpoint is not on this machine, so it was not contacted.",
+      );
+    }
+    return endpoint;
+  }
+
+  async function discoverModels(target: ModelDiscoveryTarget): Promise<ModelCatalogue> {
+    const discoveryFetch = options.modelDiscovery?.fetch ?? globalThis.fetch;
+    try {
+      if (target.provider === "local") {
+        return await listLocalModels({ endpoint: target.endpoint, fetch: discoveryFetch });
+      }
+      const provider = target.provider;
+      // The credential is read here and handed straight to the provider call.
+      // It is never part of the result, the cache key, or an error: the
+      // renderer learns which models exist, never what unlocked them.
+      const apiKey = await resolveCredential(credentials, provider);
+      if (apiKey === undefined) {
+        return fail(
+          "permission-denied",
+          "No API key is configured for this provider. Add one before listing its models.",
+        );
+      }
+      const client = { apiKey, fetch: discoveryFetch };
+      return provider === "anthropic"
+        ? await listAnthropicModels(client)
+        : await listOpenAIModels(client);
+    } catch (error) {
+      if (error instanceof NativeHostError) throw error;
+      return modelDiscoveryFailure(error);
+    }
+  }
+
+  async function listModels(input: ModelsListInput): Promise<ModelsListResult> {
+    const provider = input.provider;
+    const target: ModelDiscoveryTarget =
+      provider === "local"
+        ? { provider, endpoint: localCatalogueEndpoint(input.workspaceId) }
+        : { provider };
+    const cacheKey = target.provider === "local" ? `local:${target.endpoint}` : target.provider;
+    const now = discoveryNow();
+    if (input.refresh !== true) {
+      const cached = modelCatalogues.get(cacheKey);
+      if (cached !== undefined && cached.expiresAt > now) {
+        return { ...cached.result, source: "cache" };
+      }
+    }
+    const catalogue = await discoverModels(target);
+    const result: ModelsListResult = {
+      provider,
+      models: catalogue.models.map((model) => ({ id: model.id })),
+      truncated: catalogue.truncated,
+      source: "live",
+      retrievedAt: new Date(now).toISOString(),
+    };
+    modelCatalogues.set(cacheKey, { result, expiresAt: now + modelCatalogueCacheTtlMs });
+    return result;
   }
 
   function workspaceFor(id: string): ActiveWorkspace {
@@ -1686,6 +1832,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "credential.set": {
           const configured = await credentials.set(command.input.provider, command.input.apiKey);
+          modelCatalogues.delete(command.input.provider);
           if (!configured) {
             return fail(
               "operation-failed",
@@ -1705,6 +1852,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "credential.remove": {
           await credentials.remove(command.input.provider);
+          modelCatalogues.delete(command.input.provider);
           const status = await credentials.status(command.input.provider);
           return {
             ok: true,
@@ -1716,6 +1864,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             },
           };
         }
+        case "models.list":
+          return { ok: true, value: await listModels(command.input) };
       }
     } catch (error) {
       options.onError?.(error, command.type);

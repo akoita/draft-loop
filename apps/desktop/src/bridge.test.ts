@@ -666,4 +666,54 @@ describe("desktop capability bridge", () => {
     expect(reduceReviewState(state, { type: "recover-to-review" }).providerFailure).toBeNull();
     expect(reduceReviewState(state, { type: "stop" }).providerFailure).toBeNull();
   });
+  it("carries a model catalogue across the bridge and refuses a hostile one", async () => {
+    const catalogue = {
+      provider: "local" as const,
+      models: [{ id: "llama3.2:3b" }, { id: "qwen3:8b" }],
+      truncated: false,
+      source: "live" as const,
+      retrievedAt: "2026-08-19T09:00:00.000Z",
+    };
+    const port = createCapabilityPort(bridge(async () => ({ ok: true, value: catalogue })));
+
+    await expect(
+      port.execute({ type: "models.list", input: { provider: "local", refresh: true } }),
+    ).resolves.toEqual({ ok: true, value: catalogue });
+
+    for (const hostile of [
+      { ...catalogue, models: [{ id: "../../etc/passwd" }] },
+      { ...catalogue, models: [{ id: `a${"b".repeat(200)}` }] },
+      { ...catalogue, models: [{ id: "llama3.2:3b", displayName: "Llama" }] },
+      { ...catalogue, models: [{ id: "llama3.2:3b" }, { id: "llama3.2:3b" }] },
+      {
+        ...catalogue,
+        models: Array.from({ length: 201 }, (_, index) => ({ id: `model-${index}` })),
+      },
+      { ...catalogue, provider: "totally-other" },
+      { ...catalogue, source: "guess" },
+      { ...catalogue, retrievedAt: "whenever" },
+      { ...catalogue, apiKey: "sk-leaked" },
+    ]) {
+      const hostilePort = createCapabilityPort(bridge(async () => ({ ok: true, value: hostile })));
+      await expect(
+        hostilePort.execute({ type: "models.list", input: { provider: "local" } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+  });
+
+  it("rejects model discovery input the host was never meant to receive", () => {
+    expect(
+      validateBridgeCommand({ type: "models.list", input: { provider: "anthropic" } }),
+    ).toEqual({ type: "models.list", input: { provider: "anthropic" } });
+
+    for (const input of [
+      { provider: "evil-co" },
+      { provider: "local", endpoint: "http://10.0.0.1:11434/v1" },
+      { provider: "local", workspaceId: "../escape" },
+      { provider: "local", refresh: "yes" },
+      {},
+    ]) {
+      expect(() => validateBridgeCommand({ type: "models.list", input })).toThrow("invalid");
+    }
+  });
 });

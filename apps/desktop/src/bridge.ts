@@ -31,6 +31,7 @@ export const bridgeCapabilities = [
   "credential.status",
   "credential.set",
   "credential.remove",
+  "models.list",
 ] as const;
 
 export type BridgeCapability = (typeof bridgeCapabilities)[number];
@@ -63,6 +64,15 @@ export type ExportFormat = (typeof exportFormats)[number];
 
 export const credentialProviders = ["anthropic", "openai"] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
+
+/**
+ * The companies whose catalogue can be listed.
+ *
+ * Wider than `credentialProviders` because `local` has no credential: its
+ * catalogue comes from a server on this machine, named by the workspace.
+ */
+export const modelDiscoveryProviders = ["anthropic", "openai", "local"] as const;
+export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
 
 export const credentialSources = ["app", "env", "none"] as const;
 export type CredentialSource = (typeof credentialSources)[number];
@@ -258,6 +268,19 @@ export interface CredentialRemoveInput {
  */
 const credentialKeys = inputKeys<CredentialStatusInput & CredentialRemoveInput>()(["provider"]);
 
+export interface ModelsListInput {
+  readonly provider: ModelDiscoveryProvider;
+  /**
+   * Which open workspace names the local server to ask. Only meaningful for
+   * `local`; the hosted providers are reached at their own fixed address.
+   */
+  readonly workspaceId?: string;
+  /** Ask the provider again rather than answering from the host's short cache. */
+  readonly refresh?: boolean;
+}
+
+const modelsListKeys = inputKeys<ModelsListInput>()(["provider", "workspaceId", "refresh"]);
+
 export interface WorkspaceSummary {
   readonly id: string;
   readonly name: string;
@@ -398,6 +421,47 @@ const credentialResultKeys = resultKeys<CredentialResult>()([
   "protection",
 ]);
 
+/**
+ * A model id the provider says the configured credential can reach.
+ *
+ * Ids only. Display names and pricing are not carried: neither is needed to
+ * name a model correctly, and every extra field is another string from a
+ * provider that this boundary would have to police.
+ */
+export interface DiscoveredModelSummary {
+  readonly id: string;
+}
+
+export interface ModelsListResult {
+  readonly provider: ModelDiscoveryProvider;
+  readonly models: readonly DiscoveredModelSummary[];
+  /** Whether the provider had more to report than this list carries. */
+  readonly truncated: boolean;
+  /** Whether the host asked the provider or answered from its short cache. */
+  readonly source: "live" | "cache";
+  /** When the underlying provider call happened, so a cached list can say so. */
+  readonly retrievedAt: string;
+}
+
+const modelsListResultKeys = resultKeys<ModelsListResult>()([
+  "provider",
+  "models",
+  "truncated",
+  "source",
+  "retrievedAt",
+]);
+
+const discoveredModelKeys = resultKeys<DiscoveredModelSummary>()(["id"]);
+
+/**
+ * This boundary's own ceiling on a discovered catalogue.
+ *
+ * The provider layer caps at the same number; repeating it rather than
+ * importing it keeps this module free of provider dependencies and means a
+ * host that skipped the cap still cannot hand the renderer an unbounded list.
+ */
+const maximumDiscoveredModels = 200;
+
 export interface BridgeCommandInputMap {
   "workspace.open": WorkspaceOpenInput;
   "workspace.create": WorkspaceCreateInput;
@@ -414,6 +478,7 @@ export interface BridgeCommandInputMap {
   "credential.status": CredentialStatusInput;
   "credential.set": CredentialSetInput;
   "credential.remove": CredentialRemoveInput;
+  "models.list": ModelsListInput;
 }
 
 export interface BridgeCommandOutputMap {
@@ -432,6 +497,7 @@ export interface BridgeCommandOutputMap {
   "credential.status": CredentialStatus;
   "credential.set": CredentialResult;
   "credential.remove": CredentialResult;
+  "models.list": ModelsListResult;
 }
 
 export type BridgeCommandName = keyof BridgeCommandInputMap;
@@ -909,6 +975,18 @@ function validateCredentialSetInput(value: unknown): CredentialSetInput {
   return { provider, apiKey: input.apiKey.trim() };
 }
 
+function validateModelsListInput(value: unknown): ModelsListInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, modelsListKeys)) return invalidInput();
+  const workspaceId = optionalIdentifier(input.workspaceId);
+  const refresh = optionalBooleanValue(input.refresh);
+  return {
+    provider: enumValue(input.provider, modelDiscoveryProviders),
+    ...(workspaceId === undefined ? {} : { workspaceId }),
+    ...(refresh === undefined ? {} : { refresh }),
+  };
+}
+
 /** Parses untrusted renderer input into one of the allowlisted bridge commands. */
 export function validateBridgeCommand(value: unknown): BridgeCommand {
   const command = requireRecord(value);
@@ -946,6 +1024,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "credential.set", input: validateCredentialSetInput(command.input) };
     case "credential.remove":
       return { type: "credential.remove", input: validateCredentialInput(command.input) };
+    case "models.list":
+      return { type: "models.list", input: validateModelsListInput(command.input) };
   }
 }
 
@@ -1244,6 +1324,40 @@ function normalizeCredentialResult(value: unknown): CredentialResult {
   };
 }
 
+/**
+ * Polices a catalogue on its way to the renderer.
+ *
+ * The host has already bounded what the provider said, and this checks it
+ * again: an id that reaches here is one the workspace configuration would
+ * accept, so a person choosing from this list cannot end up with a model id
+ * the rest of the system refuses -- or with a lineage nobody meant.
+ */
+function normalizeModelsListResult(value: unknown): ModelsListResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, modelsListResultKeys) ||
+    !Array.isArray(result.models) ||
+    result.models.length > maximumDiscoveredModels
+  ) {
+    return invalidInput();
+  }
+  const models = result.models.map((item) => {
+    const model = requireRecord(item);
+    if (!hasOnlyKeys(model, discoveredModelKeys)) return invalidInput();
+    return { id: modelId(model.id) } satisfies DiscoveredModelSummary;
+  });
+  if (new Set(models.map((model) => model.id)).size !== models.length) return invalidInput();
+  const retrievedAt = stringValue(result.retrievedAt, 64);
+  if (!Number.isFinite(Date.parse(retrievedAt))) return invalidInput();
+  return {
+    provider: enumValue(result.provider, modelDiscoveryProviders),
+    models,
+    truncated: booleanValue(result.truncated),
+    source: enumValue(result.source, ["live", "cache"] as const),
+    retrievedAt,
+  };
+}
+
 function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
   switch (command) {
     case "workspace.open":
@@ -1268,6 +1382,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "credential.set":
     case "credential.remove":
       return normalizeCredentialResult(value);
+    case "models.list":
+      return normalizeModelsListResult(value);
   }
 }
 

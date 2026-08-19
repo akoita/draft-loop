@@ -16,6 +16,7 @@
     "@draft-loop/application": "workspace:*",
     "@draft-loop/ingestion": "workspace:*",
     "@draft-loop/orchestrator": "workspace:*",
+    "@draft-loop/providers": "workspace:*",
     "better-sqlite3": "13.0.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
