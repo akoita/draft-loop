@@ -32,6 +32,7 @@ export const bridgeCapabilities = [
   "credential.set",
   "credential.remove",
   "models.list",
+  "models.preview-independence",
 ] as const;
 
 export type BridgeCapability = (typeof bridgeCapabilities)[number];
@@ -66,12 +67,26 @@ export const credentialProviders = ["anthropic", "openai"] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
 
 /**
+ * The provider companies a workspace can be configured to use.
+ *
+ * This is the application's own allowlist, not a preference: the local driver
+ * refuses to build an adapter for any other company, so a company outside this
+ * list is invalid input rather than an option this host declined to offer.
+ */
+export const modelCompanies = ["anthropic", "openai", "local"] as const;
+export type ModelCompany = (typeof modelCompanies)[number];
+
+/**
  * The companies whose catalogue can be listed.
  *
  * Wider than `credentialProviders` because `local` has no credential: its
- * catalogue comes from a server on this machine, named by the workspace.
+ * catalogue comes from a server on this machine, named by the workspace. It is
+ * `modelCompanies` itself rather than a copy of it, because a catalogue exists
+ * only to fill in a workspace's model choice: a company that could be listed
+ * but not configured, or configured but not listed, would be a defect in one
+ * of the two rather than a distinction worth encoding.
  */
-export const modelDiscoveryProviders = ["anthropic", "openai", "local"] as const;
+export const modelDiscoveryProviders = modelCompanies;
 export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
 
 export const credentialSources = ["app", "env", "none"] as const;
@@ -140,19 +155,42 @@ export interface WorkspaceOpenInput {
 
 const workspaceOpenKeys = inputKeys<WorkspaceOpenInput>()(["selection"]);
 
+/**
+ * Everything a new workspace can be told about its models.
+ *
+ * Every field is optional and every omitted field keeps the workspace default,
+ * so a host that is handed nothing still creates the same workspace it always
+ * did. The names match `InitializeWorkspaceCommand` deliberately: this input
+ * exists to fill that command in, and the desktop should be able to express
+ * exactly what `draft-loop init` can.
+ */
 export interface WorkspaceCreateInput {
   /** A display name only. The native host owns the destination folder picker. */
   readonly name: string;
   /** Real workspaces are empty; demo mode is explicit and deterministic. */
   readonly mode?: "real" | "demo";
+  /** Author provider company, matching the CLI's `--author-company`. */
+  readonly authorCompany?: ModelCompany;
   /**
    * Exact author model id. Omitted uses the workspace default, matching the
-   * CLI's `--author-model`. Companies are not overridable here: Anthropic and
-   * OpenAI remain the default cross-company pair.
+   * CLI's `--author-model`.
    */
   readonly authorModel?: string;
+  /** Critic provider company, matching the CLI's `--critic-company`. */
+  readonly criticCompany?: ModelCompany;
   /** Exact critic model id. Omitted uses the workspace default. */
   readonly criticModel?: string;
+  /**
+   * The weights the author descends from, as claimed by the operator. Omitted
+   * lets the domain derive one; nothing here derives it.
+   */
+  readonly authorLineage?: string;
+  /** The weights the critic descends from, on the same terms. */
+  readonly criticLineage?: string;
+  /** Loopback base URL of the model server used when a company is `local`. */
+  readonly localEndpoint?: string;
+  /** Why one lineage on both sides is acceptable; recorded with every run. */
+  readonly independenceOverrideRationale?: string;
   /**
    * Sections the CV must contain, matching the CLI's `--required-sections`.
    * Omitted uses the workspace default.
@@ -163,8 +201,14 @@ export interface WorkspaceCreateInput {
 const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
   "name",
   "mode",
+  "authorCompany",
   "authorModel",
+  "criticCompany",
   "criticModel",
+  "authorLineage",
+  "criticLineage",
+  "localEndpoint",
+  "independenceOverrideRationale",
   "requiredSections",
 ]);
 
@@ -280,6 +324,45 @@ export interface ModelsListInput {
 }
 
 const modelsListKeys = inputKeys<ModelsListInput>()(["provider", "workspaceId", "refresh"]);
+
+/**
+ * A model someone is considering, before any workspace has been created.
+ *
+ * The company is a bounded label rather than one of `modelCompanies`, because
+ * the question asked of it is about weights and not about configuration: a
+ * reseller's namespace such as `bedrock` names a route to a model this
+ * workspace could reach another way, and answering "these are the same
+ * weights" for that pairing is the whole point. Refusing to answer would leave
+ * the question to be worked out somewhere with no right to it.
+ */
+export interface ModelCandidate {
+  readonly company: string;
+  readonly modelId: string;
+  /**
+   * The operator's own claim about the weights. Present only when they made
+   * one; absent lets the derivation speak.
+   */
+  readonly lineage?: string;
+}
+
+/**
+ * A candidate pairing, asked about before it is committed to.
+ *
+ * The question this carries -- "would these two count as independent?" -- has
+ * exactly one correct answer, and it lives in the domain. The renderer asks
+ * rather than works it out, because a surface that recomputes the rule goes on
+ * showing the old answer after the rule changes.
+ */
+export interface ModelsPreviewIndependenceInput {
+  readonly author: ModelCandidate;
+  readonly critic: ModelCandidate;
+}
+
+const modelCandidateKeys = inputKeys<ModelCandidate>()(["company", "modelId", "lineage"]);
+const modelsPreviewIndependenceKeys = inputKeys<ModelsPreviewIndependenceInput>()([
+  "author",
+  "critic",
+]);
 
 export interface WorkspaceSummary {
   readonly id: string;
@@ -454,6 +537,25 @@ const modelsListResultKeys = resultKeys<ModelsListResult>()([
 const discoveredModelKeys = resultKeys<DiscoveredModelSummary>()(["id"]);
 
 /**
+ * What a candidate pairing would record about independence.
+ *
+ * The field names are those of `IndependentReviewView` on purpose: the words a
+ * person reads while choosing models are the words they will read again at the
+ * approval gate, and the answer behind both is derived in one place.
+ */
+export interface ModelsPreviewIndependenceResult {
+  readonly authorLineage: string;
+  readonly criticLineage: string;
+  readonly lineagesDistinct: boolean;
+}
+
+const modelsPreviewIndependenceResultKeys = resultKeys<ModelsPreviewIndependenceResult>()([
+  "authorLineage",
+  "criticLineage",
+  "lineagesDistinct",
+]);
+
+/**
  * This boundary's own ceiling on a discovered catalogue.
  *
  * The provider layer caps at the same number; repeating it rather than
@@ -479,6 +581,7 @@ export interface BridgeCommandInputMap {
   "credential.set": CredentialSetInput;
   "credential.remove": CredentialRemoveInput;
   "models.list": ModelsListInput;
+  "models.preview-independence": ModelsPreviewIndependenceInput;
 }
 
 export interface BridgeCommandOutputMap {
@@ -498,6 +601,7 @@ export interface BridgeCommandOutputMap {
   "credential.set": CredentialResult;
   "credential.remove": CredentialResult;
   "models.list": ModelsListResult;
+  "models.preview-independence": ModelsPreviewIndependenceResult;
 }
 
 export type BridgeCommandName = keyof BridgeCommandInputMap;
@@ -582,10 +686,22 @@ const commandNames = new Set<BridgeCommandName>(bridgeCapabilities);
  * deliberately looser than the domain's 200-character limit on a *declared*
  * lineage, because a derived one is `company:modelId` and is bounded only by
  * those two fields. Refusing a lineage the domain accepted would fail the
- * whole review load over a label.
+ * whole review load over a label. The rationale ceiling is the domain's own
+ * and bounds the claim in both directions: a renderer may send no more than
+ * the domain would keep.
  */
 const maximumLineageLength = 512;
 const maximumOverrideRationaleLength = 500;
+
+/**
+ * The longest lineage this boundary accepts from a renderer.
+ *
+ * Unlike the ceiling above, which bounds a lineage the host derived, this
+ * bounds one a person declared, so it mirrors the domain's
+ * `maximumModelLineageLength` exactly: accepting a longer one would only defer
+ * the same refusal to workspace creation.
+ */
+const maximumDeclaredLineageLength = 200;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -772,6 +888,70 @@ function optionalSectionTitles(value: unknown): readonly string[] | undefined {
   return value === undefined ? undefined : sectionTitles(value);
 }
 
+/**
+ * A lineage label an operator declared, bounded the way the domain bounds one.
+ *
+ * The domain accepts any non-empty label of at most
+ * `maximumModelLineageLength` characters once trimmed, and normalizes it
+ * itself; this applies that same ceiling to the string as sent, so nothing
+ * reaches workspace creation that would be refused there. It deliberately
+ * computes nothing else: deriving a lineage is the domain's job alone.
+ */
+function lineageLabel(value: unknown): string {
+  const result = stringValue(value, maximumDeclaredLineageLength).trim();
+  if (result === "") return invalidInput();
+  return result;
+}
+
+function optionalLineageLabel(value: unknown): string | undefined {
+  return value === undefined ? undefined : lineageLabel(value);
+}
+
+function optionalModelCompany(value: unknown): ModelCompany | undefined {
+  return value === undefined ? undefined : enumValue(value, modelCompanies);
+}
+
+function optionalOverrideRationale(value: unknown): string | undefined {
+  return value === undefined ? undefined : proseValue(value, maximumOverrideRationaleLength).trim();
+}
+
+/**
+ * The base URL of a model server on this machine.
+ *
+ * `local` is a promise that nothing leaves the machine, and an address this
+ * boundary cannot prove is loopback is refused here rather than after a
+ * workspace exists to hold it. The application's `isLoopbackEndpoint` stays the
+ * authority and re-checks every configured endpoint; this repeats its rule
+ * rather than importing it, because this module carries no application
+ * dependency, and because a renderer form should be told no before a directory
+ * is created. Refusing embedded credentials matters as much as the host: they
+ * are unnecessary for a local server and the classic way to make a remote host
+ * read as a local one.
+ */
+function localEndpointUrl(value: unknown): string {
+  const result = stringValue(value, 512).trim();
+  let url: URL;
+  try {
+    url = new URL(result);
+  } catch {
+    return invalidInput();
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return invalidInput();
+  if (url.username !== "" || url.password !== "") return invalidInput();
+  const hostname = url.hostname.toLowerCase();
+  const octets = hostname.split(".");
+  const loopbackIpv4 =
+    octets.length === 4 &&
+    octets[0] === "127" &&
+    octets.every((octet) => /^\d{1,3}$/u.test(octet) && Number(octet) <= 255);
+  if (hostname !== "localhost" && hostname !== "[::1]" && !loopbackIpv4) return invalidInput();
+  return result;
+}
+
+function optionalLocalEndpointUrl(value: unknown): string | undefined {
+  return value === undefined ? undefined : localEndpointUrl(value);
+}
+
 function optionalRelativePath(value: unknown): string | undefined {
   return value === undefined ? undefined : relativePath(value);
 }
@@ -796,14 +976,28 @@ function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
   const mode =
     input.mode === undefined ? undefined : enumValue(input.mode, ["real", "demo"] as const);
+  const authorCompany = optionalModelCompany(input.authorCompany);
   const authorModel = optionalModelId(input.authorModel);
+  const criticCompany = optionalModelCompany(input.criticCompany);
   const criticModel = optionalModelId(input.criticModel);
+  const authorLineage = optionalLineageLabel(input.authorLineage);
+  const criticLineage = optionalLineageLabel(input.criticLineage);
+  const localEndpoint = optionalLocalEndpointUrl(input.localEndpoint);
+  const independenceOverrideRationale = optionalOverrideRationale(
+    input.independenceOverrideRationale,
+  );
   const requiredSections = optionalSectionTitles(input.requiredSections);
   return {
     name: workspaceName(input.name),
     ...(mode === undefined ? {} : { mode }),
+    ...(authorCompany === undefined ? {} : { authorCompany }),
     ...(authorModel === undefined ? {} : { authorModel }),
+    ...(criticCompany === undefined ? {} : { criticCompany }),
     ...(criticModel === undefined ? {} : { criticModel }),
+    ...(authorLineage === undefined ? {} : { authorLineage }),
+    ...(criticLineage === undefined ? {} : { criticLineage }),
+    ...(localEndpoint === undefined ? {} : { localEndpoint }),
+    ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
     ...(requiredSections === undefined ? {} : { requiredSections }),
   };
 }
@@ -987,6 +1181,26 @@ function validateModelsListInput(value: unknown): ModelsListInput {
   };
 }
 
+function validateModelCandidate(value: unknown): ModelCandidate {
+  const candidate = requireRecord(value);
+  if (!hasOnlyKeys(candidate, modelCandidateKeys)) return invalidInput();
+  const lineage = optionalLineageLabel(candidate.lineage);
+  return {
+    company: identifier(candidate.company),
+    modelId: modelId(candidate.modelId),
+    ...(lineage === undefined ? {} : { lineage }),
+  };
+}
+
+function validateModelsPreviewIndependenceInput(value: unknown): ModelsPreviewIndependenceInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, modelsPreviewIndependenceKeys)) return invalidInput();
+  return {
+    author: validateModelCandidate(input.author),
+    critic: validateModelCandidate(input.critic),
+  };
+}
+
 /** Parses untrusted renderer input into one of the allowlisted bridge commands. */
 export function validateBridgeCommand(value: unknown): BridgeCommand {
   const command = requireRecord(value);
@@ -1026,6 +1240,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "credential.remove", input: validateCredentialInput(command.input) };
     case "models.list":
       return { type: "models.list", input: validateModelsListInput(command.input) };
+    case "models.preview-independence":
+      return {
+        type: "models.preview-independence",
+        input: validateModelsPreviewIndependenceInput(command.input),
+      };
   }
 }
 
@@ -1358,6 +1577,24 @@ function normalizeModelsListResult(value: unknown): ModelsListResult {
   };
 }
 
+/**
+ * Polices a previewed independence answer on its way back to the renderer.
+ *
+ * The lineages are checked as bounded labels and nothing more: whether they
+ * are distinct is the domain's answer, and re-deriving or second-guessing it
+ * here would put a copy of the rule on the renderer's side of the boundary,
+ * which is the defect this command exists to avoid.
+ */
+function normalizeModelsPreviewIndependenceResult(value: unknown): ModelsPreviewIndependenceResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, modelsPreviewIndependenceResultKeys)) return invalidInput();
+  return {
+    authorLineage: stringValue(result.authorLineage, maximumLineageLength),
+    criticLineage: stringValue(result.criticLineage, maximumLineageLength),
+    lineagesDistinct: booleanValue(result.lineagesDistinct),
+  };
+}
+
 function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
   switch (command) {
     case "workspace.open":
@@ -1384,6 +1621,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeCredentialResult(value);
     case "models.list":
       return normalizeModelsListResult(value);
+    case "models.preview-independence":
+      return normalizeModelsPreviewIndependenceResult(value);
   }
 }
 

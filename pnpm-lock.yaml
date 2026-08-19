@@ -75,6 +75,9 @@ importers:
       '@draft-loop/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@draft-loop/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@draft-loop/ingestion':
         specifier: workspace:*
         version: link:../../packages/ingestion

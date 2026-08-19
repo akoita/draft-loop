@@ -2189,4 +2189,231 @@ describe("native host", () => {
       });
     });
   });
+
+  describe("model configuration", () => {
+    /**
+     * A host that cannot reach anything.
+     *
+     * Every dialog and every credential read throws, so a command that touches
+     * the machine fails loudly instead of quietly passing.
+     */
+    function inertHost() {
+      const dialogs: NativeHostDialogs = {
+        chooseDirectory: async () => {
+          throw new Error("no dialog should open");
+        },
+        chooseFiles: async () => {
+          throw new Error("no dialog should open");
+        },
+      };
+      return createNativeHost({
+        dialogs,
+        credentials: {
+          status: async () => {
+            throw new Error("no credential should be read");
+          },
+          set: async () => {
+            throw new Error("no credential should be written");
+          },
+          remove: async () => {
+            throw new Error("no credential should be removed");
+          },
+        },
+      });
+    }
+
+    async function preview(
+      author: { company: string; modelId: string; lineage?: string },
+      critic: { company: string; modelId: string; lineage?: string },
+    ) {
+      const result = await inertHost().invoke({
+        type: "models.preview-independence",
+        input: { author, critic },
+      });
+      expect(result).toMatchObject({ ok: true });
+      return (
+        result as {
+          readonly value: {
+            readonly authorLineage: string;
+            readonly criticLineage: string;
+            readonly lineagesDistinct: boolean;
+          };
+        }
+      ).value;
+    }
+
+    it("carries every configured model field into workspace initialization", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-model-config-"));
+      const root = join(parent, "configured-workspace");
+      const fixture = service(root);
+      try {
+        const host = createNativeHost({
+          applicationService: fixture.service,
+          dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+        });
+
+        const created = await host.invoke({
+          type: "workspace.create",
+          input: {
+            name: "configured-workspace",
+            mode: "real",
+            authorCompany: "local",
+            authorModel: "qwen3-coder-30b",
+            criticCompany: "anthropic",
+            criticModel: "claude-sonnet-4-5",
+            authorLineage: "qwen3 base",
+            criticLineage: "claude sonnet 4.5",
+            localEndpoint: "http://127.0.0.1:11434/v1",
+            independenceOverrideRationale: "Both sides were checked against a held-out set.",
+            requiredSections: ["Summary", "Experience"],
+          },
+        });
+
+        expect(created).toMatchObject({ ok: true });
+        expect(fixture.service.initialize).toHaveBeenCalledWith(
+          expect.objectContaining({
+            root,
+            authorCompany: "local",
+            authorModel: "qwen3-coder-30b",
+            criticCompany: "anthropic",
+            criticModel: "claude-sonnet-4-5",
+            authorLineage: "qwen3 base",
+            criticLineage: "claude sonnet 4.5",
+            localEndpoint: "http://127.0.0.1:11434/v1",
+            independenceOverrideRationale: "Both sides were checked against a held-out set.",
+            requiredSections: ["Summary", "Experience"],
+          }),
+          expect.anything(),
+        );
+      } finally {
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
+    it("leaves a workspace default alone when the desktop names no model", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-model-default-"));
+      const root = join(parent, "default-workspace");
+      const fixture = service(root);
+      try {
+        const host = createNativeHost({
+          applicationService: fixture.service,
+          dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+        });
+
+        await host.invoke({ type: "workspace.create", input: { name: "default-workspace" } });
+
+        for (const key of [
+          "authorCompany",
+          "authorModel",
+          "criticCompany",
+          "criticModel",
+          "authorLineage",
+          "criticLineage",
+          "localEndpoint",
+          "independenceOverrideRationale",
+        ]) {
+          expect(fixture.service.initialize).toHaveBeenCalledWith(
+            expect.not.objectContaining({ [key]: expect.anything() }),
+            expect.anything(),
+          );
+        }
+      } finally {
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
+    it("refuses a model choice the workspace could not honour before creating anything", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-model-refused-"));
+      const fixture = service(join(parent, "refused-workspace"));
+      const chooseDirectory = vi.fn(async () => parent);
+      try {
+        const host = createNativeHost({
+          applicationService: fixture.service,
+          dialogs: { chooseDirectory, chooseFiles: async () => [] },
+        });
+
+        for (const input of [
+          { name: "refused-workspace", authorCompany: "bedrock" },
+          { name: "refused-workspace", localEndpoint: "http://10.0.0.4:11434/v1" },
+          { name: "refused-workspace", authorLineage: "x".repeat(201) },
+          { name: "refused-workspace", independenceOverrideRationale: "  " },
+        ]) {
+          expect(await host.invoke({ type: "workspace.create", input })).toEqual({
+            ok: false,
+            error: {
+              code: "invalid-input",
+              message: "The desktop command input is invalid.",
+            },
+          });
+        }
+
+        expect(chooseDirectory).not.toHaveBeenCalled();
+        expect(fixture.service.initialize).not.toHaveBeenCalled();
+        expect(await readdir(parent)).toEqual([]);
+      } finally {
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
+    it("resolves a resold route and a direct one to one lineage", async () => {
+      expect(
+        await preview(
+          { company: "anthropic", modelId: "claude-sonnet-4-5" },
+          { company: "bedrock", modelId: "us.anthropic.claude-sonnet-4-5-20250929-v1:0" },
+        ),
+      ).toEqual({
+        authorLineage: "anthropic:claude-sonnet-4-5",
+        criticLineage: "anthropic:claude-sonnet-4-5",
+        lineagesDistinct: false,
+      });
+    });
+
+    it("reports a genuinely different pairing as distinct", async () => {
+      expect(
+        await preview(
+          { company: "anthropic", modelId: "claude-sonnet-4-5" },
+          { company: "openai", modelId: "gpt-5.6-luna" },
+        ),
+      ).toEqual({
+        authorLineage: "anthropic:claude-sonnet-4-5",
+        criticLineage: "openai:gpt-5.6-luna",
+        lineagesDistinct: true,
+      });
+
+      expect(
+        await preview(
+          { company: "local", modelId: "qwen3-coder-30b" },
+          { company: "anthropic", modelId: "claude-sonnet-4-5" },
+        ),
+      ).toMatchObject({ authorLineage: "local:qwen3-coder-30b", lineagesDistinct: true });
+    });
+
+    it("lets a declared lineage overrule what the pairing would derive", async () => {
+      expect(
+        await preview(
+          { company: "anthropic", modelId: "claude-sonnet-4-5" },
+          {
+            company: "bedrock",
+            modelId: "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+            lineage: " Fine-Tuned  Sonnet ",
+          },
+        ),
+      ).toEqual({
+        authorLineage: "anthropic:claude-sonnet-4-5",
+        criticLineage: "fine-tuned sonnet",
+        lineagesDistinct: true,
+      });
+
+      expect(
+        await preview(
+          { company: "anthropic", modelId: "claude-sonnet-4-5", lineage: "house weights" },
+          { company: "openai", modelId: "gpt-5.6-luna", lineage: "house weights" },
+        ),
+      ).toEqual({
+        authorLineage: "house weights",
+        criticLineage: "house weights",
+        lineagesDistinct: false,
+      });
+    });
+  });
 });

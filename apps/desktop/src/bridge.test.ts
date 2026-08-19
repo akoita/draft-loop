@@ -701,6 +701,143 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("carries a complete model choice into workspace creation", () => {
+    const input = {
+      name: "local-workspace",
+      mode: "real" as const,
+      authorCompany: "local" as const,
+      authorModel: "qwen3-coder-30b",
+      criticCompany: "anthropic" as const,
+      criticModel: "claude-sonnet-4-5",
+      authorLineage: "qwen3 base",
+      criticLineage: "claude sonnet 4.5",
+      localEndpoint: "http://127.0.0.1:11434/v1",
+      independenceOverrideRationale: "Both sides were checked against the same held-out set.",
+      requiredSections: ["Summary", "Experience"],
+    };
+
+    expect(validateBridgeCommand({ type: "workspace.create", input })).toEqual({
+      type: "workspace.create",
+      input,
+    });
+  });
+
+  it("refuses a model choice the workspace could not honour", () => {
+    for (const input of [
+      // A company no provider adapter exists for is invalid input, not an
+      // option this host happened not to offer.
+      { name: "w", authorCompany: "bedrock" },
+      { name: "w", criticCompany: "" },
+      // "local" is a promise that nothing leaves the machine.
+      { name: "w", authorCompany: "local", localEndpoint: "http://10.0.0.4:11434/v1" },
+      { name: "w", localEndpoint: "http://evil.example.com/v1" },
+      { name: "w", localEndpoint: "http://user:pass@127.0.0.1:11434/v1" },
+      { name: "w", localEndpoint: "file:///etc/passwd" },
+      { name: "w", localEndpoint: "http://127.0.0.1.evil.example.com/v1" },
+      { name: "w", localEndpoint: "not a url" },
+      // The domain keeps at most 200 characters of a declared lineage.
+      { name: "w", authorLineage: "x".repeat(201) },
+      { name: "w", criticLineage: "   " },
+      { name: "w", authorLineage: "" },
+      // A rationale is prose an auditor reads; an empty one claims nothing.
+      { name: "w", independenceOverrideRationale: "   " },
+      { name: "w", independenceOverrideRationale: "x".repeat(501) },
+      { name: "w", independenceOverrideRationale: 7 },
+      { name: "w", authorLineage: ["anthropic"] },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "workspace.create", input })).toThrow("invalid");
+    }
+  });
+
+  it("keeps loopback endpoints and bounded lineages usable", () => {
+    for (const localEndpoint of [
+      "http://localhost:11434/v1",
+      "http://[::1]:1234/v1",
+      "http://127.10.20.30:8080/v1",
+      "https://127.0.0.1:8443/v1",
+    ]) {
+      expect(
+        validateBridgeCommand({
+          type: "workspace.create",
+          input: { name: "w", localEndpoint },
+        }),
+      ).toEqual({ type: "workspace.create", input: { name: "w", localEndpoint } });
+    }
+
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "w", authorLineage: `  ${"x".repeat(196)}  ` },
+      }),
+    ).toEqual({ type: "workspace.create", input: { name: "w", authorLineage: "x".repeat(196) } });
+  });
+
+  it("asks the host about a candidate pairing without answering for itself", async () => {
+    const answer = {
+      authorLineage: "anthropic:claude-sonnet-4-5",
+      criticLineage: "anthropic:claude-sonnet-4-5",
+      lineagesDistinct: false,
+    };
+    const port = createCapabilityPort(bridge(async () => ({ ok: true, value: answer })));
+
+    await expect(
+      port.execute({
+        type: "models.preview-independence",
+        input: {
+          author: { company: "anthropic", modelId: "claude-sonnet-4-5" },
+          critic: {
+            company: "bedrock",
+            modelId: "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+          },
+        },
+      }),
+    ).resolves.toEqual({ ok: true, value: answer });
+
+    for (const hostile of [
+      { ...answer, lineagesDistinct: "no" },
+      { ...answer, authorLineage: "" },
+      { ...answer, authorLineage: `a${"b".repeat(600)}` },
+      { ...answer, required: true },
+    ]) {
+      const hostilePort = createCapabilityPort(bridge(async () => ({ ok: true, value: hostile })));
+      await expect(
+        hostilePort.execute({
+          type: "models.preview-independence",
+          input: {
+            author: { company: "anthropic", modelId: "claude-opus-5" },
+            critic: { company: "openai", modelId: "gpt-5.6-luna" },
+          },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+  });
+
+  it("rejects an independence preview the domain could not be asked", () => {
+    const valid = {
+      author: { company: "anthropic", modelId: "claude-sonnet-4-5", lineage: "base sonnet" },
+      critic: { company: "openai", modelId: "gpt-5.6-luna" },
+    };
+    expect(validateBridgeCommand({ type: "models.preview-independence", input: valid })).toEqual({
+      type: "models.preview-independence",
+      input: valid,
+    });
+
+    for (const input of [
+      {},
+      { author: valid.author },
+      { author: valid.author, critic: valid.critic, required: true },
+      { author: valid.author, critic: { company: "openai" } },
+      { author: valid.author, critic: { company: "openai", modelId: "../../etc/passwd" } },
+      { author: valid.author, critic: { ...valid.critic, lineage: "x".repeat(201) } },
+      { author: valid.author, critic: { ...valid.critic, lineage: "" } },
+      { author: valid.author, critic: { ...valid.critic, endpoint: "http://127.0.0.1" } },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "models.preview-independence", input })).toThrow(
+        "invalid",
+      );
+    }
+  });
+
   it("rejects model discovery input the host was never meant to receive", () => {
     expect(
       validateBridgeCommand({ type: "models.list", input: { provider: "anthropic" } }),

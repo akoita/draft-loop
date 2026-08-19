@@ -13,6 +13,7 @@ import {
   SourceIngestionUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
+import { deriveModelLineage } from "@draft-loop/domain";
 import {
   ingestFile,
   ingestUrl,
@@ -43,6 +44,8 @@ import {
   type FileSelectResult,
   type ModelsListInput,
   type ModelsListResult,
+  type ModelsPreviewIndependenceInput,
+  type ModelsPreviewIndependenceResult,
   type ReviewDispatchInput,
   type SelectedFile,
   type SourceAddUrlInput,
@@ -51,6 +54,7 @@ import {
   type SupportedMediaType,
   safeBridgeError,
   validateBridgeCommand,
+  type WorkspaceCreateInput,
 } from "../bridge.js";
 import type {
   DesktopReviewState,
@@ -1003,6 +1007,39 @@ function safeFormat(value: ExportFormat): "markdown" | "pdf" | "docx" {
   return value;
 }
 
+/**
+ * What a new workspace can be told about its models.
+ *
+ * Derived from the bridge input rather than restated, so a field added to the
+ * command appears here too instead of being silently dropped on the way to the
+ * application.
+ */
+type WorkspaceModelConfiguration = Omit<WorkspaceCreateInput, "name" | "mode">;
+
+/**
+ * Whether a candidate pairing would count as independent, before anything is
+ * created.
+ *
+ * A calculation over its arguments and nothing else: no workspace, no file, no
+ * credential, no provider call. The lineages come from the domain's
+ * `deriveModelLineage`, the only place a lineage is computed; the renderer asks
+ * this question rather than answering it, because a surface that works the rule
+ * out for itself keeps giving the old answer after the rule moves on -- which
+ * is exactly how a trust badge once went on comparing companies after the
+ * domain had started comparing lineages.
+ *
+ * Distinctness is the same string comparison `describeIndependentReview` makes
+ * over the same two derived labels; what it is not is a second opinion about
+ * where those labels come from.
+ */
+function previewIndependence(
+  input: ModelsPreviewIndependenceInput,
+): ModelsPreviewIndependenceResult {
+  const authorLineage = deriveModelLineage(input.author);
+  const criticLineage = deriveModelLineage(input.critic);
+  return { authorLineage, criticLineage, lineagesDistinct: authorLineage !== criticLineage };
+}
+
 export interface NativeHost {
   readonly capabilities: readonly BridgeCapability[];
   readonly invoke: (value: unknown) => Promise<BridgeResult<unknown>>;
@@ -1228,11 +1265,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   async function createWorkspace(
     name: string,
     mode: "real" | "demo" = "demo",
-    models: {
-      readonly authorModel?: string;
-      readonly criticModel?: string;
-      readonly requiredSections?: readonly string[];
-    } = {},
+    models: WorkspaceModelConfiguration = {},
   ): Promise<{ workspace: { id: string; name: string } }> {
     const parent = await options.dialogs.chooseDirectory("create");
     if (parent === undefined) return fail("permission-denied", "Workspace creation was cancelled.");
@@ -1261,8 +1294,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           sources: "evidence",
           fixtureMode: mode === "demo",
           maxRounds: 2,
+          ...(models.authorCompany === undefined ? {} : { authorCompany: models.authorCompany }),
           ...(models.authorModel === undefined ? {} : { authorModel: models.authorModel }),
+          ...(models.criticCompany === undefined ? {} : { criticCompany: models.criticCompany }),
           ...(models.criticModel === undefined ? {} : { criticModel: models.criticModel }),
+          ...(models.authorLineage === undefined ? {} : { authorLineage: models.authorLineage }),
+          ...(models.criticLineage === undefined ? {} : { criticLineage: models.criticLineage }),
+          ...(models.localEndpoint === undefined ? {} : { localEndpoint: models.localEndpoint }),
+          ...(models.independenceOverrideRationale === undefined
+            ? {}
+            : { independenceOverrideRationale: models.independenceOverrideRationale }),
           ...(models.requiredSections === undefined
             ? {}
             : { requiredSections: models.requiredSections }),
@@ -1685,21 +1726,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       switch (command.type) {
         case "workspace.open":
           return { ok: true, value: await openWorkspace() };
-        case "workspace.create":
-          return {
-            ok: true,
-            value: await createWorkspace(command.input.name, command.input.mode ?? "demo", {
-              ...(command.input.authorModel === undefined
-                ? {}
-                : { authorModel: command.input.authorModel }),
-              ...(command.input.criticModel === undefined
-                ? {}
-                : { criticModel: command.input.criticModel }),
-              ...(command.input.requiredSections === undefined
-                ? {}
-                : { requiredSections: command.input.requiredSections }),
-            }),
-          };
+        case "workspace.create": {
+          // Everything but the name and the mode describes the models, and each
+          // field is named for the application command it fills in, so the rest
+          // travels as one piece rather than being copied field by field.
+          const { name, mode, ...models } = command.input;
+          return { ok: true, value: await createWorkspace(name, mode ?? "demo", models) };
+        }
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);
           return {
@@ -1866,6 +1899,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "models.list":
           return { ok: true, value: await listModels(command.input) };
+        case "models.preview-independence":
+          return { ok: true, value: previewIndependence(command.input) };
       }
     } catch (error) {
       options.onError?.(error, command.type);
