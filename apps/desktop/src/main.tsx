@@ -151,6 +151,92 @@ export function modelDiscoveryNote(
   }
 }
 
+/**
+ * A side's filter text, remembered against the company it was typed for.
+ *
+ * The company is carried with the text rather than beside it so that changing
+ * company cannot leave a stale filter behind: a filter typed for one provider
+ * says nothing about the next provider's list, and a reset that has to be
+ * remembered at every call site is a reset that will eventually be forgotten.
+ */
+export interface ModelFilterState {
+  readonly company: ModelCompany;
+  readonly text: string;
+}
+
+/** The filter as it applies to the company now selected; blank if it was another's. */
+export function modelFilterText(filter: ModelFilterState, company: ModelCompany): string {
+  return filter.company === company ? filter.text : "";
+}
+
+/** Which of a company's models a filter leaves in the select, and what to say. */
+export interface ModelFilterResult {
+  /** The options to render, in the provider's own order. */
+  readonly options: readonly string[];
+  /** How many ids the filter actually matched. */
+  readonly matched: number;
+  /** Whether the current selection had to be retained beyond the matching ids. */
+  readonly keptSelected: boolean;
+  /** The line under the filter field, or "" when nothing is being filtered. */
+  readonly note: string;
+}
+
+/**
+ * Narrow a discovered list by a typed fragment of a model id.
+ *
+ * Two rules make this safe to do to a control someone has already used. The
+ * current selection is always listed, matching or not, because a select that
+ * quietly drops the chosen option reads as the choice having been lost rather
+ * than as the list having been narrowed. And no match is a sentence rather
+ * than an empty box: a list with nothing in it gives a person nothing to do.
+ *
+ * This is presentation only. It decides what the select shows, never what the
+ * draft holds, so what is submitted is what was chosen either way.
+ */
+export function filterModelOptions(
+  models: readonly string[],
+  filter: string,
+  selected: string,
+): ModelFilterResult {
+  const wanted = filter.trim();
+  if (wanted === "") {
+    const keptSelected = selected !== "" && !models.includes(selected);
+    return {
+      options: keptSelected ? [...models, selected] : models,
+      matched: models.length,
+      keptSelected,
+      note: "",
+    };
+  }
+  const needle = wanted.toLowerCase();
+  const matched = new Set(models.filter((model) => model.toLowerCase().includes(needle)));
+  const keptSelected = selected !== "" && !matched.has(selected);
+  const providerOptions = models.filter(
+    (model) => matched.has(model) || (keptSelected && model === selected),
+  );
+  const options =
+    keptSelected && !models.includes(selected) ? [...providerOptions, selected] : providerOptions;
+  const total = `${models.length} model${models.length === 1 ? "" : "s"}`;
+  const wayOut = `Clear the filter to see all ${total}, or choose “Other model…” to type an id.`;
+  if (matched.size === 0) {
+    return {
+      options,
+      matched: 0,
+      keptSelected,
+      note: keptSelected
+        ? `No model id contains “${wanted}”, so only the model you chose is listed. ${wayOut}`
+        : `No model id contains “${wanted}”. ${wayOut}`,
+    };
+  }
+  const shown = `Showing ${matched.size} of ${total} matching “${wanted}”`;
+  return {
+    options,
+    matched: matched.size,
+    keptSelected,
+    note: keptSelected ? `${shown}, and the model you chose.` : `${shown}.`,
+  };
+}
+
 /** How the setup form presents what the pairing would record. */
 export interface IndependencePreviewSummary {
   readonly tone: "independent" | "shared" | "unrecorded";
@@ -287,9 +373,11 @@ interface ModelSideFieldsProps {
   readonly discovery: ModelDiscoveryState;
   readonly localEndpointNamed: boolean;
   readonly typingOwnModel: boolean;
+  readonly filter: string;
   readonly disabled: boolean;
   readonly onCompanyChange: (company: ModelCompany) => void;
   readonly onModelChange: (model: string) => void;
+  readonly onFilterChange: (filter: string) => void;
   readonly onTypeOwnModel: () => void;
 }
 
@@ -300,15 +388,19 @@ function ModelSideFields({
   discovery,
   localEndpointNamed,
   typingOwnModel,
+  filter,
   disabled,
   onCompanyChange,
   onModelChange,
+  onFilterChange,
   onTypeOwnModel,
 }: ModelSideFieldsProps) {
   const label = modelSideLabels[side];
   const mode = modelInputMode(company, discovery, localEndpointNamed, typingOwnModel);
   const note = modelDiscoveryNote(company, discovery, localEndpointNamed);
   const listed = discovery.status === "ready" ? discovery.models : [];
+  const filtered = filterModelOptions(listed, filter, model);
+  const filterNoteId = `setup-model-filter-note-${side}`;
   return (
     <fieldset className="setup-side">
       <legend>{label} model</legend>
@@ -329,6 +421,38 @@ function ModelSideFields({
           ))}
         </select>
       </label>
+      {/* A hundred-odd ids is not a choice anyone can make from a list, so the
+          filter narrows what the select carries. It is a plain text field
+          above a native select on purpose: the platform keeps its own
+          keyboard and screen-reader behaviour, which a hand-rolled combobox
+          would have to reimplement. */}
+      {mode === "list" ? (
+        <>
+          <label className="setup-field" htmlFor={`setup-model-filter-${side}`}>
+            <span>Filter</span>
+            <input
+              id={`setup-model-filter-${side}`}
+              type="text"
+              value={filter}
+              disabled={disabled}
+              placeholder="part of a model id"
+              aria-label={`Filter ${label} models`}
+              aria-describedby={filterNoteId}
+              onChange={(event) => onFilterChange(event.target.value)}
+            />
+          </label>
+          <p
+            id={filterNoteId}
+            className={`setup-note setup-filter-note${
+              filtered.matched === 0 ? " setup-filter-empty" : ""
+            }`}
+            role="status"
+            aria-live="polite"
+          >
+            {filtered.note}
+          </p>
+        </>
+      ) : null}
       {/* The model control changes shape with what discovery found, so the
           label points at it by id rather than by containment: the association
           has to survive a select becoming a text field. */}
@@ -337,7 +461,7 @@ function ModelSideFields({
         {mode === "list" ? (
           <select
             id={`setup-model-${side}`}
-            value={listed.includes(model) ? model : ""}
+            value={filtered.options.includes(model) ? model : ""}
             disabled={disabled}
             aria-label={`${label} model`}
             onChange={(event) => {
@@ -346,7 +470,7 @@ function ModelSideFields({
             }}
           >
             <option value="">Choose a model…</option>
-            {listed.map((candidate) => (
+            {filtered.options.map((candidate) => (
               <option key={candidate} value={candidate}>
                 {candidate}
               </option>
@@ -375,8 +499,10 @@ interface WorkspaceSetupFormProps {
   readonly discovery: Readonly<Record<ModelCompany, ModelDiscoveryState>>;
   readonly preview: IndependencePreviewState;
   readonly typingOwnModel: Readonly<Record<ModelSide, boolean>>;
+  readonly modelFilters: Readonly<Record<ModelSide, ModelFilterState>>;
   readonly busy: boolean;
   readonly onDraftChange: (draft: WorkspaceSetupDraft) => void;
+  readonly onModelFilterChange: (side: ModelSide, filter: ModelFilterState) => void;
   readonly onTypeOwnModel: (side: ModelSide) => void;
   readonly onCreate?: (() => void) | undefined;
   readonly onCreateDemo?: (() => void) | undefined;
@@ -395,8 +521,10 @@ export function WorkspaceSetupForm({
   discovery,
   preview,
   typingOwnModel,
+  modelFilters,
   busy,
   onDraftChange,
+  onModelFilterChange,
   onTypeOwnModel,
   onCreate,
   onCreateDemo,
@@ -433,11 +561,16 @@ export function WorkspaceSetupForm({
           discovery={discovery[draft.authorCompany]}
           localEndpointNamed={localEndpointNamed}
           typingOwnModel={typingOwnModel.author}
+          filter={modelFilterText(modelFilters.author, draft.authorCompany)}
           disabled={busy}
-          onCompanyChange={(authorCompany) =>
-            onDraftChange({ ...draft, authorCompany, authorModel: "" })
-          }
+          onCompanyChange={(authorCompany) => {
+            onModelFilterChange("author", { company: authorCompany, text: "" });
+            onDraftChange({ ...draft, authorCompany, authorModel: "" });
+          }}
           onModelChange={(authorModel) => onDraftChange({ ...draft, authorModel })}
+          onFilterChange={(text) =>
+            onModelFilterChange("author", { company: draft.authorCompany, text })
+          }
           onTypeOwnModel={() => onTypeOwnModel("author")}
         />
         <ModelSideFields
@@ -447,11 +580,16 @@ export function WorkspaceSetupForm({
           discovery={discovery[draft.criticCompany]}
           localEndpointNamed={localEndpointNamed}
           typingOwnModel={typingOwnModel.critic}
+          filter={modelFilterText(modelFilters.critic, draft.criticCompany)}
           disabled={busy}
-          onCompanyChange={(criticCompany) =>
-            onDraftChange({ ...draft, criticCompany, criticModel: "" })
-          }
+          onCompanyChange={(criticCompany) => {
+            onModelFilterChange("critic", { company: criticCompany, text: "" });
+            onDraftChange({ ...draft, criticCompany, criticModel: "" });
+          }}
           onModelChange={(criticModel) => onDraftChange({ ...draft, criticModel })}
+          onFilterChange={(text) =>
+            onModelFilterChange("critic", { company: draft.criticCompany, text })
+          }
           onTypeOwnModel={() => onTypeOwnModel("critic")}
         />
       </div>
@@ -545,6 +683,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [typingOwnModel, setTypingOwnModel] = useState<Readonly<Record<ModelSide, boolean>>>({
     author: false,
     critic: false,
+  });
+  const [modelFilters, setModelFilters] = useState<Readonly<Record<ModelSide, ModelFilterState>>>({
+    author: { company: initialWorkspaceSetupDraft.authorCompany, text: "" },
+    critic: { company: initialWorkspaceSetupDraft.criticCompany, text: "" },
   });
   const [discovery, setDiscovery] = useState<Readonly<Record<ModelCompany, ModelDiscoveryState>>>({
     anthropic: { status: "idle" },
@@ -781,8 +923,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               discovery={discovery}
               preview={preview}
               typingOwnModel={typingOwnModel}
+              modelFilters={modelFilters}
               busy={busy}
               onDraftChange={setDraft}
+              onModelFilterChange={(side, filter) =>
+                setModelFilters((current) => ({
+                  ...current,
+                  [side]: filter,
+                }))
+              }
               onTypeOwnModel={(side) =>
                 setTypingOwnModel((current) => ({ ...current, [side]: true }))
               }

@@ -3245,6 +3245,34 @@ input[type="checkbox"] {
   overflow-wrap: anywhere;
 }
 
+/* How far a filter has narrowed a provider's list, sat directly under the
+   field that did the narrowing rather than a gap away from it. It is a live
+   region, so it is always in the markup and simply has nothing to say while
+   the filter is empty. The visually hidden empty state keeps the live region
+   in the accessibility tree without reserving a blank row. */
+.setup-filter-note {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+.setup-filter-note:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Nothing matched. Amber on the side's own ground, the same "you cannot
+   proceed from here" the blocker below wears, because an empty list is the
+   one filter state a person has to be told how to leave. */
+.setup-filter-empty {
+  color: var(--amber);
+}
+
 /* What is standing between this form and a workspace. Amber, because it is the
    same "you cannot proceed yet" the finding queue uses, not an error. */
 .setup-blocker {

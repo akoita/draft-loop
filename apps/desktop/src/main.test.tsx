@@ -1,12 +1,17 @@
+import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ModelCompany } from "./bridge.js";
 import {
+  filterModelOptions,
   type IndependencePreviewState,
   independencePreviewSummary,
   initialWorkspaceSetupDraft,
   type ModelDiscoveryState,
+  type ModelFilterState,
+  type ModelSide,
   modelDiscoveryNote,
+  modelFilterText,
   modelInputMode,
   otherModelOptionValue,
   requiresLocalEndpoint,
@@ -819,6 +824,22 @@ describe("desktop trust strip independence", () => {
  * is the wording and the blocking, not React's own effect scheduling.
  */
 describe("desktop workspace setup", () => {
+  const findElement = (
+    node: ReactNode,
+    predicate: (element: ReactElement) => boolean,
+  ): ReactElement | undefined => {
+    for (const child of Children.toArray(node)) {
+      if (!isValidElement(child)) continue;
+      if (predicate(child)) return child;
+      const nested = findElement(
+        (child.props as { readonly children?: ReactNode }).children,
+        predicate,
+      );
+      if (nested !== undefined) return nested;
+    }
+    return undefined;
+  };
+
   const ready = (
     authorLineage: string,
     criticLineage: string,
@@ -834,10 +855,18 @@ describe("desktop workspace setup", () => {
     local: { status: "idle" },
   };
 
+  const noFilters = (
+    draft: WorkspaceSetupDraft,
+  ): Readonly<Record<ModelSide, ModelFilterState>> => ({
+    author: { company: draft.authorCompany, text: "" },
+    critic: { company: draft.criticCompany, text: "" },
+  });
+
   const renderForm = (
     draft: WorkspaceSetupDraft,
     preview: IndependencePreviewState,
     discovery: Readonly<Record<ModelCompany, ModelDiscoveryState>> = idleDiscovery,
+    modelFilters: Readonly<Record<ModelSide, ModelFilterState>> = noFilters(draft),
   ) =>
     renderToStaticMarkup(
       <WorkspaceSetupForm
@@ -845,8 +874,10 @@ describe("desktop workspace setup", () => {
         discovery={discovery}
         preview={preview}
         typingOwnModel={{ author: false, critic: false }}
+        modelFilters={modelFilters}
         busy={false}
         onDraftChange={() => undefined}
+        onModelFilterChange={() => undefined}
         onTypeOwnModel={() => undefined}
         onCreate={() => undefined}
         onCreateDemo={() => undefined}
@@ -896,6 +927,184 @@ describe("desktop workspace setup", () => {
     expect(html).toContain('<option value="claude-haiku-4-5">claude-haiku-4-5</option>');
     expect(html).toContain(`<option value="${otherModelOptionValue}">Other model…</option>`);
     expect(html).toContain("2 models listed by the provider");
+  });
+
+  /**
+   * A provider that answers with 118 ids, which is the size that made the
+   * plain select unusable. The two families are deliberately disjoint, so a
+   * filter that matches one can be checked to have hidden the other.
+   */
+  const manyModels: readonly string[] = [
+    ...Array.from({ length: 60 }, (_, index) => `gpt-5-preview-${index}`),
+    ...Array.from({ length: 58 }, (_, index) => `o4-mini-${index}`),
+  ];
+
+  const filteredCritic = (
+    draft: WorkspaceSetupDraft,
+    text: string,
+    models: readonly string[] = manyModels,
+  ) =>
+    renderForm(
+      draft,
+      { status: "idle" },
+      {
+        ...idleDiscovery,
+        openai: { status: "ready", models, source: "live", truncated: false },
+      },
+      { ...noFilters(draft), critic: { company: "openai", text } },
+    );
+
+  it("narrows a long list to what was typed, and says how many are shown", () => {
+    expect(manyModels).toHaveLength(118);
+    const narrowed = filterModelOptions(manyModels, "GPT-5-preview-1", "");
+
+    // Matching is case-insensitive and on any part of the id.
+    expect(narrowed.options).toContain("gpt-5-preview-1");
+    expect(narrowed.options).toContain("gpt-5-preview-19");
+    expect(narrowed.options).not.toContain("o4-mini-1");
+    expect(narrowed.matched).toBe(11);
+    expect(narrowed.note).toBe("Showing 11 of 118 models matching “GPT-5-preview-1”.");
+    // An empty filter is not a filter: everything stays, and nothing is said.
+    expect(filterModelOptions(manyModels, "  ", "").options).toBe(manyModels);
+    expect(filterModelOptions(manyModels, "  ", "").note).toBe("");
+
+    const html = filteredCritic({ ...named, criticModel: "gpt-5-preview-3" }, "preview-3");
+    expect(html).toContain('<option value="gpt-5-preview-3" selected="">gpt-5-preview-3</option>');
+    expect(html).toContain('<option value="gpt-5-preview-30">gpt-5-preview-30</option>');
+    expect(html).not.toContain(">o4-mini-3<");
+    expect(html).toContain("Showing 11 of 118 models matching “preview-3”.");
+    // Filtering is presentation: the provider's own count is still reported.
+    expect(html).toContain("118 models listed by the provider");
+    expect(html).toContain('aria-label="Filter Critic models"');
+    // The author side is typing its id, so there is no list to filter there.
+    expect(html).not.toContain('aria-label="Filter Author models"');
+
+    const unfilteredHtml = filteredCritic({ ...named, criticModel: "gpt-5-preview-3" }, "");
+    expect(unfilteredHtml).toContain(
+      'id="setup-model-filter-note-critic" class="setup-note setup-filter-note" role="status" aria-live="polite"></p>',
+    );
+  });
+
+  it("keeps the chosen model listed even when the filter does not match it", () => {
+    const kept = filterModelOptions(manyModels, "o4-mini-2", "gpt-5-preview-7");
+
+    expect(kept.options).toContain("gpt-5-preview-7");
+    expect(kept.options).toContain("o4-mini-2");
+    expect(kept.matched).toBe(11);
+    expect(kept.keptSelected).toBe(true);
+    expect(kept.note).toBe(
+      "Showing 11 of 118 models matching “o4-mini-2”, and the model you chose.",
+    );
+    // The provider's order is kept, so the option does not jump about either.
+    expect(kept.options.indexOf("gpt-5-preview-7")).toBeLessThan(kept.options.indexOf("o4-mini-2"));
+    const unlisted = filterModelOptions(manyModels, "o4", "not-listed");
+    expect(unlisted.keptSelected).toBe(true);
+    expect(unlisted.options.at(-1)).toBe("not-listed");
+
+    const html = filteredCritic({ ...named, criticModel: "gpt-5-preview-7" }, "o4-mini-2");
+    expect(html).toContain('<option value="gpt-5-preview-7" selected="">gpt-5-preview-7</option>');
+    expect(html).toContain(`<option value="${otherModelOptionValue}">Other model…</option>`);
+  });
+
+  it("keeps an unlisted typed id selected when discovery later produces a list", () => {
+    const selected = "gpt-private-deployment";
+    const unfiltered = filterModelOptions(manyModels, "", selected);
+
+    expect(unfiltered.options.slice(0, manyModels.length)).toEqual(manyModels);
+    expect(unfiltered.options.at(-1)).toBe(selected);
+    expect(unfiltered.keptSelected).toBe(true);
+
+    const unfilteredHtml = filteredCritic({ ...named, criticModel: selected }, "");
+    expect(unfilteredHtml).toContain(
+      `<option value="${selected}" selected="">${selected}</option>`,
+    );
+
+    const filteredHtml = filteredCritic({ ...named, criticModel: selected }, "o4-mini-2");
+    expect(filteredHtml).toContain(`<option value="${selected}" selected="">${selected}</option>`);
+    expect(filteredHtml).toContain(
+      "Showing 11 of 118 models matching “o4-mini-2”, and the model you chose.",
+    );
+  });
+
+  it("says what to do when nothing matches rather than showing an empty list", () => {
+    expect(filterModelOptions(manyModels, "llama", "").note).toBe(
+      "No model id contains “llama”. Clear the filter to see all 118 models, or choose “Other model…” to type an id.",
+    );
+    expect(filterModelOptions(manyModels, "llama", "gpt-5-preview-7").note).toBe(
+      "No model id contains “llama”, so only the model you chose is listed. Clear the filter to see all 118 models, or choose “Other model…” to type an id.",
+    );
+    expect(filterModelOptions(["gpt-5"], "llama", "").note).toBe(
+      "No model id contains “llama”. Clear the filter to see all 1 model, or choose “Other model…” to type an id.",
+    );
+
+    const html = filteredCritic(named, "llama");
+    expect(html).toContain("setup-filter-empty");
+    expect(html).toContain("No model id contains “llama”, so only the model you chose is listed.");
+    // The escape hatch survives a filter that matched nothing at all.
+    expect(html).toContain(`<option value="${otherModelOptionValue}">Other model…</option>`);
+    // An empty list never stops a workspace being created.
+    expect(html).not.toContain('type="submit" disabled=""');
+  });
+
+  it("clears that side's real filter state whenever its provider changes", () => {
+    let currentDraft = { ...named };
+    let currentFilters: Readonly<Record<ModelSide, ModelFilterState>> = {
+      ...noFilters(currentDraft),
+      critic: { company: "openai", text: "gpt" },
+    };
+    const form = () =>
+      WorkspaceSetupForm({
+        draft: currentDraft,
+        discovery: idleDiscovery,
+        preview: { status: "idle" },
+        typingOwnModel: { author: false, critic: false },
+        modelFilters: currentFilters,
+        busy: false,
+        onDraftChange: (next) => {
+          currentDraft = next;
+        },
+        onModelFilterChange: (side, filter) => {
+          currentFilters = { ...currentFilters, [side]: filter };
+        },
+        onTypeOwnModel: () => undefined,
+      });
+    const criticFields = () => {
+      const fields = findElement(
+        form(),
+        (element) => (element.props as { readonly side?: ModelSide }).side === "critic",
+      );
+      expect(fields).toBeDefined();
+      return fields as ReactElement<{
+        readonly onCompanyChange: (company: ModelCompany) => void;
+        readonly onFilterChange: (text: string) => void;
+      }>;
+    };
+
+    expect(modelFilterText(currentFilters.critic, "openai")).toBe("gpt");
+    criticFields().props.onCompanyChange("anthropic");
+    expect(currentFilters.critic).toEqual({ company: "anthropic", text: "" });
+    criticFields().props.onFilterChange("claude");
+    expect(currentFilters.critic).toEqual({ company: "anthropic", text: "claude" });
+    criticFields().props.onCompanyChange("openai");
+    expect(currentFilters.critic).toEqual({ company: "openai", text: "" });
+    expect(modelFilterText(currentFilters.critic, "openai")).toBe("");
+  });
+
+  it("filters what is offered without touching what is submitted", () => {
+    const chosen: WorkspaceSetupDraft = { ...named, criticModel: "gpt-5-preview-7" };
+
+    // The filter is not part of the draft, so there is nothing it could send.
+    expect(Object.keys(chosen)).not.toContain("filter");
+    expect(workspaceModelSelection(chosen).criticModel).toBe("gpt-5-preview-7");
+    // A filter that hides the chosen id and one that shows it render the same
+    // selection, and neither reaches the create path.
+    expect(filteredCritic(chosen, "o4")).toContain(
+      '<option value="gpt-5-preview-7" selected="">gpt-5-preview-7</option>',
+    );
+    expect(filteredCritic(chosen, "")).toContain(
+      '<option value="gpt-5-preview-7" selected="">gpt-5-preview-7</option>',
+    );
+    expect(workspaceSetupBlocker(chosen, { status: "idle" })).toBeNull();
   });
 
   it("falls back to a typed model id and says why discovery failed", () => {
