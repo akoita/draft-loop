@@ -294,14 +294,14 @@ describe("full real-mode native host draft workflow", () => {
           if (typeof parameters.model !== "string") {
             throw new Error("The fake critic transport received no model.");
           }
-          if (parameters.max_output_tokens !== 4096) {
+          if (parameters.max_output_tokens !== 16_384) {
             throw new Error("The fake critic transport received an unexpected output budget.");
           }
           if (parameters.store !== false) {
             throw new Error("The fake critic transport must not store responses.");
           }
           expect(parameters.model).toBe("gpt-5.6-luna");
-          expect(parameters.max_output_tokens).toBe(4096);
+          expect(parameters.max_output_tokens).toBe(16_384);
           expect(parameters.store).toBe(false);
           expect(parameters.text).toEqual(
             expect.objectContaining({
@@ -540,7 +540,7 @@ describe("full real-mode native host draft workflow", () => {
       expect(criticRequests).toEqual([
         {
           model: "gpt-5.6-luna",
-          maxOutputTokens: 4096,
+          maxOutputTokens: 16_384,
           store: false,
           strict: true,
           round: 1,
@@ -548,7 +548,7 @@ describe("full real-mode native host draft workflow", () => {
         },
         {
           model: "gpt-5.6-luna",
-          maxOutputTokens: 4096,
+          maxOutputTokens: 16_384,
           store: false,
           strict: true,
           round: 2,
