@@ -79,6 +79,7 @@ import type {
   ReviewSection,
   WorkspaceReadiness,
 } from "../model.js";
+import { isUnresolvedFinding } from "../model.js";
 
 const configDirectory = ".draft-loop";
 const sourceProvenanceFilename = "source-provenance.json";
@@ -648,8 +649,10 @@ function previousArtifact(snapshot: RunSnapshot, current: ReviewArtifact): Revie
   return candidates[0] === undefined ? null : reviewArtifact(candidates[0], emptyOverrides);
 }
 
-function findingId(runId: string, index: number, code: string): string {
-  return `${runId}:finding:${index}:${code}`;
+function findingId(snapshot: RunSnapshot, index: number, code: string): string {
+  const artifactIdentity = snapshot.artifact?.id ?? `round-${snapshot.round}`;
+  const artifactScope = createHash("sha256").update(artifactIdentity).digest("hex").slice(0, 16);
+  return `${snapshot.runId}:finding:${artifactScope}:${index}:${code}`;
 }
 
 function reviewFinding(
@@ -659,7 +662,7 @@ function reviewFinding(
 ): ReviewFinding {
   const finding = snapshot.findings[index];
   if (finding === undefined) fail("operation-failed", "The run finding is missing.");
-  const id = findingId(snapshot.runId, index, finding.code);
+  const id = findingId(snapshot, index, finding.code);
   return {
     id,
     code: finding.code,
@@ -1342,7 +1345,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           jobDescription: "job.md",
           sources: "evidence",
           fixtureMode: mode === "demo",
-          maxRounds: 2,
+          maxRounds: models.maxRounds ?? 3,
           ...(models.authorCompany === undefined ? {} : { authorCompany: models.authorCompany }),
           ...(models.authorModel === undefined ? {} : { authorModel: models.authorModel }),
           ...(models.criticCompany === undefined ? {} : { criticCompany: models.criticCompany }),
@@ -1647,6 +1650,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       case "request-revision":
       case "approve":
       case "recover-to-review":
+      case "recover-round-limit":
         if (
           (currentSnapshot?.state === "provider-error" || criticRecovery) &&
           action.type !== "recover-to-review"
@@ -1659,6 +1663,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         if (action.type === "request-revision") {
           await requireProviderTransmissionAcknowledgement(workspace);
         }
+        if (
+          action.type === "approve" &&
+          currentSnapshot !== undefined &&
+          currentSnapshot.findings
+            .map((_finding, index) => reviewFinding(currentSnapshot, index, overrides))
+            .some((finding) => finding.severity === "error" && isUnresolvedFinding(finding))
+        ) {
+          return fail(
+            "operation-failed",
+            "Resolve, reject, or override blocking findings before approval.",
+          );
+        }
         await service.lifecycle(
           {
             root: workspace.root,
@@ -1668,7 +1684,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
                 ? "revision"
                 : action.type === "recover-to-review"
                   ? "recover-review"
-                  : action.type,
+                  : action.type === "recover-round-limit"
+                    ? "recover-round-budget"
+                    : action.type,
           },
           io(),
         );

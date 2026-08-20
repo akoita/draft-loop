@@ -98,7 +98,13 @@ export interface ResumeRunCommand extends StartRunCommand {
   readonly signal?: AbortSignal;
 }
 
-export type LifecycleAction = "pause" | "stop" | "approve" | "revision" | "recover-review";
+export type LifecycleAction =
+  | "pause"
+  | "stop"
+  | "approve"
+  | "revision"
+  | "recover-review"
+  | "recover-round-budget";
 
 export interface LifecycleCommand {
   readonly root: string;

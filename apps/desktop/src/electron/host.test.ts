@@ -50,6 +50,40 @@ const recordedIndependence: IndependentReviewRecord = {
   required: true,
 };
 
+function artifact(id = "artifact-native", version = 1) {
+  return {
+    schemaVersion: 1,
+    id,
+    version,
+    parentVersionId: version === 1 ? null : "artifact-native",
+    createdAt: "2026-08-12T10:00:00.000Z",
+    language: "en",
+    sections: [
+      {
+        id: "summary",
+        title: "Summary",
+        kind: "summary",
+        order: 0,
+        blocks: [
+          { id: "summary-block", type: "paragraph", text: "Local draft", claimIds: ["claim-1"] },
+        ],
+      },
+    ],
+    claims: [
+      {
+        id: "claim-1",
+        text: "Local draft",
+        sectionId: "summary",
+        blockId: "summary-block",
+        substantive: true,
+        status: "verified",
+        evidence: [{ sourcePath: "evidence/resume.md", sourceChecksum: "abc", excerpt: "local" }],
+      },
+    ],
+    decisions: [],
+  };
+}
+
 function service(
   root: string,
   snapshotOverrides: Readonly<Record<string, unknown>> = {},
@@ -66,37 +100,7 @@ function service(
     round: 1,
     currentStep: null,
     budget: { maxRounds: 2, maxCostUsd: 0.25 },
-    artifact: {
-      schemaVersion: 1,
-      id: "artifact-native",
-      version: 1,
-      parentVersionId: null,
-      createdAt: "2026-08-12T10:00:00.000Z",
-      language: "en",
-      sections: [
-        {
-          id: "summary",
-          title: "Summary",
-          kind: "summary",
-          order: 0,
-          blocks: [
-            { id: "summary-block", type: "paragraph", text: "Local draft", claimIds: ["claim-1"] },
-          ],
-        },
-      ],
-      claims: [
-        {
-          id: "claim-1",
-          text: "Local draft",
-          sectionId: "summary",
-          blockId: "summary-block",
-          substantive: true,
-          status: "verified",
-          evidence: [{ sourcePath: "evidence/resume.md", sourceChecksum: "abc", excerpt: "local" }],
-        },
-      ],
-      decisions: [],
-    },
+    artifact: artifact(),
     findings: [
       {
         code: "unsupported-claim",
@@ -1265,8 +1269,132 @@ describe("native host", () => {
       expect(await readFile(join(root, ".draft-loop", "review-overrides.json"), "utf8")).toContain(
         "overridden",
       );
+
+      const revisedFixture = service(root, {
+        round: 2,
+        artifact: artifact("artifact-revised", 2),
+      });
+      const revisedHost = createNativeHost({
+        dialogs,
+        applicationService: revisedFixture.service,
+      });
+      await revisedHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const revised = await revisedHost.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      });
+      expect(revised).toMatchObject({
+        ok: true,
+        value: { findings: [{ decision: "pending" }] },
+      });
+      expect((revised as { readonly value: DesktopReviewState }).value.findings[0]?.id).not.toBe(
+        findingId,
+      );
     } finally {
       await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses native approval after a blocking finding is accepted without revision", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-accepted-blocker-"));
+    const fixture = service(root);
+    const dialogs = {
+      chooseDirectory: vi.fn(async () => root),
+      chooseFiles: vi.fn(async () => []),
+    };
+
+    try {
+      const host = createNativeHost({ dialogs, applicationService: fixture.service });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      });
+      const findingId = (review as { readonly value: DesktopReviewState }).value.findings[0]?.id;
+      if (findingId === undefined) throw new Error("finding fixture is missing");
+
+      const accepted = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "finding-decision", findingId, decision: "accepted" },
+        },
+      });
+      expect(accepted).toMatchObject({
+        ok: true,
+        value: { findings: [{ decision: "accepted" }] },
+      });
+
+      const approval = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "approve" },
+        },
+      });
+      expect(approval).toMatchObject({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          message: "Resolve, reject, or override blocking findings before approval.",
+        },
+      });
+      expect(fixture.service.lifecycle).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("routes explicit round-limit recovery through the application lifecycle", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-round-limit-recovery-"));
+    const previousCritique = {
+      id: "run-native:2:critic:attempt:1",
+      runId: "run-native",
+      contextSnapshotId: "context-native",
+      round: 2,
+      step: "critic",
+      status: "completed",
+      output: { findings: [] },
+      provider: "openai",
+      modelId: "gpt-5",
+      providerRequestId: null,
+      inputTokens: 1,
+      outputTokens: 1,
+      totalTokens: 2,
+      estimatedUsd: null,
+      completedAt: "2026-08-12T10:00:00.000Z",
+    } as const;
+    const fixture = service(root, {
+      state: "awaiting-approval",
+      round: 3,
+      budget: { maxRounds: 2 },
+      executionHistory: [previousCritique],
+    });
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const result = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "recover-round-limit" },
+        },
+      });
+
+      expect(result).toMatchObject({ ok: true });
+      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
+        { root, runId: "run-native", action: "recover-round-budget" },
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 
@@ -2359,6 +2487,7 @@ describe("native host", () => {
             localEndpoint: "http://127.0.0.1:11434/v1",
             independenceOverrideRationale: "Both sides were checked against a held-out set.",
             requiredSections: ["Summary", "Experience"],
+            maxRounds: 6,
           },
         });
 
@@ -2375,6 +2504,7 @@ describe("native host", () => {
             localEndpoint: "http://127.0.0.1:11434/v1",
             independenceOverrideRationale: "Both sides were checked against a held-out set.",
             requiredSections: ["Summary", "Experience"],
+            maxRounds: 6,
           }),
           expect.anything(),
         );

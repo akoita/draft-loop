@@ -234,6 +234,7 @@ export type ReviewAction =
   | { readonly type: "start" }
   | { readonly type: "resume" }
   | { readonly type: "recover-to-review" }
+  | { readonly type: "recover-round-limit" }
   | { readonly type: "stop" }
   | { readonly type: "request-revision" }
   | { readonly type: "approve" }
@@ -270,12 +271,22 @@ export interface ReviewFindingSummary {
   readonly status: ReviewValidationStatus;
 }
 
-function isUnresolved(finding: ReviewFinding): boolean {
-  return finding.decision === "pending" || finding.decision === "deferred";
+/**
+ * Accepting a blocking finding records agreement with the critique; it does
+ * not make the current artifact safe to approve. A later artifact revision
+ * gets a new finding identity, while rejection and a reasoned override close
+ * the finding on the current artifact.
+ */
+export function isUnresolvedFinding(finding: ReviewFinding): boolean {
+  return (
+    finding.decision === "pending" ||
+    finding.decision === "deferred" ||
+    (finding.severity === "error" && finding.decision === "accepted")
+  );
 }
 
 export function reviewFindingSummary(state: DesktopReviewState): ReviewFindingSummary {
-  const unresolved = state.findings.filter(isUnresolved);
+  const unresolved = state.findings.filter(isUnresolvedFinding);
   const blocking = unresolved.filter((finding) => finding.severity === "error");
   const warnings = unresolved.filter((finding) => finding.severity === "warning");
   return {
@@ -288,6 +299,14 @@ export function reviewFindingSummary(state: DesktopReviewState): ReviewFindingSu
 
 export function unresolvedBlockingFindings(state: DesktopReviewState): readonly ReviewFinding[] {
   return reviewFindingSummary(state).blocking;
+}
+
+export function roundLimitRecoveryRequired(state: DesktopReviewState): boolean {
+  return (
+    state.state === "awaiting-approval" &&
+    !state.reviewComplete &&
+    state.round > state.providerTransmissionPreflight.budget.maxRounds
+  );
 }
 
 export function reduceReviewState(
@@ -361,6 +380,15 @@ export function reduceReviewState(
         state.reviewComplete &&
         state.providerFailure?.availableActions.includes("return-to-review")
         ? { ...state, state: "awaiting-approval", providerFailure: null }
+        : state;
+    case "recover-round-limit":
+      return roundLimitRecoveryRequired(state)
+        ? {
+            ...state,
+            round: state.round - 1,
+            reviewComplete: true,
+            evaluation: { ...state.evaluation, stopReason: "round-limit-recovered" },
+          }
         : state;
     case "stop":
       return state.state === "provider-error" || state.execution.status !== "idle"

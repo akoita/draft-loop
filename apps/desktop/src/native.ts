@@ -37,6 +37,7 @@ export interface WorkspaceModelSelection {
   readonly criticModel?: string;
   readonly localEndpoint?: string;
   readonly independenceOverrideRationale?: string;
+  readonly maxRounds?: number;
 }
 
 /**
@@ -93,6 +94,7 @@ export function workspaceCreateInput(
     ...(criticModel === undefined ? {} : { criticModel }),
     ...(localEndpoint === undefined ? {} : { localEndpoint }),
     ...(rationale === undefined ? {} : { independenceOverrideRationale: rationale }),
+    ...(selection?.maxRounds === undefined ? {} : { maxRounds: selection.maxRounds }),
   };
 }
 
