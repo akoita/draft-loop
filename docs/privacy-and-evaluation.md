@@ -13,7 +13,7 @@ machine unless the user explicitly approves a provider transmission.
 | Personal                              | Local workspace                                                                      | Explicit approval and provider allowlist required                                            | Until the user deletes it                                                  |
 | Confidential employer                 | Local workspace                                                                      | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it                                                  |
 | Secret embedded in candidate material | Never place in source/evaluation fixtures                                            | Not allowed as application content                                                           | Do not retain                                                              |
-| Provider credential                   | Electron user-data credential store or provider SDK environment; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, or app data is deleted |
+| Provider credential                   | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
 
 The provider contract requires `allowTransmission`, an allowlisted provider
 company, and an acknowledgement when a request is sensitive. Provider identity,
@@ -59,6 +59,15 @@ and a separate local key protected by user file permissions. That fallback is
 not equivalent to an operating-system secret store. Credentials must not enter
 workspace history, backups, diagnostic exports, or provider request content.
 See [ADR 0004](adr/0004-desktop-credential-boundary.md).
+
+Experimental local user-session mode delegates a complete structured request
+to an installed Codex or Claude runtime. DraftLoop does not extract or persist
+those runtimes' OAuth credentials. The runtime and authentication mode are part
+of the approved endpoint identity, and their retention preference is shown as
+provider-default rather than API-style ephemeral retention. Tools, repository
+instructions, extensions, MCP servers, web search, and local session
+persistence are disabled where supported; an observed tool event fails the
+request. See [ADR 0006](adr/0006-provider-authentication-modes.md).
 
 Workspace backup, restore, retention purge, and diagnostic export are explicit
 local operations. Purging the primary history does not prove deletion of copies

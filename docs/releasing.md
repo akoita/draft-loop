@@ -95,17 +95,52 @@ To run the same check locally after packaging:
 pnpm desktop:smoke -- ./apps/desktop/out/@draft-loop-desktop-linux-x64/@draft-loop-desktop
 ```
 
-Before a release, run the full local validation and then the explicit paid
-live-provider synthetic gate:
+Before a release, run the mandatory local preflight:
 
 ```text
-pnpm validate
+pnpm release:preflight
+```
+
+The command first requires a clean worktree, then runs `pnpm validate` followed
+by the paid synthetic live-provider gate. It fails closed on either failure and
+refuses to run when `CI` or `GITHUB_ACTIONS` is enabled. Its default mixed route
+is Anthropic API-key mode with OpenAI user-session mode; the provider-specific
+environment variables below remain available as explicit local overrides.
+
+For an experimental local run through authenticated Claude and Codex user
+sessions, first complete `claude auth login` and `codex login`, then run:
+
+```text
+DRAFT_LOOP_PROVIDER_AUTH_MODE=user-session \
+DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-4-5 \
+DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-5.3-codex-spark \
 pnpm test:e2e:live
 ```
 
-The live gate uses synthetic `example.test`-style job and candidate material,
-requires both Anthropic and OpenAI credentials to already be configured in the
-Electron application, and incurs a bounded provider cost. Run this gate before
+This invokes the same production provider contracts with a different explicit
+authentication mode. It consumes subscription allowance, requires the vendor
+runtimes to be installed, reports per-request dollar cost as unknown, and
+never falls back to an API key. The mode is experimental and does not replace
+the API-key-backed local release check.
+
+When only one subscription or API balance is available, select each transport
+explicitly. For example, Anthropic API billing with an OpenAI subscription:
+
+```text
+DRAFT_LOOP_ANTHROPIC_AUTH_MODE=api-key \
+DRAFT_LOOP_OPENAI_AUTH_MODE=user-session \
+DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-4-5 \
+DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-5.3-codex-spark \
+pnpm test:e2e:live
+```
+
+This is deterministic transport selection, not automatic fallback. The live
+provider gate is local-only: do not add provider credentials or subscription
+sessions to GitHub Actions or another CI/CD environment.
+
+The live gate uses synthetic `example.test`-style job and candidate material.
+In API-key mode it requires both Anthropic and OpenAI credentials to already be
+configured in the Electron application and incurs a bounded provider cost. Run this gate before
 manual Electron validation with consented real data; never use real candidate
 material in the synthetic gate.
 
@@ -130,18 +165,12 @@ The gate prints the pair it is about to bill before launching. If a cheap model
 ever proves unreliable on the synthetic material, override it for that run and
 change the default here rather than leaving the gate flaky.
 
-This same gate also runs in CI. The **Release** workflow runs it as a blocking
-job between source validation and artifact building, so no release artifact is
-built before a real Anthropic-author / OpenAI-critic run has passed. A release
-run always uses the gate's default model pair; it does not expose the
-override. It is also independently runnable on demand from the Actions tab via
-the **Live provider E2E** workflow's manual dispatch, for a smoke run outside
-a release. That manual dispatch accepts optional `author_model` and
-`critic_model` inputs that map to the same override environment variables
-described above; leaving either empty runs the gate's default pair. In CI the
-gate authenticates from the `ANTHROPIC_API_KEY` and `OPENAI_API_KEY`
-repository secrets rather than the Electron credential store. The job fails —
-it never skips — when either secret or provider quota is unavailable.
+The live provider gate does not run in CI or the **Release** workflow. CI runs
+the deterministic `pnpm validate` suite and packaged offline acceptance gates,
+which require no provider credentials. Before starting a release workflow, a
+maintainer runs the live gate locally with synthetic material and records the
+sanitized result in the release evidence. Provider API keys and local vendor
+sessions remain outside CI/CD.
 
 ## Stage release procedure
 
@@ -150,17 +179,20 @@ it never skips — when either secret or provider quota is unavailable.
    channel match the roadmap. Review the stage acceptance criteria and evidence
    links.
 3. Merge the PR into `main` and wait for CI to pass.
-4. Run **Release** from GitHub Actions with the matching version and
+4. In a clean local worktree at the exact approved `main` commit, run
+   `pnpm release:preflight` and record its sanitized live-provider result in the
+   release evidence. Do not change the release revision afterward.
+5. Run **Release** from GitHub Actions with the matching version and
    `dry_run=true`. Keep `attest_provenance=false` for a dry run.
-5. Review the dry-run manifest, platform artifacts, checksums, and known
+6. Review the dry-run manifest, platform artifacts, checksums, and known
    limitations, including the attached CycloneDX SBOM.
-6. Re-run the workflow with `dry_run=false` after maintainer approval. Set
+7. Re-run the workflow with `dry_run=false` after maintainer approval. Set
    `attest_provenance=true` only when the repository plan supports GitHub
    artifact attestations.
-7. Confirm the GitHub tag, generated notes, attached artifacts, manifest,
+8. Confirm the GitHub tag, generated notes, attached artifacts, manifest,
    CycloneDX SBOM, and `SHA256SUMS` file. Verify attestations with
    `gh attestation verify` when enabled.
-8. Update the roadmap stage evidence with the achieved status level, acceptance
+9. Update the roadmap stage evidence with the achieved status level, acceptance
    results, supported-platform matrix, product measures, release tag, manifest,
    checksums, known limitations, unresolved risks, and next decision. Do not
    label the stage Validated when only implementation or synthetic evidence is

@@ -28,6 +28,10 @@ to a provider.
 
 ## Decision
 
+This ADR governs `api-key` authentication. ADR 0006 adds an explicit local
+`user-session` mode whose provider-managed credentials never cross the renderer
+bridge or enter this credential store.
+
 Use an allowlisted renderer-to-main credential command with main-process-owned
 persistence and a separate provider-transmission preflight.
 

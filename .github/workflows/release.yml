@@ -88,17 +88,9 @@ jobs:
       - name: Run repository quality gates
         run: pnpm validate
 
-  live_gate:
-    name: Live provider E2E gate
-    needs: validate
-    uses: ./.github/workflows/live-provider-e2e.yml
-    with:
-      ref: ${{ needs.validate.outputs.commit }}
-    secrets: inherit
-
   build:
     name: Build ${{ matrix.name }} desktop artifact
-    needs: [validate, live_gate]
+    needs: validate
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

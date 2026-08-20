@@ -1,5 +1,6 @@
 import { chmod, mkdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
+import type { ProviderAuthModeConfiguration } from "@draft-loop/application";
 
 import type {
   BridgeCommand,
@@ -33,6 +34,7 @@ export interface LiveProviderE2EOptions {
   readonly authorModel?: string;
   /** Exact critic model id. Omitted uses the workspace default. */
   readonly criticModel?: string;
+  readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
 }
 
 export interface LiveProviderE2EReport {
@@ -264,6 +266,13 @@ export async function runLiveProviderE2E(options: LiveProviderE2EOptions): Promi
       `${provider} credential check`,
     );
     requireCondition(credential.configured, `${provider} credential is not configured`);
+    if (options.providerAuthModeConfiguration?.[provider] === "user-session") {
+      requireCondition(
+        credential.source === "user-session" &&
+          credential.protection === "provider-managed-session",
+        `${provider} provider-managed user session is not active`,
+      );
+    }
   }
 
   const workspace = await invoke<WorkspaceResult>(

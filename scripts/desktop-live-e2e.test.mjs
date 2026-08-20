@@ -4,7 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
 import { afterEach, describe, test } from "node:test";
-import { main, parseArguments, resolveGateModels } from "./desktop-live-e2e.mjs";
+import {
+  main,
+  parseArguments,
+  resolveGateAuthMode,
+  resolveGateAuthModes,
+  resolveGateModels,
+} from "./desktop-live-e2e.mjs";
 
 const anthropicVariable = "ANTHROPIC_API_KEY";
 const openaiVariable = "OPENAI_API_KEY";
@@ -74,6 +80,48 @@ describe("resolveGateModels", () => {
     assert.equal(
       resolveGateModels({ DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "  claude-opus-4-8  " }).author,
       "claude-opus-4-8",
+    );
+  });
+});
+
+describe("resolveGateAuthMode", () => {
+  test("defaults both local development and packaged runs to API keys", () => {
+    assert.equal(resolveGateAuthMode({}, false), "api-key");
+    assert.equal(resolveGateAuthMode({}, true), "api-key");
+  });
+
+  test("accepts only the two explicit modes", () => {
+    assert.equal(resolveGateAuthMode({ DRAFT_LOOP_PROVIDER_AUTH_MODE: "api-key" }), "api-key");
+    assert.equal(
+      resolveGateAuthMode({ DRAFT_LOOP_PROVIDER_AUTH_MODE: "user-session" }),
+      "user-session",
+    );
+    assert.throws(
+      () => resolveGateAuthMode({ DRAFT_LOOP_PROVIDER_AUTH_MODE: "oauth" }),
+      /unsupported DRAFT_LOOP_PROVIDER_AUTH_MODE/u,
+    );
+    assert.throws(
+      () => resolveGateAuthMode({ DRAFT_LOOP_PROVIDER_AUTH_MODE: " user-session " }),
+      /unsupported DRAFT_LOOP_PROVIDER_AUTH_MODE/u,
+    );
+  });
+});
+
+describe("resolveGateAuthModes", () => {
+  test("supports an explicit API-key Anthropic and user-session OpenAI mix", () => {
+    assert.deepEqual(
+      resolveGateAuthModes({
+        DRAFT_LOOP_PROVIDER_AUTH_MODE: "user-session",
+        DRAFT_LOOP_ANTHROPIC_AUTH_MODE: "api-key",
+      }),
+      { anthropic: "api-key", openai: "user-session" },
+    );
+  });
+
+  test("rejects invalid provider-specific overrides", () => {
+    assert.throws(
+      () => resolveGateAuthModes({ DRAFT_LOOP_OPENAI_AUTH_MODE: "oauth" }),
+      /unsupported DRAFT_LOOP_OPENAI_AUTH_MODE/u,
     );
   });
 });

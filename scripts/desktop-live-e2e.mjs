@@ -12,17 +12,23 @@ const USAGE = `Usage: pnpm test:e2e:live [--keep] [<packaged-executable> [<evide
 
 Launches the desktop live-provider E2E with synthetic example.test material.
 Without a packaged executable the gate runs the desktop dev app and requires
-Anthropic and OpenAI credentials already configured in Electron.
+API keys by default. Set DRAFT_LOOP_PROVIDER_AUTH_MODE=user-session explicitly
+to use authenticated Claude and Codex user sessions, or set the provider-specific
+DRAFT_LOOP_ANTHROPIC_AUTH_MODE and DRAFT_LOOP_OPENAI_AUTH_MODE overrides.
 With a packaged executable the gate runs headless and requires ANTHROPIC_API_KEY
 and OPENAI_API_KEY in the environment.
 
-The gate bills real provider usage. It runs the cheapest verified cross-company
+User-session mode uses your provider subscriptions and remains subject to their
+allowances. API-key mode bills real provider usage. The gate runs a verified cross-company
 pair by default; override either side with DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL or
 DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL.
 `;
 const PACKAGED_CREDENTIAL_VARIABLES = Object.freeze(["ANTHROPIC_API_KEY", "OPENAI_API_KEY"]);
 const AUTHOR_MODEL_VARIABLE = "DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL";
 const CRITIC_MODEL_VARIABLE = "DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL";
+const AUTH_MODE_VARIABLE = "DRAFT_LOOP_PROVIDER_AUTH_MODE";
+const ANTHROPIC_AUTH_MODE_VARIABLE = "DRAFT_LOOP_ANTHROPIC_AUTH_MODE";
+const OPENAI_AUTH_MODE_VARIABLE = "DRAFT_LOOP_OPENAI_AUTH_MODE";
 /**
  * The gate exercises the real provider path, so it should run the cheapest
  * models that still do so rather than the workspace defaults. Anthropic and
@@ -102,6 +108,27 @@ export function resolveGateModels(environment = process.env) {
   };
 }
 
+export function resolveGateAuthMode(environment = process.env) {
+  const value = environment[AUTH_MODE_VARIABLE];
+  if (value === undefined) return "api-key";
+  if (value === "api-key" || value === "user-session") return value;
+  throw new DesktopLiveE2EError(`unsupported ${AUTH_MODE_VARIABLE}: ${value}`);
+}
+
+export function resolveGateAuthModes(environment = process.env) {
+  const fallback = resolveGateAuthMode(environment);
+  const resolveOverride = (variable) => {
+    const value = environment[variable];
+    if (value === undefined) return fallback;
+    if (value === "api-key" || value === "user-session") return value;
+    throw new DesktopLiveE2EError(`unsupported ${variable}: ${value}`);
+  };
+  return {
+    anthropic: resolveOverride(ANTHROPIC_AUTH_MODE_VARIABLE),
+    openai: resolveOverride(OPENAI_AUTH_MODE_VARIABLE),
+  };
+}
+
 function assertPackagedCredentials() {
   for (const variable of PACKAGED_CREDENTIAL_VARIABLES) {
     const value = process.env[variable];
@@ -132,7 +159,12 @@ async function writeSyntheticInputs(paths) {
   await chmod(paths.candidate, 0o600);
 }
 
-function launchLiveE2E(paths, executable, models = resolveGateModels()) {
+function launchLiveE2E(
+  paths,
+  executable,
+  models = resolveGateModels(),
+  authModes = resolveGateAuthModes(process.env),
+) {
   return new Promise((resolveLaunch, rejectLaunch) => {
     const packaged = executable !== undefined;
     const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
@@ -159,6 +191,8 @@ function launchLiveE2E(paths, executable, models = resolveGateModels()) {
         DRAFT_LOOP_LIVE_E2E_EVIDENCE: paths.report,
         [AUTHOR_MODEL_VARIABLE]: models.author,
         [CRITIC_MODEL_VARIABLE]: models.critic,
+        [ANTHROPIC_AUTH_MODE_VARIABLE]: authModes.anthropic,
+        [OPENAI_AUTH_MODE_VARIABLE]: authModes.openai,
       },
       stdio: ["ignore", "ignore", "pipe"],
       detached: process.platform !== "win32",
@@ -227,7 +261,13 @@ export async function runLiveE2E(
 ) {
   const packagedExecutable = executable === undefined ? undefined : resolve(executable);
   const evidencePath = evidence === undefined ? undefined : resolve(evidence);
+  const authModes = resolveGateAuthModes(process.env);
   if (packagedExecutable !== undefined) {
+    if (Object.values(authModes).includes("user-session")) {
+      throw new DesktopLiveE2EError(
+        "packaged live E2E does not support user-session mode; use api-key mode.",
+      );
+    }
     assertPackagedCredentials();
     await requirePackagedExecutable(packagedExecutable);
   }
@@ -249,9 +289,9 @@ export async function runLiveE2E(
   try {
     await writeSyntheticInputs(paths);
     stdout.write(
-      `Live-provider gate: billing real provider usage; author ${models.author}, critic ${models.critic}.\n`,
+      `Live-provider gate: Anthropic ${authModes.anthropic}, OpenAI ${authModes.openai}; author ${models.author}, critic ${models.critic}.\n`,
     );
-    await launchLiveE2E(paths, packagedExecutable, models);
+    await launchLiveE2E(paths, packagedExecutable, models, authModes);
     const report = JSON.parse(await readFile(paths.report, "utf8"));
     assertSanitizedReport(report, paths);
     const reportDetails = await stat(paths.report);

@@ -147,7 +147,7 @@ export interface ProviderTransmissionPolicy {
   readonly excludedScope: readonly ["complete candidate corpus"];
   readonly author: ProviderTransmissionIdentity;
   readonly critic: ProviderTransmissionIdentity;
-  readonly retentionPreference: "ephemeral-request" | "not-allowed";
+  readonly retentionPreference: "ephemeral-request" | "provider-default" | "not-allowed";
   readonly budget: {
     readonly maxRounds: number;
     readonly maxCostUsd: number | null;

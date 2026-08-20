@@ -2,7 +2,11 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { type AnthropicClient, createLocalModelAdapter } from "@draft-loop/providers";
+import {
+  type AnthropicClient,
+  createLocalModelAdapter,
+  type UserSessionProcessRunner,
+} from "@draft-loop/providers";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -10,6 +14,7 @@ import {
   createLocalApplicationDriver,
   defaultRequiredSections,
   type ProviderClientFactories,
+  resolveProviderAuthModes,
   SourceIngestionUserError,
 } from "./local.js";
 import { defaultLocalModelEndpoint } from "./local-endpoint.js";
@@ -103,6 +108,33 @@ function anthropicCritiqueClient(findings: readonly JsonRecord[]): AnthropicClie
   };
 }
 
+function anthropicAuthorClient(): AnthropicClient {
+  return {
+    messages: {
+      create: (input) => {
+        const content = (input as { readonly messages?: readonly { readonly content?: unknown }[] })
+          .messages?.[0]?.content;
+        if (typeof content !== "string") throw new Error("missing Anthropic author input");
+        const response = {
+          id: "anthropic-author-1",
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(authorProposal(evidenceChunkId(content))),
+            },
+          ],
+          model: "claude-haiku-4-5",
+          stop_reason: "end_turn",
+          usage: { input_tokens: 90, output_tokens: 20 },
+        };
+        return Object.assign(Promise.resolve(response), {
+          withResponse: async () => ({ data: response, request_id: "anthropic-author-1" }),
+        }) as ReturnType<AnthropicClient["messages"]["create"]>;
+      },
+    },
+  };
+}
+
 async function providerWorkspace(prefix: string): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), prefix));
   await mkdir(join(root, "evidence"), { recursive: true });
@@ -179,6 +211,13 @@ async function localPairingWorkspace(prefix: string): Promise<string> {
 }
 
 describe("local application driver", () => {
+  it("resolves explicit per-provider auth overrides over the global mode", () => {
+    expect(resolveProviderAuthModes("user-session", "api-key", undefined)).toEqual({
+      anthropic: "api-key",
+      openai: "user-session",
+    });
+  });
+
   it("fails closed before indexing when PDF extraction is unreliable", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-invalid-pdf-"));
     try {
@@ -464,6 +503,146 @@ describe("local application driver", () => {
     });
 
     expect(calls).toEqual([`${defaultLocalModelEndpoint}/chat/completions`]);
+  });
+
+  it("routes both hosted providers through user sessions without resolving API keys", async () => {
+    const root = await providerWorkspace("draft-loop-user-session-");
+    const io = { write: () => undefined };
+    const resolveCredential = vi.fn(async () => {
+      throw new Error("API-key resolution must not run in user-session mode.");
+    });
+    const anthropicRunner = vi.fn<UserSessionProcessRunner>(async (_command, _args, options) => {
+      const input = JSON.parse(options.stdin) as {
+        readonly retrievedEvidence?: readonly { readonly id?: string }[];
+      };
+      const chunkId = input.retrievedEvidence?.[0]?.id;
+      if (chunkId === undefined) throw new Error("missing evidence chunk");
+      return {
+        exitCode: 0,
+        stdout: JSON.stringify({
+          type: "result",
+          subtype: "success",
+          is_error: false,
+          session_id: "claude-session",
+          structured_output: authorProposal(chunkId),
+          usage: { input_tokens: 90, output_tokens: 20 },
+          permission_denials: [],
+        }),
+        stderr: "",
+      };
+    });
+    const openaiRunner = vi.fn<UserSessionProcessRunner>(async (_command, args, _options) => {
+      const outputIndex = args.indexOf("--output-last-message");
+      const outputPath = args[outputIndex + 1];
+      if (outputPath === undefined) throw new Error("missing output path");
+      await writeFile(outputPath, JSON.stringify({ findings: [] }), { mode: 0o600 });
+      return {
+        exitCode: 0,
+        stdout: [
+          JSON.stringify({ type: "thread.started", thread_id: "codex-session" }),
+          JSON.stringify({
+            type: "turn.completed",
+            usage: { input_tokens: 80, output_tokens: 10 },
+          }),
+        ].join("\n"),
+        stderr: "",
+      };
+    });
+    const driver = createLocalApplicationDriver({
+      providerAuthMode: "user-session",
+      resolveCredential,
+      providerClientFactories: {
+        anthropic: () => {
+          throw new Error("Anthropic SDK factory must not run in user-session mode.");
+        },
+        openai: () => {
+          throw new Error("OpenAI SDK factory must not run in user-session mode.");
+        },
+      },
+      userSessionRunners: { anthropic: anthropicRunner, openai: openaiRunner },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "anthropic",
+          authorModel: "claude-sonnet-4-5",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+        },
+        io,
+      );
+      const snapshot = await driver.start({ root, allowProviderData: true }, io);
+
+      expect(snapshot.state).toBe("awaiting-approval");
+      expect(resolveCredential).not.toHaveBeenCalled();
+      expect(anthropicRunner).toHaveBeenCalledOnce();
+      expect(openaiRunner).toHaveBeenCalledOnce();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("routes Anthropic through its API key and OpenAI through its user session", async () => {
+    const root = await providerWorkspace("draft-loop-mixed-provider-auth-");
+    const io = { write: () => undefined };
+    const resolveCredential = vi.fn(async (provider: "anthropic" | "openai") => {
+      if (provider === "openai") throw new Error("OpenAI API key must not be resolved.");
+      return "fake-anthropic-key";
+    });
+    const openaiRunner = vi.fn<UserSessionProcessRunner>(async (_command, args) => {
+      const outputPath = args[args.indexOf("--output-last-message") + 1];
+      if (outputPath === undefined) throw new Error("missing output path");
+      await writeFile(outputPath, JSON.stringify({ findings: [] }), { mode: 0o600 });
+      return {
+        exitCode: 0,
+        stdout: [
+          JSON.stringify({ type: "thread.started", thread_id: "codex-session" }),
+          JSON.stringify({
+            type: "turn.completed",
+            usage: { input_tokens: 80, output_tokens: 10 },
+          }),
+        ].join("\n"),
+        stderr: "",
+      };
+    });
+    const driver = createLocalApplicationDriver({
+      providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
+      resolveCredential,
+      providerClientFactories: {
+        anthropic: () => anthropicAuthorClient(),
+        openai: () => {
+          throw new Error("OpenAI SDK factory must not run in user-session mode.");
+        },
+      },
+      userSessionRunners: { openai: openaiRunner },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "anthropic",
+          authorModel: "claude-haiku-4-5",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+        },
+        io,
+      );
+      const snapshot = await driver.start({ root, allowProviderData: true }, io);
+
+      expect(snapshot.state).toBe("awaiting-approval");
+      expect(resolveCredential).toHaveBeenCalledOnce();
+      expect(resolveCredential).toHaveBeenCalledWith("anthropic");
+      expect(openaiRunner).toHaveBeenCalledOnce();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("refuses a local endpoint that would send candidate material off this machine", async () => {

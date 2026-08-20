@@ -46,6 +46,16 @@ a substitute for review or for the checks that run on it.
 Resolve conflicts on the branch rather than on `main`, and say in the PR body
 which side of any conflict was taken and why.
 
+## Release guardrail
+
+Before initiating any release action locally, including dispatching the
+`Release` GitHub workflow, run `pnpm release:preflight` from the exact revision
+being released and require it to pass. Do not bypass this command or substitute
+an older live-provider result. The command runs deterministic validation first
+and then the synthetic live-provider E2E with the explicit local mixed-auth
+defaults. It must never run in CI/CD, and provider credentials or subscription
+sessions must never be added to hosted automation.
+
 ## Data, privacy, and model rules
 
 - Keep candidate material and run history local by default. Do not upload or

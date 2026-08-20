@@ -409,6 +409,47 @@ describe("desktop capability bridge", () => {
     });
   });
 
+  it("strictly validates provider-managed user-session credential status", async () => {
+    const accepted = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            provider: "anthropic",
+            configured: true,
+            source: "user-session",
+            protection: "provider-managed-session",
+          },
+        }),
+        ["credential.status"],
+      ),
+    );
+    await expect(
+      accepted.execute({ type: "credential.status", input: { provider: "anthropic" } }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { source: "user-session", protection: "provider-managed-session" },
+    });
+
+    const rejected = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            provider: "anthropic",
+            configured: true,
+            source: "oauth-token",
+            protection: "provider-managed-session",
+          },
+        }),
+        ["credential.status"],
+      ),
+    );
+    await expect(
+      rejected.execute({ type: "credential.status", input: { provider: "anthropic" } }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("reports unavailable browser capabilities without filesystem access", async () => {
     const result = await createBrowserCapabilityPort().execute({
       type: "file.select",
