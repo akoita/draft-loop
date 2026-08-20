@@ -2280,6 +2280,32 @@ input[type="checkbox"] {
   color: var(--teal);
 }
 
+.finding-bulk-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--surface-inset);
+}
+
+.finding-bulk-actions legend {
+  padding: 0 var(--space-1);
+  color: var(--text-3);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.finding-bulk-actions .button {
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+}
+
 .findings-queue-scroll {
   display: grid;
   align-content: start;
@@ -2578,6 +2604,25 @@ input[type="checkbox"] {
   color: var(--text-2);
   font-size: var(--text-xs);
   line-height: 1.45;
+}
+
+.round-limit-recovery {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-3) 0;
+  border: 1px solid var(--amber-line);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--amber-wash);
+}
+
+.round-limit-recovery .warning-copy,
+.round-limit-note {
+  margin: 0;
+}
+
+.round-limit-recovery .button {
+  justify-self: start;
 }
 
 .approval-actions {
@@ -3197,6 +3242,10 @@ input[type="checkbox"] {
   min-width: 0;
 }
 
+.setup-round-limit input {
+  max-width: 9rem;
+}
+
 /* The field's own name. Every other line inside a field is help text, so the
    label takes the strongest ink and the note below it takes the quietest that
    still clears AA on this ground. */
@@ -3388,6 +3437,10 @@ input[type="checkbox"] {
 
   .finding-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .finding-bulk-actions {
+    grid-template-columns: 1fr;
   }
 }
 

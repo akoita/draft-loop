@@ -13,17 +13,24 @@ import {
   type DesktopReviewState,
   type FindingDecision,
   type IndependentReviewView,
+  isUnresolvedFinding,
   type ReviewAction,
   type ReviewArtifact,
   type ReviewBlock,
   type ReviewFinding,
   reviewFindingSummary,
+  roundLimitRecoveryRequired,
 } from "./model.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 
 interface ReviewWorkspaceProps {
   readonly state: DesktopReviewState;
   readonly onAction: (action: ReviewAction) => void;
+  readonly onBulkFindingDecision?: (
+    findingIds: readonly string[],
+    decision: DirectFindingDecision,
+  ) => void;
+  readonly pendingBulkFindingCount?: number | null;
   readonly pendingReviewAction?: PendingReviewAction | null;
   readonly onSelectFiles?: (target: "evidence" | "job-description") => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
@@ -72,7 +79,9 @@ const findingQueueFilters: ReadonlyArray<{
   { id: "resolved", label: "Resolved" },
 ];
 
-const directFindingDecisions: readonly Exclude<FindingDecision, "pending" | "overridden">[] = [
+export type DirectFindingDecision = Exclude<FindingDecision, "pending" | "overridden">;
+
+const directFindingDecisions: readonly DirectFindingDecision[] = [
   "accepted",
   "rejected",
   "deferred",
@@ -108,10 +117,6 @@ function matchPaletteCommands(
   return commands.filter((command) =>
     `${command.label} ${command.note}`.toLowerCase().includes(needle),
   );
-}
-
-function isUnresolvedFinding(finding: ReviewFinding): boolean {
-  return finding.decision === "pending" || finding.decision === "deferred";
 }
 
 export function findingQueueCounts(findings: readonly ReviewFinding[]): FindingQueueCounts {
@@ -157,6 +162,17 @@ export function filterFindingQueue(
     case "resolved":
       return findings.filter((finding) => !isUnresolvedFinding(finding));
   }
+}
+
+/** Findings a bulk action may change: unresolved, visible in the active filter, and not already set. */
+export function bulkFindingDecisionTargets(
+  findings: readonly ReviewFinding[],
+  filter: FindingQueueFilter,
+  decision: DirectFindingDecision,
+): readonly string[] {
+  return filterFindingQueue(findings, filter)
+    .filter((finding) => isUnresolvedFinding(finding) && finding.decision !== decision)
+    .map((finding) => finding.id);
 }
 
 export function findingQueueFilterCount(
@@ -212,7 +228,7 @@ export function findingQueueEmptyMessage(
   counts: FindingQueueCounts,
 ): string {
   if (filter === "needs-action" && counts.needsAction === 0) {
-    return counts.resolved > 0 ? "All findings are decided." : "No findings need action yet.";
+    return counts.resolved > 0 ? "All findings are resolved." : "No findings need action yet.";
   }
   if (filter === "blocking" && counts.blocking === 0) return "No blocking findings need action.";
   if (filter === "warnings" && counts.warnings === 0) return "No warnings need action.";
@@ -1096,6 +1112,8 @@ function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number
 export function ReviewWorkspace({
   state,
   onAction,
+  onBulkFindingDecision,
+  pendingBulkFindingCount = null,
   pendingReviewAction = null,
   onSelectFiles,
   onAddUrl,
@@ -1106,7 +1124,13 @@ export function ReviewWorkspace({
 }: ReviewWorkspaceProps) {
   const findingSummary = reviewFindingSummary(state);
   const { blocking: blockingFindings, warnings } = findingSummary;
+  const acceptedBlockingFindings = blockingFindings.filter(
+    (finding) => finding.decision === "accepted",
+  );
   const hasArtifact = state.artifact.version > 0;
+  const maximumRounds = state.providerTransmissionPreflight.budget.maxRounds;
+  const roundLimitRecovery = roundLimitRecoveryRequired(state);
+  const roundLimitReached = state.round >= maximumRounds;
   const claimById = useMemo(
     () => new Map(state.artifact.claims.map((claim) => [claim.id, claim])),
     [state.artifact.claims],
@@ -1122,15 +1146,17 @@ export function ReviewWorkspace({
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const validationLabel = !hasArtifact
     ? "No draft artifact available"
-    : !state.reviewComplete
-      ? "Independent critique did not complete"
-      : state.state === "provider-error"
-        ? "Provider recovery remains before approval"
-        : findingSummary.status === "blocked"
-          ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
-          : findingSummary.status === "warnings"
-            ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
-            : "No unresolved findings";
+    : roundLimitRecovery
+      ? "Round limit recovery required"
+      : !state.reviewComplete
+        ? "Independent critique did not complete"
+        : state.state === "provider-error"
+          ? "Provider recovery remains before approval"
+          : findingSummary.status === "blocked"
+            ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+            : findingSummary.status === "warnings"
+              ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+              : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
@@ -1232,6 +1258,10 @@ export function ReviewWorkspace({
   const queueCounts = findingQueueCounts(state.findings);
   const filteredFindings = filterFindingQueue(state.findings, findingFilter);
   const findingDecisionPending = pendingReviewAction?.action === "finding-decision";
+  const bulkDecisionAvailable =
+    onBulkFindingDecision !== undefined &&
+    findingFilter !== "resolved" &&
+    filteredFindings.some(isUnresolvedFinding);
   const previousNeedsActionCount = useRef(queueCounts.needsAction);
   const policyConfirmed =
     confirmedPolicyFingerprint === state.providerTransmissionPreflight.fingerprint;
@@ -1571,7 +1601,12 @@ export function ReviewWorkspace({
             onAction({ type: "approve" });
           }
         } else if (event.key === "r" || event.key === "R") {
-          if (state.state === "awaiting-approval" && state.reviewComplete && transmissionReady) {
+          if (
+            state.state === "awaiting-approval" &&
+            state.reviewComplete &&
+            !roundLimitReached &&
+            transmissionReady
+          ) {
             event.preventDefault();
             onAction({ type: "request-revision" });
           }
@@ -1683,6 +1718,7 @@ export function ReviewWorkspace({
     settingsOpen,
     state.findings,
     state.reviewComplete,
+    roundLimitReached,
     state.state,
     transmissionReady,
   ]);
@@ -1701,13 +1737,17 @@ export function ReviewWorkspace({
     pendingReviewAction === null ? null : "Another review action is already running.";
   const revisionReason = !hasArtifact
     ? "No draft artifact available yet."
-    : !state.reviewComplete
-      ? "Independent critique has not completed."
-      : state.state !== "awaiting-approval"
-        ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
-        : !transmissionReady
-          ? "Provider transmission has not been acknowledged."
-          : pendingActionReason;
+    : roundLimitRecovery
+      ? "Return to the last fully reviewed round before requesting another revision."
+      : !state.reviewComplete
+        ? "Independent critique has not completed."
+        : roundLimitReached
+          ? `Maximum of ${maximumRounds} rounds reached. Create a workspace with a higher limit to continue.`
+          : state.state !== "awaiting-approval"
+            ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
+            : !transmissionReady
+              ? "Provider transmission has not been acknowledged."
+              : pendingActionReason;
   const comparisonReason = hasPreviousArtifact
     ? null
     : "There is no previous version to compare with.";
@@ -1726,6 +1766,15 @@ export function ReviewWorkspace({
               ? `The run is ${stateLabel(state.state)}, not awaiting approval.`
               : pendingActionReason,
       run: () => onAction({ type: "approve" }),
+    },
+    {
+      id: "recover-round-limit",
+      label: `Return to reviewed Round ${Math.max(1, state.round - 1)}`,
+      note: "Undo an empty round opened after the configured limit",
+      disabledReason: roundLimitRecovery
+        ? pendingActionReason
+        : "Round-limit recovery is not needed.",
+      run: () => onAction({ type: "recover-round-limit" }),
     },
     {
       id: "request-revision",
@@ -2651,13 +2700,15 @@ export function ReviewWorkspace({
             <span>
               {!hasArtifact
                 ? "Complete or recover the author step before reviewing findings or approving an artifact."
-                : !state.reviewComplete
-                  ? "Complete an independent critic review before approval or export."
-                  : findingSummary.status === "blocked"
-                    ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
-                    : findingSummary.status === "warnings"
-                      ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-                      : "All findings have a recorded decision."}
+                : roundLimitRecovery
+                  ? `Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
+                  : !state.reviewComplete
+                    ? "Complete an independent critic review before approval or export."
+                    : findingSummary.status === "blocked"
+                      ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+                      : findingSummary.status === "warnings"
+                        ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+                        : "All findings have a recorded decision."}
             </span>
           </section>
 
@@ -3069,10 +3120,10 @@ export function ReviewWorkspace({
                   <p className="eyebrow">Critique triage</p>
                   <h2>Findings</h2>
                   <p className="finding-progress" role="status" aria-live="polite">
-                    {queueCounts.resolved} of {state.findings.length} decided
+                    {queueCounts.resolved} of {state.findings.length} resolved
                     {queueCounts.needsAction > 0
                       ? ` · ${queueCounts.needsAction} need action`
-                      : " · all findings decided"}
+                      : " · all findings resolved"}
                   </p>
                 </div>
                 <span className="count-badge">
@@ -3110,10 +3161,40 @@ export function ReviewWorkspace({
             </div>
             {findingDecisionPending ? (
               <p className="pending-action-status" role="status" aria-live="polite">
-                Saving finding decision… Elapsed {pendingReviewAction.elapsedSeconds} second
+                Saving{" "}
+                {pendingBulkFindingCount === null
+                  ? "finding decision"
+                  : `${pendingBulkFindingCount} finding decisions`}
+                … Elapsed {pendingReviewAction.elapsedSeconds} second
                 {pendingReviewAction.elapsedSeconds === 1 ? "" : "s"}. Keep this window open while
-                the decision is saved.
+                {pendingBulkFindingCount === null ? " the decision is" : " the decisions are"}{" "}
+                saved.
               </p>
+            ) : null}
+            {bulkDecisionAvailable ? (
+              <fieldset className="finding-bulk-actions">
+                <legend>
+                  Apply to all {filteredFindings.filter(isUnresolvedFinding).length} shown
+                </legend>
+                {directFindingDecisions.map((decision) => {
+                  const targetIds = bulkFindingDecisionTargets(
+                    state.findings,
+                    findingFilter,
+                    decision,
+                  );
+                  return (
+                    <button
+                      className="button button-quiet"
+                      type="button"
+                      key={decision}
+                      disabled={pendingReviewAction !== null || targetIds.length === 0}
+                      onClick={() => onBulkFindingDecision(targetIds, decision)}
+                    >
+                      {decisionLabels[decision]} all
+                    </button>
+                  );
+                })}
+              </fieldset>
             ) : null}
             <section
               className="findings-queue-scroll"
@@ -3187,7 +3268,9 @@ export function ReviewWorkspace({
                       </span>
                       <span className="finding-summary-footer">
                         <span className={`finding-summary-status resolution-${finding.decision}`}>
-                          {decisionLabels[finding.decision]}
+                          {finding.severity === "error" && finding.decision === "accepted"
+                            ? "Accepted · revision required"
+                            : decisionLabels[finding.decision]}
                           <span className="finding-summary-chevron" aria-hidden="true">
                             {isExpanded ? "⌃" : "⌄"}
                           </span>
@@ -3363,6 +3446,22 @@ export function ReviewWorkspace({
               <p className="warning-copy">
                 Approval and export are unavailable until the author produces a valid draft.
               </p>
+            ) : roundLimitRecovery ? (
+              <div className="round-limit-recovery" role="alert">
+                <p className="warning-copy">
+                  Round {state.round} was opened after the configured maximum of {maximumRounds},
+                  before any new draft or critique was produced. Version {state.artifact.version}
+                  and its completed Round {state.round - 1} critique are still intact.
+                </p>
+                <button
+                  className="button button-primary"
+                  type="button"
+                  disabled={pendingReviewAction !== null}
+                  onClick={() => onAction({ type: "recover-round-limit" })}
+                >
+                  Return to reviewed Round {state.round - 1}
+                </button>
+              </div>
             ) : !state.reviewComplete ? (
               <p className="warning-copy">
                 Independent critique did not complete. Complete an independent critic review before
@@ -3372,7 +3471,9 @@ export function ReviewWorkspace({
               <p className="warning-copy">
                 {state.approval === "approved"
                   ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? " remains" : "s remain"} unresolved after approval.`
-                  : `Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
+                  : acceptedBlockingFindings.length > 0
+                    ? `Request a revision for ${acceptedBlockingFindings.length} accepted blocking finding${acceptedBlockingFindings.length === 1 ? "" : "s"}, or reject or override the finding if it does not apply.`
+                    : `Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
               </p>
             ) : warnings.length > 0 ? (
               <p className="warning-copy">
@@ -3430,6 +3531,7 @@ export function ReviewWorkspace({
                 disabled={
                   state.state !== "awaiting-approval" ||
                   !state.reviewComplete ||
+                  roundLimitReached ||
                   !transmissionReady ||
                   pendingReviewAction !== null
                 }
@@ -3439,6 +3541,12 @@ export function ReviewWorkspace({
                 <kbd>Alt+R</kbd>
               </button>
             </div>
+            {!roundLimitRecovery && state.reviewComplete && roundLimitReached ? (
+              <p className="subtle round-limit-note">
+                Maximum of {maximumRounds} review rounds reached. This reviewed version remains
+                available for approval; create a workspace with a higher limit to continue the loop.
+              </p>
+            ) : null}
             {approvalExportErrorVisible ? (
               <div className="error-banner approval-action-error" role="alert">
                 <p>{errorMessage}</p>

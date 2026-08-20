@@ -6,7 +6,7 @@ import {
   type ModelsPreviewIndependenceResult,
   modelCompanies,
 } from "./bridge.js";
-import type { DesktopReviewState, ReviewAction } from "./model.js";
+import type { DesktopReviewState, FindingDecision, ReviewAction } from "./model.js";
 import {
   createDesktopReviewPort,
   DesktopBridgeError,
@@ -18,6 +18,23 @@ import { createReviewActionDispatcher, type PendingReviewAction } from "./review
 import "./styles.css";
 
 const runRefreshIntervalMs = 750;
+
+type DirectFindingDecision = Exclude<FindingDecision, "pending" | "overridden">;
+
+export async function dispatchFindingDecisions(
+  state: DesktopReviewState,
+  findingIds: readonly string[],
+  decision: DirectFindingDecision,
+  dispatch: (state: DesktopReviewState, action: ReviewAction) => Promise<DesktopReviewState>,
+  onProgress: (state: DesktopReviewState) => void = () => undefined,
+): Promise<DesktopReviewState> {
+  let next = state;
+  for (const findingId of findingIds) {
+    next = await dispatch(next, { type: "finding-decision", findingId, decision });
+    onProgress(next);
+  }
+  return next;
+}
 
 /**
  * How long a typed model id settles before the pairing is asked about.
@@ -36,6 +53,7 @@ export interface WorkspaceSetupDraft {
   readonly criticModel: string;
   readonly localEndpoint: string;
   readonly independenceOverrideRationale: string;
+  readonly maxRounds: number;
 }
 
 export const initialWorkspaceSetupDraft: WorkspaceSetupDraft = Object.freeze({
@@ -46,6 +64,7 @@ export const initialWorkspaceSetupDraft: WorkspaceSetupDraft = Object.freeze({
   criticModel: "",
   localEndpoint: "",
   independenceOverrideRationale: "",
+  maxRounds: 3,
 });
 
 /** What `models.list` has said about one company so far. */
@@ -328,6 +347,9 @@ export function workspaceSetupBlocker(
   preview: IndependencePreviewState,
 ): string | null {
   if (draft.name.trim() === "") return "Name the workspace before creating it.";
+  if (!Number.isInteger(draft.maxRounds) || draft.maxRounds < 1 || draft.maxRounds > 20) {
+    return "Choose a maximum round count between 1 and 20.";
+  }
   if (draft.authorModel.trim() === "" || draft.criticModel.trim() === "") {
     return "Name an author model and a critic model before creating the workspace.";
   }
@@ -346,6 +368,7 @@ export function workspaceModelSelection(draft: WorkspaceSetupDraft): WorkspaceMo
     criticModel: draft.criticModel,
     ...(requiresLocalEndpoint(draft) ? { localEndpoint: draft.localEndpoint } : {}),
     independenceOverrideRationale: draft.independenceOverrideRationale,
+    maxRounds: draft.maxRounds,
   };
 }
 
@@ -553,6 +576,28 @@ export function WorkspaceSetupForm({
           onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
         />
       </label>
+      <label className="setup-field setup-round-limit">
+        <span>Maximum review rounds</span>
+        <input
+          type="number"
+          min={1}
+          max={20}
+          step={1}
+          value={draft.maxRounds}
+          disabled={busy}
+          aria-label="Maximum review rounds"
+          onChange={(event) =>
+            onDraftChange({
+              ...draft,
+              maxRounds: event.target.value === "" ? 0 : Number(event.target.value),
+            })
+          }
+        />
+        <span className="setup-note">
+          The author and critic stop after this many rounds and return the last fully reviewed draft
+          to you. More rounds can improve convergence but use more time and provider budget.
+        </span>
+      </label>
       <div className="setup-sides">
         <ModelSideFields
           side="author"
@@ -676,6 +721,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [importError, setImportError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingReviewAction, setPendingReviewAction] = useState<PendingReviewAction | null>(null);
+  const [pendingBulkFindingCount, setPendingBulkFindingCount] = useState<number | null>(null);
   const [reviewActionDispatcher] = useState(() =>
     createReviewActionDispatcher(setPendingReviewAction),
   );
@@ -766,6 +812,35 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         );
       }
     });
+  };
+
+  const onBulkFindingDecision = (
+    findingIds: readonly string[],
+    decision: DirectFindingDecision,
+  ) => {
+    const firstFindingId = findingIds[0];
+    if (state === null || firstFindingId === undefined) return;
+    setImportError(null);
+    setPendingBulkFindingCount(findingIds.length);
+    const pendingAction: ReviewAction = {
+      type: "finding-decision",
+      findingId: firstFindingId,
+      decision,
+    };
+    const started = reviewActionDispatcher.dispatch(pendingAction, async () => {
+      try {
+        await dispatchFindingDecisions(state, findingIds, decision, activePort.dispatch, setState);
+      } catch (reason: unknown) {
+        setImportError(
+          reason instanceof Error
+            ? reason.message
+            : "The finding decisions could not be completed.",
+        );
+      } finally {
+        setPendingBulkFindingCount(null);
+      }
+    });
+    if (!started) setPendingBulkFindingCount(null);
   };
 
   useEffect(() => {
@@ -974,6 +1049,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     <ReviewWorkspace
       state={state}
       onAction={onAction}
+      onBulkFindingDecision={onBulkFindingDecision}
+      pendingBulkFindingCount={pendingBulkFindingCount}
       errorMessage={importError}
       pendingReviewAction={pendingReviewAction}
       {...(activePort.selectFiles === undefined

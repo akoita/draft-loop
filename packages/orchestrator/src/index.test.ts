@@ -348,6 +348,58 @@ describe("durable orchestration", () => {
     });
   });
 
+  it("keeps the last reviewed round intact when the configured round limit is reached", async () => {
+    const { engine, store } = engineFixture();
+
+    const reviewed = await engine.start(request({ budget: { maxRounds: 1 } }));
+
+    await expect(engine.requestRevision("run-1")).rejects.toThrow(
+      /maximum round limit reached \(1\)/i,
+    );
+    expect(await store.loadRun("run-1")).toEqual(reviewed);
+  });
+
+  it("recovers an empty over-limit round to the preceding fully reviewed round", async () => {
+    const { engine, store } = engineFixture();
+    await engine.start(request({ budget: { maxRounds: 2 } }));
+    await engine.requestRevision("run-1");
+    const reviewedRoundTwo = await engine.resume("run-1", { context: context() });
+    await store.saveRun({
+      ...reviewedRoundTwo,
+      state: "awaiting-approval",
+      round: 3,
+      currentStep: null,
+      lastError: null,
+    });
+
+    const recovered = await engine.recoverRoundBudget("run-1");
+
+    expect(recovered).toMatchObject({ state: "awaiting-approval", round: 2, approval: "pending" });
+    expect(hasCompletedIndependentCritique(recovered)).toBe(true);
+    expect((await engine.events("run-1")).map((event) => event.type)).toContain(
+      "user.round-budget-recovered",
+    );
+  });
+
+  it("refuses round-limit recovery after any work occurred in the extra round", async () => {
+    const store = new InMemoryRunStore();
+    await store.saveRun({
+      ...pausedSnapshot(),
+      state: "awaiting-approval",
+      round: 4,
+      budget: { maxRounds: 3 },
+      currentStep: null,
+      artifact: artifact(),
+      executionHistory: [
+        critiqueExecution({ round: 3, id: "run-1:3:critic:attempt:1" }),
+        critiqueExecution({ round: 4, id: "run-1:4:critic:attempt:1", status: "failed" }),
+      ],
+    });
+    const { engine } = engineFixture({ store });
+
+    await expect(engine.recoverRoundBudget("run-1")).rejects.toThrow(/not eligible/i);
+  });
+
   it("rejects invalid or cross-workspace context before invoking an agent", async () => {
     const { engine, author, critic } = engineFixture();
     const mismatched = createContextSnapshot({

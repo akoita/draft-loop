@@ -153,6 +153,16 @@ describe("desktop capability bridge", () => {
         },
       }),
     ).toMatchObject({ input: { action: { type: "recover-to-review" } } });
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          action: { type: "recover-round-limit" },
+        },
+      }),
+    ).toMatchObject({ input: { action: { type: "recover-round-limit" } } });
     expect(() =>
       validateBridgeCommand({
         type: "review.dispatch",
@@ -188,6 +198,26 @@ describe("desktop capability bridge", () => {
         criticModel: "gpt-5.6-luna",
       },
     });
+  });
+
+  it("accepts a bounded workspace round limit", () => {
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "candidate", mode: "real", maxRounds: 6 },
+      }),
+    ).toEqual({
+      type: "workspace.create",
+      input: { name: "candidate", mode: "real", maxRounds: 6 },
+    });
+    for (const maxRounds of [0, 21, 2.5, "3"]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "workspace.create",
+          input: { name: "candidate", maxRounds },
+        }),
+      ).toThrow("invalid");
+    }
   });
 
   it("accepts a namespaced local model id, which names weights rather than a path", () => {

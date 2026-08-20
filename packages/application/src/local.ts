@@ -1809,7 +1809,13 @@ export async function resumeRun(
   }
 }
 
-type LifecycleAction = "pause" | "stop" | "approve" | "revision" | "recover-review";
+type LifecycleAction =
+  | "pause"
+  | "stop"
+  | "approve"
+  | "revision"
+  | "recover-review"
+  | "recover-round-budget";
 
 export async function lifecycleRun(
   rootInput: string,
@@ -1834,7 +1840,9 @@ export async function lifecycleRun(
             ? await runEngine.approve(runId)
             : action === "revision"
               ? await runEngine.requestRevision(runId)
-              : await runEngine.recoverToReview(runId);
+              : action === "recover-review"
+                ? await runEngine.recoverToReview(runId)
+                : await runEngine.recoverRoundBudget(runId);
     await storage.saveDecision({
       id: `decision-${runId}-${action}-${snapshot.round}-${Date.now()}`,
       workspaceId: config.id,
@@ -1849,7 +1857,9 @@ export async function lifecycleRun(
             ? "Revision requested through the explicit CLI command."
             : action === "recover-review"
               ? "Returned to review after a provider failure."
-              : `${action} requested through the CLI command.`,
+              : action === "recover-round-budget"
+                ? "Returned to the last fully reviewed round after an exhausted round limit."
+                : `${action} requested through the CLI command.`,
       actor: "user:cli",
       createdAt: timestamp(),
       payload: { action, source: "cli" },

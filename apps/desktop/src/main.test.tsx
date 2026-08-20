@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ModelCompany } from "./bridge.js";
 import {
+  dispatchFindingDecisions,
   filterModelOptions,
   type IndependencePreviewState,
   independencePreviewSummary,
@@ -24,13 +25,17 @@ import {
 } from "./main.js";
 import {
   createFixtureReviewState,
+  type DesktopReviewState,
   type IndependentReviewView,
+  type ReviewAction,
   reduceReviewState,
   reviewFindingSummary,
+  roundLimitRecoveryRequired,
   unresolvedBlockingFindings,
 } from "./model.js";
 import { DesktopBridgeError, workspaceCreateInput } from "./native.js";
 import {
+  bulkFindingDecisionTargets,
   canExportReview,
   filterFindingQueue,
   findingQueueCounts,
@@ -405,7 +410,7 @@ describe("desktop trust-centered review", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={createFixtureReviewState()} onAction={() => undefined} />,
     );
-    expect(html).toContain("0 of 2 decided · 2 need action");
+    expect(html).toContain("0 of 2 resolved · 2 need action");
     expect(html).toContain("Needs action");
     expect(html).toContain("Blocking");
     expect(html).toContain("Warnings");
@@ -415,13 +420,85 @@ describe("desktop trust-centered review", () => {
     expect(html).not.toContain("Override rationale (required)");
   });
 
+  it("offers bulk decisions for every actionable finding in the active queue", () => {
+    const state = createFixtureReviewState();
+
+    expect(bulkFindingDecisionTargets(state.findings, "needs-action", "accepted")).toEqual([
+      "finding-unsupported-claim",
+      "finding-coverage",
+    ]);
+    expect(bulkFindingDecisionTargets(state.findings, "warnings", "accepted")).toEqual([
+      "finding-coverage",
+    ]);
+    expect(bulkFindingDecisionTargets(state.findings, "resolved", "accepted")).toEqual([]);
+
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={state}
+        onAction={() => undefined}
+        onBulkFindingDecision={() => undefined}
+      />,
+    );
+    expect(html).toContain("Apply to all 2 shown");
+    expect(html).toContain("Accept all");
+    expect(html).toContain("Reject all");
+    expect(html).toContain("Defer all");
+    expect(html).not.toContain("Override all");
+  });
+
+  it("reports and disables a bulk decision while it is being saved", () => {
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={createFixtureReviewState()}
+        onAction={() => undefined}
+        onBulkFindingDecision={() => undefined}
+        pendingBulkFindingCount={2}
+        pendingReviewAction={{ action: "finding-decision", elapsedSeconds: 3 }}
+      />,
+    );
+
+    expect(html).toContain("Saving 2 finding decisions… Elapsed 3 seconds.");
+    for (const decision of ["Accept all", "Reject all", "Defer all"]) {
+      expect(html).toContain(`disabled="">${decision}</button>`);
+    }
+  });
+
+  it("serializes bulk finding decisions through the existing durable action", async () => {
+    const initial = createFixtureReviewState();
+    const receivedStates: DesktopReviewState[] = [];
+    const receivedActions: ReviewAction[] = [];
+
+    const result = await dispatchFindingDecisions(
+      initial,
+      initial.findings.map((finding) => finding.id),
+      "accepted",
+      async (state, action) => {
+        receivedStates.push(state);
+        receivedActions.push(action);
+        return reduceReviewState(state, action);
+      },
+    );
+
+    expect(receivedActions).toEqual([
+      {
+        type: "finding-decision",
+        findingId: "finding-unsupported-claim",
+        decision: "accepted",
+      },
+      { type: "finding-decision", findingId: "finding-coverage", decision: "accepted" },
+    ]);
+    expect(receivedStates[1]?.findings[0]?.decision).toBe("accepted");
+    expect(result.findings.map((finding) => finding.decision)).toEqual(["accepted", "accepted"]);
+  });
+
   it("keeps fully resolved findings compact by default", () => {
     const initial = createFixtureReviewState();
     const resolved = {
       ...initial,
       findings: initial.findings.map((finding, index) => ({
         ...finding,
-        decision: index === 0 ? ("accepted" as const) : ("rejected" as const),
+        decision: index === 0 ? ("overridden" as const) : ("rejected" as const),
+        ...(index === 0 ? { rationale: "Verified against the candidate source." } : {}),
       })),
     };
 
@@ -432,9 +509,29 @@ describe("desktop trust-centered review", () => {
     const html = renderToStaticMarkup(
       <ReviewWorkspace state={resolved} onAction={() => undefined} />,
     );
-    expect(html).toContain("2 of 2 decided · all findings decided");
+    expect(html).toContain("2 of 2 resolved · all findings resolved");
     expect(html.match(/aria-expanded="false"/gu)).toHaveLength(2);
     expect(html).not.toContain("Linked claim:");
+  });
+
+  it("keeps an accepted blocking finding actionable until the artifact is revised", () => {
+    const initial = createFixtureReviewState();
+    const accepted = reduceReviewState(initial, {
+      type: "finding-decision",
+      findingId: "finding-unsupported-claim",
+      decision: "accepted",
+    });
+    const awaitingApproval = { ...accepted, state: "awaiting-approval" as const };
+
+    expect(unresolvedBlockingFindings(awaitingApproval)).toHaveLength(1);
+    expect(reduceReviewState(awaitingApproval, { type: "approve" }).approval).toBe("pending");
+
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={awaitingApproval} onAction={() => undefined} />,
+    );
+    expect(html).toContain("Accepted · revision required");
+    expect(html).toContain("Request a revision for 1 accepted blocking finding");
+    expect(html).toMatch(/aria-keyshortcuts="Alt\+A"[^>]*disabled=""/u);
   });
 
   it("reveals override rationale only for the explicitly edited finding", () => {
@@ -906,6 +1003,8 @@ describe("desktop workspace setup", () => {
     expect(html).toContain("Create workspace");
     expect(html).toContain("Try demo workspace");
     expect(html).toContain("Open workspace");
+    expect(html).toContain("Maximum review rounds");
+    expect(html).toContain('aria-label="Maximum review rounds"');
     // Nothing is claimed about a pairing that has not been named yet.
     expect(html).toContain(
       "Name an author model and a critic model, and this will say whether the pairing counts as independent.",
@@ -1283,6 +1382,9 @@ describe("desktop workspace setup", () => {
       "Name an author model and a critic model before creating the workspace.",
     );
     expect(workspaceSetupBlocker(named, { status: "idle" })).toBeNull();
+    expect(workspaceSetupBlocker({ ...named, maxRounds: 0 }, { status: "idle" })).toBe(
+      "Choose a maximum round count between 1 and 20.",
+    );
   });
 
   it("sends only what a person actually chose", () => {
@@ -1293,6 +1395,7 @@ describe("desktop workspace setup", () => {
       authorModel: "claude-sonnet-4-5",
       criticCompany: "openai",
       criticModel: "gpt-5",
+      maxRounds: 3,
     });
     expect(
       workspaceCreateInput(
@@ -1313,10 +1416,64 @@ describe("desktop workspace setup", () => {
       criticCompany: "openai",
       criticModel: "gpt-5",
       localEndpoint: "http://127.0.0.1:11434/v1",
+      maxRounds: 3,
     });
     expect(workspaceCreateInput("draft-loop-workspace")).toEqual({
       name: "draft-loop-workspace",
       mode: "real",
     });
+  });
+
+  it("explains and repairs an empty round opened past the configured limit", () => {
+    const initial = createFixtureReviewState();
+    const stranded = {
+      ...initial,
+      state: "awaiting-approval" as const,
+      round: 3,
+      reviewComplete: false,
+      providerTransmissionPreflight: {
+        ...initial.providerTransmissionPreflight,
+        budget: { ...initial.providerTransmissionPreflight.budget, maxRounds: 2 },
+      },
+    };
+
+    expect(roundLimitRecoveryRequired(stranded)).toBe(true);
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={stranded} onAction={() => undefined} />,
+    );
+    expect(html).toContain("Round limit recovery required");
+    expect(html).toContain("Round 3 was opened after the configured maximum of 2");
+    expect(html).toContain("Return to reviewed Round 2");
+    expect(html).toMatch(/title="Request revision \(Alt\+R\)"[^>]*disabled=""/u);
+
+    const recovered = reduceReviewState(stranded, { type: "recover-round-limit" });
+    expect(recovered).toMatchObject({ round: 2, reviewComplete: true });
+    expect(roundLimitRecoveryRequired(recovered)).toBe(false);
+  });
+
+  it("keeps the last fully reviewed artifact approvable when the round cap is reached", () => {
+    const initial = createFixtureReviewState();
+    const capped = {
+      ...initial,
+      state: "awaiting-approval" as const,
+      round: 2,
+      reviewComplete: true,
+      findings: initial.findings.map((finding) => ({
+        ...finding,
+        decision: "rejected" as const,
+      })),
+      providerTransmissionPreflight: {
+        ...initial.providerTransmissionPreflight,
+        budget: { ...initial.providerTransmissionPreflight.budget, maxRounds: 2 },
+      },
+    };
+
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace state={capped} onAction={() => undefined} />,
+    );
+    expect(html).toContain("Maximum of 2 review rounds reached");
+    expect(html).toContain("This reviewed version remains available for approval");
+    expect(html).toMatch(/title="Request revision \(Alt\+R\)"[^>]*disabled=""/u);
+    expect(html).toMatch(/title="Approve artifact \(Alt\+A\)"/u);
   });
 });

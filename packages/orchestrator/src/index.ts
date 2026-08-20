@@ -172,7 +172,8 @@ export type RunEventType =
   | "user.stopped"
   | "user.approved"
   | "user.exported"
-  | "user.revision-requested";
+  | "user.revision-requested"
+  | "user.round-budget-recovered";
 
 export interface RunEventInput {
   readonly id: string;
@@ -227,6 +228,7 @@ export interface OrchestrationEngine {
   readonly pause: (runId: string) => Promise<RunSnapshot>;
   readonly stop: (runId: string) => Promise<RunSnapshot>;
   readonly recoverToReview: (runId: string) => Promise<RunSnapshot>;
+  readonly recoverRoundBudget: (runId: string) => Promise<RunSnapshot>;
   readonly approve: (runId: string) => Promise<RunSnapshot>;
   readonly markExported: (runId: string) => Promise<RunSnapshot>;
   readonly requestRevision: (runId: string) => Promise<RunSnapshot>;
@@ -1317,6 +1319,11 @@ export function createOrchestrationEngine(
         "A completed independent critic review is required before requesting revision.",
       );
     }
+    if (snapshot.round >= snapshot.budget.maxRounds) {
+      throw new Error(
+        `Maximum round limit reached (${snapshot.budget.maxRounds}). Increase the workspace limit before requesting another revision.`,
+      );
+    }
     const updated = {
       ...snapshot,
       state: "revising" as const,
@@ -1330,6 +1337,46 @@ export function createOrchestrationEngine(
     return updated;
   };
 
+  const recoverRoundBudget = async (runId: string): Promise<RunSnapshot> => {
+    const snapshot = await loadForAction(runId);
+    const previousRound = snapshot.round - 1;
+    const currentRoundExecutions = snapshot.executionHistory.filter(
+      (execution) => execution.runId === snapshot.runId && execution.round === snapshot.round,
+    );
+    const previousCritique = snapshot.executionHistory.some(
+      (execution) =>
+        execution.runId === snapshot.runId &&
+        execution.contextSnapshotId === snapshot.contextSnapshotId &&
+        execution.round === previousRound &&
+        execution.step === "critic" &&
+        execution.status === "completed" &&
+        structurallyValidCritique(execution.output),
+    );
+    if (
+      snapshot.state !== "awaiting-approval" ||
+      snapshot.round <= snapshot.budget.maxRounds ||
+      currentRoundExecutions.length > 0 ||
+      !previousCritique ||
+      snapshot.artifact === null
+    ) {
+      throw new Error("This run is not eligible for round-limit recovery.");
+    }
+    const updated = {
+      ...snapshot,
+      round: previousRound,
+      state: "awaiting-approval" as const,
+      currentStep: null,
+      approval: "pending" as const,
+      updatedAt: clock(),
+      lastError: null,
+    };
+    await saveAndEmit(updated, "user.round-budget-recovered", {
+      fromRound: snapshot.round,
+      toRound: previousRound,
+    });
+    return updated;
+  };
+
   const events = (runId: string): Promise<readonly RunEvent[]> => options.store.listEvents(runId);
 
   return {
@@ -1340,6 +1387,7 @@ export function createOrchestrationEngine(
     pause,
     stop,
     recoverToReview,
+    recoverRoundBudget,
     approve,
     markExported,
     requestRevision,

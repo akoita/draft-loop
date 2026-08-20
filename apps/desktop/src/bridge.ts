@@ -198,6 +198,8 @@ export interface WorkspaceCreateInput {
    * Omitted uses the workspace default.
    */
   readonly requiredSections?: readonly string[];
+  /** Maximum author-critic rounds before the run returns to human review. */
+  readonly maxRounds?: number;
 }
 
 const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
@@ -212,6 +214,7 @@ const workspaceCreateKeys = inputKeys<WorkspaceCreateInput>()([
   "localEndpoint",
   "independenceOverrideRationale",
   "requiredSections",
+  "maxRounds",
 ]);
 
 /**
@@ -964,6 +967,14 @@ function optionalSectionTitles(value: unknown): readonly string[] | undefined {
   return value === undefined ? undefined : sectionTitles(value);
 }
 
+function optionalMaxRounds(value: unknown): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1 || value > 20) {
+    return invalidInput();
+  }
+  return value;
+}
+
 /**
  * A lineage label an operator declared, bounded the way the domain bounds one.
  *
@@ -1063,6 +1074,7 @@ function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
     input.independenceOverrideRationale,
   );
   const requiredSections = optionalSectionTitles(input.requiredSections);
+  const maxRounds = optionalMaxRounds(input.maxRounds);
   return {
     name: workspaceName(input.name),
     ...(mode === undefined ? {} : { mode }),
@@ -1075,6 +1087,7 @@ function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
     ...(localEndpoint === undefined ? {} : { localEndpoint }),
     ...(independenceOverrideRationale === undefined ? {} : { independenceOverrideRationale }),
     ...(requiredSections === undefined ? {} : { requiredSections }),
+    ...(maxRounds === undefined ? {} : { maxRounds }),
   };
 }
 
@@ -1184,6 +1197,7 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "start":
     case "resume":
     case "recover-to-review":
+    case "recover-round-limit":
     case "stop":
     case "request-revision":
     case "approve":
