@@ -1,4 +1,5 @@
 import { dirname, join, resolve } from "node:path";
+import { resolveProviderAuthModes } from "@draft-loop/application";
 import {
   app,
   BrowserWindow,
@@ -96,6 +97,11 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  const providerAuthModeConfiguration = resolveProviderAuthModes(
+    process.env.DRAFT_LOOP_PROVIDER_AUTH_MODE,
+    process.env.DRAFT_LOOP_ANTHROPIC_AUTH_MODE,
+    process.env.DRAFT_LOOP_OPENAI_AUTH_MODE,
+  );
   const acceptanceEnabled = process.env.DRAFT_LOOP_ACCEPTANCE === "1";
   const acceptanceRoot = process.env.DRAFT_LOOP_ACCEPTANCE_WORKSPACE;
   const acceptanceCandidate = process.env.DRAFT_LOOP_ACCEPTANCE_CANDIDATE;
@@ -232,6 +238,7 @@ app.whenReady().then(() => {
   };
   const acceptanceUrlHostnameResolver = async (): Promise<readonly string[]> => ["93.184.216.34"];
   const host = createNativeHost({
+    providerAuthModeConfiguration,
     dialogs:
       acceptanceEnabled && acceptanceWorkspace !== undefined && acceptanceCandidate !== undefined
         ? {
@@ -312,6 +319,7 @@ app.whenReady().then(() => {
       jobPath: liveE2eJobPath,
       candidatePath: liveE2eCandidatePath,
       evidencePath: liveE2eEvidencePath,
+      providerAuthModeConfiguration,
       ...(liveE2eAuthorModel === undefined || liveE2eAuthorModel === ""
         ? {}
         : { authorModel: liveE2eAuthorModel }),

@@ -555,6 +555,7 @@ function retryWaitLabel(waitMs: number): string {
 const credentialSourceLabels: Readonly<Record<CredentialStatus["source"], string>> = {
   app: "Configured in app",
   env: "Configured via env",
+  "user-session": "Provider user session",
   none: "Not configured",
 };
 
@@ -564,6 +565,7 @@ const credentialProtectionLabels: Readonly<Record<CredentialStatus["protection"]
   "local-aes-gcm": "Local AES fallback (key stored beside app data)",
   environment: "Environment variable",
   "session-memory": "Session memory only",
+  "provider-managed-session": "Provider-managed session",
   none: "No credential",
 };
 

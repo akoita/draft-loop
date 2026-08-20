@@ -10,6 +10,10 @@ import {
   defaultLocalModelEndpoint,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
+  type ProviderAuthMode,
+  type ProviderAuthModeConfiguration,
+  type ProviderUserSessionRunners,
+  resolveProviderAuthModes,
   SourceIngestionUserError,
   type WorkspaceDescriptor,
 } from "@draft-loop/application";
@@ -28,6 +32,9 @@ import {
   listOpenAIModels,
   type ModelCatalogue,
   ProviderAdapterError,
+  probeAnthropicClaudeUserSession,
+  probeOpenAICodexUserSession,
+  type UserSessionLoginStatus,
 } from "@draft-loop/providers";
 
 import {
@@ -130,6 +137,12 @@ export interface NativeHostOptions {
   readonly urlFetcher?: UrlFetcher;
   readonly urlHostnameResolver?: UrlHostnameResolver;
   readonly modelDiscovery?: NativeModelDiscoveryOptions;
+  readonly providerAuthMode?: ProviderAuthMode;
+  readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
+  readonly userSessionRunners?: ProviderUserSessionRunners;
+  readonly userSessionProbes?: Partial<
+    Readonly<Record<CredentialProvider, () => Promise<UserSessionLoginStatus>>>
+  >;
   /** Acceptance-only switch for exercising the preflight with offline fixtures. */
   readonly requireProviderPreflight?: boolean;
   readonly onError?: (error: unknown, capability: BridgeCapability) => void;
@@ -229,13 +242,18 @@ function providerEndpoint(
   company: string,
   fixtureMode: boolean,
   localEndpoint: string | undefined,
+  providerAuthModeConfiguration: ProviderAuthModeConfiguration,
 ): string {
   if (fixtureMode) return "local fixture (no network)";
   switch (company.trim().toLowerCase()) {
     case "anthropic":
-      return "https://api.anthropic.com/v1/messages";
+      return providerAuthModeConfiguration.anthropic === "user-session"
+        ? "local Claude runtime → Anthropic subscription"
+        : "https://api.anthropic.com/v1/messages";
     case "openai":
-      return "https://api.openai.com/v1/responses";
+      return providerAuthModeConfiguration.openai === "user-session"
+        ? "local Codex runtime → OpenAI subscription"
+        : "https://api.openai.com/v1/responses";
     case "local":
       return localEndpoint ?? defaultLocalModelEndpoint;
     default:
@@ -243,7 +261,10 @@ function providerEndpoint(
   }
 }
 
-function providerTransmissionPolicy(descriptor: WorkspaceDescriptor): ProviderTransmissionPolicy {
+function providerTransmissionPolicy(
+  descriptor: WorkspaceDescriptor,
+  providerAuthModeConfiguration: ProviderAuthModeConfiguration,
+): ProviderTransmissionPolicy {
   return {
     dataClass: descriptor.fixtureMode
       ? "synthetic-demo-material"
@@ -256,6 +277,7 @@ function providerTransmissionPolicy(descriptor: WorkspaceDescriptor): ProviderTr
         descriptor.author.company,
         descriptor.fixtureMode,
         descriptor.localEndpoint,
+        providerAuthModeConfiguration,
       ),
     },
     critic: {
@@ -264,9 +286,18 @@ function providerTransmissionPolicy(descriptor: WorkspaceDescriptor): ProviderTr
         descriptor.critic.company,
         descriptor.fixtureMode,
         descriptor.localEndpoint,
+        providerAuthModeConfiguration,
       ),
     },
-    retentionPreference: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
+    retentionPreference: descriptor.fixtureMode
+      ? "not-allowed"
+      : [descriptor.author, descriptor.critic].some(
+            ({ company }) =>
+              (company === "anthropic" || company === "openai") &&
+              providerAuthModeConfiguration[company] === "user-session",
+          )
+        ? "provider-default"
+        : "ephemeral-request",
     budget: {
       maxRounds: descriptor.maxRounds,
       maxCostUsd: descriptor.maxCostUsd ?? null,
@@ -307,6 +338,7 @@ function isProviderTransmissionPolicy(value: unknown): value is ProviderTransmis
     isProviderIdentity(value.author) &&
     isProviderIdentity(value.critic) &&
     (value.retentionPreference === "ephemeral-request" ||
+      value.retentionPreference === "provider-default" ||
       value.retentionPreference === "not-allowed") &&
     isRecord(budget) &&
     Object.keys(budget).length === 3 &&
@@ -352,8 +384,12 @@ async function providerTransmissionPreflight(
   descriptor: WorkspaceDescriptor,
   root: string,
   requireForFixture = false,
+  providerAuthModeConfiguration: ProviderAuthModeConfiguration = {
+    anthropic: "api-key",
+    openai: "api-key",
+  },
 ): Promise<ProviderTransmissionPreflight> {
-  const policy = providerTransmissionPolicy(descriptor);
+  const policy = providerTransmissionPolicy(descriptor, providerAuthModeConfiguration);
   const fingerprint = providerTransmissionFingerprint(policy);
   if (descriptor.fixtureMode && !requireForFixture) {
     return { ...policy, required: false, fingerprint, acknowledged: true, acknowledgedAt: null };
@@ -747,7 +783,7 @@ function reviewState(
       critic: descriptor.critic,
       transmissionAllowed: preflight.required && preflight.acknowledged,
       sensitiveData: true,
-      requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
+      requestedRetention: preflight.retentionPreference,
       independentReview,
     },
     providerTransmissionPreflight: preflight,
@@ -794,7 +830,7 @@ function emptyReviewState(
       critic: descriptor.critic,
       transmissionAllowed: preflight.required && preflight.acknowledged,
       sensitiveData: setup.evidenceSourceCount > 0,
-      requestedRetention: descriptor.fixtureMode ? "not-allowed" : "ephemeral-request",
+      requestedRetention: preflight.retentionPreference,
       /** No run means no recorded claim; nothing here can be invented. */
       independentReview: null,
     },
@@ -1047,12 +1083,18 @@ export interface NativeHost {
 
 export function createNativeHost(options: NativeHostOptions): NativeHost {
   const credentials = options.credentials ?? createMemoryCredentialStore();
+  const providerAuthModeConfiguration =
+    options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
   const requireProviderPreflight = options.requireProviderPreflight === true;
   const service =
     options.applicationService ??
     createApplicationService(
       createLocalApplicationDriver({
+        providerAuthModeConfiguration,
         resolveCredential: async (provider) => resolveCredential(credentials, provider),
+        ...(options.userSessionRunners === undefined
+          ? {}
+          : { userSessionRunners: options.userSessionRunners }),
       }),
     );
   let active: ActiveWorkspace | undefined;
@@ -1146,6 +1188,12 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         return await listLocalModels({ endpoint: target.endpoint, fetch: discoveryFetch });
       }
       const provider = target.provider;
+      if (providerAuthModeConfiguration[provider] === "user-session") {
+        return fail(
+          "permission-denied",
+          "Hosted model discovery is unavailable in user-session mode; enter an exact model id.",
+        );
+      }
       // The credential is read here and handed straight to the provider call.
       // It is never part of the result, the cache key, or an error: the
       // renderer learns which models exist, never what unlocked them.
@@ -1252,6 +1300,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       workspace.descriptor,
       workspace.root,
       requireProviderPreflight,
+      providerAuthModeConfiguration,
     );
     if (preflight.required && !preflight.acknowledged) {
       return fail(
@@ -1531,6 +1580,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           workspace.descriptor,
           workspace.root,
           requireProviderPreflight,
+          providerAuthModeConfiguration,
         );
         if (!current.required) break;
         if (action.fingerprint !== current.fingerprint) {
@@ -1541,7 +1591,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         await writeProviderTransmissionAcknowledgement(
           workspace.root,
-          providerTransmissionPolicy(workspace.descriptor),
+          providerTransmissionPolicy(workspace.descriptor, providerAuthModeConfiguration),
           current.fingerprint,
         );
         break;
@@ -1696,6 +1746,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       workspace.descriptor,
       workspace.root,
       requireProviderPreflight,
+      providerAuthModeConfiguration,
     );
     if (snapshot === undefined) return emptyReviewState(workspace.descriptor, setup, preflight);
     return reviewState(
@@ -1812,6 +1863,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               workspace.descriptor,
               workspace.root,
               requireProviderPreflight,
+              providerAuthModeConfiguration,
             );
             return {
               ok: true,
@@ -1822,6 +1874,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             workspace.descriptor,
             workspace.root,
             requireProviderPreflight,
+            providerAuthModeConfiguration,
           );
           return {
             ok: true,
@@ -1872,6 +1925,24 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           };
         }
         case "credential.status": {
+          if (providerAuthModeConfiguration[command.input.provider] === "user-session") {
+            const provider = command.input.provider;
+            const probe =
+              options.userSessionProbes?.[provider] ??
+              (provider === "anthropic"
+                ? probeAnthropicClaudeUserSession
+                : probeOpenAICodexUserSession);
+            const session = await probe();
+            return {
+              ok: true,
+              value: {
+                provider,
+                configured: session.available && session.authenticated,
+                source: "user-session",
+                protection: "provider-managed-session",
+              },
+            };
+          }
           const status = await credentials.status(command.input.provider);
           return {
             ok: true,

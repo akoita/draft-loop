@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document
-**Last reviewed:** 2026-08-16
+**Last reviewed:** 2026-08-20
 **Current stage:** Integration hardening and outcome validation
 
 This document describes product direction, not fixed delivery dates. The
@@ -251,6 +251,11 @@ baseline demonstrates workflow parity.
   provenance before enabling vector retrieval by default.
 - Integrate cancellation, timeout, bounded retry, rate-limit recovery, safe
   streaming progress, and reproducible run manifests into the product path.
+- Evaluate a separately consented OpenRouter transport for users who prefer
+  one in-product paid balance over bringing provider API keys or subscriptions.
+  It must use the same production path in validation and release checks, expose
+  OpenRouter plus the downstream model host, and receive its own architecture,
+  privacy, and billing decision before implementation.
 - Keep swapped provider roles and additional adapters independent of the
   orchestration domain.
 
@@ -350,6 +355,9 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-20 | Added a mandatory local `release:preflight` guardrail and agent policy before any release action | The paid live-provider check must run on the release revision without placing API keys or subscription sessions in CI/CD; a repository command is more portable and auditable than an optional per-clone Git hook |
+| 2026-08-20 | Made the paid live-provider E2E a local-only release validation and removed its GitHub Actions gate | Provider API keys and interactive subscription sessions should remain outside CI/CD; hosted automation continues to run deterministic credential-free validation and packaged offline acceptance |
+| 2026-08-20 | Added explicit per-provider API-key and experimental local user-session authentication modes, including deterministic mixed transport selection, and scheduled OpenRouter evaluation under provider quality | Local validation should reuse supported vendor logins without copying OAuth tokens and may select an API key when one subscription is unavailable, while hosted CI remains credential-free; OpenRouter is a future product billing option rather than a test-only backend |
 | 2026-08-16 | Required a deterministic real-mode full-draft NativeHost regression (#177) before another consented Electron rerun (#104) | The packaged fixture acceptance bypasses the provider adapters and canonical live-author proposal path, so repeated manual testing was discovering integration failures too late |
 | 2026-08-15 | Inserted the repeated Anthropic author-output completion failure (#175) before the consented rerun (#104) | A real-input structured response can end before a complete proposal is available; the product must budget author output explicitly and report safe completion diagnostics before representative validation can continue |
 | 2026-08-15 | Replaced the incomplete-critic approval dead end with bounded critic-only recovery (#173) | A failed independent critic must preserve the completed author draft and retry that exact step; it must not imply approval readiness or force another author round |

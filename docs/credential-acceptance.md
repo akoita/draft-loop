@@ -1,5 +1,10 @@
 # Packaged credential acceptance
 
+This acceptance contract covers the `api-key` authentication mode. Experimental
+local `user-session` authentication keeps OAuth credentials inside the vendor
+runtime and is covered by provider-session status and live synthetic checks;
+it does not reuse the API-key set/replace/remove workflow below.
+
 Credential lifecycle acceptance runs the packaged Electron application twice on
 Linux x64, macOS arm64, and Windows x64. It uses Electron `safeStorage` from the
 real main process, not a test double.

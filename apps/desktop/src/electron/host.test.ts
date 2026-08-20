@@ -859,6 +859,57 @@ describe("native host", () => {
     }
   });
 
+  it("names each transport and conservatively uses provider-default retention in mixed mode", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-user-session-preflight-"));
+    const fixture = service(root);
+    const liveWorkspace = { ...descriptor(root), fixtureMode: false };
+    fixture.service.readWorkspace.mockResolvedValue(liveWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: liveWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          providerExposure: { requestedRetention: "provider-default" },
+          providerTransmissionPreflight: {
+            retentionPreference: "provider-default",
+            author: { endpoint: "https://api.anthropic.com/v1/messages" },
+            critic: { endpoint: "local Codex runtime → OpenAI subscription" },
+          },
+        },
+      });
+      const fingerprint = (review as { readonly value: DesktopReviewState }).value
+        .providerTransmissionPreflight.fingerprint;
+      const acknowledged = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: liveWorkspace.id,
+          runId: "pending",
+          action: { type: "acknowledge-provider-transmission", fingerprint },
+        },
+      });
+      expect(acknowledged).toMatchObject({
+        ok: true,
+        value: { providerTransmissionPreflight: { acknowledged: true } },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails closed until the current live provider policy is acknowledged and persists safe metadata", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-exposure-"));
     const fixture = service(root);
@@ -1918,6 +1969,47 @@ describe("native host", () => {
           protection: "none",
         },
       });
+    });
+
+    it("reports provider-managed user sessions without reading the API-key store", async () => {
+      const status = vi.fn(async () => {
+        throw new Error("API-key status must not be read in user-session mode.");
+      });
+      const host = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => undefined,
+          chooseFiles: async () => [],
+        },
+        providerAuthMode: "user-session",
+        credentials: {
+          status,
+          set: async () => false,
+          remove: async () => false,
+          get: async () => {
+            throw new Error("API keys must not be read in user-session mode.");
+          },
+        },
+        userSessionProbes: {
+          anthropic: async () => ({ available: true, authenticated: true }),
+          openai: async () => ({ available: true, authenticated: false }),
+        },
+      });
+
+      await expect(
+        host.invoke({ type: "credential.status", input: { provider: "anthropic" } }),
+      ).resolves.toEqual({
+        ok: true,
+        value: {
+          provider: "anthropic",
+          configured: true,
+          source: "user-session",
+          protection: "provider-managed-session",
+        },
+      });
+      await expect(
+        host.invoke({ type: "credential.status", input: { provider: "openai" } }),
+      ).resolves.toMatchObject({ ok: true, value: { configured: false } });
+      expect(status).not.toHaveBeenCalled();
     });
   });
   describe("model discovery", () => {

@@ -3,6 +3,8 @@ import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resource
 import type { AgentRole, ModelCompany, ModelSelection } from "@draft-loop/domain";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses.js";
 
+export * from "./user-session.js";
+
 export type ProviderId = ModelCompany;
 export type { AgentRole, ModelSelection };
 

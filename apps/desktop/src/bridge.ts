@@ -90,7 +90,7 @@ export type ModelCompany = (typeof modelCompanies)[number];
 export const modelDiscoveryProviders = modelCompanies;
 export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
 
-export const credentialSources = ["app", "env", "none"] as const;
+export const credentialSources = ["app", "env", "user-session", "none"] as const;
 export type CredentialSource = (typeof credentialSources)[number];
 
 export const credentialProtections = [
@@ -99,6 +99,7 @@ export const credentialProtections = [
   "local-aes-gcm",
   "environment",
   "session-memory",
+  "provider-managed-session",
   "none",
 ] as const;
 export type CredentialProtection = (typeof credentialProtections)[number];
