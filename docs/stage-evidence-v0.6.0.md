@@ -1,17 +1,20 @@
 # v0.6.0 alpha stage evidence
 
-- **Status:** release candidate verified — publication blocked
+- **Status:** stage concluded at Integrated — validation failed; not released
 - **Stage:** Integration hardening and outcome validation
-- **Reviewed:** 2026-08-15
-- **Release metadata:** `release.json` is aligned to the stage and `alpha`
-  channel. Package manifests are aligned to `0.6.0`, and the release dry run
-  passed from source commit `dd933cf81c4161191281108b6f44c3d8cec94f8f`;
-  publication remains blocked until the real-application outcome gate is
-  complete.
+- **Reviewed:** 2026-08-21
+- **Release decision:** the `0.6.0` candidate is not being published. Package
+  manifests reached `0.6.0` and an earlier release dry run passed from source
+  commit `dd933cf81c4161191281108b6f44c3d8cec94f8f`, but the representative
+  outcome did not meet the factual-completeness and application-readiness exit
+  criterion. `release.json` now targets the v0.7 stage so the concluded v0.6
+  candidate cannot be mistaken for an approved release.
 
 This record is intentionally conservative. Automated and sanitized acceptance
-results demonstrate implementation and integration; they do not substitute for
-the consented representative application required by roadmap issue 104.
+results demonstrate implementation and integration. The consented
+representative application required by roadmap issue 104 was run and produced
+negative product evidence, so the stage is closed without a release rather
+than relabeled as Validated.
 
 ## Evidence matrix
 
@@ -21,8 +24,8 @@ the consented representative application required by roadmap issue 104.
 | Installed desktop acceptance | [Installed-app protocol](installed-app-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393103) | Integrated with sanitized inputs; Linux x64, macOS arm64, and Windows x64 passed | Real candidate files and a real job URL have not been published as evidence |
 | Credential lifecycle and preflight | [Credential protocol](credential-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393186) | Integrated automated lifecycle matrix passed on all three targets | Synthetic canaries do not prove every user environment or provider account |
 | Provider failure recovery | [Recovery implementation PR](https://github.com/akoita/draft-loop/pull/110); repository recovery tests | Implemented and integrated | No live provider outage is claimed by this record |
-| Consent and sanitized outcome reporting | [Pilot protocol](pilot-protocol.md); [outcome-reporting PR](https://github.com/akoita/draft-loop/pull/114) | Reporting path implemented | No real consented application has been recorded yet; [issue 104](https://github.com/akoita/draft-loop/issues/104) remains open |
-| Release artifacts and manifest | [Release procedure](releasing.md); [release contract](../release.json); [dry run 31855377293](https://github.com/akoita/draft-loop/actions/runs/31855377293) | v0.6.0 candidate verified on Linux x64, macOS arm64, and Windows x64 | Artifacts are unsigned alpha ZIPs; the Windows archive remains 148.6 MiB, and provenance was intentionally disabled for the dry run |
+| Consent and sanitized outcome reporting | [Pilot protocol](pilot-protocol.md); [outcome-reporting PR](https://github.com/akoita/draft-loop/pull/114); [issue 104](https://github.com/akoita/draft-loop/issues/104) | One private representative workflow reached approval and export; outcome failed the quality baseline | The result omitted required CV structure and chronology, changed a factual invariant, and introduced unsupported content; private inputs and outputs remain local |
+| Release artifacts and manifest | [Release procedure](releasing.md); [dry run 31855377293](https://github.com/akoita/draft-loop/actions/runs/31855377293) | v0.6.0 candidate verified on Linux x64, macOS arm64, and Windows x64; publication cancelled | No v0.6.0 tag or GitHub release exists; the reviewed dry-run artifacts were unsigned alpha ZIPs, Windows remained 148.6 MiB, and provenance was intentionally disabled |
 
 ## Release-candidate review
 
@@ -51,37 +54,39 @@ executable dominate each archive. On Windows, the executable alone stores
 remain known packaging improvements; they are not evidence failures for this
 unsigned alpha candidate.
 
-## Product measures
+## Representative outcome
 
-No real-application measures are claimed in this public record. The private
-pilot record must provide, at minimum:
+One private consented application exercised the live Anthropic–OpenAI workflow,
+three author–critic rounds, human finding decisions, approval, and Markdown
+export. Provider cost was unavailable because a subscription-backed session was
+part of the mixed authentication route and the run did not yield a complete,
+comparable cost. Review time, manual-edit count, confidence, and adversarial
+observations were not captured consistently enough to publish as measures.
 
-- first-draft, revised-draft, and manual-baseline comparison where available;
-- factuality regression, critical-requirement coverage, and unsupported-claim
-  counts;
-- useful versus rejected findings, review minutes, and manual edits;
-- author–critic rounds, provider cost, approval/export completion, and user
-  confidence; and
-- misleading-evidence and prompt-injection observations plus limitations.
+Comparison with the candidate's private manual baseline found that the
+generated artifact was not application-ready. It omitted major CV sections and
+career chronology, altered seniority, introduced unsupported quantification,
+and flattened distinct employers, roles, projects, credentials, education, and
+languages into an incomplete structure. A later run also demonstrated that an
+accepted blocking finding can require revision after the configured round cap,
+leaving approval correctly blocked but without an available revision action.
 
-The [consented outcome pilot protocol](pilot-protocol.md) defines the private
-record and the content-free report boundary. Candidate files, workspace
-databases, prompts, responses, credentials, exports, and employer-confidential
-terms must not be added to this repository or CI artifacts.
+These are bounded observations from one case, not claims about provider quality
+in general. Candidate files, workspace databases, prompts, responses,
+credentials, exports, employer details, and the manual baseline remain outside
+the repository and CI artifacts under the [pilot protocol](pilot-protocol.md).
 
-## Open gate and next decision
+## Final decision and carry-forward
 
-The release gate is blocked only by the missing private representative outcome
-in [issue 104](https://github.com/akoita/draft-loop/issues/104):
+The stage exit criterion was not met. The maintainer therefore concluded v0.6
+at **Integrated; validation failed**, cancelled publication of v0.6.0, and did
+not run the paid release preflight or create a tag or GitHub release.
 
-1. Run one representative application locally under the consent and provider
-   preflight rules in issue 104.
-2. Complete approval and local export, then generate the sanitized outcome
-   summary.
-3. Review the factuality, coverage, effort, cost, confidence, and limitation
-   results without generalizing beyond the sample.
-4. Publish only after the stage exit criterion is met and explicit maintainer
-   approval is confirmed.
-
-Until then, the roadmap stage remains **Integrated; validation incomplete** and
-the repository must not claim a v0.6.0 release.
+The negative evidence directly defines the v0.7 Application-grade CV workflow:
+reusable candidate knowledge bases, a canonical career profile, a reviewed
+opportunity brief, requirement-to-achievement planning, complete structured CV
+composition under a customizable writing/template policy, independent critique
+and author adjudication, recoverable stopping rules, professional rendering,
+and parity evaluation against the private manual baseline. The v0.6 release
+issue and outcome issue close as unsuccessful stage work, not as passed
+acceptance.
