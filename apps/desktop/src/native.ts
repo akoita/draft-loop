@@ -185,7 +185,12 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           input: {
             workspaceId: state.workspaceId,
             target,
-            ...(target === "job-description" ? { multiple: false } : {}),
+            ...(target === "job-description" || target === "writing-policy"
+              ? { multiple: false }
+              : {}),
+            ...(target === "writing-policy"
+              ? { extensions: [".md", ".markdown", ".txt", ".text"] as const }
+              : {}),
           },
         }),
       );

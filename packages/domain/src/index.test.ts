@@ -100,6 +100,32 @@ describe("domain workspace and context snapshots", () => {
     expect(snapshot.evidenceManifest[0]?.checksum).toBe(checksum);
   });
 
+  it("preserves a versioned writing policy separately from evidence", () => {
+    const snapshot = createContextSnapshot(
+      validInput({
+        writingPolicy: {
+          content: "  Use ASCII punctuation.  ",
+          checksum: "B".repeat(64),
+          version: " sha256:bbbbbbbbbbbb ",
+        },
+      }),
+    );
+
+    expect(snapshot.writingPolicy).toEqual({
+      content: "Use ASCII punctuation.",
+      checksum: "b".repeat(64),
+      version: "sha256:bbbbbbbbbbbb",
+    });
+    expect(snapshot.evidenceManifest).toHaveLength(1);
+    expect(() =>
+      createContextSnapshot(
+        validInput({
+          writingPolicy: { content: "Rules", checksum: "invalid", version: "v1" },
+        }),
+      ),
+    ).toThrow(/writingPolicy\.checksum/i);
+  });
+
   it("deeply freezes the snapshot and does not mutate from input changes", () => {
     const input = validInput();
     const snapshot = createContextSnapshot(input);

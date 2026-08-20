@@ -125,6 +125,9 @@ function service(
       initialize: vi.fn(async () => workspace),
       readWorkspace: vi.fn(async () => workspace),
       reconfigureModels: vi.fn<ApplicationService["reconfigureModels"]>(async () => workspace),
+      configureWritingPolicy: vi.fn<ApplicationService["configureWritingPolicy"]>(
+        async () => workspace,
+      ),
       begin: vi.fn(async () => snapshot),
       start: vi.fn(async () => snapshot),
       resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),
@@ -1807,6 +1810,72 @@ describe("native host", () => {
           setup: expect.objectContaining({
             jobDescriptionReady: true,
           }),
+        },
+      });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("imports an explicitly selected writing policy outside candidate evidence", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-policy-select-"));
+    const policySource = join(parent, "AGENTS.md");
+    await writeFile(policySource, "Use ASCII punctuation and preserve exact metrics.", "utf8");
+
+    try {
+      const dialogs: NativeHostDialogs = {
+        chooseDirectory: async () => parent,
+        chooseFiles: async () => [policySource],
+      };
+      const host = createNativeHost({ dialogs });
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "policy-import-test", mode: "real" },
+      });
+      const workspaceId = (
+        created as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+
+      const selected = await host.invoke({
+        type: "file.select",
+        input: { workspaceId, target: "writing-policy", multiple: false, extensions: [".md"] },
+      });
+
+      expect(selected).toMatchObject({
+        ok: true,
+        value: {
+          files: [
+            {
+              name: "writing-policy.md",
+              relativePath: ".draft-loop/writing-policy.md",
+              mediaType: "text/markdown",
+            },
+          ],
+        },
+      });
+      const workspaceRoot = join(parent, "policy-import-test");
+      await expect(
+        readFile(join(workspaceRoot, ".draft-loop", "writing-policy.md"), "utf8"),
+      ).resolves.toBe("Use ASCII punctuation and preserve exact metrics.\n");
+      expect(await readdir(join(workspaceRoot, "evidence"))).toEqual([]);
+
+      const loaded = await host.invoke({ type: "review.load", input: { workspaceId } });
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          setup: {
+            evidenceSourceCount: 0,
+            writingPolicy: {
+              version: expect.stringMatching(/^sha256:[a-f0-9]{12}$/u),
+              checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
+              preview: "Use ASCII punctuation and preserve exact metrics.",
+            },
+          },
+          providerTransmissionPreflight: {
+            transmissionScope: expect.arrayContaining([
+              "candidate-approved writing policy when configured",
+            ]),
+          },
         },
       });
     } finally {

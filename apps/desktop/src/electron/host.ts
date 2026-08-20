@@ -90,6 +90,7 @@ const transmissionScope = [
   "job description and requirements",
   "candidate source manifest",
   "selected candidate-source excerpts",
+  "candidate-approved writing policy when configured",
   "current draft and structured findings",
 ] as const;
 const excludedTransmissionScope = ["complete candidate corpus"] as const;
@@ -888,6 +889,25 @@ async function workspaceReadiness(
     jobDescriptionReady = false;
   }
   const evidenceSourceCount = await countEvidenceFiles(resolve(root, descriptor.sourceDirectory));
+  let writingPolicyStatus: WorkspaceReadiness["writingPolicyStatus"] =
+    descriptor.writingPolicyPath === undefined ? "none" : "unavailable";
+  let writingPolicy: WorkspaceReadiness["writingPolicy"] = null;
+  if (descriptor.writingPolicyPath !== undefined) {
+    try {
+      const content = (await readFile(resolve(root, descriptor.writingPolicyPath), "utf8")).trim();
+      if (content !== "") {
+        const checksum = createHash("sha256").update(content, "utf8").digest("hex");
+        writingPolicy = {
+          version: `sha256:${checksum.slice(0, 12)}`,
+          checksum,
+          preview: content.replace(/\s+/gu, " ").slice(0, 240),
+        };
+        writingPolicyStatus = "active";
+      }
+    } catch {
+      writingPolicy = null;
+    }
+  }
   let retrievalStatus: WorkspaceReadiness["retrievalStatus"] = "not-indexed";
   let indexedEvidenceChunkCount = 0;
   let selectedEvidenceChunkCount = 0;
@@ -909,6 +929,9 @@ async function workspaceReadiness(
   const nextSteps: string[] = [];
   if (!jobDescriptionReady) nextSteps.push("Add a target job description.");
   if (evidenceSourceCount === 0) nextSteps.push("Add at least one candidate evidence source.");
+  if (writingPolicyStatus === "unavailable") {
+    nextSteps.push("Replace the configured writing policy before starting a review.");
+  }
   if (retrievalStatus === "no-query") {
     nextSteps.push("Replace the job description with searchable role content.");
   }
@@ -919,6 +942,8 @@ async function workspaceReadiness(
     fixtureMode: descriptor.fixtureMode,
     jobDescriptionReady,
     evidenceSourceCount,
+    writingPolicyStatus,
+    writingPolicy,
     retrievalStatus,
     indexedEvidenceChunkCount,
     selectedEvidenceChunkCount,
@@ -927,6 +952,7 @@ async function workspaceReadiness(
     ready:
       jobDescriptionReady &&
       evidenceSourceCount > 0 &&
+      writingPolicyStatus !== "unavailable" &&
       retrievalStatus !== "no-query" &&
       retrievalStatus !== "unavailable",
     nextSteps,
@@ -1443,6 +1469,25 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             .digest("hex")
             .slice(0, 24),
           name: "job.md",
+          relativePath: targetRelative,
+          mediaType: "text/markdown",
+          byteLength: targetDetails.size,
+        });
+      } else if (targetKind === "writing-policy") {
+        const descriptor = await service.configureWritingPolicy(
+          { root: workspace.root, sourcePath },
+          io(),
+        );
+        active = { descriptor, root: workspace.root };
+        const targetRelative = descriptor.writingPolicyPath ?? ".draft-loop/writing-policy.md";
+        const target = resolve(workspace.root, targetRelative);
+        const targetDetails = await stat(target);
+        files.push({
+          id: createHash("sha256")
+            .update(await readFile(target))
+            .digest("hex")
+            .slice(0, 24),
+          name: basename(target),
           relativePath: targetRelative,
           mediaType: "text/markdown",
           byteLength: targetDetails.size,

@@ -32,7 +32,7 @@ interface ReviewWorkspaceProps {
   ) => void;
   readonly pendingBulkFindingCount?: number | null;
   readonly pendingReviewAction?: PendingReviewAction | null;
-  readonly onSelectFiles?: (target: "evidence" | "job-description") => void;
+  readonly onSelectFiles?: (target: "evidence" | "job-description" | "writing-policy") => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   readonly errorMessage?: string | null;
   readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
@@ -2492,9 +2492,54 @@ export function ReviewWorkspace({
                     Review and fetch source URL
                   </button>
                 </article>
-                <article className={`setup-card${modelKeysReady ? " setup-card-ready" : ""}`}>
+                <article
+                  className={`setup-card${state.setup.writingPolicyStatus === "active" ? " setup-card-ready" : ""}`}
+                >
                   <div className="setup-card-head">
                     <span className="setup-number">03</span>
+                    <span
+                      className={`setup-state${state.setup.writingPolicyStatus === "active" ? " setup-state-ready" : ""}`}
+                    >
+                      {state.setup.writingPolicyStatus === "active"
+                        ? "Active"
+                        : state.setup.writingPolicyStatus === "unavailable"
+                          ? "Needs attention"
+                          : "Optional"}
+                    </span>
+                  </div>
+                  <strong>Writing policy</strong>
+                  <span>
+                    {state.setup.writingPolicyStatus === "unavailable"
+                      ? "The configured policy cannot be read; replace it before starting"
+                      : state.setup.writingPolicy === null
+                        ? "Add explicit rules for both author and critic"
+                        : `Applied as ${state.setup.writingPolicy.version}`}
+                  </span>
+                  {state.setup.writingPolicy === null ? (
+                    <span className="setup-note">
+                      A selected policy is kept separate from career evidence. Its instructions and
+                      checksum are recorded with the run and its content is shared with both model
+                      providers.
+                    </span>
+                  ) : (
+                    <span className="setup-retrieval-status" role="status">
+                      {state.setup.writingPolicy.preview}
+                    </span>
+                  )}
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    disabled={onSelectFiles === undefined}
+                    onClick={() => onSelectFiles?.("writing-policy")}
+                  >
+                    {state.setup.writingPolicyStatus === "none"
+                      ? "Choose policy file"
+                      : "Replace policy"}
+                  </button>
+                </article>
+                <article className={`setup-card${modelKeysReady ? " setup-card-ready" : ""}`}>
+                  <div className="setup-card-head">
+                    <span className="setup-number">04</span>
                     <span className={`setup-state${modelKeysReady ? " setup-state-ready" : ""}`}>
                       {state.setup.fixtureMode
                         ? "Not needed"

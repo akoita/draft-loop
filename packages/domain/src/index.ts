@@ -290,10 +290,21 @@ export interface ContextSnapshot {
   readonly language: string;
   readonly outputConstraints: OutputConstraints;
   readonly truthfulnessPolicy: string;
+  /** Explicit candidate-approved authoring policy, separate from claim evidence. */
+  readonly writingPolicy?: WritingPolicy;
   readonly readinessRubric: ReadinessRubric;
   readonly evidenceManifest: readonly EvidenceSource[];
   readonly modelConfiguration: ModelConfiguration;
   readonly profileId?: ProfileId;
+}
+
+export interface WritingPolicy {
+  /** Exact policy text applied to this run. */
+  readonly content: string;
+  /** SHA-256 of `content`, recorded for audit and change detection. */
+  readonly checksum: string;
+  /** Stable human-visible version derived from the checksum. */
+  readonly version: string;
 }
 
 export interface ContextSnapshotInput {
@@ -311,6 +322,7 @@ export interface ContextSnapshotInput {
   readonly language?: string;
   readonly outputConstraints?: OutputConstraintsInput;
   readonly truthfulnessPolicy?: string;
+  readonly writingPolicy?: WritingPolicy;
   readonly readinessRubric?: ReadinessRubricInput;
   readonly evidenceManifest?: readonly EvidenceSourceInput[];
   readonly modelConfiguration?: ModelConfigurationInput;
@@ -749,6 +761,22 @@ export function validateContextSnapshotInput(input: unknown): SemanticValidation
   validateOptionalString(candidate.candidateInstructions, "candidateInstructions", issues);
   validateOptionalString(candidate.instructions, "instructions", issues);
   validateOptionalString(candidate.truthfulnessPolicy, "truthfulnessPolicy", issues, true);
+  if (candidate.writingPolicy !== undefined) {
+    if (!isRecord(candidate.writingPolicy)) {
+      addIssue(issues, "invalid-value", "writingPolicy", "must be a writing policy object.");
+    } else {
+      const policy = candidate.writingPolicy as Partial<WritingPolicy>;
+      if (!isNonEmptyString(policy.content)) {
+        addIssue(issues, "invalid-value", "writingPolicy.content", "must not be empty.");
+      }
+      if (!isNonEmptyString(policy.checksum) || !/^[a-f0-9]{64}$/iu.test(policy.checksum)) {
+        addIssue(issues, "invalid-value", "writingPolicy.checksum", "must be a SHA-256 checksum.");
+      }
+      if (!isNonEmptyString(policy.version)) {
+        addIssue(issues, "invalid-value", "writingPolicy.version", "must not be empty.");
+      }
+    }
+  }
   validateRequirements(candidate, issues);
   validateEvidenceManifest(candidate, issues);
   validateModelConfiguration(candidate, issues);
@@ -1168,6 +1196,15 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
       ...(outputConstraints.tone === undefined ? {} : { tone: outputConstraints.tone.trim() }),
     },
     truthfulnessPolicy: (input.truthfulnessPolicy ?? "Do not add unsupported claims.").trim(),
+    ...(input.writingPolicy === undefined
+      ? {}
+      : {
+          writingPolicy: {
+            content: input.writingPolicy.content.trim(),
+            checksum: input.writingPolicy.checksum.toLowerCase(),
+            version: input.writingPolicy.version.trim(),
+          },
+        }),
     readinessRubric: {
       relevance: input.readinessRubric?.relevance as number,
       evidence: input.readinessRubric?.evidence as number,

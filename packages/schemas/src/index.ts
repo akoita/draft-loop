@@ -82,6 +82,14 @@ export const evidenceSourceSchema = z.object({
 
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
 
+export const writingPolicySchema = z.object({
+  content: nonEmptyString,
+  checksum: z.string().regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum"),
+  version: nonEmptyString,
+});
+
+export type WritingPolicy = z.infer<typeof writingPolicySchema>;
+
 export const candidateProfileSchema = z.object({
   id: nonEmptyString,
   name: nonEmptyString,
@@ -211,6 +219,7 @@ const contextSnapshotShape = z.object({
   language: nonEmptyString,
   outputConstraints: outputConstraintsSchema,
   truthfulnessPolicy: nonEmptyString.default("Do not add unsupported claims."),
+  writingPolicy: writingPolicySchema.optional(),
   readinessRubric: readinessRubricSchema,
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,
@@ -251,6 +260,7 @@ const contextSnapshotInputShape = z.object({
     requiredSections: [],
   }),
   truthfulnessPolicy: nonEmptyString.default("Do not add unsupported claims."),
+  writingPolicy: writingPolicySchema.optional(),
   readinessRubric: readinessRubricSchema,
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,

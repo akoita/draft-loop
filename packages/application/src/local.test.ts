@@ -425,6 +425,109 @@ describe("local application driver", () => {
     }
   });
 
+  it("records an explicitly selected writing policy and applies it to both model roles", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-");
+    const sourcePath = join(root, "AGENTS.md");
+    const policyText = "Use plain ASCII punctuation. Never round candidate metrics upward.";
+    await writeFile(sourcePath, policyText, "utf8");
+    const authorInputs: string[] = [];
+    const criticInputs: string[] = [];
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly messages: readonly { readonly content: string }[];
+      };
+      authorInputs.push(body.messages[1]?.content ?? "");
+      return localCompletion(
+        authorProposal(evidenceChunkId(body.messages[1]?.content ?? "")),
+        "local-policy",
+      );
+    });
+    const criticClient: AnthropicClient = {
+      messages: {
+        create: (input) => {
+          const content = (
+            input as { readonly messages?: readonly { readonly content?: unknown }[] }
+          ).messages?.[0]?.content;
+          if (typeof content !== "string") throw new Error("missing critic input");
+          criticInputs.push(content);
+          const response = {
+            id: "anthropic-policy-critic",
+            content: [{ type: "text", text: JSON.stringify({ findings: [] }) }],
+            model: "claude-sonnet-4-5",
+            stop_reason: "end_turn",
+            usage: { input_tokens: 90, output_tokens: 20 },
+          };
+          return Object.assign(Promise.resolve(response), {
+            withResponse: async () => ({ data: response, request_id: response.id }),
+          }) as ReturnType<AnthropicClient["messages"]["create"]>;
+        },
+      },
+    };
+    const driver = createLocalApplicationDriver({
+      resolveCredential: async () => "fake-anthropic-key",
+      providerClientFactories: {
+        local: () => ({ fetch: localFetch as unknown as typeof fetch }),
+        anthropic: () => criticClient,
+      },
+    });
+
+    try {
+      await driver.initialize({
+        root,
+        jobDescription: "job.md",
+        sources: "evidence",
+        authorCompany: "local",
+        authorModel: "qwen-policy",
+        criticCompany: "anthropic",
+        criticModel: "claude-sonnet-4-5",
+      });
+      const configured = await driver.configureWritingPolicy({ root, sourcePath });
+      expect(configured.writingPolicyPath).toBe(".draft-loop/writing-policy.md");
+
+      const snapshot = await driver.start({ root, allowProviderData: true });
+      expect(snapshot.state).toBe("awaiting-approval");
+      expect(authorInputs).toHaveLength(1);
+      expect(criticInputs).toHaveLength(1);
+      for (const serialized of [...authorInputs, ...criticInputs]) {
+        expect(JSON.parse(serialized)).toMatchObject({
+          context: {
+            writingPolicy: {
+              content: policyText,
+              checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
+              version: expect.stringMatching(/^sha256:[a-f0-9]{12}$/u),
+            },
+            evidenceManifest: [{ path: join(root, "evidence", "resume.md") }],
+          },
+        });
+      }
+
+      const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        const record = await storage.getContextSnapshot(snapshot.contextSnapshotId);
+        expect(record?.payload).toMatchObject({
+          writingPolicy: {
+            content: policyText,
+            checksum: expect.any(String),
+            version: expect.any(String),
+          },
+          evidenceManifest: [{ path: join(root, "evidence", "resume.md") }],
+        });
+      } finally {
+        await storage.close();
+      }
+
+      const tampered = await workspaceConfig(root);
+      await writeFile(
+        join(root, ".draft-loop", "workspace.json"),
+        `${JSON.stringify({ ...tampered, writingPolicyPath: "../outside-policy.md" })}\n`,
+        "utf8",
+      );
+      await expect(driver.readWorkspace(root)).rejects.toThrow(/managed policy file/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("leaves the endpoint to the adapter when the workspace configures none", async () => {
     const root = await providerWorkspace("draft-loop-local-default-endpoint-");
     const io = { write: () => undefined };

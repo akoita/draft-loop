@@ -294,7 +294,7 @@ export interface FileSelectInput {
   readonly workspaceId: string;
   readonly extensions?: readonly SupportedFileExtension[];
   readonly multiple?: boolean;
-  readonly target?: "evidence" | "job-description";
+  readonly target?: "evidence" | "job-description" | "writing-policy";
 }
 
 const fileSelectKeys = inputKeys<FileSelectInput>()([
@@ -1237,7 +1237,7 @@ function validateFileSelectInput(value: unknown): FileSelectInput {
   const target =
     input.target === undefined
       ? undefined
-      : enumValue(input.target, ["evidence", "job-description"] as const);
+      : enumValue(input.target, ["evidence", "job-description", "writing-policy"] as const);
   return {
     workspaceId: identifier(input.workspaceId),
     ...(normalizedExtensions === undefined ? {} : { extensions: normalizedExtensions }),

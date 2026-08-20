@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document
-**Last reviewed:** 2026-08-20
+**Last reviewed:** 2026-08-21
 **Current stage:** Integration hardening and outcome validation
 
 This document describes product direction, not fixed delivery dates. The
@@ -105,6 +105,13 @@ artifact schemas, multilingual templates, a local endpoint adapter, and
 portfolio ingestion. These are component-level implementations or partial
 integrations. They do not establish that the retrieval, pilot, production-beta,
 or controlled-expansion outcomes are complete.
+
+An initial workspace-scoped writing-policy slice for #148 is integrated behind
+explicit local file selection. The selected policy remains separate from
+candidate evidence, is versioned by checksum in run context, is visible before
+provider transmission, and supplies deterministic checks for supported rules.
+It does not complete #148: reusable global preferences, opportunity overrides,
+and in-product policy editing remain part of the v0.7 stage.
 
 The sanitized first real-application run for issue #104 failed its quality
 baseline: technical export completed, but major CV sections and chronology were
@@ -355,6 +362,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-21 | Integrated an explicit workspace writing-policy source role as an early partial slice of #148 without moving the current stage | Representative use showed that recurring candidate rules must guide both model roles without treating files named like agent configuration as evidence or executable repository instructions; reusable global policy and per-opportunity overrides remain v0.7 work |
 | 2026-08-20 | Added a mandatory local `release:preflight` guardrail and agent policy before any release action | The paid live-provider check must run on the release revision without placing API keys or subscription sessions in CI/CD; a repository command is more portable and auditable than an optional per-clone Git hook |
 | 2026-08-20 | Made the paid live-provider E2E a local-only release validation and removed its GitHub Actions gate | Provider API keys and interactive subscription sessions should remain outside CI/CD; hosted automation continues to run deterministic credential-free validation and packaged offline acceptance |
 | 2026-08-20 | Added explicit per-provider API-key and experimental local user-session authentication modes, including deterministic mixed transport selection, and scheduled OpenRouter evaluation under provider quality | Local validation should reuse supported vendor logins without copying OAuth tokens and may select an API key when one subscription is unavailable, while hosted CI remains credential-free; OpenRouter is a future product billing option rather than a test-only backend |
