@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 
-import { type ArtifactValidationIssue, validateArtifactReferences } from "@draft-loop/artifacts";
+import {
+  type ArtifactValidationIssue,
+  hasRequiredArtifactSection,
+  validateArtifactReferences,
+} from "@draft-loop/artifacts";
 import type { DraftArtifact } from "@draft-loop/schemas";
 
 export type OutputFormat = "markdown" | "pdf" | "docx";
@@ -186,10 +190,6 @@ export class ArtifactExportValidationError extends Error {
   }
 }
 
-function normalize(value: string): string {
-  return value.normalize("NFKC").replace(/\s+/gu, " ").trim().toLowerCase();
-}
-
 function artifactText(artifact: DraftArtifact): string {
   return artifact.sections
     .slice()
@@ -214,9 +214,8 @@ export function validateArtifactForExport(
       message: issue.message,
       path: issue.path,
     }));
-  const sectionNames = new Set(artifact.sections.map((section) => normalize(section.title)));
   for (const requiredSection of constraints.requiredSections ?? []) {
-    if (!sectionNames.has(normalize(requiredSection))) {
+    if (!hasRequiredArtifactSection(artifact, requiredSection)) {
       issues.push({
         code: "missing-required-section",
         message: `required section ${requiredSection} is missing`,

@@ -64,6 +64,22 @@ describe("Markdown rendering", () => {
     expect(docx.content.slice(0, 4)).toEqual(new Uint8Array([0x50, 0x4b, 0x03, 0x04]));
   });
 
+  it("accepts semantic required sections when display headings are customized", () => {
+    const customizedArtifact: DraftArtifact = {
+      ...artifact,
+      sections: artifact.sections.map((section) => ({
+        ...section,
+        title: section.kind === "summary" ? "Professional Summary" : "Professional Experience",
+      })),
+    };
+
+    expect(() =>
+      renderArtifact(customizedArtifact, "markdown", {
+        requiredSections: ["Summary", "Experience"],
+      }),
+    ).not.toThrow();
+  });
+
   it("escapes the controlled HTML template and blocks layout violations", () => {
     const html = renderHtml({
       ...artifact,

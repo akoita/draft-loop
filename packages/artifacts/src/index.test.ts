@@ -6,6 +6,7 @@ import {
   type DraftArtifact,
   diffArtifacts,
   getUnbackedClaims,
+  hasRequiredArtifactSection,
   stableSerializeArtifact,
   validateArtifactReferences,
 } from "./index.js";
@@ -65,6 +66,20 @@ function artifactParts() {
 }
 
 describe("structured CV artifacts", () => {
+  it("matches required sections by display title or semantic kind", () => {
+    const artifact = createArtifact({
+      ...artifactInput(),
+      sections: artifactInput().sections.map((section) => ({
+        ...section,
+        title: "Professional Summary",
+      })),
+    });
+
+    expect(hasRequiredArtifactSection(artifact, "Professional Summary")).toBe(true);
+    expect(hasRequiredArtifactSection(artifact, " summary ")).toBe(true);
+    expect(hasRequiredArtifactSection(artifact, "Experience")).toBe(false);
+  });
+
   it("creates a frozen version-one artifact and identifies unsupported claims", () => {
     const { input, claim, section } = artifactParts();
     const artifact = createArtifact({

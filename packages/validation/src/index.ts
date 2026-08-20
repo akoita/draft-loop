@@ -1,3 +1,4 @@
+import { hasRequiredArtifactSection } from "@draft-loop/artifacts";
 import type { DraftArtifact, JobRequirement, OutputConstraints } from "@draft-loop/schemas";
 
 export type ValidationSeverity = "error" | "warning";
@@ -80,10 +81,6 @@ const stopWords = new Set([
 
 function normalizeText(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/gu, " ").trim();
-}
-
-function normalizeSectionTitle(value: string): string {
-  return normalizeText(value).replace(/\s/gu, "");
 }
 
 function tokens(value: string): readonly string[] {
@@ -226,12 +223,8 @@ export function validateDraftArtifact(
   const issues: ValidationIssue[] = [];
   const text = artifactText(artifact);
   const constraints = context.outputConstraints;
-  const sectionTitles = new Set(
-    artifact.sections.map((section) => normalizeSectionTitle(section.title)),
-  );
-
   for (const requiredSection of constraints.requiredSections ?? []) {
-    if (!sectionTitles.has(normalizeSectionTitle(requiredSection))) {
+    if (!hasRequiredArtifactSection(artifact, requiredSection)) {
       addIssue(issues, {
         code: "missing-required-section",
         category: "format",
