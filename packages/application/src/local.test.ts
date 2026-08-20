@@ -531,7 +531,10 @@ describe("local application driver", () => {
         stderr: "",
       };
     });
-    const openaiRunner = vi.fn<UserSessionProcessRunner>(async (_command, args, _options) => {
+    const openaiRunner = vi.fn<UserSessionProcessRunner>(async (_command, args, options) => {
+      expect(options.stdin).toContain("Do not repeat deterministicFindings");
+      expect(options.stdin).toContain("Return no more than 16 findings");
+      expect(options.stdin).toContain("keep each message to 400 characters or fewer");
       const outputIndex = args.indexOf("--output-last-message");
       const outputPath = args[outputIndex + 1];
       if (outputPath === undefined) throw new Error("missing output path");
@@ -581,6 +584,66 @@ describe("local application driver", () => {
       expect(resolveCredential).not.toHaveBeenCalled();
       expect(anthropicRunner).toHaveBeenCalledOnce();
       expect(openaiRunner).toHaveBeenCalledOnce();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an oversized user-session critique as a retryable provider response", async () => {
+    const root = await providerWorkspace("draft-loop-bounded-user-session-critique-");
+    const openaiRunner = vi.fn<UserSessionProcessRunner>(async (_command, args) => {
+      const outputPath = args[args.indexOf("--output-last-message") + 1];
+      if (outputPath === undefined) throw new Error("missing output path");
+      const findings = Array.from({ length: 17 }, (_, index) => ({
+        id: `finding-${index + 1}`,
+        code: "quality",
+        category: "quality",
+        severity: "warning",
+        message: "Keep the finding concise.",
+      }));
+      await writeFile(outputPath, JSON.stringify({ findings }), { mode: 0o600 });
+      return {
+        exitCode: 0,
+        stdout: [
+          JSON.stringify({ type: "thread.started", thread_id: "codex-session" }),
+          JSON.stringify({
+            type: "turn.completed",
+            usage: { input_tokens: 80, output_tokens: 100 },
+          }),
+        ].join("\n"),
+        stderr: "",
+      };
+    });
+    const driver = createLocalApplicationDriver({
+      providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
+      resolveCredential: async () => "fake-anthropic-key",
+      providerClientFactories: { anthropic: () => anthropicAuthorClient() },
+      userSessionRunners: { openai: openaiRunner },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "anthropic",
+          authorModel: "claude-haiku-4-5",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+        },
+        { write: () => undefined },
+      );
+
+      const snapshot = await driver.start(
+        { root, allowProviderData: true },
+        { write: () => undefined },
+      );
+
+      expect(snapshot).toMatchObject({
+        state: "provider-error",
+        lastError: { code: "invalid-response", step: "critic", retryable: true },
+      });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

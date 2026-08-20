@@ -224,6 +224,8 @@ describe("OpenAICodexUserSessionAdapter", () => {
         "read-only",
         "--strict-config",
         "--config",
+        'model_reasoning_effort="low"',
+        "--config",
         'approval_policy="never"',
         "--config",
         "features.shell_tool=false",
@@ -287,6 +289,35 @@ describe("OpenAICodexUserSessionAdapter", () => {
       providerRequestId: "codex-thread",
       usage: { inputTokens: 12, outputTokens: 3, totalTokens: 15 },
       cost: { estimatedUsd: null },
+    });
+  });
+
+  it("keeps author reasoning at the runtime default", async () => {
+    const authorModel = { ...openAIModel, role: "author" as const };
+    const runner = vi.fn<UserSessionProcessRunner>(async (_command, args) => {
+      expect(args).not.toContain('model_reasoning_effort="low"');
+      const outputPath = args[args.indexOf("--output-last-message") + 1];
+      if (outputPath === undefined) throw new Error("output path missing");
+      await writeFile(outputPath, '{"answer":"yes"}');
+      return {
+        exitCode: 0,
+        stdout: [
+          JSON.stringify({ type: "thread.started", thread_id: "thread" }),
+          JSON.stringify({
+            type: "turn.completed",
+            usage: { input_tokens: 1, output_tokens: 1 },
+          }),
+        ].join("\n"),
+        stderr: "",
+      };
+    });
+    const adapter = new OpenAICodexUserSessionAdapter({
+      configuredModel: authorModel,
+      runner,
+    });
+
+    await expect(adapter.execute(request(authorModel))).resolves.toMatchObject({
+      output: { answer: "yes" },
     });
   });
 

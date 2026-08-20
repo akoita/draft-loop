@@ -731,6 +731,8 @@ const codexConfigurationOverrides = [
   'web_search="disabled"',
 ] as const;
 
+const codexCriticConfigurationOverrides = ['model_reasoning_effort="low"'] as const;
+
 export class OpenAICodexUserSessionAdapter<
   Input extends JsonValue = JsonValue,
   Output extends JsonValue = JsonValue,
@@ -783,6 +785,9 @@ export class OpenAICodexUserSessionAdapter<
           "--sandbox",
           "read-only",
           "--strict-config",
+          ...(request.model.role === "critic"
+            ? codexCriticConfigurationOverrides.flatMap((override) => ["--config", override])
+            : []),
           ...codexConfigurationOverrides.flatMap((override) => ["--config", override]),
         ];
         const result = await this.options.runner(this.options.command, args, {
