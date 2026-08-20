@@ -85,6 +85,27 @@ describe("canonical context snapshot schemas", () => {
     expect(parsed.modelConfiguration.author.modelId).toBe("claude-opus-exact");
   });
 
+  it("round-trips an optional versioned writing policy", () => {
+    const snapshot = createContextSnapshot({
+      ...validInput(),
+      writingPolicy: {
+        content: "Use ASCII punctuation.",
+        checksum: "b".repeat(64),
+        version: "sha256:bbbbbbbbbbbb",
+      },
+    });
+
+    expect(parseContextSnapshot(serializeContextSnapshot(snapshot)).writingPolicy).toEqual(
+      snapshot.writingPolicy,
+    );
+    expect(() =>
+      contextSnapshotSchema.parse({
+        ...snapshot,
+        writingPolicy: { ...snapshot.writingPolicy, checksum: "invalid" },
+      }),
+    ).toThrow(/SHA-256 checksum/i);
+  });
+
   it("normalizes the description alias in requirement input", () => {
     expect(
       jobRequirementInputSchema.parse({

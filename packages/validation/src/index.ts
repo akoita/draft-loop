@@ -1,5 +1,10 @@
 import { hasRequiredArtifactSection } from "@draft-loop/artifacts";
-import type { DraftArtifact, JobRequirement, OutputConstraints } from "@draft-loop/schemas";
+import type {
+  DraftArtifact,
+  JobRequirement,
+  OutputConstraints,
+  WritingPolicy,
+} from "@draft-loop/schemas";
 
 export type ValidationSeverity = "error" | "warning";
 
@@ -26,6 +31,7 @@ export type DeterministicValidationCode =
   | "unsupported-claim"
   | "unsupported-quantification"
   | "inconsistent-date"
+  | "writing-policy-ascii-punctuation"
   | "uncovered-requirement"
   | "explicit-gap";
 
@@ -53,6 +59,7 @@ export interface DeterministicValidationContext {
     OutputConstraints,
     "requiredSections" | "maxWords" | "maxCharacters" | "maxLength"
   >;
+  readonly writingPolicy?: Pick<WritingPolicy, "content" | "version">;
 }
 
 export interface DeterministicValidationOptions {
@@ -223,6 +230,20 @@ export function validateDraftArtifact(
   const issues: ValidationIssue[] = [];
   const text = artifactText(artifact);
   const constraints = context.outputConstraints;
+  if (
+    context.writingPolicy !== undefined &&
+    /(?:plain\s+ascii\s+punctuation|no\s+em\s+dashes|no\s+en\s+dashes)/iu.test(
+      context.writingPolicy.content,
+    ) &&
+    /[‐‑‒–—―‘’“”]/u.test(text)
+  ) {
+    addIssue(issues, {
+      code: "writing-policy-ascii-punctuation",
+      category: "format",
+      severity: "warning",
+      message: `draft violates writing policy ${context.writingPolicy.version}: use plain ASCII punctuation`,
+    });
+  }
   for (const requiredSection of constraints.requiredSections ?? []) {
     if (!hasRequiredArtifactSection(artifact, requiredSection)) {
       addIssue(issues, {

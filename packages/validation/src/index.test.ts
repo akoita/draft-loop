@@ -103,6 +103,27 @@ describe("deterministic artifact validation", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("reports machine-checkable ASCII punctuation policy violations", () => {
+    const result = validateDraftArtifact(
+      artifactWithClaim("Built reliable systems — locally.", [
+        evidence("Built reliable systems — locally."),
+      ]),
+      context({
+        writingPolicy: {
+          content: "Plain ASCII punctuation only. No em dashes.",
+          version: "sha256:bbbbbbbbbbbb",
+        },
+      }),
+    );
+
+    expect(result.issues).toContainEqual({
+      code: "writing-policy-ascii-punctuation",
+      category: "format",
+      severity: "warning",
+      message: "draft violates writing policy sha256:bbbbbbbbbbbb: use plain ASCII punctuation",
+    });
+  });
+
   it("accepts a required semantic kind when the display heading is customized", () => {
     const artifact = artifactWithClaim("Built reliable systems.", [
       evidence("Built reliable systems."),

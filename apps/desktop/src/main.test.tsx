@@ -181,6 +181,8 @@ describe("desktop trust-centered review", () => {
         fixtureMode: false,
         jobDescriptionReady: false,
         evidenceSourceCount: 0,
+        writingPolicyStatus: "none" as const,
+        writingPolicy: null,
         retrievalStatus: "not-indexed" as const,
         indexedEvidenceChunkCount: 0,
         selectedEvidenceChunkCount: 0,
@@ -219,6 +221,9 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain("Bring your source material into the loop");
     expect(html).toContain("Add job description");
     expect(html).toContain("Review and fetch source URL");
+    expect(html).toContain("Writing policy");
+    expect(html).toContain("Choose policy file");
+    expect(html).toContain("kept separate from career evidence");
     expect(html).toContain("Start author–critic review");
     expect(html).toContain("Acknowledgement required");
     expect(html).toContain("selected candidate-source excerpts");

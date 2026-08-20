@@ -82,6 +82,18 @@ describe("desktop capability bridge", () => {
       },
     });
 
+    expect(
+      validateBridgeCommand({
+        type: "file.select",
+        input: {
+          workspaceId: "workspace-1",
+          extensions: [".md", ".txt"],
+          multiple: false,
+          target: "writing-policy",
+        },
+      }),
+    ).toMatchObject({ input: { target: "writing-policy", multiple: false } });
+
     expect(() => validateBridgeCommand({ type: "shell.exec", input: {} })).toThrow("not supported");
     expect(() =>
       validateBridgeCommand({

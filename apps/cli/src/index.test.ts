@@ -54,6 +54,7 @@ function harness(record?: IndependentReviewRecord): Harness {
     },
     readWorkspace: async (root) => descriptor(root),
     reconfigureModels: unreachable("reconfigureModels"),
+    configureWritingPolicy: unreachable("configureWritingPolicy"),
     begin: unreachable("begin"),
     start: unreachable("start"),
     resume: unreachable("resume"),

@@ -142,6 +142,7 @@ export interface ProviderTransmissionPolicy {
     "job description and requirements",
     "candidate source manifest",
     "selected candidate-source excerpts",
+    "candidate-approved writing policy when configured",
     "current draft and structured findings",
   ];
   readonly excludedScope: readonly ["complete candidate corpus"];
@@ -172,6 +173,12 @@ export interface WorkspaceReadiness {
   readonly fixtureMode: boolean;
   readonly jobDescriptionReady: boolean;
   readonly evidenceSourceCount: number;
+  readonly writingPolicyStatus: "none" | "active" | "unavailable";
+  readonly writingPolicy: {
+    readonly version: string;
+    readonly checksum: string;
+    readonly preview: string;
+  } | null;
   readonly retrievalStatus: "not-indexed" | "matched" | "fallback" | "no-query" | "unavailable";
   readonly indexedEvidenceChunkCount: number;
   readonly selectedEvidenceChunkCount: number;
@@ -249,7 +256,9 @@ export interface DesktopReviewPort {
   readonly openWorkspace?: () => Promise<DesktopReviewState>;
   readonly createWorkspace?: (name: string) => Promise<DesktopReviewState>;
   readonly createDemoWorkspace?: (name: string) => Promise<DesktopReviewState>;
-  readonly selectFiles?: (target: "evidence" | "job-description") => Promise<DesktopReviewState>;
+  readonly selectFiles?: (
+    target: "evidence" | "job-description" | "writing-policy",
+  ) => Promise<DesktopReviewState>;
   readonly addUrl?: (
     target: "evidence" | "job-description",
     url: string,
@@ -538,6 +547,7 @@ export function createFixtureReviewState(): DesktopReviewState {
         "job description and requirements",
         "candidate source manifest",
         "selected candidate-source excerpts",
+        "candidate-approved writing policy when configured",
         "current draft and structured findings",
       ],
       excludedScope: ["complete candidate corpus"],
@@ -609,6 +619,8 @@ export function createFixtureReviewState(): DesktopReviewState {
       fixtureMode: true,
       jobDescriptionReady: true,
       evidenceSourceCount: 1,
+      writingPolicyStatus: "none",
+      writingPolicy: null,
       retrievalStatus: "matched",
       indexedEvidenceChunkCount: 2,
       selectedEvidenceChunkCount: 1,

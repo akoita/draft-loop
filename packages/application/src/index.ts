@@ -65,11 +65,19 @@ export interface ReconfigureWorkspaceModelsCommand {
   readonly localEndpoint?: string;
 }
 
+export interface ConfigureWritingPolicyCommand {
+  readonly root: string;
+  /** Local Markdown or text file deliberately selected by the candidate. */
+  readonly sourcePath: string;
+}
+
 export interface WorkspaceDescriptor {
   readonly id: string;
   readonly root: string;
   readonly jobDescriptionPath: string;
   readonly sourceDirectory: string;
+  /** Workspace-relative policy path. Policy text is never candidate evidence. */
+  readonly writingPolicyPath?: string;
   readonly language: string;
   readonly outputFormat: "markdown";
   readonly requiredSections: readonly string[];
@@ -173,6 +181,11 @@ export interface ApplicationDriver {
     command: ReconfigureWorkspaceModelsCommand,
     io?: ApplicationIo,
   ) => Promise<WorkspaceDescriptor>;
+  /** Import and activate an explicitly selected local writing-policy file. */
+  readonly configureWritingPolicy: (
+    command: ConfigureWritingPolicyCommand,
+    io?: ApplicationIo,
+  ) => Promise<WorkspaceDescriptor>;
   /** Persist the run and its context without starting provider execution. */
   readonly begin: (command: BeginRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly start: (command: StartRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
@@ -228,6 +241,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
     readWorkspace: async (root) => driver.readWorkspace(requireRoot(root)),
     reconfigureModels: async (command, io) =>
       driver.reconfigureModels({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    configureWritingPolicy: async (command, io) =>
+      driver.configureWritingPolicy(
+        { ...command, root: requireRoot(command.root) },
+        normalizeIo(io),
+      ),
     begin: async (command, io) =>
       driver.begin({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     start: async (command, io) =>
