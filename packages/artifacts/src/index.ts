@@ -97,6 +97,27 @@ export function getUnbackedClaims(artifact: DraftArtifact): readonly ArtifactCla
 
 export const findUnsupportedClaims = getUnbackedClaims;
 
+function normalizeSectionIdentity(value: string): string {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/gu, "");
+}
+
+/**
+ * A required section may name either the user-visible heading or its stable
+ * semantic kind. This lets authors localize or refine headings without making
+ * an otherwise complete artifact fail validation or export.
+ */
+export function hasRequiredArtifactSection(
+  artifact: Pick<DraftArtifact, "sections">,
+  requiredSection: string,
+): boolean {
+  const requiredIdentity = normalizeSectionIdentity(requiredSection);
+  return artifact.sections.some(
+    (section) =>
+      normalizeSectionIdentity(section.title) === requiredIdentity ||
+      normalizeSectionIdentity(section.kind) === requiredIdentity,
+  );
+}
+
 export function validateArtifactReferences(
   artifact: DraftArtifact,
 ): readonly ArtifactValidationIssue[] {

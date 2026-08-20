@@ -103,6 +103,23 @@ describe("deterministic artifact validation", () => {
     expect(result.issues).toEqual([]);
   });
 
+  it("accepts a required semantic kind when the display heading is customized", () => {
+    const artifact = artifactWithClaim("Built reliable systems.", [
+      evidence("Built reliable systems."),
+    ]);
+    const summary = artifact.sections[0];
+    if (summary === undefined) throw new Error("summary fixture is missing");
+    summary.title = "Professional Summary";
+
+    const result = validateDraftArtifact(
+      artifact,
+      context({ outputConstraints: { requiredSections: ["Summary"] } }),
+    );
+
+    expect(result.valid).toBe(true);
+    expect(result.issues).toEqual([]);
+  });
+
   it("reports character, word, and legacy character limits", () => {
     const artifact = artifactWithClaim("Built reliable systems with TypeScript.", [
       evidence("Built reliable systems with TypeScript."),

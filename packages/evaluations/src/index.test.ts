@@ -103,6 +103,23 @@ describe("deterministic readiness evaluation", () => {
     expect(result.status).toBe("ready");
   });
 
+  it("scores a customized display heading through its required semantic kind", () => {
+    const customizedArtifact: DraftArtifact = {
+      ...artifact,
+      sections: artifact.sections.map((section) => ({
+        ...section,
+        title: "Professional Summary",
+      })),
+    };
+
+    const result = evaluateReadiness(customizedArtifact, context({ format: 1 }), { round: 1 });
+
+    expect(result.scores.find((score) => score.dimension === "format")?.score).toBe(1);
+    expect(
+      result.thresholdResults.find((threshold) => threshold.dimension === "format")?.meets,
+    ).toBe(true);
+  });
+
   it("stops on blocking findings without claiming readiness", () => {
     const result = evaluateReadiness(artifact, context(), {
       findings: [

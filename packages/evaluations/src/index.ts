@@ -1,3 +1,4 @@
+import { hasRequiredArtifactSection } from "@draft-loop/artifacts";
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import {
   type DraftArtifact,
@@ -145,10 +146,6 @@ function wordCount(value: string): number {
   return trimmed === "" ? 0 : trimmed.split(/\s+/u).length;
 }
 
-function normalizeSectionTitle(value: string): string {
-  return normalizeText(value).replace(/\s/gu, "");
-}
-
 function clampScore(value: number): number {
   return Math.min(1, Math.max(0, Number(value.toFixed(6))));
 }
@@ -209,12 +206,9 @@ function formatScore(
   const text = artifactText(artifact);
   const checks: boolean[] = [];
   if ((constraints.requiredSections ?? []).length > 0) {
-    const sectionTitles = new Set(
-      artifact.sections.map((section) => normalizeSectionTitle(section.title)),
-    );
     checks.push(
       (constraints.requiredSections ?? []).every((title) =>
-        sectionTitles.has(normalizeSectionTitle(title)),
+        hasRequiredArtifactSection(artifact, title),
       ),
     );
   }
