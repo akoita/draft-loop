@@ -1,14 +1,14 @@
 # v0.6.0 alpha stage evidence
 
-- **Status:** Integrated — validation failed; alpha publication approved
+- **Status:** Released — validation failed
 - **Stage:** Integration hardening and outcome validation
 - **Reviewed:** 2026-08-21
-- **Release decision:** publish `0.6.0` as an explicitly non-validated alpha
-  baseline. Package manifests reached `0.6.0` and an earlier release dry run
-  passed from source commit `dd933cf81c4161191281108b6f44c3d8cec94f8f`.
+- **Release:** [v0.6.0 integrated alpha](https://github.com/akoita/draft-loop/releases/tag/v0.6.0),
+  published from source commit `631e5e02689fee01e4d887161c986c661f4c3ca1`
+  by [workflow run 32435727961](https://github.com/akoita/draft-loop/actions/runs/32435727961).
   The representative outcome did not meet the factual-completeness and
-  application-readiness exit criterion, and that failure remains a prominent
-  release limitation rather than being treated as passed acceptance.
+  application-readiness exit criterion, and that failure is a prominent
+  release limitation rather than passed acceptance.
 
 This record is intentionally conservative. Automated and sanitized acceptance
 results demonstrate implementation and integration. The consented
@@ -25,28 +25,34 @@ reproducible baseline for v0.7; it does not relabel the stage as Validated.
 | Credential lifecycle and preflight | [Credential protocol](credential-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393186) | Integrated automated lifecycle matrix passed on all three targets | Synthetic canaries do not prove every user environment or provider account |
 | Provider failure recovery | [Recovery implementation PR](https://github.com/akoita/draft-loop/pull/110); repository recovery tests | Implemented and integrated | No live provider outage is claimed by this record |
 | Consent and sanitized outcome reporting | [Pilot protocol](pilot-protocol.md); [outcome-reporting PR](https://github.com/akoita/draft-loop/pull/114); [issue 104](https://github.com/akoita/draft-loop/issues/104) | One private representative workflow reached approval and export; outcome failed the quality baseline | The result omitted required CV structure and chronology, changed a factual invariant, and introduced unsupported content; private inputs and outputs remain local |
-| Release artifacts and manifest | [Release procedure](releasing.md); [dry run 31855377293](https://github.com/akoita/draft-loop/actions/runs/31855377293) | v0.6.0 candidate verified on Linux x64, macOS arm64, and Windows x64; publication pending | The reviewed dry-run artifacts were unsigned alpha ZIPs, Windows remained 148.6 MiB, and provenance was intentionally disabled |
+| Release artifacts and manifest | [Release procedure](releasing.md); [release v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0); [publication run 32435727961](https://github.com/akoita/draft-loop/actions/runs/32435727961) | Released on Linux x64, macOS arm64, and Windows x64 with manifest, checksums, and CycloneDX SBOM | Artifacts are unsigned alpha ZIPs; Windows remains 148.6 MiB, and provenance was not requested because repository-plan support was not established |
 
 ## Release-candidate review
 
-The official `0.6.0` dry run completed successfully on 2026-08-15. It pinned
-source commit `dd933cf81c4161191281108b6f44c3d8cec94f8f`, validated all 16
-workspace package versions, built all three supported targets, and completed
-the packaged Linux smoke test. The macOS and Windows jobs completed their
-installed-app acceptance paths in the required-check matrix before the dry
-run.
+The mandatory local release preflight passed from the exact release revision on
+2026-08-21. It ran deterministic validation before the paid synthetic live
+provider gate, then completed a cross-company Anthropic/OpenAI workflow through
+independent critique, decisions, approval, and Markdown export with 11 of 11
+claims linked to synthetic evidence.
+
+The official `0.6.0` [dry run](https://github.com/akoita/draft-loop/actions/runs/32435190544)
+and publication run both pinned source commit
+`631e5e02689fee01e4d887161c986c661f4c3ca1`, validated all 16 workspace package
+versions, built all three supported targets, and completed the packaged Linux
+smoke test. The published manifest and `SHA256SUMS` agree with GitHub's asset
+digests.
 
 | Target | ZIP size | SHA-256 |
 | --- | ---: | --- |
-| Linux x64 | 130.8 MiB | `1a81934651e326d7c1b3849af510ecaa99449c4912cfd929684c79a17f91f6e4` |
-| macOS arm64 | 125.1 MiB | `c005f6753ae78811387f2aecf794bd29d0083006f981da31982a4f892f8263ff` |
-| Windows x64 | 148.6 MiB | `06ff39ef365c14599fe3d1dbc06f017053085b31c8f8f00d60806a0865ab72df` |
+| Linux x64 | 130.9 MiB | `c578405ca2bce1298834c5b61c370cd3df6318a11d63f8086175e1082223a3b1` |
+| macOS arm64 | 125.3 MiB | `81f233bf1c1c6f5fb7d67833aad2a314419b5cf8754e45d6af3952ff1d9bdaa3` |
+| Windows x64 | 148.6 MiB | `8178186d6de37452cb1e1244aacf715bc4ba5ae0fe469d2bfb2ecd726f64fd3e` |
 
-The downloaded ZIP digests match both `SHA256SUMS` and the release manifest.
-The CycloneDX 1.7 SBOM contains 772 components and no local user paths. Archive
-name and release-bundle scans found no candidate files, resume-like names,
-credentials, `.draft-loop` directories, workspace databases, or run-history
-files.
+The published ZIP digests match both `SHA256SUMS` and the release manifest. The
+CycloneDX 1.7 SBOM contains 772 components and no local candidate or maintainer
+paths. Archive-name and release-bundle scans found no candidate files,
+resume-like names, credentials, `.draft-loop` directories, workspace databases,
+or run-history files.
 
 Package-size diagnostics show that the embedded Electron runtime and platform
 executable dominate each archive. On Windows, the executable alone stores
@@ -78,10 +84,10 @@ the repository and CI artifacts under the [pilot protocol](pilot-protocol.md).
 
 ## Final decision and carry-forward
 
-The validation exit criterion was not met. The maintainer nevertheless approved
-publication of v0.6.0 as an **Integrated; validation failed** alpha baseline.
-The mandatory paid local release preflight must pass on the exact approved
-release revision before the dry run or publication workflow is dispatched.
+The validation exit criterion was not met. The maintainer published v0.6.0 as a
+**Released; validation failed** alpha baseline after the mandatory local
+preflight and release evidence passed. The release preserves an integrated,
+reproducible baseline; it does not claim application readiness.
 
 The negative evidence directly defines the v0.7 Application-grade CV workflow:
 reusable candidate knowledge bases, a canonical career profile, a reviewed
@@ -89,5 +95,5 @@ opportunity brief, requirement-to-achievement planning, complete structured CV
 composition under a customizable writing/template policy, independent critique
 and author adjudication, recoverable stopping rules, professional rendering,
 and parity evaluation against the private manual baseline. The v0.6 outcome
-issue remains a failed observation, not passed acceptance; the release issue
-closes only after the prerelease assets and final evidence are verified.
+issue remains a failed observation, not passed acceptance. The verified release
+closes v0.6, and v0.7 becomes the active corrective product stage.
