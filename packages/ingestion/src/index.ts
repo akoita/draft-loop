@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
-import { readFile } from "node:fs/promises";
+import { type BigIntStats, constants } from "node:fs";
+import { type FileHandle, lstat, open } from "node:fs/promises";
 import { isIP } from "node:net";
 import { extname } from "node:path";
 import { inflateRawSync, inflateSync } from "node:zlib";
@@ -106,6 +107,7 @@ export type IngestionIssueCode =
   | "unsupported-media-type"
   | "extractor-unavailable"
   | "read-failure"
+  | "source-too-large"
   | "parse-failure"
   | "empty-content"
   | "approval-required"
@@ -129,6 +131,7 @@ export interface NormalizedSource {
   readonly source: IngestionSource;
   readonly mediaType: SupportedMediaType;
   readonly checksum: string;
+  readonly sizeBytes: number;
   readonly text: string;
   readonly chunks: readonly SourceChunk[];
   readonly issues: readonly IngestionIssue[];
@@ -160,7 +163,10 @@ export interface BinarySourceExtractor {
 
 export interface IngestionOptions {
   readonly maxChunkCharacters?: number;
+  readonly maxSourceBytes?: number;
   readonly extractors?: readonly BinarySourceExtractor[];
+  /** @internal Test seam for changing a local source between its read and final validation. */
+  readonly afterSourceRead?: () => void | Promise<void>;
 }
 
 export type UrlFetcher = (input: string, init?: RequestInit) => Promise<Response>;
@@ -1250,6 +1256,108 @@ function safeErrorMessage(code: "read" | "parse", sourcePath: string): Ingestion
   );
 }
 
+class SourceTooLargeError extends Error {}
+
+function localSourceMetadataMatches(left: BigIntStats, right: BigIntStats): boolean {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.size === right.size &&
+    left.mtimeNs === right.mtimeNs &&
+    left.ctimeNs === right.ctimeNs
+  );
+}
+
+function localFileErrorCode(error: unknown): unknown {
+  return typeof error === "object" && error !== null && "code" in error
+    ? (error as { readonly code?: unknown }).code
+    : undefined;
+}
+
+async function openLocalSource(path: string): Promise<FileHandle> {
+  if (typeof constants.O_NOFOLLOW === "number" && constants.O_NOFOLLOW !== 0) {
+    try {
+      return await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    } catch (error) {
+      const code = localFileErrorCode(error);
+      if (code !== "EINVAL" && code !== "ENOSYS" && code !== "ENOTSUP" && code !== "EOPNOTSUPP") {
+        throw error;
+      }
+    }
+  }
+  return open(path, constants.O_RDONLY);
+}
+
+async function readBoundedLocalSource(
+  handle: FileHandle,
+  maximumBytes: number | undefined,
+): Promise<Uint8Array> {
+  if (maximumBytes === undefined) return handle.readFile();
+
+  const chunks: Buffer[] = [];
+  let total = 0;
+  while (true) {
+    const buffer = Buffer.allocUnsafe(Math.min(64 * 1024, maximumBytes - total + 1));
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+    if (bytesRead === 0) return Buffer.concat(chunks, total);
+    total += bytesRead;
+    if (total > maximumBytes) throw new SourceTooLargeError();
+    chunks.push(buffer.subarray(0, bytesRead));
+  }
+}
+
+async function readStableLocalSource(path: string, options: IngestionOptions): Promise<Uint8Array> {
+  const pathBeforeOpen = await lstat(path, { bigint: true });
+  if (pathBeforeOpen.isSymbolicLink() || !pathBeforeOpen.isFile()) {
+    throw new Error("Local source is not a regular file.");
+  }
+  if (
+    options.maxSourceBytes !== undefined &&
+    pathBeforeOpen.size > BigInt(options.maxSourceBytes)
+  ) {
+    throw new SourceTooLargeError();
+  }
+
+  const handle = await openLocalSource(path);
+  try {
+    const opened = await handle.stat({ bigint: true });
+    const pathAfterOpen = await lstat(path, { bigint: true });
+    if (
+      !opened.isFile() ||
+      pathAfterOpen.isSymbolicLink() ||
+      !pathAfterOpen.isFile() ||
+      !localSourceMetadataMatches(pathBeforeOpen, opened) ||
+      !localSourceMetadataMatches(opened, pathAfterOpen)
+    ) {
+      throw new Error("Local source changed while it was opened.");
+    }
+    if (options.maxSourceBytes !== undefined && opened.size > BigInt(options.maxSourceBytes)) {
+      throw new SourceTooLargeError();
+    }
+
+    const bytes = await readBoundedLocalSource(handle, options.maxSourceBytes);
+    await options.afterSourceRead?.();
+
+    const afterRead = await handle.stat({ bigint: true });
+    const pathAfterRead = await lstat(path, { bigint: true });
+    if (
+      pathAfterRead.isSymbolicLink() ||
+      !pathAfterRead.isFile() ||
+      !localSourceMetadataMatches(opened, afterRead) ||
+      !localSourceMetadataMatches(afterRead, pathAfterRead) ||
+      BigInt(bytes.byteLength) !== afterRead.size
+    ) {
+      throw new Error("Local source changed while it was read.");
+    }
+    if (options.maxSourceBytes !== undefined && bytes.byteLength > options.maxSourceBytes) {
+      throw new SourceTooLargeError();
+    }
+    return bytes;
+  } finally {
+    await handle.close();
+  }
+}
+
 async function extractSource(
   source: IngestionSource,
   mediaType: SupportedMediaType,
@@ -1386,6 +1494,7 @@ async function normalizeIngestedBytes(
       source: normalizedSource,
       mediaType,
       checksum: sourceChecksum,
+      sizeBytes: bytes.byteLength,
       text,
       chunks: createChunks(
         text,
@@ -1690,11 +1799,25 @@ export async function ingestFile(
     return { source: null, issues: [resultIssue] };
   }
 
+  if (
+    options.maxSourceBytes !== undefined &&
+    (!Number.isSafeInteger(options.maxSourceBytes) || options.maxSourceBytes < 1)
+  ) {
+    throw new RangeError("maxSourceBytes must be a positive integer.");
+  }
+
   let bytes: Uint8Array;
   try {
-    bytes = await readFile(source.path);
-  } catch {
-    const resultIssue = safeErrorMessage("read", source.path);
+    bytes = await readStableLocalSource(source.path, options);
+  } catch (error) {
+    const resultIssue =
+      error instanceof SourceTooLargeError
+        ? issue(
+            "source-too-large",
+            source.path,
+            "The source file exceeds the configured size limit.",
+          )
+        : safeErrorMessage("read", source.path);
     return { source: null, issues: [resultIssue] };
   }
 
