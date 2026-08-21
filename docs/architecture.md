@@ -44,7 +44,8 @@ flowchart TB
 
     subgraph Infrastructure["Local and provider adapters"]
         direction LR
-        Storage[("Local storage + retrieval<br/>SQLite · FTS/BM25 · run history")]
+        WorkspaceStore[("Application workspace store<br/>SQLite · FTS/BM25 · run history")]
+        CKBStore[("Portable CKB store<br/>logical UUID · SQLite metadata")]
         Providers["Provider adapters<br/>data-policy enforcement"]
         Credentials["Credential store<br/>main-process owned"]
     end
@@ -62,9 +63,10 @@ flowchart TB
     Host --> App
     App --> Orchestrator
     App --> Knowledge
-    App --> Storage
-    Domain --> Storage
-    Knowledge --> Storage
+    App --> WorkspaceStore
+    Domain --> WorkspaceStore
+    Knowledge --> WorkspaceStore
+    App -.->|"future selection and source lifecycle"| CKBStore
     Orchestrator --> Providers
     Host --> Credentials
     Credentials -.->|"key lookup; never projected back"| Providers
@@ -81,13 +83,16 @@ flowchart TB
     class CLI,Renderer ui;
     class Bridge,Host,App boundary;
     class Orchestrator,Domain,Knowledge,Quality,Artifacts core;
-    class Storage,Providers,Credentials infra;
+    class WorkspaceStore,CKBStore,Providers,Credentials infra;
     class Models,URL,Export external;
 ```
 
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
-network and export edges require the visible approvals described below.
+network and export edges require the visible approvals described below. The
+dotted CKB edge marks a component boundary, not an integrated workflow: the
+portable store can carry logical identity and lifecycle metadata, but application
+selection and source/retrieval use have not crossed that boundary yet.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -111,6 +116,12 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   live author and critic requests; local vector and hybrid implementations are
   evaluation components until deletion, retention, isolation, and quality are
   validated for the product path.
+- The portable Candidate Knowledge Base store is a second local SQLite boundary,
+  separate from every application workspace and its run history. Its persisted
+  logical UUID identifies the store when its user-selected filesystem location
+  changes. The current component stores lifecycle metadata only; it does not yet
+  store source content or versions, drive retrieval, or appear in CLI or desktop
+  workflows. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
 - The orchestrator owns round sequencing, budgets, pause/stop behavior, and
   user-visible run events; provider adapters own SDK translation only.
 - The application package owns adapter-neutral use cases and command/query
@@ -121,8 +132,9 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
 - Storage is local by default. Rendering consumes approved artifacts and does
   not submit them anywhere.
 - Backup/restore, retention purge, and content-free diagnostic export are
-  explicit local operations. Their existence does not imply encrypted storage
-  or validated disaster recovery on every platform.
+  explicit operations for application workspaces. They do not yet export,
+  restore, or delete the separate CKB store, and their existence does not imply
+  encrypted storage or validated disaster recovery on every platform.
 - Context snapshots cross the persistence boundary through
   `serializeContextSnapshot` and `parseContextSnapshot`; the Zod schema checks
   version, requirements, evidence checksums, rubric values, and model identity
@@ -201,20 +213,20 @@ The state machine describes the lifecycle of a workspace run. A transition must
 emit an auditable event and retain the relevant inputs, outputs, evidence links,
 and user decision.
 
-| State | Meaning | Allowed next states |
-| --- | --- | --- |
-| `collecting` | Workspace inputs are being assembled. | `ingesting`, `paused`, `stopped` |
-| `ingesting` | Selected local material is being normalized. | `drafting`, `collecting`, `paused`, `stopped` |
-| `drafting` | The configured author is creating a draft. | `reviewing`, `paused`, `stopped`, `budget-exhausted` |
-| `reviewing` | The independent critic is producing structured findings. | `revising`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted` |
-| `revising` | The author is addressing accepted findings. | `reviewing`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted` |
-| `provider-error` | A provider request failed and safe provider, model, step, request-id, and attempt metadata is available for recovery. | The corresponding active step on explicit retry (at most three orchestration attempts), `awaiting-approval` when an artifact can return to review, `stopped` |
-| `awaiting-approval` | Checks are complete and the user must decide. | `approved`, `revising`, `paused`, `stopped` |
-| `approved` | The user approved the current artifact. | `exported`, `revising` |
-| `exported` | An approved artifact was rendered locally. | — |
-| `paused` | The user temporarily suspended the run. | `collecting`, `drafting`, `reviewing`, `revising`, `awaiting-approval`, `stopped` |
-| `stopped` | The user ended the run. | — |
-| `budget-exhausted` | A round, cost, or time budget ended the loop. | `awaiting-approval`, `revising`, `stopped` |
+| State               | Meaning                                                                                                               | Allowed next states                                                                                                                                          |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `collecting`        | Workspace inputs are being assembled.                                                                                 | `ingesting`, `paused`, `stopped`                                                                                                                             |
+| `ingesting`         | Selected local material is being normalized.                                                                          | `drafting`, `collecting`, `paused`, `stopped`                                                                                                                |
+| `drafting`          | The configured author is creating a draft.                                                                            | `reviewing`, `paused`, `stopped`, `budget-exhausted`                                                                                                         |
+| `reviewing`         | The independent critic is producing structured findings.                                                              | `revising`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                                                     |
+| `revising`          | The author is addressing accepted findings.                                                                           | `reviewing`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                                                    |
+| `provider-error`    | A provider request failed and safe provider, model, step, request-id, and attempt metadata is available for recovery. | The corresponding active step on explicit retry (at most three orchestration attempts), `awaiting-approval` when an artifact can return to review, `stopped` |
+| `awaiting-approval` | Checks are complete and the user must decide.                                                                         | `approved`, `revising`, `paused`, `stopped`                                                                                                                  |
+| `approved`          | The user approved the current artifact.                                                                               | `exported`, `revising`                                                                                                                                       |
+| `exported`          | An approved artifact was rendered locally.                                                                            | —                                                                                                                                                            |
+| `paused`            | The user temporarily suspended the run.                                                                               | `collecting`, `drafting`, `reviewing`, `revising`, `awaiting-approval`, `stopped`                                                                            |
+| `stopped`           | The user ended the run.                                                                                               | —                                                                                                                                                            |
+| `budget-exhausted`  | A round, cost, or time budget ended the loop.                                                                         | `awaiting-approval`, `revising`, `stopped`                                                                                                                   |
 
 The loop should enter `awaiting-approval` when the readiness criteria are met,
 quality is stable across configured consecutive rounds, or the user chooses to
@@ -246,18 +258,21 @@ rules, retention defaults, and deterministic evaluation gate.
 
 The CLI and packaged desktop host are adapters over these contracts. They use
 the same local application driver, which stores a small workspace manifest
-beside a local SQLite history file, ingests selected local sources, constructs a
-context snapshot, and drives the orchestration engine. Offline fixture agents
-make the lifecycle testable without network access. The desktop renderer uses
-the same adapter-neutral review port through a capability-limited bridge;
-browser mode has no filesystem or persistent credential capabilities and
-retains only a deterministic fixture fallback. Live provider execution is
-opt-in and the provider boundary enforces the request data policy before the SDK
-call. Completing and validating the full desktop preflight remains current
-roadmap work. Approved artifacts are rendered locally to Markdown, controlled
-DOCX, or controlled PDF. Each renderer consumes the same ordered structured
-artifact; the application records artifact version, template version,
-timestamp, format, MIME type, and checksum in the immutable export record.
+beside an application-specific SQLite history file, ingests selected local
+sources, constructs a context snapshot, and drives the orchestration engine.
+That workspace and run history remain distinct from the portable CKB store.
+Neither adapter yet lets the user create, open, select, export, restore, or
+delete that store, and the current retrieval path still reads workspace-scoped
+evidence. Offline fixture agents make the lifecycle testable without network
+access. The desktop renderer uses the same adapter-neutral review port through a
+capability-limited bridge; browser mode has no filesystem or persistent
+credential capabilities and retains only a deterministic fixture fallback.
+Live provider execution is opt-in and the provider boundary enforces the request
+data policy before the SDK call. Approved artifacts are rendered locally to
+Markdown, controlled DOCX, or controlled PDF. Each renderer consumes the same
+ordered structured artifact; the application records artifact version, template
+version, timestamp, format, MIME type, and checksum in the immutable export
+record.
 
 Additional artifact schemas, multilingual templates, portfolio ingestion, and
 the local endpoint adapter reuse these boundaries at component level. They are

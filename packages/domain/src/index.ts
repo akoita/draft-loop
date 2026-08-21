@@ -23,6 +23,7 @@ export type EvidenceSourceId = Brand<string, "EvidenceSourceId">;
 export type ArtifactId = Brand<string, "ArtifactId">;
 export type AgentReferenceId = Brand<string, "AgentReferenceId">;
 export type ProfileId = Brand<string, "ProfileId">;
+export type CandidateKnowledgeStoreId = Brand<string, "CandidateKnowledgeStoreId">;
 export type CandidateKnowledgeBaseId = Brand<string, "CandidateKnowledgeBaseId">;
 
 export interface WorkspaceIdentity {
@@ -42,10 +43,8 @@ export function createWorkspace(id: string): Workspace {
 }
 
 /**
- * A candidate profile is a persistent, independently managed collection of
- * ingested professional materials (files, URLs, portfolios). Profiles live
- * across workspaces so the same evidence can be reused for multiple job
- * applications without re-importing.
+ * Legacy canonical-profile prototype retained for context compatibility.
+ * Reusable source collections belong to CandidateKnowledgeBase instead.
  */
 export interface CandidateProfile {
   readonly id: ProfileId;
@@ -74,6 +73,35 @@ export function createProfile(id: string, input: CandidateProfileInput): Candida
     description: (input.description ?? "").trim(),
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+export const candidateKnowledgeStoreSchemaVersion = 1 as const;
+
+export interface CandidateKnowledgeStore {
+  readonly schemaVersion: typeof candidateKnowledgeStoreSchemaVersion;
+  readonly id: CandidateKnowledgeStoreId;
+  readonly createdAt: string;
+}
+
+export function createCandidateKnowledgeStore(
+  id: string,
+  createdAt = new Date().toISOString(),
+): CandidateKnowledgeStore {
+  const normalizedId = id.trim();
+  if (normalizedId === "") {
+    throw new Error("A candidate knowledge store id is required.");
+  }
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(createdAt) ||
+    Number.isNaN(Date.parse(createdAt))
+  ) {
+    throw new Error("Candidate knowledge store createdAt must be a valid ISO timestamp.");
+  }
+  return {
+    schemaVersion: candidateKnowledgeStoreSchemaVersion,
+    id: normalizedId as CandidateKnowledgeStoreId,
+    createdAt,
   };
 }
 

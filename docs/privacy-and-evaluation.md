@@ -7,13 +7,14 @@ machine unless the user explicitly approves a provider transmission.
 
 ## Data policy
 
-| Data class                            | Default location                                                                     | Provider transmission                                                                        | Retention default                                                          |
-| ------------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Public                                | Local workspace                                                                      | Allowed only through an explicit request policy                                              | Until the user deletes it                                                  |
-| Personal                              | Local workspace                                                                      | Explicit approval and provider allowlist required                                            | Until the user deletes it                                                  |
-| Confidential employer                 | Local workspace                                                                      | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it                                                  |
-| Secret embedded in candidate material | Never place in source/evaluation fixtures                                            | Not allowed as application content                                                           | Do not retain                                                              |
-| Provider credential                   | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
+| Data class                                         | Default location                                                                                                           | Provider transmission                                                                        | Retention default                                                                                   |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Public                                             | Local workspace                                                                                                            | Allowed only through an explicit request policy                                              | Until the user deletes it                                                                           |
+| Personal                                           | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                            | Until the user deletes it                                                                           |
+| Confidential employer                              | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it                                                                           |
+| Portable CKB store identity and lifecycle metadata | User-selected local SQLite store, separate from application workspaces and run history                                     | Not provider data; the physical path must not be transmitted                                 | Until the user removes the local store; no integrated deletion control exists                       |
+| Secret embedded in candidate material              | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                           | Do not retain                                                                                       |
+| Provider credential                                | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
 
 The provider contract requires `allowTransmission`, an allowlisted provider
 company, and an acknowledgement when a request is sensitive. Provider identity,
@@ -28,6 +29,20 @@ local source: until deleted
 run history: until deleted
 provider retention: not allowed unless explicitly configured
 ```
+
+The portable CKB store component currently persists only a schema version,
+logical UUID, creation time, and local SQLite lifecycle metadata. It does not
+yet contain candidate source files, fetched source content, source versions,
+normalized facts, or retrieval indexes. Application workspaces continue to own
+their current evidence and run history. The CKB store's user-selected path is
+host configuration: it is excluded from the portable manifest, provider request
+data, content-free audit data, and diagnostics.
+
+The CKB SQLite file is plaintext. DraftLoop applies restrictive permissions
+where supported, but permissions are best-effort and are not encryption or a
+defense against another process running as the same user. Users remain
+responsible for the privacy properties of the selected directory, filesystem,
+device backups, and copies made outside DraftLoop.
 
 The application must show the data class, provider, model, and retention choice
 before the first request containing source or draft material. A denied policy
@@ -72,7 +87,11 @@ request. See [ADR 0006](adr/0006-provider-authentication-modes.md).
 Workspace backup, restore, retention purge, and diagnostic export are explicit
 local operations. Purging the primary history does not prove deletion of copies
 the user made through backups or exports; the product must disclose that scope
-and keep diagnostic output content-free.
+and keep diagnostic output content-free. Those existing operations apply to
+application workspaces; they do not yet export, restore, or delete the separate
+portable CKB store. Physical CKB source handling, complete deletion across raw
+and derived data, and CKB backup/export/restore remain future privacy boundaries
+and must not be implied by the metadata-only component.
 
 ## Redaction and logging
 

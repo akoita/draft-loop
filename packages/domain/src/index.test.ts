@@ -7,6 +7,7 @@ import {
   canonicalizeModelId,
   createAgentContextReference,
   createCandidateKnowledgeBase,
+  createCandidateKnowledgeStore,
   createContextSnapshot,
   createProfile,
   createWorkspace,
@@ -710,6 +711,28 @@ describe("CandidateKnowledgeBase", () => {
     ).toThrow(/must not precede/i);
     expect(() => archiveCandidateKnowledgeBase(knowledgeBase, "2026-08-20T08:00:00Z")).toThrow(
       /must not precede/i,
+    );
+  });
+});
+
+describe("CandidateKnowledgeStore", () => {
+  const createdAt = "2026-08-21T12:30:00.000Z";
+
+  it("creates a canonical versioned portable store identity", () => {
+    expect(createCandidateKnowledgeStore("  portable-store-1  ", createdAt)).toEqual({
+      schemaVersion: 1,
+      id: "portable-store-1",
+      createdAt,
+    });
+  });
+
+  it("rejects blank identifiers and non-ISO timestamps", () => {
+    expect(() => createCandidateKnowledgeStore("  ", createdAt)).toThrow(/store id is required/i);
+    expect(() => createCandidateKnowledgeStore("portable-store-1", "2026-08-21")).toThrow(
+      /valid ISO timestamp/i,
+    );
+    expect(() => createCandidateKnowledgeStore("portable-store-1", ` ${createdAt} `)).toThrow(
+      /valid ISO timestamp/i,
     );
   });
 });

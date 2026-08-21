@@ -263,6 +263,9 @@ importers:
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../domain
+      '@draft-loop/schemas':
+        specifier: workspace:*
+        version: link:../schemas
       drizzle-orm:
         specifier: 0.45.2
         version: 0.45.2(better-sqlite3@13.0.3)

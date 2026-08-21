@@ -275,5 +275,6 @@ export function createApplicationService(driver: ApplicationDriver): Application
   return Object.freeze(service);
 }
 
+export * from "./knowledge-base.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
