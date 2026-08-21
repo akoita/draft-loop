@@ -48,7 +48,8 @@ workflow:
 - a portable Candidate Knowledge Base (CKB) store component with a logical UUID,
   CKB/source/version metadata, immutable managed raw bytes for approved local
   files, explicit manual version append, and an explicit bounded structural
-  inventory query at the application boundary;
+  inventory query at the application boundary, plus an internal prospective
+  managed-write journal;
 - bounded, approval-gated URL ingestion for GitHub, certification, profile,
   portfolio, and job-description sources with provenance and typed facts;
 - explicit separation of blocking findings, warnings, artifact approval, and
@@ -84,8 +85,22 @@ directories, symlinks, special/other entries, and whether the scan completed or
 hit its limit. It returns no names, paths, IDs, labels, checksums, or content;
 never follows unknown symlinks, recurses into unknown directories, or reads
 unknown file bytes; and does not mutate or classify unknown entries as
-DraftLoop-owned residue. Application workspaces and their run-history databases
-remain separate from the CKB store.
+DraftLoop-owned residue. SQLite migration v7 adds an internal, append-only
+managed-write journal for new creates and appends. It records opaque intent
+before staging, then records the resolved target before publication, the atomic
+managed-marker/database commit, and completion only after staging cleanup. New staging names are opaque
+operation-derived hashes. The journal contains no origin path, filename, label,
+checksum, source content, provider data, diagnostic projection, cleanup token,
+or approval, and its identifiers are not exposed. It does not retroactively
+claim legacy v6 writes or any entry without prospective journal proof. It
+authorizes no cleanup: deletion, adoption, quarantine, repair, reconciliation,
+automatic scanning, writer locks/leases, and approval UI remain unimplemented.
+Safe future cleanup still requires writer coordination and explicit visible
+approval. Same-current-byte managed appends record a terminal, non-owning no-op;
+metadata-only
+versions can be explicitly materialized without adopting a pre-existing
+unowned target based on matching bytes or shape. Application workspaces and
+their run-history databases remain separate from the CKB store.
 
 ## Stack
 
@@ -113,7 +128,7 @@ flowchart LR
     Export["Local CV export"]
     WorkspaceStore[("Application workspace<br/>+ SQLite run history")]
     ApprovedFile["Approved single local file"]
-    CKBStore[("Portable CKB store<br/>managed raw blob + source/version metadata")]
+    CKBStore[("Portable CKB store<br/>raw blobs · metadata · internal write journal")]
 
     Inputs --> Adapters --> Application
     Application --> Context --> Loop
@@ -137,6 +152,8 @@ candidate data, including when selected for a later version. Deleting the
 original or a workspace does not delete the CKB copy, and SQLite-only backup is
 incomplete. Unreferenced opaque entries have no authenticated ownership record;
 their shape alone cannot authorize deletion, adoption, quarantine, or repair.
+The prospective journal supplies evidence for future policy only; portable CKB
+data is still not authoritative for application retrieval.
 See the [detailed
 architecture](docs/architecture.md) and
 [ADR 0007](docs/adr/0007-portable-candidate-knowledge-store.md) for the current

@@ -123,12 +123,27 @@ origin bindings; automatically refresh or report freshness, last refresh, or
 moved/deleted/inaccessible origins; ingest directories or URLs; relate
 cross-source duplicates; index or retrieve; select a CKB for an application or
 run; expose CLI/desktop controls; repair missing/corrupt referenced blobs;
-journal ownership or coordinate writers through locks/leases; delete, clean up,
-or reconcile unknown entries; or completely backup, export, or restore. Safe
-future cleanup requires a durable ownership journal, writer coordination, and
-explicit approval; unjournaled entries remain unknown. This remains component
-implementation; local vector and hybrid retrieval remain evaluation components
-pending representative comparison and lifecycle evidence.
+coordinate writers through locks/leases; delete, clean up, or reconcile unknown
+entries; or completely backup, export, or restore. Safe future cleanup requires
+prospective journal proof, writer coordination, and explicit approval;
+unjournaled entries remain unknown. SQLite migration v7 supplies that
+prospective internal append-only journal for new managed creates and appends.
+Opaque intent precedes staging; a monotonic event records the resolved target
+before publication, followed by publication and the atomic managed-marker/database
+commit; completion follows staging cleanup. New staging names are opaque operation-derived hashes. Journal
+records exclude origin paths, filenames, labels, checksums, source content,
+provider data, diagnostic projections, cleanup tokens, and approvals, and
+journal IDs are not exposed. Legacy v6 writes and entries without prospective
+journal proof remain unknown. The journal supplies evidence for future policy
+only: it does not delete, adopt, quarantine, repair, reconcile, auto-scan,
+coordinate writers with locks/leases, provide approval UI, or authorize
+cleanup. Same-current-byte managed appends record a terminal, non-owning no-op;
+metadata-only
+versions can be explicitly materialized without adopting pre-existing unowned
+targets based on matching bytes or shape. This remains component implementation
+under #78; the portable CKB is not authoritative for retrieval, and local
+vector and hybrid retrieval remain evaluation components pending representative
+comparison and lifecycle evidence.
 
 Several later-stage components also exist: local lexical/vector retrieval,
 provider retry and progress behavior, a consented pilot harness, backup and
@@ -402,6 +417,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                    |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Added the prospective internal managed-write ownership journal in SQLite migration v7 without advancing #78 or the application-grade stage beyond component implementation                                              | New managed writes gain append-only intent/publication/commit/completion provenance and opaque operation-derived staging names, while legacy or unjournaled entries remain unknown and cleanup still requires writer coordination plus explicit visible approval                                                                                             |
 | 2026-08-21 | Added an explicit bounded, count-only structural inventory query for the portable store without advancing the application-grade stage beyond component implementation                                                    | Inventory validates referenced blobs and classifies `sources/` entries without names, content, traversal, mutation, or provider exposure; unreferenced entries lack authenticated ownership evidence, so repair and cleanup remain blocked on a future durable journal, writer coordination, and explicit approval                                              |
 | 2026-08-21 | Exposed explicit managed-file version append at the application component boundary without advancing the application-grade stage beyond component implementation                                                        | A candidate can manually approve changed bytes as parent-linked version N+1 after repeated media, extraction, 20 MiB, stable-file, and managed-copy checks; identical current bytes are a true no-op, paths stay runtime-only, and automatic refresh/freshness, origin reporting, directory/URL intake, duplicates/indexing/retrieval, app/run selection, UI controls, deletion/reconciliation, and complete backup/export/restore remain out |
 | 2026-08-21 | Added approved single-file managed CKB intake without advancing the application-grade stage beyond component implementation                                                                                              | One regular file can now cross the portable boundary only after type, 20 MiB, and extraction checks; opaque immutable bytes and a version-6 marker establish exact managed provenance without host paths, while directory/URL intake, refresh/freshness, duplicates/indexing, retrieval/UI integration, deletion, reconciliation, backup, export, and restore remain out |

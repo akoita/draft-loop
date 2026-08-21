@@ -12,7 +12,7 @@ machine unless the user explicitly approves a provider transmission.
 | Public                                             | Local workspace                                                                                                            | Allowed only through an explicit request policy                                              | Until the user deletes it                                                                           |
 | Personal                                           | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                            | Until the user deletes it                                                                           |
 | Confidential employer                              | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it                                                                           |
-| Portable CKB metadata and managed raw source bytes | User-selected local plaintext store, separate from application workspaces and run history                                  | Not provider data; raw bytes, paths, URLs, labels, and checksums must not be transmitted      | Until the user removes the local store; complete deletion and secure erasure are not implemented    |
+| Portable CKB metadata, managed-write journal, and raw source bytes | User-selected local plaintext store, separate from application workspaces and run history                                  | Not provider data; raw bytes, journal, paths, URLs, labels, and checksums must not be transmitted      | Until the user removes the local store; complete deletion and secure erasure are not implemented    |
 | Secret embedded in candidate material              | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                           | Do not retain                                                                                       |
 | Provider credential                                | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
 
@@ -54,6 +54,15 @@ or content. It does not follow unknown symlinks, recurse into unknown
 directories, read unknown file bytes, mutate storage, or run automatically.
 This is a local state query, not provider data or content-diagnostic automation.
 
+SQLite migration version 7 adds an internal, append-only ownership journal for
+new managed creates and appends. It records opaque intent before staging,
+resolved-target selection before publication, publication and atomic
+managed-marker/database-commit events, and completion only after staging cleanup. New staging names are opaque
+operation-derived hashes. The journal contains no origin path, filename, label,
+checksum, source content, provider data, diagnostic projection, cleanup token,
+or approval. Journal identifiers remain internal and are excluded from the
+application result and count-only inventory.
+
 The store contains no exact host paths or URLs, filename provenance,
 filename-derived physical names, remembered origin binding, directory binding,
 automatic refresh, freshness or last-refresh state, moved/deleted/inaccessible
@@ -88,10 +97,22 @@ Ordinary failures clean up their files, while a crash or concurrent loser can
 leave unreferenced opaque entries. Their names and layout provide no
 authenticated evidence that DraftLoop owns or abandoned them. Inventory must
 therefore not delete, adopt, quarantine, repair, or assign ownership. Safe
-cleanup requires a future durable ownership journal, coordination with active
-writers, and explicit approval; unjournaled entries remain unknown. Inventory
-also does not repair missing or corrupt referenced blobs, which continue to
-fail normal store validation.
+cleanup requires prospective journal evidence, coordination with active
+writers, and explicit approval; unjournaled entries remain unknown. Version 7
+supplies that prospective evidence for new writes, but it does not retroactively
+claim legacy version-6 writes or authorize cleanup. Inventory also does not
+repair missing or corrupt referenced blobs, which continue to fail normal store
+validation.
+
+The journal is not a cleanup token, approval record, provider-facing field, or
+diagnostic projection. It does not delete, adopt, quarantine, repair,
+reconcile, automatically scan, or coordinate concurrent writers through locks
+or leases. Safe future cleanup still requires writer coordination and explicit
+visible approval. Same-current-byte managed appends record a terminal,
+non-owning no-op.
+Metadata-only versions may be explicitly materialized under the managed-copy
+checks, but matching bytes or shape never authorize adoption of a pre-existing
+unowned target.
 
 The application must show the data class, provider, model, and retention choice
 before the first request containing source or draft material. A denied policy
@@ -143,9 +164,9 @@ does not delete the managed CKB copy. A SQLite-only backup is not a complete CKB
 backup because it omits managed raw blobs. Complete deletion across raw,
 unknown, derived, backed-up, and exported data and CKB backup/export/restore
 remain future privacy boundaries and must not be implied by managed-file intake
-or manual version append. Repair, journal/lock/lease and cleanup coordination,
-app/run CKB selection, indexing and retrieval, CLI or desktop controls, and
-origin lifecycle reporting are likewise not integrated.
+or manual version append. Repair, lock/lease writer coordination, cleanup and
+approval UI, app/run CKB selection, indexing and retrieval, CLI or desktop
+controls, and origin lifecycle reporting are likewise not integrated.
 
 ## Redaction and logging
 

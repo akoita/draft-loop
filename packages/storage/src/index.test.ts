@@ -217,11 +217,23 @@ async function seedHistory(storage: SqliteStorage): Promise<void> {
 
 interface RawSqliteDatabase {
   readonly exec: (sql: string) => void;
+  readonly prepare: (sql: string) => {
+    readonly get: (...parameters: readonly unknown[]) => Record<string, unknown> | undefined;
+    readonly all: (...parameters: readonly unknown[]) => readonly Record<string, unknown>[];
+  };
   readonly close: () => void;
 }
 
 interface RawSqliteConstructor {
   new (filename: string): RawSqliteDatabase;
+}
+
+function openRawDatabase(filename: string): RawSqliteDatabase {
+  const loaded = createRequire(import.meta.url)("better-sqlite3") as {
+    readonly default?: unknown;
+  };
+  const Constructor = loaded.default ?? loaded;
+  return new (Constructor as RawSqliteConstructor)(filename);
 }
 
 function removeMigrationTwo(filename: string): void {
@@ -231,7 +243,7 @@ function removeMigrationTwo(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "PRAGMA foreign_keys = OFF; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3, 4, 5, 6);",
+    "PRAGMA foreign_keys = OFF; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3, 4, 5, 6, 7);",
   );
   database.close();
 }
@@ -243,7 +255,7 @@ function removeMigrationFour(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DELETE FROM schema_migrations WHERE version IN (4, 5, 6);",
+    "DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DELETE FROM schema_migrations WHERE version IN (4, 5, 6, 7);",
   );
   database.close();
 }
@@ -255,7 +267,7 @@ function removeMigrationFive(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DELETE FROM schema_migrations WHERE version IN (5, 6);",
+    "DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DELETE FROM schema_migrations WHERE version IN (5, 6, 7);",
   );
   database.close();
 }
@@ -267,7 +279,19 @@ function removeMigrationSix(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_managed_source_versions; DELETE FROM schema_migrations WHERE version = 6;",
+    "DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DELETE FROM schema_migrations WHERE version IN (6, 7);",
+  );
+  database.close();
+}
+
+function removeMigrationSeven(filename: string): void {
+  const loaded = createRequire(import.meta.url)("better-sqlite3") as {
+    readonly default?: unknown;
+  };
+  const Constructor = loaded.default ?? loaded;
+  const database = new (Constructor as RawSqliteConstructor)(filename);
+  database.exec(
+    "DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DELETE FROM schema_migrations WHERE version = 7;",
   );
   database.close();
 }
@@ -276,9 +300,9 @@ describe("SQLite storage", () => {
   it("applies migrations idempotently and rejects sensitive key persistence", async () => {
     const storage = openSqliteStorage(":memory:");
 
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     storage.migrate();
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
 
     await storage.set("ui.language", "en");
     await expect(storage.get("ui.language")).resolves.toBe("en");
@@ -302,10 +326,10 @@ describe("SQLite storage", () => {
 
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     upgraded.migrate();
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -319,7 +343,7 @@ describe("SQLite storage", () => {
 
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
       upgraded.ensureDefaultCandidateKnowledgeBase(knowledgeBase()),
@@ -337,7 +361,7 @@ describe("SQLite storage", () => {
 
     removeMigrationFive(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
       savedKnowledgeBase,
     );
@@ -361,19 +385,42 @@ describe("SQLite storage", () => {
 
     removeMigrationSix(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
     ).resolves.toBe(false);
     await expect(
-      upgraded.appendManagedCandidateKnowledgeSourceVersion(
-        "ckb-1",
-        "ckb-source-1",
-        knowledgeSourceVersion({
+      (async () => {
+        const version = knowledgeSourceVersion({
           id: "ignored-materialization-id",
           createdAt: "2026-08-12T09:12:00.000Z",
-        }),
-      ),
+        });
+        await upgraded.prepareManagedCandidateKnowledgeWrite({
+          operationId: "materialize-operation",
+          knowledgeBaseId: "ckb-1",
+          sourceId: "ckb-source-1",
+          requestedVersionId: version.id,
+          kind: "append",
+          createdAt: version.createdAt,
+        });
+        await upgraded.recordManagedCandidateKnowledgeWriteEvent(
+          "materialize-operation",
+          "targeted",
+          legacy.version.id,
+          version.createdAt,
+        );
+        await upgraded.recordManagedCandidateKnowledgeWriteEvent(
+          "materialize-operation",
+          "published",
+          legacy.version.id,
+          version.createdAt,
+        );
+        return upgraded.commitManagedCandidateKnowledgeWrite({
+          kind: "append",
+          operationId: "materialize-operation",
+          version,
+        });
+      })(),
     ).resolves.toEqual({ ...legacy, created: false });
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
@@ -382,6 +429,52 @@ describe("SQLite storage", () => {
       { id: legacy.version.id, sourceId: legacy.source.id, kind: "file" },
     ]);
     await upgraded.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("upgrades v6 managed markers without retroactively claiming journal ownership", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-ckb-journal-migration-"));
+    const filename = join(directory, "knowledge.sqlite");
+    const initial = openSqliteStorage(filename);
+    await initial.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    const managed = await initial.createCandidateKnowledgeSource(
+      knowledgeSource(),
+      knowledgeSourceVersion(),
+    );
+    await initial.close();
+
+    const legacyDatabase = openRawDatabase(filename);
+    legacyDatabase.exec(
+      "INSERT INTO candidate_knowledge_managed_source_versions(version_id) VALUES ('ckb-source-version-1')",
+    );
+    legacyDatabase.close();
+
+    removeMigrationSeven(filename);
+    const upgraded = openSqliteStorage(filename);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    await expect(
+      upgraded.isCandidateKnowledgeSourceVersionManaged(
+        managed.source.knowledgeBaseId,
+        managed.source.id,
+        managed.version.id,
+      ),
+    ).resolves.toBe(true);
+    upgraded.validateCandidateKnowledgeSourceGraph();
+    upgraded.migrate();
+    await upgraded.close();
+
+    const database = openRawDatabase(filename);
+    expect(
+      database
+        .prepare("SELECT COUNT(*) AS count FROM candidate_knowledge_managed_write_operations")
+        .get(),
+    ).toEqual({ count: 0 });
+    expect(
+      database
+        .prepare("SELECT COUNT(*) AS count FROM candidate_knowledge_managed_write_events")
+        .get(),
+    ).toEqual({ count: 0 });
+    database.close();
     await rm(directory, { recursive: true, force: true });
   });
 
@@ -561,31 +654,84 @@ describe("SQLite storage", () => {
     await storage.close();
   });
 
-  it("writes managed markers atomically and requires file-kind sources", async () => {
+  it("writes managed markers through the journal and requires file-kind sources", async () => {
     const storage = openSqliteStorage(":memory:");
     await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
-    const first = await storage.createManagedCandidateKnowledgeSource(
-      knowledgeSource(),
-      knowledgeSourceVersion(),
+    const firstVersion = knowledgeSourceVersion();
+    await storage.prepareManagedCandidateKnowledgeWrite({
+      operationId: "create-operation",
+      knowledgeBaseId: "ckb-1",
+      sourceId: "ckb-source-1",
+      requestedVersionId: firstVersion.id,
+      kind: "create",
+      createdAt: firstVersion.createdAt,
+    });
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "create-operation",
+      "targeted",
+      firstVersion.id,
+      firstVersion.createdAt,
     );
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "create-operation",
+      "published",
+      firstVersion.id,
+      firstVersion.createdAt,
+    );
+    const first = await storage.commitManagedCandidateKnowledgeWrite({
+      kind: "create",
+      operationId: "create-operation",
+      source: knowledgeSource(),
+      version: firstVersion,
+    });
     await expect(
       storage.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", first.version.id),
     ).resolves.toBe(true);
     await expect(
-      storage.appendManagedCandidateKnowledgeSourceVersion(
-        "ckb-1",
-        "ckb-source-1",
-        knowledgeSourceVersion({
+      (async () => {
+        const version = knowledgeSourceVersion({
           id: "ignored-managed-id",
           createdAt: "2026-08-12T09:12:00.000Z",
-        }),
-      ),
+        });
+        await storage.prepareManagedCandidateKnowledgeWrite({
+          operationId: "noop-operation",
+          knowledgeBaseId: "ckb-1",
+          sourceId: "ckb-source-1",
+          requestedVersionId: version.id,
+          kind: "append",
+          createdAt: version.createdAt,
+        });
+        return storage.recordManagedCandidateKnowledgeWriteNoop("noop-operation", version);
+      })(),
     ).resolves.toEqual({ ...first, created: false });
+    const urlVersion = knowledgeSourceVersion({ id: "url-version" });
+    await storage.prepareManagedCandidateKnowledgeWrite({
+      operationId: "url-operation",
+      knowledgeBaseId: "ckb-1",
+      sourceId: "url-source",
+      requestedVersionId: urlVersion.id,
+      kind: "create",
+      createdAt: urlVersion.createdAt,
+    });
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "url-operation",
+      "targeted",
+      urlVersion.id,
+      urlVersion.createdAt,
+    );
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "url-operation",
+      "published",
+      urlVersion.id,
+      urlVersion.createdAt,
+    );
     await expect(
-      storage.createManagedCandidateKnowledgeSource(
-        knowledgeSource({ id: "url-source", kind: "url" }),
-        knowledgeSourceVersion({ id: "url-version" }),
-      ),
+      storage.commitManagedCandidateKnowledgeWrite({
+        kind: "create",
+        operationId: "url-operation",
+        source: knowledgeSource({ id: "url-source", kind: "url" }),
+        version: urlVersion,
+      }),
     ).rejects.toThrow(/require a file source/i);
     await expect(
       storage.getCandidateKnowledgeSource("ckb-1", "url-source"),
@@ -595,15 +741,101 @@ describe("SQLite storage", () => {
       knowledgeSource({ id: "occupying-source", displayName: "Occupying source" }),
       knowledgeSourceVersion({ id: "occupied-managed-version", checksum: "e".repeat(64) }),
     );
+    const occupiedVersion = knowledgeSourceVersion({
+      id: "occupied-managed-version",
+      checksum: "f".repeat(64),
+    });
+    await storage.prepareManagedCandidateKnowledgeWrite({
+      operationId: "occupied-operation",
+      knowledgeBaseId: "ckb-1",
+      sourceId: "rolled-back-managed-source",
+      requestedVersionId: occupiedVersion.id,
+      kind: "create",
+      createdAt: occupiedVersion.createdAt,
+    });
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "occupied-operation",
+      "targeted",
+      occupiedVersion.id,
+      occupiedVersion.createdAt,
+    );
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "occupied-operation",
+      "published",
+      occupiedVersion.id,
+      occupiedVersion.createdAt,
+    );
     await expect(
-      storage.createManagedCandidateKnowledgeSource(
-        knowledgeSource({ id: "rolled-back-managed-source", displayName: "Rolled back" }),
-        knowledgeSourceVersion({ id: "occupied-managed-version", checksum: "f".repeat(64) }),
-      ),
+      storage.commitManagedCandidateKnowledgeWrite({
+        kind: "create",
+        operationId: "occupied-operation",
+        source: knowledgeSource({
+          id: "rolled-back-managed-source",
+          displayName: "Rolled back",
+        }),
+        version: occupiedVersion,
+      }),
     ).rejects.toThrow();
     await expect(
       storage.getCandidateKnowledgeSource("ckb-1", "rolled-back-managed-source"),
     ).resolves.toBeUndefined();
+    await storage.close();
+  });
+
+  it("does not let a distinct prepared operation commit another operation's publication", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await storage.createCandidateKnowledgeSource(knowledgeSource(), knowledgeSourceVersion());
+    await storage.prepareManagedCandidateKnowledgeWrite({
+      operationId: "operation-a",
+      knowledgeBaseId: "ckb-1",
+      sourceId: "ckb-source-1",
+      requestedVersionId: "journal-version-a",
+      kind: "append",
+      createdAt: "2026-08-12T09:12:00.000Z",
+    });
+    await storage.prepareManagedCandidateKnowledgeWrite({
+      operationId: "operation-b",
+      knowledgeBaseId: "ckb-1",
+      sourceId: "ckb-source-1",
+      requestedVersionId: "journal-version-b",
+      kind: "append",
+      createdAt: "2026-08-12T09:12:00.000Z",
+    });
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "operation-a",
+      "targeted",
+      "journal-version-a",
+      "2026-08-12T09:12:00.000Z",
+    );
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "operation-a",
+      "published",
+      "journal-version-a",
+      "2026-08-12T09:12:00.000Z",
+    );
+
+    await expect(
+      storage.commitManagedCandidateKnowledgeWrite({
+        kind: "append",
+        operationId: "operation-b",
+        version: knowledgeSourceVersion({
+          id: "journal-version-b",
+          checksum: "e".repeat(64),
+          createdAt: "2026-08-12T09:12:00.000Z",
+        }),
+      }),
+    ).rejects.toThrow(/prepared|published/i);
+    await expect(
+      storage.isCandidateKnowledgeSourceVersionManaged(
+        "ckb-1",
+        "ckb-source-1",
+        "journal-version-b",
+      ),
+    ).resolves.toBe(false);
+    await expect(
+      storage.listCandidateKnowledgeSourceVersions("ckb-1", "ckb-source-1"),
+    ).resolves.toHaveLength(1);
     await storage.close();
   });
 
@@ -758,10 +990,38 @@ describe("SQLite storage", () => {
     const filename = join(directory, "knowledge.sqlite");
     const storage = openSqliteStorage(filename);
     await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
-    await storage.createManagedCandidateKnowledgeSource(
+    const managed = await storage.createCandidateKnowledgeSource(
       knowledgeSource(),
       knowledgeSourceVersion(),
     );
+    await storage.prepareManagedCandidateKnowledgeWrite({
+      operationId: "immutability-materialization",
+      knowledgeBaseId: "ckb-1",
+      sourceId: managed.source.id,
+      requestedVersionId: "immutability-request",
+      kind: "append",
+      createdAt: "2026-08-12T09:12:00.000Z",
+    });
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "immutability-materialization",
+      "targeted",
+      managed.version.id,
+      "2026-08-12T09:12:00.000Z",
+    );
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      "immutability-materialization",
+      "published",
+      managed.version.id,
+      "2026-08-12T09:12:00.000Z",
+    );
+    await storage.commitManagedCandidateKnowledgeWrite({
+      kind: "append",
+      operationId: "immutability-materialization",
+      version: knowledgeSourceVersion({
+        id: "immutability-request",
+        createdAt: "2026-08-12T09:12:00.000Z",
+      }),
+    });
     await storage.createCandidateKnowledgeSource(
       knowledgeSource({ id: "url-source", kind: "url", displayName: "URL source" }),
       knowledgeSourceVersion({ id: "url-version", checksum: "e".repeat(64) }),
