@@ -4,6 +4,7 @@ import { describe, test } from "node:test";
 import {
   ReleaseLocalPreflightError,
   resolveReleasePreflightEnvironment,
+  resolveReleaseValidationEnvironment,
   runReleaseLocalPreflight,
 } from "./release-local-preflight.mjs";
 
@@ -26,6 +27,20 @@ describe("local release preflight", () => {
     );
   });
 
+  test("removes live provider routing from deterministic validation", () => {
+    assert.deepEqual(
+      resolveReleaseValidationEnvironment({
+        PATH: "/usr/bin",
+        DRAFT_LOOP_PROVIDER_AUTH_MODE: "user-session",
+        DRAFT_LOOP_ANTHROPIC_AUTH_MODE: "api-key",
+        DRAFT_LOOP_OPENAI_AUTH_MODE: "user-session",
+        DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-haiku-4-5",
+        DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-5.3-codex-spark",
+      }),
+      { PATH: "/usr/bin" },
+    );
+  });
+
   test("refuses CI and GitHub Actions environments", () => {
     for (const environment of [{ CI: "true" }, { GITHUB_ACTIONS: "true" }]) {
       assert.throws(
@@ -38,7 +53,7 @@ describe("local release preflight", () => {
   test("runs validation before the paid live gate and stops on failure", () => {
     const calls = [];
     runReleaseLocalPreflight({
-      environment: {},
+      environment: { DRAFT_LOOP_PROVIDER_AUTH_MODE: "user-session" },
       platform: "linux",
       runner: (command, args, options) => {
         calls.push({ command, args, options });
@@ -53,6 +68,8 @@ describe("local release preflight", () => {
         ["pnpm", "test:e2e:live"],
       ],
     );
+    assert.equal(Object.hasOwn(calls[1].options.env, "DRAFT_LOOP_PROVIDER_AUTH_MODE"), false);
+    assert.equal(Object.hasOwn(calls[1].options.env, "DRAFT_LOOP_OPENAI_AUTH_MODE"), false);
     assert.equal(calls[2].options.env.DRAFT_LOOP_OPENAI_AUTH_MODE, "user-session");
 
     let call = 0;
