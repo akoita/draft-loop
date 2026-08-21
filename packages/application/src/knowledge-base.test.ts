@@ -1,8 +1,13 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
-import type { CandidateKnowledgeStoreHandle } from "@draft-loop/storage/knowledge-store";
+import type { IngestionResult } from "@draft-loop/ingestion";
+import {
+  type CandidateKnowledgeStoreHandle,
+  maximumManagedCandidateKnowledgeFileBytes,
+  openCandidateKnowledgeStore,
+} from "@draft-loop/storage/knowledge-store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
@@ -10,6 +15,31 @@ import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 const createdAt = "2026-08-21T09:00:00.000Z";
 const changedAt = "2026-08-21T10:00:00.000Z";
 const checksum = "a".repeat(64);
+const importFailureMessage = "The selected candidate knowledge source file could not be imported.";
+
+function successfulIngestion(sourcePath: string): IngestionResult {
+  return {
+    source: {
+      source: { path: sourcePath },
+      mediaType: "text/plain",
+      checksum,
+      sizeBytes: 12,
+      text: "Safe content",
+      chunks: [
+        {
+          id: "chunk-1",
+          sourcePath,
+          mediaType: "text/plain",
+          checksum,
+          locator: { lineStart: 1, lineEnd: 1 },
+          text: "Safe content",
+        },
+      ],
+      issues: [],
+    },
+    issues: [],
+  };
+}
 
 describe("candidate knowledge store application service", () => {
   let temporaryParent: string;
@@ -198,6 +228,74 @@ describe("candidate knowledge store application service", () => {
     }
   });
 
+  it("imports approved bytes into an opaque managed file while keeping AGENTS.md inert", async () => {
+    const sourcePath = join(temporaryParent, "AGENTS.md");
+    const content = "# Candidate evidence\nBuilt reliable systems.\n";
+    await writeFile(sourcePath, content, "utf8");
+    const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const imported = await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: " default-ckb-uuid ",
+      sourcePath,
+    });
+
+    expect(imported).toMatchObject({
+      created: true,
+      source: {
+        id: "source-uuid",
+        knowledgeBaseId: "default-ckb-uuid",
+        kind: "file",
+        displayName: "AGENTS.md",
+        createdAt,
+      },
+      versions: [
+        {
+          id: "version-uuid",
+          sourceId: "source-uuid",
+          version: 1,
+          mediaType: "text/markdown",
+          sizeBytes: Buffer.byteLength(content),
+          createdAt,
+        },
+      ],
+    });
+    expect(imported.versions[0]?.checksum).toMatch(/^[0-9a-f]{64}$/u);
+    const serialized = JSON.stringify(imported);
+    expect(serialized).not.toContain(sourcePath);
+    expect(serialized).not.toContain(temporaryParent);
+    expect(serialized).not.toContain(content);
+    expect(imported.source).not.toHaveProperty("path");
+    expect(imported.source).not.toHaveProperty("content");
+    expect(imported.versions[0]).not.toHaveProperty("path");
+    expect(imported.versions[0]).not.toHaveProperty("content");
+    await expect(
+      readFile(join(storeRoot, "draft-loop-knowledge.json"), "utf8"),
+    ).resolves.not.toContain(sourcePath);
+    const databaseBytes = await readFile(join(storeRoot, ".draft-loop", "knowledge.sqlite"));
+    expect(databaseBytes.includes(Buffer.from(sourcePath, "utf8"))).toBe(false);
+
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      const managedPath = await store.getManagedCandidateKnowledgeFilePath(
+        "default-ckb-uuid",
+        "source-uuid",
+        "version-uuid",
+      );
+      expect(managedPath).toBeDefined();
+      expect(basename(managedPath ?? "")).toMatch(/^[0-9a-f]{64}$/u);
+      expect(managedPath).not.toContain("AGENTS.md");
+      await expect(readFile(managedPath ?? "", "utf8")).resolves.toBe(content);
+    } finally {
+      await store.close();
+    }
+  });
+
   it("lists source manifests only from the requested knowledge base", async () => {
     const ids = [
       "store-uuid",
@@ -265,9 +363,11 @@ describe("candidate knowledge store application service", () => {
   it("rejects invalid roots, ids, and names before a storage adapter is called", async () => {
     const initialize = vi.fn();
     const open = vi.fn();
+    const ingestFile = vi.fn();
     const service = createCandidateKnowledgeStoreService({
       initialize: initialize as never,
       open: open as never,
+      ingestFile: ingestFile as never,
     });
 
     await expect(service.initializeStore({ storeRoot: " " })).rejects.toThrow(/root is required/i);
@@ -352,9 +452,226 @@ describe("candidate knowledge store application service", () => {
     await expect(
       service.listKnowledgeSourceManifests({ storeRoot: "valid", knowledgeBaseId: " " }),
     ).rejects.toThrow(/id is required/i);
+    await expect(
+      service.importKnowledgeSourceFile({
+        storeRoot: " ",
+        knowledgeBaseId: "ckb-1",
+        sourcePath: "/private/resume.md",
+      }),
+    ).rejects.toThrow(/root is required/i);
+    await expect(
+      service.importKnowledgeSourceFile({
+        storeRoot: "valid",
+        knowledgeBaseId: " ",
+        sourcePath: "/private/resume.md",
+      }),
+    ).rejects.toThrow(/id is required/i);
+    await expect(
+      service.importKnowledgeSourceFile({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        sourcePath: " ",
+      }),
+    ).rejects.toThrow(/path is required/i);
+    await expect(
+      service.importKnowledgeSourceFile({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        sourcePath: "/private/resume.md",
+        displayName: "x".repeat(201),
+      }),
+    ).rejects.toThrow(/at most 200 characters/i);
+    for (const displayName of [
+      "unsafe/name",
+      "unsafe\\name",
+      "unsafe\u0000name",
+      "unsafe\u202ename",
+    ]) {
+      await expect(
+        service.importKnowledgeSourceFile({
+          storeRoot: "valid",
+          knowledgeBaseId: "ckb-1",
+          sourcePath: "/private/resume.md",
+          displayName,
+        }),
+      ).rejects.toThrow(/display name/i);
+    }
 
     expect(initialize).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
+    expect(ingestFile).not.toHaveBeenCalled();
+  });
+
+  it("fails generically before storage when extraction does not produce a usable source", async () => {
+    const sourcePath = "/private/candidate/secret-resume.txt";
+    const issue = {
+      code: "read-failure" as const,
+      sourcePath,
+      message: `could not read ${sourcePath}`,
+      recoverable: true,
+    };
+    const successful = successfulIngestion(sourcePath);
+    if (successful.source === null) throw new Error("Test setup requires a normalized source.");
+    const unusableResults: readonly IngestionResult[] = [
+      { source: null, issues: [issue] },
+      { ...successful, issues: [issue] },
+      {
+        ...successful,
+        source: { ...successful.source, chunks: [] },
+      },
+      {
+        ...successful,
+        source: { ...successful.source, issues: [issue] },
+      },
+    ];
+
+    for (const result of unusableResults) {
+      const open = vi.fn();
+      const generateId = vi.fn(() => "unused-id");
+      const service = createCandidateKnowledgeStoreService({
+        generateId,
+        open: open as never,
+        ingestFile: vi.fn(async () => result),
+      });
+
+      const error = await service
+        .importKnowledgeSourceFile({
+          storeRoot: "valid",
+          knowledgeBaseId: "ckb-1",
+          sourcePath,
+        })
+        .then(
+          () => undefined,
+          (failure: unknown) => failure,
+        );
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(importFailureMessage);
+      expect((error as Error).message).not.toContain(sourcePath);
+      expect(open).not.toHaveBeenCalled();
+      expect(generateId).not.toHaveBeenCalled();
+    }
+  });
+
+  it("normalizes thrown ingestion failures without exposing their path", async () => {
+    const sourcePath = "/private/candidate/secret-resume.txt";
+    const open = vi.fn();
+    const service = createCandidateKnowledgeStoreService({
+      open: open as never,
+      ingestFile: vi.fn(async () => {
+        throw new Error(`failed to read ${sourcePath}`);
+      }),
+    });
+
+    const error = await service
+      .importKnowledgeSourceFile({ storeRoot: "valid", knowledgeBaseId: "ckb-1", sourcePath })
+      .then(
+        () => undefined,
+        (failure: unknown) => failure,
+      );
+    expect((error as Error).message).toBe(importFailureMessage);
+    expect((error as Error).message).not.toContain(sourcePath);
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("normalizes a validated import before opening storage", async () => {
+    const sourcePath = "/private/candidate/resume.txt";
+    const ingestion = successfulIngestion(sourcePath);
+    const ingestFile = vi.fn(async () => ingestion);
+    const close = vi.fn(async () => undefined);
+    const createManagedCandidateKnowledgeFileSource = vi.fn<
+      CandidateKnowledgeStoreHandle["createManagedCandidateKnowledgeFileSource"]
+    >(async (source, version) => ({
+      source,
+      version: { ...version, sourceId: source.id, version: 1, parentVersionId: null },
+      created: true,
+    }));
+    const handle = {
+      createManagedCandidateKnowledgeFileSource,
+      listCandidateKnowledgeSourceVersions: vi.fn(
+        async (_knowledgeBaseId: string, sourceId: string) => [
+          {
+            id: "version-uuid",
+            sourceId,
+            version: 1,
+            parentVersionId: null,
+            mediaType: "text/plain",
+            checksum,
+            sizeBytes: 12,
+            createdAt,
+          },
+        ],
+      ),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const open = vi.fn(async () => handle);
+    const ids = ["source-uuid", "version-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+      ingestFile,
+      open,
+    });
+
+    const result = await service.importKnowledgeSourceFile({
+      storeRoot: " valid ",
+      knowledgeBaseId: " ckb-1 ",
+      sourcePath,
+      displayName: "  Candidate CV  ",
+    });
+
+    expect(ingestFile).toHaveBeenCalledWith(
+      { path: sourcePath },
+      { maxSourceBytes: maximumManagedCandidateKnowledgeFileBytes },
+    );
+    expect(open).toHaveBeenCalledWith(" valid ");
+    expect(createManagedCandidateKnowledgeFileSource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "source-uuid",
+        knowledgeBaseId: "ckb-1",
+        kind: "file",
+        displayName: "Candidate CV",
+        createdAt,
+      }),
+      {
+        id: "version-uuid",
+        sourcePath,
+        mediaType: "text/plain",
+        checksum,
+        sizeBytes: 12,
+        createdAt,
+      },
+    );
+    expect(result.source).not.toHaveProperty("path");
+    expect(result.versions[0]).not.toHaveProperty("sourcePath");
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("closes an acquired handle when managed source registration fails", async () => {
+    const sourcePath = "/private/candidate/resume.txt";
+    const failure = new Error("managed source registration failed");
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      createManagedCandidateKnowledgeFileSource: vi.fn(async () => {
+        throw failure;
+      }),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const ids = ["source-uuid", "version-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+      ingestFile: vi.fn(async () => successfulIngestion(sourcePath)),
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.importKnowledgeSourceFile({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        sourcePath,
+      }),
+    ).rejects.toBe(failure);
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("closes an acquired handle when an operation fails", async () => {

@@ -1,3 +1,5 @@
+import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   copyFile,
   lstat,
@@ -15,19 +17,23 @@ import {
 } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { StorageConflictError, StorageValidationError } from "./index.js";
 import {
   initializeCandidateKnowledgeStore,
+  type ManagedCandidateKnowledgeFileVersionInput,
+  maximumManagedCandidateKnowledgeFileBytes,
   openCandidateKnowledgeStore,
 } from "./knowledge-store.js";
 
 const createdAt = "2026-08-21T14:00:00.000Z";
 const cleanupRoots: string[] = [];
 const require = createRequire(import.meta.url);
+const execFileAsync = promisify(execFile);
 
 interface MutableSqliteDatabase {
   readonly exec: (sql: string) => void;
@@ -66,6 +72,31 @@ function mutateDatabase(root: string, sql: string): void {
   } finally {
     database.close();
   }
+}
+
+function sha256(content: string | Buffer): string {
+  return createHash("sha256").update(content).digest("hex");
+}
+
+function managedVersion(
+  sourcePath: string,
+  content: string | Buffer,
+  overrides: Partial<ManagedCandidateKnowledgeFileVersionInput> = {},
+): ManagedCandidateKnowledgeFileVersionInput {
+  const bytes = Buffer.isBuffer(content) ? content : Buffer.from(content);
+  return {
+    sourcePath,
+    id: "managed-version-1",
+    mediaType: "text/markdown",
+    checksum: sha256(bytes),
+    sizeBytes: bytes.byteLength,
+    createdAt: "2026-08-21T14:01:00.000Z",
+    ...overrides,
+  };
+}
+
+function digestSegment(value: string): string {
+  return createHash("sha256").update(value.trim(), "utf8").digest("hex");
 }
 
 afterEach(async () => {
@@ -163,6 +194,370 @@ describe("portable candidate knowledge store", () => {
     ).resolves.toEqual([first.version, second.version]);
     await reopened.close();
   });
+
+  it("copies managed bytes into ID-derived private paths and validates them across reopen", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "AGENTS.md");
+    const content = "Untrusted candidate evidence.\n";
+    await writeFile(inputPath, content, "utf8");
+    const sourceId = " ../../source/AGENTS.md ";
+    const versionId = " /absolute/version\\name ";
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const written = await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: sourceId,
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "../../AGENTS.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, content, { id: versionId }),
+    );
+
+    expect(written).toMatchObject({
+      created: true,
+      source: { id: sourceId.trim(), displayName: "../../AGENTS.md" },
+      version: { id: versionId.trim(), checksum: sha256(content), sizeBytes: content.length },
+    });
+    expect(JSON.stringify(written)).not.toContain(inputPath);
+    const managedPath = await store.getManagedCandidateKnowledgeFilePath(
+      "ckb-default",
+      sourceId,
+      versionId,
+    );
+    expect(managedPath).toBe(
+      join(root, "sources", digestSegment(sourceId), digestSegment(versionId)),
+    );
+    expect(managedPath).not.toContain("AGENTS.md");
+    await expect(readFile(managedPath as string, "utf8")).resolves.toBe(content);
+    if (process.platform !== "win32") {
+      expect((await stat(dirname(managedPath as string))).mode & 0o777).toBe(0o700);
+      expect((await stat(managedPath as string)).mode & 0o777).toBe(0o600);
+    }
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.getManagedCandidateKnowledgeFilePath("ckb-default", sourceId, versionId),
+    ).resolves.toBe(managedPath);
+    await reopened.close();
+  });
+
+  it("appends, deduplicates, and materializes managed file versions", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    await writeFile(inputPath, "first", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const first = await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "managed-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "first"),
+    );
+    await writeFile(inputPath, "second", "utf8");
+    const second = await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "managed-source",
+      managedVersion(inputPath, "second", {
+        id: "managed-version-2",
+        createdAt: "2026-08-21T14:02:00.000Z",
+      }),
+    );
+    const duplicate = await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "managed-source",
+      managedVersion(inputPath, "second", {
+        id: "ignored-duplicate-version",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    );
+    expect(second).toMatchObject({ created: true, version: { version: 2 } });
+    expect(duplicate).toEqual({ ...second, created: false });
+    await expect(
+      store.getManagedCandidateKnowledgeFilePath(
+        "ckb-default",
+        "managed-source",
+        "ignored-duplicate-version",
+      ),
+    ).resolves.toBeUndefined();
+
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "legacy-file-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Legacy metadata",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      },
+      {
+        id: "legacy-version",
+        mediaType: "text/markdown",
+        checksum: sha256("second"),
+        sizeBytes: Buffer.byteLength("second"),
+        createdAt: "2026-08-21T14:03:00.000Z",
+      },
+    );
+    const materialized = await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "legacy-file-source",
+      managedVersion(inputPath, "second", {
+        id: "ignored-materialized-version",
+        createdAt: "2026-08-21T14:04:00.000Z",
+      }),
+    );
+    expect(materialized).toMatchObject({ created: false, version: { id: "legacy-version" } });
+    await expect(
+      store.getManagedCandidateKnowledgeFilePath(
+        "ckb-default",
+        "legacy-file-source",
+        "legacy-version",
+      ),
+    ).resolves.toBe(
+      join(root, "sources", digestSegment("legacy-file-source"), digestSegment("legacy-version")),
+    );
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", "managed-source"),
+    ).resolves.toEqual([first.version, second.version]);
+    await store.close();
+  });
+
+  it("rejects unsafe managed inputs, oversize files, integrity mismatches, and mutations", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const source = {
+      id: "managed-source",
+      knowledgeBaseId: "ckb-default",
+      kind: "file" as const,
+      displayName: "Candidate notes",
+      createdAt: "2026-08-21T14:01:00.000Z",
+    };
+
+    const directoryInput = join(parent, "directory-input");
+    await mkdir(directoryInput);
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(source, managedVersion(directoryInput, "")),
+    ).rejects.toThrow(/regular file/i);
+
+    const realInput = join(parent, "real-input.md");
+    await writeFile(realInput, "safe", "utf8");
+    if (process.platform !== "win32") {
+      const linkedInput = join(parent, "linked-input.md");
+      await symlink(realInput, linkedInput, "file");
+      await expect(
+        store.createManagedCandidateKnowledgeFileSource(
+          source,
+          managedVersion(linkedInput, "safe"),
+        ),
+      ).rejects.toThrow(/symbolic link/i);
+    }
+
+    const insideStore = join(root, "sources", "selected-from-store.md");
+    await writeFile(insideStore, "inside", "utf8");
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        source,
+        managedVersion(insideStore, "inside"),
+      ),
+    ).rejects.toThrow(/outside its store/i);
+    await rm(insideStore);
+
+    const oversized = join(parent, "oversized.bin");
+    await writeFile(oversized, "x", "utf8");
+    await truncate(oversized, maximumManagedCandidateKnowledgeFileBytes + 1);
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        source,
+        managedVersion(oversized, Buffer.alloc(0), {
+          sizeBytes: maximumManagedCandidateKnowledgeFileBytes + 1,
+        }),
+      ),
+    ).rejects.toThrow(/size limit/i);
+
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        source,
+        managedVersion(realInput, "safe", { checksum: "0".repeat(64) }),
+      ),
+    ).rejects.toThrow(/integrity metadata/i);
+
+    await writeFile(realInput, "before", "utf8");
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        source,
+        managedVersion(realInput, "before", {
+          beforeSourceRecheck: async () => {
+            await writeFile(realInput, "changed-after-capture", "utf8");
+          },
+        }),
+      ),
+    ).rejects.toThrow(/changed while it was being copied/i);
+    await expect(store.listCandidateKnowledgeSources("ckb-default")).resolves.toEqual([]);
+    await store.close();
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "rejects FIFO managed inputs without opening them",
+    async () => {
+      const parent = await temporaryParent();
+      const root = join(parent, "candidate-knowledge");
+      const fifoPath = join(parent, "candidate.pipe");
+      await execFileAsync("mkfifo", [fifoPath]);
+      const store = await initializeCandidateKnowledgeStore(initialization(root));
+      await expect(
+        store.createManagedCandidateKnowledgeFileSource(
+          {
+            id: "fifo-source",
+            knowledgeBaseId: "ckb-default",
+            kind: "file",
+            displayName: "FIFO",
+            createdAt: "2026-08-21T14:01:00.000Z",
+          },
+          managedVersion(fifoPath, ""),
+        ),
+      ).rejects.toThrow(/regular file/i);
+      await store.close();
+    },
+  );
+
+  it("publishes without replacement, adopts matching residue, and cleans ordinary failures", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    const content = "candidate evidence";
+    await writeFile(inputPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const sourceId = "managed-source";
+    const versionId = "managed-version-1";
+    const sourceDirectory = join(root, "sources", digestSegment(sourceId));
+    const finalPath = join(sourceDirectory, digestSegment(versionId));
+    await mkdir(sourceDirectory, { mode: 0o700 });
+    await writeFile(finalPath, "different", { mode: 0o600 });
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: sourceId,
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Candidate notes",
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(inputPath, content, { id: versionId }),
+      ),
+    ).rejects.toBeInstanceOf(StorageConflictError);
+    await expect(readFile(finalPath, "utf8")).resolves.toBe("different");
+    await rm(finalPath);
+    await writeFile(finalPath, content, { mode: 0o600 });
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: sourceId,
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Candidate notes",
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(inputPath, content, { id: versionId }),
+      ),
+    ).resolves.toMatchObject({ created: true });
+
+    const failingInput = join(parent, "failing.md");
+    await writeFile(failingInput, "failure fixture", "utf8");
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "failing-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Failure fixture",
+          createdAt: "2026-08-21T14:02:00.000Z",
+        },
+        managedVersion(failingInput, "failure fixture", {
+          id: "failing-version",
+          createdAt: "2026-08-21T14:02:00.000Z",
+          beforeDatabaseWrite: async () => {
+            throw new Error("simulated database-phase failure");
+          },
+        }),
+      ),
+    ).rejects.toThrow(/simulated database-phase failure/i);
+    await expect(
+      lstat(join(root, "sources", digestSegment("failing-source"))),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect((await readdir(join(root, "sources"))).some((name) => name.startsWith(".intake-"))).toBe(
+      false,
+    );
+    await store.close();
+  });
+
+  it("rejects missing or corrupted managed files when reopening", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    await writeFile(inputPath, "candidate evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "managed-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "candidate evidence"),
+    );
+    const managedPath = await store.getManagedCandidateKnowledgeFilePath(
+      "ckb-default",
+      "managed-source",
+      "managed-version-1",
+    );
+    await store.close();
+    await rm(managedPath as string);
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(/missing/i);
+    await writeFile(managedPath as string, "candidate evidence", "utf8");
+    await writeFile(managedPath as string, "corrupted evidence", "utf8");
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(/checksum|size/i);
+    const database = join(root, ".draft-loop", "knowledge.sqlite");
+    const moved = join(root, ".draft-loop", "knowledge-moved.sqlite");
+    await rename(database, moved);
+    await rename(moved, database);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "rejects a managed-file symlink when reopening",
+    async () => {
+      const parent = await temporaryParent();
+      const root = join(parent, "candidate-knowledge");
+      const inputPath = join(parent, "candidate.md");
+      await writeFile(inputPath, "candidate evidence", "utf8");
+      const store = await initializeCandidateKnowledgeStore(initialization(root));
+      await store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "managed-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Candidate notes",
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(inputPath, "candidate evidence"),
+      );
+      const managedPath = await store.getManagedCandidateKnowledgeFilePath(
+        "ckb-default",
+        "managed-source",
+        "managed-version-1",
+      );
+      await store.close();
+      await rm(managedPath as string);
+      await symlink(inputPath, managedPath as string, "file");
+      await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(/symbolic link/i);
+    },
+  );
 
   it.skipIf(process.platform === "win32")(
     "creates private directories, manifest, and database with restrictive modes",

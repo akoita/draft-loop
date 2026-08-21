@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { basename } from "node:path";
 
 import {
   type CandidateKnowledgeBase,
@@ -10,6 +11,7 @@ import {
   createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
 } from "@draft-loop/domain";
+import { ingestFile } from "@draft-loop/ingestion";
 import type {
   CandidateKnowledgeSourceRecord,
   CandidateKnowledgeSourceVersionRecord,
@@ -18,6 +20,7 @@ import {
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeStoreHandle,
   initializeCandidateKnowledgeStore,
+  maximumManagedCandidateKnowledgeFileBytes,
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
 
@@ -81,6 +84,13 @@ export interface AppendKnowledgeSourceVersionCommand {
   readonly sizeBytes: number;
 }
 
+export interface ImportKnowledgeSourceFileCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourcePath: string;
+  readonly displayName?: string;
+}
+
 export interface ListKnowledgeSourceManifestsCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -124,6 +134,9 @@ export interface CandidateKnowledgeStoreService {
   readonly appendKnowledgeSourceVersion: (
     command: AppendKnowledgeSourceVersionCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
+  readonly importKnowledgeSourceFile: (
+    command: ImportKnowledgeSourceFileCommand,
+  ) => Promise<CandidateKnowledgeSourceWriteResult>;
   readonly listKnowledgeSourceManifests: (
     command: ListKnowledgeSourceManifestsCommand,
   ) => Promise<readonly CandidateKnowledgeSourceManifest[]>;
@@ -134,6 +147,7 @@ export interface CandidateKnowledgeStoreServiceDependencies {
   readonly now?: () => string;
   readonly initialize?: typeof initializeCandidateKnowledgeStore;
   readonly open?: typeof openCandidateKnowledgeStore;
+  readonly ingestFile?: typeof ingestFile;
 }
 
 interface ResolvedDependencies {
@@ -141,6 +155,7 @@ interface ResolvedDependencies {
   readonly now: () => string;
   readonly initialize: typeof initializeCandidateKnowledgeStore;
   readonly open: typeof openCandidateKnowledgeStore;
+  readonly ingestFile: typeof ingestFile;
 }
 
 function requireText(value: string, label: string): string {
@@ -155,6 +170,32 @@ function requireStoreRoot(storeRoot: string): string {
     throw new Error("Candidate knowledge store root is required.");
   }
   return storeRoot;
+}
+
+const maximumSourceDisplayNameCharacters = 200;
+const unsafeSourceDisplayNamePattern = /[\p{Cc}\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/u;
+
+function sourceDisplayName(sourcePath: string, explicitDisplayName?: string): string {
+  const value = (explicitDisplayName ?? basename(sourcePath)).trim();
+  if (value === "") {
+    throw new Error("Candidate knowledge source display name is required.");
+  }
+  if (Array.from(value).length > maximumSourceDisplayNameCharacters) {
+    throw new Error(
+      `Candidate knowledge source display name must be at most ${maximumSourceDisplayNameCharacters} characters.`,
+    );
+  }
+  if (unsafeSourceDisplayNamePattern.test(value)) {
+    throw new Error("Candidate knowledge source display name contains unsupported characters.");
+  }
+  if (explicitDisplayName !== undefined && /[\\/]/u.test(value)) {
+    throw new Error("Candidate knowledge source display name must not contain path separators.");
+  }
+  return value;
+}
+
+function importFailure(): Error {
+  return new Error("The selected candidate knowledge source file could not be imported.");
 }
 
 function toKnowledgeBase(record: CandidateKnowledgeBaseRecord): CandidateKnowledgeBase {
@@ -278,6 +319,7 @@ function resolveDependencies(
     now: dependencies.now ?? (() => new Date().toISOString()),
     initialize: dependencies.initialize ?? initializeCandidateKnowledgeStore,
     open: dependencies.open ?? openCandidateKnowledgeStore,
+    ingestFile: dependencies.ingestFile ?? ingestFile,
   };
 }
 
@@ -437,6 +479,53 @@ export function createCandidateKnowledgeStoreService(
         },
       );
     },
+    importKnowledgeSourceFile: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const sourcePath = requireText(command.sourcePath, "Candidate knowledge source path");
+      const displayName = sourceDisplayName(sourcePath, command.displayName);
+      let ingestion: Awaited<ReturnType<typeof ingestFile>>;
+      try {
+        ingestion = await resolved.ingestFile(
+          { path: sourcePath },
+          { maxSourceBytes: maximumManagedCandidateKnowledgeFileBytes },
+        );
+      } catch {
+        throw importFailure();
+      }
+      const normalized = ingestion.source;
+      if (
+        normalized === null ||
+        ingestion.issues.length > 0 ||
+        normalized.issues.length > 0 ||
+        normalized.chunks.length === 0
+      ) {
+        throw importFailure();
+      }
+
+      const sourceId = requireText(resolved.generateId(), "Candidate knowledge source id");
+      const versionId = requireText(resolved.generateId(), "Candidate knowledge source version id");
+      const createdAt = resolved.now();
+      const source = createCandidateKnowledgeSource(
+        sourceId,
+        { knowledgeBaseId, kind: "file", displayName },
+        createdAt,
+      );
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const result = await handle.createManagedCandidateKnowledgeFileSource(source, {
+            id: versionId,
+            sourcePath,
+            mediaType: normalized.mediaType,
+            checksum: normalized.checksum,
+            sizeBytes: normalized.sizeBytes,
+            createdAt,
+          });
+          return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
+        },
+      );
+    },
     listKnowledgeSourceManifests: async (command) => {
       const storeRoot = requireStoreRoot(command.storeRoot);
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
@@ -466,4 +555,5 @@ export const renameKnowledgeBase = defaultService.renameKnowledgeBase;
 export const archiveKnowledgeBase = defaultService.archiveKnowledgeBase;
 export const createKnowledgeSource = defaultService.createKnowledgeSource;
 export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSourceVersion;
+export const importKnowledgeSourceFile = defaultService.importKnowledgeSourceFile;
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;

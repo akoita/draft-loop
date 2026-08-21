@@ -100,6 +100,12 @@ export interface CandidateKnowledgeSourceVersionWriteResult {
   readonly created: boolean;
 }
 
+export interface ManagedCandidateKnowledgeSourceVersionRecord
+  extends CandidateKnowledgeSourceVersionRecord {
+  readonly knowledgeBaseId: string;
+  readonly kind: CandidateKnowledgeSourceKind;
+}
+
 export interface CandidateKnowledgeBaseStoragePort {
   readonly ensureDefaultCandidateKnowledgeBase: (
     input: Omit<CandidateKnowledgeBaseInput, "isDefault">,
@@ -520,7 +526,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 5 as const;
+export const storageSchemaVersion = 6 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -947,12 +953,39 @@ const migrationFive: Migration = {
   `.trim(),
 };
 
+const migrationSix: Migration = {
+  version: 6,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_managed_source_versions (
+      version_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_source_versions(id)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_source_versions_require_file
+      BEFORE INSERT ON candidate_knowledge_managed_source_versions
+      WHEN NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_source_versions AS v
+        JOIN candidate_knowledge_sources AS s ON s.id = v.source_id
+        WHERE v.id = NEW.version_id AND s.kind = 'file'
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge source versions require a file source'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_source_versions_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_managed_source_versions
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge source versions are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_source_versions_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_managed_source_versions
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge source versions are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
   migrationThree,
   migrationFour,
   migrationFive,
+  migrationSix,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -1465,6 +1498,160 @@ export class SqliteStorage
     return result as CandidateKnowledgeSourceVersionWriteResult;
   }
 
+  public async createManagedCandidateKnowledgeSource(
+    sourceInput: CandidateKnowledgeSourceInput,
+    initialVersionInput: CandidateKnowledgeSourceVersionInput,
+  ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
+    this.ensureOpen();
+    const source = normalizeCandidateKnowledgeSourceInput(sourceInput);
+    const initialVersion = normalizeCandidateKnowledgeSourceVersionInput(initialVersionInput);
+    if (source.kind !== "file") {
+      throw new StorageValidationError(
+        "managed candidate knowledge source versions require a file source",
+      );
+    }
+    if (Date.parse(initialVersion.createdAt) < Date.parse(source.createdAt)) {
+      throw new StorageValidationError(
+        "candidate knowledge source version createdAt must not precede its source createdAt",
+      );
+    }
+    const version: CandidateKnowledgeSourceVersionRecord = {
+      ...initialVersion,
+      sourceId: source.id,
+      version: 1,
+      parentVersionId: null,
+    };
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(source.knowledgeBaseId);
+      if (
+        this.database
+          .prepare("SELECT id FROM candidate_knowledge_sources WHERE id = ?")
+          .get(source.id) !== undefined
+      ) {
+        throw new StorageConflictError(`candidate knowledge source ${source.id} already exists`);
+      }
+      this.insertCandidateKnowledgeSource(source);
+      this.insertCandidateKnowledgeSourceVersion(version);
+      this.insertManagedCandidateKnowledgeSourceVersion(version.id);
+    })();
+    return { source, version, created: true };
+  }
+
+  public async appendManagedCandidateKnowledgeSourceVersion(
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionInput: CandidateKnowledgeSourceVersionInput,
+  ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const normalizedVersion = normalizeCandidateKnowledgeSourceVersionInput(versionInput);
+    let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      const source = this.requireCandidateKnowledgeSource(
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+      );
+      if (source.kind !== "file") {
+        throw new StorageValidationError(
+          "managed candidate knowledge source versions require a file source",
+        );
+      }
+      const currentRow = this.database
+        .prepare(
+          "SELECT id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC LIMIT 1",
+        )
+        .get(normalizedSourceId);
+      if (currentRow === undefined) {
+        throw new StorageValidationError(
+          `candidate knowledge source ${normalizedSourceId} has no versions`,
+        );
+      }
+      const current = candidateKnowledgeSourceVersionFromRow(currentRow);
+      if (Date.parse(normalizedVersion.createdAt) < Date.parse(current.createdAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge source version createdAt must not precede the current version createdAt",
+        );
+      }
+      if (current.checksum === normalizedVersion.checksum) {
+        if (
+          current.mediaType !== normalizedVersion.mediaType ||
+          current.sizeBytes !== normalizedVersion.sizeBytes
+        ) {
+          throw new StorageConflictError(
+            "candidate knowledge source version checksum conflicts with its integrity metadata",
+          );
+        }
+        if (!this.hasManagedCandidateKnowledgeSourceVersion(current.id)) {
+          this.insertManagedCandidateKnowledgeSourceVersion(current.id);
+        }
+        result = { source, version: current, created: false };
+        return;
+      }
+      const version: CandidateKnowledgeSourceVersionRecord = {
+        ...normalizedVersion,
+        sourceId: normalizedSourceId,
+        version: current.version + 1,
+        parentVersionId: current.id,
+      };
+      this.insertCandidateKnowledgeSourceVersion(version);
+      this.insertManagedCandidateKnowledgeSourceVersion(version.id);
+      result = { source, version, created: true };
+    })();
+    return result as CandidateKnowledgeSourceVersionWriteResult;
+  }
+
+  public async isCandidateKnowledgeSourceVersionManaged(
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ): Promise<boolean> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const normalizedVersionId = requireNonEmpty(
+      versionId,
+      "candidate knowledge source version id",
+    ).trim();
+    const row = this.database
+      .prepare(
+        `SELECT m.version_id
+         FROM candidate_knowledge_managed_source_versions AS m
+         JOIN candidate_knowledge_source_versions AS v ON v.id = m.version_id
+         JOIN candidate_knowledge_sources AS s ON s.id = v.source_id
+         WHERE s.candidate_knowledge_base_id = ? AND v.source_id = ? AND v.id = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedSourceId, normalizedVersionId);
+    return row !== undefined;
+  }
+
+  public listManagedCandidateKnowledgeSourceVersions(): readonly ManagedCandidateKnowledgeSourceVersionRecord[] {
+    this.ensureOpen();
+    return this.database
+      .prepare(
+        `SELECT s.candidate_knowledge_base_id, s.kind,
+                v.id, v.source_id, v.version, v.parent_version_id, v.media_type,
+                v.checksum, v.size_bytes, v.created_at
+         FROM candidate_knowledge_managed_source_versions AS m
+         JOIN candidate_knowledge_source_versions AS v ON v.id = m.version_id
+         JOIN candidate_knowledge_sources AS s ON s.id = v.source_id
+         ORDER BY s.candidate_knowledge_base_id, v.source_id, v.version, v.id`,
+      )
+      .all()
+      .map((row) => ({
+        ...candidateKnowledgeSourceVersionFromRow(row),
+        knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
+        kind: rowString(row, "kind") as CandidateKnowledgeSourceKind,
+      }));
+  }
+
   public async getCandidateKnowledgeSource(
     knowledgeBaseId: string,
     sourceId: string,
@@ -1571,6 +1758,21 @@ export class SqliteStorage
         previousId = version.id;
         previousCreatedAt = versionCreatedAt;
       }
+    }
+    const nonFileManagedVersion = this.database
+      .prepare(
+        `SELECT m.version_id
+         FROM candidate_knowledge_managed_source_versions AS m
+         JOIN candidate_knowledge_source_versions AS v ON v.id = m.version_id
+         JOIN candidate_knowledge_sources AS s ON s.id = v.source_id
+         WHERE s.kind <> 'file'
+         LIMIT 1`,
+      )
+      .get();
+    if (nonFileManagedVersion !== undefined) {
+      throw new StorageValidationError(
+        "Candidate knowledge store contains a managed version for a non-file source.",
+      );
     }
   }
 
@@ -2933,6 +3135,22 @@ export class SqliteStorage
         record.sizeBytes,
         record.createdAt,
       );
+  }
+
+  private hasManagedCandidateKnowledgeSourceVersion(versionId: string): boolean {
+    return (
+      this.database
+        .prepare(
+          "SELECT version_id FROM candidate_knowledge_managed_source_versions WHERE version_id = ?",
+        )
+        .get(versionId) !== undefined
+    );
+  }
+
+  private insertManagedCandidateKnowledgeSourceVersion(versionId: string): void {
+    this.database
+      .prepare("INSERT INTO candidate_knowledge_managed_source_versions (version_id) VALUES (?)")
+      .run(versionId);
   }
 
   private requireCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {

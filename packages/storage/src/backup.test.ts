@@ -18,7 +18,7 @@ const testWorkspace: WorkspaceRecord = {
 };
 
 describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () => {
-  it("creates an atomic backup with SHA-256 checksum and restores state cleanly", async () => {
+  it("backs up managed markers as SQLite metadata without claiming a complete blob backup", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "draft-loop-backup-test-"));
     const dbPath = join(tempDir, "source.sqlite");
     const backupPath = join(tempDir, "backups", "2026-08-13T100000.sqlite");
@@ -45,7 +45,7 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
         additionalKnowledgeBase.id,
         "2026-08-13T09:02:00.000Z",
       );
-      const source = await storage.createCandidateKnowledgeSource(
+      const source = await storage.createManagedCandidateKnowledgeSource(
         {
           id: "source-1",
           knowledgeBaseId: defaultKnowledgeBase.id,
@@ -116,6 +116,15 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
           source.source.id,
         ),
       ).resolves.toEqual([source.version, sourceVersion.version]);
+      await expect(
+        restoredStorage.isCandidateKnowledgeSourceVersionManaged(
+          defaultKnowledgeBase.id,
+          source.source.id,
+          source.version.id,
+        ),
+      ).resolves.toBe(true);
+      // SqliteStorage intentionally knows nothing about a portable store's sources/ directory.
+      // A complete candidate knowledge-store backup must bundle and verify those blobs separately.
 
       await storage.close();
       await restoredStorage.close();

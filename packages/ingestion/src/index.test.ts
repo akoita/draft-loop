@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -115,6 +115,9 @@ describe("local source ingestion", () => {
     expect(first.source?.mediaType).toBe("text/plain");
     expect(first.source?.text).toBe("First line\nSecond line\n\nThird line");
     expect(first.source?.checksum).toMatch(/^[a-f0-9]{64}$/);
+    expect(first.source?.sizeBytes).toBe(
+      new TextEncoder().encode("\uFEFFFirst line\r\nSecond line  \r\n\r\nThird line").byteLength,
+    );
     expect(first.source?.chunks).toEqual(second.source?.chunks);
     expect(first.source?.chunks).toHaveLength(2);
     expect(first.source?.chunks[0]).toMatchObject({
@@ -122,6 +125,72 @@ describe("local source ingestion", () => {
       locator: { lineStart: 1, lineEnd: 2 },
       text: "First line\nSecond line",
     });
+  });
+
+  it("bounds a selected local source without changing accepted text behavior", async () => {
+    const path = await fixture("bounded.txt", "bounded source");
+
+    const accepted = await ingestFile({ path }, { maxSourceBytes: 14 });
+    const oversized = await ingestFile({ path }, { maxSourceBytes: 13 });
+
+    expect(accepted.issues).toEqual([]);
+    expect(accepted.source?.text).toBe("bounded source");
+    expect(oversized.source).toBeNull();
+    expect(oversized.issues).toEqual([
+      {
+        code: "source-too-large",
+        sourcePath: path,
+        message: "The source file exceeds the configured size limit.",
+        recoverable: true,
+      },
+    ]);
+  });
+
+  it.each([0, -1, 1.5])("rejects invalid maxSourceBytes value %s", async (maxSourceBytes) => {
+    const path = await fixture("invalid-limit.txt", "candidate source");
+
+    await expect(ingestFile({ path }, { maxSourceBytes })).rejects.toThrow(
+      /maxSourceBytes must be a positive integer/u,
+    );
+  });
+
+  it("rejects non-regular local sources", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-"));
+    temporaryDirectories.push(parent);
+    const path = join(parent, "directory.txt");
+    await mkdir(path);
+
+    const result = await ingestFile({ path });
+
+    expect(result.source).toBeNull();
+    expect(result.issues).toMatchObject([{ code: "read-failure", sourcePath: path }]);
+  });
+
+  it.skipIf(process.platform === "win32")("rejects symbolic-link local sources", async () => {
+    const target = await fixture("target.txt", "candidate source");
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-link-"));
+    temporaryDirectories.push(directory);
+    const path = join(directory, "linked.txt");
+    await symlink(target, path, "file");
+
+    const result = await ingestFile({ path });
+
+    expect(result.source).toBeNull();
+    expect(result.issues).toMatchObject([{ code: "read-failure", sourcePath: path }]);
+  });
+
+  it("fails closed when a local source changes after it is read", async () => {
+    const path = await fixture("changing.txt", "initial source");
+
+    const result = await ingestFile(
+      { path },
+      {
+        afterSourceRead: async () => writeFile(path, "changed source with a different size"),
+      },
+    );
+
+    expect(result.source).toBeNull();
+    expect(result.issues).toMatchObject([{ code: "read-failure", sourcePath: path }]);
   });
 
   it("extracts HTML text while removing inactive content and decoding entities", async () => {
@@ -160,6 +229,7 @@ describe("local source ingestion", () => {
 
     expect(result.issues).toEqual([]);
     expect(result.source?.mediaType).toBe("application/pdf");
+    expect(result.source?.sizeBytes).toBe(4);
     expect(result.source?.text).toBe("Experience\nBuilt reliable systems.");
     expect(new Uint8Array(observed.bytes ?? [])).toEqual(new Uint8Array([37, 80, 68, 70]));
     expect(observed.checksum).toBe(result.source?.checksum);

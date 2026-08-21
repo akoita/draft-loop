@@ -99,11 +99,16 @@ application-level CKB selection. A separate portable CKB store component now
 persists a logical UUID, CKB lifecycle metadata, stable CKB-scoped source
 identity, and immutable ordered source-version metadata. Sources record file/URL
 kind and a local label; versions record SHA-256, media type, byte size, and
-timestamp. The store retains no exact host paths or URLs and remains independent
-of application workspaces and run history. It does not yet store source content,
-bind directories, refresh sources, track freshness, duplicates, or indexes,
-drive retrieval, or expose CLI/desktop selection, deletion, export, or restore.
-Local vector and hybrid retrieval remain evaluation components pending
+timestamp. Its first approved managed-intake command accepts one local regular
+file of at most 20 MiB in the five supported media types, requires successful
+extraction, and copies immutable raw bytes beneath an opaque ID-derived name.
+The store retains no exact host paths, filename provenance, filename-derived
+physical names, or URLs; a sensitive local label may still default to a
+basename. It remains independent of application workspaces and run history. It
+does not yet bind directories, ingest URLs, refresh sources, track freshness,
+duplicates, or indexes, drive retrieval, or expose CLI/desktop selection,
+deletion, backup, export, or restore. This remains component implementation;
+local vector and hybrid retrieval remain evaluation components pending
 representative comparison and lifecycle evidence.
 
 Several later-stage components also exist: local lexical/vector retrieval,
@@ -378,6 +383,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                    |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Added approved single-file managed CKB intake without advancing the application-grade stage beyond component implementation                                                                                              | One regular file can now cross the portable boundary only after type, 20 MiB, and extraction checks; opaque immutable bytes and a version-6 marker establish exact managed provenance without host paths, while directory/URL intake, refresh/freshness, duplicates/indexing, retrieval/UI integration, deletion, reconciliation, backup, export, and restore remain out |
 | 2026-08-21 | Added portable CKB source identity and immutable ordered source-version metadata without advancing the application-grade stage beyond component implementation                                                           | Stable source IDs and SHA-256 version records establish portable provenance without retaining host paths, URLs, or content; physical intake, refresh, duplicates/indexing, application selection, retrieval, CLI/desktop UI, deletion, export, and restore remain unintegrated                                                                              |
 | 2026-08-21 | Implemented the portable CKB store identity and local SQLite lifecycle-metadata component for #78 without advancing the application-grade stage beyond component implementation                                           | A user-selected store needs a logical UUID independent of its filesystem path and must remain separate from application workspaces and run history; source versions, selection, retrieval cutover, CLI/desktop UI, deletion, export, and restore remain unintegrated                                                                                      |
 | 2026-08-21 | Published [v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0) as Released but not Validated and moved Application-grade CV workflow to Now                                                                 | The exact-revision local live-provider preflight, release dry run, three platform builds, manifest, checksums, SBOM, and known limitations passed; the representative output-quality failure remains the defining v0.7 input rather than being waived                                                                                                     |

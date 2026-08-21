@@ -45,7 +45,7 @@ flowchart TB
     subgraph Infrastructure["Local and provider adapters"]
         direction LR
         WorkspaceStore[("Application workspace store<br/>SQLite · FTS/BM25 · run history")]
-        CKBStore[("Portable CKB store<br/>CKB · source/version metadata")]
+        CKBStore[("Portable CKB store<br/>managed raw blobs · source/version metadata")]
         Providers["Provider adapters<br/>data-policy enforcement"]
         Credentials["Credential store<br/>main-process owned"]
     end
@@ -54,6 +54,7 @@ flowchart TB
         direction LR
         Models["Anthropic + OpenAI<br/>or local compatible endpoint"]
         URL["User-approved URL fetch"]
+        LocalFile["Application-approved<br/>single local file"]
         Export["Local Markdown · DOCX · PDF"]
     end
 
@@ -66,13 +67,15 @@ flowchart TB
     App --> WorkspaceStore
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
-    App -.->|"metadata component; run integration pending"| CKBStore
+    App -->|"validated single-file managed intake"| CKBStore
+    CKBStore -.->|"selection and retrieval pending"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
     Credentials -.->|"key lookup; never projected back"| Providers
     Providers -->|"approved transmission only"| Models
     Host -->|"validated request"| URL
     URL --> Knowledge
+    LocalFile -->|"validated managed intake"| App
     Host -->|"approved artifact only"| Export
 
     classDef ui fill:#e8f1ff,stroke:#2563eb,color:#172554;
@@ -84,16 +87,17 @@ flowchart TB
     class Bridge,Host,App boundary;
     class Orchestrator,Domain,Knowledge,Quality,Artifacts core;
     class WorkspaceStore,CKBStore,Providers,Credentials infra;
-    class Models,URL,Export external;
+    class Models,URL,LocalFile,Export external;
 ```
 
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
-dotted CKB edge marks a component boundary, not an integrated workflow: the
-portable store carries logical identity, lifecycle, source, and immutable
-source-version metadata, but application selection and source/retrieval use have
-not crossed that boundary yet.
+solid CKB edge is the explicit managed-intake command: approval covers one local
+regular file, extraction succeeds before persistence, and the application
+copies verified raw bytes into the portable store. The dotted CKB edge marks the
+still-unintegrated workflow: application selection, retrieval, and provider use
+have not crossed that boundary yet.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -121,11 +125,23 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   separate from every application workspace and its run history. Its persisted
   logical UUID identifies the store when its user-selected filesystem location
   changes. The current component stores CKB metadata, stable CKB-scoped source
-  identity with file/URL kind and a local label, and ordered immutable versions
-  with SHA-256, media type, byte size, and timestamp. It stores no exact host
-  paths or URLs and no source content. It does not drive retrieval or appear in
-  CLI or desktop workflows. See
+  identity with file/URL kind and a sensitive local label, ordered immutable
+  versions with SHA-256, media type, byte size, and timestamp, and managed raw
+  bytes for one explicitly approved file. Intake accepts only a regular file of
+  at most 20 MiB in the five ingestion-supported media types and persists
+  nothing unless extraction succeeds. Raw bytes use an opaque, ID-derived local
+  name with restrictive best-effort permissions; exact host paths and original
+  filenames are not persisted as provenance or physical names, although a
+  sensitive label may default to the basename. It does not drive retrieval or
+  appear in CLI or desktop workflows. See
   [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
+- Managed intake publishes verified bytes without replacement before committing
+  their version-6 database marker. Committed markers always require matching
+  regular-file bytes. Ordinary failures clean up; crashes or concurrency can
+  leave unreferenced opaque files until explicit reconciliation is implemented.
+- Managed blobs and SQLite metadata are plaintext. A source whose label resembles
+  `AGENTS.md` or other configuration remains inert candidate data and never
+  changes application instructions, policy, or permissions.
 - The orchestrator owns round sequencing, budgets, pause/stop behavior, and
   user-visible run events; provider adapters own SDK translation only.
 - The application package owns adapter-neutral use cases and command/query
@@ -137,8 +153,9 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   not submit them anywhere.
 - Backup/restore, retention purge, and content-free diagnostic export are
   explicit operations for application workspaces. They do not yet export,
-  restore, or delete the separate CKB store, and their existence does not imply
-  encrypted storage or validated disaster recovery on every platform.
+  restore, or delete the separate CKB store, and a SQLite-only copy is not a
+  complete CKB backup because it omits managed raw bytes. Their existence does
+  not imply encrypted storage or validated disaster recovery on every platform.
 - Context snapshots cross the persistence boundary through
   `serializeContextSnapshot` and `parseContextSnapshot`; the Zod schema checks
   version, requirements, evidence checksums, rubric values, and model identity
@@ -265,11 +282,13 @@ the same local application driver, which stores a small workspace manifest
 beside an application-specific SQLite history file, ingests selected local
 sources, constructs a context snapshot, and drives the orchestration engine.
 That workspace and run history remain distinct from the portable CKB store.
-Neither adapter yet lets the user create, open, select, export, restore, or
-delete that store. Directory intake, refresh, duplicate/index state, application
-selection, and retrieval cutover are also pending; the current retrieval path
-still reads workspace-scoped evidence. Offline fixture agents make the lifecycle
-testable without network access. The desktop renderer uses the same
+The application contract can approve and copy one supported local regular file
+into the store, but neither adapter yet provides the broader CKB create, open,
+select, export, restore, or delete workflow. Directory and URL intake, refresh,
+freshness, duplicate/index state, application selection, and retrieval cutover
+are also pending; the current retrieval path still reads workspace-scoped
+evidence. Offline fixture agents make the lifecycle testable without network
+access. The desktop renderer uses the same
 adapter-neutral review port through a capability-limited bridge; browser mode
 has no filesystem or persistent
 credential capabilities and retains only a deterministic fixture fallback.

@@ -21,10 +21,10 @@ The application therefore needs two local persistence boundaries:
    any application.
 
 The portable-store component establishes the second boundary's identity and
-SQLite lifecycle metadata. The current metadata-only source/version slice adds
-stable CKB-scoped source identities and immutable source versions without
-putting candidate source content in the store or connecting it to an application
-workflow.
+SQLite lifecycle metadata. Its first managed-intake slice also copies one
+explicitly approved local file into the store and binds those immutable bytes to
+a stable CKB-scoped source version. It does not connect CKB selection or
+retrieval to an application workflow.
 
 ## Decision
 
@@ -43,7 +43,31 @@ A source has a stable logical ID scoped to one CKB, a file or URL kind, and a
 local user-visible label. Each immutable, ordered source version records a
 SHA-256 checksum, media type, byte size, and creation timestamp. A checksum is
 version integrity metadata and a possible duplicate signal, not source identity.
-The metadata contains neither the original bytes nor extracted content.
+
+The application command to add one local file is the approval boundary for that
+one file. Intake accepts only a regular file of at most 20 MiB in the five
+ingestion-supported media types: plain text, Markdown, HTML, PDF, and DOCX. The
+existing extraction and content-quality checks must succeed before any raw bytes
+or metadata are persisted. Directory, URL, refresh, and bulk intake are outside
+this slice.
+
+Successful intake copies the exact approved raw bytes beneath `sources/` using
+an opaque layout derived only from generated source and version IDs. The
+original host path and filename are neither physical names in the store nor
+persisted provenance. A local label may default to the basename or use a label
+chosen by the user, but it is sensitive user-interface metadata, not an origin
+path or instruction.
+
+Storage migration version 6 adds the managed-object marker that binds a source
+version to its copied bytes. Publication is no-replace, file first, and database
+second: bytes are staged privately, verified, published under their final opaque
+name, and only then committed with their marker and integrity metadata. A
+committed managed marker is valid only while the corresponding regular file
+exists and matches the recorded checksum and size. Ordinary failures clean up
+their staging or newly published file. A process crash or concurrent loser can
+still leave an unreferenced opaque file; explicit orphan reconciliation remains
+future lifecycle work and no database row may be created to legitimize residue
+implicitly.
 
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
@@ -58,20 +82,27 @@ may show the local location to the user, but it must not treat that location as
 candidate evidence or transmit it to a model provider.
 
 The same rule applies to source origins in this slice: exact host paths and URLs
-are not persisted. Source labels are local user-visible metadata and checksums
-can correlate known content, so neither belongs in a content-free diagnostic
-projection or provider request.
+are not persisted. Exact managed provenance consists of the logical store, CKB,
+source and version IDs plus the checksum, size, media type, and capture time of
+the copied bytes. It does not claim to preserve the original host location.
+Source labels are local user-visible metadata and checksums can correlate known
+content, so neither belongs in a content-free diagnostic projection or provider
+request.
+
+Managed source bytes are inert candidate data. A source named `AGENTS.md`,
+`.env`, or like another tool or repository configuration file must never become
+application instructions, provider policy, permissions, or executable
+configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- adding physical candidate source files or fetched source content, including
-  managed intake and directory bindings;
-- exact origin provenance, refresh and freshness, and duplicate handling;
+- directory intake, URL/fetched source intake, and directory bindings;
+- origin-path provenance, refresh and freshness, and duplicate handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to
   provider-transmission approval;
 - CLI and desktop creation, opening, selection, and lifecycle controls;
-- source and store deletion semantics, including derived data and retained run
+- source and store deletion semantics, including raw bytes, derived data, and retained run
   references; and
 - portable export, backup, restore, conflict handling, and migration rollback.
 
@@ -90,10 +121,10 @@ a portable-store record must not make a workspace run read from it implicitly.
 - **Put workspace run history in the portable store.** Rejected because
   opportunity and provider history has a different privacy, retention, and
   backup lifecycle from reusable candidate knowledge.
-- **Store candidate files in the initial slice.** Deferred because safe managed
-  copies, symlink and traversal handling, versioning, deletion coverage,
-  backup/restore, and provider-selection approval need explicit contracts and
-  tests before physical source material crosses this boundary.
+- **Keep the store metadata-only until full source lifecycle exists.** Rejected
+  for this slice because a narrowly approved, immutable single-file copy can
+  establish portable byte provenance without prematurely enabling directory
+  refresh, retrieval, provider use, deletion, or backup claims.
 - **Use cloud storage or remote vectors.** Rejected for this stage because it
   would add accounts, authentication, remote retention, and new provider
   exposure to a local-first boundary.
@@ -105,18 +136,22 @@ a portable-store record must not make a workspace run read from it implicitly.
   lifecycle and retention policies.
 - Moving or copying a SQLite file will require later conflict and restore rules;
   the UUID alone does not decide which copy is current.
-- The store contains source and source-version metadata but no source content,
-  so it does not yet improve application retrieval or reduce repeated import.
+- The store can contain immutable managed raw bytes for an approved single file,
+  but it does not yet improve application retrieval or reduce repeated import.
 - Deleting an application workspace does not delete a separate CKB store, and
-  deleting a future CKB store must not silently claim to delete workspace run
-  history or user-created backups.
-- The architecture and threat model must be revisited before physical source
-  ingestion, retrieval cutover, export/restore, or provider use is enabled.
+  deleting the original host file does not delete its managed CKB copy. Deleting
+  a future CKB store must not silently claim to delete workspace run history,
+  device backups, or user-created copies.
+- A SQLite-only CKB copy is not a complete CKB backup because it
+  does not include managed raw bytes. CKB deletion, backup, export, restore, and
+  secure-erasure semantics remain unimplemented.
+- The architecture and threat model must be revisited before directory or URL
+  intake, retrieval cutover, export/restore, or provider use is enabled.
 
 ## Follow-up
 
-- Define managed physical-source intake and exact provenance without retaining
-  host paths in portable or provider-facing records.
+- Define explicit orphan reconciliation for interrupted managed intake without
+  adopting or deleting unrelated files.
 - Define explicit application-to-CKB selection and fail-closed retrieval
   isolation.
 - Define deletion coverage for raw, normalized, indexed, cached, historical,
