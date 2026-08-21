@@ -27,6 +27,7 @@ import {
   initializeCandidateKnowledgeStore,
   type ManagedCandidateKnowledgeFileVersionInput,
   maximumManagedCandidateKnowledgeFileBytes,
+  maximumManagedCandidateKnowledgeInventoryEntries,
   openCandidateKnowledgeStore,
 } from "./knowledge-store.js";
 
@@ -324,6 +325,260 @@ describe("portable candidate knowledge store", () => {
     await expect(
       store.listCandidateKnowledgeSourceVersions("ckb-default", "managed-source"),
     ).resolves.toEqual([first.version, second.version]);
+    await store.close();
+  });
+
+  it("reports clean and managed inventories with verified marker counts", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    await writeFile(inputPath, "candidate evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+
+    await expect(store.inspectManagedCandidateKnowledgeFiles()).resolves.toEqual({
+      schemaVersion: 1,
+      verifiedManagedFileCount: 0,
+      scannedEntryCount: 0,
+      unknownEntries: {
+        intakeShapedFilesAtSourcesRoot: 0,
+        opaqueEntriesAtSourcesRoot: 0,
+        entriesInsideManagedSourceDirectories: 0,
+        symbolicLinks: 0,
+        otherEntries: 0,
+      },
+      complete: true,
+      scanLimitReached: false,
+    });
+
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "managed-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "candidate evidence"),
+    );
+    const inventory = await store.inspectManagedCandidateKnowledgeFiles();
+    expect(inventory).toEqual({
+      schemaVersion: 1,
+      verifiedManagedFileCount: 1,
+      scannedEntryCount: 2,
+      unknownEntries: {
+        intakeShapedFilesAtSourcesRoot: 0,
+        opaqueEntriesAtSourcesRoot: 0,
+        entriesInsideManagedSourceDirectories: 0,
+        symbolicLinks: 0,
+        otherEntries: 0,
+      },
+      complete: true,
+      scanLimitReached: false,
+    });
+    expect(Object.isFrozen(inventory)).toBe(true);
+    expect(Object.isFrozen(inventory.unknownEntries)).toBe(true);
+    await store.close();
+  });
+
+  it("classifies unknown entries without reading or mutating them or disclosing identities", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "private-candidate.md");
+    const managedContent = "private managed candidate content";
+    const unknownContent = "unknown root content must remain untouched";
+    const subtreeContent = "opaque subtree content must remain untouched";
+    await writeFile(inputPath, managedContent, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const sourceId = "private-managed-source";
+    const versionId = "managed-version-1";
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: sourceId,
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Private candidate label",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, managedContent, { id: versionId }),
+    );
+    const sourcesRoot = join(root, "sources");
+    const intakeName = ".intake-12345678-1234-4123-8123-123456789abc";
+    const unknownName = "unknown-root-name.txt";
+    const opaqueDirectoryName = "opaque-directory-name";
+    const nestedUnknownName = "extra-nested-name.txt";
+    await writeFile(join(sourcesRoot, intakeName), "staged bytes", "utf8");
+    await writeFile(join(sourcesRoot, unknownName), unknownContent, "utf8");
+    await mkdir(join(sourcesRoot, opaqueDirectoryName));
+    await writeFile(join(sourcesRoot, opaqueDirectoryName, "hidden-child.txt"), subtreeContent);
+    const managedSourceDirectory = join(sourcesRoot, digestSegment(sourceId));
+    await writeFile(join(managedSourceDirectory, nestedUnknownName), "nested unknown bytes");
+    const databasePath = join(root, ".draft-loop", "knowledge.sqlite");
+    const databaseBefore = await readFile(databasePath);
+
+    const inventory = await store.inspectManagedCandidateKnowledgeFiles();
+
+    expect(inventory).toEqual({
+      schemaVersion: 1,
+      verifiedManagedFileCount: 1,
+      scannedEntryCount: 6,
+      unknownEntries: {
+        intakeShapedFilesAtSourcesRoot: 1,
+        opaqueEntriesAtSourcesRoot: 2,
+        entriesInsideManagedSourceDirectories: 1,
+        symbolicLinks: 0,
+        otherEntries: 0,
+      },
+      complete: true,
+      scanLimitReached: false,
+    });
+    expect(await readFile(join(sourcesRoot, intakeName), "utf8")).toBe("staged bytes");
+    expect(await readFile(join(sourcesRoot, unknownName), "utf8")).toBe(unknownContent);
+    expect(await readFile(join(sourcesRoot, opaqueDirectoryName, "hidden-child.txt"), "utf8")).toBe(
+      subtreeContent,
+    );
+    expect(await readFile(join(managedSourceDirectory, nestedUnknownName), "utf8")).toBe(
+      "nested unknown bytes",
+    );
+    expect(await readFile(databasePath)).toEqual(databaseBefore);
+    const serialized = JSON.stringify(inventory);
+    for (const secret of [
+      root,
+      sourceId,
+      versionId,
+      "Private candidate label",
+      sha256(managedContent),
+      managedContent,
+      intakeName,
+      unknownName,
+      opaqueDirectoryName,
+      nestedUnknownName,
+    ]) {
+      expect(serialized).not.toContain(secret);
+    }
+    await store.close();
+  });
+
+  it("revalidates every marked managed file before inventory", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    await writeFile(inputPath, "candidate evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "managed-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "candidate evidence"),
+    );
+    const managedPath = await store.getManagedCandidateKnowledgeFilePath(
+      "ckb-default",
+      "managed-source",
+      "managed-version-1",
+    );
+    await writeFile(managedPath as string, "corrupted evidence", "utf8");
+    await expect(store.inspectManagedCandidateKnowledgeFiles()).rejects.toThrow(/checksum|size/i);
+    await store.close();
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "counts unknown symlinks without following them or touching their targets",
+    async () => {
+      const parent = await temporaryParent();
+      const root = join(parent, "candidate-knowledge");
+      const inputPath = join(parent, "candidate.md");
+      const externalDirectory = join(parent, "external-directory");
+      const externalFile = join(externalDirectory, "external-target.txt");
+      await mkdir(externalDirectory);
+      await writeFile(externalFile, "external target bytes", "utf8");
+      await writeFile(inputPath, "candidate evidence", "utf8");
+      const store = await initializeCandidateKnowledgeStore(initialization(root));
+      await store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "managed-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Candidate notes",
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(inputPath, "candidate evidence"),
+      );
+      const sourcesRoot = join(root, "sources");
+      await symlink(externalDirectory, join(sourcesRoot, "unknown-directory-link"), "dir");
+      await symlink(
+        externalFile,
+        join(sourcesRoot, digestSegment("managed-source"), "unknown-file-link"),
+        "file",
+      );
+
+      const inventory = await store.inspectManagedCandidateKnowledgeFiles();
+
+      expect(inventory.unknownEntries.symbolicLinks).toBe(2);
+      expect(inventory.scannedEntryCount).toBe(4);
+      expect(await readFile(externalFile, "utf8")).toBe("external target bytes");
+      await store.close();
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "counts special entries without opening them",
+    async () => {
+      const parent = await temporaryParent();
+      const root = join(parent, "candidate-knowledge");
+      const store = await initializeCandidateKnowledgeStore(initialization(root));
+      await execFileAsync("mkfifo", [join(root, "sources", "unknown.pipe")]);
+
+      const inventory = await store.inspectManagedCandidateKnowledgeFiles();
+
+      expect(inventory).toMatchObject({
+        scannedEntryCount: 1,
+        complete: true,
+        scanLimitReached: false,
+        unknownEntries: { otherEntries: 1 },
+      });
+      await store.close();
+    },
+  );
+
+  it("distinguishes an exactly complete scan cap from entries beyond the global cap", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const sourcesRoot = join(root, "sources");
+    for (let index = 0; index < maximumManagedCandidateKnowledgeInventoryEntries; index += 1) {
+      await writeFile(join(sourcesRoot, `unknown-${String(index).padStart(4, "0")}`), "x");
+    }
+
+    const exactInventory = await store.inspectManagedCandidateKnowledgeFiles();
+
+    expect(exactInventory).toMatchObject({
+      verifiedManagedFileCount: 0,
+      scannedEntryCount: maximumManagedCandidateKnowledgeInventoryEntries,
+      complete: true,
+      scanLimitReached: false,
+    });
+    expect(exactInventory.unknownEntries.opaqueEntriesAtSourcesRoot).toBe(
+      maximumManagedCandidateKnowledgeInventoryEntries,
+    );
+
+    await writeFile(
+      join(sourcesRoot, `unknown-${maximumManagedCandidateKnowledgeInventoryEntries}`),
+      "x",
+    );
+    const cappedInventory = await store.inspectManagedCandidateKnowledgeFiles();
+
+    expect(cappedInventory).toMatchObject({
+      verifiedManagedFileCount: 0,
+      scannedEntryCount: maximumManagedCandidateKnowledgeInventoryEntries,
+      complete: false,
+      scanLimitReached: true,
+    });
+    expect(cappedInventory.unknownEntries.opaqueEntriesAtSourcesRoot).toBe(
+      maximumManagedCandidateKnowledgeInventoryEntries,
+    );
     await store.close();
   });
 

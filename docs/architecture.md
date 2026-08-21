@@ -67,7 +67,7 @@ flowchart TB
     App --> WorkspaceStore
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
-    App -->|"validated file add or manual version append"| CKBStore
+    App -->|"validated add / append; explicit structural inventory"| CKBStore
     CKBStore -.->|"selection and retrieval pending"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
@@ -93,12 +93,13 @@ flowchart TB
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
-solid CKB edge covers explicit managed-file add and manual version-append
-operations: each approval covers one local regular file, extraction succeeds
-before persistence, and the application copies verified raw bytes into the
-portable store. The dotted CKB edge marks the still-unintegrated workflow:
-application selection, retrieval, and provider use have not crossed that
-boundary yet.
+solid CKB edge covers explicit managed-file add, manual version append, and the
+local structural-inventory query. Each write approval covers one local regular
+file, extraction succeeds before persistence, and the application copies
+verified raw bytes into the portable store. Inventory is an explicit bounded,
+count-only read after normal referenced-blob validation. The dotted CKB edge
+marks the still-unintegrated workflow: application selection, retrieval, and
+provider use have not crossed that boundary yet.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -144,8 +145,19 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
 - Managed-file add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
   matching regular-file bytes. Ordinary failures clean up; crashes or
-  concurrency can leave unreferenced opaque files until explicit reconciliation
-  is implemented.
+  concurrency can leave unreferenced opaque files. Their shape does not prove
+  DraftLoop ownership.
+- The application can explicitly request a bounded structural inventory after
+  referenced managed blobs pass their normal validation. The result exposes
+  only counts for verified managed files, scanned entries, staging-shaped and
+  other opaque root entries, extra entries under expected managed-source
+  directories, symlinks, special/other entries, and complete/scan-limit status.
+  It exposes no names, paths, IDs, labels, checksums, or content; follows no
+  unknown symlinks; does not recurse into unknown directories or read unknown
+  file bytes; and performs no mutation. Structural categories do not authorize
+  adoption, quarantine, repair, or deletion. A future cleanup design needs a
+  durable ownership journal, writer coordination, and explicit approval;
+  unjournaled entries remain unknown.
 - Managed blobs and SQLite metadata are plaintext. A source whose label resembles
   `AGENTS.md` or other configuration remains inert candidate data and never
   changes application instructions, policy, or permissions.
@@ -290,13 +302,14 @@ beside an application-specific SQLite history file, ingests selected local
 sources, constructs a context snapshot, and drives the orchestration engine.
 That workspace and run history remain distinct from the portable CKB store.
 The application contract can approve and copy one supported local regular file
-into the store or manually append approved changed bytes to an existing file
-source. Storage already supplied the append primitive; this slice exposes it at
-the application component boundary. Neither user-facing adapter yet provides
-CKB controls. Remembered origin binding, automatic refresh, freshness or
-last-refresh state, moved/deleted/inaccessible-origin reporting, directory and
-URL intake, cross-source duplicate relationships, indexing and retrieval,
-application/run CKB selection, deletion, orphan reconciliation, and complete
+into the store, manually append approved changed bytes to an existing file
+source, or explicitly request its bounded count-only structural inventory.
+Neither user-facing adapter yet provides CKB controls. Remembered origin
+binding, automatic refresh, freshness or last-refresh state,
+moved/deleted/inaccessible-origin reporting, directory and URL intake,
+cross-source duplicate relationships, indexing and retrieval, application/run
+CKB selection, deletion, repair of missing/corrupt referenced blobs, durable
+journaling and writer coordination, cleanup/reconciliation, and complete
 backup/export/restore remain pending; the current retrieval path still reads
 workspace-scoped evidence. Offline fixture agents make the lifecycle testable
 without network access. The desktop renderer uses the same

@@ -20,6 +20,7 @@ import {
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeStoreHandle,
   initializeCandidateKnowledgeStore,
+  type ManagedCandidateKnowledgeFileInventory,
   maximumManagedCandidateKnowledgeFileBytes,
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
@@ -103,6 +104,10 @@ export interface ListKnowledgeSourceManifestsCommand {
   readonly knowledgeBaseId: string;
 }
 
+export interface InspectManagedCandidateKnowledgeFilesCommand {
+  readonly storeRoot: string;
+}
+
 /** Local application metadata; names and descriptions are not a diagnostic allowlist. */
 export interface CandidateKnowledgeStoreView {
   readonly store: CandidateKnowledgeStore;
@@ -150,6 +155,9 @@ export interface CandidateKnowledgeStoreService {
   readonly listKnowledgeSourceManifests: (
     command: ListKnowledgeSourceManifestsCommand,
   ) => Promise<readonly CandidateKnowledgeSourceManifest[]>;
+  readonly inspectManagedCandidateKnowledgeFiles: (
+    command: InspectManagedCandidateKnowledgeFilesCommand,
+  ) => Promise<ManagedCandidateKnowledgeFileInventory>;
 }
 
 export interface CandidateKnowledgeStoreServiceDependencies {
@@ -330,6 +338,26 @@ async function project(
       createCandidateKnowledgeStore(handle.descriptor.id, handle.descriptor.createdAt),
     ),
     knowledgeBases: Object.freeze(records.map(toKnowledgeBase)),
+  });
+}
+
+function projectManagedCandidateKnowledgeFileInventory(
+  inventory: ManagedCandidateKnowledgeFileInventory,
+): ManagedCandidateKnowledgeFileInventory {
+  return Object.freeze({
+    schemaVersion: inventory.schemaVersion,
+    verifiedManagedFileCount: inventory.verifiedManagedFileCount,
+    scannedEntryCount: inventory.scannedEntryCount,
+    unknownEntries: Object.freeze({
+      intakeShapedFilesAtSourcesRoot: inventory.unknownEntries.intakeShapedFilesAtSourcesRoot,
+      opaqueEntriesAtSourcesRoot: inventory.unknownEntries.opaqueEntriesAtSourcesRoot,
+      entriesInsideManagedSourceDirectories:
+        inventory.unknownEntries.entriesInsideManagedSourceDirectories,
+      symbolicLinks: inventory.unknownEntries.symbolicLinks,
+      otherEntries: inventory.unknownEntries.otherEntries,
+    }),
+    complete: inventory.complete,
+    scanLimitReached: inventory.scanLimitReached,
   });
 }
 
@@ -601,6 +629,16 @@ export function createCandidateKnowledgeStoreService(
         },
       );
     },
+    inspectManagedCandidateKnowledgeFiles: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) =>
+          projectManagedCandidateKnowledgeFileInventory(
+            await handle.inspectManagedCandidateKnowledgeFiles(),
+          ),
+      );
+    },
   };
   return Object.freeze(service);
 }
@@ -618,3 +656,5 @@ export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSource
 export const importKnowledgeSourceFile = defaultService.importKnowledgeSourceFile;
 export const appendKnowledgeSourceFileVersion = defaultService.appendKnowledgeSourceFileVersion;
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;
+export const inspectManagedCandidateKnowledgeFiles =
+  defaultService.inspectManagedCandidateKnowledgeFiles;

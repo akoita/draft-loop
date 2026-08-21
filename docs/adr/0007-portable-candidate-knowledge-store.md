@@ -24,8 +24,10 @@ The portable-store component establishes the second boundary's identity and
 SQLite lifecycle metadata. Its managed-file slices copy an explicitly approved
 local file into the store, bind those immutable bytes to a stable CKB-scoped
 source version, and expose storage's existing managed-version append through an
-explicit application operation. They do not connect CKB selection or retrieval
-to an application workflow.
+explicit application operation. A further application query provides bounded,
+count-only structural inventory of the managed `sources/` namespace. These
+operations do not connect CKB selection or retrieval to an application
+workflow.
 
 ## Decision
 
@@ -84,9 +86,31 @@ name, and only then committed with their marker and integrity metadata. A
 committed managed marker is valid only while the corresponding regular file
 exists and matches the recorded checksum and size. Ordinary failures clean up
 their staging or newly published file. A process crash or concurrent loser can
-still leave an unreferenced opaque file; explicit orphan reconciliation remains
-future lifecycle work and no database row may be created to legitimize residue
-implicitly.
+still leave an unreferenced opaque file, but an unreferenced entry has no
+authenticated ownership evidence. A filename or layout shape cannot prove that
+DraftLoop created or abandoned it, and no database row may be created to
+legitimize it implicitly.
+
+An explicit local application query can inventory the `sources/` namespace
+after the normal referenced-blob validation succeeds. It is bounded and
+non-destructive. Its result contains only counts of verified managed files,
+scanned entries, staging-shaped root files, other opaque root files and
+directories, extra entries inside expected managed-source directories,
+symlinks, and special or otherwise unclassified entries, plus whether the scan
+completed or reached its limit. It returns no names, paths, IDs, labels,
+checksums, or file content. It never follows unknown symlinks, recurses into
+unknown directories, reads unknown file bytes, mutates the database or
+filesystem, or runs automatically. Missing or corrupt referenced blobs still
+fail normal validation; this query is not a repair mode.
+
+The inventory is groundwork for later reconciliation, not ownership proof or
+cleanup authority. In particular, “staging-shaped” and “opaque” are structural
+categories only; entries in either category remain unknown and must not be
+deleted, adopted, quarantined, or repaired. Safe cleanup requires a future
+durable ownership journal, coordination with managed-file writers, and explicit
+user approval. Entries absent from that future journal remain unknown. The
+query is local application state inspection, not provider-facing data or
+content-diagnostic automation.
 
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
@@ -125,7 +149,8 @@ This decision deliberately leaves the following work unintegrated:
 - CLI and desktop creation, opening, selection, and lifecycle controls;
 - source and store deletion semantics, including raw bytes, derived data, and
   retained run references;
-- explicit orphan reconciliation; and
+- repair of missing or corrupt referenced blobs, durable ownership journaling,
+  writer locks or leases, cleanup, and reconciliation of unknown entries; and
 - complete portable export, backup, restore, conflict handling, and migration
   rollback.
 
@@ -162,6 +187,8 @@ a portable-store record must not make a workspace run read from it implicitly.
 - The store can contain immutable managed raw bytes for an approved file and
   append changed bytes as parent-linked versions without changing source
   identity. It does not yet improve application retrieval or monitor origins.
+- The application can explicitly inspect bounded structural counts without
+  disclosing entry identifiers or turning unknown entries into owned residue.
 - Deleting an application workspace does not delete a separate CKB store, and
   deleting the original host file does not delete its managed CKB copy. Deleting
   a future CKB store must not silently claim to delete workspace run history,
@@ -174,8 +201,9 @@ a portable-store record must not make a workspace run read from it implicitly.
 
 ## Follow-up
 
-- Define explicit orphan reconciliation for interrupted managed intake without
-  adopting or deleting unrelated files.
+- Define a durable ownership journal and managed-writer coordination before an
+  explicitly approved reconciliation can distinguish journaled residue from
+  unrelated or otherwise unknown entries.
 - Define explicit application-to-CKB selection and fail-closed retrieval
   isolation.
 - Define deletion coverage for raw, normalized, indexed, cached, historical,
