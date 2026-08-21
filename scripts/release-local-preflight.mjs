@@ -9,6 +9,11 @@ const DEFAULTS = Object.freeze({
   DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-5.3-codex-spark",
 });
 
+const VALIDATION_ENVIRONMENT_EXCLUSIONS = new Set([
+  "DRAFT_LOOP_PROVIDER_AUTH_MODE",
+  ...Object.keys(DEFAULTS),
+]);
+
 export class ReleaseLocalPreflightError extends Error {
   constructor(message) {
     super(message);
@@ -31,14 +36,24 @@ export function resolveReleasePreflightEnvironment(environment = process.env) {
   );
 }
 
+export function resolveReleaseValidationEnvironment(environment = process.env) {
+  return Object.fromEntries(
+    Object.entries(environment).filter(([name]) => !VALIDATION_ENVIRONMENT_EXCLUSIONS.has(name)),
+  );
+}
+
 export function runReleaseLocalPreflight({
   environment = process.env,
   platform = process.platform,
   runner = spawnSync,
 } = {}) {
   const resolved = resolveReleasePreflightEnvironment(environment);
+  const validationEnvironment = resolveReleaseValidationEnvironment(environment);
   const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const commands = [["validate"], ["test:e2e:live"]];
+  const commands = [
+    { args: ["validate"], environment: validationEnvironment },
+    { args: ["test:e2e:live"], environment: { ...environment, ...resolved } },
+  ];
 
   const status = runner("git", ["status", "--porcelain", "--untracked-files=normal"], {
     env: { ...environment },
@@ -55,9 +70,9 @@ export function runReleaseLocalPreflight({
     );
   }
 
-  for (const args of commands) {
+  for (const { args, environment: commandEnvironment } of commands) {
     const result = runner(command, args, {
-      env: { ...environment, ...resolved },
+      env: commandEnvironment,
       stdio: "inherit",
       shell: false,
     });
