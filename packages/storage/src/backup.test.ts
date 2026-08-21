@@ -45,6 +45,33 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
         additionalKnowledgeBase.id,
         "2026-08-13T09:02:00.000Z",
       );
+      const source = await storage.createCandidateKnowledgeSource(
+        {
+          id: "source-1",
+          knowledgeBaseId: defaultKnowledgeBase.id,
+          kind: "file",
+          displayName: "Career notes.md",
+          createdAt: "2026-08-13T09:03:00.000Z",
+        },
+        {
+          id: "source-version-1",
+          mediaType: "text/markdown",
+          checksum: "a".repeat(64),
+          sizeBytes: 128,
+          createdAt: "2026-08-13T09:03:00.000Z",
+        },
+      );
+      const sourceVersion = await storage.appendCandidateKnowledgeSourceVersion(
+        defaultKnowledgeBase.id,
+        source.source.id,
+        {
+          id: "source-version-2",
+          mediaType: "text/markdown",
+          checksum: "b".repeat(64),
+          sizeBytes: 256,
+          createdAt: "2026-08-13T09:04:00.000Z",
+        },
+      );
 
       // Verify migration versions are present
       const migrations = storage.appliedMigrationVersions();
@@ -80,6 +107,15 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
           archivedAt: "2026-08-13T09:02:00.000Z",
         },
       ]);
+      await expect(
+        restoredStorage.listCandidateKnowledgeSources(defaultKnowledgeBase.id),
+      ).resolves.toEqual([source.source]);
+      await expect(
+        restoredStorage.listCandidateKnowledgeSourceVersions(
+          defaultKnowledgeBase.id,
+          source.source.id,
+        ),
+      ).resolves.toEqual([source.version, sourceVersion.version]);
 
       await storage.close();
       await restoredStorage.close();

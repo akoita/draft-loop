@@ -46,8 +46,8 @@ workflow:
   application driver, native workspace/file dialogs, SQLite history, and
   restart-safe review state;
 - a portable Candidate Knowledge Base (CKB) store component with a logical UUID
-  and lifecycle metadata in a separate local SQLite file at a user-selected
-  path;
+  and CKB, source, and immutable source-version metadata in a separate local
+  SQLite file at a user-selected path;
 - bounded, approval-gated URL ingestion for GitHub, certification, profile,
   portfolio, and job-description sources with provenance and typed facts;
 - explicit separation of blocking findings, warnings, artifact approval, and
@@ -60,10 +60,13 @@ workflow:
 
 These capabilities are not all validated product outcomes. The current stage is
 the application-grade CV workflow. The portable CKB store currently contains
-identity and lifecycle metadata only: source content and versions, workspace
+metadata only: stable CKB-scoped source identity with file/URL kind and a local
+user-visible label, plus ordered immutable versions with SHA-256, media type,
+byte size, and timestamp. It stores no exact host paths or URLs and no source
+content. Directory binding, refresh, duplicate and indexing state, workspace
 selection, retrieval cutover, CLI and desktop controls, deletion, export, and
 restore are not integrated. Application workspaces and their run-history
-databases remain separate from the selected CKB store.
+databases remain separate from the CKB store.
 
 ## Stack
 
@@ -90,7 +93,7 @@ flowchart LR
     Review["Validation<br/>+ human approval"]
     Export["Local CV export"]
     WorkspaceStore[("Application workspace<br/>+ SQLite run history")]
-    CKBStore[("Portable CKB store<br/>logical UUID + SQLite metadata")]
+    CKBStore[("Portable CKB store<br/>CKB + source/version metadata")]
 
     Inputs --> Adapters --> Application
     Application --> Context --> Loop
@@ -104,7 +107,9 @@ At a high level, DraftLoop keeps source material and run history local, sends
 only approved context through provider adapters, and requires human approval
 before local export. The portable CKB store is a separate, user-selected local
 SQLite store; its filesystem path is not part of its logical identity and is
-not provider data. See the [detailed architecture](docs/architecture.md) and
+not persisted or provider data. Source labels and checksums remain local CKB
+metadata and are not content-free diagnostics. See the [detailed
+architecture](docs/architecture.md) and
 [ADR 0007](docs/adr/0007-portable-candidate-knowledge-store.md) for the current
 component boundary and its unimplemented workflow integrations.
 

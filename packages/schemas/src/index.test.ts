@@ -9,6 +9,9 @@ import {
   agentContextReferenceSchema,
   candidateKnowledgeBaseSchema,
   candidateKnowledgeBaseStateSchema,
+  candidateKnowledgeSourceKindSchema,
+  candidateKnowledgeSourceSchema,
+  candidateKnowledgeSourceVersionSchema,
   candidateKnowledgeStoreSchema,
   candidateProfileSchema,
   contextSnapshotInputSchema,
@@ -578,6 +581,131 @@ describe("candidateKnowledgeBaseSchema", () => {
         archivedAt: "2026-08-20T11:00:00.000Z",
       }),
     ).toThrow(/archivedAt must not precede createdAt or follow updatedAt/i);
+  });
+});
+
+describe("candidate knowledge source schemas", () => {
+  const createdAt = "2026-08-21T09:00:00.000Z";
+
+  it("parses canonical logical source identity metadata", () => {
+    expect(candidateKnowledgeSourceKindSchema.parse("url")).toBe("url");
+    expect(
+      candidateKnowledgeSourceSchema.parse({
+        id: "  source-1  ",
+        knowledgeBaseId: "  ckb-primary  ",
+        kind: "file",
+        displayName: "  Current CV  ",
+        createdAt,
+      }),
+    ).toEqual({
+      id: "source-1",
+      knowledgeBaseId: "ckb-primary",
+      kind: "file",
+      displayName: "Current CV",
+      createdAt,
+    });
+  });
+
+  it("rejects invalid source identity fields", () => {
+    const valid = {
+      id: "source-1",
+      knowledgeBaseId: "ckb-primary",
+      kind: "file",
+      displayName: "Current CV",
+      createdAt,
+    };
+    expect(() => candidateKnowledgeSourceSchema.parse({ ...valid, id: " " })).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceSchema.parse({ ...valid, knowledgeBaseId: " " }),
+    ).toThrow();
+    expect(() => candidateKnowledgeSourceSchema.parse({ ...valid, kind: "directory" })).toThrow();
+    expect(() => candidateKnowledgeSourceSchema.parse({ ...valid, displayName: " " })).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceSchema.parse({ ...valid, createdAt: "2026-08-21" }),
+    ).toThrow(/valid ISO timestamp/i);
+    expect(() =>
+      candidateKnowledgeSourceSchema.parse({ ...valid, createdAt: ` ${createdAt} ` }),
+    ).toThrow(/valid ISO timestamp/i);
+  });
+
+  it("normalizes immutable first and child version metadata", () => {
+    expect(
+      candidateKnowledgeSourceVersionSchema.parse({
+        id: "  version-1  ",
+        sourceId: "  source-1  ",
+        version: 1,
+        mediaType: "  text/markdown  ",
+        checksum: "A".repeat(64),
+        sizeBytes: 0,
+        createdAt,
+      }),
+    ).toEqual({
+      id: "version-1",
+      sourceId: "source-1",
+      version: 1,
+      mediaType: "text/markdown",
+      checksum: "a".repeat(64),
+      sizeBytes: 0,
+      createdAt,
+    });
+    expect(
+      candidateKnowledgeSourceVersionSchema.parse({
+        id: "version-2",
+        sourceId: "source-1",
+        version: 2,
+        parentVersionId: "  version-1  ",
+        mediaType: "text/markdown",
+        checksum: "b".repeat(64),
+        sizeBytes: 2048,
+        createdAt,
+      }).parentVersionId,
+    ).toBe("version-1");
+  });
+
+  it("rejects invalid version lineage, integrity metadata, fields, and timestamps", () => {
+    const valid = {
+      id: "version-1",
+      sourceId: "source-1",
+      version: 1,
+      mediaType: "text/plain",
+      checksum: "a".repeat(64),
+      sizeBytes: 12,
+      createdAt,
+    };
+    expect(() => candidateKnowledgeSourceVersionSchema.parse({ ...valid, version: 0 })).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({
+        ...valid,
+        parentVersionId: "version-0",
+      }),
+    ).toThrow(/must not have a parent/i);
+    expect(() => candidateKnowledgeSourceVersionSchema.parse({ ...valid, version: 2 })).toThrow(
+      /require a parent/i,
+    );
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, checksum: "a".repeat(40) }),
+    ).toThrow(/SHA-256/i);
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, checksum: `sha256:${checksum}` }),
+    ).toThrow(/SHA-256/i);
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, sizeBytes: -1 }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, sizeBytes: 1.5 }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, sourceId: " " }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, mediaType: " " }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, createdAt: "not-a-date" }),
+    ).toThrow(/valid ISO timestamp/i);
+    expect(() =>
+      candidateKnowledgeSourceVersionSchema.parse({ ...valid, createdAt: ` ${createdAt} ` }),
+    ).toThrow(/valid ISO timestamp/i);
   });
 });
 

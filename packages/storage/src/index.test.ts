@@ -8,6 +8,8 @@ import { describe, expect, it } from "vitest";
 import {
   type ArtifactVersionInput,
   type CandidateKnowledgeBaseInput,
+  type CandidateKnowledgeSourceInput,
+  type CandidateKnowledgeSourceVersionInput,
   type ContextSnapshotInput,
   type DecisionRecordInput,
   type EvidenceChunkRecord,
@@ -57,6 +59,28 @@ const knowledgeBase = (
   description: "Sanitized professional material",
   isDefault: true,
   createdAt: "2026-08-12T09:00:00.000Z",
+  ...overrides,
+});
+
+const knowledgeSource = (
+  overrides: Partial<CandidateKnowledgeSourceInput> = {},
+): CandidateKnowledgeSourceInput => ({
+  id: "ckb-source-1",
+  knowledgeBaseId: "ckb-1",
+  kind: "file",
+  displayName: "Career notes.md",
+  createdAt: "2026-08-12T09:10:00.000Z",
+  ...overrides,
+});
+
+const knowledgeSourceVersion = (
+  overrides: Partial<CandidateKnowledgeSourceVersionInput> = {},
+): CandidateKnowledgeSourceVersionInput => ({
+  id: "ckb-source-version-1",
+  mediaType: "text/markdown",
+  checksum: "d".repeat(64),
+  sizeBytes: 128,
+  createdAt: "2026-08-12T09:11:00.000Z",
   ...overrides,
 });
 
@@ -207,7 +231,7 @@ function removeMigrationTwo(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "PRAGMA foreign_keys = OFF; DROP TABLE candidate_knowledge_bases; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3, 4);",
+    "PRAGMA foreign_keys = OFF; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3, 4, 5);",
   );
   database.close();
 }
@@ -219,7 +243,19 @@ function removeMigrationFour(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_bases; DELETE FROM schema_migrations WHERE version = 4;",
+    "DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DELETE FROM schema_migrations WHERE version IN (4, 5);",
+  );
+  database.close();
+}
+
+function removeMigrationFive(filename: string): void {
+  const loaded = createRequire(import.meta.url)("better-sqlite3") as {
+    readonly default?: unknown;
+  };
+  const Constructor = loaded.default ?? loaded;
+  const database = new (Constructor as RawSqliteConstructor)(filename);
+  database.exec(
+    "DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DELETE FROM schema_migrations WHERE version = 5;",
   );
   database.close();
 }
@@ -228,9 +264,9 @@ describe("SQLite storage", () => {
   it("applies migrations idempotently and rejects sensitive key persistence", async () => {
     const storage = openSqliteStorage(":memory:");
 
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5]);
     storage.migrate();
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5]);
 
     await storage.set("ui.language", "en");
     await expect(storage.get("ui.language")).resolves.toBe("en");
@@ -254,10 +290,10 @@ describe("SQLite storage", () => {
 
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     upgraded.migrate();
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -271,11 +307,31 @@ describe("SQLite storage", () => {
 
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
       upgraded.ensureDefaultCandidateKnowledgeBase(knowledgeBase()),
     ).resolves.toMatchObject({ id: "ckb-1", isDefault: true, state: "active" });
+    await upgraded.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("upgrades a populated v4 database with candidate knowledge-source storage", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-ckb-source-migration-"));
+    const filename = join(directory, "workspace.sqlite");
+    const initial = openSqliteStorage(filename);
+    const savedKnowledgeBase = await initial.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await initial.close();
+
+    removeMigrationFive(filename);
+    const upgraded = openSqliteStorage(filename);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5]);
+    await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
+      savedKnowledgeBase,
+    );
+    await expect(
+      upgraded.createCandidateKnowledgeSource(knowledgeSource(), knowledgeSourceVersion()),
+    ).resolves.toMatchObject({ created: true, version: { version: 1, parentVersionId: null } });
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -387,6 +443,246 @@ describe("SQLite storage", () => {
       storage.archiveCandidateKnowledgeBase("ckb-2", "2026-08-12T08:59:00.000Z"),
     ).rejects.toThrow(/must not precede/i);
     await storage.close();
+  });
+
+  it("creates and appends immutable candidate knowledge-source versions", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+
+    const first = await storage.createCandidateKnowledgeSource(
+      knowledgeSource({ displayName: "  Career notes.md  " }),
+      knowledgeSourceVersion(),
+    );
+    expect(first).toEqual({
+      created: true,
+      source: knowledgeSource(),
+      version: {
+        ...knowledgeSourceVersion(),
+        sourceId: "ckb-source-1",
+        version: 1,
+        parentVersionId: null,
+      },
+    });
+
+    const duplicate = await storage.appendCandidateKnowledgeSourceVersion(
+      "ckb-1",
+      "ckb-source-1",
+      knowledgeSourceVersion({ id: "ignored-version-id", createdAt: "2026-08-12T09:12:00.000Z" }),
+    );
+    expect(duplicate).toEqual({ ...first, created: false });
+
+    await expect(
+      storage.appendCandidateKnowledgeSourceVersion(
+        "ckb-1",
+        "ckb-source-1",
+        knowledgeSourceVersion({
+          id: "conflicting-integrity-metadata",
+          sizeBytes: 999,
+          createdAt: "2026-08-12T09:12:00.000Z",
+        }),
+      ),
+    ).rejects.toThrow(StorageConflictError);
+
+    const second = await storage.appendCandidateKnowledgeSourceVersion(
+      "ckb-1",
+      "ckb-source-1",
+      knowledgeSourceVersion({
+        id: "ckb-source-version-2",
+        checksum: "e".repeat(64),
+        sizeBytes: 256,
+        createdAt: "2026-08-12T09:13:00.000Z",
+      }),
+    );
+    expect(second).toMatchObject({
+      created: true,
+      version: {
+        id: "ckb-source-version-2",
+        sourceId: "ckb-source-1",
+        version: 2,
+        parentVersionId: "ckb-source-version-1",
+      },
+    });
+    await expect(storage.listCandidateKnowledgeSources("ckb-1")).resolves.toEqual([
+      knowledgeSource(),
+    ]);
+    await expect(
+      storage.listCandidateKnowledgeSourceVersions("ckb-1", "ckb-source-1"),
+    ).resolves.toEqual([first.version, second.version]);
+    storage.validateCandidateKnowledgeSourceGraph();
+    await storage.close();
+  });
+
+  it("enforces candidate knowledge-source scope and active knowledge bases", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await storage.createCandidateKnowledgeBase(knowledgeBase({ id: "ckb-2", isDefault: false }));
+    await storage.createCandidateKnowledgeSource(knowledgeSource(), knowledgeSourceVersion());
+    const archivedSource = await storage.createCandidateKnowledgeSource(
+      knowledgeSource({
+        id: "ckb-source-2",
+        knowledgeBaseId: "ckb-2",
+        displayName: "Archived source",
+      }),
+      knowledgeSourceVersion({ id: "archived-source-version" }),
+    );
+
+    await expect(
+      storage.getCandidateKnowledgeSource("ckb-2", "ckb-source-1"),
+    ).resolves.toBeUndefined();
+    await expect(
+      storage.listCandidateKnowledgeSourceVersions("ckb-2", "ckb-source-1"),
+    ).rejects.toThrow(/not found in candidate knowledge base ckb-2/i);
+    await expect(
+      storage.appendCandidateKnowledgeSourceVersion(
+        "ckb-2",
+        "ckb-source-1",
+        knowledgeSourceVersion({ id: "cross-scope", checksum: "e".repeat(64) }),
+      ),
+    ).rejects.toThrow(/not found in candidate knowledge base ckb-2/i);
+
+    await storage.archiveCandidateKnowledgeBase("ckb-2", "2026-08-12T09:20:00.000Z");
+    await expect(storage.getCandidateKnowledgeSource("ckb-2", "ckb-source-2")).resolves.toEqual(
+      archivedSource.source,
+    );
+    await expect(storage.listCandidateKnowledgeSources("ckb-2")).resolves.toEqual([
+      archivedSource.source,
+    ]);
+    await expect(
+      storage.listCandidateKnowledgeSourceVersions("ckb-2", "ckb-source-2"),
+    ).resolves.toEqual([archivedSource.version]);
+    await expect(
+      storage.appendCandidateKnowledgeSourceVersion(
+        "ckb-2",
+        "ckb-source-2",
+        knowledgeSourceVersion({
+          id: "archived-append",
+          checksum: "e".repeat(64),
+          createdAt: "2026-08-12T09:21:00.000Z",
+        }),
+      ),
+    ).rejects.toThrow(/archived/i);
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource({ id: "archived-source", knowledgeBaseId: "ckb-2" }),
+        knowledgeSourceVersion({ id: "archived-version" }),
+      ),
+    ).rejects.toThrow(/archived/i);
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource({ id: "missing-source", knowledgeBaseId: "missing" }),
+        knowledgeSourceVersion({ id: "missing-version" }),
+      ),
+    ).rejects.toThrow(/was not found/i);
+    await storage.close();
+  });
+
+  it("validates source metadata and rolls back failed source-version appends", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource({ kind: "other" as "file" }),
+        knowledgeSourceVersion(),
+      ),
+    ).rejects.toThrow(/unsupported.*kind/i);
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource({ displayName: " " }),
+        knowledgeSourceVersion(),
+      ),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource(),
+        knowledgeSourceVersion({ checksum: "A".repeat(64) }),
+      ),
+    ).rejects.toThrow(/lowercase SHA-256/i);
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource(),
+        knowledgeSourceVersion({ sizeBytes: 1.5 }),
+      ),
+    ).rejects.toThrow(/non-negative integer/i);
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource(),
+        knowledgeSourceVersion({ createdAt: "2026-08-12T09:09:00.000Z" }),
+      ),
+    ).rejects.toThrow(/must not precede its source createdAt/i);
+
+    await storage.createCandidateKnowledgeSource(knowledgeSource(), knowledgeSourceVersion());
+    await expect(
+      storage.appendCandidateKnowledgeSourceVersion(
+        "ckb-1",
+        "ckb-source-1",
+        knowledgeSourceVersion({
+          id: "backdated-idempotent",
+          createdAt: "2026-08-12T09:10:00.000Z",
+        }),
+      ),
+    ).rejects.toThrow(/must not precede the current version createdAt/i);
+    await expect(
+      storage.appendCandidateKnowledgeSourceVersion(
+        "ckb-1",
+        "ckb-source-1",
+        knowledgeSourceVersion({
+          id: "backdated-version",
+          checksum: "c".repeat(64),
+          createdAt: "2026-08-12T09:10:00.000Z",
+        }),
+      ),
+    ).rejects.toThrow(/must not precede the current version createdAt/i);
+    await storage.createCandidateKnowledgeSource(
+      knowledgeSource({ id: "ckb-source-2", displayName: "Second source" }),
+      knowledgeSourceVersion({ id: "occupied-version-id", checksum: "e".repeat(64) }),
+    );
+    await expect(
+      storage.createCandidateKnowledgeSource(
+        knowledgeSource({ id: "rolled-back-source", displayName: "Rolled back source" }),
+        knowledgeSourceVersion({ id: "occupied-version-id", checksum: "f".repeat(64) }),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      storage.getCandidateKnowledgeSource("ckb-1", "rolled-back-source"),
+    ).resolves.toBeUndefined();
+    await expect(
+      storage.appendCandidateKnowledgeSourceVersion(
+        "ckb-1",
+        "ckb-source-1",
+        knowledgeSourceVersion({ id: "occupied-version-id", checksum: "f".repeat(64) }),
+      ),
+    ).rejects.toThrow();
+    await expect(
+      storage.listCandidateKnowledgeSourceVersions("ckb-1", "ckb-source-1"),
+    ).resolves.toHaveLength(1);
+    await storage.close();
+  });
+
+  it("enforces immutable source rows and version rows in SQLite", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-source-immutability-"));
+    const filename = join(directory, "knowledge.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await storage.createCandidateKnowledgeSource(knowledgeSource(), knowledgeSourceVersion());
+    await storage.close();
+
+    const loaded = createRequire(import.meta.url)("better-sqlite3") as {
+      readonly default?: unknown;
+    };
+    const Constructor = loaded.default ?? loaded;
+    const database = new (Constructor as RawSqliteConstructor)(filename);
+    expect(() =>
+      database.exec(
+        "UPDATE candidate_knowledge_sources SET display_name = 'changed' WHERE id = 'ckb-source-1'",
+      ),
+    ).toThrow(/immutable/i);
+    expect(() =>
+      database.exec(
+        "DELETE FROM candidate_knowledge_source_versions WHERE id = 'ckb-source-version-1'",
+      ),
+    ).toThrow(/immutable/i);
+    database.close();
+    await rm(directory, { recursive: true, force: true });
   });
 
   it("round-trips local records after close and reopen", async () => {

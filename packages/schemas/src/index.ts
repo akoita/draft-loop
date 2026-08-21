@@ -1,5 +1,6 @@
 import {
   candidateKnowledgeBaseStates,
+  candidateKnowledgeSourceKinds,
   candidateKnowledgeStoreSchemaVersion,
   contextSchemaVersion,
   deriveModelLineage,
@@ -20,12 +21,26 @@ const checksumSchema = z
     "must be a SHA-1, SHA-256, or SHA-512 checksum",
   );
 
+const sha256ChecksumSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum")
+  .transform((value) => value.toLowerCase());
+
 const timestampSchema = nonEmptyString.refine(
   (value) =>
     /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
     !Number.isNaN(Date.parse(value)),
   "must be a valid ISO timestamp",
 );
+
+const strictTimestampSchema = z
+  .string()
+  .refine(
+    (value) =>
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
+      !Number.isNaN(Date.parse(value)),
+    "must be a valid ISO timestamp",
+  );
 
 export const workspaceInputSchema = z.object({
   jobDescription: nonEmptyString,
@@ -174,6 +189,49 @@ export const candidateKnowledgeBaseSchema = z
   });
 
 export type CandidateKnowledgeBase = z.infer<typeof candidateKnowledgeBaseSchema>;
+
+export const candidateKnowledgeSourceKindSchema = z.enum(candidateKnowledgeSourceKinds);
+export type CandidateKnowledgeSourceKind = z.infer<typeof candidateKnowledgeSourceKindSchema>;
+
+export const candidateKnowledgeSourceSchema = z.object({
+  id: nonEmptyString,
+  knowledgeBaseId: nonEmptyString,
+  kind: candidateKnowledgeSourceKindSchema,
+  displayName: nonEmptyString,
+  createdAt: strictTimestampSchema,
+});
+
+export type CandidateKnowledgeSource = z.infer<typeof candidateKnowledgeSourceSchema>;
+
+export const candidateKnowledgeSourceVersionSchema = z
+  .object({
+    id: nonEmptyString,
+    sourceId: nonEmptyString,
+    version: z.number().finite().int().positive(),
+    parentVersionId: nonEmptyString.optional(),
+    mediaType: nonEmptyString,
+    checksum: sha256ChecksumSchema,
+    sizeBytes: z.number().finite().int().nonnegative(),
+    createdAt: strictTimestampSchema,
+  })
+  .superRefine((sourceVersion, context) => {
+    if (sourceVersion.version === 1 && sourceVersion.parentVersionId !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentVersionId"],
+        message: "candidate knowledge source version 1 must not have a parent version",
+      });
+    }
+    if (sourceVersion.version > 1 && sourceVersion.parentVersionId === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentVersionId"],
+        message: "candidate knowledge source versions after version 1 require a parent version",
+      });
+    }
+  });
+
+export type CandidateKnowledgeSourceVersion = z.infer<typeof candidateKnowledgeSourceVersionSchema>;
 
 export const outputConstraintsSchema = z.object({
   format: z.enum(outputFormats).default("markdown"),

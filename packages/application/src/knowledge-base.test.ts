@@ -9,6 +9,7 @@ import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 
 const createdAt = "2026-08-21T09:00:00.000Z";
 const changedAt = "2026-08-21T10:00:00.000Z";
+const checksum = "a".repeat(64);
 
 describe("candidate knowledge store application service", () => {
   let temporaryParent: string;
@@ -94,7 +95,156 @@ describe("candidate knowledge store application service", () => {
     await expect(service.openStore({ storeRoot })).resolves.toEqual(archived);
   });
 
-  it("returns a content-free portable projection with null archive dates omitted", async () => {
+  it("creates and lists source metadata, appends lineage, and exposes idempotence", async () => {
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "source-uuid",
+      "version-1-uuid",
+      "version-2-uuid",
+      "unused-version-uuid",
+    ];
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const created = await service.createKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: " default-ckb-uuid ",
+      kind: "file",
+      displayName: "  Current CV  ",
+      mediaType: "  text/markdown  ",
+      checksum: "A".repeat(64),
+      sizeBytes: 0,
+    });
+
+    expect(created).toEqual({
+      created: true,
+      source: {
+        id: "source-uuid",
+        knowledgeBaseId: "default-ckb-uuid",
+        kind: "file",
+        displayName: "Current CV",
+        createdAt,
+      },
+      versions: [
+        {
+          id: "version-1-uuid",
+          sourceId: "source-uuid",
+          version: 1,
+          mediaType: "text/markdown",
+          checksum: "a".repeat(64),
+          sizeBytes: 0,
+          createdAt,
+        },
+      ],
+    });
+    await expect(
+      service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toEqual([{ source: created.source, versions: created.versions }]);
+
+    now = changedAt;
+    const appended = await service.appendKnowledgeSourceVersion({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: " source-uuid ",
+      mediaType: " text/markdown ",
+      checksum: "B".repeat(64),
+      sizeBytes: 2048,
+    });
+    expect(appended.created).toBe(true);
+    expect(appended.versions).toEqual([
+      created.versions[0],
+      {
+        id: "version-2-uuid",
+        sourceId: "source-uuid",
+        version: 2,
+        parentVersionId: "version-1-uuid",
+        mediaType: "text/markdown",
+        checksum: "b".repeat(64),
+        sizeBytes: 2048,
+        createdAt: changedAt,
+      },
+    ]);
+
+    const unchanged = await service.appendKnowledgeSourceVersion({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      mediaType: "text/markdown",
+      checksum: "B".repeat(64),
+      sizeBytes: 2048,
+    });
+    expect(unchanged.created).toBe(false);
+    expect(unchanged.versions).toEqual(appended.versions);
+    await expect(
+      service.listKnowledgeSourceManifests({ storeRoot, knowledgeBaseId: "default-ckb-uuid" }),
+    ).resolves.toHaveLength(1);
+    expect(unchanged.versions).toHaveLength(2);
+
+    for (const value of [created, appended, unchanged]) {
+      expect(value.source).not.toHaveProperty("path");
+      expect(value.source).not.toHaveProperty("url");
+      expect(value.source).not.toHaveProperty("content");
+      expect(value.versions[0]).not.toHaveProperty("path");
+      expect(value.versions[0]).not.toHaveProperty("url");
+      expect(value.versions[0]).not.toHaveProperty("content");
+    }
+  });
+
+  it("lists source manifests only from the requested knowledge base", async () => {
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "other-ckb-uuid",
+      "default-source-uuid",
+      "default-version-uuid",
+      "other-source-uuid",
+      "other-version-uuid",
+    ];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.createKnowledgeBase({ storeRoot, displayName: "Other evidence" });
+    const sourceInput = {
+      storeRoot,
+      kind: "file" as const,
+      mediaType: "text/plain",
+      checksum: "a".repeat(64),
+      sizeBytes: 12,
+    };
+    await service.createKnowledgeSource({
+      ...sourceInput,
+      knowledgeBaseId: "default-ckb-uuid",
+      displayName: "Default source",
+    });
+    await service.createKnowledgeSource({
+      ...sourceInput,
+      knowledgeBaseId: "other-ckb-uuid",
+      displayName: "Other source",
+    });
+
+    const defaultManifests = await service.listKnowledgeSourceManifests({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+    });
+    const otherManifests = await service.listKnowledgeSourceManifests({
+      storeRoot,
+      knowledgeBaseId: "other-ckb-uuid",
+    });
+    expect(defaultManifests.map((manifest) => manifest.source.id)).toEqual(["default-source-uuid"]);
+    expect(otherManifests.map((manifest) => manifest.source.id)).toEqual(["other-source-uuid"]);
+  });
+
+  it("returns portable local metadata without its host root and omits null archive dates", async () => {
     const service = createCandidateKnowledgeStoreService({
       generateId: vi
         .fn<() => string>()
@@ -135,6 +285,73 @@ describe("candidate knowledge store application service", () => {
     await expect(
       service.archiveKnowledgeBase({ storeRoot: "valid", knowledgeBaseId: " " }),
     ).rejects.toThrow(/id is required/i);
+    await expect(
+      service.createKnowledgeSource({
+        storeRoot: "valid",
+        knowledgeBaseId: " ",
+        kind: "file",
+        displayName: "CV",
+        mediaType: "text/plain",
+        checksum,
+        sizeBytes: 1,
+      }),
+    ).rejects.toThrow(/id is required/i);
+    await expect(
+      service.createKnowledgeSource({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        kind: "directory" as never,
+        displayName: "CV",
+        mediaType: "text/plain",
+        checksum,
+        sizeBytes: 1,
+      }),
+    ).rejects.toThrow(/kind must be one of/i);
+    await expect(
+      service.createKnowledgeSource({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        kind: "file",
+        displayName: " ",
+        mediaType: "text/plain",
+        checksum,
+        sizeBytes: 1,
+      }),
+    ).rejects.toThrow(/display name is required/i);
+    await expect(
+      service.createKnowledgeSource({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        kind: "file",
+        displayName: "CV",
+        mediaType: " ",
+        checksum,
+        sizeBytes: 1,
+      }),
+    ).rejects.toThrow(/media type is required/i);
+    await expect(
+      service.appendKnowledgeSourceVersion({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        sourceId: "source-1",
+        mediaType: "text/plain",
+        checksum: `sha256:${checksum}`,
+        sizeBytes: 1,
+      }),
+    ).rejects.toThrow(/SHA-256/i);
+    await expect(
+      service.appendKnowledgeSourceVersion({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        sourceId: "source-1",
+        mediaType: "text/plain",
+        checksum,
+        sizeBytes: -1,
+      }),
+    ).rejects.toThrow(/nonnegative integer/i);
+    await expect(
+      service.listKnowledgeSourceManifests({ storeRoot: "valid", knowledgeBaseId: " " }),
+    ).rejects.toThrow(/id is required/i);
 
     expect(initialize).not.toHaveBeenCalled();
     expect(open).not.toHaveBeenCalled();
@@ -156,6 +373,36 @@ describe("candidate knowledge store application service", () => {
     });
 
     await expect(service.openStore({ storeRoot: "valid" })).rejects.toBe(failure);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("closes an acquired handle when source registration fails", async () => {
+    const failure = new Error("source registration failed");
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      createCandidateKnowledgeSource: vi.fn(async () => {
+        throw failure;
+      }),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const ids = ["source-uuid", "version-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.createKnowledgeSource({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        kind: "file",
+        displayName: "CV",
+        mediaType: "text/plain",
+        checksum,
+        sizeBytes: 12,
+      }),
+    ).rejects.toBe(failure);
     expect(close).toHaveBeenCalledOnce();
   });
 

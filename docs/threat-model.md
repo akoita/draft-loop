@@ -9,6 +9,7 @@ deployment. The current roadmap stage is the application-grade CV workflow.
 The current product is a local, single-user CLI and Electron desktop workspace.
 It also has a component-level portable Candidate Knowledge Base store: a
 user-selected, separate local SQLite file with a logical UUID and lifecycle
+metadata, stable CKB-scoped source identity, and immutable source-version
 metadata. Application workspaces and their run history remain separate. There
 is no internet-facing DraftLoop service, account system, multi-tenant database,
 or background job runner in this repository.
@@ -37,8 +38,10 @@ contain indirect instructions intended to manipulate an agent.
 The portable CKB store is plaintext. Restrictive local permissions are applied
 where supported but are best-effort, not encryption, and do not protect against
 another process running as the same user. The current store component contains
-identity and lifecycle metadata only; physical candidate sources, source
-versions, retrieval indexes, application selection, deletion, export, and
+CKB, source, and source-version metadata only. It stores source kind and a local
+label plus ordered SHA-256, media type, byte size, and timestamp; exact host paths
+and URLs are excluded. Physical candidate sources, directory bindings, refresh,
+freshness, duplicates/indexes, application selection, deletion, export, and
 restore have not moved into that boundary.
 
 Future cloud sync, authentication, multi-tenancy, remote retrieval, browser
@@ -57,7 +60,7 @@ threat-model review. They are not covered by the controls below.
 | Application to approved URL                       | Source URL, local network reachability, fetched content, and provenance   | `ingestUrl` in `packages/ingestion/src/index.ts` requires approval, HTTPS, safe host resolution, manual redirect validation, time/size limits, and supported content types                                                         | DNS rebinding, resolver/fetch races, remote tracking, malicious HTML, and future parser expansion require continuing tests                             |
 | Application to local endpoint                     | Candidate data, credentials, and model output                             | Adapter contract, structured output validation, and explicit configuration                                                                                                                                                         | “Local” does not prove same-machine operation, privacy, identity, or trustworthy retention                                                             |
 | Application to local history and retrieval        | Run metadata, evidence chunks, findings, decisions, and artifacts         | SQLite persistence, workspace identifiers, checksums, immutable records, FTS scoping, and `assertSafePayload` in `packages/storage/src/index.ts`                                                                                   | Host compromise, incomplete field checks, deletion bugs, or query mistakes can expose or mix workspace data                                            |
-| User to portable CKB store                        | Stable store identity, local location, and lifecycle metadata             | Separate user-selected SQLite store, logical UUID independent of path, best-effort restrictive permissions, and no source content in the current component                                                                         | Plaintext metadata and user-created copies remain readable within the local user boundary; source intake and lifecycle controls are not yet integrated |
+| User to portable CKB store                        | Stable store/source identity, local labels, checksums, and lifecycle metadata | Separate user-selected SQLite store, logical IDs independent of path, no exact host paths or URLs, best-effort restrictive permissions, and no source content                                                                     | Plaintext labels may reveal candidate information; checksums can correlate known content; source intake and lifecycle controls are not yet integrated  |
 | Backup, restore, retention purge, and diagnostics | Copies of workspace data and operational metadata                         | Explicit local operations, integrity checks, confirmed purge, and content-free diagnostic design                                                                                                                                   | Backups can outlive workspace deletion; destination permissions and restore overwrite behavior need platform acceptance                                |
 | Approved artifact to renderer/export              | Links, HTML/Markdown, and generated files                                 | Local rendering, controlled formats, checksum records, and an approval boundary                                                                                                                                                    | Unsafe links, images, markup, or viewer behavior can create egress or content-spoofing risks                                                           |
 | Source repository, CI, and release artifacts      | Credentials, fixtures, dependencies, build output, and update trust       | Secret-free fixtures, lockfile, lint/type/test gates, license and secret scans, checksums, and SBOM generation                                                                                                                     | A compromised dependency, CI credential, unsigned installer, or unsafe update can alter releases                                                       |
@@ -75,8 +78,8 @@ application workspace store <---- structured history <---- evaluation/validation
      |                                                         |
 backup / purge / diagnostics                         human approval -> local export
 
-portable CKB store (logical UUID + lifecycle metadata only)
-     . . . future source lifecycle, selection, and retrieval integration . . .
+portable CKB store (logical UUID + CKB/source/version metadata only)
+     . . . future intake, lifecycle, selection, and retrieval integration . . .
 ```
 
 ## Ranked abuse paths
@@ -96,6 +99,7 @@ portable CKB store (logical UUID + lifecycle metadata only)
 | T-011 | High / medium         | A compromised dependency, build workflow, installer, or update path executes with local user access.                                                                     | Pinned dependencies, lockfile review, secret/license checks, platform builds, checksums, and CycloneDX SBOM generation.                                                                                                                                                                                                                                                                 | Add signed installers, provenance where available, a verified update/rollback design, and release-key incident procedures before production beta.                                                         |
 | T-012 | High / medium         | A local subscription runtime loads tools, repository instructions, plugins, or account configuration and gains access beyond the approved model request.                 | User-session mode runs from an empty temporary directory, disables supported tool and customization surfaces, bounds output, rejects observed tool events, and never copies OAuth credentials.                                                                                                                                                                                          | Keep the mode experimental until vendor embedding terms, packaged-runtime behavior, retention, and enforceable token budgets are resolved and acceptance-tested.                                          |
 | T-013 | High / medium         | A portable CKB path or copied store discloses local directory structure or remains readable beyond the user's expected lifecycle.                                        | The logical UUID is independent of the path; paths are excluded from the portable manifest and provider-facing data; the current component stores no source content; local permissions are restrictive where supported.                                                                                                                                                                 | Permissions are best-effort and the store is plaintext. Define safe physical-source intake, deletion, export, restore, copy-conflict, and backup semantics before storing candidate content.              |
+| T-014 | High / medium         | A CKB label, exact origin, or checksum leaks candidate information through diagnostics or provider data, or a source named like agent configuration is treated as executable instruction. | Exact host paths and URLs are excluded; CKB metadata has no provider path; content-free projections omit labels and checksums; all future source files, including `AGENTS.md`-like names, remain inert untrusted candidate data.                                                                                       | Keep UI and diagnostic projections distinct, add adversarial source-name tests before physical intake, and review any future exact-provenance storage.                                                    |
 
 ## Runtime and build-time controls
 
@@ -111,10 +115,12 @@ the local machine authoritative.
 
 The portable CKB store path is local host configuration. It is not part of the
 logical store identity, portable manifest, provider request, or content-free
-audit/diagnostic data. No CLI or desktop workflow currently selects this store
-for a run, so provider transmission and retrieval must continue to use the
-existing workspace boundary until explicit selection and preflight binding are
-implemented.
+audit/diagnostic data. Source labels are local user-visible metadata, and source
+checksums can correlate known content; neither belongs in content-free
+diagnostics or provider requests. No CLI or desktop workflow currently selects
+this store for a run, so provider transmission and retrieval must continue to
+use the existing workspace boundary until explicit selection and preflight
+binding are implemented.
 
 The `local` provider company is a claim that candidate material never leaves
 this machine, and every downstream surface — the desktop transmission
@@ -147,7 +153,8 @@ The following remain open during the application-grade CV stage:
   review whenever supported sources or formats expand;
 - retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector/hybrid retrieval is enabled by default;
-- portable CKB physical-source intake, source versioning, application selection,
+- portable CKB physical-source intake, directory binding, exact provenance,
+  refresh/freshness, duplicate and indexing state, application selection,
   retrieval isolation, deletion, export, restore, backup disclosure, and
   migration rollback require explicit boundaries before candidate content is
   stored there;

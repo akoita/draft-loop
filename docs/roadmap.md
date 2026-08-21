@@ -96,11 +96,15 @@ orchestration engine, and live provider requests receive retrieved chunks rather
 than the complete ingested candidate corpus. It does not yet provide integrated
 reusable CKB data, multiple-CKB isolation, continuous source lifecycle, or
 application-level CKB selection. A separate portable CKB store component now
-persists a logical UUID and local SQLite lifecycle metadata at a user-selected
-path. It remains independent of application workspaces and run history and does
-not yet store source content or versions, drive retrieval, or expose CLI/desktop
-selection, deletion, export, or restore. Local vector and hybrid retrieval remain
-evaluation components pending representative comparison and lifecycle evidence.
+persists a logical UUID, CKB lifecycle metadata, stable CKB-scoped source
+identity, and immutable ordered source-version metadata. Sources record file/URL
+kind and a local label; versions record SHA-256, media type, byte size, and
+timestamp. The store retains no exact host paths or URLs and remains independent
+of application workspaces and run history. It does not yet store source content,
+bind directories, refresh sources, track freshness, duplicates, or indexes,
+drive retrieval, or expose CLI/desktop selection, deletion, export, or restore.
+Local vector and hybrid retrieval remain evaluation components pending
+representative comparison and lifecycle evidence.
 
 Several later-stage components also exist: local lexical/vector retrieval,
 provider retry and progress behavior, a consented pilot harness, backup and
@@ -374,6 +378,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                    |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Added portable CKB source identity and immutable ordered source-version metadata without advancing the application-grade stage beyond component implementation                                                           | Stable source IDs and SHA-256 version records establish portable provenance without retaining host paths, URLs, or content; physical intake, refresh, duplicates/indexing, application selection, retrieval, CLI/desktop UI, deletion, export, and restore remain unintegrated                                                                              |
 | 2026-08-21 | Implemented the portable CKB store identity and local SQLite lifecycle-metadata component for #78 without advancing the application-grade stage beyond component implementation                                           | A user-selected store needs a logical UUID independent of its filesystem path and must remain separate from application workspaces and run history; source versions, selection, retrieval cutover, CLI/desktop UI, deletion, export, and restore remain unintegrated                                                                                      |
 | 2026-08-21 | Published [v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0) as Released but not Validated and moved Application-grade CV workflow to Now                                                                 | The exact-revision local live-provider preflight, release dry run, three platform builds, manifest, checksums, SBOM, and known limitations passed; the representative output-quality failure remains the defining v0.7 input rather than being waived                                                                                                     |
 | 2026-08-21 | Approved v0.6.0 as a non-validated alpha release baseline and kept v0.7 next until publication evidence is complete                                                                                                       | The live workflow reached approval and export but did not preserve factual completeness, chronology, or application readiness; a prerelease can preserve the integrated baseline without claiming validation, while v0.7 owns the canonical profile, customizable structure, complete composition, stopping rules, and parity work exposed by the failure |

@@ -7,6 +7,8 @@ import {
   canonicalizeModelId,
   createAgentContextReference,
   createCandidateKnowledgeBase,
+  createCandidateKnowledgeSource,
+  createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
   createContextSnapshot,
   createProfile,
@@ -711,6 +713,167 @@ describe("CandidateKnowledgeBase", () => {
     ).toThrow(/must not precede/i);
     expect(() => archiveCandidateKnowledgeBase(knowledgeBase, "2026-08-20T08:00:00Z")).toThrow(
       /must not precede/i,
+    );
+  });
+});
+
+describe("CandidateKnowledgeSource", () => {
+  const createdAt = "2026-08-21T09:00:00.000Z";
+
+  it("creates a canonical logical source without a physical locator", () => {
+    expect(
+      createCandidateKnowledgeSource(
+        "  source-1  ",
+        {
+          knowledgeBaseId: "  ckb-primary  ",
+          kind: "file",
+          displayName: "  Current CV  ",
+        },
+        createdAt,
+      ),
+    ).toEqual({
+      id: "source-1",
+      knowledgeBaseId: "ckb-primary",
+      kind: "file",
+      displayName: "Current CV",
+      createdAt,
+    });
+  });
+
+  it("rejects blank fields, unsupported kinds, and malformed timestamps", () => {
+    expect(() =>
+      createCandidateKnowledgeSource(
+        " ",
+        { knowledgeBaseId: "ckb-1", kind: "url", displayName: "Portfolio" },
+        createdAt,
+      ),
+    ).toThrow(/source id is required/i);
+    expect(() =>
+      createCandidateKnowledgeSource(
+        "source-1",
+        { knowledgeBaseId: " ", kind: "url", displayName: "Portfolio" },
+        createdAt,
+      ),
+    ).toThrow(/knowledge base id is required/i);
+    expect(() =>
+      createCandidateKnowledgeSource(
+        "source-1",
+        { knowledgeBaseId: "ckb-1", kind: "url", displayName: " " },
+        createdAt,
+      ),
+    ).toThrow(/display name is required/i);
+    expect(() =>
+      createCandidateKnowledgeSource(
+        "source-1",
+        { knowledgeBaseId: "ckb-1", kind: "directory" as never, displayName: "Career" },
+        createdAt,
+      ),
+    ).toThrow(/kind must be one of/i);
+    expect(() =>
+      createCandidateKnowledgeSource(
+        "source-1",
+        { knowledgeBaseId: "ckb-1", kind: "file", displayName: "Career" },
+        "2026-08-21",
+      ),
+    ).toThrow(/valid ISO timestamp/i);
+  });
+});
+
+describe("CandidateKnowledgeSourceVersion", () => {
+  const createdAt = "2026-08-21T09:30:00.000Z";
+
+  it("creates canonical first and child version metadata", () => {
+    expect(
+      createCandidateKnowledgeSourceVersion(
+        "  version-1  ",
+        {
+          sourceId: "  source-1  ",
+          version: 1,
+          mediaType: "  text/markdown  ",
+          checksum: "A".repeat(64),
+          sizeBytes: 0,
+        },
+        createdAt,
+      ),
+    ).toEqual({
+      id: "version-1",
+      sourceId: "source-1",
+      version: 1,
+      mediaType: "text/markdown",
+      checksum: "a".repeat(64),
+      sizeBytes: 0,
+      createdAt,
+    });
+
+    expect(
+      createCandidateKnowledgeSourceVersion(
+        "version-2",
+        {
+          sourceId: "source-1",
+          version: 2,
+          parentVersionId: "  version-1  ",
+          mediaType: "text/markdown",
+          checksum: "b".repeat(64),
+          sizeBytes: 2048,
+        },
+        createdAt,
+      ).parentVersionId,
+    ).toBe("version-1");
+  });
+
+  it("rejects invalid lineage, checksums, sizes, fields, and timestamps", () => {
+    const valid = {
+      sourceId: "source-1",
+      version: 1,
+      mediaType: "text/plain",
+      checksum: "a".repeat(64),
+      sizeBytes: 12,
+    };
+
+    expect(() =>
+      createCandidateKnowledgeSourceVersion("version-1", { ...valid, version: 0 }, createdAt),
+    ).toThrow(/positive integer/i);
+    expect(() =>
+      createCandidateKnowledgeSourceVersion(
+        "version-1",
+        { ...valid, version: 1, parentVersionId: "version-0" },
+        createdAt,
+      ),
+    ).toThrow(/must not have a parent/i);
+    expect(() =>
+      createCandidateKnowledgeSourceVersion("version-2", { ...valid, version: 2 }, createdAt),
+    ).toThrow(/require a parent/i);
+    expect(() =>
+      createCandidateKnowledgeSourceVersion(
+        "version-2",
+        { ...valid, version: 2, parentVersionId: " " },
+        createdAt,
+      ),
+    ).toThrow(/require a parent/i);
+    expect(() =>
+      createCandidateKnowledgeSourceVersion(
+        "version-1",
+        { ...valid, checksum: "a".repeat(40) },
+        createdAt,
+      ),
+    ).toThrow(/SHA-256/i);
+    expect(() =>
+      createCandidateKnowledgeSourceVersion("version-1", { ...valid, sizeBytes: -1 }, createdAt),
+    ).toThrow(/nonnegative integer/i);
+    expect(() =>
+      createCandidateKnowledgeSourceVersion("version-1", { ...valid, sizeBytes: 1.5 }, createdAt),
+    ).toThrow(/nonnegative integer/i);
+    expect(() => createCandidateKnowledgeSourceVersion(" ", valid, createdAt)).toThrow(
+      /version id is required/i,
+    );
+    expect(() =>
+      createCandidateKnowledgeSourceVersion("version-1", { ...valid, sourceId: " " }, createdAt),
+    ).toThrow(/source id is required/i);
+    expect(() =>
+      createCandidateKnowledgeSourceVersion("version-1", { ...valid, mediaType: " " }, createdAt),
+    ).toThrow(/media type is required/i);
+    expect(() => createCandidateKnowledgeSourceVersion("version-1", valid, "not-a-date")).toThrow(
+      /valid ISO timestamp/i,
     );
   });
 });

@@ -67,6 +67,39 @@ export interface CandidateKnowledgeBaseRecord {
   readonly archivedAt: string | null;
 }
 
+export type CandidateKnowledgeSourceKind = "file" | "url";
+
+export interface CandidateKnowledgeSourceInput {
+  readonly id: string;
+  readonly knowledgeBaseId: string;
+  readonly kind: CandidateKnowledgeSourceKind;
+  readonly displayName: string;
+  readonly createdAt: string;
+}
+
+export type CandidateKnowledgeSourceRecord = CandidateKnowledgeSourceInput;
+
+export interface CandidateKnowledgeSourceVersionInput {
+  readonly id: string;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly createdAt: string;
+}
+
+export interface CandidateKnowledgeSourceVersionRecord
+  extends CandidateKnowledgeSourceVersionInput {
+  readonly sourceId: string;
+  readonly version: number;
+  readonly parentVersionId: string | null;
+}
+
+export interface CandidateKnowledgeSourceVersionWriteResult {
+  readonly source: CandidateKnowledgeSourceRecord;
+  readonly version: CandidateKnowledgeSourceVersionRecord;
+  readonly created: boolean;
+}
+
 export interface CandidateKnowledgeBaseStoragePort {
   readonly ensureDefaultCandidateKnowledgeBase: (
     input: Omit<CandidateKnowledgeBaseInput, "isDefault">,
@@ -87,6 +120,26 @@ export interface CandidateKnowledgeBaseStoragePort {
     id: string,
     archivedAt: string,
   ) => Promise<CandidateKnowledgeBaseRecord>;
+  readonly createCandidateKnowledgeSource: (
+    source: CandidateKnowledgeSourceInput,
+    initialVersion: CandidateKnowledgeSourceVersionInput,
+  ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
+  readonly appendCandidateKnowledgeSourceVersion: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    version: CandidateKnowledgeSourceVersionInput,
+  ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
+  readonly getCandidateKnowledgeSource: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeSourceRecord | undefined>;
+  readonly listCandidateKnowledgeSources: (
+    knowledgeBaseId: string,
+  ) => Promise<readonly CandidateKnowledgeSourceRecord[]>;
+  readonly listCandidateKnowledgeSourceVersions: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<readonly CandidateKnowledgeSourceVersionRecord[]>;
 }
 
 export interface ContextSnapshotInput {
@@ -467,7 +520,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 4 as const;
+export const storageSchemaVersion = 5 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -841,11 +894,65 @@ const migrationFour: Migration = {
   `.trim(),
 };
 
+const migrationFive: Migration = {
+  version: 5,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_sources (
+      id TEXT PRIMARY KEY NOT NULL,
+      candidate_knowledge_base_id TEXT NOT NULL REFERENCES candidate_knowledge_bases(id),
+      kind TEXT NOT NULL CHECK (kind IN ('file', 'url')),
+      display_name TEXT NOT NULL CHECK (length(trim(display_name)) > 0),
+      created_at TEXT NOT NULL,
+      UNIQUE (id, candidate_knowledge_base_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_source_versions (
+      id TEXT PRIMARY KEY NOT NULL,
+      source_id TEXT NOT NULL REFERENCES candidate_knowledge_sources(id),
+      version INTEGER NOT NULL CHECK (version >= 1),
+      parent_version_id TEXT,
+      media_type TEXT NOT NULL CHECK (length(trim(media_type)) > 0),
+      checksum TEXT NOT NULL CHECK (
+        length(checksum) = 64 AND checksum NOT GLOB '*[^0-9a-f]*'
+      ),
+      size_bytes INTEGER NOT NULL CHECK (size_bytes >= 0 AND typeof(size_bytes) = 'integer'),
+      created_at TEXT NOT NULL,
+      UNIQUE (source_id, version),
+      UNIQUE (id, source_id),
+      FOREIGN KEY (parent_version_id, source_id)
+        REFERENCES candidate_knowledge_source_versions(id, source_id),
+      CHECK (
+        (version = 1 AND parent_version_id IS NULL) OR
+        (version > 1 AND parent_version_id IS NOT NULL)
+      )
+    );
+
+    CREATE INDEX IF NOT EXISTS candidate_knowledge_sources_ckb_created_idx
+      ON candidate_knowledge_sources(candidate_knowledge_base_id, created_at, id);
+    CREATE INDEX IF NOT EXISTS candidate_knowledge_source_versions_source_version_idx
+      ON candidate_knowledge_source_versions(source_id, version, id);
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_sources_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_sources
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge sources are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_sources_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_sources
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge sources are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_versions_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_source_versions
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source versions are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_versions_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_source_versions
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source versions are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
   migrationThree,
   migrationFour,
+  migrationFive,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -1264,6 +1371,207 @@ export class SqliteStorage
       };
     })();
     return result as CandidateKnowledgeBaseRecord;
+  }
+
+  public async createCandidateKnowledgeSource(
+    sourceInput: CandidateKnowledgeSourceInput,
+    initialVersionInput: CandidateKnowledgeSourceVersionInput,
+  ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
+    this.ensureOpen();
+    const source = normalizeCandidateKnowledgeSourceInput(sourceInput);
+    const initialVersion = normalizeCandidateKnowledgeSourceVersionInput(initialVersionInput);
+    if (Date.parse(initialVersion.createdAt) < Date.parse(source.createdAt)) {
+      throw new StorageValidationError(
+        "candidate knowledge source version createdAt must not precede its source createdAt",
+      );
+    }
+    const version: CandidateKnowledgeSourceVersionRecord = {
+      ...initialVersion,
+      sourceId: source.id,
+      version: 1,
+      parentVersionId: null,
+    };
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(source.knowledgeBaseId);
+      if (
+        this.database
+          .prepare("SELECT id FROM candidate_knowledge_sources WHERE id = ?")
+          .get(source.id) !== undefined
+      ) {
+        throw new StorageConflictError(`candidate knowledge source ${source.id} already exists`);
+      }
+      this.insertCandidateKnowledgeSource(source);
+      this.insertCandidateKnowledgeSourceVersion(version);
+    })();
+    return { source, version, created: true };
+  }
+
+  public async appendCandidateKnowledgeSourceVersion(
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionInput: CandidateKnowledgeSourceVersionInput,
+  ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const normalizedVersion = normalizeCandidateKnowledgeSourceVersionInput(versionInput);
+    let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      const source = this.requireCandidateKnowledgeSource(
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+      );
+      const currentRow = this.database
+        .prepare(
+          "SELECT id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC LIMIT 1",
+        )
+        .get(normalizedSourceId);
+      if (currentRow === undefined) {
+        throw new StorageValidationError(
+          `candidate knowledge source ${normalizedSourceId} has no versions`,
+        );
+      }
+      const current = candidateKnowledgeSourceVersionFromRow(currentRow);
+      if (Date.parse(normalizedVersion.createdAt) < Date.parse(current.createdAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge source version createdAt must not precede the current version createdAt",
+        );
+      }
+      if (current.checksum === normalizedVersion.checksum) {
+        if (
+          current.mediaType !== normalizedVersion.mediaType ||
+          current.sizeBytes !== normalizedVersion.sizeBytes
+        ) {
+          throw new StorageConflictError(
+            "candidate knowledge source version checksum conflicts with its integrity metadata",
+          );
+        }
+        result = { source, version: current, created: false };
+        return;
+      }
+      const version: CandidateKnowledgeSourceVersionRecord = {
+        ...normalizedVersion,
+        sourceId: normalizedSourceId,
+        version: current.version + 1,
+        parentVersionId: current.id,
+      };
+      this.insertCandidateKnowledgeSourceVersion(version);
+      result = { source, version, created: true };
+    })();
+    return result as CandidateKnowledgeSourceVersionWriteResult;
+  }
+
+  public async getCandidateKnowledgeSource(
+    knowledgeBaseId: string,
+    sourceId: string,
+  ): Promise<CandidateKnowledgeSourceRecord | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    const row = this.database
+      .prepare(
+        "SELECT id, candidate_knowledge_base_id, kind, display_name, created_at FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ? AND id = ?",
+      )
+      .get(normalizedKnowledgeBaseId, normalizedSourceId);
+    return row === undefined ? undefined : candidateKnowledgeSourceFromRow(row);
+  }
+
+  public async listCandidateKnowledgeSources(
+    knowledgeBaseId: string,
+  ): Promise<readonly CandidateKnowledgeSourceRecord[]> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    return this.database
+      .prepare(
+        "SELECT id, candidate_knowledge_base_id, kind, display_name, created_at FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ? ORDER BY created_at, id",
+      )
+      .all(normalizedKnowledgeBaseId)
+      .map(candidateKnowledgeSourceFromRow);
+  }
+
+  public async listCandidateKnowledgeSourceVersions(
+    knowledgeBaseId: string,
+    sourceId: string,
+  ): Promise<readonly CandidateKnowledgeSourceVersionRecord[]> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    this.requireCandidateKnowledgeSource(normalizedKnowledgeBaseId, normalizedSourceId);
+    return this.database
+      .prepare(
+        "SELECT v.id, v.source_id, v.version, v.parent_version_id, v.media_type, v.checksum, v.size_bytes, v.created_at FROM candidate_knowledge_source_versions AS v JOIN candidate_knowledge_sources AS s ON s.id = v.source_id WHERE s.candidate_knowledge_base_id = ? AND v.source_id = ? ORDER BY v.version, v.id",
+      )
+      .all(normalizedKnowledgeBaseId, normalizedSourceId)
+      .map(candidateKnowledgeSourceVersionFromRow);
+  }
+
+  public validateCandidateKnowledgeSourceGraph(): void {
+    this.ensureOpen();
+    const foreignKeyViolations = this.database.pragma("foreign_key_check");
+    if (Array.isArray(foreignKeyViolations) && foreignKeyViolations.length > 0) {
+      throw new StorageValidationError(
+        "Candidate knowledge store contains invalid source relationships.",
+      );
+    }
+    const sources = this.database
+      .prepare("SELECT id, created_at FROM candidate_knowledge_sources ORDER BY id")
+      .all<{ readonly id: string; readonly created_at: string }>();
+    const selectVersions = this.database.prepare(
+      "SELECT id, version, parent_version_id, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version, id",
+    );
+    for (const source of sources) {
+      const sourceCreatedAt = requireTimestamp(
+        source.created_at,
+        `candidate knowledge source ${source.id} createdAt`,
+      );
+      const versions = selectVersions.all<{
+        readonly id: string;
+        readonly version: number;
+        readonly parent_version_id: string | null;
+        readonly created_at: string;
+      }>(source.id);
+      if (versions.length === 0) {
+        throw new StorageValidationError(
+          `Candidate knowledge source ${source.id} has no source versions.`,
+        );
+      }
+      let previousId: string | null = null;
+      let previousCreatedAt = sourceCreatedAt;
+      for (const [index, version] of versions.entries()) {
+        if (version.version !== index + 1 || version.parent_version_id !== previousId) {
+          throw new StorageValidationError(
+            `Candidate knowledge source ${source.id} has an invalid version chain.`,
+          );
+        }
+        const versionCreatedAt = requireTimestamp(
+          version.created_at,
+          `candidate knowledge source version ${version.id} createdAt`,
+        );
+        if (Date.parse(versionCreatedAt) < Date.parse(previousCreatedAt)) {
+          throw new StorageValidationError(
+            `Candidate knowledge source ${source.id} has an invalid version timestamp order.`,
+          );
+        }
+        previousId = version.id;
+        previousCreatedAt = versionCreatedAt;
+      }
+    }
   }
 
   public async saveWorkspace(record: WorkspaceRecord): Promise<void> {
@@ -2600,6 +2908,33 @@ export class SqliteStorage
       );
   }
 
+  private insertCandidateKnowledgeSource(record: CandidateKnowledgeSourceRecord): void {
+    this.database
+      .prepare(
+        "INSERT INTO candidate_knowledge_sources (id, candidate_knowledge_base_id, kind, display_name, created_at) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(record.id, record.knowledgeBaseId, record.kind, record.displayName, record.createdAt);
+  }
+
+  private insertCandidateKnowledgeSourceVersion(
+    record: CandidateKnowledgeSourceVersionRecord,
+  ): void {
+    this.database
+      .prepare(
+        "INSERT INTO candidate_knowledge_source_versions (id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(
+        record.id,
+        record.sourceId,
+        record.version,
+        record.parentVersionId,
+        record.mediaType,
+        record.checksum,
+        record.sizeBytes,
+        record.createdAt,
+      );
+  }
+
   private requireCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {
     const row = this.database
       .prepare(
@@ -2610,6 +2945,31 @@ export class SqliteStorage
       throw new StorageValidationError(`candidate knowledge base ${id} was not found`);
     }
     return candidateKnowledgeBaseFromRow(row);
+  }
+
+  private requireActiveCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {
+    const knowledgeBase = this.requireCandidateKnowledgeBase(id);
+    if (knowledgeBase.state !== "active") {
+      throw new StorageConflictError(`candidate knowledge base ${id} is archived`);
+    }
+    return knowledgeBase;
+  }
+
+  private requireCandidateKnowledgeSource(
+    knowledgeBaseId: string,
+    sourceId: string,
+  ): CandidateKnowledgeSourceRecord {
+    const row = this.database
+      .prepare(
+        "SELECT id, candidate_knowledge_base_id, kind, display_name, created_at FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ? AND id = ?",
+      )
+      .get(knowledgeBaseId, sourceId);
+    if (row === undefined) {
+      throw new StorageValidationError(
+        `candidate knowledge source ${sourceId} was not found in candidate knowledge base ${knowledgeBaseId}`,
+      );
+    }
+    return candidateKnowledgeSourceFromRow(row);
   }
 
   private ensureOpen(): void {
@@ -2650,6 +3010,49 @@ function normalizeCandidateKnowledgeBaseInput(
   };
 }
 
+function normalizeCandidateKnowledgeSourceInput(
+  input: CandidateKnowledgeSourceInput,
+): CandidateKnowledgeSourceRecord {
+  const id = requireNonEmpty(input.id, "candidate knowledge source id").trim();
+  const knowledgeBaseId = requireNonEmpty(
+    input.knowledgeBaseId,
+    "candidate knowledge source knowledgeBaseId",
+  ).trim();
+  if (input.kind !== "file" && input.kind !== "url") {
+    throw new StorageValidationError(`Unsupported candidate knowledge source kind: ${input.kind}`);
+  }
+  const displayName = requireNonEmpty(
+    input.displayName,
+    "candidate knowledge source displayName",
+  ).trim();
+  const createdAt = requireTimestamp(input.createdAt, "candidate knowledge source createdAt");
+  return { id, knowledgeBaseId, kind: input.kind, displayName, createdAt };
+}
+
+function normalizeCandidateKnowledgeSourceVersionInput(
+  input: CandidateKnowledgeSourceVersionInput,
+): CandidateKnowledgeSourceVersionInput {
+  const id = requireNonEmpty(input.id, "candidate knowledge source version id").trim();
+  const mediaType = requireNonEmpty(
+    input.mediaType,
+    "candidate knowledge source version mediaType",
+  ).trim();
+  if (!/^[0-9a-f]{64}$/.test(input.checksum)) {
+    throw new StorageValidationError(
+      "candidate knowledge source version checksum must be a lowercase SHA-256 checksum",
+    );
+  }
+  const sizeBytes = requireNonNegativeInteger(
+    input.sizeBytes,
+    "candidate knowledge source version sizeBytes",
+  );
+  const createdAt = requireTimestamp(
+    input.createdAt,
+    "candidate knowledge source version createdAt",
+  );
+  return { id, mediaType, checksum: input.checksum, sizeBytes, createdAt };
+}
+
 function workspaceFromRow(row: Record<string, unknown>): WorkspaceRecord {
   return {
     id: rowString(row, "id"),
@@ -2669,6 +3072,33 @@ function candidateKnowledgeBaseFromRow(row: Record<string, unknown>): CandidateK
     createdAt: rowString(row, "created_at"),
     updatedAt: rowString(row, "updated_at"),
     archivedAt: rowNullableString(row, "archived_at"),
+  };
+}
+
+function candidateKnowledgeSourceFromRow(
+  row: Record<string, unknown>,
+): CandidateKnowledgeSourceRecord {
+  return {
+    id: rowString(row, "id"),
+    knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
+    kind: rowString(row, "kind") as CandidateKnowledgeSourceKind,
+    displayName: rowString(row, "display_name"),
+    createdAt: rowString(row, "created_at"),
+  };
+}
+
+function candidateKnowledgeSourceVersionFromRow(
+  row: Record<string, unknown>,
+): CandidateKnowledgeSourceVersionRecord {
+  return {
+    id: rowString(row, "id"),
+    sourceId: rowString(row, "source_id"),
+    version: rowNumber(row, "version"),
+    parentVersionId: rowNullableString(row, "parent_version_id"),
+    mediaType: rowString(row, "media_type"),
+    checksum: rowString(row, "checksum"),
+    sizeBytes: rowNumber(row, "size_bytes"),
+    createdAt: rowString(row, "created_at"),
   };
 }
 

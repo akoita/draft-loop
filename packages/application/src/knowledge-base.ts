@@ -2,9 +2,18 @@ import { randomUUID } from "node:crypto";
 
 import {
   type CandidateKnowledgeBase,
+  type CandidateKnowledgeSource,
+  type CandidateKnowledgeSourceKind,
+  type CandidateKnowledgeSourceVersion,
   type CandidateKnowledgeStore,
+  createCandidateKnowledgeSource,
+  createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
 } from "@draft-loop/domain";
+import type {
+  CandidateKnowledgeSourceRecord,
+  CandidateKnowledgeSourceVersionRecord,
+} from "@draft-loop/storage";
 import {
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeStoreHandle,
@@ -12,7 +21,13 @@ import {
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
 
-export type { CandidateKnowledgeBase, CandidateKnowledgeStore } from "@draft-loop/domain";
+export type {
+  CandidateKnowledgeBase,
+  CandidateKnowledgeSource,
+  CandidateKnowledgeSourceKind,
+  CandidateKnowledgeSourceVersion,
+  CandidateKnowledgeStore,
+} from "@draft-loop/domain";
 
 const defaultKnowledgeBaseDisplayName = "Career evidence";
 
@@ -47,10 +62,43 @@ export interface ArchiveKnowledgeBaseCommand {
   readonly knowledgeBaseId: string;
 }
 
-/** A portable, content-free projection safe for adapter and diagnostics use. */
+export interface CreateKnowledgeSourceCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly kind: CandidateKnowledgeSourceKind;
+  readonly displayName: string;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+}
+
+export interface AppendKnowledgeSourceVersionCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+}
+
+export interface ListKnowledgeSourceManifestsCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+}
+
+/** Local application metadata; names and descriptions are not a diagnostic allowlist. */
 export interface CandidateKnowledgeStoreView {
   readonly store: CandidateKnowledgeStore;
   readonly knowledgeBases: readonly CandidateKnowledgeBase[];
+}
+
+export interface CandidateKnowledgeSourceManifest {
+  readonly source: CandidateKnowledgeSource;
+  readonly versions: readonly CandidateKnowledgeSourceVersion[];
+}
+
+export interface CandidateKnowledgeSourceWriteResult extends CandidateKnowledgeSourceManifest {
+  readonly created: boolean;
 }
 
 export interface CandidateKnowledgeStoreService {
@@ -70,6 +118,15 @@ export interface CandidateKnowledgeStoreService {
   readonly archiveKnowledgeBase: (
     command: ArchiveKnowledgeBaseCommand,
   ) => Promise<CandidateKnowledgeStoreView>;
+  readonly createKnowledgeSource: (
+    command: CreateKnowledgeSourceCommand,
+  ) => Promise<CandidateKnowledgeSourceWriteResult>;
+  readonly appendKnowledgeSourceVersion: (
+    command: AppendKnowledgeSourceVersionCommand,
+  ) => Promise<CandidateKnowledgeSourceWriteResult>;
+  readonly listKnowledgeSourceManifests: (
+    command: ListKnowledgeSourceManifestsCommand,
+  ) => Promise<readonly CandidateKnowledgeSourceManifest[]>;
 }
 
 export interface CandidateKnowledgeStoreServiceDependencies {
@@ -112,6 +169,73 @@ function toKnowledgeBase(record: CandidateKnowledgeBaseRecord): CandidateKnowled
     ...(record.archivedAt === null ? {} : { archivedAt: record.archivedAt }),
   };
   return Object.freeze(knowledgeBase);
+}
+
+function toKnowledgeSource(record: CandidateKnowledgeSourceRecord): CandidateKnowledgeSource {
+  return Object.freeze(
+    createCandidateKnowledgeSource(
+      record.id,
+      {
+        knowledgeBaseId: record.knowledgeBaseId,
+        kind: record.kind,
+        displayName: record.displayName,
+      },
+      record.createdAt,
+    ),
+  );
+}
+
+function toKnowledgeSourceVersion(
+  record: CandidateKnowledgeSourceVersionRecord,
+): CandidateKnowledgeSourceVersion {
+  return Object.freeze(
+    createCandidateKnowledgeSourceVersion(
+      record.id,
+      {
+        sourceId: record.sourceId,
+        version: record.version,
+        ...(record.parentVersionId === null ? {} : { parentVersionId: record.parentVersionId }),
+        mediaType: record.mediaType,
+        checksum: record.checksum,
+        sizeBytes: record.sizeBytes,
+      },
+      record.createdAt,
+    ),
+  );
+}
+
+async function projectSourceManifest(
+  handle: CandidateKnowledgeStoreHandle,
+  knowledgeBaseId: string,
+  record: CandidateKnowledgeSourceRecord,
+): Promise<CandidateKnowledgeSourceManifest> {
+  if (record.knowledgeBaseId !== knowledgeBaseId) {
+    throw new Error(
+      "Storage returned a candidate knowledge source outside the requested knowledge base.",
+    );
+  }
+  const versions = await handle.listCandidateKnowledgeSourceVersions(knowledgeBaseId, record.id);
+  if (versions.some((version) => version.sourceId !== record.id)) {
+    throw new Error("Storage returned a candidate knowledge source version outside its source.");
+  }
+  return Object.freeze({
+    source: toKnowledgeSource(record),
+    versions: Object.freeze(
+      versions
+        .map(toKnowledgeSourceVersion)
+        .sort((left, right) => left.version - right.version || left.id.localeCompare(right.id)),
+    ),
+  });
+}
+
+async function projectSourceWriteResult(
+  handle: CandidateKnowledgeStoreHandle,
+  knowledgeBaseId: string,
+  record: CandidateKnowledgeSourceRecord,
+  created: boolean,
+): Promise<CandidateKnowledgeSourceWriteResult> {
+  const manifest = await projectSourceManifest(handle, knowledgeBaseId, record);
+  return Object.freeze({ ...manifest, created });
 }
 
 async function project(
@@ -164,6 +288,26 @@ export function createCandidateKnowledgeStoreService(
 
   const openAndProject = async (storeRoot: string): Promise<CandidateKnowledgeStoreView> =>
     useHandle(() => resolved.open(storeRoot), project);
+
+  const prepareVersion = (
+    sourceId: string,
+    command: {
+      readonly mediaType: string;
+      readonly checksum: string;
+      readonly sizeBytes: number;
+    },
+  ): CandidateKnowledgeSourceVersion =>
+    createCandidateKnowledgeSourceVersion(
+      requireText(resolved.generateId(), "Candidate knowledge source version id"),
+      {
+        sourceId,
+        version: 1,
+        mediaType: command.mediaType,
+        checksum: command.checksum,
+        sizeBytes: command.sizeBytes,
+      },
+      resolved.now(),
+    );
 
   const service: CandidateKnowledgeStoreService = {
     initializeStore: async (command) => {
@@ -243,6 +387,71 @@ export function createCandidateKnowledgeStoreService(
         },
       );
     },
+    createKnowledgeSource: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const source = createCandidateKnowledgeSource(
+        requireText(resolved.generateId(), "Candidate knowledge source id"),
+        {
+          knowledgeBaseId,
+          kind: command.kind,
+          displayName: command.displayName,
+        },
+        resolved.now(),
+      );
+      const version = prepareVersion(source.id, command);
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const result = await handle.createCandidateKnowledgeSource(source, {
+            id: version.id,
+            mediaType: version.mediaType,
+            checksum: version.checksum,
+            sizeBytes: version.sizeBytes,
+            createdAt: version.createdAt,
+          });
+          return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
+        },
+      );
+    },
+    appendKnowledgeSourceVersion: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      const version = prepareVersion(sourceId, command);
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const result = await handle.appendCandidateKnowledgeSourceVersion(
+            knowledgeBaseId,
+            sourceId,
+            {
+              id: version.id,
+              mediaType: version.mediaType,
+              checksum: version.checksum,
+              sizeBytes: version.sizeBytes,
+              createdAt: version.createdAt,
+            },
+          );
+          return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
+        },
+      );
+    },
+    listKnowledgeSourceManifests: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const sources = await handle.listCandidateKnowledgeSources(knowledgeBaseId);
+          return Object.freeze(
+            await Promise.all(
+              sources.map((source) => projectSourceManifest(handle, knowledgeBaseId, source)),
+            ),
+          );
+        },
+      );
+    },
   };
   return Object.freeze(service);
 }
@@ -255,3 +464,6 @@ export const listKnowledgeBases = defaultService.listKnowledgeBases;
 export const createKnowledgeBase = defaultService.createKnowledgeBase;
 export const renameKnowledgeBase = defaultService.renameKnowledgeBase;
 export const archiveKnowledgeBase = defaultService.archiveKnowledgeBase;
+export const createKnowledgeSource = defaultService.createKnowledgeSource;
+export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSourceVersion;
+export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;
