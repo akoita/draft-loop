@@ -82,6 +82,12 @@ export interface ManagedCandidateKnowledgeFileVersionInput
   readonly beforeSourceRecheck?: () => Promise<void>;
   /** @internal Test seam for simulating a failure after file publication but before SQLite. */
   readonly beforeDatabaseWrite?: () => Promise<void>;
+  /** @internal Test seam after the no-replace link and before its published event. */
+  readonly afterTargetPublication?: () => Promise<void>;
+  /** @internal Test seam for simulating a failure after the atomic SQLite commit. */
+  readonly beforeCommittedFileRecheck?: () => Promise<void>;
+  /** @internal Test seam for simulating a staging cleanup failure after commit. */
+  readonly beforeStagingCleanup?: () => Promise<void>;
 }
 
 export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseStoragePort {
@@ -176,11 +182,39 @@ interface CapturedManagedFile {
   readonly checksum: string;
   readonly sizeBytes: number;
   readonly temporaryPath: string;
+  readonly temporaryIdentity: FileIdentity;
+}
+
+interface FileIdentity {
+  readonly dev: number;
+  readonly ino: number;
+}
+
+async function removeRegularFileIfIdentityMatches(
+  path: string,
+  identity: FileIdentity,
+): Promise<boolean> {
+  try {
+    const details = await lstat(path);
+    if (
+      details.isSymbolicLink() ||
+      !details.isFile() ||
+      details.dev !== identity.dev ||
+      details.ino !== identity.ino
+    ) {
+      return false;
+    }
+    await rm(path);
+    return true;
+  } catch (error) {
+    return isMissing(error);
+  }
 }
 
 async function captureManagedFile(
   root: string,
   input: ManagedCandidateKnowledgeFileVersionInput,
+  operationId: string,
 ): Promise<CapturedManagedFile> {
   const expectedChecksum = requiredManagedText(
     input.checksum,
@@ -208,7 +242,8 @@ async function captureManagedFile(
 
   let sourceHandle: FileHandle | undefined;
   let temporaryHandle: FileHandle | undefined;
-  const temporaryPath = join(root, sourcesDirectory, `.intake-${randomUUID()}`);
+  let temporaryIdentity: FileIdentity | undefined;
+  const temporaryPath = join(root, sourcesDirectory, `.intake-${managedPathSegment(operationId)}`);
   try {
     const selectedDetails = await lstat(selectedPath);
     if (selectedDetails.isSymbolicLink() || !selectedDetails.isFile()) {
@@ -245,6 +280,8 @@ async function captureManagedFile(
     }
 
     temporaryHandle = await open(temporaryPath, "wx", 0o600);
+    const temporaryDetails = await temporaryHandle.stat();
+    temporaryIdentity = { dev: temporaryDetails.dev, ino: temporaryDetails.ino };
     const digest = createHash("sha256");
     const buffer = Buffer.allocUnsafe(64 * 1024);
     let sizeBytes = 0;
@@ -280,11 +317,13 @@ async function captureManagedFile(
     await chmodWhereSupported(temporaryPath, 0o600);
     await sourceHandle.close();
     sourceHandle = undefined;
-    return { checksum, sizeBytes, temporaryPath };
+    return { checksum, sizeBytes, temporaryPath, temporaryIdentity };
   } catch (error) {
     await closeQuietly(temporaryHandle);
     await closeQuietly(sourceHandle);
-    await rm(temporaryPath, { force: true });
+    if (temporaryIdentity !== undefined) {
+      await removeRegularFileIfIdentityMatches(temporaryPath, temporaryIdentity);
+    }
     if (error instanceof StorageValidationError || error instanceof StorageConflictError) {
       throw error;
     }
@@ -444,43 +483,24 @@ async function verifyManagedFile(
 
 async function publishManagedFile(
   temporaryPath: string,
+  temporaryIdentity: FileIdentity,
   finalPath: string,
   version: Pick<CandidateKnowledgeSourceVersionRecord, "checksum" | "sizeBytes">,
-): Promise<boolean> {
+): Promise<void> {
   let created = false;
   try {
     await link(temporaryPath, finalPath);
     created = true;
     await chmodWhereSupported(finalPath, 0o600);
     await verifyManagedFile(finalPath, version);
-    return true;
   } catch (error) {
-    if (errorCode(error) !== "EEXIST") {
-      if (created) {
-        try {
-          const [published, staged] = await Promise.all([lstat(finalPath), lstat(temporaryPath)]);
-          if (
-            !published.isSymbolicLink() &&
-            published.isFile() &&
-            published.dev === staged.dev &&
-            published.ino === staged.ino
-          ) {
-            await rm(finalPath);
-          }
-        } catch {
-          // Preserve a path that disappeared or changed concurrently.
-        }
-      }
-      throw error;
-    }
-    try {
-      await verifyManagedFile(finalPath, version);
-    } catch {
+    if (errorCode(error) === "EEXIST") {
       throw new StorageConflictError(
-        "Managed candidate knowledge source version target already contains different content.",
+        "Managed candidate knowledge source version target already exists and is not owned by this operation.",
       );
     }
-    return false;
+    if (created) await removeRegularFileIfIdentityMatches(finalPath, temporaryIdentity);
+    throw error;
   }
 }
 
@@ -527,7 +547,7 @@ interface MutableManagedCandidateKnowledgeFileInventory {
 }
 
 const intakeShapedFilename =
-  /^\.intake-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+  /^\.intake-(?:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|[0-9a-f]{64})$/;
 
 async function scanManagedCandidateKnowledgeDirectory(
   path: string,
@@ -731,58 +751,33 @@ function managedVersionMetadata(
   };
 }
 
-async function removeUncommittedManagedFile(
-  storage: SqliteStorage,
-  knowledgeBaseId: string,
-  sourceId: string,
-  versionId: string,
-  path: string,
-  temporaryPath: string,
-  createdFile: boolean,
+async function cleanUncommittedManagedWrite(
+  captured: CapturedManagedFile,
+  finalPath: string | undefined,
+  published: boolean,
   createdDirectory: boolean,
-): Promise<void> {
-  if (!createdFile) {
-    if (createdDirectory) {
-      try {
-        await rmdir(dirname(path));
-      } catch {
-        // Preserve a directory that is no longer empty or was changed concurrently.
-      }
-    }
-    return;
+): Promise<boolean> {
+  let complete = true;
+  if (
+    published &&
+    finalPath !== undefined &&
+    !(await removeRegularFileIfIdentityMatches(finalPath, captured.temporaryIdentity))
+  ) {
+    complete = false;
   }
-  let managed: boolean;
-  try {
-    managed = await storage.isCandidateKnowledgeSourceVersionManaged(
-      knowledgeBaseId,
-      sourceId,
-      versionId,
-    );
-  } catch {
-    return;
+  if (
+    !(await removeRegularFileIfIdentityMatches(captured.temporaryPath, captured.temporaryIdentity))
+  ) {
+    complete = false;
   }
-  if (managed) return;
-  try {
-    const [published, staged] = await Promise.all([lstat(path), lstat(temporaryPath)]);
-    if (
-      published.isSymbolicLink() ||
-      !published.isFile() ||
-      published.dev !== staged.dev ||
-      published.ino !== staged.ino
-    ) {
-      return;
-    }
-    await rm(path);
-  } catch {
-    return;
-  }
-  if (createdDirectory) {
+  if (createdDirectory && finalPath !== undefined) {
     try {
-      await rmdir(dirname(path));
-    } catch {
-      // Preserve a directory that is no longer empty or was changed concurrently.
+      await rmdir(dirname(finalPath));
+    } catch (error) {
+      if (errorCode(error) !== "ENOTEMPTY" && !isMissing(error)) complete = false;
     }
   }
+  return complete;
 }
 
 async function writeManagedCandidateKnowledgeFile(
@@ -815,71 +810,161 @@ async function writeManagedCandidateKnowledgeFile(
     );
   }
   const requestedVersion = managedVersionMetadata(operation.version);
-  const captured = await captureManagedFile(root, operation.version);
-  const integrity = {
-    checksum: captured.checksum,
-    sizeBytes: captured.sizeBytes,
-  };
+  const operationId = randomUUID();
+  await storage.prepareManagedCandidateKnowledgeWrite({
+    operationId,
+    knowledgeBaseId,
+    sourceId,
+    requestedVersionId: requestedVersion.id,
+    kind: operation.kind,
+    createdAt: requestedVersion.createdAt,
+  });
+  let captured: CapturedManagedFile | undefined;
+  let sourceDirectoryCreated = false;
+  let targetPath: string | undefined;
+  let targetVersionId = requestedVersion.id;
+  let targeted = false;
+  let published = false;
+  let committed = false;
+  let noopCandidate = false;
   try {
-    let targetVersionId = requestedVersion.id;
+    captured = await captureManagedFile(root, operation.version, operationId);
+    const integrity = {
+      checksum: captured.checksum,
+      sizeBytes: captured.sizeBytes,
+    };
+    let publicationRequired = true;
     if (operation.kind === "append") {
       const versions = await storage.listCandidateKnowledgeSourceVersions(
         knowledgeBaseId,
         sourceId,
       );
       const current = versions.at(-1);
-      if (current?.checksum === captured.checksum) targetVersionId = current.id;
+      if (current?.checksum === captured.checksum) {
+        targetVersionId = current.id;
+        if (
+          current.mediaType !== requestedVersion.mediaType ||
+          current.sizeBytes !== captured.sizeBytes
+        ) {
+          throw new StorageConflictError(
+            "Candidate knowledge source version checksum conflicts with its integrity metadata.",
+          );
+        }
+        if (
+          await storage.isCandidateKnowledgeSourceVersionManaged(
+            knowledgeBaseId,
+            sourceId,
+            current.id,
+          )
+        ) {
+          targetPath = managedVersionPath(root, sourceId, current.id);
+          await verifyManagedFile(targetPath, current);
+          publicationRequired = false;
+          noopCandidate = true;
+        }
+      }
     }
 
-    const sourceDirectory = await ensureManagedSourceDirectory(root, sourceId);
-    const targetPath = managedVersionPath(root, sourceId, targetVersionId);
-    let createdTarget = false;
-    try {
-      createdTarget = await publishManagedFile(captured.temporaryPath, targetPath, integrity);
+    if (noopCandidate) {
       await operation.version.beforeDatabaseWrite?.();
-      const result =
-        operation.kind === "create"
-          ? await storage.createManagedCandidateKnowledgeSource(
-              { ...operation.source, id: sourceId, knowledgeBaseId },
-              requestedVersion,
-            )
-          : await storage.appendManagedCandidateKnowledgeSourceVersion(
-              knowledgeBaseId,
-              sourceId,
-              requestedVersion,
-            );
-
-      const committedPath = managedVersionPath(root, sourceId, result.version.id);
-      if (committedPath !== targetPath) {
-        await publishManagedFile(captured.temporaryPath, committedPath, result.version);
-        await removeUncommittedManagedFile(
-          storage,
-          knowledgeBaseId,
-          sourceId,
-          targetVersionId,
-          targetPath,
+      await operation.version.beforeStagingCleanup?.();
+      if (
+        !(await removeRegularFileIfIdentityMatches(
           captured.temporaryPath,
-          createdTarget,
-          sourceDirectory.created,
+          captured.temporaryIdentity,
+        ))
+      ) {
+        throw new StorageValidationError(
+          "Managed candidate knowledge source staging cleanup could not be verified.",
         );
       }
-      await verifyManagedFile(committedPath, result.version);
-      return result;
-    } catch (error) {
-      await removeUncommittedManagedFile(
-        storage,
-        knowledgeBaseId,
-        sourceId,
-        targetVersionId,
-        targetPath,
-        captured.temporaryPath,
-        createdTarget,
-        sourceDirectory.created,
-      );
-      throw error;
+      await operation.version.beforeCommittedFileRecheck?.();
+      await verifyManagedFile(targetPath as string, integrity);
+      return storage.recordManagedCandidateKnowledgeWriteNoop(operationId, requestedVersion);
     }
-  } finally {
-    await rm(captured.temporaryPath, { force: true });
+
+    if (publicationRequired) {
+      targetPath = managedVersionPath(root, sourceId, targetVersionId);
+      await storage.recordManagedCandidateKnowledgeWriteEvent(
+        operationId,
+        "targeted",
+        targetVersionId,
+        requestedVersion.createdAt,
+      );
+      targeted = true;
+      const sourceDirectory = await ensureManagedSourceDirectory(root, sourceId);
+      sourceDirectoryCreated = sourceDirectory.created;
+      await publishManagedFile(
+        captured.temporaryPath,
+        captured.temporaryIdentity,
+        targetPath,
+        integrity,
+      );
+      published = true;
+      await operation.version.afterTargetPublication?.();
+      await storage.recordManagedCandidateKnowledgeWriteEvent(
+        operationId,
+        "published",
+        targetVersionId,
+        requestedVersion.createdAt,
+      );
+    }
+
+    await operation.version.beforeDatabaseWrite?.();
+    const result = await storage.commitManagedCandidateKnowledgeWrite(
+      operation.kind === "create"
+        ? {
+            kind: "create",
+            operationId,
+            source: { ...operation.source, id: sourceId, knowledgeBaseId },
+            version: requestedVersion,
+          }
+        : { kind: "append", operationId, version: requestedVersion },
+    );
+    committed = true;
+    const committedPath = managedVersionPath(root, sourceId, result.version.id);
+    await operation.version.beforeCommittedFileRecheck?.();
+    await verifyManagedFile(committedPath, result.version);
+    await operation.version.beforeStagingCleanup?.();
+    if (
+      !(await removeRegularFileIfIdentityMatches(
+        captured.temporaryPath,
+        captured.temporaryIdentity,
+      ))
+    ) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source staging cleanup could not be verified.",
+      );
+    }
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      operationId,
+      "completed",
+      result.version.id,
+      requestedVersion.createdAt,
+    );
+    return result;
+  } catch (error) {
+    if (!committed && captured !== undefined) {
+      const cleaned = await cleanUncommittedManagedWrite(
+        captured,
+        targetPath,
+        published,
+        sourceDirectoryCreated,
+      );
+      if (cleaned && targeted && !noopCandidate) {
+        try {
+          await storage.recordManagedCandidateKnowledgeWriteEvent(
+            operationId,
+            "aborted",
+            targetVersionId,
+            requestedVersion.createdAt,
+          );
+        } catch {
+          // The durable prepared/published journal remains safely inspectable.
+        }
+      }
+    }
+    throw error;
   }
 }
 

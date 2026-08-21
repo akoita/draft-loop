@@ -26,8 +26,9 @@ local file into the store, bind those immutable bytes to a stable CKB-scoped
 source version, and expose storage's existing managed-version append through an
 explicit application operation. A further application query provides bounded,
 count-only structural inventory of the managed `sources/` namespace. These
-operations do not connect CKB selection or retrieval to an application
-workflow.
+operations now have prospective managed-write provenance in an internal
+append-only journal. They do not connect CKB selection or retrieval to an
+application workflow.
 
 ## Decision
 
@@ -106,11 +107,36 @@ fail normal validation; this query is not a repair mode.
 The inventory is groundwork for later reconciliation, not ownership proof or
 cleanup authority. In particular, “staging-shaped” and “opaque” are structural
 categories only; entries in either category remain unknown and must not be
-deleted, adopted, quarantined, or repaired. Safe cleanup requires a future
-durable ownership journal, coordination with managed-file writers, and explicit
-user approval. Entries absent from that future journal remain unknown. The
-query is local application state inspection, not provider-facing data or
+deleted, adopted, quarantined, or repaired. The prospective journal described
+below supplies provenance evidence for new writes only; safe cleanup also
+requires coordination with managed-file writers and explicit user approval.
+Entries absent from prospective journal proof remain unknown. The query is
+local application state inspection, not provider-facing data or
 content-diagnostic automation.
+
+Storage migration version 7 adds a prospective, internal, append-only
+managed-write ownership journal. Every new managed create or append records an
+opaque intent before staging begins. A monotonic event records the resolved
+target before publication, followed by publication and the atomic managed-marker
+and database commit; completion is recorded only after staging cleanup succeeds.
+New staging names are opaque hashes derived from the
+operation rather than source metadata or user filenames.
+
+The journal contains no origin path, filename, label, checksum, source content,
+provider data, diagnostic projection, cleanup token, or approval. Journal
+identifiers remain internal and are not returned by application operations or
+the count-only inventory. Migration does not infer or backfill ownership for
+legacy version-6 writes. Any entry without prospective journal proof remains
+unknown, even when its bytes or shape resemble a managed or staging object.
+
+Journal evidence is provenance for a future cleanup policy, not cleanup
+authority. This slice does not delete, adopt, quarantine, repair, reconcile, or
+automatically scan entries; coordinate writers with a lock or lease; expose an
+approval UI; or authorize cleanup. Safe future cleanup still requires writer
+coordination and explicit visible approval. Same-current-byte managed appends
+record a terminal, non-owning no-op. An existing metadata-only version may be explicitly
+materialized under the normal managed-copy checks, but a pre-existing unowned
+target is never adopted merely because its bytes or shape match expectations.
 
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
@@ -149,8 +175,8 @@ This decision deliberately leaves the following work unintegrated:
 - CLI and desktop creation, opening, selection, and lifecycle controls;
 - source and store deletion semantics, including raw bytes, derived data, and
   retained run references;
-- repair of missing or corrupt referenced blobs, durable ownership journaling,
-  writer locks or leases, cleanup, and reconciliation of unknown entries; and
+- repair of missing or corrupt referenced blobs, writer locks or leases,
+  cleanup approval, and reconciliation of unknown entries; and
 - complete portable export, backup, restore, conflict handling, and migration
   rollback.
 
@@ -189,6 +215,8 @@ a portable-store record must not make a workspace run read from it implicitly.
   identity. It does not yet improve application retrieval or monitor origins.
 - The application can explicitly inspect bounded structural counts without
   disclosing entry identifiers or turning unknown entries into owned residue.
+- Prospective v7 journal events provide internal provenance evidence for new
+  managed writes without claiming legacy or otherwise unjournaled entries.
 - Deleting an application workspace does not delete a separate CKB store, and
   deleting the original host file does not delete its managed CKB copy. Deleting
   a future CKB store must not silently claim to delete workspace run history,
@@ -201,9 +229,9 @@ a portable-store record must not make a workspace run read from it implicitly.
 
 ## Follow-up
 
-- Define a durable ownership journal and managed-writer coordination before an
-  explicitly approved reconciliation can distinguish journaled residue from
-  unrelated or otherwise unknown entries.
+- Define managed-writer coordination and an explicit visible approval policy
+  before future reconciliation can act on prospective journal evidence;
+  unjournaled entries remain unknown.
 - Define explicit application-to-CKB selection and fail-closed retrieval
   isolation.
 - Define deletion coverage for raw, normalized, indexed, cached, historical,

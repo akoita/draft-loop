@@ -106,6 +106,39 @@ export interface ManagedCandidateKnowledgeSourceVersionRecord
   readonly kind: CandidateKnowledgeSourceKind;
 }
 
+export type ManagedCandidateKnowledgeWriteKind = "create" | "append";
+export type ManagedCandidateKnowledgeWriteEventState =
+  | "targeted"
+  | "published"
+  | "committed"
+  | "completed"
+  | "aborted"
+  | "noop";
+
+export interface ManagedCandidateKnowledgeWriteOperationInput {
+  readonly operationId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly requestedVersionId: string;
+  readonly kind: ManagedCandidateKnowledgeWriteKind;
+  readonly createdAt: string;
+}
+
+type ManagedCandidateKnowledgeWriteOperationRecord = ManagedCandidateKnowledgeWriteOperationInput;
+
+export type ManagedCandidateKnowledgeWriteCommitInput =
+  | {
+      readonly kind: "create";
+      readonly operationId: string;
+      readonly source: CandidateKnowledgeSourceInput;
+      readonly version: CandidateKnowledgeSourceVersionInput;
+    }
+  | {
+      readonly kind: "append";
+      readonly operationId: string;
+      readonly version: CandidateKnowledgeSourceVersionInput;
+    };
+
 export interface CandidateKnowledgeBaseStoragePort {
   readonly ensureDefaultCandidateKnowledgeBase: (
     input: Omit<CandidateKnowledgeBaseInput, "isDefault">,
@@ -526,7 +559,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 6 as const;
+export const storageSchemaVersion = 7 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -979,6 +1012,153 @@ const migrationSix: Migration = {
   `.trim(),
 };
 
+const migrationSeven: Migration = {
+  version: 7,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_managed_write_operations (
+      operation_id TEXT PRIMARY KEY NOT NULL,
+      candidate_knowledge_base_id TEXT NOT NULL REFERENCES candidate_knowledge_bases(id),
+      source_id TEXT NOT NULL,
+      requested_version_id TEXT NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('create', 'append')),
+      created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_managed_write_events (
+      operation_id TEXT NOT NULL
+        REFERENCES candidate_knowledge_managed_write_operations(operation_id),
+      sequence INTEGER NOT NULL CHECK (sequence >= 1),
+      state TEXT NOT NULL CHECK (
+        state IN ('targeted', 'published', 'committed', 'completed', 'aborted', 'noop')
+      ),
+      target_version_id TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (operation_id, sequence)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_operations_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_managed_write_operations
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write operations are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_operations_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_managed_write_operations
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write operations are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_managed_write_events
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write events are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_managed_write_events
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write events are immutable'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_contiguous_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_events
+      WHEN NEW.sequence <> COALESCE((
+        SELECT MAX(sequence) + 1
+        FROM candidate_knowledge_managed_write_events
+        WHERE operation_id = NEW.operation_id
+      ), 1)
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write event sequence is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_target_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_events
+      WHEN (
+        EXISTS (
+          SELECT 1 FROM candidate_knowledge_managed_write_events
+          WHERE operation_id = NEW.operation_id AND target_version_id <> NEW.target_version_id
+        ) OR NOT EXISTS (
+          SELECT 1
+          FROM candidate_knowledge_managed_write_operations AS operation
+          WHERE operation.operation_id = NEW.operation_id
+            AND (
+              operation.requested_version_id = NEW.target_version_id OR
+              (
+                operation.kind = 'append' AND EXISTS (
+                  SELECT 1 FROM candidate_knowledge_source_versions AS version
+                  WHERE version.id = NEW.target_version_id
+                    AND version.source_id = operation.source_id
+                )
+              )
+            )
+        )
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write event target is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_timestamp_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_events
+      WHEN julianday(NEW.created_at) IS NULL OR EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_managed_write_operations AS operation
+        WHERE operation.operation_id = NEW.operation_id
+          AND julianday(NEW.created_at) < julianday(operation.created_at)
+      ) OR EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_managed_write_events AS event
+        WHERE event.operation_id = NEW.operation_id
+          AND julianday(NEW.created_at) < julianday(event.created_at)
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write event timestamp is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_transition_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_events
+      WHEN NOT (
+        (NEW.sequence = 1 AND NEW.state IN ('targeted', 'noop')) OR
+        (
+          NEW.sequence > 1 AND EXISTS (
+            SELECT 1
+            FROM candidate_knowledge_managed_write_events AS previous
+            WHERE previous.operation_id = NEW.operation_id
+              AND previous.sequence = NEW.sequence - 1
+              AND (
+                (previous.state = 'targeted' AND NEW.state IN ('published', 'aborted')) OR
+                (previous.state = 'published' AND NEW.state IN ('committed', 'aborted')) OR
+                (previous.state = 'committed' AND NEW.state = 'completed')
+              )
+          )
+        )
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write event transition is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_commit_target_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_events
+      WHEN NEW.state IN ('committed', 'completed') AND NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_managed_write_operations AS operation
+        JOIN candidate_knowledge_sources AS source
+          ON source.id = operation.source_id
+         AND source.candidate_knowledge_base_id = operation.candidate_knowledge_base_id
+        JOIN candidate_knowledge_source_versions AS version
+          ON version.id = NEW.target_version_id
+         AND version.source_id = source.id
+        JOIN candidate_knowledge_managed_source_versions AS managed
+          ON managed.version_id = version.id
+        WHERE operation.operation_id = NEW.operation_id
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write commit target is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_noop_target_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_events
+      WHEN NEW.state = 'noop' AND NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_managed_write_operations AS operation
+        JOIN candidate_knowledge_sources AS source
+          ON source.id = operation.source_id
+         AND source.candidate_knowledge_base_id = operation.candidate_knowledge_base_id
+        JOIN candidate_knowledge_source_versions AS version
+          ON version.id = NEW.target_version_id
+         AND version.source_id = source.id
+        JOIN candidate_knowledge_managed_source_versions AS managed
+          ON managed.version_id = version.id
+        WHERE operation.operation_id = NEW.operation_id
+          AND operation.kind = 'append'
+          AND version.version = (
+            SELECT MAX(current.version)
+            FROM candidate_knowledge_source_versions AS current
+            WHERE current.source_id = source.id
+          )
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write noop target is invalid'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -986,6 +1166,7 @@ const migrations: readonly Migration[] = [
   migrationFour,
   migrationFive,
   migrationSix,
+  migrationSeven,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -1498,63 +1679,134 @@ export class SqliteStorage
     return result as CandidateKnowledgeSourceVersionWriteResult;
   }
 
-  public async createManagedCandidateKnowledgeSource(
-    sourceInput: CandidateKnowledgeSourceInput,
-    initialVersionInput: CandidateKnowledgeSourceVersionInput,
-  ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
+  public async prepareManagedCandidateKnowledgeWrite(
+    input: ManagedCandidateKnowledgeWriteOperationInput,
+  ): Promise<void> {
     this.ensureOpen();
-    const source = normalizeCandidateKnowledgeSourceInput(sourceInput);
-    const initialVersion = normalizeCandidateKnowledgeSourceVersionInput(initialVersionInput);
-    if (source.kind !== "file") {
+    const operationId = requireNonEmpty(
+      input.operationId,
+      "managed candidate knowledge write operation id",
+    ).trim();
+    const knowledgeBaseId = requireNonEmpty(
+      input.knowledgeBaseId,
+      "managed candidate knowledge write candidate knowledge base id",
+    ).trim();
+    const sourceId = requireNonEmpty(
+      input.sourceId,
+      "managed candidate knowledge write source id",
+    ).trim();
+    const requestedVersionId = requireNonEmpty(
+      input.requestedVersionId,
+      "managed candidate knowledge write requested version id",
+    ).trim();
+    if (input.kind !== "create" && input.kind !== "append") {
       throw new StorageValidationError(
-        "managed candidate knowledge source versions require a file source",
+        `Unsupported managed candidate knowledge write kind: ${input.kind}`,
       );
     }
-    if (Date.parse(initialVersion.createdAt) < Date.parse(source.createdAt)) {
-      throw new StorageValidationError(
-        "candidate knowledge source version createdAt must not precede its source createdAt",
-      );
-    }
-    const version: CandidateKnowledgeSourceVersionRecord = {
-      ...initialVersion,
-      sourceId: source.id,
-      version: 1,
-      parentVersionId: null,
-    };
+    const createdAt = requireTimestamp(
+      input.createdAt,
+      "managed candidate knowledge write createdAt",
+    );
     this.database.transaction(() => {
-      this.requireActiveCandidateKnowledgeBase(source.knowledgeBaseId);
-      if (
-        this.database
-          .prepare("SELECT id FROM candidate_knowledge_sources WHERE id = ?")
-          .get(source.id) !== undefined
-      ) {
-        throw new StorageConflictError(`candidate knowledge source ${source.id} already exists`);
+      this.requireActiveCandidateKnowledgeBase(knowledgeBaseId);
+      const existingOperation = this.database
+        .prepare(
+          "SELECT operation_id FROM candidate_knowledge_managed_write_operations WHERE operation_id = ?",
+        )
+        .get(operationId);
+      if (existingOperation !== undefined) {
+        throw new StorageConflictError(
+          `managed candidate knowledge write operation ${operationId} already exists`,
+        );
       }
-      this.insertCandidateKnowledgeSource(source);
-      this.insertCandidateKnowledgeSourceVersion(version);
-      this.insertManagedCandidateKnowledgeSourceVersion(version.id);
+      const existingSource = this.database
+        .prepare(
+          "SELECT id, candidate_knowledge_base_id, kind, display_name, created_at FROM candidate_knowledge_sources WHERE id = ?",
+        )
+        .get(sourceId);
+      if (input.kind === "create") {
+        if (existingSource !== undefined) {
+          throw new StorageConflictError(`candidate knowledge source ${sourceId} already exists`);
+        }
+      } else {
+        const source = this.requireCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+        if (source.kind !== "file") {
+          throw new StorageValidationError(
+            "managed candidate knowledge source versions require a file source",
+          );
+        }
+      }
+      this.database
+        .prepare(
+          "INSERT INTO candidate_knowledge_managed_write_operations (operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .run(operationId, knowledgeBaseId, sourceId, requestedVersionId, input.kind, createdAt);
     })();
-    return { source, version, created: true };
   }
 
-  public async appendManagedCandidateKnowledgeSourceVersion(
-    knowledgeBaseId: string,
-    sourceId: string,
+  public async recordManagedCandidateKnowledgeWriteEvent(
+    operationIdInput: string,
+    state: Exclude<ManagedCandidateKnowledgeWriteEventState, "committed" | "noop">,
+    targetVersionIdInput: string,
+    createdAtInput: string,
+  ): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireNonEmpty(
+      operationIdInput,
+      "managed candidate knowledge write operation id",
+    ).trim();
+    const targetVersionId = requireNonEmpty(
+      targetVersionIdInput,
+      "managed candidate knowledge write target version id",
+    ).trim();
+    if (
+      state !== "targeted" &&
+      state !== "published" &&
+      state !== "completed" &&
+      state !== "aborted"
+    ) {
+      throw new StorageValidationError(
+        `Unsupported managed candidate knowledge write event state: ${state}`,
+      );
+    }
+    const createdAt = requireTimestamp(
+      createdAtInput,
+      "managed candidate knowledge write event createdAt",
+    );
+    this.database.transaction(() => {
+      this.insertManagedCandidateKnowledgeWriteEvent(
+        operationId,
+        state,
+        targetVersionId,
+        createdAt,
+      );
+    })();
+  }
+
+  public async recordManagedCandidateKnowledgeWriteNoop(
+    operationIdInput: string,
     versionInput: CandidateKnowledgeSourceVersionInput,
   ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
     this.ensureOpen();
-    const normalizedKnowledgeBaseId = requireNonEmpty(
-      knowledgeBaseId,
-      "candidate knowledge base id",
+    const operationId = requireNonEmpty(
+      operationIdInput,
+      "managed candidate knowledge write operation id",
     ).trim();
-    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
-    const normalizedVersion = normalizeCandidateKnowledgeSourceVersionInput(versionInput);
+    const requestedVersion = normalizeCandidateKnowledgeSourceVersionInput(versionInput);
     let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
     this.database.transaction(() => {
-      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      if (operation.kind !== "append" || requestedVersion.id !== operation.requestedVersionId) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write noop does not match its intent",
+        );
+      }
+      this.requireManagedCandidateKnowledgeWriteState(operationId, undefined, undefined);
+      this.requireActiveCandidateKnowledgeBase(operation.knowledgeBaseId);
       const source = this.requireCandidateKnowledgeSource(
-        normalizedKnowledgeBaseId,
-        normalizedSourceId,
+        operation.knowledgeBaseId,
+        operation.sourceId,
       );
       if (source.kind !== "file") {
         throw new StorageValidationError(
@@ -1565,41 +1817,184 @@ export class SqliteStorage
         .prepare(
           "SELECT id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC LIMIT 1",
         )
-        .get(normalizedSourceId);
+        .get(operation.sourceId);
       if (currentRow === undefined) {
         throw new StorageValidationError(
-          `candidate knowledge source ${normalizedSourceId} has no versions`,
+          `candidate knowledge source ${operation.sourceId} has no versions`,
         );
       }
       const current = candidateKnowledgeSourceVersionFromRow(currentRow);
-      if (Date.parse(normalizedVersion.createdAt) < Date.parse(current.createdAt)) {
+      if (
+        current.checksum !== requestedVersion.checksum ||
+        current.mediaType !== requestedVersion.mediaType ||
+        current.sizeBytes !== requestedVersion.sizeBytes ||
+        !this.hasManagedCandidateKnowledgeSourceVersion(current.id)
+      ) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write noop no longer matches the current managed version",
+        );
+      }
+      if (Date.parse(requestedVersion.createdAt) < Date.parse(current.createdAt)) {
         throw new StorageValidationError(
           "candidate knowledge source version createdAt must not precede the current version createdAt",
         );
       }
-      if (current.checksum === normalizedVersion.checksum) {
+      this.insertManagedCandidateKnowledgeWriteEvent(
+        operationId,
+        "noop",
+        current.id,
+        requestedVersion.createdAt,
+      );
+      result = { source, version: current, created: false };
+    })();
+    return result as CandidateKnowledgeSourceVersionWriteResult;
+  }
+
+  public async commitManagedCandidateKnowledgeWrite(
+    input: ManagedCandidateKnowledgeWriteCommitInput,
+  ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
+    this.ensureOpen();
+    const operationId = requireNonEmpty(
+      input.operationId,
+      "managed candidate knowledge write operation id",
+    ).trim();
+    const requestedVersion = normalizeCandidateKnowledgeSourceVersionInput(input.version);
+    let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
+    this.database.transaction(() => {
+      const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      if (operation.kind !== input.kind) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write operation kind does not match its commit",
+        );
+      }
+      if (requestedVersion.id !== operation.requestedVersionId) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write requested version does not match its intent",
+        );
+      }
+      this.requireActiveCandidateKnowledgeBase(operation.knowledgeBaseId);
+
+      if (input.kind === "create") {
+        const source = normalizeCandidateKnowledgeSourceInput(input.source);
         if (
-          current.mediaType !== normalizedVersion.mediaType ||
-          current.sizeBytes !== normalizedVersion.sizeBytes
+          source.id !== operation.sourceId ||
+          source.knowledgeBaseId !== operation.knowledgeBaseId
+        ) {
+          throw new StorageConflictError(
+            "managed candidate knowledge write source does not match its intent",
+          );
+        }
+        if (source.kind !== "file") {
+          throw new StorageValidationError(
+            "managed candidate knowledge source versions require a file source",
+          );
+        }
+        if (Date.parse(requestedVersion.createdAt) < Date.parse(source.createdAt)) {
+          throw new StorageValidationError(
+            "candidate knowledge source version createdAt must not precede its source createdAt",
+          );
+        }
+        if (
+          this.database
+            .prepare("SELECT id FROM candidate_knowledge_sources WHERE id = ?")
+            .get(source.id) !== undefined
+        ) {
+          throw new StorageConflictError(`candidate knowledge source ${source.id} already exists`);
+        }
+        this.requireManagedCandidateKnowledgeWriteState(
+          operationId,
+          "published",
+          requestedVersion.id,
+        );
+        const version: CandidateKnowledgeSourceVersionRecord = {
+          ...requestedVersion,
+          sourceId: source.id,
+          version: 1,
+          parentVersionId: null,
+        };
+        this.insertCandidateKnowledgeSource(source);
+        this.insertCandidateKnowledgeSourceVersion(version);
+        this.insertManagedCandidateKnowledgeSourceVersion(version.id);
+        this.insertManagedCandidateKnowledgeWriteEvent(
+          operationId,
+          "committed",
+          version.id,
+          requestedVersion.createdAt,
+        );
+        result = { source, version, created: true };
+        return;
+      }
+
+      const source = this.requireCandidateKnowledgeSource(
+        operation.knowledgeBaseId,
+        operation.sourceId,
+      );
+      if (source.kind !== "file") {
+        throw new StorageValidationError(
+          "managed candidate knowledge source versions require a file source",
+        );
+      }
+      const currentRow = this.database
+        .prepare(
+          "SELECT id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC LIMIT 1",
+        )
+        .get(operation.sourceId);
+      if (currentRow === undefined) {
+        throw new StorageValidationError(
+          `candidate knowledge source ${operation.sourceId} has no versions`,
+        );
+      }
+      const current = candidateKnowledgeSourceVersionFromRow(currentRow);
+      if (Date.parse(requestedVersion.createdAt) < Date.parse(current.createdAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge source version createdAt must not precede the current version createdAt",
+        );
+      }
+      if (current.checksum === requestedVersion.checksum) {
+        if (
+          current.mediaType !== requestedVersion.mediaType ||
+          current.sizeBytes !== requestedVersion.sizeBytes
         ) {
           throw new StorageConflictError(
             "candidate knowledge source version checksum conflicts with its integrity metadata",
           );
         }
-        if (!this.hasManagedCandidateKnowledgeSourceVersion(current.id)) {
-          this.insertManagedCandidateKnowledgeSourceVersion(current.id);
+        this.requireManagedCandidateKnowledgeWriteState(operationId, "published", current.id);
+        if (this.hasManagedCandidateKnowledgeSourceVersion(current.id)) {
+          throw new StorageConflictError(
+            "managed candidate knowledge write must use the non-owning noop path",
+          );
         }
+        this.insertManagedCandidateKnowledgeSourceVersion(current.id);
+        this.insertManagedCandidateKnowledgeWriteEvent(
+          operationId,
+          "committed",
+          current.id,
+          requestedVersion.createdAt,
+        );
         result = { source, version: current, created: false };
         return;
       }
+
+      this.requireManagedCandidateKnowledgeWriteState(
+        operationId,
+        "published",
+        requestedVersion.id,
+      );
       const version: CandidateKnowledgeSourceVersionRecord = {
-        ...normalizedVersion,
-        sourceId: normalizedSourceId,
+        ...requestedVersion,
+        sourceId: operation.sourceId,
         version: current.version + 1,
         parentVersionId: current.id,
       };
       this.insertCandidateKnowledgeSourceVersion(version);
       this.insertManagedCandidateKnowledgeSourceVersion(version.id);
+      this.insertManagedCandidateKnowledgeWriteEvent(
+        operationId,
+        "committed",
+        version.id,
+        requestedVersion.createdAt,
+      );
       result = { source, version, created: true };
     })();
     return result as CandidateKnowledgeSourceVersionWriteResult;
@@ -1773,6 +2168,167 @@ export class SqliteStorage
       throw new StorageValidationError(
         "Candidate knowledge store contains a managed version for a non-file source.",
       );
+    }
+    this.validateManagedCandidateKnowledgeWriteJournal();
+  }
+
+  private validateManagedCandidateKnowledgeWriteJournal(): void {
+    const operations = this.database
+      .prepare(
+        "SELECT operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at FROM candidate_knowledge_managed_write_operations ORDER BY operation_id",
+      )
+      .all();
+    const selectEvents = this.database.prepare(
+      "SELECT sequence, state, target_version_id, created_at FROM candidate_knowledge_managed_write_events WHERE operation_id = ? ORDER BY sequence",
+    );
+    const selectSource = this.database.prepare(
+      "SELECT candidate_knowledge_base_id, kind FROM candidate_knowledge_sources WHERE id = ?",
+    );
+    const selectTarget = this.database.prepare(
+      `SELECT source.candidate_knowledge_base_id, version.source_id, managed.version_id
+       FROM candidate_knowledge_source_versions AS version
+       JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+       LEFT JOIN candidate_knowledge_managed_source_versions AS managed
+         ON managed.version_id = version.id
+       WHERE version.id = ?`,
+    );
+    for (const row of operations) {
+      const operation = managedCandidateKnowledgeWriteOperationFromRow(row);
+      requireNonEmpty(operation.operationId, "managed candidate knowledge write operation id");
+      requireNonEmpty(
+        operation.knowledgeBaseId,
+        "managed candidate knowledge write candidate knowledge base id",
+      );
+      requireNonEmpty(operation.sourceId, "managed candidate knowledge write source id");
+      requireNonEmpty(
+        operation.requestedVersionId,
+        "managed candidate knowledge write requested version id",
+      );
+      if (operation.kind !== "create" && operation.kind !== "append") {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains an invalid managed write operation kind.",
+        );
+      }
+      const operationCreatedAt = requireTimestamp(
+        operation.createdAt,
+        `managed candidate knowledge write operation ${operation.operationId} createdAt`,
+      );
+      this.requireCandidateKnowledgeBase(operation.knowledgeBaseId);
+      const source = selectSource.get<{
+        readonly candidate_knowledge_base_id: string;
+        readonly kind: string;
+      }>(operation.sourceId);
+      if (
+        operation.kind === "append" &&
+        (source === undefined ||
+          source.candidate_knowledge_base_id !== operation.knowledgeBaseId ||
+          source.kind !== "file")
+      ) {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains an invalid managed append operation source.",
+        );
+      }
+      if (
+        source !== undefined &&
+        (source.candidate_knowledge_base_id !== operation.knowledgeBaseId || source.kind !== "file")
+      ) {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains an invalid managed write operation source.",
+        );
+      }
+
+      const events = selectEvents.all<{
+        readonly sequence: number;
+        readonly state: string;
+        readonly target_version_id: string;
+        readonly created_at: string;
+      }>(operation.operationId);
+      let previousState: ManagedCandidateKnowledgeWriteEventState | undefined;
+      let previousCreatedAt = operationCreatedAt;
+      let targetVersionId: string | undefined;
+      for (const [index, event] of events.entries()) {
+        if (event.sequence !== index + 1) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains a non-contiguous managed write journal.",
+          );
+        }
+        if (
+          event.state !== "targeted" &&
+          event.state !== "published" &&
+          event.state !== "committed" &&
+          event.state !== "completed" &&
+          event.state !== "aborted" &&
+          event.state !== "noop"
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains an invalid managed write event state.",
+          );
+        }
+        const transitionAllowed =
+          (previousState === undefined && (event.state === "targeted" || event.state === "noop")) ||
+          (previousState === "targeted" &&
+            (event.state === "published" || event.state === "aborted")) ||
+          (previousState === "published" &&
+            (event.state === "committed" || event.state === "aborted")) ||
+          (previousState === "committed" && event.state === "completed");
+        if (!transitionAllowed) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains an invalid managed write event transition.",
+          );
+        }
+        const createdAt = requireTimestamp(
+          event.created_at,
+          `managed candidate knowledge write event ${operation.operationId}:${event.sequence} createdAt`,
+        );
+        if (Date.parse(createdAt) < Date.parse(previousCreatedAt)) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains an invalid managed write timestamp order.",
+          );
+        }
+        if (targetVersionId === undefined) targetVersionId = event.target_version_id;
+        if (event.target_version_id !== targetVersionId) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains inconsistent managed write targets.",
+          );
+        }
+        const target = selectTarget.get<{
+          readonly candidate_knowledge_base_id: string;
+          readonly source_id: string;
+          readonly version_id: string | null;
+        }>(event.target_version_id);
+        const targetAllowed =
+          event.target_version_id === operation.requestedVersionId ||
+          (operation.kind === "append" && target?.source_id === operation.sourceId);
+        if (!targetAllowed) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains an invalid managed write target.",
+          );
+        }
+        if (
+          (event.state === "committed" || event.state === "completed") &&
+          (target?.candidate_knowledge_base_id !== operation.knowledgeBaseId ||
+            target.source_id !== operation.sourceId ||
+            target.version_id !== event.target_version_id)
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains an unresolved managed write commit.",
+          );
+        }
+        if (event.state === "noop") {
+          if (
+            operation.kind !== "append" ||
+            target?.candidate_knowledge_base_id !== operation.knowledgeBaseId ||
+            target.source_id !== operation.sourceId ||
+            target.version_id !== event.target_version_id
+          ) {
+            throw new StorageValidationError(
+              "Candidate knowledge store contains an invalid managed write noop.",
+            );
+          }
+        }
+        previousState = event.state;
+        previousCreatedAt = createdAt;
+      }
     }
   }
 
@@ -3093,6 +3649,70 @@ export class SqliteStorage
     return auditFromRow(row);
   }
 
+  private requireManagedCandidateKnowledgeWriteOperation(
+    operationId: string,
+  ): ManagedCandidateKnowledgeWriteOperationRecord {
+    const row = this.database
+      .prepare(
+        "SELECT operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at FROM candidate_knowledge_managed_write_operations WHERE operation_id = ?",
+      )
+      .get(operationId);
+    if (row === undefined) {
+      throw new StorageValidationError(
+        `managed candidate knowledge write operation ${operationId} was not found`,
+      );
+    }
+    return managedCandidateKnowledgeWriteOperationFromRow(row);
+  }
+
+  private requireManagedCandidateKnowledgeWriteState(
+    operationId: string,
+    expectedState: ManagedCandidateKnowledgeWriteEventState | undefined,
+    expectedTargetVersionId: string | undefined,
+  ): void {
+    const row = this.database
+      .prepare(
+        "SELECT state, target_version_id FROM candidate_knowledge_managed_write_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
+      )
+      .get<{ readonly state: string; readonly target_version_id: string }>(operationId);
+    if (expectedState === undefined) {
+      if (row !== undefined) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write operation is not in its prepared state",
+        );
+      }
+      return;
+    }
+    if (
+      row?.state !== expectedState ||
+      (expectedTargetVersionId !== undefined && row.target_version_id !== expectedTargetVersionId)
+    ) {
+      throw new StorageConflictError(
+        `managed candidate knowledge write operation is not ${expectedState}`,
+      );
+    }
+  }
+
+  private insertManagedCandidateKnowledgeWriteEvent(
+    operationId: string,
+    state: ManagedCandidateKnowledgeWriteEventState,
+    targetVersionId: string,
+    createdAt: string,
+  ): void {
+    this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+    const sequence =
+      (this.database
+        .prepare(
+          "SELECT MAX(sequence) AS sequence FROM candidate_knowledge_managed_write_events WHERE operation_id = ?",
+        )
+        .get<{ readonly sequence: number | null }>(operationId)?.sequence ?? 0) + 1;
+    this.database
+      .prepare(
+        "INSERT INTO candidate_knowledge_managed_write_events (operation_id, sequence, state, target_version_id, created_at) VALUES (?, ?, ?, ?, ?)",
+      )
+      .run(operationId, sequence, state, targetVersionId, createdAt);
+  }
+
   private insertCandidateKnowledgeBase(record: CandidateKnowledgeBaseRecord): void {
     this.database
       .prepare(
@@ -3301,6 +3921,19 @@ function candidateKnowledgeSourceFromRow(
     knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
     kind: rowString(row, "kind") as CandidateKnowledgeSourceKind,
     displayName: rowString(row, "display_name"),
+    createdAt: rowString(row, "created_at"),
+  };
+}
+
+function managedCandidateKnowledgeWriteOperationFromRow(
+  row: Record<string, unknown>,
+): ManagedCandidateKnowledgeWriteOperationRecord {
+  return {
+    operationId: rowString(row, "operation_id"),
+    knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
+    sourceId: rowString(row, "source_id"),
+    requestedVersionId: rowString(row, "requested_version_id"),
+    kind: rowString(row, "kind") as ManagedCandidateKnowledgeWriteKind,
     createdAt: rowString(row, "created_at"),
   };
 }

@@ -38,6 +38,10 @@ const execFileAsync = promisify(execFile);
 
 interface MutableSqliteDatabase {
   readonly exec: (sql: string) => void;
+  readonly prepare: (sql: string) => {
+    readonly get: (...parameters: readonly unknown[]) => Record<string, unknown> | undefined;
+    readonly all: (...parameters: readonly unknown[]) => readonly Record<string, unknown>[];
+  };
   readonly close: () => void;
 }
 
@@ -70,6 +74,19 @@ function mutateDatabase(root: string, sql: string): void {
   const database = new Database(join(root, ".draft-loop", "knowledge.sqlite"));
   try {
     database.exec(sql);
+  } finally {
+    database.close();
+  }
+}
+
+function queryDatabase(
+  root: string,
+  sql: string,
+  ...parameters: readonly unknown[]
+): readonly Record<string, unknown>[] {
+  const database = new Database(join(root, ".draft-loop", "knowledge.sqlite"));
+  try {
+    return database.prepare(sql).all(...parameters);
   } finally {
     database.close();
   }
@@ -304,14 +321,41 @@ describe("portable candidate knowledge store", () => {
         createdAt: "2026-08-21T14:03:00.000Z",
       },
     );
+    let observedDurableTargetBeforePublished = false;
     const materialized = await store.appendManagedCandidateKnowledgeFileVersion(
       "ckb-default",
       "legacy-file-source",
       managedVersion(inputPath, "second", {
         id: "ignored-materialized-version",
         createdAt: "2026-08-21T14:04:00.000Z",
+        afterTargetPublication: async () => {
+          expect(
+            queryDatabase(
+              root,
+              `SELECT event.state, event.target_version_id
+               FROM candidate_knowledge_managed_write_operations AS operation
+               JOIN candidate_knowledge_managed_write_events AS event
+                 ON event.operation_id = operation.operation_id
+               WHERE operation.requested_version_id = 'ignored-materialized-version'
+               ORDER BY event.sequence`,
+            ),
+          ).toEqual([{ state: "targeted", target_version_id: "legacy-version" }]);
+          await expect(
+            readFile(
+              join(
+                root,
+                "sources",
+                digestSegment("legacy-file-source"),
+                digestSegment("legacy-version"),
+              ),
+              "utf8",
+            ),
+          ).resolves.toBe("second");
+          observedDurableTargetBeforePublished = true;
+        },
       }),
     );
+    expect(observedDurableTargetBeforePublished).toBe(true);
     expect(materialized).toMatchObject({ created: false, version: { id: "legacy-version" } });
     await expect(
       store.getManagedCandidateKnowledgeFilePath(
@@ -322,10 +366,287 @@ describe("portable candidate knowledge store", () => {
     ).resolves.toBe(
       join(root, "sources", digestSegment("legacy-file-source"), digestSegment("legacy-version")),
     );
+    expect(
+      queryDatabase(
+        root,
+        `SELECT event.state, event.target_version_id
+         FROM candidate_knowledge_managed_write_operations AS operation
+         JOIN candidate_knowledge_managed_write_events AS event
+           ON event.operation_id = operation.operation_id
+         WHERE operation.requested_version_id = 'ignored-materialized-version'
+         ORDER BY event.sequence`,
+      ),
+    ).toEqual([
+      { state: "targeted", target_version_id: "legacy-version" },
+      { state: "published", target_version_id: "legacy-version" },
+      { state: "committed", target_version_id: "legacy-version" },
+      { state: "completed", target_version_id: "legacy-version" },
+    ]);
     await expect(
       store.listCandidateKnowledgeSourceVersions("ckb-default", "managed-source"),
     ).resolves.toEqual([first.version, second.version]);
     await store.close();
+  });
+
+  it("journals intent before staging and records create, changed append, and managed no-op sequences", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "private-candidate-name.md");
+    const sourceId = "opaque-source-id";
+    const firstContent = "private first content";
+    const secondContent = "private second content";
+    await writeFile(inputPath, firstContent, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    let observedIntent = false;
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: sourceId,
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Private source label",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, firstContent, {
+        id: "version-one",
+        beforeSourceRecheck: async () => {
+          const operations = queryDatabase(
+            root,
+            "SELECT operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at FROM candidate_knowledge_managed_write_operations",
+          );
+          expect(operations).toHaveLength(1);
+          expect(operations[0]).toMatchObject({
+            candidate_knowledge_base_id: "ckb-default",
+            source_id: sourceId,
+            requested_version_id: "version-one",
+            kind: "create",
+          });
+          expect(
+            queryDatabase(root, "SELECT state FROM candidate_knowledge_managed_write_events"),
+          ).toEqual([]);
+          expect(await readdir(join(root, "sources"))).toEqual([
+            expect.stringMatching(/^\.intake-[0-9a-f]{64}$/u),
+          ]);
+          const serialized = JSON.stringify(operations);
+          for (const secret of [
+            inputPath,
+            "private-candidate-name.md",
+            "Private source label",
+            sha256(firstContent),
+            firstContent,
+          ]) {
+            expect(serialized).not.toContain(secret);
+          }
+          observedIntent = true;
+        },
+      }),
+    );
+    expect(observedIntent).toBe(true);
+
+    await writeFile(inputPath, secondContent, "utf8");
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      sourceId,
+      managedVersion(inputPath, secondContent, {
+        id: "version-two",
+        createdAt: "2026-08-21T14:02:00.000Z",
+      }),
+    );
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      sourceId,
+      managedVersion(inputPath, secondContent, {
+        id: "unused-no-op-version",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    );
+
+    const events = queryDatabase(
+      root,
+      `SELECT operation.requested_version_id, event.sequence, event.state, event.target_version_id
+       FROM candidate_knowledge_managed_write_operations AS operation
+       JOIN candidate_knowledge_managed_write_events AS event
+         ON event.operation_id = operation.operation_id
+       ORDER BY operation.rowid, event.sequence`,
+    );
+    expect(events).toEqual([
+      {
+        requested_version_id: "version-one",
+        sequence: 1,
+        state: "targeted",
+        target_version_id: "version-one",
+      },
+      {
+        requested_version_id: "version-one",
+        sequence: 2,
+        state: "published",
+        target_version_id: "version-one",
+      },
+      {
+        requested_version_id: "version-one",
+        sequence: 3,
+        state: "committed",
+        target_version_id: "version-one",
+      },
+      {
+        requested_version_id: "version-one",
+        sequence: 4,
+        state: "completed",
+        target_version_id: "version-one",
+      },
+      {
+        requested_version_id: "version-two",
+        sequence: 1,
+        state: "targeted",
+        target_version_id: "version-two",
+      },
+      {
+        requested_version_id: "version-two",
+        sequence: 2,
+        state: "published",
+        target_version_id: "version-two",
+      },
+      {
+        requested_version_id: "version-two",
+        sequence: 3,
+        state: "committed",
+        target_version_id: "version-two",
+      },
+      {
+        requested_version_id: "version-two",
+        sequence: 4,
+        state: "completed",
+        target_version_id: "version-two",
+      },
+      {
+        requested_version_id: "unused-no-op-version",
+        sequence: 1,
+        state: "noop",
+        target_version_id: "version-two",
+      },
+    ]);
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", sourceId),
+    ).resolves.toHaveLength(2);
+    await store.close();
+  });
+
+  it("records a migrated v6 same-byte append as a non-owning noop", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "legacy-managed.md");
+    const content = "legacy managed bytes";
+    await writeFile(inputPath, content, "utf8");
+    const initial = await initializeCandidateKnowledgeStore(initialization(root));
+    const legacy = await initial.createCandidateKnowledgeSource(
+      {
+        id: "legacy-managed-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Legacy managed source",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      {
+        id: "legacy-managed-version",
+        mediaType: "text/markdown",
+        checksum: sha256(content),
+        sizeBytes: Buffer.byteLength(content),
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+    await initial.close();
+    const managedDirectory = join(root, "sources", digestSegment(legacy.source.id));
+    await mkdir(managedDirectory, { recursive: true, mode: 0o700 });
+    await writeFile(join(managedDirectory, digestSegment(legacy.version.id)), content, {
+      mode: 0o600,
+    });
+    mutateDatabase(
+      root,
+      `INSERT INTO candidate_knowledge_managed_source_versions(version_id)
+       VALUES ('legacy-managed-version');
+       DROP TABLE candidate_knowledge_managed_write_events;
+       DROP TABLE candidate_knowledge_managed_write_operations;
+       DELETE FROM schema_migrations WHERE version = 7`,
+    );
+
+    const migrated = await openCandidateKnowledgeStore(root);
+    const result = await migrated.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      legacy.source.id,
+      managedVersion(inputPath, content, {
+        id: "migrated-noop-request",
+        createdAt: "2026-08-21T14:02:00.000Z",
+      }),
+    );
+    expect(result).toEqual({ ...legacy, created: false });
+    expect(
+      queryDatabase(
+        root,
+        `SELECT operation.requested_version_id, event.state, event.target_version_id
+         FROM candidate_knowledge_managed_write_operations AS operation
+         JOIN candidate_knowledge_managed_write_events AS event
+           ON event.operation_id = operation.operation_id`,
+      ),
+    ).toEqual([
+      {
+        requested_version_id: "migrated-noop-request",
+        state: "noop",
+        target_version_id: "legacy-managed-version",
+      },
+    ]);
+    await migrated.close();
+  });
+
+  it("reopens after a historical noop is followed by a changed managed version", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    const sourceId = "historical-noop-source";
+    await writeFile(inputPath, "first version", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: sourceId,
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Historical noop source",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "first version", { id: "historical-version-one" }),
+    );
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      sourceId,
+      managedVersion(inputPath, "first version", {
+        id: "historical-noop-request",
+        createdAt: "2026-08-21T14:02:00.000Z",
+      }),
+    );
+    await writeFile(inputPath, "second version", "utf8");
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      sourceId,
+      managedVersion(inputPath, "second version", {
+        id: "historical-version-two",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    );
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.listCandidateKnowledgeSourceVersions("ckb-default", sourceId),
+    ).resolves.toHaveLength(2);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT event.state, event.target_version_id
+         FROM candidate_knowledge_managed_write_operations AS operation
+         JOIN candidate_knowledge_managed_write_events AS event
+           ON event.operation_id = operation.operation_id
+         WHERE operation.requested_version_id = 'historical-noop-request'`,
+      ),
+    ).toEqual([{ state: "noop", target_version_id: "historical-version-one" }]);
+    await reopened.close();
   });
 
   it("reports clean and managed inventories with verified marker counts", async () => {
@@ -403,10 +724,12 @@ describe("portable candidate knowledge store", () => {
     );
     const sourcesRoot = join(root, "sources");
     const intakeName = ".intake-12345678-1234-4123-8123-123456789abc";
+    const hashedIntakeName = `.intake-${"a".repeat(64)}`;
     const unknownName = "unknown-root-name.txt";
     const opaqueDirectoryName = "opaque-directory-name";
     const nestedUnknownName = "extra-nested-name.txt";
     await writeFile(join(sourcesRoot, intakeName), "staged bytes", "utf8");
+    await writeFile(join(sourcesRoot, hashedIntakeName), "hashed staged bytes", "utf8");
     await writeFile(join(sourcesRoot, unknownName), unknownContent, "utf8");
     await mkdir(join(sourcesRoot, opaqueDirectoryName));
     await writeFile(join(sourcesRoot, opaqueDirectoryName, "hidden-child.txt"), subtreeContent);
@@ -420,9 +743,9 @@ describe("portable candidate knowledge store", () => {
     expect(inventory).toEqual({
       schemaVersion: 1,
       verifiedManagedFileCount: 1,
-      scannedEntryCount: 6,
+      scannedEntryCount: 7,
       unknownEntries: {
-        intakeShapedFilesAtSourcesRoot: 1,
+        intakeShapedFilesAtSourcesRoot: 2,
         opaqueEntriesAtSourcesRoot: 2,
         entriesInsideManagedSourceDirectories: 1,
         symbolicLinks: 0,
@@ -432,6 +755,7 @@ describe("portable candidate knowledge store", () => {
       scanLimitReached: false,
     });
     expect(await readFile(join(sourcesRoot, intakeName), "utf8")).toBe("staged bytes");
+    expect(await readFile(join(sourcesRoot, hashedIntakeName), "utf8")).toBe("hashed staged bytes");
     expect(await readFile(join(sourcesRoot, unknownName), "utf8")).toBe(unknownContent);
     expect(await readFile(join(sourcesRoot, opaqueDirectoryName, "hidden-child.txt"), "utf8")).toBe(
       subtreeContent,
@@ -449,6 +773,7 @@ describe("portable candidate knowledge store", () => {
       sha256(managedContent),
       managedContent,
       intakeName,
+      hashedIntakeName,
       unknownName,
       opaqueDirectoryName,
       nestedUnknownName,
@@ -681,7 +1006,7 @@ describe("portable candidate knowledge store", () => {
     },
   );
 
-  it("publishes without replacement, adopts matching residue, and cleans ordinary failures", async () => {
+  it("publishes without replacement, rejects matching residue, and cleans ordinary failures", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
     const inputPath = join(parent, "candidate.md");
@@ -709,6 +1034,20 @@ describe("portable candidate knowledge store", () => {
     await expect(readFile(finalPath, "utf8")).resolves.toBe("different");
     await rm(finalPath);
     await writeFile(finalPath, content, { mode: 0o600 });
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: sourceId,
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Candidate notes",
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(inputPath, content, { id: versionId }),
+      ),
+    ).rejects.toBeInstanceOf(StorageConflictError);
+    await expect(readFile(finalPath, "utf8")).resolves.toBe(content);
+    await rm(finalPath);
     await expect(
       store.createManagedCandidateKnowledgeFileSource(
         {
@@ -748,7 +1087,317 @@ describe("portable candidate knowledge store", () => {
     expect((await readdir(join(root, "sources"))).some((name) => name.startsWith(".intake-"))).toBe(
       false,
     );
+    expect(
+      queryDatabase(
+        root,
+        `SELECT event.state
+         FROM candidate_knowledge_managed_write_operations AS operation
+         JOIN candidate_knowledge_managed_write_events AS event
+           ON event.operation_id = operation.operation_id
+         WHERE operation.requested_version_id = 'failing-version'
+         ORDER BY event.sequence`,
+      ),
+    ).toEqual([{ state: "targeted" }, { state: "published" }, { state: "aborted" }]);
+
+    const prePublishedInput = join(parent, "pre-published.md");
+    await writeFile(prePublishedInput, "pre-published fixture", "utf8");
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "pre-published-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Pre-published fixture",
+          createdAt: "2026-08-21T14:03:00.000Z",
+        },
+        managedVersion(prePublishedInput, "pre-published fixture", {
+          id: "pre-published-version",
+          createdAt: "2026-08-21T14:03:00.000Z",
+          afterTargetPublication: async () => {
+            expect(
+              queryDatabase(
+                root,
+                `SELECT event.state, event.target_version_id
+                 FROM candidate_knowledge_managed_write_operations AS operation
+                 JOIN candidate_knowledge_managed_write_events AS event
+                   ON event.operation_id = operation.operation_id
+                 WHERE operation.requested_version_id = 'pre-published-version'
+                 ORDER BY event.sequence`,
+              ),
+            ).toEqual([{ state: "targeted", target_version_id: "pre-published-version" }]);
+            throw new Error("simulated pre-published failure");
+          },
+        }),
+      ),
+    ).rejects.toThrow(/simulated pre-published failure/i);
+    await expect(
+      lstat(join(root, "sources", digestSegment("pre-published-source"))),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    expect(
+      queryDatabase(
+        root,
+        `SELECT event.state
+         FROM candidate_knowledge_managed_write_operations AS operation
+         JOIN candidate_knowledge_managed_write_events AS event
+           ON event.operation_id = operation.operation_id
+         WHERE operation.requested_version_id = 'pre-published-version'
+         ORDER BY event.sequence`,
+      ),
+    ).toEqual([{ state: "targeted" }, { state: "aborted" }]);
     await store.close();
+  });
+
+  it("leaves safely inspectable prepared intent and no residue after capture fails before publication", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    await writeFile(inputPath, "before", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "capture-failure-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Capture failure",
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(inputPath, "before", {
+          id: "capture-failure-version",
+          beforeSourceRecheck: async () => {
+            await writeFile(inputPath, "changed during capture", "utf8");
+          },
+        }),
+      ),
+    ).rejects.toThrow(/changed while it was being copied/i);
+
+    expect(await readdir(join(root, "sources"))).toEqual([]);
+    expect(
+      queryDatabase(
+        root,
+        "SELECT kind, source_id, requested_version_id FROM candidate_knowledge_managed_write_operations",
+      ),
+    ).toEqual([
+      {
+        kind: "create",
+        source_id: "capture-failure-source",
+        requested_version_id: "capture-failure-version",
+      },
+    ]);
+    expect(
+      queryDatabase(root, "SELECT state FROM candidate_knowledge_managed_write_events"),
+    ).toEqual([]);
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await reopened.close();
+  });
+
+  it("keeps committed bytes and staging evidence after a post-commit cleanup failure", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    const content = "committed candidate evidence";
+    await writeFile(inputPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "post-commit-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Post-commit source",
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(inputPath, content, {
+          id: "post-commit-version",
+          beforeStagingCleanup: async () => {
+            throw new Error("simulated staging cleanup failure");
+          },
+        }),
+      ),
+    ).rejects.toThrow(/simulated staging cleanup failure/i);
+
+    const committedPath = await store.getManagedCandidateKnowledgeFilePath(
+      "ckb-default",
+      "post-commit-source",
+      "post-commit-version",
+    );
+    await expect(readFile(committedPath ?? "", "utf8")).resolves.toBe(content);
+    expect(
+      (await readdir(join(root, "sources"))).some((name) => /^\.intake-[0-9a-f]{64}$/u.test(name)),
+    ).toBe(true);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT event.state
+         FROM candidate_knowledge_managed_write_operations AS operation
+         JOIN candidate_knowledge_managed_write_events AS event
+           ON event.operation_id = operation.operation_id
+         WHERE operation.requested_version_id = 'post-commit-version'
+         ORDER BY event.sequence`,
+      ),
+    ).toEqual([{ state: "targeted" }, { state: "published" }, { state: "committed" }]);
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await reopened.close();
+  });
+
+  it("enforces journal immutability and fails closed on a malformed transition graph", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    await writeFile(inputPath, "candidate evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "journal-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Journal source",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "candidate evidence", { id: "journal-version" }),
+    );
+    await store.close();
+
+    expect(() =>
+      mutateDatabase(
+        root,
+        "UPDATE candidate_knowledge_managed_write_operations SET source_id = 'different'",
+      ),
+    ).toThrow(/immutable/i);
+    expect(() =>
+      mutateDatabase(root, "DELETE FROM candidate_knowledge_managed_write_events"),
+    ).toThrow(/immutable/i);
+    expect(() =>
+      mutateDatabase(
+        root,
+        `INSERT INTO candidate_knowledge_managed_write_events
+           (operation_id, sequence, state, target_version_id, created_at)
+         SELECT operation_id, 5, 'completed', 'journal-version', '2026-08-21T14:01:00.000Z'
+         FROM candidate_knowledge_managed_write_operations`,
+      ),
+    ).toThrow(/transition/i);
+    mutateDatabase(
+      root,
+      `INSERT INTO candidate_knowledge_managed_write_operations
+         (operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at)
+       VALUES
+         ('illegal-first-commit', 'ckb-default', 'journal-source', 'illegal-commit-version', 'append', '2026-08-21T14:01:00.000Z'),
+         ('illegal-noop-target', 'ckb-default', 'journal-source', 'illegal-noop-version', 'append', '2026-08-21T14:01:00.000Z'),
+         ('illegal-noop-transition', 'ckb-default', 'journal-source', 'illegal-noop-transition-version', 'append', '2026-08-21T14:01:00.000Z')`,
+    );
+    expect(() =>
+      mutateDatabase(
+        root,
+        `INSERT INTO candidate_knowledge_managed_write_events
+           (operation_id, sequence, state, target_version_id, created_at)
+         VALUES ('illegal-first-commit', 1, 'committed', 'journal-version', '2026-08-21T14:01:00.000Z')`,
+      ),
+    ).toThrow(/transition/i);
+    expect(() =>
+      mutateDatabase(
+        root,
+        `INSERT INTO candidate_knowledge_managed_write_events
+           (operation_id, sequence, state, target_version_id, created_at)
+         VALUES ('illegal-noop-target', 1, 'noop', 'missing-version', '2026-08-21T14:01:00.000Z')`,
+      ),
+    ).toThrow(/noop target/i);
+    mutateDatabase(
+      root,
+      `INSERT INTO candidate_knowledge_managed_write_events
+         (operation_id, sequence, state, target_version_id, created_at)
+       VALUES ('illegal-noop-transition', 1, 'targeted', 'journal-version', '2026-08-21T14:01:00.000Z')`,
+    );
+    expect(() =>
+      mutateDatabase(
+        root,
+        `INSERT INTO candidate_knowledge_managed_write_events
+           (operation_id, sequence, state, target_version_id, created_at)
+         VALUES ('illegal-noop-transition', 2, 'noop', 'journal-version', '2026-08-21T14:01:00.000Z')`,
+      ),
+    ).toThrow(/transition/i);
+
+    mutateDatabase(
+      root,
+      `DROP TRIGGER candidate_knowledge_managed_write_events_immutable_delete;
+       DELETE FROM candidate_knowledge_managed_write_events WHERE sequence = 2`,
+    );
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(/contiguous/i);
+  });
+
+  it("fails closed when journal triggers are bypassed to persist illegal terminal records", async () => {
+    const parent = await temporaryParent();
+    const committedRoot = join(parent, "illegal-committed");
+    const committedInput = join(parent, "illegal-committed.md");
+    await writeFile(committedInput, "committed corruption fixture", "utf8");
+    const committedStore = await initializeCandidateKnowledgeStore(initialization(committedRoot));
+    await committedStore.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "committed-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Committed corruption",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(committedInput, "committed corruption fixture", {
+        id: "committed-version",
+      }),
+    );
+    await committedStore.close();
+    mutateDatabase(
+      committedRoot,
+      `DROP TRIGGER candidate_knowledge_managed_write_events_immutable_delete;
+       DROP TRIGGER candidate_knowledge_managed_write_events_transition_insert;
+       DELETE FROM candidate_knowledge_managed_write_events;
+       INSERT INTO candidate_knowledge_managed_write_events
+         (operation_id, sequence, state, target_version_id, created_at)
+       SELECT operation_id, 1, 'committed', 'committed-version', '2026-08-21T14:01:00.000Z'
+       FROM candidate_knowledge_managed_write_operations`,
+    );
+    await expect(openCandidateKnowledgeStore(committedRoot)).rejects.toThrow(/transition/i);
+
+    const noopRoot = join(parent, "illegal-noop");
+    const noopInput = join(parent, "illegal-noop.md");
+    await writeFile(noopInput, "first noop fixture", "utf8");
+    const noopStore = await initializeCandidateKnowledgeStore(initialization(noopRoot));
+    await noopStore.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "noop-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Noop corruption",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(noopInput, "first noop fixture", { id: "old-managed-version" }),
+    );
+    await writeFile(noopInput, "current noop fixture", "utf8");
+    await noopStore.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "noop-source",
+      managedVersion(noopInput, "current noop fixture", {
+        id: "current-managed-version",
+        createdAt: "2026-08-21T14:02:00.000Z",
+      }),
+    );
+    await noopStore.close();
+    mutateDatabase(
+      noopRoot,
+      `DROP TRIGGER candidate_knowledge_managed_write_events_noop_target_insert;
+       INSERT INTO candidate_knowledge_managed_write_operations
+         (operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at)
+       VALUES ('zz-illegal-noop', 'ckb-default', 'noop-source', 'noop-request', 'append', '2026-08-21T14:03:00.000Z');
+       INSERT INTO candidate_knowledge_managed_write_events
+         (operation_id, sequence, state, target_version_id, created_at)
+       VALUES ('zz-illegal-noop', 1, 'noop', 'noop-request', '2026-08-21T14:03:00.000Z')`,
+    );
+    await expect(openCandidateKnowledgeStore(noopRoot)).rejects.toThrow(
+      /invalid managed write noop/i,
+    );
   });
 
   it("rejects missing or corrupted managed files when reopening", async () => {

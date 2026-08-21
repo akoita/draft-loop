@@ -45,7 +45,7 @@ flowchart TB
     subgraph Infrastructure["Local and provider adapters"]
         direction LR
         WorkspaceStore[("Application workspace store<br/>SQLite · FTS/BM25 · run history")]
-        CKBStore[("Portable CKB store<br/>managed raw blobs · source/version metadata")]
+        CKBStore[("Portable CKB store<br/>raw blobs · metadata · write journal")]
         Providers["Provider adapters<br/>data-policy enforcement"]
         Credentials["Credential store<br/>main-process owned"]
     end
@@ -147,6 +147,14 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   matching regular-file bytes. Ordinary failures clean up; crashes or
   concurrency can leave unreferenced opaque files. Their shape does not prove
   DraftLoop ownership.
+- SQLite migration v7 adds an internal append-only ownership journal for new
+  managed creates and appends. Each operation records opaque intent before
+  staging, resolved-target selection before publication, publication and atomic
+  managed-marker/database-commit events, and completion only after staging cleanup. New staging names are
+  opaque operation-derived hashes. The journal excludes origin paths,
+  filenames, labels, checksums, source content, provider data, diagnostic
+  projections, cleanup tokens, and approvals; its identifiers do not cross the
+  application boundary.
 - The application can explicitly request a bounded structural inventory after
   referenced managed blobs pass their normal validation. The result exposes
   only counts for verified managed files, scanned entries, staging-shaped and
@@ -155,9 +163,17 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   It exposes no names, paths, IDs, labels, checksums, or content; follows no
   unknown symlinks; does not recurse into unknown directories or read unknown
   file bytes; and performs no mutation. Structural categories do not authorize
-  adoption, quarantine, repair, or deletion. A future cleanup design needs a
-  durable ownership journal, writer coordination, and explicit approval;
-  unjournaled entries remain unknown.
+  adoption, quarantine, repair, or deletion. The prospective journal supplies
+  evidence for new writes only; a future cleanup design still needs writer
+  coordination and explicit approval, and unjournaled entries remain unknown.
+- Version-7 journal provenance is prospective. It does not claim legacy
+  version-6 writes or other pre-existing entries, trigger an automatic scan, or
+  authorize deletion, adoption, quarantine, repair, or reconciliation.
+  Same-current-byte managed appends record a terminal, non-owning no-op.
+  Metadata-only versions can
+  be explicitly materialized under normal managed-copy checks without adopting
+  a pre-existing unowned target based on matching bytes or shape. Future
+  cleanup still needs writer locks or leases plus explicit visible approval.
 - Managed blobs and SQLite metadata are plaintext. A source whose label resembles
   `AGENTS.md` or other configuration remains inert candidate data and never
   changes application instructions, policy, or permissions.
@@ -309,8 +325,9 @@ binding, automatic refresh, freshness or last-refresh state,
 moved/deleted/inaccessible-origin reporting, directory and URL intake,
 cross-source duplicate relationships, indexing and retrieval, application/run
 CKB selection, deletion, repair of missing/corrupt referenced blobs, durable
-journaling and writer coordination, cleanup/reconciliation, and complete
-backup/export/restore remain pending; the current retrieval path still reads
+writer coordination, cleanup approval/reconciliation, and complete
+backup/export/restore remain pending; the internal prospective journal is not
+a user-facing lifecycle control, and the current retrieval path still reads
 workspace-scoped evidence. Offline fixture agents make the lifecycle testable
 without network access. The desktop renderer uses the same
 adapter-neutral review port through a capability-limited bridge; browser mode

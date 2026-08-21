@@ -12,8 +12,9 @@ user-selected, separate local store with a logical UUID and lifecycle metadata,
 stable CKB-scoped source identity, immutable source-version metadata, managed
 raw bytes for explicitly approved local files, and an application operation for
 manual version append. It also exposes an explicit bounded, count-only local
-structural inventory query. Application workspaces and their run history remain
-separate. There is no internet-facing DraftLoop service, account system,
+structural inventory query and keeps a prospective internal append-only
+managed-write ownership journal. Application workspaces and their run history
+remain separate. There is no internet-facing DraftLoop service, account system,
 multi-tenant database, or background job runner in this repository.
 
 The implemented network boundaries are:
@@ -67,6 +68,16 @@ the database or filesystem. An unreferenced entry's shape is not authenticated
 ownership evidence, so it remains unknown and cannot be deleted, adopted,
 quarantined, or repaired by this query.
 
+SQLite migration version 7 records opaque intent for each new managed create or
+append before staging. A monotonic event records the resolved target before
+publication, followed by publication and the atomic managed-marker/database
+commit; completion follows staging cleanup. New staging
+names are opaque operation-derived hashes. The internal append-only journal
+contains no origin path, filename, label, checksum, source content, provider
+data, diagnostic projection, cleanup token, or approval, and its identifiers
+are not exposed. It does not retroactively claim legacy version-6 writes;
+entries without prospective journal proof remain unknown.
+
 Future cloud sync, authentication, multi-tenancy, remote retrieval, browser
 extensions, autonomous tools, or external job submission require a new
 threat-model review. They are not covered by the controls below.
@@ -82,6 +93,7 @@ threat-model review. They are not covered by the controls below.
 | Application to authenticated local agent runtime  | Candidate context, provider session, local files, and process environment | Explicit user-session mode, empty temporary working directory, disabled tools/customizations/MCP/web access, bounded process IO, cancellation, structured-output validation, and no OAuth-token extraction                         | Vendor runtimes and subscription terms can change; Codex does not currently expose an enforceable output-token ceiling                                 |
 | Application to approved URL                       | Source URL, local network reachability, fetched content, and provenance   | `ingestUrl` in `packages/ingestion/src/index.ts` requires approval, HTTPS, safe host resolution, manual redirect validation, time/size limits, and supported content types                                                         | DNS rebinding, resolver/fetch races, remote tracking, malicious HTML, and future parser expansion require continuing tests                             |
 | Application to portable-store structural inventory | Sensitive unknown filesystem entries and managed-source integrity         | Explicit local query after referenced-blob validation; bounded count-only classification; no names/paths/content; no unknown symlink following, unknown-directory recursion, unknown-byte reads, mutation, or provider exposure                                                                 | Counts reveal limited store shape; scan limits may produce incomplete results; structural categories cannot establish ownership or authorize cleanup |
+| Managed-write operation to internal ownership journal | Prospective ownership provenance and operation lifecycle                   | Append-only opaque intent before staging; resolved target before publication; monotonic publication and atomic-commit events; completion after staging cleanup; terminal non-owning no-op; opaque operation-derived staging names; no sensitive source metadata, cleanup token, approval, diagnostic, provider, or application projection                    | Same-user database tampering remains possible; legacy and unjournaled entries stay unknown; journal evidence alone cannot coordinate writers or authorize cleanup |
 | Application to local endpoint                     | Candidate data, credentials, and model output                             | Adapter contract, structured output validation, and explicit configuration                                                                                                                                                         | “Local” does not prove same-machine operation, privacy, identity, or trustworthy retention                                                             |
 | Application to local history and retrieval        | Run metadata, evidence chunks, findings, decisions, and artifacts         | SQLite persistence, workspace identifiers, checksums, immutable records, FTS scoping, and `assertSafePayload` in `packages/storage/src/index.ts`                                                                                   | Host compromise, incomplete field checks, deletion bugs, or query mistakes can expose or mix workspace data                                            |
 | User-approved local file to portable CKB store    | Raw candidate bytes, stable store/source identity, local labels, checksums, and lifecycle metadata | Explicit add/manual append operations; repeated regular-file/type/20 MiB/extraction/stable-copy gates; parent-linked changed versions; identical-byte no-op; opaque ID-derived no-replace copy; version-6 managed marker; no persisted host path or filename provenance; best-effort restrictive permissions | Plaintext bytes and labels remain readable to same-user processes and backups; crashes or concurrency can leave unreferenced residue; origin monitoring, selection, retrieval, reconciliation, and lifecycle controls are not integrated |
@@ -103,7 +115,9 @@ application workspace store <---- structured history <---- evaluation/validation
 backup / purge / diagnostics                         human approval -> local export
 
 portable CKB store (logical UUID + CKB/source/version metadata + managed raw blobs)
-approved local file ----> validated add/manual append ----> immutable raw version
+approved local file ----> journaled add/manual append ----> immutable raw version
+                                |
+                                +----> internal prospective operation events
      . . . future lifecycle, selection, retrieval, and provider integration . . .
 ```
 
@@ -126,8 +140,9 @@ approved local file ----> validated add/manual append ----> immutable raw versio
 | T-013 | High / medium         | Plaintext managed source bytes or a copied store remain readable after the user deletes the original file or application workspace and believes the material is gone.                                        | Logical identity is independent of host path; paths are excluded from portable and provider-facing data; managed names are opaque; local permissions are restrictive where supported.                                                                                                                                                                 | Permissions are best-effort and do not stop a same-user process. Disclose that original/workspace deletion does not delete the CKB copy, SQLite-only backup is incomplete, and CKB deletion/export/restore and backup coverage remain unimplemented.              |
 | T-014 | High / medium         | A CKB label or checksum leaks candidate information, or a source named like agent configuration is treated as executable instruction. | Exact host paths, filename provenance, filename-derived physical names, and URLs are excluded; content-free projections omit labels and checksums; all managed files and versions, including `AGENTS.md`-like selections, remain inert untrusted candidate data under opaque ID-derived names.                                                                                       | Keep UI and diagnostic projections distinct, keep configuration-like names adversarially tested, and review any future origin-path provenance.                                                    |
 | T-015 | High / medium         | A selected path changes during validation or copying, causing different, partial, special-file, or oversized bytes to enter the CKB. | Explicit one-file approval for both add and append, repeated regular-file/type/size checks, extraction before persistence, immutable raw-byte copy, checksum and size verification, and no-replace publication. | Keep source-mutation, symlink, special-file, size-growth, and extraction-failure tests at both managed-file boundaries; do not claim protection from a process that already controls the same user account. |
-| T-016 | Medium / high         | A crash or concurrent managed-file add or append leaves an unreferenced sensitive blob, or metadata commits without the verified bytes it names. | File-first/database-second publication, version-6 managed markers, verified bytes for every committed marker, no-replace targets, ordinary failure cleanup, and explicit bounded structural inventory. | Inventory cannot authenticate ownership. Safe cleanup requires a future durable journal, writer coordination, and explicit approval; unjournaled entries remain unknown and must not be adopted, quarantined, repaired, or deleted. |
-| T-017 | Medium / medium       | Structural inventory leaks sensitive entry identity/content, escapes through a symlink or unknown directory, or is mistaken for cleanup authority. | Count-only bounded result; normal referenced-blob validation first; no names, paths, IDs, labels, checksums, content, unknown-byte reads, unknown symlink following, unknown-directory recursion, mutation, automatic execution, or provider exposure. | Counts can disclose limited store shape and scan-limit status can be incomplete. Keep the query separate from content diagnostics and require an authenticated ownership journal plus explicit approval before any future cleanup. |
+| T-016 | Medium / high         | A crash or concurrent managed-file add or append leaves an unreferenced sensitive blob, or metadata commits without the verified bytes it names. | File-first/database-second publication, version-6 managed markers, verified bytes for every committed marker, no-replace targets, ordinary failure cleanup, bounded structural inventory, and prospective version-7 journal events. | Journal evidence does not cover legacy writes, coordinate concurrent writers, or authorize cleanup. Unjournaled entries remain unknown; future cleanup requires writer coordination and explicit visible approval. |
+| T-017 | Medium / medium       | Structural inventory leaks sensitive entry identity/content, escapes through a symlink or unknown directory, or is mistaken for cleanup authority. | Count-only bounded result; normal referenced-blob validation first; no names, paths, IDs, labels, checksums, content, unknown-byte reads, unknown symlink following, unknown-directory recursion, mutation, automatic execution, or provider exposure. | Counts can disclose limited store shape and scan-limit status can be incomplete. Keep the query separate from content diagnostics and require prospective journal evidence, writer coordination, and explicit approval before any future cleanup. |
+| T-018 | Medium / medium       | A journal record, matching bytes, or a staging-shaped name is mistaken for current ownership or cleanup approval. | Prospective append-only operation events, opaque hashed staging names, no retroactive v6 claims, no cleanup token/approval field, no journal-ID projection, and no adoption of pre-existing targets based on bytes or shape. | Same-user tampering is in scope; journal provenance is only one future policy input. Add writer locks/leases and explicit visible approval before enabling cleanup. |
 
 ## Runtime and build-time controls
 
@@ -158,9 +173,13 @@ selection and preflight binding are implemented.
 The structural inventory is a local application query, not a provider-facing
 projection or content-diagnostic workflow. Missing or corrupt referenced blobs
 still fail normal validation; inventory is not repair mode. Unknown entries are
-counted without names or content and remain untouched. A future reconciliation
-requires durable journaled ownership, coordination with managed writers, and a
-visible approval boundary.
+counted without names or content and remain untouched. The prospective internal
+journal is not returned by inventory or provider-facing projections and does
+not trigger an automatic scan. Same-current-byte managed appends record a
+terminal, non-owning no-op; metadata-only versions may be explicitly materialized without adopting
+pre-existing unowned targets based on matching bytes or shape. A future
+reconciliation requires journal evidence, coordination with managed writers,
+and a visible approval boundary.
 
 The `local` provider company is a claim that candidate material never leaves
 this machine, and every downstream surface — the desktop transmission
@@ -197,8 +216,8 @@ The following remain open during the application-grade CV stage:
   freshness/last-refresh, moved/deleted/inaccessible-origin reporting,
   directory and URL intake, cross-source duplicate relationships, indexing and
   retrieval, application/run selection, CLI/desktop controls, repair of
-  missing/corrupt referenced blobs, durable journal/lock/lease writer
-  coordination, deletion, cleanup/reconciliation, complete
+  missing/corrupt referenced blobs, lock/lease writer coordination, deletion,
+  cleanup approval/reconciliation, complete
   backup/export/restore, and migration rollback remain outside the managed-file
   component;
 - backup destinations and diagnostic exports remain the user's responsibility

@@ -45,7 +45,7 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
         additionalKnowledgeBase.id,
         "2026-08-13T09:02:00.000Z",
       );
-      const source = await storage.createManagedCandidateKnowledgeSource(
+      const source = await storage.createCandidateKnowledgeSource(
         {
           id: "source-1",
           knowledgeBaseId: defaultKnowledgeBase.id,
@@ -61,6 +61,37 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
           createdAt: "2026-08-13T09:03:00.000Z",
         },
       );
+      await storage.prepareManagedCandidateKnowledgeWrite({
+        operationId: "backup-materialization",
+        knowledgeBaseId: defaultKnowledgeBase.id,
+        sourceId: source.source.id,
+        requestedVersionId: "backup-materialization-request",
+        kind: "append",
+        createdAt: "2026-08-13T09:03:00.000Z",
+      });
+      await storage.recordManagedCandidateKnowledgeWriteEvent(
+        "backup-materialization",
+        "targeted",
+        source.version.id,
+        "2026-08-13T09:03:00.000Z",
+      );
+      await storage.recordManagedCandidateKnowledgeWriteEvent(
+        "backup-materialization",
+        "published",
+        source.version.id,
+        "2026-08-13T09:03:00.000Z",
+      );
+      await storage.commitManagedCandidateKnowledgeWrite({
+        kind: "append",
+        operationId: "backup-materialization",
+        version: {
+          id: "backup-materialization-request",
+          mediaType: source.version.mediaType,
+          checksum: source.version.checksum,
+          sizeBytes: source.version.sizeBytes,
+          createdAt: source.version.createdAt,
+        },
+      });
       const sourceVersion = await storage.appendCandidateKnowledgeSourceVersion(
         defaultKnowledgeBase.id,
         source.source.id,
