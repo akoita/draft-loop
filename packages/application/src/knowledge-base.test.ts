@@ -292,7 +292,7 @@ describe("candidate knowledge store application service", () => {
       readFile(join(storeRoot, "draft-loop-knowledge.json"), "utf8"),
     ).resolves.not.toContain(sourcePath);
     const databaseBytes = await readFile(join(storeRoot, ".draft-loop", "knowledge.sqlite"));
-    expect(databaseBytes.includes(Buffer.from(sourcePath, "utf8"))).toBe(false);
+    expect(databaseBytes.includes(Buffer.from(sourcePath, "utf8"))).toBe(true);
 
     const store = await openCandidateKnowledgeStore(storeRoot);
     try {
@@ -305,6 +305,16 @@ describe("candidate knowledge store application service", () => {
       expect(basename(managedPath ?? "")).toMatch(/^[0-9a-f]{64}$/u);
       expect(managedPath).not.toContain("AGENTS.md");
       await expect(readFile(managedPath ?? "", "utf8")).resolves.toBe(content);
+      const binding = await store.getCandidateKnowledgeSourceOriginBinding(
+        "default-ckb-uuid",
+        "source-uuid",
+      );
+      expect(binding).toEqual({
+        sourceId: "source-uuid",
+        originPath: sourcePath,
+        boundAt: createdAt,
+      });
+      expect(Object.isFrozen(binding)).toBe(true);
     } finally {
       await store.close();
     }
@@ -376,6 +386,7 @@ describe("candidate knowledge store application service", () => {
       readFile(join(storeRoot, "draft-loop-knowledge.json"), "utf8"),
     ).resolves.not.toContain(selectedVersionPath);
     const databaseBytes = await readFile(join(storeRoot, ".draft-loop", "knowledge.sqlite"));
+    expect(databaseBytes.includes(Buffer.from(initialPath, "utf8"))).toBe(true);
     expect(databaseBytes.includes(Buffer.from(selectedVersionPath, "utf8"))).toBe(false);
 
     const reopened = await openCandidateKnowledgeStore(storeRoot);
@@ -391,6 +402,13 @@ describe("candidate knowledge store application service", () => {
         "version-2-uuid",
       );
       await expect(readFile(firstManagedPath ?? "", "utf8")).resolves.toBe(firstContent);
+      await expect(
+        reopened.getCandidateKnowledgeSourceOriginBinding("default-ckb-uuid", "source-uuid"),
+      ).resolves.toEqual({
+        sourceId: "source-uuid",
+        originPath: initialPath,
+        boundAt: createdAt,
+      });
       await expect(readFile(secondManagedPath ?? "", "utf8")).resolves.toBe(secondContent);
       expect(await readdir(dirname(secondManagedPath ?? ""))).toHaveLength(2);
     } finally {

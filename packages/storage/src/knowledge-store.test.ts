@@ -262,6 +262,138 @@ describe("portable candidate knowledge store", () => {
     await reopened.close();
   });
 
+  it("remembers one canonical origin binding for a managed create and scopes reads", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const nested = join(parent, "nested");
+    const inputPath = join(parent, "candidate.md");
+    const selectedPath = `${nested}/../candidate.md`;
+    await mkdir(nested);
+    await writeFile(inputPath, "candidate evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-other",
+      displayName: "Other evidence",
+      isDefault: false,
+      createdAt: "2026-08-21T14:01:00.000Z",
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "bound-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(selectedPath, "candidate evidence"),
+    );
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "metadata-only-file",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Metadata only",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      {
+        id: "metadata-only-file-version",
+        mediaType: "text/markdown",
+        checksum: "a".repeat(64),
+        sizeBytes: 1,
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Public profile",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      {
+        id: "url-source-version",
+        mediaType: "text/plain",
+        checksum: "b".repeat(64),
+        sizeBytes: 1,
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+
+    const binding = await store.getCandidateKnowledgeSourceOriginBinding(
+      "ckb-default",
+      "bound-source",
+    );
+    expect(binding).toEqual({
+      sourceId: "bound-source",
+      originPath: await realpath(selectedPath),
+      boundAt: "2026-08-21T14:01:00.000Z",
+    });
+    expect(Object.isFrozen(binding)).toBe(true);
+    expect(
+      queryDatabase(
+        root,
+        "SELECT source_id, origin_path, bound_at FROM candidate_knowledge_source_origin_bindings",
+      ),
+    ).toHaveLength(1);
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-other", "bound-source"),
+    ).resolves.toBeUndefined();
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "metadata-only-file"),
+    ).resolves.toBeUndefined();
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "url-source"),
+    ).resolves.toBeUndefined();
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "missing-source"),
+    ).resolves.toBeUndefined();
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.getCandidateKnowledgeSourceOriginBinding("ckb-default", "bound-source"),
+    ).resolves.toEqual(binding);
+    await reopened.close();
+  });
+
+  it("migrates v7 sources as unbound", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "legacy-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Legacy source",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      {
+        id: "legacy-version",
+        mediaType: "text/markdown",
+        checksum: "c".repeat(64),
+        sizeBytes: 1,
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+    await store.close();
+    mutateDatabase(
+      root,
+      "DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version = 8",
+    );
+
+    const migrated = await openCandidateKnowledgeStore(root);
+    await expect(
+      migrated.getCandidateKnowledgeSourceOriginBinding("ckb-default", "legacy-source"),
+    ).resolves.toBeUndefined();
+    expect(queryDatabase(root, "SELECT * FROM candidate_knowledge_source_origin_bindings")).toEqual(
+      [],
+    );
+    await migrated.close();
+  });
+
   it("appends, deduplicates, and materializes managed file versions", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
@@ -1098,6 +1230,9 @@ describe("portable candidate knowledge store", () => {
          ORDER BY event.sequence`,
       ),
     ).toEqual([{ state: "targeted" }, { state: "published" }, { state: "aborted" }]);
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "failing-source"),
+    ).resolves.toBeUndefined();
 
     const prePublishedInput = join(parent, "pre-published.md");
     await writeFile(prePublishedInput, "pre-published fixture", "utf8");
@@ -1144,6 +1279,9 @@ describe("portable candidate knowledge store", () => {
          ORDER BY event.sequence`,
       ),
     ).toEqual([{ state: "targeted" }, { state: "aborted" }]);
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "pre-published-source"),
+    ).resolves.toBeUndefined();
     await store.close();
   });
 
@@ -1191,6 +1329,9 @@ describe("portable candidate knowledge store", () => {
     await store.close();
 
     const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.getCandidateKnowledgeSourceOriginBinding("ckb-default", "capture-failure-source"),
+    ).resolves.toBeUndefined();
     await reopened.close();
   });
 

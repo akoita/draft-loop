@@ -45,7 +45,7 @@ flowchart TB
     subgraph Infrastructure["Local and provider adapters"]
         direction LR
         WorkspaceStore[("Application workspace store<br/>SQLite · FTS/BM25 · run history")]
-        CKBStore[("Portable CKB store<br/>raw blobs · metadata · write journal")]
+        CKBStore[("Portable CKB store<br/>raw blobs · metadata · local origins · write journal")]
         Providers["Provider adapters<br/>data-policy enforcement"]
         Credentials["Credential store<br/>main-process owned"]
     end
@@ -136,11 +136,17 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   Changed bytes append ordered parent-linked version N+1; bytes identical to the
   current version return a no-op without advancing version time or creating a
   freshness claim. Raw bytes use an opaque, ID-derived local name with
-  restrictive best-effort permissions. The selected path is runtime-only and
-  is not remembered; exact host paths and original filenames are not persisted
-  as provenance or physical names. Source identity and its sensitive label stay
-  stable even if a later selected path or basename differs. It does not drive
-  retrieval or appear in CLI or desktop workflows. See
+  restrictive best-effort permissions. A successful managed create remembers
+  the canonical physical path from its verified capture in sensitive local-only
+  SQLite state; manual append paths never replace it. This binding is copied
+  with the database but is not portable continuity, can become stale when the
+  store or origin moves/disappears, is not yet refreshed/rebound/status-checked,
+  and is never provider-facing. Exact paths remain absent from the portable
+  descriptor, source/version metadata, manifests, journal rows, inventory,
+  diagnostics, and application projections. Source identity and its sensitive
+  label stay stable even if a
+  later selected path or basename differs. It does not drive retrieval or
+  appear in CLI or desktop workflows. See
   [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
 - Managed-file add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
@@ -320,8 +326,13 @@ That workspace and run history remain distinct from the portable CKB store.
 The application contract can approve and copy one supported local regular file
 into the store, manually append approved changed bytes to an existing file
 source, or explicitly request its bounded count-only structural inventory.
-Neither user-facing adapter yet provides CKB controls. Remembered origin
-binding, automatic refresh, freshness or last-refresh state,
+Neither user-facing adapter yet provides CKB controls. A successful managed
+create now records its canonical verified physical origin in a sensitive,
+local-only SQLite binding table; manual appends never change it. The binding is
+copied with the SQLite database but is not portable continuity, can become
+stale when the store moves machines or the origin moves/disappears, is not yet
+refreshed/rebound/status-checked, and is never provider-facing. Automatic
+refresh, freshness or last-refresh state,
 moved/deleted/inaccessible-origin reporting, directory and URL intake,
 cross-source duplicate relationships, indexing and retrieval, application/run
 CKB selection, deletion, repair of missing/corrupt referenced blobs, durable

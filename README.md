@@ -71,10 +71,15 @@ approve a local file as a manual new version of that same source. It repeats the
 type, extraction, size, stable-file, and managed-copy checks. Changed bytes
 create ordered version N+1; bytes identical to the current version are a no-op
 and do not advance version time or imply freshness. The selected path is used
-only for that command and is not persisted; source identity and label remain
-stable even when the selected path or basename changes. Directory and URL
-intake, remembered origin binding, automatic refresh, freshness or last-refresh
-state, moved/deleted/inaccessible-origin reporting, cross-source duplicate
+for capture, and a successful managed create remembers its canonical physical
+path in a separate sensitive local-only SQLite binding. A later manual append
+uses its selected path only for that operation and never changes the initial
+binding; source identity and label remain stable even when the selected path or
+basename changes. The binding is copied with the SQLite database but is not
+portable continuity: it can become stale when the store moves to another
+machine or the origin moves or disappears. It is not yet refreshed, rebound, or
+status-checked, and is never provider-facing. Directory and URL intake,
+automatic refresh, freshness or last-refresh state, moved/deleted/inaccessible-origin reporting, cross-source duplicate
 relationships, indexing and retrieval, application/run CKB selection, CLI and
 desktop controls, deletion, reconciliation or repair, and complete backup,
 export, and restore are not integrated. The local inventory query first
@@ -85,7 +90,10 @@ directories, symlinks, special/other entries, and whether the scan completed or
 hit its limit. It returns no names, paths, IDs, labels, checksums, or content;
 never follows unknown symlinks, recurses into unknown directories, or reads
 unknown file bytes; and does not mutate or classify unknown entries as
-DraftLoop-owned residue. SQLite migration v7 adds an internal, append-only
+DraftLoop-owned residue. SQLite migration v8 adds a local-only origin-binding
+table for successful managed creates; it is not included in the manifest,
+descriptor, journal, inventory, diagnostics, or provider projections. SQLite
+migration v7 adds an internal, append-only
 managed-write journal for new creates and appends. It records opaque intent
 before staging, then records the resolved target before publication, the atomic
 managed-marker/database commit, and completion only after staging cleanup. New staging names are opaque
@@ -144,8 +152,13 @@ At a high level, DraftLoop keeps source material and run history local, sends
 only approved context through provider adapters, and requires human approval
 before local export. The portable CKB store is a separate, user-selected
 plaintext local store; its filesystem path is not part of its logical identity
-and is not persisted or provider data. Managed bytes use restrictive
-best-effort permissions; same-user processes and device backups remain risks.
+and is not persisted in the manifest or provider data. A successful managed
+create retains its canonical verified origin only in sensitive local-only
+SQLite state. That binding is copied with the database but is not portable
+continuity, can become stale when the store or origin moves/disappears, is not
+yet refreshed/rebound/status-checked, and is never provider-facing. Managed
+bytes use restrictive best-effort permissions; same-user processes and device
+backups remain risks.
 Source labels and checksums remain local CKB metadata and are not content-free
 diagnostics. A configuration-like name such as `AGENTS.md` remains inert
 candidate data, including when selected for a later version. Deleting the
