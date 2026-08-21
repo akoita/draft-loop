@@ -2,7 +2,7 @@
 
 **Status:** Living document
 **Last reviewed:** 2026-08-21
-**Current stage:** Integration hardening and outcome validation — release closure
+**Current stage:** Application-grade CV workflow
 
 This document describes product direction, not fixed delivery dates. The
 **Now** horizon is the current commitment; **Next** is planned but may change
@@ -125,9 +125,10 @@ approval/export gate (#169), critic-only provider recovery path (#173),
 Anthropic author-output completion diagnostics (#175), and deterministic
 full-flow NativeHost regression (#177) are complete. They established a strong
 integration baseline but did not correct the representative output-quality
-failure. v0.6.0 will be published only as an explicitly non-validated alpha
-baseline; its [stage-evidence record](stage-evidence-v0.6.0.md) carries the
-negative outcome into the application-grade v0.7 work.
+failure. [v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0) was
+published as an explicitly non-validated alpha baseline; its
+[stage-evidence record](stage-evidence-v0.6.0.md) carries the negative outcome
+into the application-grade v0.7 work.
 
 ## Reference workflow and parity target
 
@@ -177,14 +178,14 @@ experience, contact employers, or submit applications.
 
 | Horizon | Stage | Evidence status | Outcome | Remaining gate |
 | --- | --- | --- | --- | --- |
-| Now | Integration hardening and outcome validation (v0.6 release closure) | Integrated; validation failed; alpha publication pending | Preserve a reproducible integrated baseline without overstating application readiness | Mandatory local preflight, verified release artifacts, final stage evidence, and milestone closure |
-| Next | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
+| Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed | Preserve a reproducible integrated baseline without overstating application readiness | Closed with failed representative outcome carried into v0.7; see the [stage evidence](stage-evidence-v0.6.0.md) |
+| Now | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
 | Next | Retrieval and provider quality | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable | Representative quality comparison, deletion/retention proof, integrated cancellation and provider recovery |
 | Next | Real-application pilot | Implemented harness; not outcome-validated | Validate factuality, quality, and user-effort hypotheses | Consented cases, calibrated measures, recorded results and limitations |
 | Later | Production-ready beta | Partial implementation; not production-validated | Distribute a safe, dependable desktop application | Signed installers, safe updates/migrations, platform acceptance, recovery and accessibility evidence |
 | Later | Controlled expansion | Implemented prototypes and components; gated | Extend a proven workflow without weakening trust boundaries | Core CV pilot evidence, separate integration/validation, updated threat decisions |
 
-### Now — Integration hardening and outcome validation (v0.6 release closure)
+### Released — Integration hardening and outcome validation (v0.6)
 
 Turn the substantially integrated alpha into a coherent, evidence-backed local
 workflow rather than adding more surface area.
@@ -213,11 +214,11 @@ release has traceable evidence and known limitations.
 
 **Validation outcome:** The integration and platform criteria were demonstrated,
 but the representative application regressed factual completeness and
-application readiness. v0.6.0 may therefore be published only as an explicitly
-non-validated alpha baseline. The unmet outcome moves forward as the defining
-input to v0.7 rather than being waived.
+application readiness. v0.6.0 was published as an explicitly non-validated
+alpha baseline. The unmet outcome moves forward as the defining input to v0.7
+rather than being waived.
 
-### Next — Application-grade CV workflow
+### Now — Application-grade CV workflow
 
 Automate the proven private reference workflow before expanding retrieval,
 provider, or application-pilot capability. Issue #143 is the parent for
@@ -369,6 +370,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
+| 2026-08-21 | Published [v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0) as Released but not Validated and moved Application-grade CV workflow to Now | The exact-revision local live-provider preflight, release dry run, three platform builds, manifest, checksums, SBOM, and known limitations passed; the representative output-quality failure remains the defining v0.7 input rather than being waived |
 | 2026-08-21 | Approved v0.6.0 as a non-validated alpha release baseline and kept v0.7 next until publication evidence is complete | The live workflow reached approval and export but did not preserve factual completeness, chronology, or application readiness; a prerelease can preserve the integrated baseline without claiming validation, while v0.7 owns the canonical profile, customizable structure, complete composition, stopping rules, and parity work exposed by the failure |
 | 2026-08-21 | Integrated an explicit workspace writing-policy source role as an early partial slice of #148 without moving the current stage | Representative use showed that recurring candidate rules must guide both model roles without treating files named like agent configuration as evidence or executable repository instructions; reusable global policy and per-opportunity overrides remain v0.7 work |
 | 2026-08-20 | Added a mandatory local `release:preflight` guardrail and agent policy before any release action | The paid live-provider check must run on the release revision without placing API keys or subscription sessions in CI/CD; a repository command is more portable and auditable than an optional per-clone Git hook |
