@@ -9,11 +9,11 @@ deployment. The current roadmap stage is the application-grade CV workflow.
 The current product is a local, single-user CLI and Electron desktop workspace.
 It also has a component-level portable Candidate Knowledge Base store: a
 user-selected, separate local store with a logical UUID and lifecycle metadata,
-stable CKB-scoped source identity, immutable source-version metadata, and
-managed raw bytes for one explicitly approved local file. Application
-workspaces and their run history remain separate. There
-is no internet-facing DraftLoop service, account system, multi-tenant database,
-or background job runner in this repository.
+stable CKB-scoped source identity, immutable source-version metadata, managed
+raw bytes for explicitly approved local files, and an application operation for
+manual version append. Application workspaces and their run history remain
+separate. There is no internet-facing DraftLoop service, account system,
+multi-tenant database, or background job runner in this repository.
 
 The implemented network boundaries are:
 
@@ -40,14 +40,20 @@ The portable CKB store is plaintext. Restrictive local permissions are applied
 where supported but are best-effort, not encryption, and do not protect against
 another process running as the same user. The current store component contains
 CKB, source, and source-version metadata plus one immutable managed raw blob per
-approved intake. The application command approves one regular file of at most
-20 MiB in the five supported media types, and extraction must pass before
-persistence. It stores source kind and a sensitive local label plus ordered
-SHA-256, media type, byte size, and timestamp; exact host paths, filename
-provenance, filename-derived physical names, and URLs are excluded, although a
-sensitive label may default to the basename. Directory and URL intake, refresh,
-freshness, duplicates/indexes, application selection, deletion, export, and
-restore have not moved into that boundary.
+created version. The application can explicitly approve one regular file of at
+most 20 MiB in the five supported media types for initial intake or as a manual
+new version of an existing file source. Every operation requires successful
+extraction and repeats the stable-file and managed-copy checks. Changed bytes
+create ordered parent-linked version N+1; identical current bytes return a
+no-op, do not advance time, and do not establish freshness. The selected path
+is runtime-only, while source identity and its sensitive label stay stable even
+if a later path or basename differs. Exact host paths, filename provenance,
+filename-derived physical names, and URLs are excluded. Remembered origin
+binding, automatic refresh, freshness/last-refresh, moved/deleted/inaccessible
+reporting, directory and URL intake, cross-source duplicate relationships,
+indexes/retrieval, app/run CKB selection, CLI/desktop controls, deletion, orphan
+reconciliation, and complete backup/export/restore have not moved into that
+boundary.
 
 Future cloud sync, authentication, multi-tenancy, remote retrieval, browser
 extensions, autonomous tools, or external job submission require a new
@@ -65,7 +71,7 @@ threat-model review. They are not covered by the controls below.
 | Application to approved URL                       | Source URL, local network reachability, fetched content, and provenance   | `ingestUrl` in `packages/ingestion/src/index.ts` requires approval, HTTPS, safe host resolution, manual redirect validation, time/size limits, and supported content types                                                         | DNS rebinding, resolver/fetch races, remote tracking, malicious HTML, and future parser expansion require continuing tests                             |
 | Application to local endpoint                     | Candidate data, credentials, and model output                             | Adapter contract, structured output validation, and explicit configuration                                                                                                                                                         | “Local” does not prove same-machine operation, privacy, identity, or trustworthy retention                                                             |
 | Application to local history and retrieval        | Run metadata, evidence chunks, findings, decisions, and artifacts         | SQLite persistence, workspace identifiers, checksums, immutable records, FTS scoping, and `assertSafePayload` in `packages/storage/src/index.ts`                                                                                   | Host compromise, incomplete field checks, deletion bugs, or query mistakes can expose or mix workspace data                                            |
-| User-approved local file to portable CKB store    | Raw candidate bytes, stable store/source identity, local labels, checksums, and lifecycle metadata | One-file application command, regular-file/type/20 MiB/extraction gates, opaque ID-derived no-replace copy, version-6 managed marker, no persisted host path or filename provenance, and best-effort restrictive permissions | Plaintext bytes and labels remain readable to same-user processes and backups; crashes or concurrency can leave unreferenced residue; selection, retrieval, reconciliation, and lifecycle controls are not integrated |
+| User-approved local file to portable CKB store    | Raw candidate bytes, stable store/source identity, local labels, checksums, and lifecycle metadata | Explicit add/manual append operations; repeated regular-file/type/20 MiB/extraction/stable-copy gates; parent-linked changed versions; identical-byte no-op; opaque ID-derived no-replace copy; version-6 managed marker; no persisted host path or filename provenance; best-effort restrictive permissions | Plaintext bytes and labels remain readable to same-user processes and backups; crashes or concurrency can leave unreferenced residue; origin monitoring, selection, retrieval, reconciliation, and lifecycle controls are not integrated |
 | Backup, restore, retention purge, and diagnostics | Copies of workspace data and operational metadata                         | Explicit local operations, integrity checks, confirmed purge, and content-free diagnostic design                                                                                                                                   | Backups can outlive workspace deletion; destination permissions and restore overwrite behavior need platform acceptance                                |
 | Approved artifact to renderer/export              | Links, HTML/Markdown, and generated files                                 | Local rendering, controlled formats, checksum records, and an approval boundary                                                                                                                                                    | Unsafe links, images, markup, or viewer behavior can create egress or content-spoofing risks                                                           |
 | Source repository, CI, and release artifacts      | Credentials, fixtures, dependencies, build output, and update trust       | Secret-free fixtures, lockfile, lint/type/test gates, license and secret scans, checksums, and SBOM generation                                                                                                                     | A compromised dependency, CI credential, unsigned installer, or unsafe update can alter releases                                                       |
@@ -83,8 +89,8 @@ application workspace store <---- structured history <---- evaluation/validation
      |                                                         |
 backup / purge / diagnostics                         human approval -> local export
 
-portable CKB store (logical UUID + CKB/source/version metadata + managed raw blob)
-approved local file ----> validated managed intake ----> immutable raw blob
+portable CKB store (logical UUID + CKB/source/version metadata + managed raw blobs)
+approved local file ----> validated add/manual append ----> immutable raw version
      . . . future lifecycle, selection, retrieval, and provider integration . . .
 ```
 
@@ -105,9 +111,9 @@ approved local file ----> validated managed intake ----> immutable raw blob
 | T-011 | High / medium         | A compromised dependency, build workflow, installer, or update path executes with local user access.                                                                     | Pinned dependencies, lockfile review, secret/license checks, platform builds, checksums, and CycloneDX SBOM generation.                                                                                                                                                                                                                                                                 | Add signed installers, provenance where available, a verified update/rollback design, and release-key incident procedures before production beta.                                                         |
 | T-012 | High / medium         | A local subscription runtime loads tools, repository instructions, plugins, or account configuration and gains access beyond the approved model request.                 | User-session mode runs from an empty temporary directory, disables supported tool and customization surfaces, bounds output, rejects observed tool events, and never copies OAuth credentials.                                                                                                                                                                                          | Keep the mode experimental until vendor embedding terms, packaged-runtime behavior, retention, and enforceable token budgets are resolved and acceptance-tested.                                          |
 | T-013 | High / medium         | Plaintext managed source bytes or a copied store remain readable after the user deletes the original file or application workspace and believes the material is gone.                                        | Logical identity is independent of host path; paths are excluded from portable and provider-facing data; managed names are opaque; local permissions are restrictive where supported.                                                                                                                                                                 | Permissions are best-effort and do not stop a same-user process. Disclose that original/workspace deletion does not delete the CKB copy, SQLite-only backup is incomplete, and CKB deletion/export/restore and backup coverage remain unimplemented.              |
-| T-014 | High / medium         | A CKB label or checksum leaks candidate information, or a source named like agent configuration is treated as executable instruction. | Exact host paths, filename provenance, filename-derived physical names, and URLs are excluded; content-free projections omit labels and checksums; all managed files, including `AGENTS.md`-like labels, remain inert untrusted candidate data under opaque ID-derived names.                                                                                       | Keep UI and diagnostic projections distinct, keep configuration-like names adversarially tested, and review any future origin-path provenance.                                                    |
-| T-015 | High / medium         | A selected path changes during validation or copying, causing different, partial, special-file, or oversized bytes to enter the CKB. | Explicit one-file approval, regular-file/type/size checks, extraction before persistence, immutable raw-byte copy, checksum and size verification, and no-replace publication. | Keep source-mutation, symlink, special-file, size-growth, and extraction-failure tests at the managed-intake boundary; do not claim protection from a process that already controls the same user account. |
-| T-016 | Medium / high         | A crash or concurrent import leaves an unreferenced sensitive blob, or metadata commits without the verified bytes it names. | File-first/database-second publication, version-6 managed markers, verified bytes for every committed marker, no-replace targets, and ordinary failure cleanup. | Explicit orphan reconciliation remains unimplemented; it must distinguish managed residue from unrelated files and never adopt it implicitly. |
+| T-014 | High / medium         | A CKB label or checksum leaks candidate information, or a source named like agent configuration is treated as executable instruction. | Exact host paths, filename provenance, filename-derived physical names, and URLs are excluded; content-free projections omit labels and checksums; all managed files and versions, including `AGENTS.md`-like selections, remain inert untrusted candidate data under opaque ID-derived names.                                                                                       | Keep UI and diagnostic projections distinct, keep configuration-like names adversarially tested, and review any future origin-path provenance.                                                    |
+| T-015 | High / medium         | A selected path changes during validation or copying, causing different, partial, special-file, or oversized bytes to enter the CKB. | Explicit one-file approval for both add and append, repeated regular-file/type/size checks, extraction before persistence, immutable raw-byte copy, checksum and size verification, and no-replace publication. | Keep source-mutation, symlink, special-file, size-growth, and extraction-failure tests at both managed-file boundaries; do not claim protection from a process that already controls the same user account. |
+| T-016 | Medium / high         | A crash or concurrent managed-file add or append leaves an unreferenced sensitive blob, or metadata commits without the verified bytes it names. | File-first/database-second publication, version-6 managed markers, verified bytes for every committed marker, no-replace targets, and ordinary failure cleanup. | Explicit orphan reconciliation remains unimplemented; it must distinguish managed residue from unrelated files and never adopt it implicitly. |
 
 ## Runtime and build-time controls
 
@@ -121,17 +127,19 @@ outputs, source references, human approval, local retention, and content-free
 operational events. These controls reduce impact but do not make model output or
 the local machine authoritative.
 
-The portable CKB store path and an approved source path are local host
+The portable CKB store path and each approved source path are local host
 configuration. Neither is part of logical identity, the portable manifest, a
-provider request, or content-free audit/diagnostic data. The original filename
-is not a managed physical name or persisted provenance. Source labels are local
-user-visible metadata, and source checksums can correlate known content; neither
-belongs in content-free diagnostics or provider requests. Managed raw bytes use
-opaque ID-derived names and remain inert even when a label resembles
-`AGENTS.md` or other configuration. No CLI or desktop workflow currently
-selects this store for a run, so provider transmission and retrieval must
-continue to use the existing workspace boundary until explicit selection and
-preflight binding are implemented.
+provider request, or content-free audit/diagnostic data. A selected source path
+is runtime-only and is not remembered after add or append. The original
+filename is not a managed physical name or persisted provenance, and selecting
+a different path or basename does not change the source identity or label.
+Source labels are local user-visible metadata, and source checksums can
+correlate known content; neither belongs in content-free diagnostics or provider
+requests. Managed raw bytes use opaque ID-derived names and remain inert even
+when a label resembles `AGENTS.md` or other configuration. No CLI or desktop
+workflow currently selects this store for a run, so provider transmission and
+retrieval must continue to use the existing workspace boundary until explicit
+selection and preflight binding are implemented.
 
 The `local` provider company is a claim that candidate material never leaves
 this machine, and every downstream surface — the desktop transmission
@@ -164,10 +172,12 @@ The following remain open during the application-grade CV stage:
   review whenever supported sources or formats expand;
 - retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector/hybrid retrieval is enabled by default;
-- portable CKB directory and URL intake, directory binding, refresh/freshness,
-  duplicate and indexing state, application selection, retrieval isolation,
-  deletion, export, restore, complete backup, orphan reconciliation, and
-  migration rollback remain outside the single-file component;
+- portable CKB remembered origin binding, automatic refresh,
+  freshness/last-refresh, moved/deleted/inaccessible-origin reporting,
+  directory and URL intake, cross-source duplicate relationships, indexing and
+  retrieval, application/run selection, CLI/desktop controls, deletion, orphan
+  reconciliation, complete backup/export/restore, and migration rollback remain
+  outside the managed-file component;
 - backup destinations and diagnostic exports remain the user's responsibility
   unless the product can prove their deletion and permission behavior;
 - signed desktop updates, installer permissions, migration/rollback, and

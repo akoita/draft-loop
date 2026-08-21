@@ -91,6 +91,13 @@ export interface ImportKnowledgeSourceFileCommand {
   readonly displayName?: string;
 }
 
+export interface AppendKnowledgeSourceFileVersionCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly sourcePath: string;
+}
+
 export interface ListKnowledgeSourceManifestsCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -136,6 +143,9 @@ export interface CandidateKnowledgeStoreService {
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
   readonly importKnowledgeSourceFile: (
     command: ImportKnowledgeSourceFileCommand,
+  ) => Promise<CandidateKnowledgeSourceWriteResult>;
+  readonly appendKnowledgeSourceFileVersion: (
+    command: AppendKnowledgeSourceFileVersionCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
   readonly listKnowledgeSourceManifests: (
     command: ListKnowledgeSourceManifestsCommand,
@@ -196,6 +206,38 @@ function sourceDisplayName(sourcePath: string, explicitDisplayName?: string): st
 
 function importFailure(): Error {
   return new Error("The selected candidate knowledge source file could not be imported.");
+}
+
+function appendFileVersionFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge source file could not be added as a new version.",
+  );
+}
+
+async function ingestManagedCandidateKnowledgeFile(
+  ingest: typeof ingestFile,
+  sourcePath: string,
+  failure: () => Error,
+): Promise<NonNullable<Awaited<ReturnType<typeof ingestFile>>["source"]>> {
+  let ingestion: Awaited<ReturnType<typeof ingestFile>>;
+  try {
+    ingestion = await ingest(
+      { path: sourcePath },
+      { maxSourceBytes: maximumManagedCandidateKnowledgeFileBytes },
+    );
+  } catch {
+    throw failure();
+  }
+  const normalized = ingestion.source;
+  if (
+    normalized === null ||
+    ingestion.issues.length > 0 ||
+    normalized.issues.length > 0 ||
+    normalized.chunks.length === 0
+  ) {
+    throw failure();
+  }
+  return normalized;
 }
 
 function toKnowledgeBase(record: CandidateKnowledgeBaseRecord): CandidateKnowledgeBase {
@@ -484,24 +526,11 @@ export function createCandidateKnowledgeStoreService(
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
       const sourcePath = requireText(command.sourcePath, "Candidate knowledge source path");
       const displayName = sourceDisplayName(sourcePath, command.displayName);
-      let ingestion: Awaited<ReturnType<typeof ingestFile>>;
-      try {
-        ingestion = await resolved.ingestFile(
-          { path: sourcePath },
-          { maxSourceBytes: maximumManagedCandidateKnowledgeFileBytes },
-        );
-      } catch {
-        throw importFailure();
-      }
-      const normalized = ingestion.source;
-      if (
-        normalized === null ||
-        ingestion.issues.length > 0 ||
-        normalized.issues.length > 0 ||
-        normalized.chunks.length === 0
-      ) {
-        throw importFailure();
-      }
+      const normalized = await ingestManagedCandidateKnowledgeFile(
+        resolved.ingestFile,
+        sourcePath,
+        importFailure,
+      );
 
       const sourceId = requireText(resolved.generateId(), "Candidate knowledge source id");
       const versionId = requireText(resolved.generateId(), "Candidate knowledge source version id");
@@ -522,6 +551,37 @@ export function createCandidateKnowledgeStoreService(
             sizeBytes: normalized.sizeBytes,
             createdAt,
           });
+          return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
+        },
+      );
+    },
+    appendKnowledgeSourceFileVersion: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      const sourcePath = requireText(command.sourcePath, "Candidate knowledge source path");
+      const normalized = await ingestManagedCandidateKnowledgeFile(
+        resolved.ingestFile,
+        sourcePath,
+        appendFileVersionFailure,
+      );
+      const versionId = requireText(resolved.generateId(), "Candidate knowledge source version id");
+      const createdAt = resolved.now();
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const result = await handle.appendManagedCandidateKnowledgeFileVersion(
+            knowledgeBaseId,
+            sourceId,
+            {
+              id: versionId,
+              sourcePath,
+              mediaType: normalized.mediaType,
+              checksum: normalized.checksum,
+              sizeBytes: normalized.sizeBytes,
+              createdAt,
+            },
+          );
           return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
         },
       );
@@ -556,4 +616,5 @@ export const archiveKnowledgeBase = defaultService.archiveKnowledgeBase;
 export const createKnowledgeSource = defaultService.createKnowledgeSource;
 export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSourceVersion;
 export const importKnowledgeSourceFile = defaultService.importKnowledgeSourceFile;
+export const appendKnowledgeSourceFileVersion = defaultService.appendKnowledgeSourceFileVersion;
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;
