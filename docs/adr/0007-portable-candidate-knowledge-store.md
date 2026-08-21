@@ -21,10 +21,11 @@ The application therefore needs two local persistence boundaries:
    any application.
 
 The portable-store component establishes the second boundary's identity and
-SQLite lifecycle metadata. Its first managed-intake slice also copies one
-explicitly approved local file into the store and binds those immutable bytes to
-a stable CKB-scoped source version. It does not connect CKB selection or
-retrieval to an application workflow.
+SQLite lifecycle metadata. Its managed-file slices copy an explicitly approved
+local file into the store, bind those immutable bytes to a stable CKB-scoped
+source version, and expose storage's existing managed-version append through an
+explicit application operation. They do not connect CKB selection or retrieval
+to an application workflow.
 
 ## Decision
 
@@ -48,8 +49,26 @@ The application command to add one local file is the approval boundary for that
 one file. Intake accepts only a regular file of at most 20 MiB in the five
 ingestion-supported media types: plain text, Markdown, HTML, PDF, and DOCX. The
 existing extraction and content-quality checks must succeed before any raw bytes
-or metadata are persisted. Directory, URL, refresh, and bulk intake are outside
-this slice.
+or metadata are persisted.
+
+An explicit application operation can approve one local regular file as a
+manual new version of an existing file source. Every append repeats the same
+supported-media, successful-extraction, 20 MiB, stable-file, and managed-copy
+checks as initial intake. If the approved bytes differ from the current version,
+the store creates ordered immutable version N+1, linked to version N by its
+parent version ID. If the approved bytes are identical to the current version,
+the operation returns the existing source manifest as a no-op: it creates no
+version and must not advance a timestamp or be interpreted as freshness or a
+last-refresh observation. This operation is an explicit/manual version append
+or update, not automatic refresh.
+
+The selected append path exists only for the duration of the operation. It is
+not remembered as an origin binding or persisted in portable metadata,
+provider-facing data, or content-free diagnostics. The existing source ID,
+kind, creation time, and display label remain stable even if the newly selected
+path or basename differs. The selection therefore says which bytes the
+candidate approves for this version; it does not redefine the source's identity
+or provenance.
 
 Successful intake copies the exact approved raw bytes beneath `sources/` using
 an opaque layout derived only from generated source and version IDs. The
@@ -97,14 +116,18 @@ configuration. Its original filename is not used in the managed layout.
 This decision deliberately leaves the following work unintegrated:
 
 - directory intake, URL/fetched source intake, and directory bindings;
-- origin-path provenance, refresh and freshness, and duplicate handling;
+- remembered origin binding, automatic refresh, freshness or last-refresh
+  state, and moved, deleted, or inaccessible-origin reporting;
+- cross-source duplicate relationships and duplicate handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to
-  provider-transmission approval;
+  a run or provider-transmission approval;
 - CLI and desktop creation, opening, selection, and lifecycle controls;
-- source and store deletion semantics, including raw bytes, derived data, and retained run
-  references; and
-- portable export, backup, restore, conflict handling, and migration rollback.
+- source and store deletion semantics, including raw bytes, derived data, and
+  retained run references;
+- explicit orphan reconciliation; and
+- complete portable export, backup, restore, conflict handling, and migration
+  rollback.
 
 Until those boundaries are implemented, the existing workspace-scoped evidence
 and retrieval path remains authoritative for application runs. The presence of
@@ -136,8 +159,9 @@ a portable-store record must not make a workspace run read from it implicitly.
   lifecycle and retention policies.
 - Moving or copying a SQLite file will require later conflict and restore rules;
   the UUID alone does not decide which copy is current.
-- The store can contain immutable managed raw bytes for an approved single file,
-  but it does not yet improve application retrieval or reduce repeated import.
+- The store can contain immutable managed raw bytes for an approved file and
+  append changed bytes as parent-linked versions without changing source
+  identity. It does not yet improve application retrieval or monitor origins.
 - Deleting an application workspace does not delete a separate CKB store, and
   deleting the original host file does not delete its managed CKB copy. Deleting
   a future CKB store must not silently claim to delete workspace run history,

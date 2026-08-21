@@ -99,17 +99,23 @@ application-level CKB selection. A separate portable CKB store component now
 persists a logical UUID, CKB lifecycle metadata, stable CKB-scoped source
 identity, and immutable ordered source-version metadata. Sources record file/URL
 kind and a local label; versions record SHA-256, media type, byte size, and
-timestamp. Its first approved managed-intake command accepts one local regular
-file of at most 20 MiB in the five supported media types, requires successful
-extraction, and copies immutable raw bytes beneath an opaque ID-derived name.
-The store retains no exact host paths, filename provenance, filename-derived
-physical names, or URLs; a sensitive local label may still default to a
-basename. It remains independent of application workspaces and run history. It
-does not yet bind directories, ingest URLs, refresh sources, track freshness,
-duplicates, or indexes, drive retrieval, or expose CLI/desktop selection,
-deletion, backup, export, or restore. This remains component implementation;
-local vector and hybrid retrieval remain evaluation components pending
-representative comparison and lifecycle evidence.
+timestamp and parent lineage. Its approved managed-file commands accept one
+local regular file of at most 20 MiB in the five supported media types, require
+successful extraction plus stable-file and managed-copy checks, and copy
+immutable raw bytes beneath an opaque ID-derived name. The application component
+can explicitly append approved changed bytes as version N+1 of an existing file
+source; identical current bytes are a no-op and do not advance time or imply
+freshness. The selected path is runtime-only, and source identity and label stay
+stable even when its basename differs. The store retains no exact host paths,
+filename provenance, filename-derived physical names, or URLs. It remains
+independent of application workspaces and run history. It does not yet remember
+origin bindings; automatically refresh or report freshness, last refresh, or
+moved/deleted/inaccessible origins; ingest directories or URLs; relate
+cross-source duplicates; index or retrieve; select a CKB for an application or
+run; expose CLI/desktop controls; delete or reconcile orphans; or completely
+backup, export, or restore. This remains component implementation; local vector
+and hybrid retrieval remain evaluation components pending representative
+comparison and lifecycle evidence.
 
 Several later-stage components also exist: local lexical/vector retrieval,
 provider retry and progress behavior, a consented pilot harness, backup and
@@ -383,6 +389,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                    |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Exposed explicit managed-file version append at the application component boundary without advancing the application-grade stage beyond component implementation                                                        | A candidate can manually approve changed bytes as parent-linked version N+1 after repeated media, extraction, 20 MiB, stable-file, and managed-copy checks; identical current bytes are a true no-op, paths stay runtime-only, and automatic refresh/freshness, origin reporting, directory/URL intake, duplicates/indexing/retrieval, app/run selection, UI controls, deletion/reconciliation, and complete backup/export/restore remain out |
 | 2026-08-21 | Added approved single-file managed CKB intake without advancing the application-grade stage beyond component implementation                                                                                              | One regular file can now cross the portable boundary only after type, 20 MiB, and extraction checks; opaque immutable bytes and a version-6 marker establish exact managed provenance without host paths, while directory/URL intake, refresh/freshness, duplicates/indexing, retrieval/UI integration, deletion, reconciliation, backup, export, and restore remain out |
 | 2026-08-21 | Added portable CKB source identity and immutable ordered source-version metadata without advancing the application-grade stage beyond component implementation                                                           | Stable source IDs and SHA-256 version records establish portable provenance without retaining host paths, URLs, or content; physical intake, refresh, duplicates/indexing, application selection, retrieval, CLI/desktop UI, deletion, export, and restore remain unintegrated                                                                              |
 | 2026-08-21 | Implemented the portable CKB store identity and local SQLite lifecycle-metadata component for #78 without advancing the application-grade stage beyond component implementation                                           | A user-selected store needs a logical UUID independent of its filesystem path and must remain separate from application workspaces and run history; source versions, selection, retrieval cutover, CLI/desktop UI, deletion, export, and restore remain unintegrated                                                                                      |

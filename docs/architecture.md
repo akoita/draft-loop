@@ -67,7 +67,7 @@ flowchart TB
     App --> WorkspaceStore
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
-    App -->|"validated single-file managed intake"| CKBStore
+    App -->|"validated file add or manual version append"| CKBStore
     CKBStore -.->|"selection and retrieval pending"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
@@ -75,7 +75,7 @@ flowchart TB
     Providers -->|"approved transmission only"| Models
     Host -->|"validated request"| URL
     URL --> Knowledge
-    LocalFile -->|"validated managed intake"| App
+    LocalFile -->|"explicit approved add or version append"| App
     Host -->|"approved artifact only"| Export
 
     classDef ui fill:#e8f1ff,stroke:#2563eb,color:#172554;
@@ -93,11 +93,12 @@ flowchart TB
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
-solid CKB edge is the explicit managed-intake command: approval covers one local
-regular file, extraction succeeds before persistence, and the application
-copies verified raw bytes into the portable store. The dotted CKB edge marks the
-still-unintegrated workflow: application selection, retrieval, and provider use
-have not crossed that boundary yet.
+solid CKB edge covers explicit managed-file add and manual version-append
+operations: each approval covers one local regular file, extraction succeeds
+before persistence, and the application copies verified raw bytes into the
+portable store. The dotted CKB edge marks the still-unintegrated workflow:
+application selection, retrieval, and provider use have not crossed that
+boundary yet.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -127,18 +128,24 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   changes. The current component stores CKB metadata, stable CKB-scoped source
   identity with file/URL kind and a sensitive local label, ordered immutable
   versions with SHA-256, media type, byte size, and timestamp, and managed raw
-  bytes for one explicitly approved file. Intake accepts only a regular file of
-  at most 20 MiB in the five ingestion-supported media types and persists
-  nothing unless extraction succeeds. Raw bytes use an opaque, ID-derived local
-  name with restrictive best-effort permissions; exact host paths and original
-  filenames are not persisted as provenance or physical names, although a
-  sensitive label may default to the basename. It does not drive retrieval or
-  appear in CLI or desktop workflows. See
+  bytes for explicitly approved files. Initial intake and every manual version
+  append accept only a regular file of at most 20 MiB in the five
+  ingestion-supported media types and persist nothing unless extraction
+  succeeds. Each operation also repeats the stable-file and managed-copy checks.
+  Changed bytes append ordered parent-linked version N+1; bytes identical to the
+  current version return a no-op without advancing version time or creating a
+  freshness claim. Raw bytes use an opaque, ID-derived local name with
+  restrictive best-effort permissions. The selected path is runtime-only and
+  is not remembered; exact host paths and original filenames are not persisted
+  as provenance or physical names. Source identity and its sensitive label stay
+  stable even if a later selected path or basename differs. It does not drive
+  retrieval or appear in CLI or desktop workflows. See
   [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
-- Managed intake publishes verified bytes without replacement before committing
-  their version-6 database marker. Committed markers always require matching
-  regular-file bytes. Ordinary failures clean up; crashes or concurrency can
-  leave unreferenced opaque files until explicit reconciliation is implemented.
+- Managed-file add and append publish verified bytes without replacement before
+  committing their version-6 database marker. Committed markers always require
+  matching regular-file bytes. Ordinary failures clean up; crashes or
+  concurrency can leave unreferenced opaque files until explicit reconciliation
+  is implemented.
 - Managed blobs and SQLite metadata are plaintext. A source whose label resembles
   `AGENTS.md` or other configuration remains inert candidate data and never
   changes application instructions, policy, or permissions.
@@ -283,12 +290,16 @@ beside an application-specific SQLite history file, ingests selected local
 sources, constructs a context snapshot, and drives the orchestration engine.
 That workspace and run history remain distinct from the portable CKB store.
 The application contract can approve and copy one supported local regular file
-into the store, but neither adapter yet provides the broader CKB create, open,
-select, export, restore, or delete workflow. Directory and URL intake, refresh,
-freshness, duplicate/index state, application selection, and retrieval cutover
-are also pending; the current retrieval path still reads workspace-scoped
-evidence. Offline fixture agents make the lifecycle testable without network
-access. The desktop renderer uses the same
+into the store or manually append approved changed bytes to an existing file
+source. Storage already supplied the append primitive; this slice exposes it at
+the application component boundary. Neither user-facing adapter yet provides
+CKB controls. Remembered origin binding, automatic refresh, freshness or
+last-refresh state, moved/deleted/inaccessible-origin reporting, directory and
+URL intake, cross-source duplicate relationships, indexing and retrieval,
+application/run CKB selection, deletion, orphan reconciliation, and complete
+backup/export/restore remain pending; the current retrieval path still reads
+workspace-scoped evidence. Offline fixture agents make the lifecycle testable
+without network access. The desktop renderer uses the same
 adapter-neutral review port through a capability-limited bridge; browser mode
 has no filesystem or persistent
 credential capabilities and retains only a deterministic fixture fallback.

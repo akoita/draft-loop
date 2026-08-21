@@ -34,19 +34,26 @@ The portable CKB store component persists its schema version, logical UUID,
 creation time, CKB lifecycle metadata, stable CKB-scoped source identities, and
 immutable ordered source-version metadata. A source records file/URL kind and a
 local user-visible label; a version records SHA-256, media type, byte size, and
-timestamp. For one explicitly approved local regular file, it can also retain
-the exact raw bytes under an opaque name derived only from generated IDs. The
-application command is approval for that one file. Intake enforces a 20 MiB
-limit and the five supported media types—plain text, Markdown, HTML, PDF, and
-DOCX—and persists nothing unless extraction succeeds.
+timestamp. For explicitly approved local regular files, it can also retain the
+exact raw bytes under opaque names derived only from generated IDs. An explicit
+application operation may approve one local file as a manual new version of an
+existing file source. Initial intake and every append enforce the 20 MiB limit,
+the five supported media types—plain text, Markdown, HTML, PDF, and DOCX—plus
+successful extraction, stable-file checks, and verified managed copy. Changed
+bytes create ordered parent-linked version N+1. Bytes identical to the current
+version return a no-op, persist no new timestamp, and provide no freshness or
+last-refresh evidence.
 
 The store contains no exact host paths or URLs, filename provenance,
-filename-derived physical names, directory bindings, refresh/freshness state,
-duplicate relationships, normalized facts, or retrieval indexes. The local
-label may default to the original basename or be chosen by the user, but it is
-sensitive UI metadata rather than origin provenance. Application workspaces
-continue to own their current evidence and run history, and no CKB data is
-provider data.
+filename-derived physical names, remembered origin binding, directory binding,
+automatic refresh, freshness or last-refresh state, moved/deleted/inaccessible
+origin reports, cross-source duplicate relationships, normalized facts, or
+retrieval indexes. A selected append path is runtime-only and is not persisted.
+The local label may default to the original basename or be chosen by the user,
+but it is sensitive UI metadata rather than origin provenance; source identity
+and label do not change when a later selected path or basename differs.
+Application workspaces continue to own their current evidence and run history,
+and no CKB data is provider data.
 
 The store path and any future import path are host configuration and are excluded
 from portable records, provider requests, content-free audit data, and
@@ -54,9 +61,9 @@ diagnostics. Source labels may themselves reveal candidate information, and a
 checksum can correlate a record with known content. They are appropriate for a
 local user-facing CKB view, not a content-free diagnostic projection. Files with
 names such as `AGENTS.md`, `.env`, or other configuration-like names remain
-inert, untrusted candidate data; their names or contents cannot become
-application instructions, executable configuration, provider policy, or
-permissions.
+inert, untrusted candidate data during initial intake and version append; their
+names or contents cannot become application instructions, executable
+configuration, provider policy, or permissions.
 
 The CKB SQLite file and managed raw blobs are plaintext. DraftLoop applies
 restrictive permissions where supported, but permissions are best-effort and
@@ -120,7 +127,9 @@ portable CKB store. Deleting the selected original or an application workspace
 does not delete the managed CKB copy. A SQLite-only backup is not a complete CKB
 backup because it omits managed raw blobs. Complete deletion across raw,
 orphaned, derived, backed-up, and exported data and CKB backup/export/restore
-remain future privacy boundaries and must not be implied by single-file intake.
+remain future privacy boundaries and must not be implied by managed-file intake
+or manual version append. App/run CKB selection, indexing and retrieval, CLI or
+desktop controls, and origin lifecycle reporting are likewise not integrated.
 
 ## Redaction and logging
 
