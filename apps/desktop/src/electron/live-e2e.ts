@@ -414,7 +414,11 @@ export async function runLiveProviderE2E(options: LiveProviderE2EOptions): Promi
     "provider execution events are incomplete",
   );
 
+  // This synthetic gate verifies the provider, decision, approval, and export
+  // path; it does not adjudicate model quality. Accepted blocking findings
+  // correctly require a revision, so reject them here while accepting warnings.
   for (const finding of completed.findings) {
+    const decision = finding.severity === "error" ? "rejected" : "accepted";
     completed = await invoke<ReviewStateResult>(
       options.host,
       {
@@ -422,15 +426,17 @@ export async function runLiveProviderE2E(options: LiveProviderE2EOptions): Promi
         input: {
           workspaceId,
           runId: completed.runId,
-          action: { type: "finding-decision", findingId: finding.id, decision: "accepted" },
+          action: { type: "finding-decision", findingId: finding.id, decision },
         },
       },
-      "finding acceptance",
+      "finding decision",
     );
   }
   requireCondition(
-    completed.findings.every((finding) => finding.decision === "accepted"),
-    "projected findings were not accepted",
+    completed.findings.every(
+      (finding) => finding.decision === (finding.severity === "error" ? "rejected" : "accepted"),
+    ),
+    "projected findings did not receive the synthetic gate decisions",
   );
 
   const approved = await invoke<ReviewStateResult>(

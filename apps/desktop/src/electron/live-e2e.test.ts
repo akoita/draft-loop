@@ -256,7 +256,8 @@ describe("live provider E2E runner", () => {
       expect(report.checks.exportExists).toBe(true);
       expect(report.models.author.company).toBe("anthropic");
       expect(report.models.critic.company).toBe("openai");
-      expect(report.counts.acceptedFindings).toBe(report.counts.findings);
+      expect(report.counts.acceptedFindings).toBe(1);
+      expect(report.counts.findings).toBe(2);
       expect(reportText).not.toContain("Synthetic job from jobs.example.test");
       expect(reportText).not.toContain("Synthetic candidate evidence");
       expect(reportText).not.toContain(paths.root);
@@ -300,6 +301,37 @@ describe("live provider E2E runner", () => {
         type: "file.select",
         input: { target: "evidence" },
       });
+      expect(
+        commands.filter(
+          (command) =>
+            command.type === "review.dispatch" && command.input.action.type === "finding-decision",
+        ),
+      ).toEqual([
+        {
+          type: "review.dispatch",
+          input: {
+            workspaceId: "workspace-live",
+            runId: "run-live",
+            action: {
+              type: "finding-decision",
+              findingId: "finding-unsupported-claim",
+              decision: "rejected",
+            },
+          },
+        },
+        {
+          type: "review.dispatch",
+          input: {
+            workspaceId: "workspace-live",
+            runId: "run-live",
+            action: {
+              type: "finding-decision",
+              findingId: "finding-coverage",
+              decision: "accepted",
+            },
+          },
+        },
+      ]);
     } finally {
       fetchSpy.mockRestore();
       await rm(paths.root, { recursive: true, force: true });
