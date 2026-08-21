@@ -25,7 +25,7 @@
     "@draft-loop/schemas": "workspace:*",
     "@draft-loop/security": "workspace:*",
     "@draft-loop/storage": "workspace:*",
-    "openai": "7.4.0",
+    "openai": "7.5.0",
     "zod": "4.4.3"
   }
 }
