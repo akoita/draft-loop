@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { constants } from "node:fs";
+import { constants, type Dirent } from "node:fs";
 import {
   chmod,
   type FileHandle,
@@ -7,6 +7,7 @@ import {
   lstat,
   mkdir,
   open,
+  opendir,
   readFile,
   realpath,
   rm,
@@ -41,6 +42,22 @@ const maximumDatabaseBytes = 16 * 1024 * 1024 * 1024;
 const descriptorKeyPrefix = "candidateKnowledgeStore";
 
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
+export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
+
+export interface ManagedCandidateKnowledgeFileInventory {
+  readonly schemaVersion: 1;
+  readonly verifiedManagedFileCount: number;
+  readonly scannedEntryCount: number;
+  readonly unknownEntries: {
+    readonly intakeShapedFilesAtSourcesRoot: number;
+    readonly opaqueEntriesAtSourcesRoot: number;
+    readonly entriesInsideManagedSourceDirectories: number;
+    readonly symbolicLinks: number;
+    readonly otherEntries: number;
+  };
+  readonly complete: boolean;
+  readonly scanLimitReached: boolean;
+}
 
 export interface CandidateKnowledgeStoreDescriptor {
   readonly schemaVersion: 1;
@@ -85,6 +102,7 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     sourceId: string,
     versionId: string,
   ) => Promise<string | undefined>;
+  readonly inspectManagedCandidateKnowledgeFiles: () => Promise<ManagedCandidateKnowledgeFileInventory>;
   readonly close: () => Promise<void>;
 }
 
@@ -470,7 +488,21 @@ async function validateManagedCandidateKnowledgeFiles(
   storage: SqliteStorage,
   root: string,
 ): Promise<void> {
-  for (const version of storage.listManagedCandidateKnowledgeSourceVersions()) {
+  await verifyManagedCandidateKnowledgeFileVersions(
+    storage.listManagedCandidateKnowledgeSourceVersions(),
+    root,
+  );
+}
+
+type ManagedCandidateKnowledgeSourceVersion = ReturnType<
+  SqliteStorage["listManagedCandidateKnowledgeSourceVersions"]
+>[number];
+
+async function verifyManagedCandidateKnowledgeFileVersions(
+  versions: readonly ManagedCandidateKnowledgeSourceVersion[],
+  root: string,
+): Promise<void> {
+  for (const version of versions) {
     if (version.kind !== "file") {
       throw new StorageValidationError(
         "Candidate knowledge store contains a managed version for a non-file source.",
@@ -480,6 +512,129 @@ async function validateManagedCandidateKnowledgeFiles(
     await requireDirectory(sourceDirectory, "Managed candidate knowledge source directory");
     await verifyManagedFile(managedVersionPath(root, version.sourceId, version.id), version);
   }
+}
+
+interface MutableManagedCandidateKnowledgeFileInventory {
+  scannedEntryCount: number;
+  scanLimitReached: boolean;
+  readonly unknownEntries: {
+    intakeShapedFilesAtSourcesRoot: number;
+    opaqueEntriesAtSourcesRoot: number;
+    entriesInsideManagedSourceDirectories: number;
+    symbolicLinks: number;
+    otherEntries: number;
+  };
+}
+
+const intakeShapedFilename =
+  /^\.intake-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+async function scanManagedCandidateKnowledgeDirectory(
+  path: string,
+  inventory: MutableManagedCandidateKnowledgeFileInventory,
+  inspect: (entry: Dirent) => void,
+): Promise<void> {
+  if (inventory.scanLimitReached) return;
+  const directory = await opendir(path);
+  let closeError: unknown;
+  try {
+    while (true) {
+      const entry = await directory.read();
+      if (entry === null) break;
+      if (inventory.scannedEntryCount === maximumManagedCandidateKnowledgeInventoryEntries) {
+        inventory.scanLimitReached = true;
+        break;
+      }
+      inventory.scannedEntryCount += 1;
+      inspect(entry);
+    }
+  } finally {
+    try {
+      await directory.close();
+    } catch (error) {
+      if (errorCode(error) !== "ERR_DIR_CLOSED") closeError = error;
+    }
+  }
+  if (closeError !== undefined) throw closeError;
+}
+
+async function inspectManagedCandidateKnowledgeFiles(
+  storage: SqliteStorage,
+  root: string,
+): Promise<ManagedCandidateKnowledgeFileInventory> {
+  const managedVersions = storage.listManagedCandidateKnowledgeSourceVersions();
+  await verifyManagedCandidateKnowledgeFileVersions(managedVersions, root);
+
+  const expectedFilesBySourceDirectory = new Map<string, Set<string>>();
+  for (const version of managedVersions) {
+    const sourceDirectory = managedPathSegment(version.sourceId);
+    const expectedFiles = expectedFilesBySourceDirectory.get(sourceDirectory) ?? new Set<string>();
+    expectedFiles.add(managedPathSegment(version.id));
+    expectedFilesBySourceDirectory.set(sourceDirectory, expectedFiles);
+  }
+
+  const inventory: MutableManagedCandidateKnowledgeFileInventory = {
+    scannedEntryCount: 0,
+    scanLimitReached: false,
+    unknownEntries: {
+      intakeShapedFilesAtSourcesRoot: 0,
+      opaqueEntriesAtSourcesRoot: 0,
+      entriesInsideManagedSourceDirectories: 0,
+      symbolicLinks: 0,
+      otherEntries: 0,
+    },
+  };
+  const observedManagedSourceDirectories: string[] = [];
+  const sourcesRoot = join(root, sourcesDirectory);
+  await scanManagedCandidateKnowledgeDirectory(sourcesRoot, inventory, (entry) => {
+    if (entry.isSymbolicLink()) {
+      inventory.unknownEntries.symbolicLinks += 1;
+    } else if (entry.isFile()) {
+      if (intakeShapedFilename.test(entry.name)) {
+        inventory.unknownEntries.intakeShapedFilesAtSourcesRoot += 1;
+      } else {
+        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
+      }
+    } else if (entry.isDirectory()) {
+      if (expectedFilesBySourceDirectory.has(entry.name)) {
+        observedManagedSourceDirectories.push(entry.name);
+      } else {
+        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
+      }
+    } else {
+      inventory.unknownEntries.otherEntries += 1;
+    }
+  });
+
+  for (const sourceDirectory of observedManagedSourceDirectories) {
+    if (inventory.scanLimitReached) break;
+    const sourcePath = join(sourcesRoot, sourceDirectory);
+    await requireDirectory(sourcePath, "Managed candidate knowledge source directory");
+    const expectedFiles = expectedFilesBySourceDirectory.get(sourceDirectory) as Set<string>;
+    await scanManagedCandidateKnowledgeDirectory(sourcePath, inventory, (entry) => {
+      if (entry.isSymbolicLink()) {
+        inventory.unknownEntries.symbolicLinks += 1;
+      } else if (entry.isFile()) {
+        if (!expectedFiles.has(entry.name)) {
+          inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
+        }
+      } else if (entry.isDirectory()) {
+        inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
+      } else {
+        inventory.unknownEntries.otherEntries += 1;
+      }
+    });
+  }
+
+  const unknownEntries = Object.freeze({ ...inventory.unknownEntries });
+  return Object.freeze({
+    schemaVersion: 1,
+    verifiedManagedFileCount: managedVersions.length,
+    scannedEntryCount: inventory.scannedEntryCount,
+    unknownEntries,
+    complete: !inventory.scanLimitReached,
+    scanLimitReached: inventory.scanLimitReached,
+  });
 }
 
 function parseDescriptor(value: unknown): CandidateKnowledgeStoreDescriptor {
@@ -785,6 +940,8 @@ function createHandle(
       await verifyManagedFile(path, version);
       return path;
     },
+    inspectManagedCandidateKnowledgeFiles: () =>
+      inspectManagedCandidateKnowledgeFiles(storage, root),
     close: () => storage.close(),
   };
   return Object.freeze(handle);

@@ -44,6 +44,16 @@ bytes create ordered parent-linked version N+1. Bytes identical to the current
 version return a no-op, persist no new timestamp, and provide no freshness or
 last-refresh evidence.
 
+An explicit local application query can perform a bounded structural inventory
+of `sources/` after normal validation of every referenced managed blob. It
+returns only counts for verified managed files, scanned entries, staging-shaped
+root files, other opaque root files/directories, extra entries inside expected
+managed-source directories, symlinks, and special/other entries, together with
+complete/scan-limit status. It returns no names, paths, IDs, labels, checksums,
+or content. It does not follow unknown symlinks, recurse into unknown
+directories, read unknown file bytes, mutate storage, or run automatically.
+This is a local state query, not provider data or content-diagnostic automation.
+
 The store contains no exact host paths or URLs, filename provenance,
 filename-derived physical names, remembered origin binding, directory binding,
 automatic refresh, freshness or last-refresh state, moved/deleted/inaccessible
@@ -75,8 +85,13 @@ DraftLoop.
 Managed publication is no-replace, file first, and database second. Storage
 migration version 6 marks source versions that require verified managed bytes.
 Ordinary failures clean up their files, while a crash or concurrent loser can
-leave unreferenced opaque residue. Automatic orphan reconciliation is not yet a
-privacy or deletion guarantee.
+leave unreferenced opaque entries. Their names and layout provide no
+authenticated evidence that DraftLoop owns or abandoned them. Inventory must
+therefore not delete, adopt, quarantine, repair, or assign ownership. Safe
+cleanup requires a future durable ownership journal, coordination with active
+writers, and explicit approval; unjournaled entries remain unknown. Inventory
+also does not repair missing or corrupt referenced blobs, which continue to
+fail normal store validation.
 
 The application must show the data class, provider, model, and retention choice
 before the first request containing source or draft material. A denied policy
@@ -126,10 +141,11 @@ application workspaces; they do not yet export, restore, or delete the separate
 portable CKB store. Deleting the selected original or an application workspace
 does not delete the managed CKB copy. A SQLite-only backup is not a complete CKB
 backup because it omits managed raw blobs. Complete deletion across raw,
-orphaned, derived, backed-up, and exported data and CKB backup/export/restore
+unknown, derived, backed-up, and exported data and CKB backup/export/restore
 remain future privacy boundaries and must not be implied by managed-file intake
-or manual version append. App/run CKB selection, indexing and retrieval, CLI or
-desktop controls, and origin lifecycle reporting are likewise not integrated.
+or manual version append. Repair, journal/lock/lease and cleanup coordination,
+app/run CKB selection, indexing and retrieval, CLI or desktop controls, and
+origin lifecycle reporting are likewise not integrated.
 
 ## Redaction and logging
 

@@ -106,16 +106,29 @@ immutable raw bytes beneath an opaque ID-derived name. The application component
 can explicitly append approved changed bytes as version N+1 of an existing file
 source; identical current bytes are a no-op and do not advance time or imply
 freshness. The selected path is runtime-only, and source identity and label stay
-stable even when its basename differs. The store retains no exact host paths,
-filename provenance, filename-derived physical names, or URLs. It remains
+stable even when its basename differs. An explicit local application query now
+performs a bounded, non-destructive structural inventory of `sources/` after
+normal referenced-blob validation. It reports only counts of verified managed
+files, scanned entries, staging-shaped root files, other opaque root
+files/directories, extra entries within expected managed-source directories,
+symlinks, special/other entries, and complete/scan-limit status. It returns no
+names, paths, IDs, labels, checksums, or content and neither follows unknown
+symlinks, recurses unknown directories, reads unknown file bytes, mutates state,
+nor runs automatically. Structural shape is not authenticated ownership
+evidence: unreferenced entries remain unknown and cannot be deleted, adopted,
+quarantined, or repaired. The store retains no exact host paths, filename
+provenance, filename-derived physical names, or URLs. It remains
 independent of application workspaces and run history. It does not yet remember
 origin bindings; automatically refresh or report freshness, last refresh, or
 moved/deleted/inaccessible origins; ingest directories or URLs; relate
 cross-source duplicates; index or retrieve; select a CKB for an application or
-run; expose CLI/desktop controls; delete or reconcile orphans; or completely
-backup, export, or restore. This remains component implementation; local vector
-and hybrid retrieval remain evaluation components pending representative
-comparison and lifecycle evidence.
+run; expose CLI/desktop controls; repair missing/corrupt referenced blobs;
+journal ownership or coordinate writers through locks/leases; delete, clean up,
+or reconcile unknown entries; or completely backup, export, or restore. Safe
+future cleanup requires a durable ownership journal, writer coordination, and
+explicit approval; unjournaled entries remain unknown. This remains component
+implementation; local vector and hybrid retrieval remain evaluation components
+pending representative comparison and lifecycle evidence.
 
 Several later-stage components also exist: local lexical/vector retrieval,
 provider retry and progress behavior, a consented pilot harness, backup and
@@ -389,6 +402,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                    |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-21 | Added an explicit bounded, count-only structural inventory query for the portable store without advancing the application-grade stage beyond component implementation                                                    | Inventory validates referenced blobs and classifies `sources/` entries without names, content, traversal, mutation, or provider exposure; unreferenced entries lack authenticated ownership evidence, so repair and cleanup remain blocked on a future durable journal, writer coordination, and explicit approval                                              |
 | 2026-08-21 | Exposed explicit managed-file version append at the application component boundary without advancing the application-grade stage beyond component implementation                                                        | A candidate can manually approve changed bytes as parent-linked version N+1 after repeated media, extraction, 20 MiB, stable-file, and managed-copy checks; identical current bytes are a true no-op, paths stay runtime-only, and automatic refresh/freshness, origin reporting, directory/URL intake, duplicates/indexing/retrieval, app/run selection, UI controls, deletion/reconciliation, and complete backup/export/restore remain out |
 | 2026-08-21 | Added approved single-file managed CKB intake without advancing the application-grade stage beyond component implementation                                                                                              | One regular file can now cross the portable boundary only after type, 20 MiB, and extraction checks; opaque immutable bytes and a version-6 marker establish exact managed provenance without host paths, while directory/URL intake, refresh/freshness, duplicates/indexing, retrieval/UI integration, deletion, reconciliation, backup, export, and restore remain out |
 | 2026-08-21 | Added portable CKB source identity and immutable ordered source-version metadata without advancing the application-grade stage beyond component implementation                                                           | Stable source IDs and SHA-256 version records establish portable provenance without retaining host paths, URLs, or content; physical intake, refresh, duplicates/indexing, application selection, retrieval, CLI/desktop UI, deletion, export, and restore remain unintegrated                                                                              |

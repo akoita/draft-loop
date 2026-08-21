@@ -462,6 +462,93 @@ describe("candidate knowledge store application service", () => {
     expect(view.knowledgeBases[0]).not.toHaveProperty("archivedAt");
   });
 
+  it("rejects an invalid managed-file inventory root before opening storage", async () => {
+    const open = vi.fn();
+    const service = createCandidateKnowledgeStoreService({ open: open as never });
+
+    await expect(service.inspectManagedCandidateKnowledgeFiles({ storeRoot: " " })).rejects.toThrow(
+      /root is required/i,
+    );
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("returns a deeply frozen pathless managed-file inventory projection", async () => {
+    const close = vi.fn(async () => undefined);
+    const inspectManagedCandidateKnowledgeFiles = vi.fn(async () => ({
+      schemaVersion: 1 as const,
+      verifiedManagedFileCount: 3,
+      scannedEntryCount: 11,
+      unknownEntries: {
+        intakeShapedFilesAtSourcesRoot: 1,
+        opaqueEntriesAtSourcesRoot: 2,
+        entriesInsideManagedSourceDirectories: 3,
+        symbolicLinks: 1,
+        otherEntries: 1,
+        path: "/private/nested",
+        label: "secret",
+      },
+      complete: false,
+      scanLimitReached: true,
+      root: "/private/store",
+      filename: "secret-resume.txt",
+      id: "source-secret",
+      checksum,
+      content: "private candidate material",
+      cleanupToken: "cleanup-secret",
+      orphan: true,
+    }));
+    const handle = {
+      inspectManagedCandidateKnowledgeFiles,
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const open = vi.fn(async () => handle);
+    const service = createCandidateKnowledgeStoreService({ open });
+
+    const inventory = await service.inspectManagedCandidateKnowledgeFiles({ storeRoot: "valid" });
+
+    expect(inventory).toEqual({
+      schemaVersion: 1,
+      verifiedManagedFileCount: 3,
+      scannedEntryCount: 11,
+      unknownEntries: {
+        intakeShapedFilesAtSourcesRoot: 1,
+        opaqueEntriesAtSourcesRoot: 2,
+        entriesInsideManagedSourceDirectories: 3,
+        symbolicLinks: 1,
+        otherEntries: 1,
+      },
+      complete: false,
+      scanLimitReached: true,
+    });
+    expect(Object.isFrozen(inventory)).toBe(true);
+    expect(Object.isFrozen(inventory.unknownEntries)).toBe(true);
+    expect(open).toHaveBeenCalledOnce();
+    expect(open).toHaveBeenCalledWith("valid");
+    expect(inspectManagedCandidateKnowledgeFiles).toHaveBeenCalledOnce();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("preserves a managed-file inventory failure after attempting to close", async () => {
+    const failure = new Error("inventory failed");
+    const close = vi.fn(async () => {
+      throw new Error("close failed");
+    });
+    const handle = {
+      inspectManagedCandidateKnowledgeFiles: vi.fn(async () => {
+        throw failure;
+      }),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.inspectManagedCandidateKnowledgeFiles({ storeRoot: "valid" }),
+    ).rejects.toBe(failure);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("rejects invalid roots, ids, and names before a storage adapter is called", async () => {
     const initialize = vi.fn();
     const open = vi.fn();

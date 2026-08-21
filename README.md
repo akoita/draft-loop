@@ -47,7 +47,8 @@ workflow:
   restart-safe review state;
 - a portable Candidate Knowledge Base (CKB) store component with a logical UUID,
   CKB/source/version metadata, immutable managed raw bytes for approved local
-  files, and explicit manual version append at the application boundary;
+  files, explicit manual version append, and an explicit bounded structural
+  inventory query at the application boundary;
 - bounded, approval-gated URL ingestion for GitHub, certification, profile,
   portfolio, and job-description sources with provenance and typed facts;
 - explicit separation of blocking findings, warnings, artifact approval, and
@@ -74,9 +75,17 @@ stable even when the selected path or basename changes. Directory and URL
 intake, remembered origin binding, automatic refresh, freshness or last-refresh
 state, moved/deleted/inaccessible-origin reporting, cross-source duplicate
 relationships, indexing and retrieval, application/run CKB selection, CLI and
-desktop controls, deletion, orphan reconciliation, and complete backup, export,
-and restore are not integrated. Application workspaces and their run-history
-databases remain separate from the CKB store.
+desktop controls, deletion, reconciliation or repair, and complete backup,
+export, and restore are not integrated. The local inventory query first
+validates every referenced managed blob, then reports only bounded counts for
+verified managed files, scanned entries, staging-shaped root files, other
+opaque root files/directories, extra entries inside expected managed-source
+directories, symlinks, special/other entries, and whether the scan completed or
+hit its limit. It returns no names, paths, IDs, labels, checksums, or content;
+never follows unknown symlinks, recurses into unknown directories, or reads
+unknown file bytes; and does not mutate or classify unknown entries as
+DraftLoop-owned residue. Application workspaces and their run-history databases
+remain separate from the CKB store.
 
 ## Stack
 
@@ -111,7 +120,8 @@ flowchart LR
     Loop <-->|"approved model requests"| Models
     Loop --> Review --> Export
     Application <--> WorkspaceStore
-    ApprovedFile -->|"validated add or manual version append"| Application --> CKBStore
+    ApprovedFile -->|"explicit add or version approval"| Application
+    Application -->|"validated add / append; explicit structural inventory"| CKBStore
     CKBStore -.->|"selection and retrieval pending"| Context
 ```
 
@@ -125,7 +135,9 @@ Source labels and checksums remain local CKB metadata and are not content-free
 diagnostics. A configuration-like name such as `AGENTS.md` remains inert
 candidate data, including when selected for a later version. Deleting the
 original or a workspace does not delete the CKB copy, and SQLite-only backup is
-incomplete. See the [detailed
+incomplete. Unreferenced opaque entries have no authenticated ownership record;
+their shape alone cannot authorize deletion, adoption, quarantine, or repair.
+See the [detailed
 architecture](docs/architecture.md) and
 [ADR 0007](docs/adr/0007-portable-candidate-knowledge-store.md) for the current
 component boundary and its unimplemented workflow integrations.
