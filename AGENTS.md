@@ -6,6 +6,12 @@ Before proposing or implementing roadmap-stage work, read `docs/roadmap.md`,
 align the work with its current stage, and update the roadmap when scope or
 priorities change.
 
+## Documentation synchronization
+
+- Keep code synchronized with `README.md`, architecture documents and diagrams,
+  examples, CLI help, and roadmap references.
+- Update affected documentation in the same PR, or state why no update is needed.
+
 ## Architecture boundaries
 
 - `packages/domain` owns framework-free product concepts and workflow states.
