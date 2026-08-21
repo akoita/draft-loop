@@ -45,6 +45,9 @@ workflow:
 - a packaged Electron desktop host that connects the bridge to the shared local
   application driver, native workspace/file dialogs, SQLite history, and
   restart-safe review state;
+- a portable Candidate Knowledge Base (CKB) store component with a logical UUID
+  and lifecycle metadata in a separate local SQLite file at a user-selected
+  path;
 - bounded, approval-gated URL ingestion for GitHub, certification, profile,
   portfolio, and job-description sources with provenance and typed facts;
 - explicit separation of blocking findings, warnings, artifact approval, and
@@ -56,21 +59,23 @@ workflow:
   portfolio ingestion, and an OpenAI-compatible local endpoint adapter.
 
 These capabilities are not all validated product outcomes. The current stage is
-integration hardening and outcome validation: cross-platform installed-app
-acceptance with representative real inputs, the complete desktop provider
-preflight, failure recovery, and consented application results remain open.
+the application-grade CV workflow. The portable CKB store currently contains
+identity and lifecycle metadata only: source content and versions, workspace
+selection, retrieval cutover, CLI and desktop controls, deletion, export, and
+restore are not integrated. Application workspaces and their run-history
+databases remain separate from the selected CKB store.
 
 ## Stack
 
-| Area | Technologies |
-| --- | --- |
-| Language and runtime | TypeScript, Node.js 24.5.0, pnpm 10.18.3 |
-| Workspace | pnpm monorepo with framework-free domain packages |
-| Model providers | Anthropic SDK, OpenAI SDK, cross-provider author–critic pairing |
-| Contracts and validation | Zod, strict TypeScript, JSON Schema structured outputs |
-| CLI and desktop shell | Commander, React 19, Vite, Electron 43, Electron Forge 7 |
-| Persistence and output | Drizzle ORM, SQLite boundary, Markdown/PDF/DOCX rendering contracts |
-| Quality | Biome, ESLint, Markdownlint, Vitest, GitHub Actions |
+| Area                     | Technologies                                                        |
+| ------------------------ | ------------------------------------------------------------------- |
+| Language and runtime     | TypeScript, Node.js 24.5.0, pnpm 10.18.3                            |
+| Workspace                | pnpm monorepo with framework-free domain packages                   |
+| Model providers          | Anthropic SDK, OpenAI SDK, cross-provider author–critic pairing     |
+| Contracts and validation | Zod, strict TypeScript, JSON Schema structured outputs              |
+| CLI and desktop shell    | Commander, React 19, Vite, Electron 43, Electron Forge 7            |
+| Persistence and output   | Drizzle ORM, SQLite boundary, Markdown/PDF/DOCX rendering contracts |
+| Quality                  | Biome, ESLint, Markdownlint, Vitest, GitHub Actions                 |
 
 ## Architecture
 
@@ -84,20 +89,24 @@ flowchart LR
     Models["Anthropic + OpenAI<br/>provider adapters"]
     Review["Validation<br/>+ human approval"]
     Export["Local CV export"]
-    Storage[("Local workspace<br/>+ SQLite history")]
+    WorkspaceStore[("Application workspace<br/>+ SQLite run history")]
+    CKBStore[("Portable CKB store<br/>logical UUID + SQLite metadata")]
 
     Inputs --> Adapters --> Application
     Application --> Context --> Loop
     Loop <-->|"approved model requests"| Models
     Loop --> Review --> Export
-    Application <--> Storage
+    Application <--> WorkspaceStore
+    Application -.->|"component only; workflow integration pending"| CKBStore
 ```
 
 At a high level, DraftLoop keeps source material and run history local, sends
 only approved context through provider adapters, and requires human approval
-before local export. See the [detailed architecture](docs/architecture.md) for
-package boundaries, the Electron trust boundary, workflow states, and stopping
-conditions.
+before local export. The portable CKB store is a separate, user-selected local
+SQLite store; its filesystem path is not part of its logical identity and is
+not provider data. See the [detailed architecture](docs/architecture.md) and
+[ADR 0007](docs/adr/0007-portable-candidate-knowledge-store.md) for the current
+component boundary and its unimplemented workflow integrations.
 
 The monorepo separates product contracts from adapters:
 

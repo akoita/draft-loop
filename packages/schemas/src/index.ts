@@ -1,5 +1,6 @@
 import {
   candidateKnowledgeBaseStates,
+  candidateKnowledgeStoreSchemaVersion,
   contextSchemaVersion,
   deriveModelLineage,
   maximumIndependenceOverrideRationaleLength,
@@ -100,6 +101,21 @@ export const candidateProfileSchema = z.object({
 });
 
 export type CandidateProfile = z.infer<typeof candidateProfileSchema>;
+
+export const candidateKnowledgeStoreSchema = z.object({
+  schemaVersion: z.literal(candidateKnowledgeStoreSchemaVersion),
+  id: nonEmptyString,
+  createdAt: z
+    .string()
+    .refine(
+      (value) =>
+        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
+        !Number.isNaN(Date.parse(value)),
+      "must be a valid ISO timestamp",
+    ),
+});
+
+export type CandidateKnowledgeStore = z.infer<typeof candidateKnowledgeStoreSchema>;
 
 export const candidateKnowledgeBaseStateSchema = z.enum(candidateKnowledgeBaseStates);
 export type CandidateKnowledgeBaseState = z.infer<typeof candidateKnowledgeBaseStateSchema>;

@@ -6,6 +6,10 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./knowledge-store": {
+      "types": "./src/knowledge-store.ts",
+      "import": "./src/knowledge-store.ts"
     }
   },
   "files": [
@@ -16,6 +20,7 @@
   },
   "dependencies": {
     "@draft-loop/domain": "workspace:*",
+    "@draft-loop/schemas": "workspace:*",
     "drizzle-orm": "0.45.2"
   },
   "optionalDependencies": {

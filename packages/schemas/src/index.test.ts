@@ -9,6 +9,7 @@ import {
   agentContextReferenceSchema,
   candidateKnowledgeBaseSchema,
   candidateKnowledgeBaseStateSchema,
+  candidateKnowledgeStoreSchema,
   candidateProfileSchema,
   contextSnapshotInputSchema,
   contextSnapshotSchema,
@@ -305,6 +306,40 @@ describe("canonical context snapshot schemas", () => {
       format: "markdown",
       requiredSections: [],
     });
+  });
+});
+
+describe("candidate knowledge store schema", () => {
+  const createdAt = "2026-08-21T12:30:00.000Z";
+
+  it("parses the exact store schema version and trims its identifier", () => {
+    expect(
+      candidateKnowledgeStoreSchema.parse({
+        schemaVersion: 1,
+        id: "  portable-store-1  ",
+        createdAt,
+      }),
+    ).toEqual({ schemaVersion: 1, id: "portable-store-1", createdAt });
+  });
+
+  it("rejects unsupported versions, blank identifiers, and invalid timestamps", () => {
+    expect(() =>
+      candidateKnowledgeStoreSchema.parse({
+        schemaVersion: 2,
+        id: "portable-store-1",
+        createdAt,
+      }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeStoreSchema.parse({ schemaVersion: 1, id: "  ", createdAt }),
+    ).toThrow(/must not be empty/i);
+    expect(() =>
+      candidateKnowledgeStoreSchema.parse({
+        schemaVersion: 1,
+        id: "portable-store-1",
+        createdAt: ` ${createdAt} `,
+      }),
+    ).toThrow(/valid ISO timestamp/i);
   });
 });
 
