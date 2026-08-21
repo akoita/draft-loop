@@ -1,4 +1,5 @@
 import {
+  candidateKnowledgeBaseStates,
   contextSchemaVersion,
   deriveModelLineage,
   maximumIndependenceOverrideRationaleLength,
@@ -99,6 +100,64 @@ export const candidateProfileSchema = z.object({
 });
 
 export type CandidateProfile = z.infer<typeof candidateProfileSchema>;
+
+export const candidateKnowledgeBaseStateSchema = z.enum(candidateKnowledgeBaseStates);
+export type CandidateKnowledgeBaseState = z.infer<typeof candidateKnowledgeBaseStateSchema>;
+
+export const candidateKnowledgeBaseSchema = z
+  .object({
+    id: nonEmptyString,
+    displayName: nonEmptyString,
+    description: z.string().trim().default(""),
+    isDefault: z.boolean().default(false),
+    state: candidateKnowledgeBaseStateSchema.default("active"),
+    createdAt: timestampSchema,
+    updatedAt: timestampSchema,
+    archivedAt: timestampSchema.optional(),
+  })
+  .superRefine((knowledgeBase, context) => {
+    if (Date.parse(knowledgeBase.updatedAt) < Date.parse(knowledgeBase.createdAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["updatedAt"],
+        message: "updatedAt must not precede createdAt",
+      });
+    }
+    if (knowledgeBase.state === "active" && knowledgeBase.archivedAt !== undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["archivedAt"],
+        message: "active candidate knowledge bases must not have archivedAt",
+      });
+    }
+    if (knowledgeBase.state === "archived" && knowledgeBase.archivedAt === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: ["archivedAt"],
+        message: "archived candidate knowledge bases require archivedAt",
+      });
+    }
+    if (knowledgeBase.isDefault && knowledgeBase.state !== "active") {
+      context.addIssue({
+        code: "custom",
+        path: ["state"],
+        message: "the default candidate knowledge base must remain active",
+      });
+    }
+    if (
+      knowledgeBase.archivedAt !== undefined &&
+      (Date.parse(knowledgeBase.archivedAt) < Date.parse(knowledgeBase.createdAt) ||
+        Date.parse(knowledgeBase.archivedAt) > Date.parse(knowledgeBase.updatedAt))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["archivedAt"],
+        message: "archivedAt must not precede createdAt or follow updatedAt",
+      });
+    }
+  });
+
+export type CandidateKnowledgeBase = z.infer<typeof candidateKnowledgeBaseSchema>;
 
 export const outputConstraintsSchema = z.object({
   format: z.enum(outputFormats).default("markdown"),

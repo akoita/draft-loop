@@ -23,6 +23,7 @@ export type EvidenceSourceId = Brand<string, "EvidenceSourceId">;
 export type ArtifactId = Brand<string, "ArtifactId">;
 export type AgentReferenceId = Brand<string, "AgentReferenceId">;
 export type ProfileId = Brand<string, "ProfileId">;
+export type CandidateKnowledgeBaseId = Brand<string, "CandidateKnowledgeBaseId">;
 
 export interface WorkspaceIdentity {
   readonly id: WorkspaceId;
@@ -73,6 +74,99 @@ export function createProfile(id: string, input: CandidateProfileInput): Candida
     description: (input.description ?? "").trim(),
     createdAt: now,
     updatedAt: now,
+  };
+}
+
+export const candidateKnowledgeBaseStates = ["active", "archived"] as const;
+export type CandidateKnowledgeBaseState = (typeof candidateKnowledgeBaseStates)[number];
+
+export interface CandidateKnowledgeBase {
+  readonly id: CandidateKnowledgeBaseId;
+  readonly displayName: string;
+  readonly description: string;
+  readonly isDefault: boolean;
+  readonly state: CandidateKnowledgeBaseState;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly archivedAt?: string;
+}
+
+export interface CandidateKnowledgeBaseInput {
+  readonly displayName: string;
+  readonly description?: string;
+  readonly isDefault?: boolean;
+}
+
+function requireCandidateKnowledgeBaseText(value: string, field: "id" | "display name"): string {
+  const normalized = value.trim();
+  if (normalized === "") {
+    throw new Error(`A candidate knowledge base ${field} is required.`);
+  }
+  return normalized;
+}
+
+function requireCandidateKnowledgeBaseTimestamp(value: string, field: string): string {
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) ||
+    Number.isNaN(Date.parse(value))
+  ) {
+    throw new Error(`Candidate knowledge base ${field} must be a valid ISO timestamp.`);
+  }
+  return value;
+}
+
+export function createCandidateKnowledgeBase(
+  id: string,
+  input: CandidateKnowledgeBaseInput,
+  createdAt = new Date().toISOString(),
+): CandidateKnowledgeBase {
+  const normalizedCreatedAt = requireCandidateKnowledgeBaseTimestamp(createdAt, "createdAt");
+  return {
+    id: requireCandidateKnowledgeBaseText(id, "id") as CandidateKnowledgeBaseId,
+    displayName: requireCandidateKnowledgeBaseText(input.displayName, "display name"),
+    description: (input.description ?? "").trim(),
+    isDefault: input.isDefault ?? false,
+    state: "active",
+    createdAt: normalizedCreatedAt,
+    updatedAt: normalizedCreatedAt,
+  };
+}
+
+export function renameCandidateKnowledgeBase(
+  knowledgeBase: CandidateKnowledgeBase,
+  displayName: string,
+  updatedAt = new Date().toISOString(),
+): CandidateKnowledgeBase {
+  const normalizedUpdatedAt = requireCandidateKnowledgeBaseTimestamp(updatedAt, "updatedAt");
+  if (Date.parse(normalizedUpdatedAt) < Date.parse(knowledgeBase.updatedAt)) {
+    throw new Error("Candidate knowledge base updatedAt must not precede its current updatedAt.");
+  }
+  return {
+    ...knowledgeBase,
+    displayName: requireCandidateKnowledgeBaseText(displayName, "display name"),
+    updatedAt: normalizedUpdatedAt,
+  };
+}
+
+export function archiveCandidateKnowledgeBase(
+  knowledgeBase: CandidateKnowledgeBase,
+  archivedAt = new Date().toISOString(),
+): CandidateKnowledgeBase {
+  if (knowledgeBase.isDefault) {
+    throw new Error("The default candidate knowledge base cannot be archived.");
+  }
+  if (knowledgeBase.state === "archived") {
+    throw new Error("The candidate knowledge base is already archived.");
+  }
+  const normalizedArchivedAt = requireCandidateKnowledgeBaseTimestamp(archivedAt, "archivedAt");
+  if (Date.parse(normalizedArchivedAt) < Date.parse(knowledgeBase.updatedAt)) {
+    throw new Error("Candidate knowledge base archivedAt must not precede its current updatedAt.");
+  }
+  return {
+    ...knowledgeBase,
+    state: "archived",
+    updatedAt: normalizedArchivedAt,
+    archivedAt: normalizedArchivedAt,
   };
 }
 

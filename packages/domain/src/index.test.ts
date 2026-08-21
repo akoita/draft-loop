@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  archiveCandidateKnowledgeBase,
   assertIndependentReview,
   type ContextSnapshotInput,
   canonicalizeModelId,
   createAgentContextReference,
+  createCandidateKnowledgeBase,
   createContextSnapshot,
   createProfile,
   createWorkspace,
@@ -15,6 +17,7 @@ import {
   type ModelConfigurationInput,
   type ModelSelection,
   maximumIndependenceOverrideRationaleLength,
+  renameCandidateKnowledgeBase,
   SemanticValidationError,
   workflowStates,
 } from "./index.js";
@@ -592,6 +595,122 @@ describe("CandidateProfile", () => {
   it("rejects empty profile name", () => {
     expect(() => createProfile("p-1", { name: "" })).toThrow(/profile name is required/i);
     expect(() => createProfile("p-1", { name: "   " })).toThrow(/profile name is required/i);
+  });
+});
+
+describe("CandidateKnowledgeBase", () => {
+  const createdAt = "2026-08-20T09:00:00.000Z";
+  const renamedAt = "2026-08-20T10:00:00.000Z";
+  const archivedAt = "2026-08-20T11:00:00.000Z";
+  const renamedArchivedAt = "2026-08-20T12:00:00.000Z";
+
+  it("creates a canonical active knowledge base", () => {
+    expect(
+      createCandidateKnowledgeBase(
+        "  ckb-primary  ",
+        {
+          displayName: "  Career Evidence  ",
+          description: "  Sanitized professional material  ",
+          isDefault: true,
+        },
+        createdAt,
+      ),
+    ).toEqual({
+      id: "ckb-primary",
+      displayName: "Career Evidence",
+      description: "Sanitized professional material",
+      isDefault: true,
+      state: "active",
+      createdAt,
+      updatedAt: createdAt,
+    });
+  });
+
+  it("rejects blank identifiers and display names", () => {
+    expect(() =>
+      createCandidateKnowledgeBase("  ", { displayName: "Career Evidence" }, createdAt),
+    ).toThrow(/id is required/i);
+    expect(() => createCandidateKnowledgeBase("ckb-1", { displayName: "  " }, createdAt)).toThrow(
+      /display name is required/i,
+    );
+  });
+
+  it("renames active and archived knowledge bases while preserving lifecycle fields", () => {
+    const active = createCandidateKnowledgeBase(
+      "ckb-1",
+      { displayName: "Career Evidence" },
+      createdAt,
+    );
+    const activeRenamed = renameCandidateKnowledgeBase(active, "Current Evidence", renamedAt);
+    expect(activeRenamed).toEqual({
+      ...active,
+      displayName: "Current Evidence",
+      updatedAt: renamedAt,
+    });
+
+    const archived = archiveCandidateKnowledgeBase(activeRenamed, archivedAt);
+    const renamed = renameCandidateKnowledgeBase(
+      archived,
+      "  Historical Evidence  ",
+      renamedArchivedAt,
+    );
+
+    expect(renamed).toEqual({
+      ...archived,
+      displayName: "Historical Evidence",
+      updatedAt: renamedArchivedAt,
+    });
+    expect(renamed.archivedAt).toBe(archivedAt);
+  });
+
+  it("archives a non-default active knowledge base at the transition timestamp", () => {
+    const knowledgeBase = createCandidateKnowledgeBase(
+      "ckb-1",
+      { displayName: "Career Evidence" },
+      createdAt,
+    );
+
+    expect(archiveCandidateKnowledgeBase(knowledgeBase, archivedAt)).toEqual({
+      ...knowledgeBase,
+      state: "archived",
+      updatedAt: archivedAt,
+      archivedAt,
+    });
+  });
+
+  it("does not archive the default knowledge base or repeat an archive transition", () => {
+    const defaultKnowledgeBase = createCandidateKnowledgeBase(
+      "ckb-default",
+      { displayName: "Default Evidence", isDefault: true },
+      createdAt,
+    );
+    expect(() => archiveCandidateKnowledgeBase(defaultKnowledgeBase, archivedAt)).toThrow(
+      /default candidate knowledge base cannot be archived/i,
+    );
+
+    const archived = archiveCandidateKnowledgeBase(
+      createCandidateKnowledgeBase("ckb-other", { displayName: "Other Evidence" }, createdAt),
+      archivedAt,
+    );
+    expect(() => archiveCandidateKnowledgeBase(archived, renamedAt)).toThrow(/already archived/i);
+  });
+
+  it("rejects invalid and out-of-order lifecycle timestamps", () => {
+    expect(() =>
+      createCandidateKnowledgeBase("ckb-1", { displayName: "Career Evidence" }, "not-a-date"),
+    ).toThrow(/valid ISO timestamp/i);
+
+    const knowledgeBase = createCandidateKnowledgeBase(
+      "ckb-1",
+      { displayName: "Career Evidence" },
+      createdAt,
+    );
+    expect(() =>
+      renameCandidateKnowledgeBase(knowledgeBase, "Renamed", "2026-08-20T08:00:00Z"),
+    ).toThrow(/must not precede/i);
+    expect(() => archiveCandidateKnowledgeBase(knowledgeBase, "2026-08-20T08:00:00Z")).toThrow(
+      /must not precede/i,
+    );
   });
 });
 

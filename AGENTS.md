@@ -6,6 +6,12 @@ Before proposing or implementing roadmap-stage work, read `docs/roadmap.md`,
 align the work with its current stage, and update the roadmap when scope or
 priorities change.
 
+## Documentation synchronization
+
+- Keep code synchronized with `README.md`, architecture documents and diagrams,
+  examples, CLI help, and roadmap references.
+- Update affected documentation in the same PR, or state why no update is needed.
+
 ## Architecture boundaries
 
 - `packages/domain` owns framework-free product concepts and workflow states.
@@ -38,10 +44,11 @@ Keep tests close to the package boundary they protect.
 
 ## Change delivery
 
-Every change reaches `main` through a pull request. Work on a branch, push it,
-and open a PR; never merge, fast-forward, rebase, or push directly to `main`,
-including locally. A green local gate is a precondition for opening the PR, not
-a substitute for review or for the checks that run on it.
+Every change reaches `main` through a pull request. Work on a branch and never
+fast-forward, rebase, or push directly to `main`. An agent may merge through the
+PR only when the user explicitly asks and all required checks pass. A green
+local gate is a precondition for opening the PR, not a substitute for review or
+for the checks that run on it.
 
 Resolve conflicts on the branch rather than on `main`, and say in the PR body
 which side of any conflict was taken and why.
