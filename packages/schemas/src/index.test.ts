@@ -7,6 +7,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   agentContextReferenceSchema,
+  candidateKnowledgeBaseSchema,
+  candidateKnowledgeBaseStateSchema,
   candidateProfileSchema,
   contextSnapshotInputSchema,
   contextSnapshotSchema,
@@ -445,6 +447,102 @@ describe("candidateProfileSchema", () => {
         name: "Test",
       }),
     ).toThrow();
+  });
+});
+
+describe("candidateKnowledgeBaseSchema", () => {
+  const createdAt = "2026-08-20T09:00:00.000Z";
+
+  it("defaults a trimmed record to the active lifecycle", () => {
+    expect(
+      candidateKnowledgeBaseSchema.parse({
+        id: "  ckb-primary  ",
+        displayName: "  Career Evidence  ",
+        createdAt,
+        updatedAt: createdAt,
+      }),
+    ).toEqual({
+      id: "ckb-primary",
+      displayName: "Career Evidence",
+      description: "",
+      isDefault: false,
+      state: "active",
+      createdAt,
+      updatedAt: createdAt,
+    });
+    expect(candidateKnowledgeBaseStateSchema.parse("archived")).toBe("archived");
+  });
+
+  it("accepts an archived record whose lifecycle timestamps are ordered", () => {
+    expect(
+      candidateKnowledgeBaseSchema.parse({
+        id: "ckb-history",
+        displayName: "Historical Evidence",
+        description: "Sanitized archive",
+        isDefault: false,
+        state: "archived",
+        createdAt,
+        archivedAt: "2026-08-20T10:00:00.000Z",
+        updatedAt: "2026-08-20T11:00:00.000Z",
+      }),
+    ).toMatchObject({ state: "archived", archivedAt: "2026-08-20T10:00:00.000Z" });
+  });
+
+  it("enforces archivedAt consistency for active and archived states", () => {
+    expect(() =>
+      candidateKnowledgeBaseSchema.parse({
+        id: "ckb-active",
+        displayName: "Active Evidence",
+        state: "active",
+        createdAt,
+        updatedAt: createdAt,
+        archivedAt: createdAt,
+      }),
+    ).toThrow(/must not have archivedAt/i);
+    expect(() =>
+      candidateKnowledgeBaseSchema.parse({
+        id: "ckb-archived",
+        displayName: "Archived Evidence",
+        state: "archived",
+        createdAt,
+        updatedAt: createdAt,
+      }),
+    ).toThrow(/require archivedAt/i);
+  });
+
+  it("requires the default knowledge base to remain active", () => {
+    expect(() =>
+      candidateKnowledgeBaseSchema.parse({
+        id: "ckb-default",
+        displayName: "Default Evidence",
+        isDefault: true,
+        state: "archived",
+        createdAt,
+        updatedAt: "2026-08-20T10:00:00.000Z",
+        archivedAt: "2026-08-20T10:00:00.000Z",
+      }),
+    ).toThrow(/default candidate knowledge base must remain active/i);
+  });
+
+  it("rejects timestamps outside lifecycle order", () => {
+    expect(() =>
+      candidateKnowledgeBaseSchema.parse({
+        id: "ckb-1",
+        displayName: "Career Evidence",
+        createdAt,
+        updatedAt: "2026-08-20T08:00:00.000Z",
+      }),
+    ).toThrow(/updatedAt must not precede createdAt/i);
+    expect(() =>
+      candidateKnowledgeBaseSchema.parse({
+        id: "ckb-2",
+        displayName: "Historical Evidence",
+        state: "archived",
+        createdAt,
+        updatedAt: "2026-08-20T10:00:00.000Z",
+        archivedAt: "2026-08-20T11:00:00.000Z",
+      }),
+    ).toThrow(/archivedAt must not precede createdAt or follow updatedAt/i);
   });
 });
 

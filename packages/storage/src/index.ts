@@ -4,6 +4,7 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 
 import {
+  type CandidateKnowledgeBaseState,
   type EvidenceRetrievalInspection,
   type RetrievalOptions,
   type RetrievalPort,
@@ -45,6 +46,47 @@ export interface WorkspaceRecord {
   readonly state: WorkflowState;
   readonly createdAt: string;
   readonly updatedAt: string;
+}
+
+export interface CandidateKnowledgeBaseInput {
+  readonly id: string;
+  readonly displayName: string;
+  readonly description?: string;
+  readonly isDefault: boolean;
+  readonly createdAt: string;
+}
+
+export interface CandidateKnowledgeBaseRecord {
+  readonly id: string;
+  readonly displayName: string;
+  readonly description: string;
+  readonly state: CandidateKnowledgeBaseState;
+  readonly isDefault: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly archivedAt: string | null;
+}
+
+export interface CandidateKnowledgeBaseStoragePort {
+  readonly ensureDefaultCandidateKnowledgeBase: (
+    input: Omit<CandidateKnowledgeBaseInput, "isDefault">,
+  ) => Promise<CandidateKnowledgeBaseRecord>;
+  readonly createCandidateKnowledgeBase: (
+    input: CandidateKnowledgeBaseInput,
+  ) => Promise<CandidateKnowledgeBaseRecord>;
+  readonly getCandidateKnowledgeBase: (
+    id: string,
+  ) => Promise<CandidateKnowledgeBaseRecord | undefined>;
+  readonly listCandidateKnowledgeBases: () => Promise<readonly CandidateKnowledgeBaseRecord[]>;
+  readonly renameCandidateKnowledgeBase: (
+    id: string,
+    displayName: string,
+    updatedAt: string,
+  ) => Promise<CandidateKnowledgeBaseRecord>;
+  readonly archiveCandidateKnowledgeBase: (
+    id: string,
+    archivedAt: string,
+  ) => Promise<CandidateKnowledgeBaseRecord>;
 }
 
 export interface ContextSnapshotInput {
@@ -425,7 +467,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 3 as const;
+export const storageSchemaVersion = 4 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -774,7 +816,37 @@ const migrationThree: Migration = {
   `.trim(),
 };
 
-const migrations: readonly Migration[] = [migrationOne, migrationTwo, migrationThree];
+const migrationFour: Migration = {
+  version: 4,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_bases (
+      id TEXT PRIMARY KEY NOT NULL,
+      display_name TEXT NOT NULL,
+      description TEXT NOT NULL,
+      state TEXT NOT NULL CHECK (state IN ('active', 'archived')),
+      is_default INTEGER NOT NULL CHECK (is_default IN (0, 1)),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      archived_at TEXT,
+      CHECK (
+        (state = 'active' AND archived_at IS NULL) OR
+        (state = 'archived' AND archived_at IS NOT NULL)
+      ),
+      CHECK (is_default = 0 OR state = 'active')
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS candidate_knowledge_bases_one_default_idx
+      ON candidate_knowledge_bases(is_default)
+      WHERE is_default = 1;
+  `.trim(),
+};
+
+const migrations: readonly Migration[] = [
+  migrationOne,
+  migrationTwo,
+  migrationThree,
+  migrationFour,
+];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
 const hiddenContentKeyPattern =
@@ -839,6 +911,17 @@ function requireNonEmpty(value: string, field: string): string {
     throw new StorageValidationError(`${field} must not be empty`);
   }
   return value;
+}
+
+function requireTimestamp(value: string, field: string): string {
+  const normalized = requireNonEmpty(value, field);
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(normalized) ||
+    Number.isNaN(Date.parse(normalized))
+  ) {
+    throw new StorageValidationError(`${field} must be a valid ISO timestamp`);
+  }
+  return normalized;
 }
 
 function requirePositiveInteger(value: number, field: string): number {
@@ -959,7 +1042,9 @@ function requireStoredStep(step: StoredRunStep, field: string): void {
   }
 }
 
-export class SqliteStorage implements StoragePort, HistoryStoragePort, RetrievalPort {
+export class SqliteStorage
+  implements StoragePort, HistoryStoragePort, RetrievalPort, CandidateKnowledgeBaseStoragePort
+{
   private readonly database: SqliteHandle;
   private closed = false;
 
@@ -1025,6 +1110,160 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort, Retrieval
         "INSERT INTO key_value (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
       )
       .run(key, value, now());
+  }
+
+  public async ensureDefaultCandidateKnowledgeBase(
+    input: Omit<CandidateKnowledgeBaseInput, "isDefault">,
+  ): Promise<CandidateKnowledgeBaseRecord> {
+    this.ensureOpen();
+    const normalized = normalizeCandidateKnowledgeBaseInput({ ...input, isDefault: true });
+    let result: CandidateKnowledgeBaseRecord | undefined;
+    this.database.transaction(() => {
+      const existingDefault = this.database
+        .prepare(
+          "SELECT id, display_name, description, state, is_default, created_at, updated_at, archived_at FROM candidate_knowledge_bases WHERE is_default = 1",
+        )
+        .get();
+      if (existingDefault !== undefined) {
+        result = candidateKnowledgeBaseFromRow(existingDefault);
+        return;
+      }
+      const conflictingId = this.database
+        .prepare("SELECT id FROM candidate_knowledge_bases WHERE id = ?")
+        .get(normalized.id);
+      if (conflictingId !== undefined) {
+        throw new StorageConflictError(
+          `candidate knowledge base ${normalized.id} already exists and is not the default`,
+        );
+      }
+      this.insertCandidateKnowledgeBase(normalized);
+      result = normalized;
+    })();
+    return result as CandidateKnowledgeBaseRecord;
+  }
+
+  public async createCandidateKnowledgeBase(
+    input: CandidateKnowledgeBaseInput,
+  ): Promise<CandidateKnowledgeBaseRecord> {
+    this.ensureOpen();
+    const normalized = normalizeCandidateKnowledgeBaseInput(input);
+    this.database.transaction(() => {
+      if (
+        this.database
+          .prepare("SELECT id FROM candidate_knowledge_bases WHERE id = ?")
+          .get(normalized.id) !== undefined
+      ) {
+        throw new StorageConflictError(`candidate knowledge base ${normalized.id} already exists`);
+      }
+      if (
+        normalized.isDefault &&
+        this.database
+          .prepare("SELECT id FROM candidate_knowledge_bases WHERE is_default = 1")
+          .get() !== undefined
+      ) {
+        throw new StorageConflictError("a default candidate knowledge base already exists");
+      }
+      this.insertCandidateKnowledgeBase(normalized);
+    })();
+    return normalized;
+  }
+
+  public async getCandidateKnowledgeBase(
+    id: string,
+  ): Promise<CandidateKnowledgeBaseRecord | undefined> {
+    this.ensureOpen();
+    const normalizedId = requireNonEmpty(id, "candidate knowledge base id").trim();
+    const row = this.database
+      .prepare(
+        "SELECT id, display_name, description, state, is_default, created_at, updated_at, archived_at FROM candidate_knowledge_bases WHERE id = ?",
+      )
+      .get(normalizedId);
+    return row === undefined ? undefined : candidateKnowledgeBaseFromRow(row);
+  }
+
+  public async listCandidateKnowledgeBases(): Promise<readonly CandidateKnowledgeBaseRecord[]> {
+    this.ensureOpen();
+    return this.database
+      .prepare(
+        "SELECT id, display_name, description, state, is_default, created_at, updated_at, archived_at FROM candidate_knowledge_bases ORDER BY is_default DESC, created_at, id",
+      )
+      .all()
+      .map(candidateKnowledgeBaseFromRow);
+  }
+
+  public async renameCandidateKnowledgeBase(
+    id: string,
+    displayName: string,
+    updatedAt: string,
+  ): Promise<CandidateKnowledgeBaseRecord> {
+    this.ensureOpen();
+    const normalizedId = requireNonEmpty(id, "candidate knowledge base id").trim();
+    const normalizedName = requireNonEmpty(
+      displayName,
+      "candidate knowledge base displayName",
+    ).trim();
+    const normalizedUpdatedAt = requireTimestamp(updatedAt, "candidate knowledge base updatedAt");
+    let result: CandidateKnowledgeBaseRecord | undefined;
+    this.database.transaction(() => {
+      const current = this.requireCandidateKnowledgeBase(normalizedId);
+      if (Date.parse(normalizedUpdatedAt) < Date.parse(current.updatedAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge base updatedAt must not precede its current updatedAt",
+        );
+      }
+      this.database
+        .prepare(
+          "UPDATE candidate_knowledge_bases SET display_name = ?, updated_at = ? WHERE id = ?",
+        )
+        .run(normalizedName, normalizedUpdatedAt, normalizedId);
+      result = {
+        ...current,
+        displayName: normalizedName,
+        updatedAt: normalizedUpdatedAt,
+      };
+    })();
+    return result as CandidateKnowledgeBaseRecord;
+  }
+
+  public async archiveCandidateKnowledgeBase(
+    id: string,
+    archivedAt: string,
+  ): Promise<CandidateKnowledgeBaseRecord> {
+    this.ensureOpen();
+    const normalizedId = requireNonEmpty(id, "candidate knowledge base id").trim();
+    const normalizedArchivedAt = requireTimestamp(
+      archivedAt,
+      "candidate knowledge base archivedAt",
+    );
+    let result: CandidateKnowledgeBaseRecord | undefined;
+    this.database.transaction(() => {
+      const current = this.requireCandidateKnowledgeBase(normalizedId);
+      if (current.isDefault) {
+        throw new StorageConflictError("the default candidate knowledge base cannot be archived");
+      }
+      if (current.state === "archived") {
+        throw new StorageConflictError(
+          `candidate knowledge base ${normalizedId} is already archived`,
+        );
+      }
+      if (Date.parse(normalizedArchivedAt) < Date.parse(current.updatedAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge base archivedAt must not precede its current updatedAt",
+        );
+      }
+      this.database
+        .prepare(
+          "UPDATE candidate_knowledge_bases SET state = 'archived', updated_at = ?, archived_at = ? WHERE id = ?",
+        )
+        .run(normalizedArchivedAt, normalizedArchivedAt, normalizedId);
+      result = {
+        ...current,
+        state: "archived",
+        updatedAt: normalizedArchivedAt,
+        archivedAt: normalizedArchivedAt,
+      };
+    })();
+    return result as CandidateKnowledgeBaseRecord;
   }
 
   public async saveWorkspace(record: WorkspaceRecord): Promise<void> {
@@ -2344,6 +2583,35 @@ export class SqliteStorage implements StoragePort, HistoryStoragePort, Retrieval
     return auditFromRow(row);
   }
 
+  private insertCandidateKnowledgeBase(record: CandidateKnowledgeBaseRecord): void {
+    this.database
+      .prepare(
+        "INSERT INTO candidate_knowledge_bases (id, display_name, description, state, is_default, created_at, updated_at, archived_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      )
+      .run(
+        record.id,
+        record.displayName,
+        record.description,
+        record.state,
+        record.isDefault ? 1 : 0,
+        record.createdAt,
+        record.updatedAt,
+        record.archivedAt,
+      );
+  }
+
+  private requireCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {
+    const row = this.database
+      .prepare(
+        "SELECT id, display_name, description, state, is_default, created_at, updated_at, archived_at FROM candidate_knowledge_bases WHERE id = ?",
+      )
+      .get(id);
+    if (row === undefined) {
+      throw new StorageValidationError(`candidate knowledge base ${id} was not found`);
+    }
+    return candidateKnowledgeBaseFromRow(row);
+  }
+
   private ensureOpen(): void {
     if (this.closed) {
       throw new StorageValidationError("SQLite storage is closed");
@@ -2355,12 +2623,52 @@ function recordToJson(record: unknown): JsonValue {
   return JSON.parse(JSON.stringify(record)) as JsonValue;
 }
 
+function normalizeCandidateKnowledgeBaseInput(
+  input: CandidateKnowledgeBaseInput,
+): CandidateKnowledgeBaseRecord {
+  const id = requireNonEmpty(input.id, "candidate knowledge base id").trim();
+  const displayName = requireNonEmpty(
+    input.displayName,
+    "candidate knowledge base displayName",
+  ).trim();
+  const createdAt = requireTimestamp(input.createdAt, "candidate knowledge base createdAt");
+  if (input.description !== undefined && typeof input.description !== "string") {
+    throw new StorageValidationError("candidate knowledge base description must be a string");
+  }
+  if (typeof input.isDefault !== "boolean") {
+    throw new StorageValidationError("candidate knowledge base isDefault must be a boolean");
+  }
+  return {
+    id,
+    displayName,
+    description: (input.description ?? "").trim(),
+    state: "active",
+    isDefault: input.isDefault,
+    createdAt,
+    updatedAt: createdAt,
+    archivedAt: null,
+  };
+}
+
 function workspaceFromRow(row: Record<string, unknown>): WorkspaceRecord {
   return {
     id: rowString(row, "id"),
     state: rowString(row, "state") as WorkflowState,
     createdAt: rowString(row, "created_at"),
     updatedAt: rowString(row, "updated_at"),
+  };
+}
+
+function candidateKnowledgeBaseFromRow(row: Record<string, unknown>): CandidateKnowledgeBaseRecord {
+  return {
+    id: rowString(row, "id"),
+    displayName: rowString(row, "display_name"),
+    description: rowString(row, "description"),
+    state: rowString(row, "state") as CandidateKnowledgeBaseState,
+    isDefault: rowNumber(row, "is_default") === 1,
+    createdAt: rowString(row, "created_at"),
+    updatedAt: rowString(row, "updated_at"),
+    archivedAt: rowNullableString(row, "archived_at"),
   };
 }
 

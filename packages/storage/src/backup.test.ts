@@ -28,6 +28,23 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
       const storage = openSqliteStorage(dbPath);
       await storage.saveWorkspace(testWorkspace);
       await storage.set("test-config-key", "test-config-value");
+      const defaultKnowledgeBase = await storage.ensureDefaultCandidateKnowledgeBase({
+        id: "ckb-default",
+        displayName: "Career evidence",
+        description: "Sanitized evidence fixture",
+        createdAt: "2026-08-13T09:00:00.000Z",
+      });
+      const additionalKnowledgeBase = await storage.createCandidateKnowledgeBase({
+        id: "ckb-additional",
+        displayName: "Public projects",
+        description: "Sanitized public evidence fixture",
+        isDefault: false,
+        createdAt: "2026-08-13T09:01:00.000Z",
+      });
+      await storage.archiveCandidateKnowledgeBase(
+        additionalKnowledgeBase.id,
+        "2026-08-13T09:02:00.000Z",
+      );
 
       // Verify migration versions are present
       const migrations = storage.appliedMigrationVersions();
@@ -51,6 +68,18 @@ describe("SqliteStorage Atomic Backup, Restore and Integrity Verification", () =
 
       const restoredVal = await restoredStorage.get("test-config-key");
       expect(restoredVal).toBe("test-config-value");
+      await expect(
+        restoredStorage.getCandidateKnowledgeBase(defaultKnowledgeBase.id),
+      ).resolves.toEqual(defaultKnowledgeBase);
+      await expect(restoredStorage.listCandidateKnowledgeBases()).resolves.toMatchObject([
+        { id: "ckb-default", state: "active", isDefault: true },
+        {
+          id: "ckb-additional",
+          state: "archived",
+          isDefault: false,
+          archivedAt: "2026-08-13T09:02:00.000Z",
+        },
+      ]);
 
       await storage.close();
       await restoredStorage.close();

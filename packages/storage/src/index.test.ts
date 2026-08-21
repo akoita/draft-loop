@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   type ArtifactVersionInput,
+  type CandidateKnowledgeBaseInput,
   type ContextSnapshotInput,
   type DecisionRecordInput,
   type EvidenceChunkRecord,
@@ -20,6 +21,7 @@ import {
   type SqliteStorage,
   StorageConflictError,
   StorageSecurityError,
+  StorageValidationError,
   type WorkspaceRecord,
 } from "./index.js";
 
@@ -46,6 +48,17 @@ const source: EvidenceSourceRecord = {
   checksum: "a".repeat(64),
   createdAt: "2026-08-12T10:02:00.000Z",
 };
+
+const knowledgeBase = (
+  overrides: Partial<CandidateKnowledgeBaseInput> = {},
+): CandidateKnowledgeBaseInput => ({
+  id: "ckb-1",
+  displayName: "Career evidence",
+  description: "Sanitized professional material",
+  isDefault: true,
+  createdAt: "2026-08-12T09:00:00.000Z",
+  ...overrides,
+});
 
 const chunk = (id: string, text: string, ordinal: number): EvidenceChunkRecord => ({
   id,
@@ -194,18 +207,30 @@ function removeMigrationTwo(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "PRAGMA foreign_keys = OFF; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3);",
+    "PRAGMA foreign_keys = OFF; DROP TABLE candidate_knowledge_bases; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3, 4);",
+  );
+  database.close();
+}
+
+function removeMigrationFour(filename: string): void {
+  const loaded = createRequire(import.meta.url)("better-sqlite3") as {
+    readonly default?: unknown;
+  };
+  const Constructor = loaded.default ?? loaded;
+  const database = new (Constructor as RawSqliteConstructor)(filename);
+  database.exec(
+    "DROP TABLE candidate_knowledge_bases; DELETE FROM schema_migrations WHERE version = 4;",
   );
   database.close();
 }
 
 describe("SQLite storage", () => {
-  it("applies migration v1 idempotently and rejects sensitive key persistence", async () => {
+  it("applies migrations idempotently and rejects sensitive key persistence", async () => {
     const storage = openSqliteStorage(":memory:");
 
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
     storage.migrate();
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
 
     await storage.set("ui.language", "en");
     await expect(storage.get("ui.language")).resolves.toBe("en");
@@ -229,12 +254,139 @@ describe("SQLite storage", () => {
 
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     upgraded.migrate();
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
+  });
+
+  it("upgrades a populated v3 database with candidate knowledge-base storage", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-ckb-migration-"));
+    const filename = join(directory, "workspace.sqlite");
+    const initial = openSqliteStorage(filename);
+    await initial.saveWorkspace(workspace);
+    await initial.close();
+
+    removeMigrationFour(filename);
+    const upgraded = openSqliteStorage(filename);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4]);
+    await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
+    await expect(
+      upgraded.ensureDefaultCandidateKnowledgeBase(knowledgeBase()),
+    ).resolves.toMatchObject({ id: "ckb-1", isDefault: true, state: "active" });
+    await upgraded.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("manages one default and additional candidate knowledge-base lifecycles", async () => {
+    const storage = openSqliteStorage(":memory:");
+    const defaultInput = knowledgeBase();
+    const firstDefault = await storage.ensureDefaultCandidateKnowledgeBase(defaultInput);
+    const repeatedDefault = await storage.ensureDefaultCandidateKnowledgeBase({
+      id: "ignored-default-id",
+      displayName: "Ignored after initialization",
+      createdAt: "2026-08-12T09:01:00.000Z",
+    });
+    expect(repeatedDefault).toEqual(firstDefault);
+
+    await expect(
+      storage.createCandidateKnowledgeBase(
+        knowledgeBase({ id: "second-default", displayName: "Second", isDefault: true }),
+      ),
+    ).rejects.toThrow(/default candidate knowledge base already exists/i);
+
+    const additional = await storage.createCandidateKnowledgeBase(
+      knowledgeBase({ id: "ckb-2", displayName: "  Public projects  ", isDefault: false }),
+    );
+    expect(additional).toMatchObject({
+      id: "ckb-2",
+      displayName: "Public projects",
+      description: "Sanitized professional material",
+      state: "active",
+      isDefault: false,
+      archivedAt: null,
+    });
+    await expect(storage.createCandidateKnowledgeBase(knowledgeBase())).rejects.toThrow(
+      StorageConflictError,
+    );
+
+    const renamed = await storage.renameCandidateKnowledgeBase(
+      additional.id,
+      "  Selected public work  ",
+      "2026-08-12T09:02:00.000Z",
+    );
+    expect(renamed).toMatchObject({
+      displayName: "Selected public work",
+      state: "active",
+      updatedAt: "2026-08-12T09:02:00.000Z",
+    });
+
+    const archived = await storage.archiveCandidateKnowledgeBase(
+      additional.id,
+      "2026-08-12T09:03:00.000Z",
+    );
+    expect(archived).toMatchObject({
+      state: "archived",
+      archivedAt: "2026-08-12T09:03:00.000Z",
+      updatedAt: "2026-08-12T09:03:00.000Z",
+    });
+    await expect(
+      storage.archiveCandidateKnowledgeBase(additional.id, "2026-08-12T09:03:00.000Z"),
+    ).rejects.toThrow(/already archived/i);
+    const renamedArchived = await storage.renameCandidateKnowledgeBase(
+      additional.id,
+      "Archived public work",
+      "2026-08-12T09:04:00.000Z",
+    );
+    expect(renamedArchived).toEqual({
+      ...archived,
+      displayName: "Archived public work",
+      updatedAt: "2026-08-12T09:04:00.000Z",
+    });
+    expect(renamedArchived).toMatchObject({
+      state: "archived",
+      archivedAt: "2026-08-12T09:03:00.000Z",
+    });
+    await expect(
+      storage.archiveCandidateKnowledgeBase(firstDefault.id, "2026-08-12T09:04:00.000Z"),
+    ).rejects.toThrow(/default candidate knowledge base cannot be archived/i);
+
+    await expect(storage.listCandidateKnowledgeBases()).resolves.toEqual([
+      firstDefault,
+      renamedArchived,
+    ]);
+    await storage.close();
+  });
+
+  it("validates candidate knowledge-base inputs and lifecycle timestamps", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await expect(storage.createCandidateKnowledgeBase(knowledgeBase({ id: " " }))).rejects.toThrow(
+      StorageValidationError,
+    );
+    await expect(
+      storage.createCandidateKnowledgeBase(knowledgeBase({ displayName: " " })),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.createCandidateKnowledgeBase(knowledgeBase({ createdAt: "not-a-time" })),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.createCandidateKnowledgeBase(knowledgeBase({ createdAt: "2026-08-12" })),
+    ).rejects.toThrow(/valid ISO timestamp/i);
+    await expect(storage.getCandidateKnowledgeBase("missing")).resolves.toBeUndefined();
+    await expect(
+      storage.renameCandidateKnowledgeBase("missing", "Name", "2026-08-12T09:02:00.000Z"),
+    ).rejects.toThrow(StorageValidationError);
+
+    await storage.createCandidateKnowledgeBase(knowledgeBase({ id: "ckb-2", isDefault: false }));
+    await expect(
+      storage.renameCandidateKnowledgeBase("ckb-2", "Name", "2026-08-12T08:59:00.000Z"),
+    ).rejects.toThrow(/must not precede/i);
+    await expect(
+      storage.archiveCandidateKnowledgeBase("ckb-2", "2026-08-12T08:59:00.000Z"),
+    ).rejects.toThrow(/must not precede/i);
+    await storage.close();
   });
 
   it("round-trips local records after close and reopen", async () => {
@@ -242,6 +394,11 @@ describe("SQLite storage", () => {
     const filename = join(directory, "workspace.sqlite");
     const first = openSqliteStorage(filename);
 
+    const savedKnowledgeBase = await first.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    const archivedKnowledgeBase = await first.createCandidateKnowledgeBase(
+      knowledgeBase({ id: "ckb-2", displayName: "Archived material", isDefault: false }),
+    );
+    await first.archiveCandidateKnowledgeBase(archivedKnowledgeBase.id, "2026-08-12T09:05:00.000Z");
     await first.saveWorkspace(workspace);
     const snapshot = await first.saveContextSnapshot(
       contextSnapshot({
@@ -281,6 +438,15 @@ describe("SQLite storage", () => {
     await first.close();
 
     const second = openSqliteStorage(filename);
+    await expect(second.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
+      savedKnowledgeBase,
+    );
+    await expect(second.getCandidateKnowledgeBase(archivedKnowledgeBase.id)).resolves.toMatchObject(
+      {
+        state: "archived",
+        archivedAt: "2026-08-12T09:05:00.000Z",
+      },
+    );
     await expect(second.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(second.getContextSnapshot(snapshot.id)).resolves.toEqual(snapshot);
     await expect(second.getEvidenceSource(source.id)).resolves.toEqual(source);
