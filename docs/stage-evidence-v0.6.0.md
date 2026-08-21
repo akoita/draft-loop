@@ -1,20 +1,20 @@
 # v0.6.0 alpha stage evidence
 
-- **Status:** stage concluded at Integrated — validation failed; not released
+- **Status:** Integrated — validation failed; alpha publication approved
 - **Stage:** Integration hardening and outcome validation
 - **Reviewed:** 2026-08-21
-- **Release decision:** the `0.6.0` candidate is not being published. Package
-  manifests reached `0.6.0` and an earlier release dry run passed from source
-  commit `dd933cf81c4161191281108b6f44c3d8cec94f8f`, but the representative
-  outcome did not meet the factual-completeness and application-readiness exit
-  criterion. `release.json` now targets the v0.7 stage so the concluded v0.6
-  candidate cannot be mistaken for an approved release.
+- **Release decision:** publish `0.6.0` as an explicitly non-validated alpha
+  baseline. Package manifests reached `0.6.0` and an earlier release dry run
+  passed from source commit `dd933cf81c4161191281108b6f44c3d8cec94f8f`.
+  The representative outcome did not meet the factual-completeness and
+  application-readiness exit criterion, and that failure remains a prominent
+  release limitation rather than being treated as passed acceptance.
 
 This record is intentionally conservative. Automated and sanitized acceptance
 results demonstrate implementation and integration. The consented
 representative application required by roadmap issue 104 was run and produced
-negative product evidence, so the stage is closed without a release rather
-than relabeled as Validated.
+negative product evidence. Publishing an integrated alpha preserves a
+reproducible baseline for v0.7; it does not relabel the stage as Validated.
 
 ## Evidence matrix
 
@@ -25,7 +25,7 @@ than relabeled as Validated.
 | Credential lifecycle and preflight | [Credential protocol](credential-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393186) | Integrated automated lifecycle matrix passed on all three targets | Synthetic canaries do not prove every user environment or provider account |
 | Provider failure recovery | [Recovery implementation PR](https://github.com/akoita/draft-loop/pull/110); repository recovery tests | Implemented and integrated | No live provider outage is claimed by this record |
 | Consent and sanitized outcome reporting | [Pilot protocol](pilot-protocol.md); [outcome-reporting PR](https://github.com/akoita/draft-loop/pull/114); [issue 104](https://github.com/akoita/draft-loop/issues/104) | One private representative workflow reached approval and export; outcome failed the quality baseline | The result omitted required CV structure and chronology, changed a factual invariant, and introduced unsupported content; private inputs and outputs remain local |
-| Release artifacts and manifest | [Release procedure](releasing.md); [dry run 31855377293](https://github.com/akoita/draft-loop/actions/runs/31855377293) | v0.6.0 candidate verified on Linux x64, macOS arm64, and Windows x64; publication cancelled | No v0.6.0 tag or GitHub release exists; the reviewed dry-run artifacts were unsigned alpha ZIPs, Windows remained 148.6 MiB, and provenance was intentionally disabled |
+| Release artifacts and manifest | [Release procedure](releasing.md); [dry run 31855377293](https://github.com/akoita/draft-loop/actions/runs/31855377293) | v0.6.0 candidate verified on Linux x64, macOS arm64, and Windows x64; publication pending | The reviewed dry-run artifacts were unsigned alpha ZIPs, Windows remained 148.6 MiB, and provenance was intentionally disabled |
 
 ## Release-candidate review
 
@@ -78,15 +78,16 @@ the repository and CI artifacts under the [pilot protocol](pilot-protocol.md).
 
 ## Final decision and carry-forward
 
-The stage exit criterion was not met. The maintainer therefore concluded v0.6
-at **Integrated; validation failed**, cancelled publication of v0.6.0, and did
-not run the paid release preflight or create a tag or GitHub release.
+The validation exit criterion was not met. The maintainer nevertheless approved
+publication of v0.6.0 as an **Integrated; validation failed** alpha baseline.
+The mandatory paid local release preflight must pass on the exact approved
+release revision before the dry run or publication workflow is dispatched.
 
 The negative evidence directly defines the v0.7 Application-grade CV workflow:
 reusable candidate knowledge bases, a canonical career profile, a reviewed
 opportunity brief, requirement-to-achievement planning, complete structured CV
 composition under a customizable writing/template policy, independent critique
 and author adjudication, recoverable stopping rules, professional rendering,
-and parity evaluation against the private manual baseline. The v0.6 release
-issue and outcome issue close as unsuccessful stage work, not as passed
-acceptance.
+and parity evaluation against the private manual baseline. The v0.6 outcome
+issue remains a failed observation, not passed acceptance; the release issue
+closes only after the prerelease assets and final evidence are verified.

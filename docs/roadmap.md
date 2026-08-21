@@ -2,7 +2,7 @@
 
 **Status:** Living document
 **Last reviewed:** 2026-08-21
-**Current stage:** Application-grade CV workflow
+**Current stage:** Integration hardening and outcome validation — release closure
 
 This document describes product direction, not fixed delivery dates. The
 **Now** horizon is the current commitment; **Next** is planned but may change
@@ -125,9 +125,9 @@ approval/export gate (#169), critic-only provider recovery path (#173),
 Anthropic author-output completion diagnostics (#175), and deterministic
 full-flow NativeHost regression (#177) are complete. They established a strong
 integration baseline but did not correct the representative output-quality
-failure. The v0.6 stage is therefore concluded without a release; its
-[stage-evidence record](stage-evidence-v0.6.0.md) carries the negative outcome
-into the application-grade v0.7 work.
+failure. v0.6.0 will be published only as an explicitly non-validated alpha
+baseline; its [stage-evidence record](stage-evidence-v0.6.0.md) carries the
+negative outcome into the application-grade v0.7 work.
 
 ## Reference workflow and parity target
 
@@ -177,14 +177,14 @@ experience, contact employers, or submit applications.
 
 | Horizon | Stage | Evidence status | Outcome | Remaining gate |
 | --- | --- | --- | --- | --- |
-| Previous | Integration hardening and outcome validation (v0.6) | Integrated; validation failed; unreleased | Complete a representative application safely and recoverably in the packaged desktop app | Stage concluded after the representative result failed factual completeness and application readiness; see the [stage evidence](stage-evidence-v0.6.0.md) |
-| Now | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
+| Now | Integration hardening and outcome validation (v0.6 release closure) | Integrated; validation failed; alpha publication pending | Preserve a reproducible integrated baseline without overstating application readiness | Mandatory local preflight, verified release artifacts, final stage evidence, and milestone closure |
+| Next | Application-grade CV workflow (#143, milestone v0.7.0) | Designed; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
 | Next | Retrieval and provider quality | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable | Representative quality comparison, deletion/retention proof, integrated cancellation and provider recovery |
 | Next | Real-application pilot | Implemented harness; not outcome-validated | Validate factuality, quality, and user-effort hypotheses | Consented cases, calibrated measures, recorded results and limitations |
 | Later | Production-ready beta | Partial implementation; not production-validated | Distribute a safe, dependable desktop application | Signed installers, safe updates/migrations, platform acceptance, recovery and accessibility evidence |
 | Later | Controlled expansion | Implemented prototypes and components; gated | Extend a proven workflow without weakening trust boundaries | Core CV pilot evidence, separate integration/validation, updated threat decisions |
 
-### Concluded — Integration hardening and outcome validation (v0.6)
+### Now — Integration hardening and outcome validation (v0.6 release closure)
 
 Turn the substantially integrated alpha into a coherent, evidence-backed local
 workflow rather than adding more surface area.
@@ -211,13 +211,13 @@ targets, at least one consented real application completes without factuality
 regression, provider exposure and recovery are visibly controlled, and an alpha
 release has traceable evidence and known limitations.
 
-**Outcome:** The integration and platform criteria were demonstrated, but the
-representative application regressed factual completeness and application
-readiness. The stage concluded at Integrated, v0.6.0 publication was cancelled,
-and the unmet outcome moved forward as the defining input to v0.7 rather than
-being waived.
+**Validation outcome:** The integration and platform criteria were demonstrated,
+but the representative application regressed factual completeness and
+application readiness. v0.6.0 may therefore be published only as an explicitly
+non-validated alpha baseline. The unmet outcome moves forward as the defining
+input to v0.7 rather than being waived.
 
-### Now — Application-grade CV workflow
+### Next — Application-grade CV workflow
 
 Automate the proven private reference workflow before expanding retrieval,
 provider, or application-pilot capability. Issue #143 is the parent for
@@ -369,7 +369,7 @@ model above controls current stage claims.
 
 | Date | Change | Reason |
 | --- | --- | --- |
-| 2026-08-21 | Concluded v0.6 at Integrated with failed representative validation, cancelled the v0.6.0 release, and moved Application-grade CV workflow to Now | The live workflow reached approval and export but did not preserve factual completeness, chronology, or application readiness; publishing or calling the stage Validated would overstate the evidence, while v0.7 directly owns the canonical profile, customizable structure, complete composition, stopping rules, and parity work exposed by the failure |
+| 2026-08-21 | Approved v0.6.0 as a non-validated alpha release baseline and kept v0.7 next until publication evidence is complete | The live workflow reached approval and export but did not preserve factual completeness, chronology, or application readiness; a prerelease can preserve the integrated baseline without claiming validation, while v0.7 owns the canonical profile, customizable structure, complete composition, stopping rules, and parity work exposed by the failure |
 | 2026-08-21 | Integrated an explicit workspace writing-policy source role as an early partial slice of #148 without moving the current stage | Representative use showed that recurring candidate rules must guide both model roles without treating files named like agent configuration as evidence or executable repository instructions; reusable global policy and per-opportunity overrides remain v0.7 work |
 | 2026-08-20 | Added a mandatory local `release:preflight` guardrail and agent policy before any release action | The paid live-provider check must run on the release revision without placing API keys or subscription sessions in CI/CD; a repository command is more portable and auditable than an optional per-clone Git hook |
 | 2026-08-20 | Made the paid live-provider E2E a local-only release validation and removed its GitHub Actions gate | Provider API keys and interactive subscription sessions should remain outside CI/CD; hosted automation continues to run deterministic credential-free validation and packaged offline acceptance |
