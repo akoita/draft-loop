@@ -7,14 +7,14 @@ machine unless the user explicitly approves a provider transmission.
 
 ## Data policy
 
-| Data class                                         | Default location                                                                                                           | Provider transmission                                                                        | Retention default                                                                                   |
-| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Public                                             | Local workspace                                                                                                            | Allowed only through an explicit request policy                                              | Until the user deletes it                                                                           |
-| Personal                                           | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                            | Until the user deletes it                                                                           |
-| Confidential employer                              | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it                                                                           |
-| Portable CKB metadata, managed-write journal, and raw source bytes | User-selected local plaintext store, separate from application workspaces and run history                                  | Not provider data; raw bytes, journal, paths, URLs, labels, and checksums must not be transmitted      | Until the user removes the local store; complete deletion and secure erasure are not implemented    |
-| Secret embedded in candidate material              | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                           | Do not retain                                                                                       |
-| Provider credential                                | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
+| Data class                                                                                | Default location                                                                                                           | Provider transmission                                                                                    | Retention default                                                                                   |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Public                                                                                    | Local workspace                                                                                                            | Allowed only through an explicit request policy                                                          | Until the user deletes it                                                                           |
+| Personal                                                                                  | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                                        | Until the user deletes it                                                                           |
+| Confidential employer                                                                     | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended             | Until the user deletes it                                                                           |
+| Portable CKB metadata, local origin bindings, managed-write journal, and raw source bytes | User-selected local plaintext store, separate from application workspaces and run history                                  | Not provider data; raw bytes, origin paths, journal, URLs, labels, and checksums must not be transmitted | Until the user removes the local store; complete deletion and secure erasure are not implemented    |
+| Secret embedded in candidate material                                                     | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                                       | Do not retain                                                                                       |
+| Provider credential                                                                       | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                                        | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
 
 The provider contract requires `allowTransmission`, an allowlisted provider
 company, and an acknowledgement when a request is sensitive. Provider identity,
@@ -63,14 +63,19 @@ checksum, source content, provider data, diagnostic projection, cleanup token,
 or approval. Journal identifiers remain internal and are excluded from the
 application result and count-only inventory.
 
-The store contains no exact host paths or URLs, filename provenance,
-filename-derived physical names, remembered origin binding, directory binding,
-automatic refresh, freshness or last-refresh state, moved/deleted/inaccessible
-origin reports, cross-source duplicate relationships, normalized facts, or
-retrieval indexes. A selected append path is runtime-only and is not persisted.
-The local label may default to the original basename or be chosen by the user,
-but it is sensitive UI metadata rather than origin provenance; source identity
-and label do not change when a later selected path or basename differs.
+The initial managed import remembers the canonical physical origin path in
+sensitive local-only SQLite state; a later selected append path never replaces
+it, including for an identical no-op. This binding is copied with the SQLite
+database but is not portable continuity, becomes stale when the store moves
+machines or the origin moves/disappears, is not yet refreshed/rebound/status-
+checked, and is never provider-facing. Exact host paths remain excluded from
+the manifest, descriptor, journal, inventory, diagnostics, application
+serialization, provider requests, filename provenance, filename-derived
+physical names, and URLs. The store has no directory binding, automatic
+refresh, freshness or last-refresh state, moved/deleted/inaccessible origin
+reports, cross-source duplicate relationships, normalized facts, or retrieval
+indexes. Source identity and label do not change when a later selected path or
+basename differs.
 Application workspaces continue to own their current evidence and run history,
 and no CKB data is provider data.
 

@@ -23,6 +23,7 @@ import {
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeBaseStoragePort,
   type CandidateKnowledgeSourceInput,
+  type CandidateKnowledgeSourceOriginBindingRecord,
   type CandidateKnowledgeSourceVersionInput,
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
@@ -76,7 +77,10 @@ export interface InitializeCandidateKnowledgeStoreInput {
 
 export interface ManagedCandidateKnowledgeFileVersionInput
   extends CandidateKnowledgeSourceVersionInput {
-  /** Runtime-only import location. It is never persisted or returned in product records. */
+  /**
+   * Runtime selection. Managed creates retain its verified canonical path only in the
+   * sensitive local origin binding; appends do not persist or replace it.
+   */
   readonly sourcePath: string;
   /** @internal Test seam for mutating the opened source before its final stability check. */
   readonly beforeSourceRecheck?: () => Promise<void>;
@@ -103,6 +107,11 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     sourceId: string,
     version: ManagedCandidateKnowledgeFileVersionInput,
   ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
+  /** Sensitive local-only state; never included in application projections. */
+  readonly getCandidateKnowledgeSourceOriginBinding: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeSourceOriginBindingRecord | undefined>;
   readonly getManagedCandidateKnowledgeFilePath: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -181,6 +190,8 @@ async function writeComplete(handle: FileHandle, bytes: Buffer): Promise<void> {
 interface CapturedManagedFile {
   readonly checksum: string;
   readonly sizeBytes: number;
+  /** Canonical physical path verified during capture; never part of product projections. */
+  readonly originPath: string;
   readonly temporaryPath: string;
   readonly temporaryIdentity: FileIdentity;
 }
@@ -317,7 +328,13 @@ async function captureManagedFile(
     await chmodWhereSupported(temporaryPath, 0o600);
     await sourceHandle.close();
     sourceHandle = undefined;
-    return { checksum, sizeBytes, temporaryPath, temporaryIdentity };
+    return {
+      checksum,
+      sizeBytes,
+      originPath: physicalPath,
+      temporaryPath,
+      temporaryIdentity,
+    };
   } catch (error) {
     await closeQuietly(temporaryHandle);
     await closeQuietly(sourceHandle);
@@ -918,6 +935,7 @@ async function writeManagedCandidateKnowledgeFile(
             operationId,
             source: { ...operation.source, id: sourceId, knowledgeBaseId },
             version: requestedVersion,
+            originPath: captured.originPath,
           }
         : { kind: "append", operationId, version: requestedVersion },
     );
@@ -995,6 +1013,13 @@ function createHandle(
       storage.listCandidateKnowledgeSources(knowledgeBaseId),
     listCandidateKnowledgeSourceVersions: (knowledgeBaseId, sourceId) =>
       storage.listCandidateKnowledgeSourceVersions(knowledgeBaseId, sourceId),
+    getCandidateKnowledgeSourceOriginBinding: async (knowledgeBaseId, sourceId) => {
+      const binding = await storage.getCandidateKnowledgeSourceOriginBinding(
+        knowledgeBaseId,
+        sourceId,
+      );
+      return binding === undefined ? undefined : Object.freeze({ ...binding });
+    },
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
       writeManagedCandidateKnowledgeFile(storage, root, {
         kind: "create",

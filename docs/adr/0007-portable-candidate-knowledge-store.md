@@ -65,20 +65,28 @@ version and must not advance a timestamp or be interpreted as freshness or a
 last-refresh observation. This operation is an explicit/manual version append
 or update, not automatic refresh.
 
-The selected append path exists only for the duration of the operation. It is
-not remembered as an origin binding or persisted in portable metadata,
-provider-facing data, or content-free diagnostics. The existing source ID,
-kind, creation time, and display label remain stable even if the newly selected
-path or basename differs. The selection therefore says which bytes the
-candidate approves for this version; it does not redefine the source's identity
-or provenance.
+The selected path for a manual append exists only for the duration of that
+operation. It never changes an existing origin binding, including when the
+selected path or basename differs or the bytes are an identical no-op. A
+successful managed create records the canonical physical path returned by its
+verified capture in a separate sensitive, local-only SQLite origin-binding
+table, together with its binding timestamp. This state is copied with the
+SQLite database but is not portable continuity: it can become stale when the
+store moves machines or the origin moves or disappears. It is not yet
+refreshed, rebound, or status-checked, and is never provider-facing. The
+existing source ID, kind, creation time, and display label remain stable; the
+binding is not included in the portable descriptor or source/version metadata,
+manifests, journals, inventory,
+diagnostics, or application source projections.
 
 Successful intake copies the exact approved raw bytes beneath `sources/` using
 an opaque layout derived only from generated source and version IDs. The
 original host path and filename are neither physical names in the store nor
-persisted provenance. A local label may default to the basename or use a label
-chosen by the user, but it is sensitive user-interface metadata, not an origin
-path or instruction.
+portable source provenance. The successful managed-create origin binding is
+the one explicitly documented local exception: it remains only in the
+sensitive SQLite binding table and is not exposed to providers or diagnostics.
+A local label may default to the basename or use a label chosen by the user,
+but it is sensitive user-interface metadata, not an origin path or instruction.
 
 Storage migration version 6 adds the managed-object marker that binds a source
 version to its copied bytes. Publication is no-replace, file first, and database
@@ -138,6 +146,11 @@ record a terminal, non-owning no-op. An existing metadata-only version may be ex
 materialized under the normal managed-copy checks, but a pre-existing unowned
 target is never adopted merely because its bytes or shape match expectations.
 
+Storage migration version 8 adds the separate local-only origin-binding table.
+The binding is inserted atomically with a successful managed create's source,
+version, managed marker, and committed journal event. Existing v7 sources
+migrate without bindings. Manual appends do not insert or update a binding.
+
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
 permissions are best-effort and are not encryption or protection from another
@@ -150,10 +163,14 @@ provider request data, and content-free audit or diagnostic projections. A UI
 may show the local location to the user, but it must not treat that location as
 candidate evidence or transmit it to a model provider.
 
-The same rule applies to source origins in this slice: exact host paths and URLs
-are not persisted. Exact managed provenance consists of the logical store, CKB,
-source and version IDs plus the checksum, size, media type, and capture time of
-the copied bytes. It does not claim to preserve the original host location.
+The same rule applies to source origins in all portable and provider-facing
+surfaces. The canonical path for a successful managed create is retained only
+as sensitive local state in the SQLite origin-binding table. It is copied with
+the database but is not portable continuity, may become stale when the store
+or origin moves or disappears, is not yet refreshed/rebound/status-checked,
+and never enters a provider request or diagnostic projection. Exact managed
+provenance elsewhere consists of the logical store, CKB, source and version IDs
+plus the checksum, size, media type, and capture time of the copied bytes.
 Source labels are local user-visible metadata and checksums can correlate known
 content, so neither belongs in a content-free diagnostic projection or provider
 request.
@@ -166,8 +183,9 @@ configuration. Its original filename is not used in the managed layout.
 This decision deliberately leaves the following work unintegrated:
 
 - directory intake, URL/fetched source intake, and directory bindings;
-- remembered origin binding, automatic refresh, freshness or last-refresh
-  state, and moved, deleted, or inaccessible-origin reporting;
+- automatic refresh, freshness or last-refresh state, moved, deleted, or
+  inaccessible-origin reporting, and rebind/status controls for the local
+  origin binding;
 - cross-source duplicate relationships and duplicate handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to
