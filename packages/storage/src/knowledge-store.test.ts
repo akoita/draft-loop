@@ -122,6 +122,48 @@ describe("portable candidate knowledge store", () => {
     await reopened.close();
   });
 
+  it("persists scoped source identities and immutable versions across reopen", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const first = await store.createCandidateKnowledgeSource(
+      {
+        id: "source-1",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Career notes.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      {
+        id: "source-version-1",
+        mediaType: "text/markdown",
+        checksum: "a".repeat(64),
+        sizeBytes: 128,
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+    const second = await store.appendCandidateKnowledgeSourceVersion("ckb-default", "source-1", {
+      id: "source-version-2",
+      mediaType: "text/markdown",
+      checksum: "b".repeat(64),
+      sizeBytes: 256,
+      createdAt: "2026-08-21T14:02:00.000Z",
+    });
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(reopened.getCandidateKnowledgeSource("ckb-default", "source-1")).resolves.toEqual(
+      first.source,
+    );
+    await expect(reopened.listCandidateKnowledgeSources("ckb-default")).resolves.toEqual([
+      first.source,
+    ]);
+    await expect(
+      reopened.listCandidateKnowledgeSourceVersions("ckb-default", "source-1"),
+    ).resolves.toEqual([first.version, second.version]);
+    await reopened.close();
+  });
+
   it.skipIf(process.platform === "win32")(
     "creates private directories, manifest, and database with restrictive modes",
     async () => {
@@ -239,6 +281,108 @@ describe("portable candidate knowledge store", () => {
     const moved = join(root, ".draft-loop", "knowledge-moved.sqlite");
     await rename(database, moved);
     await rename(moved, database);
+  });
+
+  it("rejects an invalid source-version graph and releases the failed database handle", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.close();
+    mutateDatabase(
+      root,
+      "INSERT INTO candidate_knowledge_sources (id, candidate_knowledge_base_id, kind, display_name, created_at) VALUES ('source-without-version', 'ckb-default', 'file', 'Incomplete source', '2026-08-21T14:04:00.000Z')",
+    );
+
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(/has no source versions/i);
+    const database = join(root, ".draft-loop", "knowledge.sqlite");
+    const moved = join(root, ".draft-loop", "knowledge-moved.sqlite");
+    await rename(database, moved);
+    await rename(moved, database);
+  });
+
+  it("rejects source-version foreign-key violations on open", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.close();
+    mutateDatabase(
+      root,
+      "PRAGMA foreign_keys = OFF; INSERT INTO candidate_knowledge_source_versions (id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at) VALUES ('orphan-version', 'missing-source', 1, NULL, 'text/plain', 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1, '2026-08-21T14:04:00.000Z')",
+    );
+
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(
+      /invalid source relationships/i,
+    );
+  });
+
+  it("rejects a non-contiguous source-version parent chain on open", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.close();
+    mutateDatabase(
+      root,
+      `
+        INSERT INTO candidate_knowledge_sources
+          (id, candidate_knowledge_base_id, kind, display_name, created_at)
+          VALUES ('source-1', 'ckb-default', 'file', 'Career notes', '2026-08-21T14:04:00.000Z');
+        INSERT INTO candidate_knowledge_source_versions
+          (id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at)
+          VALUES
+          ('version-1', 'source-1', 1, NULL, 'text/plain', '${"a".repeat(64)}', 1, '2026-08-21T14:04:00.000Z'),
+          ('version-2', 'source-1', 2, 'version-1', 'text/plain', '${"b".repeat(64)}', 2, '2026-08-21T14:05:00.000Z'),
+          ('version-3', 'source-1', 3, 'version-1', 'text/plain', '${"c".repeat(64)}', 3, '2026-08-21T14:06:00.000Z');
+      `,
+    );
+
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(/invalid version chain/i);
+  });
+
+  it("rejects a source-version timestamp that precedes its source on open", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.close();
+    mutateDatabase(
+      root,
+      `
+        INSERT INTO candidate_knowledge_sources
+          (id, candidate_knowledge_base_id, kind, display_name, created_at)
+          VALUES ('source-1', 'ckb-default', 'file', 'Career notes', '2026-08-21T14:04:00.000Z');
+        INSERT INTO candidate_knowledge_source_versions
+          (id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at)
+          VALUES
+          ('version-1', 'source-1', 1, NULL, 'text/plain', '${"a".repeat(64)}', 1, '2026-08-21T14:03:00.000Z');
+      `,
+    );
+
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(
+      /invalid version timestamp order/i,
+    );
+  });
+
+  it("rejects a source-version timestamp that precedes its parent on open", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.close();
+    mutateDatabase(
+      root,
+      `
+        INSERT INTO candidate_knowledge_sources
+          (id, candidate_knowledge_base_id, kind, display_name, created_at)
+          VALUES ('source-1', 'ckb-default', 'file', 'Career notes', '2026-08-21T14:00:00.000Z');
+        INSERT INTO candidate_knowledge_source_versions
+          (id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at)
+          VALUES
+          ('version-1', 'source-1', 1, NULL, 'text/plain', '${"a".repeat(64)}', 1, '2026-08-21T14:02:00.000Z'),
+          ('version-2', 'source-1', 2, 'version-1', 'text/plain', '${"b".repeat(64)}', 2, '2026-08-21T14:01:00.000Z');
+      `,
+    );
+
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(
+      /invalid version timestamp order/i,
+    );
   });
 
   it("rejects unknown future storage migrations", async () => {

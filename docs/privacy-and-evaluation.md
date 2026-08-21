@@ -12,7 +12,7 @@ machine unless the user explicitly approves a provider transmission.
 | Public                                             | Local workspace                                                                                                            | Allowed only through an explicit request policy                                              | Until the user deletes it                                                                           |
 | Personal                                           | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                            | Until the user deletes it                                                                           |
 | Confidential employer                              | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended | Until the user deletes it                                                                           |
-| Portable CKB store identity and lifecycle metadata | User-selected local SQLite store, separate from application workspaces and run history                                     | Not provider data; the physical path must not be transmitted                                 | Until the user removes the local store; no integrated deletion control exists                       |
+| Portable CKB, source, and source-version metadata  | User-selected local SQLite store, separate from application workspaces and run history                                     | Not provider data; paths, URLs, labels, and checksums must not be transmitted                 | Until the user removes the local store; no integrated deletion control exists                       |
 | Secret embedded in candidate material              | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                           | Do not retain                                                                                       |
 | Provider credential                                | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                            | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
 
@@ -30,13 +30,22 @@ run history: until deleted
 provider retention: not allowed unless explicitly configured
 ```
 
-The portable CKB store component currently persists only a schema version,
-logical UUID, creation time, and local SQLite lifecycle metadata. It does not
-yet contain candidate source files, fetched source content, source versions,
-normalized facts, or retrieval indexes. Application workspaces continue to own
-their current evidence and run history. The CKB store's user-selected path is
-host configuration: it is excluded from the portable manifest, provider request
-data, content-free audit data, and diagnostics.
+The portable CKB store component persists its schema version, logical UUID,
+creation time, CKB lifecycle metadata, stable CKB-scoped source identities, and
+immutable ordered source-version metadata. A source records only file/URL kind
+and a local user-visible label; a version records SHA-256, media type, byte size,
+and timestamp. It contains no exact host paths or URLs, raw or fetched content,
+directory bindings, refresh/freshness state, duplicate relationships, normalized
+facts, or retrieval indexes. Application workspaces continue to own their
+current evidence and run history, and no CKB metadata is provider data.
+
+The store path and any future import path are host configuration and are excluded
+from portable records, provider requests, content-free audit data, and
+diagnostics. Source labels may themselves reveal candidate information, and a
+checksum can correlate a record with known content. They are appropriate for a
+local user-facing CKB view, not a content-free diagnostic projection. Files with
+names such as `AGENTS.md` remain inert, untrusted candidate data; their names or
+contents cannot become application instructions, provider policy, or permissions.
 
 The CKB SQLite file is plaintext. DraftLoop applies restrictive permissions
 where supported, but permissions are best-effort and are not encryption or a
@@ -89,9 +98,10 @@ local operations. Purging the primary history does not prove deletion of copies
 the user made through backups or exports; the product must disclose that scope
 and keep diagnostic output content-free. Those existing operations apply to
 application workspaces; they do not yet export, restore, or delete the separate
-portable CKB store. Physical CKB source handling, complete deletion across raw
-and derived data, and CKB backup/export/restore remain future privacy boundaries
-and must not be implied by the metadata-only component.
+portable CKB store. Physical CKB source handling, exact provenance, refresh,
+complete deletion across raw and derived data, and CKB backup/export/restore
+remain future privacy boundaries and must not be implied by the metadata-only
+component.
 
 ## Redaction and logging
 

@@ -187,6 +187,7 @@ async function validateOpenedStore(
       "Candidate knowledge store must contain exactly one active default knowledge base.",
     );
   }
+  storage.validateCandidateKnowledgeSourceGraph();
 }
 
 async function closePreservingFailure(storage: SqliteStorage): Promise<void> {
@@ -226,6 +227,16 @@ function createHandle(
       storage.renameCandidateKnowledgeBase(id, displayName, updatedAt),
     archiveCandidateKnowledgeBase: (id, archivedAt) =>
       storage.archiveCandidateKnowledgeBase(id, archivedAt),
+    createCandidateKnowledgeSource: (source, initialVersion) =>
+      storage.createCandidateKnowledgeSource(source, initialVersion),
+    appendCandidateKnowledgeSourceVersion: (knowledgeBaseId, sourceId, version) =>
+      storage.appendCandidateKnowledgeSourceVersion(knowledgeBaseId, sourceId, version),
+    getCandidateKnowledgeSource: (knowledgeBaseId, sourceId) =>
+      storage.getCandidateKnowledgeSource(knowledgeBaseId, sourceId),
+    listCandidateKnowledgeSources: (knowledgeBaseId) =>
+      storage.listCandidateKnowledgeSources(knowledgeBaseId),
+    listCandidateKnowledgeSourceVersions: (knowledgeBaseId, sourceId) =>
+      storage.listCandidateKnowledgeSourceVersions(knowledgeBaseId, sourceId),
     close: () => storage.close(),
   };
   return Object.freeze(handle);

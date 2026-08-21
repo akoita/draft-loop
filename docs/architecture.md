@@ -45,7 +45,7 @@ flowchart TB
     subgraph Infrastructure["Local and provider adapters"]
         direction LR
         WorkspaceStore[("Application workspace store<br/>SQLite · FTS/BM25 · run history")]
-        CKBStore[("Portable CKB store<br/>logical UUID · SQLite metadata")]
+        CKBStore[("Portable CKB store<br/>CKB · source/version metadata")]
         Providers["Provider adapters<br/>data-policy enforcement"]
         Credentials["Credential store<br/>main-process owned"]
     end
@@ -66,7 +66,7 @@ flowchart TB
     App --> WorkspaceStore
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
-    App -.->|"future selection and source lifecycle"| CKBStore
+    App -.->|"metadata component; run integration pending"| CKBStore
     Orchestrator --> Providers
     Host --> Credentials
     Credentials -.->|"key lookup; never projected back"| Providers
@@ -91,8 +91,9 @@ Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
 dotted CKB edge marks a component boundary, not an integrated workflow: the
-portable store can carry logical identity and lifecycle metadata, but application
-selection and source/retrieval use have not crossed that boundary yet.
+portable store carries logical identity, lifecycle, source, and immutable
+source-version metadata, but application selection and source/retrieval use have
+not crossed that boundary yet.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -119,9 +120,12 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
 - The portable Candidate Knowledge Base store is a second local SQLite boundary,
   separate from every application workspace and its run history. Its persisted
   logical UUID identifies the store when its user-selected filesystem location
-  changes. The current component stores lifecycle metadata only; it does not yet
-  store source content or versions, drive retrieval, or appear in CLI or desktop
-  workflows. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
+  changes. The current component stores CKB metadata, stable CKB-scoped source
+  identity with file/URL kind and a local label, and ordered immutable versions
+  with SHA-256, media type, byte size, and timestamp. It stores no exact host
+  paths or URLs and no source content. It does not drive retrieval or appear in
+  CLI or desktop workflows. See
+  [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
 - The orchestrator owns round sequencing, budgets, pause/stop behavior, and
   user-visible run events; provider adapters own SDK translation only.
 - The application package owns adapter-neutral use cases and command/query
@@ -262,10 +266,12 @@ beside an application-specific SQLite history file, ingests selected local
 sources, constructs a context snapshot, and drives the orchestration engine.
 That workspace and run history remain distinct from the portable CKB store.
 Neither adapter yet lets the user create, open, select, export, restore, or
-delete that store, and the current retrieval path still reads workspace-scoped
-evidence. Offline fixture agents make the lifecycle testable without network
-access. The desktop renderer uses the same adapter-neutral review port through a
-capability-limited bridge; browser mode has no filesystem or persistent
+delete that store. Directory intake, refresh, duplicate/index state, application
+selection, and retrieval cutover are also pending; the current retrieval path
+still reads workspace-scoped evidence. Offline fixture agents make the lifecycle
+testable without network access. The desktop renderer uses the same
+adapter-neutral review port through a capability-limited bridge; browser mode
+has no filesystem or persistent
 credential capabilities and retains only a deterministic fixture fallback.
 Live provider execution is opt-in and the provider boundary enforces the request
 data policy before the SDK call. Approved artifacts are rendered locally to

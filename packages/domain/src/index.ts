@@ -25,6 +25,8 @@ export type AgentReferenceId = Brand<string, "AgentReferenceId">;
 export type ProfileId = Brand<string, "ProfileId">;
 export type CandidateKnowledgeStoreId = Brand<string, "CandidateKnowledgeStoreId">;
 export type CandidateKnowledgeBaseId = Brand<string, "CandidateKnowledgeBaseId">;
+export type CandidateKnowledgeSourceId = Brand<string, "CandidateKnowledgeSourceId">;
+export type CandidateKnowledgeSourceVersionId = Brand<string, "CandidateKnowledgeSourceVersionId">;
 
 export interface WorkspaceIdentity {
   readonly id: WorkspaceId;
@@ -195,6 +197,125 @@ export function archiveCandidateKnowledgeBase(
     state: "archived",
     updatedAt: normalizedArchivedAt,
     archivedAt: normalizedArchivedAt,
+  };
+}
+
+export const candidateKnowledgeSourceKinds = ["file", "url"] as const;
+export type CandidateKnowledgeSourceKind = (typeof candidateKnowledgeSourceKinds)[number];
+
+export interface CandidateKnowledgeSource {
+  readonly id: CandidateKnowledgeSourceId;
+  readonly knowledgeBaseId: CandidateKnowledgeBaseId;
+  readonly kind: CandidateKnowledgeSourceKind;
+  readonly displayName: string;
+  readonly createdAt: string;
+}
+
+export interface CandidateKnowledgeSourceInput {
+  readonly knowledgeBaseId: string;
+  readonly kind: CandidateKnowledgeSourceKind;
+  readonly displayName: string;
+}
+
+function requireCandidateKnowledgeSourceText(value: string, field: string): string {
+  const normalized = value.trim();
+  if (normalized === "") {
+    throw new Error(`A candidate knowledge source ${field} is required.`);
+  }
+  return normalized;
+}
+
+function requireCandidateKnowledgeSourceTimestamp(value: string, field: string): string {
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) ||
+    Number.isNaN(Date.parse(value))
+  ) {
+    throw new Error(`Candidate knowledge source ${field} must be a valid ISO timestamp.`);
+  }
+  return value;
+}
+
+export function createCandidateKnowledgeSource(
+  id: string,
+  input: CandidateKnowledgeSourceInput,
+  createdAt = new Date().toISOString(),
+): CandidateKnowledgeSource {
+  if (!candidateKnowledgeSourceKinds.includes(input.kind)) {
+    throw new Error(
+      `Candidate knowledge source kind must be one of: ${candidateKnowledgeSourceKinds.join(", ")}.`,
+    );
+  }
+  return {
+    id: requireCandidateKnowledgeSourceText(id, "id") as CandidateKnowledgeSourceId,
+    knowledgeBaseId: requireCandidateKnowledgeSourceText(
+      input.knowledgeBaseId,
+      "knowledge base id",
+    ) as CandidateKnowledgeBaseId,
+    kind: input.kind,
+    displayName: requireCandidateKnowledgeSourceText(input.displayName, "display name"),
+    createdAt: requireCandidateKnowledgeSourceTimestamp(createdAt, "createdAt"),
+  };
+}
+
+export interface CandidateKnowledgeSourceVersion {
+  readonly id: CandidateKnowledgeSourceVersionId;
+  readonly sourceId: CandidateKnowledgeSourceId;
+  readonly version: number;
+  readonly parentVersionId?: CandidateKnowledgeSourceVersionId;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly createdAt: string;
+}
+
+export interface CandidateKnowledgeSourceVersionInput {
+  readonly sourceId: string;
+  readonly version: number;
+  readonly parentVersionId?: string;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+}
+
+export function createCandidateKnowledgeSourceVersion(
+  id: string,
+  input: CandidateKnowledgeSourceVersionInput,
+  createdAt = new Date().toISOString(),
+): CandidateKnowledgeSourceVersion {
+  if (!Number.isInteger(input.version) || input.version <= 0) {
+    throw new Error("Candidate knowledge source version must be a positive integer.");
+  }
+  const parentVersionId = input.parentVersionId?.trim();
+  if (input.version === 1 && input.parentVersionId !== undefined) {
+    throw new Error("Candidate knowledge source version 1 must not have a parent version.");
+  }
+  if (input.version > 1 && (parentVersionId === undefined || parentVersionId === "")) {
+    throw new Error(
+      "Candidate knowledge source versions after version 1 require a parent version.",
+    );
+  }
+  if (!/^[a-f0-9]{64}$/iu.test(input.checksum)) {
+    throw new Error("Candidate knowledge source version checksum must be a SHA-256 checksum.");
+  }
+  if (!Number.isInteger(input.sizeBytes) || input.sizeBytes < 0) {
+    throw new Error("Candidate knowledge source version sizeBytes must be a nonnegative integer.");
+  }
+  return {
+    id: requireCandidateKnowledgeSourceText(id, "version id") as CandidateKnowledgeSourceVersionId,
+    sourceId: requireCandidateKnowledgeSourceText(
+      input.sourceId,
+      "source id",
+    ) as CandidateKnowledgeSourceId,
+    version: input.version,
+    ...(parentVersionId
+      ? {
+          parentVersionId: parentVersionId as CandidateKnowledgeSourceVersionId,
+        }
+      : {}),
+    mediaType: requireCandidateKnowledgeSourceText(input.mediaType, "media type"),
+    checksum: input.checksum.toLowerCase(),
+    sizeBytes: input.sizeBytes,
+    createdAt: requireCandidateKnowledgeSourceTimestamp(createdAt, "version createdAt"),
   };
 }
 
