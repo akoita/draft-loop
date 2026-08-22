@@ -92,6 +92,28 @@ function queryDatabase(
   }
 }
 
+async function snapshotSourcesTree(root: string): Promise<readonly string[]> {
+  const entries: string[] = [];
+  const visit = async (directory: string, prefix: string): Promise<void> => {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      const relativePath = `${prefix}${entry.name}`;
+      if (entry.isDirectory()) {
+        entries.push(`${relativePath}/`);
+        await visit(path, `${relativePath}/`);
+      } else if (entry.isFile()) {
+        entries.push(`${relativePath}:${sha256(await readFile(path))}`);
+      } else if (entry.isSymbolicLink()) {
+        entries.push(`${relativePath}:symlink`);
+      } else {
+        entries.push(`${relativePath}:other`);
+      }
+    }
+  };
+  await visit(join(root, "sources"), "");
+  return entries.sort();
+}
+
 function sha256(content: string | Buffer): string {
   return createHash("sha256").update(content).digest("hex");
 }
@@ -358,6 +380,209 @@ describe("portable candidate knowledge store", () => {
     await reopened.close();
   });
 
+  it("rebinds exact bytes without creating a version, blob, or journal entry", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const originalPath = join(parent, "candidate.md");
+    const replacementPath = join(parent, "replacement.md");
+    const content = "candidate evidence";
+    await writeFile(originalPath, content, "utf8");
+    await writeFile(replacementPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "bound-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt,
+      },
+      managedVersion(originalPath, content),
+    );
+    const beforeVersions = await store.listCandidateKnowledgeSourceVersions(
+      "ckb-default",
+      "bound-source",
+    );
+    const beforeSources = await snapshotSourcesTree(root);
+    const beforeJournal = queryDatabase(
+      root,
+      "SELECT operation_id, state FROM candidate_knowledge_managed_write_events ORDER BY operation_id, sequence",
+    );
+
+    const rebound = await store.rebindManagedCandidateKnowledgeFileOrigin(
+      "ckb-default",
+      "bound-source",
+      {
+        sourcePath: replacementPath,
+        mediaType: "text/markdown",
+        checksum: sha256(content),
+        sizeBytes: Buffer.byteLength(content),
+        boundAt: "2026-08-21T14:02:00.000Z",
+      },
+    );
+    expect(rebound).toEqual({
+      binding: {
+        sourceId: "bound-source",
+        originPath: await realpath(replacementPath),
+        boundAt: "2026-08-21T14:02:00.000Z",
+      },
+      rebound: true,
+    });
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", "bound-source"),
+    ).resolves.toEqual(beforeVersions);
+    await expect(snapshotSourcesTree(root)).resolves.toEqual(beforeSources);
+    expect(
+      queryDatabase(
+        root,
+        "SELECT operation_id, state FROM candidate_knowledge_managed_write_events ORDER BY operation_id, sequence",
+      ),
+    ).toEqual(beforeJournal);
+
+    const current = await store.rebindManagedCandidateKnowledgeFileOrigin(
+      "ckb-default",
+      "bound-source",
+      {
+        sourcePath: replacementPath,
+        mediaType: "text/markdown",
+        checksum: sha256(content),
+        sizeBytes: Buffer.byteLength(content),
+        boundAt: "2026-08-21T14:03:00.000Z",
+      },
+    );
+    expect(current).toEqual({ rebound: false, binding: rebound.binding });
+    await expect(snapshotSourcesTree(root)).resolves.toEqual(beforeSources);
+    await store.close();
+  });
+
+  it("rejects changed bytes before changing the binding or sources tree", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const originalPath = join(parent, "candidate.md");
+    const replacementPath = join(parent, "replacement.md");
+    const content = "candidate evidence";
+    await writeFile(originalPath, content, "utf8");
+    await writeFile(replacementPath, "different evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "bound-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt,
+      },
+      managedVersion(originalPath, content),
+    );
+    const before = await store.getCandidateKnowledgeSourceOriginBinding(
+      "ckb-default",
+      "bound-source",
+    );
+    const beforeSources = await snapshotSourcesTree(root);
+    await expect(
+      store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "bound-source", {
+        ...managedVersion(replacementPath, "different evidence"),
+        boundAt: "2026-08-21T14:02:00.000Z",
+      }),
+    ).rejects.toThrow(/latest managed version/i);
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "bound-source"),
+    ).resolves.toEqual(before);
+    await expect(snapshotSourcesTree(root)).resolves.toEqual(beforeSources);
+    await store.close();
+  });
+
+  it("keeps the binding and graph unchanged for unsafe or unstable rebind selections", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const originalPath = join(parent, "candidate.md");
+    const symlinkPath = join(parent, "candidate-link.md");
+    const insideStorePath = join(root, "sources", "selected-from-store.md");
+    const content = "candidate evidence";
+    await writeFile(originalPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "bound-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt,
+      },
+      managedVersion(originalPath, content),
+    );
+    const beforeVersions = await store.listCandidateKnowledgeSourceVersions(
+      "ckb-default",
+      "bound-source",
+    );
+    const beforeBinding = await store.getCandidateKnowledgeSourceOriginBinding(
+      "ckb-default",
+      "bound-source",
+    );
+    const beforeSources = await snapshotSourcesTree(root);
+    const expectUnchanged = async (
+      expectedSources: readonly string[] = beforeSources,
+    ): Promise<void> => {
+      await expect(
+        store.listCandidateKnowledgeSourceVersions("ckb-default", "bound-source"),
+      ).resolves.toEqual(beforeVersions);
+      await expect(
+        store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "bound-source"),
+      ).resolves.toEqual(beforeBinding);
+      await expect(snapshotSourcesTree(root)).resolves.toEqual(expectedSources);
+    };
+    const rebindInput = (
+      sourcePath: string,
+      options: { readonly beforeSourceRecheck?: () => Promise<void> } = {},
+    ) => ({
+      sourcePath,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      ...options,
+    });
+
+    if (process.platform !== "win32") {
+      await symlink(originalPath, symlinkPath, "file");
+      await expect(
+        store.rebindManagedCandidateKnowledgeFileOrigin(
+          "ckb-default",
+          "bound-source",
+          rebindInput(symlinkPath),
+        ),
+      ).rejects.toThrow(/symbolic link/i);
+      await expectUnchanged();
+    }
+
+    await writeFile(insideStorePath, content, "utf8");
+    const insideSources = await snapshotSourcesTree(root);
+    await expect(
+      store.rebindManagedCandidateKnowledgeFileOrigin(
+        "ckb-default",
+        "bound-source",
+        rebindInput(insideStorePath),
+      ),
+    ).rejects.toThrow(/outside its store/i);
+    await expectUnchanged(insideSources);
+    await rm(insideStorePath);
+
+    await expect(
+      store.rebindManagedCandidateKnowledgeFileOrigin(
+        "ckb-default",
+        "bound-source",
+        rebindInput(originalPath, {
+          beforeSourceRecheck: async () => {
+            await writeFile(originalPath, "changed while copying", "utf8");
+          },
+        }),
+      ),
+    ).rejects.toThrow(/changed while it was being verified/i);
+    await expectUnchanged();
+    await writeFile(originalPath, content, "utf8");
+    await store.close();
+  });
+
   it("migrates v7 sources as unbound", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
@@ -381,7 +606,7 @@ describe("portable candidate knowledge store", () => {
     await store.close();
     mutateDatabase(
       root,
-      "DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version = 8",
+      "DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version IN (8, 9)",
     );
 
     const migrated = await openCandidateKnowledgeStore(root);

@@ -94,6 +94,26 @@ export interface ManagedCandidateKnowledgeFileVersionInput
   readonly beforeStagingCleanup?: () => Promise<void>;
 }
 
+export interface RebindManagedCandidateKnowledgeFileInput {
+  /** Explicit runtime selection; it is never persisted in a product projection. */
+  readonly sourcePath: string;
+  /** Expected media type obtained by the caller's bounded file ingestion. */
+  readonly mediaType: string;
+  /** Expected SHA-256 obtained by the caller's bounded file ingestion. */
+  readonly checksum: string;
+  /** Expected byte size obtained by the caller's bounded file ingestion. */
+  readonly sizeBytes: number;
+  /** Timestamp for the new origin binding. */
+  readonly boundAt: string;
+  /** @internal Test seam for mutating the opened source before its final stability check. */
+  readonly beforeSourceRecheck?: () => Promise<void>;
+}
+
+export interface RebindManagedCandidateKnowledgeFileResult {
+  readonly binding: CandidateKnowledgeSourceOriginBindingRecord;
+  readonly rebound: boolean;
+}
+
 export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseStoragePort {
   readonly descriptor: CandidateKnowledgeStoreDescriptor;
   /** Canonical physical root. It is runtime state and is never persisted in the manifest. */
@@ -107,6 +127,11 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     sourceId: string,
     version: ManagedCandidateKnowledgeFileVersionInput,
   ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
+  readonly rebindManagedCandidateKnowledgeFileOrigin: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    input: RebindManagedCandidateKnowledgeFileInput,
+  ) => Promise<RebindManagedCandidateKnowledgeFileResult>;
   /** Sensitive local-only state; never included in application projections. */
   readonly getCandidateKnowledgeSourceOriginBinding: (
     knowledgeBaseId: string,
@@ -194,6 +219,13 @@ interface CapturedManagedFile {
   readonly originPath: string;
   readonly temporaryPath: string;
   readonly temporaryIdentity: FileIdentity;
+}
+
+interface VerifiedManagedFile {
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  /** Canonical physical path verified during read-only validation. */
+  readonly originPath: string;
 }
 
 interface FileIdentity {
@@ -347,6 +379,110 @@ async function captureManagedFile(
     throw new StorageValidationError(
       "Managed candidate knowledge source could not be read safely.",
     );
+  }
+}
+
+async function verifyManagedFileOrigin(
+  root: string,
+  input: RebindManagedCandidateKnowledgeFileInput,
+): Promise<VerifiedManagedFile> {
+  const expectedChecksum = requiredManagedText(
+    input.checksum,
+    "Managed candidate knowledge source expected checksum",
+  );
+  if (!/^[0-9a-f]{64}$/.test(expectedChecksum)) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source expected checksum must be a lowercase SHA-256 checksum.",
+    );
+  }
+  if (!Number.isInteger(input.sizeBytes) || input.sizeBytes < 0) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source expected size must be a non-negative integer.",
+    );
+  }
+  if (input.sizeBytes > maximumManagedCandidateKnowledgeFileBytes) {
+    throw new StorageValidationError("Managed candidate knowledge source exceeds the size limit.");
+  }
+  const selectedPath = resolve(requiredManagedText(input.sourcePath, "Managed source path"));
+  if (isWithin(root, selectedPath)) {
+    throw new StorageValidationError(
+      "A managed candidate knowledge source must be selected outside its store.",
+    );
+  }
+
+  let sourceHandle: FileHandle | undefined;
+  try {
+    const selectedDetails = await lstat(selectedPath);
+    if (selectedDetails.isSymbolicLink() || !selectedDetails.isFile()) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source must be a regular file, not a symbolic link.",
+      );
+    }
+    if (selectedDetails.size > maximumManagedCandidateKnowledgeFileBytes) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source exceeds the size limit.",
+      );
+    }
+    const physicalPath = await realpath(selectedPath);
+    if (isWithin(root, physicalPath)) {
+      throw new StorageValidationError(
+        "A managed candidate knowledge source must be selected outside its store.",
+      );
+    }
+    sourceHandle = await open(selectedPath, sourceOpenFlags());
+    const before = await sourceHandle.stat();
+    if (
+      !before.isFile() ||
+      before.dev !== selectedDetails.dev ||
+      before.ino !== selectedDetails.ino
+    ) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source changed while it was being opened.",
+      );
+    }
+    if (before.size > maximumManagedCandidateKnowledgeFileBytes) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source exceeds the size limit.",
+      );
+    }
+
+    const digest = createHash("sha256");
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let sizeBytes = 0;
+    while (true) {
+      const result = await sourceHandle.read(buffer, 0, buffer.length, null);
+      if (result.bytesRead === 0) break;
+      sizeBytes += result.bytesRead;
+      if (sizeBytes > maximumManagedCandidateKnowledgeFileBytes) {
+        throw new StorageValidationError(
+          "Managed candidate knowledge source exceeds the size limit.",
+        );
+      }
+      digest.update(buffer.subarray(0, result.bytesRead));
+    }
+    await input.beforeSourceRecheck?.();
+    const after = await sourceHandle.stat();
+    if (!sameFileState(before, after) || sizeBytes !== before.size) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source changed while it was being verified.",
+      );
+    }
+    const checksum = digest.digest("hex");
+    if (sizeBytes !== input.sizeBytes || checksum !== expectedChecksum) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source does not match its expected integrity metadata.",
+      );
+    }
+    return { checksum, sizeBytes, originPath: physicalPath };
+  } catch (error) {
+    if (error instanceof StorageValidationError || error instanceof StorageConflictError) {
+      throw error;
+    }
+    throw new StorageValidationError(
+      "Managed candidate knowledge source could not be read safely.",
+    );
+  } finally {
+    await closeQuietly(sourceHandle);
   }
 }
 
@@ -986,6 +1122,100 @@ async function writeManagedCandidateKnowledgeFile(
   }
 }
 
+function latestCandidateKnowledgeSourceVersion(
+  versions: readonly CandidateKnowledgeSourceVersionRecord[],
+  sourceId: string,
+): CandidateKnowledgeSourceVersionRecord {
+  if (versions.length === 0 || versions.some((version) => version.sourceId !== sourceId)) {
+    throw new StorageValidationError("Candidate knowledge source version graph is inconsistent.");
+  }
+  return versions.reduce((latest, version) => {
+    if (
+      version.version > latest.version ||
+      (version.version === latest.version && version.id.localeCompare(latest.id) > 0)
+    ) {
+      return version;
+    }
+    return latest;
+  });
+}
+
+async function rebindManagedCandidateKnowledgeFileOrigin(
+  storage: SqliteStorage,
+  root: string,
+  knowledgeBaseId: string,
+  sourceId: string,
+  input: RebindManagedCandidateKnowledgeFileInput,
+): Promise<RebindManagedCandidateKnowledgeFileResult> {
+  const normalizedKnowledgeBaseId = requiredManagedText(
+    knowledgeBaseId,
+    "Managed candidate knowledge base id",
+  );
+  const normalizedSourceId = requiredManagedText(sourceId, "Managed candidate knowledge source id");
+  const source = await storage.getCandidateKnowledgeSource(
+    normalizedKnowledgeBaseId,
+    normalizedSourceId,
+  );
+  if (source === undefined) {
+    throw new StorageValidationError("Managed candidate knowledge source was not found.");
+  }
+  if (source.kind !== "file") {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source origin bindings require a file source.",
+    );
+  }
+  const currentBinding = await storage.getCandidateKnowledgeSourceOriginBinding(
+    normalizedKnowledgeBaseId,
+    normalizedSourceId,
+  );
+  if (currentBinding === undefined) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source origin binding is missing.",
+    );
+  }
+  const versions = await storage.listCandidateKnowledgeSourceVersions(
+    normalizedKnowledgeBaseId,
+    normalizedSourceId,
+  );
+  const latestVersion = latestCandidateKnowledgeSourceVersion(versions, normalizedSourceId);
+  if (
+    !(await storage.isCandidateKnowledgeSourceVersionManaged(
+      normalizedKnowledgeBaseId,
+      normalizedSourceId,
+      latestVersion.id,
+    ))
+  ) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source origin rebinding requires the latest version to be managed.",
+    );
+  }
+
+  const verified = await verifyManagedFileOrigin(root, input);
+  const expectedMediaType = requiredManagedText(
+    input.mediaType,
+    "Managed candidate knowledge source expected media type",
+  );
+  if (
+    expectedMediaType !== latestVersion.mediaType ||
+    verified.checksum !== latestVersion.checksum ||
+    verified.sizeBytes !== latestVersion.sizeBytes
+  ) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source does not match the latest managed version.",
+    );
+  }
+  const binding = await storage.rebindCandidateKnowledgeSourceOrigin(
+    normalizedKnowledgeBaseId,
+    normalizedSourceId,
+    verified.originPath,
+    input.boundAt,
+  );
+  return Object.freeze({
+    binding: Object.freeze({ ...binding }),
+    rebound: currentBinding.originPath !== verified.originPath,
+  });
+}
+
 function createHandle(
   descriptor: CandidateKnowledgeStoreDescriptor,
   root: string,
@@ -1033,6 +1263,8 @@ function createHandle(
         sourceId,
         version,
       }),
+    rebindManagedCandidateKnowledgeFileOrigin: (knowledgeBaseId, sourceId, input) =>
+      rebindManagedCandidateKnowledgeFileOrigin(storage, root, knowledgeBaseId, sourceId, input),
     getManagedCandidateKnowledgeFilePath: async (knowledgeBaseId, sourceId, versionId) => {
       const managed = await storage.isCandidateKnowledgeSourceVersionManaged(
         knowledgeBaseId,

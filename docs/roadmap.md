@@ -122,7 +122,7 @@ quarantined, or repaired. Successful managed creates now retain the canonical
 verified origin path in a separate sensitive local-only SQLite binding table;
 manual appends never update it. The binding is copied with the database but is
 not portable continuity, becomes stale when the store moves machines or the
-origin moves/disappears, is not automatically updated or rebound, and is never
+origin moves/disappears, is not automatically updated, and is never
 provider-facing.
 An explicit read-only application check now classifies one source as unbound,
 current, changed, missing, or inaccessible without returning the path,
@@ -134,12 +134,20 @@ repeat stable capture and managed-copy validation before becoming the next
 immutable parent-linked version, while current, unbound, missing, or
 inaccessible origins create no version. Refresh returns no path or observed
 content, never changes the binding, and persists no freshness or last-refresh
-state. The store retains no
+state. A separate explicit application operation can rebind a user-selected
+moved origin only after supported-media extraction and no-follow stable capture
+prove that its media type, checksum, and size exactly match the latest managed
+version. Rebind changes no source identity or version, publishes no managed
+blob, records no managed-write journal event, replaces rather than retains the
+superseded sensitive path, and returns only source ID, current/rebound status,
+and binding time. Different moved content must first be appended explicitly.
+The store retains no
 exact host paths in manifests, descriptors, journals, inventory, diagnostics,
 or application/provider projections, and retains no filename provenance,
 filename-derived physical names, or URLs. It remains independent of application workspaces and run
 history. It does not yet refresh in the background, persist freshness or last
-refresh, discover moved origins, or rebind them; ingest directories or URLs;
+refresh, automatically discover moved origins, expose rebind through product
+adapters, or ingest directories or URLs;
 relate cross-source duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
@@ -154,7 +162,10 @@ before publication, followed by publication and the atomic managed-marker/databa
 commit; completion follows staging cleanup. New staging names are opaque operation-derived hashes. SQLite migration v8 adds the
 separate local-only origin-binding table for successful managed creates;
 existing v7 sources remain unbound, and the binding is committed atomically
-with the source, version, managed marker, and committed journal event. Journal
+with the source, version, managed marker, and committed journal event. SQLite
+migration v9 permits only guarded replacement of that binding after the
+portable-store exact-byte rebind gate; source identity and deletion remain
+protected and replacement time cannot move backward. Journal
 records exclude origin paths, filenames, labels, checksums, source content,
 provider data, diagnostic projections, cleanup tokens, and approvals, and
 journal IDs are not exposed. Legacy v6 writes and entries without prospective
@@ -464,6 +475,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Added explicit exact-byte managed-file origin rebind as the first bounded #110 slice without advancing the v0.7 stage beyond component implementation | A moved origin needs a visible recovery path without allowing path changes to mutate candidate evidence. Rebind repeats ingestion and no-follow stable read/hash verification, requires an exact latest-managed-version match, replaces only sensitive local binding state, returns no path/checksum/content, creates no version/blob/journal event, and leaves automatic discovery, freshness persistence, directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair pending. |
 | 2026-08-22 | Split the oversized application-grade milestone into v0.7 evidence-backed drafting, v0.8 independent review/readiness, and v0.9 workflow parity/release; decomposed #78 into #110–#113 and split hybrid retrieval from lexical #80 into #114 | Fifteen open issues combined storage lifecycle, drafting, review, rendering, validation, and publication in one release. The new sequence preserves the same #4 program outcome while giving each milestone a coherent exit, moving optional research (#79) and unproven vector/hybrid optimization (#114) off the critical path. |
 | 2026-08-22 | Added explicit refresh from a managed file source's remembered origin without advancing #78 or the application-grade stage beyond component implementation                                                               | Changed bytes can become the next immutable version only after the existing no-follow ingestion and stable managed-copy gates; current, unbound, missing, and inaccessible origins create no version, the path and observed content stay out of results, and background refresh, freshness persistence, moved-origin discovery, rebind, directory/URL intake, selection, retrieval, deletion, and UI integration remain pending                    |
 | 2026-08-22 | Added an explicit, read-only managed-file origin status check without advancing #78 or the application-grade stage beyond component implementation                                                                       | A local caller can distinguish unbound, current, changed, missing, and inaccessible origins without path/checksum/content projection or mutation; the observation is not persisted, “current” is point-in-time only, and automatic refresh, rebind, moved-origin discovery, directory/URL intake, selection, retrieval, deletion, and UI integration remain pending                                                                                 |

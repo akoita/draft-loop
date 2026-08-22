@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
-import { dirname, isAbsolute, join } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 
 import {
   type CandidateKnowledgeBaseState,
@@ -568,7 +568,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 8 as const;
+export const storageSchemaVersion = 9 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -1200,6 +1200,31 @@ const migrationEight: Migration = {
   `.trim(),
 };
 
+const migrationNine: Migration = {
+  version: 9,
+  sql: `
+    DROP TRIGGER IF EXISTS candidate_knowledge_source_origin_bindings_immutable_update;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_origin_bindings_guarded_update
+      BEFORE UPDATE ON candidate_knowledge_source_origin_bindings
+      WHEN NEW.source_id <> OLD.source_id
+        OR length(trim(NEW.origin_path)) = 0
+        OR julianday(NEW.bound_at) IS NULL
+        OR julianday(OLD.bound_at) IS NULL
+        OR julianday(NEW.bound_at) < julianday(OLD.bound_at)
+        OR NOT EXISTS (
+          SELECT 1
+          FROM candidate_knowledge_sources AS source
+          JOIN candidate_knowledge_source_versions AS version
+            ON version.source_id = source.id
+          JOIN candidate_knowledge_managed_source_versions AS managed
+            ON managed.version_id = version.id
+          WHERE source.id = NEW.source_id AND source.kind = 'file'
+        )
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source origin binding replacement is invalid'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -1209,6 +1234,7 @@ const migrations: readonly Migration[] = [
   migrationSix,
   migrationSeven,
   migrationEight,
+  migrationNine,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -2154,6 +2180,91 @@ export class SqliteStorage
       )
       .get(normalizedKnowledgeBaseId, normalizedSourceId);
     return row === undefined ? undefined : candidateKnowledgeSourceOriginBindingFromRow(row);
+  }
+
+  public async rebindCandidateKnowledgeSourceOrigin(
+    knowledgeBaseId: string,
+    sourceId: string,
+    originPath: string,
+    boundAt: string,
+  ): Promise<CandidateKnowledgeSourceOriginBindingRecord> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const normalizedOriginPath = resolve(
+      requireAbsolutePath(originPath, "candidate knowledge source origin path"),
+    );
+    const normalizedBoundAt = requireTimestamp(
+      boundAt,
+      "candidate knowledge source origin binding boundAt",
+    );
+    let result: CandidateKnowledgeSourceOriginBindingRecord | undefined;
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      const source = this.requireCandidateKnowledgeSource(
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+      );
+      if (source.kind !== "file") {
+        throw new StorageValidationError(
+          "Candidate knowledge source origin bindings require a file source",
+        );
+      }
+      const managed = this.database
+        .prepare(
+          `SELECT 1
+           FROM candidate_knowledge_source_versions AS version
+           JOIN candidate_knowledge_managed_source_versions AS managed
+             ON managed.version_id = version.id
+           WHERE version.source_id = ?
+           LIMIT 1`,
+        )
+        .get(normalizedSourceId);
+      if (managed === undefined) {
+        throw new StorageValidationError(
+          "Candidate knowledge source origin bindings require a managed file source",
+        );
+      }
+      const currentRow = this.database
+        .prepare(
+          "SELECT source_id, origin_path, bound_at FROM candidate_knowledge_source_origin_bindings WHERE source_id = ?",
+        )
+        .get(normalizedSourceId);
+      if (currentRow === undefined) {
+        throw new StorageValidationError(
+          "Candidate knowledge source origin binding does not exist",
+        );
+      }
+      const current = candidateKnowledgeSourceOriginBindingFromRow(currentRow);
+      if (current.originPath === normalizedOriginPath) {
+        result = current;
+        return;
+      }
+      if (Date.parse(normalizedBoundAt) < Date.parse(current.boundAt)) {
+        throw new StorageValidationError(
+          "Candidate knowledge source origin binding boundAt must not precede its current boundAt",
+        );
+      }
+      const update = this.database
+        .prepare(
+          "UPDATE candidate_knowledge_source_origin_bindings SET origin_path = ?, bound_at = ? WHERE source_id = ?",
+        )
+        .run(normalizedOriginPath, normalizedBoundAt, normalizedSourceId);
+      if (update.changes !== 1) {
+        throw new StorageConflictError(
+          "Candidate knowledge source origin binding could not be replaced",
+        );
+      }
+      result = {
+        sourceId: normalizedSourceId,
+        originPath: normalizedOriginPath,
+        boundAt: normalizedBoundAt,
+      };
+    })();
+    return result as CandidateKnowledgeSourceOriginBindingRecord;
   }
 
   public async listCandidateKnowledgeSources(
