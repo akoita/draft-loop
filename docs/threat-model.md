@@ -63,15 +63,20 @@ manifest, descriptor, journal, inventory, diagnostics, application
 serialization, provider requests, filename provenance, filename-derived
 physical names, and URLs. A separate explicit local refresh follows only the
 remembered binding, repeats no-follow ingestion plus stable managed capture,
-and appends changed bytes as an immutable version. Other statuses do not write;
-the result does not expose the path or observed content, and refresh never
-rebinds or persists freshness. A separate explicit local rebind replaces only
+and appends changed bytes as an immutable version. Other statuses create no
+version; the result does not expose the path or observed content, and refresh
+never rebinds. Explicit refresh persists only source/version identities,
+bounded status, observation time, and optional last successful changed-byte
+refresh identity/time. It is evidence of the last explicit attempt, not a
+time-based freshness claim; a later source-version advance derives stale. A
+separate explicit local rebind replaces only
 the sensitive binding after the newly selected regular file passes ingestion,
 no-follow stable capture, and an exact latest-managed-version media/checksum/size
-match. It creates no version, managed blob, or journal event; replaces rather
+match. It creates no version, managed blob, journal event, or refresh-state
+mutation; replaces rather
 than retains the superseded path; and projects only source identity, status, and
-binding time. Background refresh, persisted freshness/last-refresh,
-moved-origin discovery, adapter-level rebind controls, directory and URL intake, cross-source duplicate relationships,
+binding time. Background refresh, time-based freshness policy,
+moved-origin discovery, adapter-level refresh/rebind controls, directory and URL intake, cross-source duplicate relationships,
 indexes/retrieval, app/run CKB selection, CLI/desktop controls, deletion,
 cleanup/reconciliation, and complete backup/export/restore have not moved into
 that boundary.

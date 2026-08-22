@@ -492,6 +492,75 @@ describe("portable candidate knowledge store", () => {
     await store.close();
   });
 
+  it("persists path-free refresh observations and derives stale after a manual append", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "candidate.md");
+    const changedPath = join(parent, "changed.md");
+    const initialContent = "candidate evidence";
+    const changedContent = "changed candidate evidence";
+    await writeFile(sourcePath, initialContent, "utf8");
+    await writeFile(changedPath, changedContent, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "observed-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt,
+      },
+      managedVersion(sourcePath, initialContent, { id: "observed-version-1" }),
+    );
+
+    await expect(
+      store.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "observed-source"),
+    ).resolves.toBeUndefined();
+    const observation = await store.upsertCandidateKnowledgeSourceRefreshObservation(
+      "ckb-default",
+      "observed-source",
+      {
+        observedVersionId: "observed-version-1",
+        status: "current",
+        checkedAt: "2026-08-21T14:02:00.000Z",
+      },
+    );
+    expect(observation).toEqual({
+      sourceId: "observed-source",
+      observedVersionId: "observed-version-1",
+      status: "current",
+      checkedAt: "2026-08-21T14:02:00.000Z",
+      lastRefreshedVersionId: null,
+      lastRefreshedAt: null,
+      stale: false,
+    });
+    expect(Object.isFrozen(observation)).toBe(true);
+    expect(JSON.stringify(observation)).not.toContain(root);
+    expect(JSON.stringify(observation)).not.toContain(sourcePath);
+    expect(JSON.stringify(observation)).not.toContain(initialContent);
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    try {
+      await expect(
+        reopened.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "observed-source"),
+      ).resolves.toEqual(observation);
+      await reopened.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "observed-source",
+        managedVersion(changedPath, changedContent, {
+          id: "observed-version-2",
+          createdAt: "2026-08-21T14:03:00.000Z",
+        }),
+      );
+      await expect(
+        reopened.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "observed-source"),
+      ).resolves.toEqual({ ...observation, stale: true });
+    } finally {
+      await reopened.close();
+    }
+  });
+
   it("keeps the binding and graph unchanged for unsafe or unstable rebind selections", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
@@ -606,7 +675,7 @@ describe("portable candidate knowledge store", () => {
     await store.close();
     mutateDatabase(
       root,
-      "DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version IN (8, 9)",
+      "DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version IN (8, 9, 10)",
     );
 
     const migrated = await openCandidateKnowledgeStore(root);

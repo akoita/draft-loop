@@ -15,6 +15,7 @@ import {
 import { ingestFile } from "@draft-loop/ingestion";
 import type {
   CandidateKnowledgeSourceRecord,
+  CandidateKnowledgeSourceRefreshObservationRecord,
   CandidateKnowledgeSourceVersionRecord,
 } from "@draft-loop/storage";
 import {
@@ -128,6 +129,12 @@ export interface RebindKnowledgeSourceOriginCommand {
   readonly sourcePath: string;
 }
 
+export interface GetKnowledgeSourceRefreshStateCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+}
+
 export type KnowledgeSourceOriginStatus =
   | "unbound"
   | "current"
@@ -161,6 +168,24 @@ export interface KnowledgeSourceOriginRebindResult {
   readonly sourceId: string;
   readonly status: KnowledgeSourceOriginRebindStatus;
   readonly boundAt: string;
+}
+
+export type KnowledgeSourceRefreshStateStatus =
+  | "unobserved"
+  | "stale"
+  | "current"
+  | "changed"
+  | "missing"
+  | "inaccessible"
+  | "unbound";
+
+export interface KnowledgeSourceRefreshStateResult {
+  readonly sourceId: string;
+  readonly status: KnowledgeSourceRefreshStateStatus;
+  readonly checkedAt?: string;
+  readonly observedVersionId?: string;
+  readonly lastRefreshedAt?: string;
+  readonly lastRefreshedVersionId?: string;
 }
 
 /** Local application metadata; names and descriptions are not a diagnostic allowlist. */
@@ -222,6 +247,9 @@ export interface CandidateKnowledgeStoreService {
   readonly rebindKnowledgeSourceOrigin: (
     command: RebindKnowledgeSourceOriginCommand,
   ) => Promise<KnowledgeSourceOriginRebindResult>;
+  readonly getKnowledgeSourceRefreshState: (
+    command: GetKnowledgeSourceRefreshStateCommand,
+  ) => Promise<KnowledgeSourceRefreshStateResult>;
 }
 
 export interface CandidateKnowledgeStoreServiceDependencies {
@@ -389,6 +417,7 @@ function latestSourceVersion(
 type InspectedKnowledgeSourceOrigin =
   | {
       readonly status: "unbound" | "missing" | "inaccessible";
+      readonly latestVersion: CandidateKnowledgeSourceVersionRecord;
     }
   | {
       readonly status: "current" | "changed";
@@ -441,6 +470,64 @@ function validateRebindResult(
   }
 }
 
+function refreshStateInvariantFailure(): Error {
+  return new Error("Candidate knowledge source refresh state returned inconsistent storage state.");
+}
+
+function isValidRefreshTimestamp(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(value) &&
+    !Number.isNaN(Date.parse(value))
+  );
+}
+
+function validateRefreshStateObservation(
+  observation: CandidateKnowledgeSourceRefreshObservationRecord,
+  sourceId: string,
+): void {
+  if (
+    typeof observation !== "object" ||
+    observation === null ||
+    observation.sourceId !== sourceId ||
+    typeof observation.observedVersionId !== "string" ||
+    observation.observedVersionId.trim() === "" ||
+    typeof observation.status !== "string" ||
+    !["current", "changed", "missing", "inaccessible", "unbound"].includes(observation.status) ||
+    !isValidRefreshTimestamp(observation.checkedAt) ||
+    typeof observation.stale !== "boolean" ||
+    (observation.lastRefreshedVersionId === null) !== (observation.lastRefreshedAt === null) ||
+    (observation.lastRefreshedVersionId !== null &&
+      (typeof observation.lastRefreshedVersionId !== "string" ||
+        observation.lastRefreshedVersionId.trim() === "")) ||
+    (observation.lastRefreshedAt !== null &&
+      !isValidRefreshTimestamp(observation.lastRefreshedAt)) ||
+    (observation.lastRefreshedAt !== null &&
+      Date.parse(observation.lastRefreshedAt) > Date.parse(observation.checkedAt))
+  ) {
+    throw refreshStateInvariantFailure();
+  }
+}
+
+function projectRefreshState(
+  observation: CandidateKnowledgeSourceRefreshObservationRecord,
+  sourceId: string,
+): KnowledgeSourceRefreshStateResult {
+  validateRefreshStateObservation(observation, sourceId);
+  return Object.freeze({
+    sourceId,
+    status: observation.stale ? ("stale" as const) : observation.status,
+    checkedAt: observation.checkedAt,
+    observedVersionId: observation.observedVersionId,
+    ...(observation.lastRefreshedAt === null
+      ? {}
+      : { lastRefreshedAt: observation.lastRefreshedAt }),
+    ...(observation.lastRefreshedVersionId === null
+      ? {}
+      : { lastRefreshedVersionId: observation.lastRefreshedVersionId }),
+  });
+}
+
 function assertSourceInScope(
   source: CandidateKnowledgeSourceRecord,
   knowledgeBaseId: string,
@@ -463,13 +550,15 @@ async function inspectKnowledgeSourceOrigin(
     throw sourceNotFound(knowledgeBaseId, sourceId);
   }
   assertSourceInScope(source, knowledgeBaseId, sourceId);
+  const versions = await handle.listCandidateKnowledgeSourceVersions(knowledgeBaseId, sourceId);
+  const latestVersion = latestSourceVersion(versions, sourceId);
   if (source.kind !== "file") {
-    return { status: "unbound" };
+    return { status: "unbound", latestVersion };
   }
 
   const binding = await handle.getCandidateKnowledgeSourceOriginBinding(knowledgeBaseId, sourceId);
   if (binding === undefined) {
-    return { status: "unbound" };
+    return { status: "unbound", latestVersion };
   }
   if (
     binding.sourceId !== sourceId ||
@@ -481,7 +570,7 @@ async function inspectKnowledgeSourceOrigin(
 
   const initialPathStatus = await inspectLocalOriginPath(inspect, binding.originPath);
   if (initialPathStatus !== "readable") {
-    return { status: initialPathStatus };
+    return { status: initialPathStatus, latestVersion };
   }
 
   let normalized: NonNullable<Awaited<ReturnType<typeof ingestFile>>["source"]>;
@@ -495,11 +584,10 @@ async function inspectKnowledgeSourceOrigin(
     const finalPathStatus = await inspectLocalOriginPath(inspect, binding.originPath);
     return {
       status: finalPathStatus === "missing" ? "missing" : "inaccessible",
+      latestVersion,
     };
   }
 
-  const versions = await handle.listCandidateKnowledgeSourceVersions(knowledgeBaseId, sourceId);
-  const latestVersion = latestSourceVersion(versions, sourceId);
   const status: "current" | "changed" =
     normalized.mediaType === latestVersion.mediaType &&
     normalized.checksum === latestVersion.checksum &&
@@ -572,6 +660,31 @@ function validateRefreshAppendResult(
     result.version.createdAt < latestVersion.createdAt
   ) {
     throw refreshAppendInvariantFailure();
+  }
+}
+
+function validateRefreshObservationWriteResult(
+  result: CandidateKnowledgeSourceRefreshObservationRecord,
+  sourceId: string,
+  expected: {
+    readonly observedVersionId: string;
+    readonly status: CandidateKnowledgeSourceRefreshObservationRecord["status"];
+    readonly checkedAt: string;
+    readonly lastRefreshedVersionId?: string;
+    readonly lastRefreshedAt?: string;
+  },
+): void {
+  validateRefreshStateObservation(result, sourceId);
+  if (
+    result.observedVersionId !== expected.observedVersionId ||
+    result.status !== expected.status ||
+    result.checkedAt !== expected.checkedAt ||
+    result.stale ||
+    (expected.lastRefreshedVersionId !== undefined &&
+      result.lastRefreshedVersionId !== expected.lastRefreshedVersionId) ||
+    (expected.lastRefreshedAt !== undefined && result.lastRefreshedAt !== expected.lastRefreshedAt)
+  ) {
+    throw refreshStateInvariantFailure();
   }
 }
 
@@ -995,7 +1108,22 @@ export function createCandidateKnowledgeStoreService(
           );
           if (inspected.status !== "changed") {
             const status: KnowledgeSourceOriginRefreshStatus = inspected.status;
-            return originRefreshResult(sourceId, status, resolved.now());
+            const checkedAt = resolved.now();
+            const observation = await handle.upsertCandidateKnowledgeSourceRefreshObservation(
+              knowledgeBaseId,
+              sourceId,
+              {
+                observedVersionId: inspected.latestVersion.id,
+                status,
+                checkedAt,
+              },
+            );
+            validateRefreshObservationWriteResult(observation, sourceId, {
+              observedVersionId: inspected.latestVersion.id,
+              status,
+              checkedAt,
+            });
+            return originRefreshResult(sourceId, status, checkedAt);
           }
 
           const versionId = requireText(
@@ -1028,9 +1156,51 @@ export function createCandidateKnowledgeStoreService(
             },
             inspected.latestVersion,
           );
+          const observationInput = result.created
+            ? {
+                observedVersionId: result.version.id,
+                status: "current" as const,
+                checkedAt,
+                lastRefreshedVersionId: result.version.id,
+                lastRefreshedAt: checkedAt,
+              }
+            : {
+                observedVersionId: result.version.id,
+                status: "current" as const,
+                checkedAt,
+              };
+          const observation = await handle.upsertCandidateKnowledgeSourceRefreshObservation(
+            knowledgeBaseId,
+            sourceId,
+            observationInput,
+          );
+          validateRefreshObservationWriteResult(observation, sourceId, observationInput);
           return result.created
             ? originRefreshResult(sourceId, "refreshed", checkedAt, result.version.id)
             : originRefreshResult(sourceId, "current", checkedAt);
+        },
+      );
+    },
+    getKnowledgeSourceRefreshState: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const source = await handle.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+          if (source === undefined) {
+            throw sourceNotFound(knowledgeBaseId, sourceId);
+          }
+          assertSourceInScope(source, knowledgeBaseId, sourceId);
+          const observation = await handle.getCandidateKnowledgeSourceRefreshObservation(
+            knowledgeBaseId,
+            sourceId,
+          );
+          if (observation === undefined) {
+            return Object.freeze({ sourceId, status: "unobserved" as const });
+          }
+          return projectRefreshState(observation, sourceId);
         },
       );
     },
@@ -1112,6 +1282,7 @@ export const appendKnowledgeSourceFileVersion = defaultService.appendKnowledgeSo
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;
 export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const refreshKnowledgeSourceFromOrigin = defaultService.refreshKnowledgeSourceFromOrigin;
+export const getKnowledgeSourceRefreshState = defaultService.getKnowledgeSourceRefreshState;
 export const rebindKnowledgeSourceOrigin = defaultService.rebindKnowledgeSourceOrigin;
 export const inspectManagedCandidateKnowledgeFiles =
   defaultService.inspectManagedCandidateKnowledgeFiles;

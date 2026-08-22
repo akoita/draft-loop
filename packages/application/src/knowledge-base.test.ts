@@ -568,6 +568,16 @@ describe("candidate knowledge store application service", () => {
       knowledgeBaseId: "default-ckb-uuid",
       sourcePath: originalPath,
     });
+    await service.refreshKnowledgeSourceFromOrigin({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    const stateBeforeRebind = await service.getKnowledgeSourceRefreshState({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
 
     now = changedAt;
     const rebound = await service.rebindKnowledgeSourceOrigin({
@@ -585,6 +595,13 @@ describe("candidate knowledge store application service", () => {
     expect(Object.keys(rebound)).toEqual(["sourceId", "status", "boundAt"]);
     expect(JSON.stringify(rebound)).not.toContain(temporaryParent);
     expect(JSON.stringify(rebound)).not.toContain(sha256(content));
+    await expect(
+      service.getKnowledgeSourceRefreshState({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toEqual(stateBeforeRebind);
 
     now = "2026-08-21T11:00:00.000Z";
     await expect(
@@ -692,6 +709,106 @@ describe("candidate knowledge store application service", () => {
     );
     expect((error as Error).message).not.toContain(sourcePath);
     expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("rejects malformed refresh-state dependency results without exposing sensitive fields", async () => {
+    const sourcePath = "/private/candidate/selected.md";
+    const source = {
+      id: "source-uuid",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Candidate source",
+      createdAt,
+    };
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      getCandidateKnowledgeSource: vi.fn(async () => source),
+      getCandidateKnowledgeSourceRefreshObservation: vi.fn(async () => ({
+        sourceId: source.id,
+        observedVersionId: "version-1-uuid",
+        status: "not-a-status",
+        checkedAt: createdAt,
+        lastRefreshedVersionId: null,
+        lastRefreshedAt: null,
+        stale: false,
+        path: sourcePath,
+        checksum,
+      })),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      open: vi.fn(async () => handle),
+    });
+
+    const error = await service
+      .getKnowledgeSourceRefreshState({
+        storeRoot: "valid",
+        knowledgeBaseId: source.knowledgeBaseId,
+        sourceId: source.id,
+      })
+      .then(
+        () => undefined,
+        (failure) => failure,
+      );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      "Candidate knowledge source refresh state returned inconsistent storage state.",
+    );
+    expect((error as Error).message).not.toContain(sourcePath);
+    expect((error as Error).message).not.toContain(checksum);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed for malformed refresh-state timestamps and derived flags", async () => {
+    const sourcePath = "/private/candidate/selected.md";
+    const source = {
+      id: "source-uuid",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Candidate source",
+      createdAt,
+    };
+    const validObservation = {
+      sourceId: source.id,
+      observedVersionId: "version-1-uuid",
+      status: "current" as const,
+      checkedAt: createdAt,
+      lastRefreshedVersionId: "version-1-uuid",
+      lastRefreshedAt: createdAt,
+      stale: false,
+    };
+    const cases: readonly Record<string, unknown>[] = [
+      { checkedAt: "not-a-time" },
+      { lastRefreshedAt: "not-a-time" },
+      { lastRefreshedAt: changedAt },
+      { stale: "false" },
+    ];
+    for (const malformed of cases) {
+      const close = vi.fn(async () => undefined);
+      const handle = {
+        getCandidateKnowledgeSource: vi.fn(async () => source),
+        getCandidateKnowledgeSourceRefreshObservation: vi.fn(async () => ({
+          ...validObservation,
+          ...malformed,
+          path: sourcePath,
+          checksum,
+        })),
+        close,
+      } as unknown as CandidateKnowledgeStoreHandle;
+      const service = createCandidateKnowledgeStoreService({
+        open: vi.fn(async () => handle),
+      });
+      await expect(
+        service.getKnowledgeSourceRefreshState({
+          storeRoot: "valid",
+          knowledgeBaseId: source.knowledgeBaseId,
+          sourceId: source.id,
+        }),
+      ).rejects.toThrow(
+        "Candidate knowledge source refresh state returned inconsistent storage state.",
+      );
+      expect(close).toHaveBeenCalledOnce();
+    }
   });
 
   it.skipIf(process.platform === "win32")(
@@ -824,6 +941,22 @@ describe("candidate knowledge store application service", () => {
     expect(current).toEqual({ sourceId: "source-uuid", checkedAt: changedAt, status: "current" });
     expect(generateId).not.toHaveBeenCalled();
     expect(now).toHaveBeenCalledOnce();
+    const refreshState = await service.getKnowledgeSourceRefreshState({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    expect(refreshState).toEqual({
+      sourceId: "source-uuid",
+      status: "current",
+      checkedAt: changedAt,
+      observedVersionId: "version-2-uuid",
+      lastRefreshedAt: changedAt,
+      lastRefreshedVersionId: "version-2-uuid",
+    });
+    expect(Object.isFrozen(refreshState)).toBe(true);
+    expect(JSON.stringify(refreshState)).not.toContain(sourcePath);
+    expect(JSON.stringify(refreshState)).not.toContain(temporaryParent);
     const serialized = JSON.stringify(refreshed);
     const observedChecksum = (
       await service.listKnowledgeSourceManifests({
@@ -918,6 +1051,17 @@ describe("candidate knowledge store application service", () => {
       const append = vi.fn(async () => {
         throw new Error(`refresh append called for ${testCase.name}`);
       });
+      const upsert = vi.fn(
+        async (_knowledgeBaseId: string, _sourceId: string, input: Record<string, unknown>) => ({
+          sourceId: source.id,
+          observedVersionId: input.observedVersionId as string,
+          status: input.status as string,
+          checkedAt: input.checkedAt as string,
+          lastRefreshedVersionId: null,
+          lastRefreshedAt: null,
+          stale: false,
+        }),
+      );
       const generateId = vi.fn(() => "must-not-generate");
       const close = vi.fn(async () => undefined);
       const handle = {
@@ -927,6 +1071,7 @@ describe("candidate knowledge store application service", () => {
         ),
         listCandidateKnowledgeSourceVersions: vi.fn(async () => [latestVersion]),
         appendManagedCandidateKnowledgeFileVersion: append,
+        upsertCandidateKnowledgeSourceRefreshObservation: upsert,
         close,
       } as unknown as CandidateKnowledgeStoreHandle;
       const service = createCandidateKnowledgeStoreService({
@@ -948,9 +1093,131 @@ describe("candidate knowledge store application service", () => {
         checkedAt: createdAt,
         status: testCase.expected,
       });
+      expect(upsert).toHaveBeenCalledOnce();
+      expect(upsert).toHaveBeenCalledWith(source.knowledgeBaseId, source.id, {
+        observedVersionId: latestVersion.id,
+        status: testCase.expected,
+        checkedAt: createdAt,
+      });
       expect(append).not.toHaveBeenCalled();
       expect(generateId).not.toHaveBeenCalled();
       expect(close).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("projects unobserved state and derives stale after a manual append without status mutation", async () => {
+    const sourcePath = join(temporaryParent, "candidate.md");
+    const manualPath = join(temporaryParent, "manual.md");
+    await writeFile(sourcePath, "# Candidate evidence\n", "utf8");
+    await writeFile(manualPath, "# Manually selected evidence\n", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "source-uuid",
+      "version-1-uuid",
+      "version-2-uuid",
+      "version-3-uuid",
+    ];
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath,
+    });
+
+    const unobserved = await service.getKnowledgeSourceRefreshState({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    expect(unobserved).toEqual({ sourceId: "source-uuid", status: "unobserved" });
+    expect(Object.isFrozen(unobserved)).toBe(true);
+    const beforeStatus = await service.getKnowledgeSourceRefreshState({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    await service.checkKnowledgeSourceOriginStatus({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    await expect(
+      service.getKnowledgeSourceRefreshState({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toEqual(beforeStatus);
+
+    const initialRefresh = await service.refreshKnowledgeSourceFromOrigin({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    expect(initialRefresh).toEqual({
+      sourceId: "source-uuid",
+      checkedAt: createdAt,
+      status: "current",
+    });
+    await expect(
+      service.getKnowledgeSourceRefreshState({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toMatchObject({
+      status: "current",
+      observedVersionId: "version-1-uuid",
+    });
+
+    now = changedAt;
+    await service.appendKnowledgeSourceFileVersion({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      sourcePath: manualPath,
+    });
+    const staleState = await service.getKnowledgeSourceRefreshState({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    expect(staleState).toEqual({
+      sourceId: "source-uuid",
+      status: "stale",
+      checkedAt: createdAt,
+      observedVersionId: "version-1-uuid",
+    });
+    await service.refreshKnowledgeSourceFromOrigin({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    const refreshedState = await service.getKnowledgeSourceRefreshState({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    expect(refreshedState.status).toBe("current");
+    expect(refreshedState.lastRefreshedVersionId).toBe("version-3-uuid");
+
+    const reopened = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        reopened.getCandidateKnowledgeSourceRefreshObservation("default-ckb-uuid", "source-uuid"),
+      ).resolves.toMatchObject({
+        observedVersionId: "version-3-uuid",
+        status: "current",
+        stale: false,
+      });
+    } finally {
+      await reopened.close();
     }
   });
 
@@ -1067,6 +1334,17 @@ describe("candidate knowledge store application service", () => {
       },
       created: false,
     }));
+    const upsertCandidateKnowledgeSourceRefreshObservation = vi.fn(
+      async (_knowledgeBaseId: string, _sourceId: string, input: Record<string, unknown>) => ({
+        sourceId: source.id,
+        observedVersionId: input.observedVersionId as string,
+        status: input.status as string,
+        checkedAt: input.checkedAt as string,
+        lastRefreshedVersionId: null,
+        lastRefreshedAt: null,
+        stale: false,
+      }),
+    );
     const handle = {
       getCandidateKnowledgeSource: vi.fn(async () => source),
       getCandidateKnowledgeSourceOriginBinding: vi.fn(async () => ({
@@ -1076,6 +1354,7 @@ describe("candidate knowledge store application service", () => {
       })),
       listCandidateKnowledgeSourceVersions: vi.fn(async () => [latestVersion]),
       appendManagedCandidateKnowledgeFileVersion,
+      upsertCandidateKnowledgeSourceRefreshObservation,
       close,
     } as unknown as CandidateKnowledgeStoreHandle;
     const generateId = vi.fn(() => "version-2-uuid");
@@ -1114,6 +1393,16 @@ describe("candidate knowledge store application service", () => {
       sizeBytes: 12,
       createdAt: changedAt,
     });
+    expect(upsertCandidateKnowledgeSourceRefreshObservation).toHaveBeenCalledOnce();
+    expect(upsertCandidateKnowledgeSourceRefreshObservation).toHaveBeenCalledWith(
+      "ckb-1",
+      source.id,
+      {
+        observedVersionId: "version-2-uuid",
+        status: "current",
+        checkedAt: changedAt,
+      },
+    );
 
     const failure = new Error("publication failed");
     appendManagedCandidateKnowledgeFileVersion.mockRejectedValueOnce(failure);
@@ -1155,6 +1444,17 @@ describe("candidate knowledge store application service", () => {
       appendResult?: AppendResult,
     ) => {
       const append = vi.fn(async () => appendResult as AppendResult);
+      const upsertCandidateKnowledgeSourceRefreshObservation = vi.fn(
+        async (_knowledgeBaseId: string, _sourceId: string, input: Record<string, unknown>) => ({
+          sourceId: source.id,
+          observedVersionId: input.observedVersionId as string,
+          status: input.status as string,
+          checkedAt: input.checkedAt as string,
+          lastRefreshedVersionId: null,
+          lastRefreshedAt: null,
+          stale: false,
+        }),
+      );
       const close = vi.fn(async () => undefined);
       const handle = {
         getCandidateKnowledgeSource: vi.fn(async () => source),
@@ -1165,6 +1465,7 @@ describe("candidate knowledge store application service", () => {
         })),
         listCandidateKnowledgeSourceVersions: vi.fn(async () => versions),
         appendManagedCandidateKnowledgeFileVersion: append,
+        upsertCandidateKnowledgeSourceRefreshObservation,
         close,
       } as unknown as CandidateKnowledgeStoreHandle;
       const service = createCandidateKnowledgeStoreService({

@@ -133,8 +133,12 @@ application operation now refreshes from that remembered origin: changed bytes
 repeat stable capture and managed-copy validation before becoming the next
 immutable parent-linked version, while current, unbound, missing, or
 inaccessible origins create no version. Refresh returns no path or observed
-content, never changes the binding, and persists no freshness or last-refresh
-state. A separate explicit application operation can rebind a user-selected
+content and never changes the binding. It persists a path-free observation
+against the exact source version examined; successful changed-byte refreshes
+record the new current version and refresh time, while later version changes
+derive `stale` until another explicit refresh. This is last-observation evidence,
+not a background watcher or time-based freshness claim. A separate explicit
+application operation can rebind a user-selected
 moved origin only after supported-media extraction and no-follow stable capture
 prove that its media type, checksum, and size exactly match the latest managed
 version. Rebind changes no source identity or version, publishes no managed
@@ -145,9 +149,9 @@ The store retains no
 exact host paths in manifests, descriptors, journals, inventory, diagnostics,
 or application/provider projections, and retains no filename provenance,
 filename-derived physical names, or URLs. It remains independent of application workspaces and run
-history. It does not yet refresh in the background, persist freshness or last
-refresh, automatically discover moved origins, expose rebind through product
-adapters, or ingest directories or URLs;
+history. It does not yet refresh in the background, apply a time-based freshness
+policy, automatically discover moved origins, expose refresh/rebind through
+product adapters, or ingest directories or URLs;
 relate cross-source duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
@@ -165,7 +169,12 @@ existing v7 sources remain unbound, and the binding is committed atomically
 with the source, version, managed marker, and committed journal event. SQLite
 migration v9 permits only guarded replacement of that binding after the
 portable-store exact-byte rebind gate; source identity and deletion remain
-protected and replacement time cannot move backward. Journal
+protected and replacement time cannot move backward. SQLite migration v10 adds
+guarded per-source refresh observations containing
+only source/version identities, bounded status, and timestamps; source/version
+scope, monotonic time, paired successful-refresh fields, immutable source
+identity, and no deletion are enforced. `stale` is derived when a newer version
+exists rather than persisted as a filesystem observation. Journal
 records exclude origin paths, filenames, labels, checksums, source content,
 provider data, diagnostic projections, cleanup tokens, and approvals, and
 journal IDs are not exposed. Legacy v6 writes and entries without prospective
@@ -475,6 +484,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Persisted guarded, path-free refresh observations as the second bounded #110 slice without advancing the v0.7 stage beyond component implementation | Explicit refresh outcomes now survive restart with the exact observed source-version identity and optional last successful changed-byte refresh time. Status checks remain read-only, later manual version advances derive `stale`, and the record is last-observation evidence rather than a background or time-based freshness claim; directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair remain pending. |
 | 2026-08-22 | Added explicit exact-byte managed-file origin rebind as the first bounded #110 slice without advancing the v0.7 stage beyond component implementation | A moved origin needs a visible recovery path without allowing path changes to mutate candidate evidence. Rebind repeats ingestion and no-follow stable read/hash verification, requires an exact latest-managed-version match, replaces only sensitive local binding state, returns no path/checksum/content, creates no version/blob/journal event, and leaves automatic discovery, freshness persistence, directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair pending. |
 | 2026-08-22 | Split the oversized application-grade milestone into v0.7 evidence-backed drafting, v0.8 independent review/readiness, and v0.9 workflow parity/release; decomposed #78 into #110–#113 and split hybrid retrieval from lexical #80 into #114 | Fifteen open issues combined storage lifecycle, drafting, review, rendering, validation, and publication in one release. The new sequence preserves the same #4 program outcome while giving each milestone a coherent exit, moving optional research (#79) and unproven vector/hybrid optimization (#114) off the critical path. |
 | 2026-08-22 | Added explicit refresh from a managed file source's remembered origin without advancing #78 or the application-grade stage beyond component implementation                                                               | Changed bytes can become the next immutable version only after the existing no-follow ingestion and stable managed-copy gates; current, unbound, missing, and inaccessible origins create no version, the path and observed content stay out of results, and background refresh, freshness persistence, moved-origin discovery, rebind, directory/URL intake, selection, retrieval, deletion, and UI integration remain pending                    |
