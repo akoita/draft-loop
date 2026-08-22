@@ -157,6 +157,10 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   path when the selected file exactly matches the latest managed version. It
   publishes no source version or blob, records no managed-write journal event,
   and retains no superseded path history.
+  A separate read-only application projection derives exact-integrity duplicate
+  groups from each source's latest version within one CKB. It returns only
+  deterministically ordered source/version IDs, persists nothing, and never
+  merges or removes evidence.
   Exact paths remain absent from the portable
   descriptor, source/version metadata, manifests, journal rows, inventory,
   diagnostics, and application projections. Source identity and its sensitive
@@ -356,8 +360,8 @@ last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
 Background refresh, time-based freshness policy, automatic moved-origin
-discovery, adapter-level refresh/rebind controls, directory and URL
-intake, cross-source duplicate relationships, indexing and retrieval,
+discovery, adapter-level refresh/rebind/duplicate controls, directory and URL
+intake, automatic duplicate resolution, indexing and retrieval,
 application/run CKB selection, deletion, repair of missing/corrupt referenced blobs, durable
 writer coordination, cleanup approval/reconciliation, and complete
 backup/export/restore remain pending; the internal prospective journal is not

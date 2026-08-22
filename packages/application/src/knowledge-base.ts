@@ -106,6 +106,11 @@ export interface ListKnowledgeSourceManifestsCommand {
   readonly knowledgeBaseId: string;
 }
 
+export interface ListKnowledgeSourceDuplicateGroupsCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+}
+
 export interface InspectManagedCandidateKnowledgeFilesCommand {
   readonly storeRoot: string;
 }
@@ -199,6 +204,15 @@ export interface CandidateKnowledgeSourceManifest {
   readonly versions: readonly CandidateKnowledgeSourceVersion[];
 }
 
+export interface KnowledgeSourceDuplicateGroupMember {
+  readonly sourceId: string;
+  readonly versionId: string;
+}
+
+export interface KnowledgeSourceDuplicateGroup {
+  readonly members: readonly KnowledgeSourceDuplicateGroupMember[];
+}
+
 export interface CandidateKnowledgeSourceWriteResult extends CandidateKnowledgeSourceManifest {
   readonly created: boolean;
 }
@@ -235,6 +249,9 @@ export interface CandidateKnowledgeStoreService {
   readonly listKnowledgeSourceManifests: (
     command: ListKnowledgeSourceManifestsCommand,
   ) => Promise<readonly CandidateKnowledgeSourceManifest[]>;
+  readonly listKnowledgeSourceDuplicateGroups: (
+    command: ListKnowledgeSourceDuplicateGroupsCommand,
+  ) => Promise<readonly KnowledgeSourceDuplicateGroup[]>;
   readonly inspectManagedCandidateKnowledgeFiles: (
     command: InspectManagedCandidateKnowledgeFilesCommand,
   ) => Promise<ManagedCandidateKnowledgeFileInventory>;
@@ -759,6 +776,145 @@ async function projectSourceManifest(
   });
 }
 
+interface DuplicateGroupMemberInternal extends KnowledgeSourceDuplicateGroupMember {}
+
+interface DuplicateGroupInternal {
+  readonly members: DuplicateGroupMemberInternal[];
+}
+
+function duplicateGraphInvariantFailure(): Error {
+  return new Error("Candidate knowledge source duplicate graph returned inconsistent state.");
+}
+
+function lexicalCompare(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function duplicateMemberCompare(
+  left: KnowledgeSourceDuplicateGroupMember,
+  right: KnowledgeSourceDuplicateGroupMember,
+): number {
+  return (
+    lexicalCompare(left.sourceId, right.sourceId) || lexicalCompare(left.versionId, right.versionId)
+  );
+}
+
+function validateDuplicateSourceRecord(
+  record: CandidateKnowledgeSourceRecord,
+  knowledgeBaseId: string,
+  sourceIds: Set<string>,
+): void {
+  if (
+    typeof record !== "object" ||
+    record === null ||
+    typeof record.id !== "string" ||
+    record.id.trim() === "" ||
+    record.knowledgeBaseId !== knowledgeBaseId ||
+    (record.kind !== "file" && record.kind !== "url") ||
+    typeof record.displayName !== "string" ||
+    record.displayName.trim() === "" ||
+    !isValidRefreshTimestamp(record.createdAt)
+  ) {
+    throw duplicateGraphInvariantFailure();
+  }
+  if (sourceIds.has(record.id)) {
+    throw duplicateGraphInvariantFailure();
+  }
+  sourceIds.add(record.id);
+}
+
+function latestDuplicateSourceVersion(
+  versions: readonly CandidateKnowledgeSourceVersionRecord[],
+  sourceId: string,
+  queryVersionIds: Set<string>,
+): CandidateKnowledgeSourceVersionRecord {
+  if (!Array.isArray(versions) || versions.length === 0) {
+    throw duplicateGraphInvariantFailure();
+  }
+  const versionIds = new Set<string>();
+  const versionNumbers = new Set<number>();
+  for (const version of versions) {
+    if (
+      typeof version !== "object" ||
+      version === null ||
+      typeof version.id !== "string" ||
+      version.id.trim() === "" ||
+      versionIds.has(version.id) ||
+      queryVersionIds.has(version.id) ||
+      version.sourceId !== sourceId ||
+      !Number.isInteger(version.version) ||
+      version.version < 1 ||
+      versionNumbers.has(version.version) ||
+      (version.version === 1
+        ? version.parentVersionId !== null
+        : typeof version.parentVersionId !== "string" || version.parentVersionId.trim() === "") ||
+      typeof version.mediaType !== "string" ||
+      version.mediaType.trim() === "" ||
+      typeof version.checksum !== "string" ||
+      !/^[0-9a-f]{64}$/iu.test(version.checksum) ||
+      !Number.isInteger(version.sizeBytes) ||
+      version.sizeBytes < 0 ||
+      !isValidRefreshTimestamp(version.createdAt)
+    ) {
+      throw duplicateGraphInvariantFailure();
+    }
+    versionIds.add(version.id);
+    queryVersionIds.add(version.id);
+    versionNumbers.add(version.version);
+  }
+
+  const ordered = [...versions].sort(
+    (left, right) => left.version - right.version || lexicalCompare(left.id, right.id),
+  );
+  let previous: CandidateKnowledgeSourceVersionRecord | undefined;
+  for (const [index, version] of ordered.entries()) {
+    if (
+      version.version !== index + 1 ||
+      (previous === undefined
+        ? version.parentVersionId !== null
+        : version.parentVersionId !== previous.id) ||
+      (previous !== undefined && Date.parse(version.createdAt) < Date.parse(previous.createdAt))
+    ) {
+      throw duplicateGraphInvariantFailure();
+    }
+    previous = version;
+  }
+  return ordered.reduce((latest, version) => {
+    if (
+      version.version > latest.version ||
+      (version.version === latest.version && lexicalCompare(version.id, latest.id) > 0)
+    ) {
+      return version;
+    }
+    return latest;
+  });
+}
+
+function projectDuplicateGroups(
+  groups: readonly DuplicateGroupInternal[],
+): readonly KnowledgeSourceDuplicateGroup[] {
+  const projected = groups
+    .map((group) => {
+      const members = [...group.members]
+        .sort(duplicateMemberCompare)
+        .map((member) => Object.freeze({ sourceId: member.sourceId, versionId: member.versionId }));
+      return Object.freeze({ members: Object.freeze(members) });
+    })
+    .sort((left, right) => {
+      for (let index = 0; index < Math.min(left.members.length, right.members.length); index += 1) {
+        const leftMember = left.members[index];
+        const rightMember = right.members[index];
+        if (leftMember === undefined || rightMember === undefined) {
+          throw duplicateGraphInvariantFailure();
+        }
+        const comparison = duplicateMemberCompare(leftMember, rightMember);
+        if (comparison !== 0) return comparison;
+      }
+      return left.members.length - right.members.length;
+    });
+  return Object.freeze(projected);
+}
+
 async function projectSourceWriteResult(
   handle: CandidateKnowledgeStoreHandle,
   knowledgeBaseId: string,
@@ -1070,6 +1226,46 @@ export function createCandidateKnowledgeStoreService(
         },
       );
     },
+    listKnowledgeSourceDuplicateGroups: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          try {
+            const sources = await handle.listCandidateKnowledgeSources(knowledgeBaseId);
+            const sourceIds = new Set<string>();
+            const queryVersionIds = new Set<string>();
+            const groups = new Map<string, DuplicateGroupInternal>();
+            for (const source of sources) {
+              validateDuplicateSourceRecord(source, knowledgeBaseId, sourceIds);
+              const versions = await handle.listCandidateKnowledgeSourceVersions(
+                knowledgeBaseId,
+                source.id,
+              );
+              const latest = latestDuplicateSourceVersion(versions, source.id, queryVersionIds);
+              const checksum = latest.checksum.toLowerCase();
+              const key = JSON.stringify([checksum, latest.mediaType, latest.sizeBytes]);
+              const group = groups.get(key);
+              const member = { sourceId: source.id, versionId: latest.id };
+              if (group === undefined) {
+                groups.set(key, { members: [member] });
+              } else {
+                if (group.members.some((existing) => existing.sourceId === member.sourceId)) {
+                  throw duplicateGraphInvariantFailure();
+                }
+                group.members.push(member);
+              }
+            }
+            return projectDuplicateGroups(
+              [...groups.values()].filter((group) => group.members.length >= 2),
+            );
+          } catch {
+            throw duplicateGraphInvariantFailure();
+          }
+        },
+      );
+    },
     checkKnowledgeSourceOriginStatus: async (command) => {
       const storeRoot = requireStoreRoot(command.storeRoot);
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
@@ -1280,6 +1476,7 @@ export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSource
 export const importKnowledgeSourceFile = defaultService.importKnowledgeSourceFile;
 export const appendKnowledgeSourceFileVersion = defaultService.appendKnowledgeSourceFileVersion;
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;
+export const listKnowledgeSourceDuplicateGroups = defaultService.listKnowledgeSourceDuplicateGroups;
 export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const refreshKnowledgeSourceFromOrigin = defaultService.refreshKnowledgeSourceFromOrigin;
 export const getKnowledgeSourceRefreshState = defaultService.getKnowledgeSourceRefreshState;
