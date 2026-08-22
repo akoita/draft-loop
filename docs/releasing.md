@@ -43,6 +43,10 @@ pnpm release:check
 pnpm test:release
 ```
 
+`pnpm release:check` requires the README to use the version-agnostic releases
+URL and rejects version-pinned GitHub release-tag links, so current download
+guidance remains durable across releases.
+
 To inspect a manifest for local build output without writing a file:
 
 ```text
@@ -177,7 +181,7 @@ sessions remain outside CI/CD.
 1. Update the root version and all workspace package versions in a focused PR.
 2. Update `release.json` to the stage being exited and verify that its stage and
    channel match the roadmap. Review the stage acceptance criteria and evidence
-   links.
+   links, plus the README maturity and installation/download wording.
 3. Merge the PR into `main` and wait for CI to pass.
 4. In a clean local worktree at the exact approved `main` commit, run
    `pnpm release:preflight` and record its sanitized live-provider result in the

@@ -15,6 +15,7 @@ import {
   formatSizeReport,
   main,
   serializeSizeReport,
+  validateReadmeReleaseLinks,
   validateReleaseMetadata,
 } from "./release.mjs";
 
@@ -30,7 +31,7 @@ function writeJson(filePath, value) {
   writeFileSync(filePath, `${JSON.stringify(value, null, 2)}\n`, "utf8");
 }
 
-function createFixture({ packageVersions = {}, metadata = {} } = {}) {
+function createFixture({ packageVersions = {}, metadata = {}, readme } = {}) {
   const rootDirectory = mkdtempSync(join(tmpdir(), "draft-loop-release-"));
   temporaryDirectories.push(rootDirectory);
   writeJson(join(rootDirectory, "package.json"), {
@@ -48,6 +49,11 @@ function createFixture({ packageVersions = {}, metadata = {} } = {}) {
     artifactTargets: ["linux-x64", "macos-arm64", "windows-x64"],
     ...metadata,
   });
+  writeFileSync(
+    join(rootDirectory, "README.md"),
+    readme ?? "# DraftLoop\n\nhttps://github.com/akoita/draft-loop/releases\n",
+    "utf8",
+  );
 
   const workspacePackages = [
     ["apps/zeta", "@draft-loop/zeta"],
@@ -177,6 +183,31 @@ describe("release package discovery and checks", () => {
     assert.throws(
       () => checkRelease(rootDirectory),
       /project must match the root package name draft-loop/,
+    );
+  });
+
+  test("accepts the version-agnostic GitHub releases link in README", () => {
+    assert.doesNotThrow(() =>
+      validateReadmeReleaseLinks("Download: https://github.com/akoita/draft-loop/releases\n"),
+    );
+  });
+
+  test("rejects version-pinned GitHub release tag links in README", () => {
+    assert.throws(
+      () =>
+        checkRelease(
+          createFixture({
+            readme: "https://github.com/akoita/draft-loop/releases/tag/v0.6.0\n",
+          }),
+        ),
+      /must not contain version-pinned GitHub release-tag links/,
+    );
+  });
+
+  test("rejects a README without the canonical GitHub releases link", () => {
+    assert.throws(
+      () => checkRelease(createFixture({ readme: "# DraftLoop\n" })),
+      /README release link check failed: README\.md must contain the canonical releases URL/,
     );
   });
 });
