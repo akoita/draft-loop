@@ -53,8 +53,18 @@ version checksum and byte size remain truthful. Approved original/final URLs,
 fetch time, and bounded URL kind are sensitive immutable local provenance for
 that version; they are excluded from generic manifests, journals, inventory,
 diagnostics, errors, and provider requests. Query strings may contain secrets or
-personal identifiers, so no URL is copied into a failure message. URL refresh,
-adapter controls, indexing, and transmission remain unimplemented.
+personal identifiers, so no URL is copied into a failure message.
+
+Each explicit URL refresh requires a new approval and re-fetches only the
+sensitive stored original URL after active-CKB, source-kind, provenance, and
+retirement preflight checks. Changed exact bytes create a parent-linked version
+with immutable provenance for that fetch. Identical bytes are current and create
+no version or provenance row even if the final redirect changed. A fetch or
+extraction failure after valid preflight persists only a URL-free
+`inaccessible` observation; rejected approval or preflight writes nothing.
+These observations are local evidence of an explicit attempt, not a freshness
+TTL. Redirect history, conditional requests, adapter controls, indexing, and
+transmission remain unimplemented.
 
 An explicit local application query can perform a bounded structural inventory
 of `sources/` after normal validation of every referenced managed blob. It

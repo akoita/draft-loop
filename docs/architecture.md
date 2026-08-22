@@ -93,9 +93,9 @@ flowchart TB
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
-solid CKB edge covers explicit managed-file add, initial approved URL intake,
-manual file-version append, and the local structural-inventory query. Each file
-write approval covers one local regular file; each URL approval covers one
+solid CKB edge covers explicit managed-file add, approved URL intake and
+refresh, manual file-version append, and the local structural-inventory query.
+Each file write approval covers one local regular file; each URL approval covers one
 bounded validated HTTPS fetch. Extraction succeeds before persistence, and the
 application copies verified exact bytes into the portable store. Inventory is
 an explicit bounded, count-only read after normal referenced-blob validation. The dotted CKB edge
@@ -175,9 +175,14 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   Immutable per-version local provenance retains the approved original URL,
   validated final redirect URL, fetch time, and bounded URL kind. Those fields
   are excluded from generic manifests, journals, inventory, diagnostics,
-  errors, and provider requests. This component does not yet refresh URLs;
-  later refresh must reject retired sources before fetching and define
-  redirect/failure readiness semantics.
+  errors, and provider requests. Explicit URL refresh requires a new approval,
+  re-fetches only the stored original URL, and rejects invalid scope, kind, or
+  retirement before network access. Changed exact bytes append a parent-linked
+  version with new immutable redirect provenance; identical bytes, including a
+  redirect-only change, are a no-op. A valid approved fetch/extraction failure
+  records only a URL-free `inaccessible` observation. Redirect history,
+  conditional requests, background refresh, and time-based readiness remain
+  unimplemented.
   Exact paths remain absent from the portable
   descriptor, source/version metadata, manifests, journal rows, inventory,
   diagnostics, and application projections. Source identity and its sensitive
@@ -364,8 +369,9 @@ That workspace and run history remain distinct from the portable CKB store.
 The application contract can approve and copy one supported local regular file
 into the store, manually append approved changed bytes to an existing file
 source, explicitly check or refresh one remembered origin without path
-projection, explicitly rebind an exact-byte moved origin, or request its bounded
-count-only structural inventory.
+projection, explicitly rebind an exact-byte moved origin, approve initial URL
+intake or immutable-origin URL refresh, or request its bounded count-only
+structural inventory.
 Neither user-facing adapter yet provides CKB controls. A successful managed
 create now records its canonical verified physical origin in a sensitive,
 local-only SQLite binding table; manual appends never change it. The binding is
@@ -378,8 +384,9 @@ last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
 Background refresh, time-based freshness policy, automatic moved-origin
-discovery, adapter-level refresh/rebind/duplicate controls, directory and URL
-intake, automatic duplicate resolution, indexing and retrieval,
+discovery, adapter-level refresh/rebind/duplicate controls, directory intake,
+URL redirect history and conditional requests, automatic duplicate resolution,
+indexing and retrieval,
 application/run CKB selection, deletion, repair of missing/corrupt referenced blobs, durable
 writer coordination, cleanup approval/reconciliation, and complete
 backup/export/restore remain pending; the internal prospective journal is not

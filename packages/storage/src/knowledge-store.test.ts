@@ -393,6 +393,228 @@ describe("portable candidate knowledge store", () => {
     await afterReopen.close();
   });
 
+  it("appends changed URL bytes with parent lineage and journals redirect-only no-ops", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const firstBody = new Uint8Array([65, 66, 67]);
+    const secondBody = new Uint8Array([68, 69, 70]);
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Remote evidence",
+        createdAt,
+      },
+      managedUrlVersion(firstBody, {
+        id: "url-version-1",
+        provenance: {
+          originalUrl: "https://example.com/evidence",
+          finalUrl: "https://example.com/evidence",
+          fetchedAt: "2026-08-21T14:01:00.000Z",
+          kind: "generic",
+        },
+      }),
+    );
+    const second = await store.appendManagedCandidateKnowledgeUrlVersion(
+      "ckb-default",
+      "url-source",
+      managedUrlVersion(secondBody, {
+        id: "url-version-2",
+        createdAt: "2026-08-21T14:02:00.000Z",
+        provenance: {
+          originalUrl: "https://example.com/evidence",
+          finalUrl: "https://cdn.example.com/evidence",
+          fetchedAt: "2026-08-21T14:02:00.000Z",
+          kind: "generic",
+        },
+      }),
+    );
+    expect(second).toMatchObject({
+      created: true,
+      version: { id: "url-version-2", version: 2, parentVersionId: "url-version-1" },
+    });
+    await expect(
+      store.getCandidateKnowledgeSourceUrlProvenance("ckb-default", "url-source", "url-version-2"),
+    ).resolves.toEqual({
+      sourceId: "url-source",
+      versionId: "url-version-2",
+      originalUrl: "https://example.com/evidence",
+      finalUrl: "https://cdn.example.com/evidence",
+      fetchedAt: "2026-08-21T14:02:00.000Z",
+      kind: "generic",
+    });
+    await expect(
+      readFile(join(root, "sources", digestSegment("url-source"), digestSegment("url-version-2"))),
+    ).resolves.toEqual(Buffer.from(secondBody));
+
+    const noop = await store.appendManagedCandidateKnowledgeUrlVersion(
+      "ckb-default",
+      "url-source",
+      managedUrlVersion(secondBody, {
+        id: "unused-url-version",
+        createdAt: "2026-08-21T14:03:00.000Z",
+        provenance: {
+          originalUrl: "https://example.com/evidence",
+          finalUrl: "https://other.example.com/evidence",
+          fetchedAt: "2026-08-21T14:03:00.000Z",
+          kind: "generic",
+        },
+      }),
+    );
+    expect(noop).toEqual({ ...second, created: false });
+    expect(
+      queryDatabase(
+        root,
+        "SELECT operation.requested_version_id, event.state, event.target_version_id FROM candidate_knowledge_managed_write_operations AS operation JOIN candidate_knowledge_managed_write_events AS event ON event.operation_id = operation.operation_id ORDER BY operation.rowid, event.sequence",
+      ).at(-1),
+    ).toEqual({
+      requested_version_id: "unused-url-version",
+      state: "noop",
+      target_version_id: "url-version-2",
+    });
+    await store.close();
+  });
+
+  it("rejects URL appends before publication for scope, kind, and retirement guards", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const filePath = join(parent, "candidate.md");
+    await writeFile(filePath, "candidate", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-other",
+      displayName: "Other evidence",
+      isDefault: false,
+      createdAt,
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "file-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "File source",
+        createdAt,
+      },
+      managedVersion(filePath, "candidate"),
+    );
+    await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "retired-url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Retired URL",
+        createdAt,
+      },
+      managedUrlVersion(new Uint8Array([1]), { id: "retired-url-version" }),
+    );
+    await store.retireCandidateKnowledgeSource("ckb-default", "retired-url-source", {
+      retiredAt: "2026-08-21T14:02:00.000Z",
+      reason: "user-requested",
+    });
+    const beforeSources = await snapshotSourcesTree(root);
+    const appendInput = managedUrlVersion(new Uint8Array([2]), {
+      id: "unused-url-version",
+      createdAt: "2026-08-21T14:03:00.000Z",
+      provenance: {
+        originalUrl: "https://example.com/evidence",
+        finalUrl: "https://example.com/evidence",
+        fetchedAt: "2026-08-21T14:03:00.000Z",
+        kind: "generic",
+      },
+    });
+    await expect(
+      store.appendManagedCandidateKnowledgeUrlVersion("ckb-default", "file-source", appendInput),
+    ).rejects.toThrow(/URL source/i);
+    await expect(
+      store.appendManagedCandidateKnowledgeUrlVersion(
+        "ckb-other",
+        "retired-url-source",
+        appendInput,
+      ),
+    ).rejects.toThrow(/not found|scope|source/i);
+    await expect(
+      store.appendManagedCandidateKnowledgeUrlVersion(
+        "ckb-default",
+        "retired-url-source",
+        appendInput,
+      ),
+    ).rejects.toThrow(/retired/i);
+    await expect(snapshotSourcesTree(root)).resolves.toEqual(beforeSources);
+    expect(
+      queryDatabase(
+        root,
+        "SELECT COUNT(*) AS count FROM candidate_knowledge_source_versions WHERE version = 2",
+      ),
+    ).toEqual([{ count: 0 }]);
+    await store.close();
+  });
+
+  it("rolls back URL append publication when provenance is invalid or rebound", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Remote evidence",
+        createdAt,
+      },
+      managedUrlVersion(new Uint8Array([1]), { id: "url-version-1" }),
+    );
+    const beforeSources = await snapshotSourcesTree(root);
+    const beforeVersions = await store.listCandidateKnowledgeSourceVersions(
+      "ckb-default",
+      "url-source",
+    );
+    const beforeProvenance = await store.getCandidateKnowledgeSourceUrlProvenance(
+      "ckb-default",
+      "url-source",
+      "url-version-1",
+    );
+    for (const provenance of [
+      {
+        originalUrl: "https://different.example/evidence",
+        finalUrl: "https://example.com/evidence",
+        fetchedAt: "2026-08-21T14:02:00.000Z",
+        kind: "generic" as const,
+      },
+      {
+        originalUrl: "http://example.com/evidence",
+        finalUrl: "https://example.com/evidence",
+        fetchedAt: "2026-08-21T14:02:00.000Z",
+        kind: "generic" as const,
+      },
+    ]) {
+      await expect(
+        store.appendManagedCandidateKnowledgeUrlVersion(
+          "ckb-default",
+          "url-source",
+          managedUrlVersion(new Uint8Array([2]), {
+            id: `invalid-${provenance.originalUrl.startsWith("http:") ? "scheme" : "original"}`,
+            createdAt: "2026-08-21T14:02:00.000Z",
+            provenance,
+          }),
+        ),
+      ).rejects.toThrow();
+      await expect(snapshotSourcesTree(root)).resolves.toEqual(beforeSources);
+      await expect(
+        store.listCandidateKnowledgeSourceVersions("ckb-default", "url-source"),
+      ).resolves.toEqual(beforeVersions);
+      await expect(
+        store.getCandidateKnowledgeSourceUrlProvenance(
+          "ckb-default",
+          "url-source",
+          "url-version-1",
+        ),
+      ).resolves.toEqual(beforeProvenance);
+    }
+    await store.close();
+  });
+
   it("remembers one canonical origin binding for a managed create and scopes reads", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");

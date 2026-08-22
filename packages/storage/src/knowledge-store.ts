@@ -29,6 +29,7 @@ import {
   type CandidateKnowledgeSourceRetirementInput,
   type CandidateKnowledgeSourceRetirementRecord,
   type CandidateKnowledgeSourceUrlProvenanceInput,
+  type CandidateKnowledgeSourceUrlProvenanceRecord,
   type CandidateKnowledgeSourceVersionInput,
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
@@ -105,6 +106,8 @@ export interface ManagedCandidateKnowledgeUrlVersionInput
   /** Exact response bytes returned by the approved URL ingestion boundary. */
   readonly responseBytes: Uint8Array;
   readonly provenance: CandidateKnowledgeSourceUrlProvenanceInput;
+  /** @internal Expected latest version for a refresh preflight lineage guard. */
+  readonly expectedCurrentVersionId?: string;
   /** @internal Test seam for simulating a failure after file publication but before SQLite. */
   readonly beforeDatabaseWrite?: () => Promise<void>;
   /** @internal Test seam after the no-replace link and before its published event. */
@@ -147,6 +150,11 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     source: CandidateKnowledgeSourceInput,
     initialVersion: ManagedCandidateKnowledgeUrlVersionInput,
   ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
+  readonly appendManagedCandidateKnowledgeUrlVersion: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    version: ManagedCandidateKnowledgeUrlVersionInput,
+  ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
   readonly appendManagedCandidateKnowledgeFileVersion: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -166,6 +174,11 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     sourceId: string,
   ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord | undefined>;
+  readonly getCandidateKnowledgeSourceUrlProvenance: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ) => Promise<CandidateKnowledgeSourceUrlProvenanceRecord | undefined>;
   readonly upsertCandidateKnowledgeSourceRefreshObservation: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1083,6 +1096,14 @@ async function writeManagedCandidateKnowledgeFile(
       "Managed candidate knowledge source versions require a file source.",
     );
   }
+  if (operation.kind === "append") {
+    const existingSource = await storage.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+    if (existingSource !== undefined && existingSource.kind !== "file") {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source versions require a file source.",
+      );
+    }
+  }
   const requestedVersion = managedVersionMetadata(operation.version);
   const operationId = randomUUID();
   await storage.prepareManagedCandidateKnowledgeWrite({
@@ -1243,46 +1264,137 @@ async function writeManagedCandidateKnowledgeFile(
   }
 }
 
-async function writeManagedCandidateKnowledgeUrlSource(
+async function writeManagedCandidateKnowledgeUrlVersion(
   storage: SqliteStorage,
   root: string,
-  source: CandidateKnowledgeSourceInput,
-  initialVersion: ManagedCandidateKnowledgeUrlVersionInput,
+  operation:
+    | {
+        readonly kind: "create";
+        readonly source: CandidateKnowledgeSourceInput;
+        readonly version: ManagedCandidateKnowledgeUrlVersionInput;
+      }
+    | {
+        readonly kind: "append";
+        readonly knowledgeBaseId: string;
+        readonly sourceId: string;
+        readonly version: ManagedCandidateKnowledgeUrlVersionInput;
+      },
 ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
-  const sourceId = requiredManagedText(source.id, "Managed candidate knowledge source id");
+  const sourceId = requiredManagedText(
+    operation.kind === "create" ? operation.source.id : operation.sourceId,
+    "Managed candidate knowledge source id",
+  );
   const knowledgeBaseId = requiredManagedText(
-    source.knowledgeBaseId,
+    operation.kind === "create" ? operation.source.knowledgeBaseId : operation.knowledgeBaseId,
     "Managed candidate knowledge base id",
   );
-  if (source.kind !== "url") {
+  if (operation.kind === "create" && operation.source.kind !== "url") {
     throw new StorageValidationError(
       "Managed candidate knowledge URL sources require a URL source.",
     );
   }
-  const requestedVersion = managedVersionMetadata(initialVersion);
-  validateManagedUrlResponseBytes(initialVersion);
+  if (operation.kind === "append") {
+    const existingSource = await storage.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+    if (existingSource !== undefined && existingSource.kind !== "url") {
+      throw new StorageValidationError(
+        "Managed candidate knowledge URL versions require a URL source.",
+      );
+    }
+    if (
+      existingSource !== undefined &&
+      (await storage.getCandidateKnowledgeSourceRetirement(knowledgeBaseId, sourceId)) !== undefined
+    ) {
+      throw new StorageConflictError("candidate knowledge source is retired");
+    }
+  }
+  const requestedVersion = managedVersionMetadata(operation.version);
+  validateManagedUrlResponseBytes(operation.version);
   const operationId = randomUUID();
   await storage.prepareManagedCandidateKnowledgeWrite({
     operationId,
     knowledgeBaseId,
     sourceId,
     requestedVersionId: requestedVersion.id,
-    kind: "create",
+    kind: operation.kind,
     createdAt: requestedVersion.createdAt,
   });
   let captured: CapturedManagedBytes | undefined;
   let sourceDirectoryCreated = false;
   let targetPath: string | undefined;
-  let published = false;
+  let targetVersionId = requestedVersion.id;
   let targeted = false;
+  let published = false;
   let committed = false;
+  let noopCandidate = false;
+  let expectedCurrentVersionId: string | undefined;
   try {
-    captured = await captureManagedBytes(root, initialVersion, operationId);
-    targetPath = managedVersionPath(root, sourceId, requestedVersion.id);
+    captured = await captureManagedBytes(root, operation.version, operationId);
+    if (operation.kind === "append") {
+      const versions = await storage.listCandidateKnowledgeSourceVersions(
+        knowledgeBaseId,
+        sourceId,
+      );
+      const current = versions.at(-1);
+      if (current?.checksum === captured.checksum) {
+        targetVersionId = current.id;
+        expectedCurrentVersionId = operation.version.expectedCurrentVersionId ?? current.id;
+        if (
+          current.mediaType !== requestedVersion.mediaType ||
+          current.sizeBytes !== captured.sizeBytes
+        ) {
+          throw new StorageConflictError(
+            "Candidate knowledge source version checksum conflicts with its integrity metadata.",
+          );
+        }
+        if (
+          !(await storage.isCandidateKnowledgeSourceVersionManaged(
+            knowledgeBaseId,
+            sourceId,
+            current.id,
+          ))
+        ) {
+          throw new StorageConflictError(
+            "Managed candidate knowledge write noop requires a managed current URL version.",
+          );
+        }
+        targetPath = managedVersionPath(root, sourceId, current.id);
+        await verifyManagedFile(targetPath, current);
+        noopCandidate = true;
+      } else if (current !== undefined) {
+        expectedCurrentVersionId = operation.version.expectedCurrentVersionId ?? current.id;
+      }
+    }
+
+    if (noopCandidate) {
+      await operation.version.beforeDatabaseWrite?.();
+      await operation.version.beforeStagingCleanup?.();
+      if (
+        !(await removeRegularFileIfIdentityMatches(
+          captured.temporaryPath,
+          captured.temporaryIdentity,
+        ))
+      ) {
+        throw new StorageValidationError(
+          "Managed candidate knowledge source staging cleanup could not be verified.",
+        );
+      }
+      await operation.version.beforeCommittedFileRecheck?.();
+      await verifyManagedFile(targetPath as string, {
+        checksum: captured.checksum,
+        sizeBytes: captured.sizeBytes,
+      });
+      return storage.recordManagedCandidateKnowledgeWriteNoop(
+        operationId,
+        requestedVersion,
+        expectedCurrentVersionId,
+      );
+    }
+
+    targetPath = managedVersionPath(root, sourceId, targetVersionId);
     await storage.recordManagedCandidateKnowledgeWriteEvent(
       operationId,
       "targeted",
-      requestedVersion.id,
+      targetVersionId,
       requestedVersion.createdAt,
     );
     targeted = true;
@@ -1295,25 +1407,36 @@ async function writeManagedCandidateKnowledgeUrlSource(
       captured,
     );
     published = true;
-    await initialVersion.afterTargetPublication?.();
+    await operation.version.afterTargetPublication?.();
     await storage.recordManagedCandidateKnowledgeWriteEvent(
       operationId,
       "published",
-      requestedVersion.id,
+      targetVersionId,
       requestedVersion.createdAt,
     );
-    await initialVersion.beforeDatabaseWrite?.();
-    const result = await storage.commitManagedCandidateKnowledgeWrite({
-      kind: "create",
-      operationId,
-      source: { ...source, id: sourceId, knowledgeBaseId },
-      version: requestedVersion,
-      urlProvenance: initialVersion.provenance,
-    });
+    await operation.version.beforeDatabaseWrite?.();
+    const result = await storage.commitManagedCandidateKnowledgeWrite(
+      operation.kind === "create"
+        ? {
+            kind: "create",
+            operationId,
+            source: { ...operation.source, id: sourceId, knowledgeBaseId },
+            version: requestedVersion,
+            urlProvenance: operation.version.provenance,
+          }
+        : {
+            kind: "append",
+            operationId,
+            version: requestedVersion,
+            urlProvenance: operation.version.provenance,
+            ...(expectedCurrentVersionId === undefined ? {} : { expectedCurrentVersionId }),
+          },
+    );
     committed = true;
-    await initialVersion.beforeCommittedFileRecheck?.();
-    await verifyManagedFile(targetPath, result.version);
-    await initialVersion.beforeStagingCleanup?.();
+    const committedPath = managedVersionPath(root, sourceId, result.version.id);
+    await operation.version.beforeCommittedFileRecheck?.();
+    await verifyManagedFile(committedPath, result.version);
+    await operation.version.beforeStagingCleanup?.();
     if (
       !(await removeRegularFileIfIdentityMatches(
         captured.temporaryPath,
@@ -1339,12 +1462,12 @@ async function writeManagedCandidateKnowledgeUrlSource(
         published,
         sourceDirectoryCreated,
       );
-      if (cleaned && targeted) {
+      if (cleaned && targeted && !noopCandidate) {
         try {
           await storage.recordManagedCandidateKnowledgeWriteEvent(
             operationId,
             "aborted",
-            requestedVersion.id,
+            targetVersionId,
             requestedVersion.createdAt,
           );
         } catch {
@@ -1491,6 +1614,14 @@ function createHandle(
       );
       return observation === undefined ? undefined : Object.freeze({ ...observation });
     },
+    getCandidateKnowledgeSourceUrlProvenance: async (knowledgeBaseId, sourceId, versionId) => {
+      const provenance = await storage.getCandidateKnowledgeSourceUrlProvenance(
+        knowledgeBaseId,
+        sourceId,
+        versionId,
+      );
+      return provenance === undefined ? undefined : Object.freeze({ ...provenance });
+    },
     upsertCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId, input) =>
       Object.freeze({
         ...(await storage.upsertCandidateKnowledgeSourceRefreshObservation(
@@ -1517,7 +1648,18 @@ function createHandle(
         version: initialVersion,
       }),
     createManagedCandidateKnowledgeUrlSource: (source, initialVersion) =>
-      writeManagedCandidateKnowledgeUrlSource(storage, root, source, initialVersion),
+      writeManagedCandidateKnowledgeUrlVersion(storage, root, {
+        kind: "create",
+        source,
+        version: initialVersion,
+      }),
+    appendManagedCandidateKnowledgeUrlVersion: (knowledgeBaseId, sourceId, version) =>
+      writeManagedCandidateKnowledgeUrlVersion(storage, root, {
+        kind: "append",
+        knowledgeBaseId,
+        sourceId,
+        version,
+      }),
     appendManagedCandidateKnowledgeFileVersion: (knowledgeBaseId, sourceId, version) =>
       writeManagedCandidateKnowledgeFile(storage, root, {
         kind: "append",

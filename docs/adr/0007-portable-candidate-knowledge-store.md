@@ -90,9 +90,27 @@ The approved original URL, validated final redirect URL, fetch time, and bounded
 URL kind are immutable sensitive local provenance for that exact source version.
 They do not enter generic manifests, descriptors, journals, inventory,
 diagnostics, errors, or provider requests. Redirects therefore remain historical
-provenance and never silently rebind source identity. This slice does not refresh
-a URL; later refresh must reject retired sources before any network request and
-define failure/readiness semantics separately.
+provenance and never silently rebind source identity.
+
+A separate explicit URL-refresh command is the approval boundary for one later
+fetch of the immutable stored original URL. It accepts no replacement URL and
+rejects an archived or mismatched CKB, a non-URL or retired source, and malformed
+latest provenance before the network boundary. Fetch, redirect, response-size,
+content-type, extraction, and usable-text checks remain identical to intake.
+Changed response bytes become the next immutable parent-linked version with the
+new validated final URL and fetch time; storage rechecks lifecycle state and
+commits exact bytes, the managed marker, per-version URL provenance, and journal
+state atomically. Identical integrity metadata is a current no-op, including a
+redirect-only change, so it creates no version or provenance row and does not
+advance last-successful-refresh state. Redirect observation history is a
+separate deferred policy rather than metadata-only source versioning.
+
+After a valid approved preflight, a fetch or extraction failure persists only a
+path- and URL-free `inaccessible` observation against the examined version.
+Approval and preflight failures fetch nothing and write no observation. These
+records are evidence of one explicit attempt, not background or time-based
+freshness. A retirement race after preflight may perform the approved fetch but
+must fail closed before any version or observation write.
 
 The application command to add one local file is the approval boundary for that
 one file. Intake accepts only a regular file of at most 20 MiB in the five
@@ -256,7 +274,9 @@ Storage migration version 12 permits the managed opaque-byte marker for file or
 URL versions while preserving file-only origin bindings. It adds immutable,
 source/version-scoped URL provenance and requires every managed URL version to
 have matching provenance. URL provenance is committed atomically with the
-source, first version, managed marker, exact bytes, and journal transition.
+source, each changed version, managed marker, exact bytes, and journal
+transition. The same schema supports explicit URL refresh; no later migration is
+required for this slice.
 
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
@@ -294,7 +314,8 @@ configuration. Its original filename is not used in the managed layout.
 This decision deliberately leaves the following work unintegrated:
 
 - directory intake and directory bindings;
-- URL refresh, redirect-change readiness policy, and URL lifecycle controls;
+- redirect-observation history, conditional URL requests, and URL-specific
+  failure or time-based readiness policy;
 - background refresh, time-based freshness policy, moved-origin discovery, and
   product-adapter controls for refresh state or explicit rebind;
 - automatic duplicate merging or preference, source reactivation, and physical

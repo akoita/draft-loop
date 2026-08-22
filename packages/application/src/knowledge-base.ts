@@ -17,6 +17,7 @@ import type {
   CandidateKnowledgeSourceRecord,
   CandidateKnowledgeSourceRefreshObservationRecord,
   CandidateKnowledgeSourceRetirementRecord,
+  CandidateKnowledgeSourceUrlProvenanceRecord,
   CandidateKnowledgeSourceVersionRecord,
 } from "@draft-loop/storage";
 import {
@@ -136,6 +137,13 @@ export interface RefreshKnowledgeSourceFromOriginCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
   readonly sourceId: string;
+}
+
+export interface RefreshKnowledgeSourceUrlCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly approved: boolean;
 }
 
 export interface RebindKnowledgeSourceOriginCommand {
@@ -303,6 +311,9 @@ export interface CandidateKnowledgeStoreService {
   readonly refreshKnowledgeSourceFromOrigin: (
     command: RefreshKnowledgeSourceFromOriginCommand,
   ) => Promise<KnowledgeSourceOriginRefreshResult>;
+  readonly refreshKnowledgeSourceUrl: (
+    command: RefreshKnowledgeSourceUrlCommand,
+  ) => Promise<KnowledgeSourceOriginRefreshResult>;
   readonly rebindKnowledgeSourceOrigin: (
     command: RebindKnowledgeSourceOriginCommand,
   ) => Promise<KnowledgeSourceOriginRebindResult>;
@@ -380,6 +391,10 @@ function importFailure(): Error {
 
 function importUrlFailure(): Error {
   return new Error("The selected candidate knowledge source URL could not be imported.");
+}
+
+function refreshUrlFailure(): Error {
+  return new Error("The selected candidate knowledge source URL could not be refreshed.");
 }
 
 function appendFileVersionFailure(): Error {
@@ -831,6 +846,182 @@ function validateRefreshAppendResult(
     result.version.version <= latestVersion.version ||
     result.version.id === latestVersion.id ||
     result.version.createdAt < latestVersion.createdAt
+  ) {
+    throw refreshAppendInvariantFailure();
+  }
+}
+
+interface UrlRefreshPreflight {
+  readonly originalUrl: string;
+  readonly latestVersion: CandidateKnowledgeSourceVersionRecord;
+}
+
+function isSafeKnowledgeSourceUrl(value: unknown): value is string {
+  if (typeof value !== "string" || value.trim() === "") return false;
+  try {
+    const parsed = new URL(value);
+    return (
+      parsed.protocol === "https:" &&
+      parsed.username === "" &&
+      parsed.password === "" &&
+      parsed.hash === "" &&
+      parsed.hostname !== ""
+    );
+  } catch {
+    return false;
+  }
+}
+
+function validateUrlRefreshProvenance(
+  provenance: CandidateKnowledgeSourceUrlProvenanceRecord | undefined,
+  sourceId: string,
+  version: CandidateKnowledgeSourceVersionRecord,
+): CandidateKnowledgeSourceUrlProvenanceRecord {
+  if (
+    provenance === undefined ||
+    typeof provenance !== "object" ||
+    provenance === null ||
+    provenance.sourceId !== sourceId ||
+    provenance.versionId !== version.id ||
+    !isSafeKnowledgeSourceUrl(provenance.originalUrl) ||
+    !isSafeKnowledgeSourceUrl(provenance.finalUrl) ||
+    !isValidRefreshTimestamp(provenance.fetchedAt) ||
+    Date.parse(provenance.fetchedAt) !== Date.parse(version.createdAt) ||
+    !["github", "certification", "profile", "portfolio", "job-description", "generic"].includes(
+      provenance.kind,
+    )
+  ) {
+    throw refreshUrlFailure();
+  }
+  return provenance;
+}
+
+async function prepareUrlRefresh(
+  handle: CandidateKnowledgeStoreHandle,
+  knowledgeBaseId: string,
+  sourceId: string,
+): Promise<UrlRefreshPreflight> {
+  const knowledgeBase = await handle.getCandidateKnowledgeBase(knowledgeBaseId);
+  if (
+    knowledgeBase === undefined ||
+    typeof knowledgeBase !== "object" ||
+    knowledgeBase === null ||
+    knowledgeBase.id !== knowledgeBaseId ||
+    knowledgeBase.state !== "active"
+  ) {
+    throw refreshUrlFailure();
+  }
+  const source = await handle.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+  if (
+    source === undefined ||
+    typeof source !== "object" ||
+    source === null ||
+    source.id !== sourceId ||
+    source.knowledgeBaseId !== knowledgeBaseId ||
+    source.kind !== "url"
+  ) {
+    throw refreshUrlFailure();
+  }
+  const versions = await handle.listCandidateKnowledgeSourceVersions(knowledgeBaseId, sourceId);
+  if (!Array.isArray(versions) || versions.length === 0) {
+    throw refreshUrlFailure();
+  }
+  const ordered = [...versions].sort(
+    (left, right) => left.version - right.version || left.id.localeCompare(right.id),
+  );
+  const versionIds = new Set<string>();
+  let parentId: string | null = null;
+  let previousCreatedAt: string | undefined;
+  for (const [index, version] of ordered.entries()) {
+    if (
+      typeof version !== "object" ||
+      version === null ||
+      version.sourceId !== sourceId ||
+      typeof version.id !== "string" ||
+      version.id.trim() === "" ||
+      versionIds.has(version.id) ||
+      !Number.isInteger(version.version) ||
+      version.version !== index + 1 ||
+      version.parentVersionId !== parentId ||
+      typeof version.mediaType !== "string" ||
+      version.mediaType.trim() === "" ||
+      !/^[0-9a-f]{64}$/u.test(version.checksum) ||
+      !Number.isInteger(version.sizeBytes) ||
+      version.sizeBytes < 0 ||
+      !isValidRefreshTimestamp(version.createdAt) ||
+      (previousCreatedAt !== undefined &&
+        Date.parse(version.createdAt) < Date.parse(previousCreatedAt))
+    ) {
+      throw refreshUrlFailure();
+    }
+    versionIds.add(version.id);
+    parentId = version.id;
+    previousCreatedAt = version.createdAt;
+  }
+  const latestVersion = ordered.at(-1) as CandidateKnowledgeSourceVersionRecord;
+  const provenance = validateUrlRefreshProvenance(
+    await handle.getCandidateKnowledgeSourceUrlProvenance(
+      knowledgeBaseId,
+      sourceId,
+      latestVersion.id,
+    ),
+    sourceId,
+    latestVersion,
+  );
+  const retirement = await handle.getCandidateKnowledgeSourceRetirement(knowledgeBaseId, sourceId);
+  if (retirement !== undefined) throw refreshUrlFailure();
+  return { originalUrl: provenance.originalUrl, latestVersion };
+}
+
+function validateUrlRefreshAppendResult(
+  result: Awaited<
+    ReturnType<CandidateKnowledgeStoreHandle["appendManagedCandidateKnowledgeUrlVersion"]>
+  >,
+  knowledgeBaseId: string,
+  sourceId: string,
+  requestedVersion: {
+    readonly id: string;
+    readonly mediaType: string;
+    readonly checksum: string;
+    readonly sizeBytes: number;
+    readonly createdAt: string;
+  },
+  latestVersion: CandidateKnowledgeSourceVersionRecord,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    typeof result.source !== "object" ||
+    result.source === null ||
+    typeof result.version !== "object" ||
+    result.version === null ||
+    typeof result.created !== "boolean" ||
+    result.source.id !== sourceId ||
+    result.source.knowledgeBaseId !== knowledgeBaseId ||
+    result.source.kind !== "url" ||
+    result.version.sourceId !== sourceId ||
+    result.version.mediaType !== requestedVersion.mediaType ||
+    result.version.checksum !== requestedVersion.checksum ||
+    result.version.sizeBytes !== requestedVersion.sizeBytes
+  ) {
+    throw refreshAppendInvariantFailure();
+  }
+  if (result.created) {
+    if (
+      result.version.id !== requestedVersion.id ||
+      result.version.version !== latestVersion.version + 1 ||
+      result.version.parentVersionId !== latestVersion.id ||
+      result.version.createdAt !== requestedVersion.createdAt
+    ) {
+      throw refreshAppendInvariantFailure();
+    }
+    return;
+  }
+  if (
+    result.version.id !== latestVersion.id ||
+    result.version.version !== latestVersion.version ||
+    result.version.parentVersionId !== latestVersion.parentVersionId ||
+    result.version.createdAt !== latestVersion.createdAt
   ) {
     throw refreshAppendInvariantFailure();
   }
@@ -1591,6 +1782,111 @@ export function createCandidateKnowledgeStoreService(
         },
       );
     },
+    refreshKnowledgeSourceUrl: async (command) => {
+      if (command.approved !== true) throw refreshUrlFailure();
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let sourceId: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      } catch {
+        throw refreshUrlFailure();
+      }
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const preflight = await prepareUrlRefresh(handle, knowledgeBaseId, sourceId);
+            let normalized: NonNullable<Awaited<ReturnType<typeof ingestUrl>>["source"]>;
+            try {
+              normalized = await ingestManagedCandidateKnowledgeUrl(
+                resolved.ingestUrl,
+                preflight.originalUrl,
+              );
+              if (
+                normalized.url === undefined ||
+                normalized.url.originalUrl !== preflight.originalUrl ||
+                !(normalized.urlResponseBytes instanceof Uint8Array)
+              ) {
+                throw new Error("malformed URL refresh result");
+              }
+            } catch {
+              const checkedAt = resolved.now();
+              const observation = await handle.upsertCandidateKnowledgeSourceRefreshObservation(
+                knowledgeBaseId,
+                sourceId,
+                {
+                  observedVersionId: preflight.latestVersion.id,
+                  status: "inaccessible",
+                  checkedAt,
+                },
+              );
+              validateRefreshObservationWriteResult(observation, sourceId, {
+                observedVersionId: preflight.latestVersion.id,
+                status: "inaccessible",
+                checkedAt,
+              });
+              return originRefreshResult(sourceId, "inaccessible", checkedAt);
+            }
+
+            const provenance = normalized.url as NonNullable<typeof normalized.url>;
+            const responseBytes = normalized.urlResponseBytes as Uint8Array;
+            const versionId = requireText(
+              resolved.generateId(),
+              "Candidate knowledge source version id",
+            );
+            const requestedVersion = {
+              id: versionId,
+              mediaType: normalized.mediaType,
+              checksum: normalized.checksum,
+              sizeBytes: normalized.sizeBytes,
+              createdAt: provenance.fetchedAt,
+              responseBytes: new Uint8Array(responseBytes),
+              provenance,
+              expectedCurrentVersionId: preflight.latestVersion.id,
+            } satisfies ManagedCandidateKnowledgeUrlVersionInput;
+            const result = await handle.appendManagedCandidateKnowledgeUrlVersion(
+              knowledgeBaseId,
+              sourceId,
+              requestedVersion,
+            );
+            validateUrlRefreshAppendResult(
+              result,
+              knowledgeBaseId,
+              sourceId,
+              requestedVersion,
+              preflight.latestVersion,
+            );
+            const observationInput = result.created
+              ? {
+                  observedVersionId: result.version.id,
+                  status: "current" as const,
+                  checkedAt: provenance.fetchedAt,
+                  lastRefreshedVersionId: result.version.id,
+                  lastRefreshedAt: provenance.fetchedAt,
+                }
+              : {
+                  observedVersionId: result.version.id,
+                  status: "current" as const,
+                  checkedAt: provenance.fetchedAt,
+                };
+            const observation = await handle.upsertCandidateKnowledgeSourceRefreshObservation(
+              knowledgeBaseId,
+              sourceId,
+              observationInput,
+            );
+            validateRefreshObservationWriteResult(observation, sourceId, observationInput);
+            return result.created
+              ? originRefreshResult(sourceId, "refreshed", provenance.fetchedAt, result.version.id)
+              : originRefreshResult(sourceId, "current", provenance.fetchedAt);
+          },
+        );
+      } catch {
+        throw refreshUrlFailure();
+      }
+    },
     getKnowledgeSourceRefreshState: async (command) => {
       const storeRoot = requireStoreRoot(command.storeRoot);
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
@@ -1750,6 +2046,7 @@ export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceMa
 export const listKnowledgeSourceDuplicateGroups = defaultService.listKnowledgeSourceDuplicateGroups;
 export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const refreshKnowledgeSourceFromOrigin = defaultService.refreshKnowledgeSourceFromOrigin;
+export const refreshKnowledgeSourceUrl = defaultService.refreshKnowledgeSourceUrl;
 export const getKnowledgeSourceRefreshState = defaultService.getKnowledgeSourceRefreshState;
 export const retireKnowledgeSource = defaultService.retireKnowledgeSource;
 export const getKnowledgeSourceRetirement = defaultService.getKnowledgeSourceRetirement;
