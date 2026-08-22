@@ -53,6 +53,12 @@ A source has a stable logical ID scoped to one CKB, a file or URL kind, and a
 local user-visible label. Each immutable, ordered source version records a
 SHA-256 checksum, media type, byte size, and creation timestamp. A checksum is
 version integrity metadata and a possible duplicate signal, not source identity.
+An explicit read-only application projection groups two or more sources within
+one CKB only when their latest versions share checksum, media type, and byte
+size. It returns deterministically ordered source/version IDs but no checksum,
+label, path, URL, content, or derived group identifier. The relationship is
+recomputed on every query, so a later version can create or remove a group. It
+is neither persisted history nor authority to merge, remove, or prefer a source.
 
 The application command to add one local file is the approval boundary for that
 one file. Intake accepts only a regular file of at most 20 MiB in the five
@@ -242,7 +248,7 @@ This decision deliberately leaves the following work unintegrated:
 - directory intake, URL/fetched source intake, and directory bindings;
 - background refresh, time-based freshness policy, moved-origin discovery, and
   product-adapter controls for refresh state or explicit rebind;
-- cross-source duplicate relationships and duplicate handling;
+- automatic duplicate merging, preference, retirement, and deletion handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to
   a run or provider-transmission approval;

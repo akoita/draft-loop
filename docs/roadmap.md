@@ -145,14 +145,19 @@ version. Rebind changes no source identity or version, publishes no managed
 blob, records no managed-write journal event, replaces rather than retains the
 superseded sensitive path, and returns only source ID, current/rebound status,
 and binding time. Different moved content must first be appended explicitly.
+An explicit read-only application projection now derives exact-integrity
+duplicate groups from the latest versions within one CKB. It returns only
+deterministically ordered source/version IDs, exposes none of the integrity
+tuple used internally, persists no relationship, and never merges or removes a
+source. A later version change automatically changes the derived result.
 The store retains no
 exact host paths in manifests, descriptors, journals, inventory, diagnostics,
 or application/provider projections, and retains no filename provenance,
 filename-derived physical names, or URLs. It remains independent of application workspaces and run
 history. It does not yet refresh in the background, apply a time-based freshness
-policy, automatically discover moved origins, expose refresh/rebind through
-product adapters, or ingest directories or URLs;
-relate cross-source duplicates; index or retrieve; select a CKB for an
+policy, automatically discover moved origins, expose refresh/rebind/duplicate
+controls through product adapters, or ingest directories or URLs;
+automatically resolve duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
 reconcile unknown entries; or completely backup, export, or restore. Those
@@ -484,6 +489,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Added deterministic latest-version duplicate groups as the third bounded #110 slice without advancing the v0.7 stage beyond component implementation | Exact integrity metadata can surface redundant sources without changing their identity. The one-CKB-scoped read-only projection returns only ordered source/version IDs, persists no relationship, and grants no merge/delete authority; removal, URL/directory intake, indexing, selection, adapters, and lifecycle policy remain pending. |
 | 2026-08-22 | Persisted guarded, path-free refresh observations as the second bounded #110 slice without advancing the v0.7 stage beyond component implementation | Explicit refresh outcomes now survive restart with the exact observed source-version identity and optional last successful changed-byte refresh time. Status checks remain read-only, later manual version advances derive `stale`, and the record is last-observation evidence rather than a background or time-based freshness claim; directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair remain pending. |
 | 2026-08-22 | Added explicit exact-byte managed-file origin rebind as the first bounded #110 slice without advancing the v0.7 stage beyond component implementation | A moved origin needs a visible recovery path without allowing path changes to mutate candidate evidence. Rebind repeats ingestion and no-follow stable read/hash verification, requires an exact latest-managed-version match, replaces only sensitive local binding state, returns no path/checksum/content, creates no version/blob/journal event, and leaves automatic discovery, freshness persistence, directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair pending. |
 | 2026-08-22 | Split the oversized application-grade milestone into v0.7 evidence-backed drafting, v0.8 independent review/readiness, and v0.9 workflow parity/release; decomposed #78 into #110–#113 and split hybrid retrieval from lexical #80 into #114 | Fifteen open issues combined storage lifecycle, drafting, review, rendering, validation, and publication in one release. The new sequence preserves the same #4 program outcome while giving each milestone a coherent exit, moving optional research (#79) and unproven vector/hybrid optimization (#114) off the critical path. |

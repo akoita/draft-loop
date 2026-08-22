@@ -471,6 +471,320 @@ describe("candidate knowledge store application service", () => {
     expect(otherManifests.map((manifest) => manifest.source.id)).toEqual(["other-source-uuid"]);
   });
 
+  it("lists exact-integrity duplicate groups from each CKB's latest versions", async () => {
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "other-ckb-uuid",
+      "source-a",
+      "version-a-1",
+      "source-b",
+      "version-b-1",
+      "source-c",
+      "version-c-1",
+      "near-checksum",
+      "near-checksum-version-1",
+      "near-media",
+      "near-media-version-1",
+      "near-size",
+      "near-size-version-1",
+      "other-source",
+      "other-version-1",
+      "version-a-2",
+    ];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.createKnowledgeBase({ storeRoot, displayName: "Other evidence" });
+    const addSource = async (input: {
+      readonly label: string;
+      readonly knowledgeBaseId?: string;
+      readonly checksum: string;
+      readonly mediaType?: string;
+      readonly sizeBytes?: number;
+    }) =>
+      service.createKnowledgeSource({
+        storeRoot,
+        knowledgeBaseId: input.knowledgeBaseId ?? "default-ckb-uuid",
+        kind: "file",
+        displayName: `Sensitive label ${input.label}`,
+        mediaType: input.mediaType ?? "text/plain",
+        checksum: input.checksum,
+        sizeBytes: input.sizeBytes ?? 12,
+      });
+
+    await addSource({ label: "source-a", checksum: "a".repeat(64) });
+    await addSource({ label: "source-b", checksum: "a".repeat(64) });
+    await addSource({ label: "source-c", checksum: "a".repeat(64) });
+    await addSource({
+      label: "near-checksum",
+      checksum: "b".repeat(64),
+    });
+    await addSource({
+      label: "near-media",
+      checksum: "a".repeat(64),
+      mediaType: "text/markdown",
+    });
+    await addSource({
+      label: "near-size",
+      checksum: "a".repeat(64),
+      sizeBytes: 13,
+    });
+    await addSource({
+      label: "other-source",
+      knowledgeBaseId: "other-ckb-uuid",
+      checksum: "a".repeat(64),
+    });
+
+    const initial = await service.listKnowledgeSourceDuplicateGroups({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+    });
+    expect(initial).toEqual([
+      {
+        members: [
+          { sourceId: "source-a", versionId: "version-a-1" },
+          { sourceId: "source-b", versionId: "version-b-1" },
+          { sourceId: "source-c", versionId: "version-c-1" },
+        ],
+      },
+    ]);
+    expect(Object.isFrozen(initial)).toBe(true);
+    expect(Object.isFrozen(initial[0])).toBe(true);
+    expect(Object.isFrozen(initial[0]?.members)).toBe(true);
+    expect(Object.isFrozen(initial[0]?.members[0])).toBe(true);
+    const serializedInitial = JSON.stringify(initial);
+    expect(serializedInitial).not.toContain("a".repeat(64));
+    expect(serializedInitial).not.toContain("text/plain");
+    expect(serializedInitial).not.toContain("12");
+    expect(serializedInitial).not.toContain("Sensitive label");
+    expect(serializedInitial).not.toContain("path");
+    expect(serializedInitial).not.toContain("url");
+    expect(serializedInitial).not.toContain("near-checksum");
+
+    const updated = await service.appendKnowledgeSourceVersion({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-a",
+      mediaType: "text/plain",
+      checksum: "b".repeat(64),
+      sizeBytes: 12,
+    });
+    expect(updated.versions.at(-1)?.id).toBe("version-a-2");
+    await expect(
+      service.listKnowledgeSourceDuplicateGroups({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toEqual([
+      {
+        members: [
+          { sourceId: "near-checksum", versionId: "near-checksum-version-1" },
+          { sourceId: "source-a", versionId: "version-a-2" },
+        ],
+      },
+      {
+        members: [
+          { sourceId: "source-b", versionId: "version-b-1" },
+          { sourceId: "source-c", versionId: "version-c-1" },
+        ],
+      },
+    ]);
+    await expect(
+      service.listKnowledgeSourceDuplicateGroups({
+        storeRoot,
+        knowledgeBaseId: "other-ckb-uuid",
+      }),
+    ).resolves.toEqual([]);
+  });
+
+  it("sorts duplicate groups independently of storage order", async () => {
+    const source = (id: string) => ({
+      id,
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: `Private label ${id}`,
+      createdAt,
+    });
+    const version = (
+      id: string,
+      sourceId: string,
+      number: number,
+      checksumValue: string,
+      parentVersionId: string | null,
+    ) => ({
+      id,
+      sourceId,
+      version: number,
+      parentVersionId,
+      mediaType: "text/plain",
+      checksum: checksumValue,
+      sizeBytes: 12,
+      createdAt,
+    });
+    const versions: Record<string, readonly CandidateKnowledgeSourceVersionRecord[]> = {
+      "source-a": [
+        version("a-version-2", "source-a", 2, "a".repeat(64), "a-version-1"),
+        version("a-version-1", "source-a", 1, "a".repeat(64), null),
+      ],
+      "source-b": [version("b-version-1", "source-b", 1, "a".repeat(64), null)],
+      "source-c": [version("c-version-1", "source-c", 1, "b".repeat(64), null)],
+      "source-d": [version("d-version-1", "source-d", 1, "b".repeat(64), null)],
+    };
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      listCandidateKnowledgeSources: vi.fn(async () => [
+        source("source-d"),
+        source("source-b"),
+        source("source-c"),
+        source("source-a"),
+      ]),
+      listCandidateKnowledgeSourceVersions: vi.fn(
+        async (_knowledgeBaseId: string, sourceId: string) => versions[sourceId] ?? [],
+      ),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.listKnowledgeSourceDuplicateGroups({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+      }),
+    ).resolves.toEqual([
+      {
+        members: [
+          { sourceId: "source-a", versionId: "a-version-2" },
+          { sourceId: "source-b", versionId: "b-version-1" },
+        ],
+      },
+      {
+        members: [
+          { sourceId: "source-c", versionId: "c-version-1" },
+          { sourceId: "source-d", versionId: "d-version-1" },
+        ],
+      },
+    ]);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("fails closed for malformed duplicate dependency graphs", async () => {
+    const source = {
+      id: "source-1",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Private label",
+      createdAt,
+    };
+    const version = {
+      id: "version-1",
+      sourceId: source.id,
+      version: 1,
+      parentVersionId: null,
+      mediaType: "text/plain",
+      checksum: "a".repeat(64),
+      sizeBytes: 12,
+      createdAt,
+    };
+    const cases: readonly {
+      readonly sources: readonly (typeof source)[];
+      readonly versions: readonly CandidateKnowledgeSourceVersionRecord[];
+    }[] = [
+      { sources: [source], versions: [] },
+      { sources: [source], versions: [{ ...version, sourceId: "other-source" }] },
+      { sources: [source, source], versions: [version] },
+    ];
+    for (const testCase of cases) {
+      const close = vi.fn(async () => undefined);
+      const handle = {
+        listCandidateKnowledgeSources: vi.fn(async () => testCase.sources),
+        listCandidateKnowledgeSourceVersions: vi.fn(async () => testCase.versions),
+        close,
+      } as unknown as CandidateKnowledgeStoreHandle;
+      const service = createCandidateKnowledgeStoreService({
+        open: vi.fn(async () => handle),
+      });
+      const error = await service
+        .listKnowledgeSourceDuplicateGroups({
+          storeRoot: "valid",
+          knowledgeBaseId: "ckb-1",
+        })
+        .then(
+          () => undefined,
+          (failure) => failure,
+        );
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(
+        "Candidate knowledge source duplicate graph returned inconsistent state.",
+      );
+      expect((error as Error).message).not.toContain("Private label");
+      expect((error as Error).message).not.toContain("a".repeat(64));
+      expect(close).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("fails closed when version IDs are reused across source graphs", async () => {
+    const firstSource = {
+      id: "source-1",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Private first label",
+      createdAt,
+    };
+    const secondSource = {
+      id: "source-2",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Private second label",
+      createdAt,
+    };
+    const version = (sourceId: string, checksumValue: string) => ({
+      id: "reused-version-id",
+      sourceId,
+      version: 1,
+      parentVersionId: null,
+      mediaType: "text/plain",
+      checksum: checksumValue,
+      sizeBytes: 12,
+      createdAt,
+    });
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      listCandidateKnowledgeSources: vi.fn(async () => [firstSource, secondSource]),
+      listCandidateKnowledgeSourceVersions: vi.fn(
+        async (_knowledgeBaseId: string, sourceId: string) =>
+          sourceId === firstSource.id
+            ? [version(firstSource.id, "a".repeat(64))]
+            : [version(secondSource.id, "b".repeat(64))],
+      ),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      open: vi.fn(async () => handle),
+    });
+
+    const error = await service
+      .listKnowledgeSourceDuplicateGroups({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+      })
+      .then(
+        () => undefined,
+        (failure) => failure,
+      );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      "Candidate knowledge source duplicate graph returned inconsistent state.",
+    );
+    expect((error as Error).message).not.toContain("Private");
+    expect((error as Error).message).not.toContain("a".repeat(64));
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("checks current, changed, and missing bound origins without changing stored state", async () => {
     const sourcePath = join(temporaryParent, "candidate.md");
     const initialContent = "# Candidate evidence\n";

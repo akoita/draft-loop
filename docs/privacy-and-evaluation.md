@@ -94,8 +94,12 @@ path from current local state rather than retaining path history or mutating
 refresh-observation state. Changed moved
 content must first be appended explicitly. The store has no directory binding,
 background refresh, time-based freshness policy, moved-origin
-discovery, cross-source duplicate relationships, normalized facts, or retrieval
-indexes. Source identity and label do not change when a later selected path or
+discovery, automatic duplicate resolution, normalized facts, or retrieval
+indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
+version integrity metadata and returns source/version IDs without checksums,
+labels, paths, URLs, content, or a derived group identifier. It is a current
+possible-duplicate signal, not ownership proof or merge/deletion authority.
+Source identity and label do not change when a later selected path or
 basename differs.
 Application workspaces continue to own their current evidence and run history,
 and no CKB data is provider data.
