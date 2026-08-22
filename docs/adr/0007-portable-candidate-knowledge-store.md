@@ -28,10 +28,13 @@ explicit application operation. A further application query provides bounded,
 count-only structural inventory of the managed `sources/` namespace, and a
 read-only origin check provides an ephemeral status without projecting the
 remembered path. A separate explicit refresh can append changed bytes from that
-binding without exposing or replacing it. These
-operations now have prospective managed-write provenance in an internal
-append-only journal. They do not connect CKB selection or retrieval to an
-application workflow.
+binding without exposing or replacing it. An explicit rebind can replace only
+that sensitive local path after a newly selected regular file passes the same
+ingestion and stable-capture checks and exactly matches the latest managed
+version. Managed creates, appends, and changed-byte refreshes have prospective
+write provenance in an internal append-only journal. Rebind writes only the
+guarded local binding and creates no managed-write event. These operations do
+not connect CKB selection or retrieval to an application workflow.
 
 ## Decision
 
@@ -75,8 +78,8 @@ successful managed create records the canonical physical path returned by its
 verified capture in a separate sensitive, local-only SQLite origin-binding
 table, together with its binding timestamp. This state is copied with the
 SQLite database but is not portable continuity: it can become stale when the
-store moves machines or the origin moves or disappears. It is not yet
-refreshed or rebound, and is never provider-facing. An explicit read-only
+store moves machines or the origin moves or disappears. It is never
+provider-facing. An explicit read-only
 application operation may check one source binding. It reports source identity,
 observation time, and exactly one of unbound, current, changed, missing, or
 inaccessible. It returns no path, checksum, media type, byte size, label, or
@@ -92,8 +95,19 @@ Refresh returns source identity, observation time, action status, and the new
 version ID only when created; it returns no path or observed file metadata or
 content, does not update the binding, and does not persist freshness or
 last-refresh state. The operation must be invoked through a visible local user
-action and never runs as background monitoring. The existing source ID, kind, creation time, and
-display label remain stable; the
+action and never runs as background monitoring. A separate explicit rebind
+operation accepts one newly selected path and repeats supported-media,
+successful-extraction, no-follow, size, stable-file, and checksum checks through
+a read-and-hash verification that stages or publishes no copy. It replaces the
+local binding only when the captured media
+type, checksum, and size exactly match the latest managed immutable version; it
+creates no source version, managed blob, or journal event. Different bytes must
+first pass the explicit manual append operation and can then be rebound as an
+exact match. A same-canonical-path selection is a no-op. The result contains
+only source identity, current/rebound status, and binding time. The superseded
+sensitive path is replaced rather than retained as history. Rebinding never
+discovers a path, runs automatically, or establishes freshness. The existing
+source ID, kind, creation time, and display label remain stable; the
 binding is not included in the portable descriptor or source/version metadata,
 manifests, journals, inventory,
 diagnostics, or application source projections.
@@ -169,6 +183,12 @@ Storage migration version 8 adds the separate local-only origin-binding table.
 The binding is inserted atomically with a successful managed create's source,
 version, managed marker, and committed journal event. Existing v7 sources
 migrate without bindings. Manual appends do not insert or update a binding.
+Storage migration version 9 replaces the blanket binding-update prohibition
+with a guarded update used only after the portable store verifies an explicit
+exact-byte rebind. The source ID remains immutable, deletion remains forbidden,
+the source must remain a managed file source, and a replacement binding time
+must not move backward. The replacement does not retain the superseded local
+path.
 
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
@@ -186,8 +206,8 @@ The same rule applies to source origins in all portable and provider-facing
 surfaces. The canonical path for a successful managed create is retained only
 as sensitive local state in the SQLite origin-binding table. It is copied with
 the database but is not portable continuity, may become stale when the store
-or origin moves or disappears, is not automatically updated or rebound, and
-never enters a provider request or diagnostic projection. The explicit status operation does
+or origin moves or disappears, is not automatically updated, and never enters
+a provider request or diagnostic projection. The explicit status operation does
 not project that path and does not persist its observation. Exact managed
 provenance elsewhere consists of the logical store, CKB, source and version IDs
 plus the checksum, size, media type, and capture time of the copied bytes.
@@ -204,7 +224,7 @@ This decision deliberately leaves the following work unintegrated:
 
 - directory intake, URL/fetched source intake, and directory bindings;
 - background refresh, persisted freshness or last-refresh state, moved-origin
-  discovery, and rebind controls for the local origin binding;
+  discovery, and product-adapter controls for explicit rebind;
 - cross-source duplicate relationships and duplicate handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to

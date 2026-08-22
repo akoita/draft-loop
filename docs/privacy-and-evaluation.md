@@ -67,8 +67,8 @@ The initial managed import remembers the canonical physical origin path in
 sensitive local-only SQLite state; a later selected append path never replaces
 it, including for an identical no-op. This binding is copied with the SQLite
 database but is not portable continuity, becomes stale when the store moves
-machines or the origin moves/disappears, is not automatically updated or
-rebound, and is never provider-facing. An explicit local application operation can classify one
+machines or the origin moves/disappears, is not automatically updated, and is
+never provider-facing. An explicit local application operation can classify one
 source as unbound, current, changed, missing, or inaccessible. Its immutable
 result contains source identity and observation time but no path, checksum,
 media type, size, label, or content; the observation is not persisted and
@@ -80,11 +80,17 @@ the remembered binding after the same no-follow, size, extraction, and
 latest-version checks. Only changed bytes are passed through stable capture and
 managed copy as a new immutable version; other statuses create no version. The
 result contains no path or observed metadata/content, the binding is unchanged,
-and no freshness or last-refresh state is persisted. The store has no directory
-binding, background refresh, persisted freshness or last-refresh state, moved-origin discovery or
-rebind control, cross-source duplicate relationships, normalized facts, or
-retrieval indexes. Source identity and label do not change when a later selected
-path or basename differs.
+and no freshness or last-refresh state is persisted. A separate explicit rebind
+accepts one user-selected file, repeats ingestion and stable no-follow capture,
+and replaces the sensitive local binding only when media type, checksum, and
+size exactly match the latest managed version. It creates no version, blob, or
+journal event, returns no path or integrity metadata, and deletes the superseded
+path from current local state rather than retaining path history. Changed moved
+content must first be appended explicitly. The store has no directory binding,
+background refresh, persisted freshness or last-refresh state, moved-origin
+discovery, cross-source duplicate relationships, normalized facts, or retrieval
+indexes. Source identity and label do not change when a later selected path or
+basename differs.
 Application workspaces continue to own their current evidence and run history,
 and no CKB data is provider data.
 

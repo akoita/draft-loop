@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
@@ -22,6 +23,10 @@ const checksum = "a".repeat(64);
 const importFailureMessage = "The selected candidate knowledge source file could not be imported.";
 const appendFailureMessage =
   "The selected candidate knowledge source file could not be added as a new version.";
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value, "utf8").digest("hex");
+}
 
 function successfulIngestion(
   sourcePath: string,
@@ -542,6 +547,196 @@ describe("candidate knowledge store application service", () => {
     expect(JSON.stringify({ current, missing })).not.toContain(checksum);
     expect(JSON.stringify({ current, missing })).not.toContain(initialContent);
   });
+
+  it("explicitly rebinds an exact-byte origin and projects only status and boundAt", async () => {
+    const originalPath = join(temporaryParent, "candidate.md");
+    const replacementPath = join(temporaryParent, "replacement.md");
+    const content = "# Candidate evidence\n";
+    await writeFile(originalPath, content, "utf8");
+    await writeFile(replacementPath, content, "utf8");
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: (() => {
+        const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+        return () => ids.shift() ?? "unexpected-id";
+      })(),
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath: originalPath,
+    });
+
+    now = changedAt;
+    const rebound = await service.rebindKnowledgeSourceOrigin({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      sourcePath: replacementPath,
+    });
+    expect(rebound).toEqual({
+      sourceId: "source-uuid",
+      status: "rebound",
+      boundAt: changedAt,
+    });
+    expect(Object.isFrozen(rebound)).toBe(true);
+    expect(Object.keys(rebound)).toEqual(["sourceId", "status", "boundAt"]);
+    expect(JSON.stringify(rebound)).not.toContain(temporaryParent);
+    expect(JSON.stringify(rebound)).not.toContain(sha256(content));
+
+    now = "2026-08-21T11:00:00.000Z";
+    await expect(
+      service.rebindKnowledgeSourceOrigin({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+        sourcePath: replacementPath,
+      }),
+    ).resolves.toEqual({
+      sourceId: "source-uuid",
+      status: "current",
+      boundAt: changedAt,
+    });
+  });
+
+  it("rejects a changed rebind selection without exposing path or integrity data", async () => {
+    const originalPath = join(temporaryParent, "candidate.md");
+    const changedPath = join(temporaryParent, "changed.md");
+    const originalContent = "# Candidate evidence\n";
+    const changedContent = "# Different evidence\n";
+    await writeFile(originalPath, originalContent, "utf8");
+    await writeFile(changedPath, changedContent, "utf8");
+    const service = createCandidateKnowledgeStoreService({
+      generateId: (() => {
+        const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+        return () => ids.shift() ?? "unexpected-id";
+      })(),
+      now: () => changedAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath: originalPath,
+    });
+
+    const error = await service
+      .rebindKnowledgeSourceOrigin({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+        sourcePath: changedPath,
+      })
+      .then(
+        () => undefined,
+        (failure) => failure,
+      );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      "The selected candidate knowledge source file could not be rebound.",
+    );
+    for (const secret of [changedPath, temporaryParent, sha256(changedContent), changedContent]) {
+      expect((error as Error).message).not.toContain(secret);
+    }
+  });
+
+  it("rejects malformed rebind dependency results without exposing sensitive fields", async () => {
+    const sourcePath = "/private/candidate/selected.md";
+    const source = {
+      id: "source-uuid",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Candidate source",
+      createdAt,
+    };
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      getCandidateKnowledgeSource: vi.fn(async () => source),
+      getCandidateKnowledgeSourceOriginBinding: vi.fn(async () => ({
+        sourceId: source.id,
+        originPath: sourcePath,
+        boundAt: createdAt,
+      })),
+      rebindManagedCandidateKnowledgeFileOrigin: vi.fn(async () => ({
+        binding: {
+          sourceId: "different-source",
+          originPath: sourcePath,
+          boundAt: changedAt,
+        },
+        rebound: true,
+      })),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      now: () => changedAt,
+      ingestFile: vi.fn(async () => successfulIngestion(sourcePath)),
+      open: vi.fn(async () => handle),
+    });
+
+    const error = await service
+      .rebindKnowledgeSourceOrigin({
+        storeRoot: "valid",
+        knowledgeBaseId: source.knowledgeBaseId,
+        sourceId: source.id,
+        sourcePath,
+      })
+      .then(
+        () => undefined,
+        (failure) => failure,
+      );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      "Candidate knowledge source rebind returned inconsistent storage state.",
+    );
+    expect((error as Error).message).not.toContain(sourcePath);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "rejects a symlink rebind selection with a generic path-free error",
+    async () => {
+      const originalPath = join(temporaryParent, "candidate.md");
+      const selectedPath = join(temporaryParent, "selected-link.md");
+      const content = "# Candidate evidence\n";
+      await writeFile(originalPath, content, "utf8");
+      await symlink(originalPath, selectedPath, "file");
+      let now = createdAt;
+      const service = createCandidateKnowledgeStoreService({
+        generateId: (() => {
+          const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+          return () => ids.shift() ?? "unexpected-id";
+        })(),
+        now: () => now,
+      });
+      await service.initializeStore({ storeRoot });
+      await service.importKnowledgeSourceFile({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourcePath: originalPath,
+      });
+
+      now = changedAt;
+      const error = await service
+        .rebindKnowledgeSourceOrigin({
+          storeRoot,
+          knowledgeBaseId: "default-ckb-uuid",
+          sourceId: "source-uuid",
+          sourcePath: selectedPath,
+        })
+        .then(
+          () => undefined,
+          (failure) => failure,
+        );
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toBe(
+        "The selected candidate knowledge source file could not be rebound.",
+      );
+      expect((error as Error).message).not.toContain(selectedPath);
+      expect((error as Error).message).not.toContain(temporaryParent);
+    },
+  );
 
   it("refreshes a changed bound origin once, preserves lineage, and keeps the binding", async () => {
     const sourcePath = join(temporaryParent, "candidate.md");
