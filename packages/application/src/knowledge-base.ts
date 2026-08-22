@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
-import { lstat } from "node:fs/promises";
-import { basename } from "node:path";
+import { lstat, realpath } from "node:fs/promises";
+import { basename, isAbsolute, relative } from "node:path";
 
 import {
   type CandidateKnowledgeBase,
@@ -12,7 +12,14 @@ import {
   createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
 } from "@draft-loop/domain";
-import { ingestFile, ingestUrl } from "@draft-loop/ingestion";
+import {
+  type DirectoryIngestionOptions,
+  type DirectoryIngestionResult,
+  ingestDirectory,
+  ingestFile,
+  ingestUrl,
+  supportedMediaTypes,
+} from "@draft-loop/ingestion";
 import type {
   CandidateKnowledgeSourceRecord,
   CandidateKnowledgeSourceRefreshObservationRecord,
@@ -96,6 +103,13 @@ export interface ImportKnowledgeSourceFileCommand {
   readonly knowledgeBaseId: string;
   readonly sourcePath: string;
   readonly displayName?: string;
+}
+
+export interface ImportKnowledgeSourceDirectoryCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryPath: string;
+  readonly options?: DirectoryIngestionOptions;
 }
 
 export interface ImportKnowledgeSourceUrlCommand {
@@ -264,6 +278,16 @@ export interface CandidateKnowledgeSourceWriteResult extends CandidateKnowledgeS
   readonly created: boolean;
 }
 
+export type KnowledgeSourceDirectoryImportStatus = "complete" | "partial";
+
+export interface ImportKnowledgeSourceDirectoryResult {
+  readonly sources: readonly CandidateKnowledgeSourceWriteResult[];
+  readonly status: KnowledgeSourceDirectoryImportStatus;
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
 export interface CandidateKnowledgeStoreService {
   readonly initializeStore: (
     command: InitializeStoreCommand,
@@ -290,6 +314,9 @@ export interface CandidateKnowledgeStoreService {
   readonly importKnowledgeSourceFile: (
     command: ImportKnowledgeSourceFileCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
+  readonly importKnowledgeSourceDirectory: (
+    command: ImportKnowledgeSourceDirectoryCommand,
+  ) => Promise<ImportKnowledgeSourceDirectoryResult>;
   readonly importKnowledgeSourceUrl: (
     command: ImportKnowledgeSourceUrlCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
@@ -334,9 +361,12 @@ export interface CandidateKnowledgeStoreServiceDependencies {
   readonly initialize?: typeof initializeCandidateKnowledgeStore;
   readonly open?: typeof openCandidateKnowledgeStore;
   readonly ingestFile?: typeof ingestFile;
+  readonly ingestDirectory?: typeof ingestDirectory;
   readonly ingestUrl?: typeof ingestUrl;
   /** @internal Narrow read-only seam for deterministic origin status checks. */
   readonly lstat?: typeof lstat;
+  /** @internal Narrow seam for deterministic directory/store overlap checks. */
+  readonly realpath?: typeof realpath;
 }
 
 interface ResolvedDependencies {
@@ -345,8 +375,10 @@ interface ResolvedDependencies {
   readonly initialize: typeof initializeCandidateKnowledgeStore;
   readonly open: typeof openCandidateKnowledgeStore;
   readonly ingestFile: typeof ingestFile;
+  readonly ingestDirectory: typeof ingestDirectory;
   readonly ingestUrl: typeof ingestUrl;
   readonly lstat: typeof lstat;
+  readonly realpath: typeof realpath;
 }
 
 function requireText(value: string, label: string): string {
@@ -389,6 +421,10 @@ function importFailure(): Error {
   return new Error("The selected candidate knowledge source file could not be imported.");
 }
 
+function importDirectoryFailure(): Error {
+  return new Error("The selected candidate knowledge source directory could not be imported.");
+}
+
 function importUrlFailure(): Error {
   return new Error("The selected candidate knowledge source URL could not be imported.");
 }
@@ -401,6 +437,119 @@ function appendFileVersionFailure(): Error {
   return new Error(
     "The selected candidate knowledge source file could not be added as a new version.",
   );
+}
+
+function pathsOverlap(left: string, right: string): boolean {
+  const isWithin = (parent: string, candidate: string): boolean => {
+    const candidateRelativePath = relative(parent, candidate);
+    if (candidateRelativePath === "") return true;
+    if (isAbsolute(candidateRelativePath)) {
+      return false;
+    }
+    return (candidateRelativePath.split(/[\\/]/u, 1)[0] ?? "") !== "..";
+  };
+  return isWithin(left, right) || isWithin(right, left);
+}
+
+async function validateDirectoryImportScope(
+  inspect: typeof lstat,
+  resolveRealpath: typeof realpath,
+  directoryPath: string,
+  storeRoot: string,
+): Promise<void> {
+  try {
+    const directoryDetails = await inspect(directoryPath, { bigint: true });
+    if (directoryDetails.isSymbolicLink() || !directoryDetails.isDirectory()) {
+      throw importDirectoryFailure();
+    }
+    const [canonicalDirectory, canonicalStore] = await Promise.all([
+      resolveRealpath(directoryPath),
+      resolveRealpath(storeRoot),
+    ]);
+    if (pathsOverlap(canonicalDirectory, canonicalStore)) {
+      throw importDirectoryFailure();
+    }
+  } catch (error) {
+    if (error instanceof Error && error.message === importDirectoryFailure().message) {
+      throw error;
+    }
+    throw importDirectoryFailure();
+  }
+}
+
+function validDirectoryIngestionSource(
+  value: unknown,
+): value is NonNullable<DirectoryIngestionResult["sources"][number]> {
+  if (typeof value !== "object" || value === null) return false;
+  const candidate = value as {
+    readonly source?: unknown;
+    readonly mediaType?: unknown;
+    readonly checksum?: unknown;
+    readonly sizeBytes?: unknown;
+    readonly chunks?: unknown;
+    readonly issues?: unknown;
+  };
+  if (
+    typeof candidate.source !== "object" ||
+    candidate.source === null ||
+    typeof candidate.mediaType !== "string" ||
+    !(supportedMediaTypes as readonly string[]).includes(candidate.mediaType) ||
+    typeof candidate.checksum !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(candidate.checksum) ||
+    !Number.isSafeInteger(candidate.sizeBytes) ||
+    (candidate.sizeBytes as number) < 0 ||
+    !Array.isArray(candidate.chunks) ||
+    candidate.chunks.length === 0 ||
+    !Array.isArray(candidate.issues) ||
+    candidate.issues.length > 0
+  ) {
+    return false;
+  }
+  const source = candidate.source as { readonly path?: unknown };
+  return typeof source.path === "string" && source.path.trim() !== "";
+}
+
+function validateDirectoryIngestionResult(
+  value: unknown,
+): asserts value is DirectoryIngestionResult {
+  if (typeof value !== "object" || value === null) throw importDirectoryFailure();
+  const result = value as {
+    readonly sources?: unknown;
+    readonly scannedEntryCount?: unknown;
+    readonly discoveredFileCount?: unknown;
+    readonly skippedEntryCount?: unknown;
+  };
+  if (
+    !Array.isArray(result.sources) ||
+    !Number.isSafeInteger(result.scannedEntryCount) ||
+    (result.scannedEntryCount as number) < 0 ||
+    !Number.isSafeInteger(result.discoveredFileCount) ||
+    (result.discoveredFileCount as number) < 0 ||
+    !Number.isSafeInteger(result.skippedEntryCount) ||
+    (result.skippedEntryCount as number) < 0 ||
+    (result.discoveredFileCount as number) > (result.scannedEntryCount as number) ||
+    (result.skippedEntryCount as number) > (result.scannedEntryCount as number) ||
+    (result.discoveredFileCount as number) + (result.skippedEntryCount as number) >
+      (result.scannedEntryCount as number) ||
+    result.discoveredFileCount !== result.sources.length ||
+    result.sources.some((source) => !validDirectoryIngestionSource(source))
+  ) {
+    throw importDirectoryFailure();
+  }
+}
+
+function directoryImportResult(
+  preflight: DirectoryIngestionResult,
+  sources: readonly CandidateKnowledgeSourceWriteResult[],
+  status: KnowledgeSourceDirectoryImportStatus,
+): ImportKnowledgeSourceDirectoryResult {
+  return Object.freeze({
+    sources: Object.freeze([...sources]),
+    status,
+    scannedEntryCount: preflight.scannedEntryCount,
+    discoveredFileCount: preflight.discoveredFileCount,
+    skippedEntryCount: preflight.skippedEntryCount,
+  });
 }
 
 async function ingestManagedCandidateKnowledgeFile(
@@ -1333,8 +1482,10 @@ function resolveDependencies(
     initialize: dependencies.initialize ?? initializeCandidateKnowledgeStore,
     open: dependencies.open ?? openCandidateKnowledgeStore,
     ingestFile: dependencies.ingestFile ?? ingestFile,
+    ingestDirectory: dependencies.ingestDirectory ?? ingestDirectory,
     ingestUrl: dependencies.ingestUrl ?? ingestUrl,
     lstat: dependencies.lstat ?? lstat,
+    realpath: dependencies.realpath ?? realpath,
   };
 }
 
@@ -1527,6 +1678,103 @@ export function createCandidateKnowledgeStoreService(
           return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
         },
       );
+    },
+    importKnowledgeSourceDirectory: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const directoryPath = requireText(
+        command.directoryPath,
+        "Candidate knowledge source directory path",
+      );
+
+      try {
+        await validateDirectoryImportScope(
+          resolved.lstat,
+          resolved.realpath,
+          directoryPath,
+          storeRoot,
+        );
+      } catch {
+        throw importDirectoryFailure();
+      }
+
+      let preflight: DirectoryIngestionResult;
+      try {
+        preflight = await resolved.ingestDirectory(directoryPath, command.options);
+        validateDirectoryIngestionResult(preflight);
+      } catch {
+        throw importDirectoryFailure();
+      }
+
+      const orderedSources = [...preflight.sources].sort((left, right) =>
+        left.source.path < right.source.path ? -1 : left.source.path > right.source.path ? 1 : 0,
+      );
+      const orderedPreflight: DirectoryIngestionResult = {
+        ...preflight,
+        sources: orderedSources,
+      };
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const knowledgeBase = await handle.getCandidateKnowledgeBase(knowledgeBaseId);
+            if (
+              knowledgeBase === undefined ||
+              knowledgeBase.id !== knowledgeBaseId ||
+              knowledgeBase.state !== "active"
+            ) {
+              throw importDirectoryFailure();
+            }
+            const projected: CandidateKnowledgeSourceWriteResult[] = [];
+            let committedCount = 0;
+            for (const normalized of orderedSources) {
+              try {
+                const sourceId = requireText(
+                  resolved.generateId(),
+                  "Candidate knowledge source id",
+                );
+                const versionId = requireText(
+                  resolved.generateId(),
+                  "Candidate knowledge source version id",
+                );
+                const createdAt = resolved.now();
+                const source = createCandidateKnowledgeSource(
+                  sourceId,
+                  {
+                    knowledgeBaseId,
+                    kind: "file",
+                    displayName: sourceDisplayName(normalized.source.path),
+                  },
+                  createdAt,
+                );
+                const result = await handle.createManagedCandidateKnowledgeFileSource(source, {
+                  id: versionId,
+                  sourcePath: normalized.source.path,
+                  mediaType: normalized.mediaType,
+                  checksum: normalized.checksum,
+                  sizeBytes: normalized.sizeBytes,
+                  createdAt,
+                });
+                committedCount += 1;
+                projected.push(
+                  await projectSourceWriteResult(
+                    handle,
+                    knowledgeBaseId,
+                    result.source,
+                    result.created,
+                  ),
+                );
+              } catch {
+                if (committedCount === 0) throw importDirectoryFailure();
+                return directoryImportResult(orderedPreflight, projected, "partial");
+              }
+            }
+            return directoryImportResult(orderedPreflight, projected, "complete");
+          },
+        );
+      } catch {
+        throw importDirectoryFailure();
+      }
     },
     importKnowledgeSourceUrl: async (command) => {
       if (command.approved !== true) throw importUrlFailure();
@@ -2040,6 +2288,7 @@ export const archiveKnowledgeBase = defaultService.archiveKnowledgeBase;
 export const createKnowledgeSource = defaultService.createKnowledgeSource;
 export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSourceVersion;
 export const importKnowledgeSourceFile = defaultService.importKnowledgeSourceFile;
+export const importKnowledgeSourceDirectory = defaultService.importKnowledgeSourceDirectory;
 export const importKnowledgeSourceUrl = defaultService.importKnowledgeSourceUrl;
 export const appendKnowledgeSourceFileVersion = defaultService.appendKnowledgeSourceFileVersion;
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;

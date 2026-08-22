@@ -1,9 +1,9 @@
 import { createHash } from "node:crypto";
 import { lookup } from "node:dns/promises";
 import { type BigIntStats, constants } from "node:fs";
-import { type FileHandle, lstat, open } from "node:fs/promises";
+import { type FileHandle, lstat, open, readdir, realpath } from "node:fs/promises";
 import { isIP } from "node:net";
-import { extname } from "node:path";
+import { extname, isAbsolute, join, relative } from "node:path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 
 export const supportedMediaTypes = [
@@ -171,6 +171,35 @@ export interface IngestionOptions {
   readonly afterSourceRead?: () => void | Promise<void>;
 }
 
+export interface DirectoryIngestionOptions extends IngestionOptions {
+  /** Maximum number of directory levels below the selected root. */
+  readonly maxDepth?: number;
+  /** Maximum number of entries inspected, including skipped entries. */
+  readonly maxScannedEntries?: number;
+  /** Maximum number of supported regular files accepted for extraction. */
+  readonly maxAcceptedFiles?: number;
+  /** Maximum aggregate bytes accepted from supported regular files. */
+  readonly maxAcceptedBytes?: number;
+  /** @internal Test seam for changing an entry during traversal. */
+  readonly afterEntryRead?: (entryPath: string) => void | Promise<void>;
+  /** @internal Test seam for changing an entry after traversal checks. */
+  readonly beforeSourceIngestion?: (entryPath: string) => void | Promise<void>;
+}
+
+export interface DirectoryIngestionResult {
+  readonly sources: readonly NormalizedSource[];
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
+export class DirectoryIngestionError extends Error {
+  constructor() {
+    super("The selected candidate knowledge source directory could not be ingested.");
+    this.name = "DirectoryIngestionError";
+  }
+}
+
 export type UrlFetcher = (input: string, init?: RequestInit) => Promise<Response>;
 export type UrlHostnameResolver = (hostname: string) => Promise<readonly string[]>;
 
@@ -203,6 +232,11 @@ const maxExtractedCharacters = 2_000_000;
 const maxUrlRedirects = 5;
 const maxUrlTimeoutMs = 30_000;
 const maxUrlResponseBytes = 4 * 1024 * 1024;
+const maxDirectoryDepth = 32;
+const maxDirectoryScannedEntries = 1024;
+const maxDirectoryAcceptedFiles = 256;
+const maxDirectoryAcceptedBytes = 256 * 1024 * 1024;
+const maxDirectoryFileBytes = 20 * 1024 * 1024;
 
 export function detectMediaType(source: IngestionSource): SupportedMediaType | null {
   const explicitMediaType = source.mediaType?.split(";", 1)[0]?.trim().toLowerCase();
@@ -1826,6 +1860,309 @@ export async function ingestFile(
   }
 
   return normalizeIngestedBytes(source, mediaType, bytes, options, source.url);
+}
+
+function directoryLimit(value: number | undefined, fallback: number, name: string): number {
+  if (value === undefined) return fallback;
+  if (!Number.isSafeInteger(value) || value < 1 || value > fallback) {
+    throw new RangeError(`${name} must be a positive integer no greater than ${fallback}.`);
+  }
+  return value;
+}
+
+function pathIsWithinDirectory(root: string, candidate: string): boolean {
+  const candidateRelativePath = relative(root, candidate);
+  if (candidateRelativePath === "") return true;
+  if (isAbsolute(candidateRelativePath)) {
+    return false;
+  }
+  return (candidateRelativePath.split(/[\\/]/u, 1)[0] ?? "") !== "..";
+}
+
+async function canonicalDirectoryRoot(directoryPath: string): Promise<string> {
+  let details: BigIntStats;
+  try {
+    details = await lstat(directoryPath, { bigint: true });
+    if (details.isSymbolicLink() || !details.isDirectory()) {
+      throw new DirectoryIngestionError();
+    }
+    const root = await realpath(directoryPath);
+    const pathAfterRealpath = await lstat(directoryPath, { bigint: true });
+    if (
+      pathAfterRealpath.isSymbolicLink() ||
+      !pathAfterRealpath.isDirectory() ||
+      !localSourceMetadataMatches(details, pathAfterRealpath)
+    ) {
+      throw new DirectoryIngestionError();
+    }
+    const canonicalDetails = await lstat(root, { bigint: true });
+    if (canonicalDetails.isSymbolicLink() || !canonicalDetails.isDirectory()) {
+      throw new DirectoryIngestionError();
+    }
+    return root;
+  } catch (error) {
+    if (error instanceof DirectoryIngestionError) throw error;
+    throw new DirectoryIngestionError();
+  }
+}
+
+export function ingestDirectory(
+  directoryPath: string,
+  options?: DirectoryIngestionOptions,
+): Promise<DirectoryIngestionResult>;
+export function ingestDirectory(
+  directorySource: Pick<IngestionSource, "path">,
+  options?: DirectoryIngestionOptions,
+): Promise<DirectoryIngestionResult>;
+export async function ingestDirectory(
+  directoryInput: string | Pick<IngestionSource, "path">,
+  options: DirectoryIngestionOptions = {},
+): Promise<DirectoryIngestionResult> {
+  const directoryPath = typeof directoryInput === "string" ? directoryInput : directoryInput?.path;
+  if (typeof directoryPath !== "string" || directoryPath.trim() === "") {
+    throw new DirectoryIngestionError();
+  }
+
+  const maxDepth = directoryLimit(options.maxDepth, maxDirectoryDepth, "maxDepth");
+  const maxScannedEntries = directoryLimit(
+    options.maxScannedEntries,
+    maxDirectoryScannedEntries,
+    "maxScannedEntries",
+  );
+  const maxAcceptedFiles = directoryLimit(
+    options.maxAcceptedFiles,
+    maxDirectoryAcceptedFiles,
+    "maxAcceptedFiles",
+  );
+  const maxAcceptedBytes = directoryLimit(
+    options.maxAcceptedBytes,
+    maxDirectoryAcceptedBytes,
+    "maxAcceptedBytes",
+  );
+  if (
+    options.maxSourceBytes !== undefined &&
+    (!Number.isSafeInteger(options.maxSourceBytes) || options.maxSourceBytes < 1)
+  ) {
+    throw new RangeError("maxSourceBytes must be a positive integer.");
+  }
+  if (
+    options.maxChunkCharacters !== undefined &&
+    (!Number.isSafeInteger(options.maxChunkCharacters) || options.maxChunkCharacters < 1)
+  ) {
+    throw new RangeError("maxChunkCharacters must be a positive integer.");
+  }
+
+  const maxSourceBytes = Math.min(
+    options.maxSourceBytes ?? maxDirectoryFileBytes,
+    maxDirectoryFileBytes,
+  );
+  const root = await canonicalDirectoryRoot(directoryPath);
+  const fileOptions: IngestionOptions = {
+    ...(options.maxChunkCharacters === undefined
+      ? {}
+      : { maxChunkCharacters: options.maxChunkCharacters }),
+    maxSourceBytes,
+    ...(options.extractors === undefined ? {} : { extractors: options.extractors }),
+    ...(options.afterSourceRead === undefined ? {} : { afterSourceRead: options.afterSourceRead }),
+  };
+
+  let scannedEntryCount = 0;
+  let discoveredFileCount = 0;
+  let skippedEntryCount = 0;
+  let acceptedBytes = 0;
+  const sources: NormalizedSource[] = [];
+
+  const walk = async (currentPath: string, depth: number): Promise<void> => {
+    let directoryBefore: BigIntStats;
+    let entries: readonly { readonly name: string }[];
+    try {
+      directoryBefore = await lstat(currentPath, { bigint: true });
+      if (directoryBefore.isSymbolicLink() || !directoryBefore.isDirectory()) {
+        throw new DirectoryIngestionError();
+      }
+      entries = await readdir(currentPath, { withFileTypes: true });
+    } catch (error) {
+      if (error instanceof DirectoryIngestionError) throw error;
+      throw new DirectoryIngestionError();
+    }
+
+    const orderedEntries = [...entries].sort((left, right) =>
+      left.name < right.name ? -1 : left.name > right.name ? 1 : 0,
+    );
+    for (const entry of orderedEntries) {
+      scannedEntryCount += 1;
+      if (scannedEntryCount > maxScannedEntries) throw new DirectoryIngestionError();
+
+      const entryPath = join(currentPath, entry.name);
+      if (entry.name.startsWith(".")) {
+        skippedEntryCount += 1;
+        continue;
+      }
+
+      let before: BigIntStats;
+      try {
+        before = await lstat(entryPath, { bigint: true });
+        await options.afterEntryRead?.(entryPath);
+      } catch {
+        throw new DirectoryIngestionError();
+      }
+
+      let observed: BigIntStats;
+      try {
+        observed = await lstat(entryPath, { bigint: true });
+      } catch {
+        throw new DirectoryIngestionError();
+      }
+      if (!localSourceMetadataMatches(before, observed)) {
+        throw new DirectoryIngestionError();
+      }
+      if (observed.isSymbolicLink()) {
+        skippedEntryCount += 1;
+        continue;
+      }
+
+      const entryDepth = depth + 1;
+      if (entryDepth > maxDepth) throw new DirectoryIngestionError();
+
+      if (observed.isDirectory()) {
+        let canonicalPath: string;
+        try {
+          canonicalPath = await realpath(entryPath);
+          if (!pathIsWithinDirectory(root, canonicalPath)) {
+            throw new DirectoryIngestionError();
+          }
+          const afterRealpath = await lstat(entryPath, { bigint: true });
+          if (
+            afterRealpath.isSymbolicLink() ||
+            !afterRealpath.isDirectory() ||
+            !localSourceMetadataMatches(observed, afterRealpath)
+          ) {
+            throw new DirectoryIngestionError();
+          }
+        } catch (error) {
+          if (error instanceof DirectoryIngestionError) throw error;
+          throw new DirectoryIngestionError();
+        }
+        await walk(canonicalPath, entryDepth);
+        let directoryAfter: BigIntStats;
+        try {
+          directoryAfter = await lstat(canonicalPath, { bigint: true });
+        } catch {
+          throw new DirectoryIngestionError();
+        }
+        if (
+          directoryAfter.isSymbolicLink() ||
+          !directoryAfter.isDirectory() ||
+          !localSourceMetadataMatches(observed, directoryAfter)
+        ) {
+          throw new DirectoryIngestionError();
+        }
+        continue;
+      }
+
+      if (!observed.isFile()) {
+        skippedEntryCount += 1;
+        continue;
+      }
+
+      let canonicalPath: string;
+      try {
+        canonicalPath = await realpath(entryPath);
+        if (!pathIsWithinDirectory(root, canonicalPath)) {
+          throw new DirectoryIngestionError();
+        }
+        const afterRealpath = await lstat(entryPath, { bigint: true });
+        if (
+          afterRealpath.isSymbolicLink() ||
+          !afterRealpath.isFile() ||
+          !localSourceMetadataMatches(observed, afterRealpath)
+        ) {
+          throw new DirectoryIngestionError();
+        }
+      } catch (error) {
+        if (error instanceof DirectoryIngestionError) throw error;
+        throw new DirectoryIngestionError();
+      }
+
+      const mediaType = detectMediaType({ path: canonicalPath });
+      if (mediaType === null) {
+        skippedEntryCount += 1;
+        continue;
+      }
+      if (observed.size > BigInt(maxSourceBytes)) throw new DirectoryIngestionError();
+      if (discoveredFileCount >= maxAcceptedFiles) throw new DirectoryIngestionError();
+      await options.beforeSourceIngestion?.(canonicalPath);
+
+      let ingestion: IngestionResult;
+      try {
+        ingestion = await ingestFile({ path: canonicalPath }, fileOptions);
+      } catch {
+        throw new DirectoryIngestionError();
+      }
+      if (
+        ingestion.source === null ||
+        ingestion.issues.length > 0 ||
+        ingestion.source.issues.length > 0 ||
+        ingestion.source.chunks.length === 0
+      ) {
+        throw new DirectoryIngestionError();
+      }
+      let validated: BigIntStats;
+      try {
+        validated = await lstat(canonicalPath, { bigint: true });
+      } catch {
+        throw new DirectoryIngestionError();
+      }
+      if (
+        validated.isSymbolicLink() ||
+        !validated.isFile() ||
+        !localSourceMetadataMatches(observed, validated) ||
+        ingestion.source.sizeBytes !== Number(validated.size)
+      ) {
+        throw new DirectoryIngestionError();
+      }
+      const sizeBytes = ingestion.source.sizeBytes;
+      if (sizeBytes > maxSourceBytes) throw new DirectoryIngestionError();
+      const nextAcceptedBytes = acceptedBytes + sizeBytes;
+      if (nextAcceptedBytes > maxAcceptedBytes) throw new DirectoryIngestionError();
+      acceptedBytes = nextAcceptedBytes;
+      discoveredFileCount += 1;
+      sources.push(ingestion.source);
+    }
+
+    let directoryAfter: BigIntStats;
+    try {
+      directoryAfter = await lstat(currentPath, { bigint: true });
+    } catch {
+      throw new DirectoryIngestionError();
+    }
+    if (
+      directoryAfter.isSymbolicLink() ||
+      !directoryAfter.isDirectory() ||
+      !localSourceMetadataMatches(directoryBefore, directoryAfter)
+    ) {
+      throw new DirectoryIngestionError();
+    }
+  };
+
+  try {
+    await walk(root, 0);
+  } catch (error) {
+    if (error instanceof DirectoryIngestionError) throw error;
+    throw new DirectoryIngestionError();
+  }
+
+  sources.sort((left, right) => {
+    const leftPath = relative(root, left.source.path);
+    const rightPath = relative(root, right.source.path);
+    return leftPath < rightPath ? -1 : leftPath > rightPath ? 1 : 0;
+  });
+  return Object.freeze({
+    sources: Object.freeze(sources),
+    scannedEntryCount,
+    discoveredFileCount,
+    skippedEntryCount,
+  });
 }
 
 export async function ingestUrl(

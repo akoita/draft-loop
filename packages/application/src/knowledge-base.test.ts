@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -21,6 +21,8 @@ const createdAt = "2026-08-21T09:00:00.000Z";
 const changedAt = "2026-08-21T10:00:00.000Z";
 const checksum = "a".repeat(64);
 const importFailureMessage = "The selected candidate knowledge source file could not be imported.";
+const directoryImportFailureMessage =
+  "The selected candidate knowledge source directory could not be imported.";
 const appendFailureMessage =
   "The selected candidate knowledge source file could not be added as a new version.";
 
@@ -361,6 +363,297 @@ describe("candidate knowledge store application service", () => {
     } finally {
       await store.close();
     }
+  });
+
+  it("imports a directory as independent managed file sources in lexical order", async () => {
+    const directoryPath = join(temporaryParent, "candidate-directory");
+    await mkdir(join(directoryPath, "nested"), { recursive: true });
+    const firstPath = join(directoryPath, "nested", "first.txt");
+    const secondPath = join(directoryPath, "second.txt");
+    const content = "# Candidate evidence\nBuilt reliable systems.\n";
+    await writeFile(firstPath, content, "utf8");
+    await writeFile(secondPath, content, "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "first-source-uuid",
+      "first-version-uuid",
+      "second-source-uuid",
+      "second-version-uuid",
+    ];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+
+    expect(imported.status).toBe("complete");
+    expect(imported.scannedEntryCount).toBe(3);
+    expect(imported.discoveredFileCount).toBe(2);
+    expect(imported.skippedEntryCount).toBe(0);
+    expect(imported.sources.map((source) => source.source.id)).toEqual([
+      "first-source-uuid",
+      "second-source-uuid",
+    ]);
+    expect(imported.sources.map((source) => source.source.displayName)).toEqual([
+      "first.txt",
+      "second.txt",
+    ]);
+    expect(imported.sources.map((source) => source.versions[0]?.id)).toEqual([
+      "first-version-uuid",
+      "second-version-uuid",
+    ]);
+
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        store.getCandidateKnowledgeSourceOriginBinding("default-ckb-uuid", "first-source-uuid"),
+      ).resolves.toMatchObject({ originPath: firstPath });
+      await expect(
+        store.getCandidateKnowledgeSourceOriginBinding("default-ckb-uuid", "second-source-uuid"),
+      ).resolves.toMatchObject({ originPath: secondPath });
+    } finally {
+      await store.close();
+    }
+
+    await expect(
+      service.listKnowledgeSourceDuplicateGroups({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toEqual([
+      {
+        members: [
+          { sourceId: "first-source-uuid", versionId: "first-version-uuid" },
+          { sourceId: "second-source-uuid", versionId: "second-version-uuid" },
+        ],
+      },
+    ]);
+  });
+
+  it("preflights a directory before any managed source write and rejects store overlap", async () => {
+    const directoryPath = join(temporaryParent, "candidate-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "first.txt"), "first", "utf8");
+    await writeFile(join(directoryPath, "second.txt"), "second", "utf8");
+    const service = createCandidateKnowledgeStoreService({
+      generateId: vi
+        .fn<() => string>()
+        .mockReturnValueOnce("store-uuid")
+        .mockReturnValueOnce("default-ckb-uuid")
+        .mockReturnValue("unexpected-id"),
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath,
+        options: { maxAcceptedFiles: 1 },
+      }),
+    ).rejects.toThrow("The selected candidate knowledge source directory could not be imported.");
+    await expect(
+      service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toEqual([]);
+
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath: storeRoot,
+      }),
+    ).rejects.toThrow("The selected candidate knowledge source directory could not be imported.");
+    await expect(
+      service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toEqual([]);
+
+    const selectedDirectoryContainingStore = join(temporaryParent, "directory-containing-store");
+    const nestedStoreRoot = join(selectedDirectoryContainingStore, "candidate-knowledge");
+    await mkdir(selectedDirectoryContainingStore);
+    const nestedService = createCandidateKnowledgeStoreService({
+      generateId: (() => {
+        const ids = ["nested-store-uuid", "nested-ckb-uuid"];
+        return () => ids.shift() ?? "unexpected-nested-id";
+      })(),
+      now: () => createdAt,
+    });
+    await nestedService.initializeStore({ storeRoot: nestedStoreRoot });
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot: nestedStoreRoot,
+        knowledgeBaseId: "nested-ckb-uuid",
+        directoryPath: selectedDirectoryContainingStore,
+      }),
+    ).rejects.toThrow(directoryImportFailureMessage);
+
+    const selectedDirectoryInsideStore = join(storeRoot, "selected-directory");
+    await mkdir(selectedDirectoryInsideStore);
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath: selectedDirectoryInsideStore,
+      }),
+    ).rejects.toThrow(directoryImportFailureMessage);
+  });
+
+  it("hides a first managed write failure and leaves zero sources", async () => {
+    const directoryPath = join(temporaryParent, "candidate-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "first.txt"), "first", "utf8");
+    const close = vi.fn(async () => undefined);
+    const open = vi.fn(async (root: string) => {
+      const handle = await openCandidateKnowledgeStore(root);
+      return {
+        ...handle,
+        close,
+        createManagedCandidateKnowledgeFileSource: async () => {
+          throw new Error("private storage detail");
+        },
+      } as CandidateKnowledgeStoreHandle;
+    });
+    const service = createCandidateKnowledgeStoreService({
+      generateId: (() => {
+        const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+        return () => ids.shift() ?? "unexpected-id";
+      })(),
+      now: () => createdAt,
+      open,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const failure = await service
+      .importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath,
+      })
+      .then(() => undefined)
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(Error);
+    expect((failure as Error).message).toBe(directoryImportFailureMessage);
+    expect((failure as Error).message).not.toContain("private storage detail");
+    expect(close).toHaveBeenCalledOnce();
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(store.listCandidateKnowledgeSources("default-ckb-uuid")).resolves.toEqual([]);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("reports a partial import when projection fails after the first source commits", async () => {
+    const directoryPath = join(temporaryParent, "candidate-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "first.txt"), "first", "utf8");
+    const open = vi.fn(async (root: string) => {
+      const handle = await openCandidateKnowledgeStore(root);
+      return {
+        ...handle,
+        listCandidateKnowledgeSourceVersions: async () => {
+          throw new Error("private projection detail");
+        },
+      } as CandidateKnowledgeStoreHandle;
+    });
+    const service = createCandidateKnowledgeStoreService({
+      generateId: (() => {
+        const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+        return () => ids.shift() ?? "unexpected-id";
+      })(),
+      now: () => createdAt,
+      open,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const result = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+
+    expect(result).toMatchObject({ status: "partial", sources: [], discoveredFileCount: 1 });
+    expect(JSON.stringify(result)).not.toContain("private projection detail");
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(store.listCandidateKnowledgeSources("default-ckb-uuid")).resolves.toHaveLength(
+        1,
+      );
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("returns only successfully projected sources after a later managed write failure", async () => {
+    const directoryPath = join(temporaryParent, "candidate-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "first.txt"), "first", "utf8");
+    await writeFile(join(directoryPath, "second.txt"), "second", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "first-source-uuid",
+      "first-version-uuid",
+      "second-source-uuid",
+      "second-version-uuid",
+    ];
+    let writeCount = 0;
+    const close = vi.fn(async () => undefined);
+    const open = vi.fn(async (root: string) => {
+      const handle = await openCandidateKnowledgeStore(root);
+      const originalCreate = handle.createManagedCandidateKnowledgeFileSource;
+      return {
+        ...handle,
+        close,
+        createManagedCandidateKnowledgeFileSource: async (
+          ...args: Parameters<typeof originalCreate>
+        ) => {
+          writeCount += 1;
+          if (writeCount === 2) throw new Error("private storage detail");
+          return originalCreate(...args);
+        },
+      } as CandidateKnowledgeStoreHandle;
+    });
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+      open,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const result = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+
+    expect(result.status).toBe("partial");
+    expect(result.sources.map((source) => source.source.id)).toEqual(["first-source-uuid"]);
+    expect(result.scannedEntryCount).toBe(2);
+    expect(result.discoveredFileCount).toBe(2);
+    expect(result.skippedEntryCount).toBe(0);
+    expect(JSON.stringify(result)).not.toContain("private storage detail");
+    expect(close).toHaveBeenCalledOnce();
+    await expect(
+      service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toHaveLength(1);
   });
 
   it("imports an approved URL with exact injected response bytes and projects no URL state", async () => {

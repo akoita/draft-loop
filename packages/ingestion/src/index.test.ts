@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { classifyUrl, ingestFile, ingestSources, ingestUrl } from "./index.js";
+import { classifyUrl, ingestDirectory, ingestFile, ingestSources, ingestUrl } from "./index.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -386,6 +386,173 @@ describe("local source ingestion", () => {
     await rm(path);
     await expect(readFile(path)).rejects.toThrow();
     expect(result.source?.text).toBe("Readable source");
+  });
+});
+
+describe("bounded directory source ingestion", () => {
+  it("discovers nested supported files in deterministic order and counts skipped entries", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-"));
+    temporaryDirectories.push(root);
+    await mkdir(join(root, "nested", "deeper"), { recursive: true });
+    await mkdir(join(root, ".ignored"));
+    await writeFile(join(root, "nested", "z.txt"), "z source", "utf8");
+    await writeFile(join(root, "nested", "deeper", "a.md"), "a source", "utf8");
+    await writeFile(join(root, "nested", "deeper", "ignored.bin"), new Uint8Array([1, 2, 3]));
+    await writeFile(join(root, ".ignored", "hidden.txt"), "hidden source", "utf8");
+
+    const result = await ingestDirectory(root);
+
+    expect(result.sources.map((source) => basename(source.source.path))).toEqual(["a.md", "z.txt"]);
+    expect(result.discoveredFileCount).toBe(2);
+    expect(result.scannedEntryCount).toBe(6);
+    expect(result.skippedEntryCount).toBe(2);
+    expect(result.sources.map((source) => source.text)).toEqual(["a source", "z source"]);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "rejects a root file and root symbolic link",
+    async () => {
+      const file = await fixture("not-a-directory.txt", "candidate");
+      await expect(ingestDirectory(file)).rejects.toThrow(
+        "selected candidate knowledge source directory could not be ingested",
+      );
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-link-"));
+      temporaryDirectories.push(root);
+      const link = `${root}-link`;
+      await symlink(root, link, "dir");
+      temporaryDirectories.push(link);
+      await expect(ingestDirectory(link)).rejects.toThrow(
+        "selected candidate knowledge source directory could not be ingested",
+      );
+    },
+  );
+
+  it.skipIf(process.platform === "win32")("does not follow child symbolic links", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-link-child-"));
+    temporaryDirectories.push(root);
+    const outside = await fixture("outside.txt", "outside source");
+    await symlink(outside, join(root, "linked.txt"), "file");
+
+    const result = await ingestDirectory(root);
+
+    expect(result.sources).toEqual([]);
+    expect(result.scannedEntryCount).toBe(1);
+    expect(result.skippedEntryCount).toBe(1);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "does not follow child directory symbolic links",
+    async () => {
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-link-child-"));
+      temporaryDirectories.push(root);
+      const outside = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-outside-"));
+      temporaryDirectories.push(outside);
+      await writeFile(join(outside, "outside.txt"), "outside source", "utf8");
+      await symlink(outside, join(root, "linked-directory"), "dir");
+
+      const result = await ingestDirectory(root);
+
+      expect(result.sources).toEqual([]);
+      expect(result.scannedEntryCount).toBe(1);
+      expect(result.skippedEntryCount).toBe(1);
+    },
+  );
+
+  it("completes with counts for hidden, unsupported, and empty entries", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-skipped-"));
+    temporaryDirectories.push(root);
+    await mkdir(join(root, "empty-directory"));
+    await mkdir(join(root, ".hidden-directory"));
+    await writeFile(join(root, ".hidden-directory", "hidden.txt"), "hidden source", "utf8");
+    await writeFile(join(root, "unsupported.bin"), new Uint8Array([1, 2, 3]));
+
+    const result = await ingestDirectory(root);
+
+    expect(result.sources).toEqual([]);
+    expect(result.scannedEntryCount).toBe(3);
+    expect(result.discoveredFileCount).toBe(0);
+    expect(result.skippedEntryCount).toBe(2);
+  });
+
+  it.each([
+    ["maxDepth", { maxDepth: 0 }],
+    ["maxScannedEntries", { maxScannedEntries: 0 }],
+    ["maxAcceptedFiles", { maxAcceptedFiles: 0 }],
+    ["maxAcceptedBytes", { maxAcceptedBytes: 0 }],
+  ] as const)("rejects an invalid %s override", async (_name, options) => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-limit-"));
+    temporaryDirectories.push(root);
+    await expect(ingestDirectory(root, options)).rejects.toThrow(/must be a positive integer/u);
+  });
+
+  it.each([
+    ["maxDepth", { maxDepth: 33 }],
+    ["maxScannedEntries", { maxScannedEntries: 1025 }],
+    ["maxAcceptedFiles", { maxAcceptedFiles: 257 }],
+    ["maxAcceptedBytes", { maxAcceptedBytes: 256 * 1024 * 1024 + 1 }],
+  ] as const)("rejects a %s override above its hard cap", async (_name, options) => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-limit-"));
+    temporaryDirectories.push(root);
+    await expect(ingestDirectory(root, options)).rejects.toThrow(/no greater than/u);
+  });
+
+  it("fails when traversal depth or scanned-entry limits are breached", async () => {
+    const depthRoot = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-depth-"));
+    temporaryDirectories.push(depthRoot);
+    await mkdir(join(depthRoot, "one", "two"), { recursive: true });
+    await writeFile(join(depthRoot, "one", "two", "candidate.txt"), "candidate", "utf8");
+    await expect(ingestDirectory(depthRoot, { maxDepth: 2 })).rejects.toThrow(
+      "selected candidate knowledge source directory could not be ingested",
+    );
+
+    const entriesRoot = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-entries-"));
+    temporaryDirectories.push(entriesRoot);
+    await writeFile(join(entriesRoot, "first.txt"), "first", "utf8");
+    await writeFile(join(entriesRoot, "second.txt"), "second", "utf8");
+    await expect(ingestDirectory(entriesRoot, { maxScannedEntries: 1 })).rejects.toThrow(
+      "selected candidate knowledge source directory could not be ingested",
+    );
+  });
+
+  it("fails preflight when accepted file or aggregate limits are exceeded", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-limit-"));
+    temporaryDirectories.push(root);
+    await writeFile(join(root, "first.txt"), "12345", "utf8");
+    await writeFile(join(root, "second.txt"), "67890", "utf8");
+
+    await expect(ingestDirectory(root, { maxAcceptedFiles: 1 })).rejects.toThrow(
+      "selected candidate knowledge source directory could not be ingested",
+    );
+    await expect(ingestDirectory(root, { maxAcceptedBytes: 9 })).rejects.toThrow(
+      "selected candidate knowledge source directory could not be ingested",
+    );
+  });
+
+  it("fails closed when an entry mutates during traversal", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-mutation-"));
+    temporaryDirectories.push(root);
+    const path = join(root, "candidate.txt");
+    await writeFile(path, "before", "utf8");
+
+    await expect(
+      ingestDirectory(root, {
+        afterEntryRead: async () => writeFile(path, "after mutation", "utf8"),
+      }),
+    ).rejects.toThrow("selected candidate knowledge source directory could not be ingested");
+  });
+
+  it("fails closed when a file changes after traversal observation", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-ingestion-directory-inner-mutation-"));
+    temporaryDirectories.push(root);
+    const path = join(root, "candidate.txt");
+    await writeFile(path, "before", "utf8");
+
+    await expect(
+      ingestDirectory(root, {
+        maxAcceptedBytes: 10,
+        beforeSourceIngestion: async () => writeFile(path, "changed after observation", "utf8"),
+      }),
+    ).rejects.toThrow("selected candidate knowledge source directory could not be ingested");
   });
 });
 
