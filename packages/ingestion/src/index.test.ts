@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -601,6 +602,38 @@ describe("URL source ingestion", () => {
     });
     expect(result.source?.chunks[0]?.url).toEqual(result.source?.url);
     expect(result.source?.source.url).toEqual(result.source?.url);
+  });
+
+  it("retains exact URL response bytes whose checksum and size describe the body", async () => {
+    const body = new Uint8Array([65, 66, 67, 194, 162]);
+    const result = await ingestUrl("https://example.com/bytes", {
+      fetcher: async () => new Response(body, { headers: { "content-type": "text/plain" } }),
+      now: () => new Date("2026-08-13T10:00:00.000Z"),
+    });
+
+    expect(result.issues).toEqual([]);
+    expect(result.source?.urlResponseBytes).toEqual(body);
+    expect(result.source?.urlResponseBytes).not.toBe(body);
+    expect(result.source?.sizeBytes).toBe(body.byteLength);
+    expect(result.source?.checksum).toBe(createHash("sha256").update(body).digest("hex"));
+    const local = await fixture("local.txt", "same text");
+    const localResult = await ingestFile({ path: local });
+    expect(localResult.source?.urlResponseBytes).toBeUndefined();
+  });
+
+  it("accepts an at-sign in a URL path or query without treating it as credentials", async () => {
+    const url = "https://example.com/path/@candidate?contact=ada@example.com";
+    const result = await ingestUrl(url, {
+      fetcher: async (input) => {
+        expect(input).toBe(url);
+        return new Response("candidate evidence", {
+          headers: { "content-type": "text/plain" },
+        });
+      },
+    });
+
+    expect(result.issues).toEqual([]);
+    expect(result.source?.url?.originalUrl).toBe(url);
   });
 
   it("follows safe redirects, records the final URL, and revalidates redirect targets", async () => {

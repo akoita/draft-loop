@@ -157,13 +157,21 @@ and remains separate from refresh freshness. Existing source/version metadata,
 managed bytes, origin binding, observation, and journal evidence are retained;
 retirement is not physical deletion, index cleanup, or secure erasure, and no
 reactivation operation is currently exposed.
+An initial approved URL intake operation now reuses the existing controlled
+HTTPS ingestion boundary and publishes the exact fetched response bytes under
+the opaque managed-source layout. It atomically records immutable local
+per-version provenance for the approved original URL, validated final redirect,
+fetch time, and bounded URL kind. Generic manifests, journals, inventory,
+diagnostics, errors, and provider requests expose none of those URL fields. This
+does not yet provide URL refresh or redirect/failure readiness policy.
 The store retains no
-exact host paths in manifests, descriptors, journals, inventory, diagnostics,
-or application/provider projections, and retains no filename provenance,
-filename-derived physical names, or URLs. It remains independent of application workspaces and run
+exact host paths or URLs in manifests, descriptors, journals, inventory,
+diagnostics, or application/provider projections, and retains no filename
+provenance or filename-derived physical names. Exact URLs exist only in the
+sensitive local provenance table. It remains independent of application workspaces and run
 history. It does not yet refresh in the background, apply a time-based freshness
 policy, automatically discover moved origins, expose refresh/rebind/duplicate
-controls through product adapters, or ingest directories or URLs;
+controls through product adapters, ingest directories, or refresh URLs;
 automatically resolve duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
@@ -189,7 +197,10 @@ identity, and no deletion are enforced. `stale` is derived when a newer version
 exists rather than persisted as a filesystem observation. SQLite migration v11
 adds the guarded logical-retirement marker: the source must belong to the
 requested active CKB, the timestamp cannot precede source creation, the only
-reason is `user-requested`, and marker update or deletion is forbidden. Journal
+reason is `user-requested`, and marker update or deletion is forbidden.
+SQLite migration v12 generalizes managed opaque-byte provenance to file or URL
+versions while keeping file origin bindings file-only, and adds guarded
+immutable URL provenance committed with the first URL version. Journal
 records exclude origin paths, filenames, labels, checksums, source content,
 provider data, diagnostic projections, cleanup tokens, and approvals, and
 journal IDs are not exposed. Legacy v6 writes and entries without prospective
@@ -499,6 +510,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Added exact-byte approved URL intake as the fifth bounded #110 slice without advancing the v0.7 stage beyond component implementation | One explicitly approved URL can now cross the established HTTPS/DNS/redirect/size/extraction boundary into an opaque immutable CKB snapshot with local per-version original/final URL provenance. Generic results and operational records remain URL-free; URL refresh/readiness, directory traversal, indexing, selection, adapters, and deletion remain pending. |
 | 2026-08-22 | Added immutable logical source retirement as the fourth bounded #110 slice without advancing the v0.7 stage beyond component implementation | A candidate can withdraw one source from future readiness without erasing provenance. The path-free marker uses only a bounded user-requested reason, blocks later source mutations, and preserves bytes, versions, bindings, observations, and journal evidence; selection/retrieval enforcement, index cleanup, reactivation, physical deletion, adapters, and retention remain pending. |
 | 2026-08-22 | Added deterministic latest-version duplicate groups as the third bounded #110 slice without advancing the v0.7 stage beyond component implementation | Exact integrity metadata can surface redundant sources without changing their identity. The one-CKB-scoped read-only projection returns only ordered source/version IDs, persists no relationship, and grants no merge/delete authority; removal, URL/directory intake, indexing, selection, adapters, and lifecycle policy remain pending. |
 | 2026-08-22 | Persisted guarded, path-free refresh observations as the second bounded #110 slice without advancing the v0.7 stage beyond component implementation | Explicit refresh outcomes now survive restart with the exact observed source-version identity and optional last successful changed-byte refresh time. Status checks remain read-only, later manual version advances derive `stale`, and the record is last-observation evidence rather than a background or time-based freshness claim; directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair remain pending. |

@@ -101,6 +101,29 @@ export interface CandidateKnowledgeSourceVersionRecord
   readonly parentVersionId: string | null;
 }
 
+export const candidateKnowledgeSourceUrlKinds = [
+  "github",
+  "certification",
+  "profile",
+  "portfolio",
+  "job-description",
+  "generic",
+] as const;
+export type CandidateKnowledgeSourceUrlKind = (typeof candidateKnowledgeSourceUrlKinds)[number];
+
+export interface CandidateKnowledgeSourceUrlProvenanceInput {
+  readonly originalUrl: string;
+  readonly finalUrl: string;
+  readonly fetchedAt: string;
+  readonly kind: CandidateKnowledgeSourceUrlKind;
+}
+
+export interface CandidateKnowledgeSourceUrlProvenanceRecord
+  extends CandidateKnowledgeSourceUrlProvenanceInput {
+  readonly sourceId: string;
+  readonly versionId: string;
+}
+
 export type CandidateKnowledgeSourceRefreshObservationStatus =
   | "current"
   | "changed"
@@ -178,7 +201,8 @@ export type ManagedCandidateKnowledgeWriteCommitInput =
       readonly source: CandidateKnowledgeSourceInput;
       readonly version: CandidateKnowledgeSourceVersionInput;
       /** Canonical physical path returned by the verified managed-file capture. */
-      readonly originPath: string;
+      readonly originPath?: string;
+      readonly urlProvenance?: CandidateKnowledgeSourceUrlProvenanceInput;
     }
   | {
       readonly kind: "append";
@@ -624,7 +648,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 11 as const;
+export const storageSchemaVersion = 12 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -1454,6 +1478,91 @@ const migrationEleven: Migration = {
   `.trim(),
 };
 
+const migrationTwelve: Migration = {
+  version: 12,
+  sql: `
+    DROP TRIGGER IF EXISTS candidate_knowledge_managed_source_versions_require_file;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_source_versions_require_supported_source
+      BEFORE INSERT ON candidate_knowledge_managed_source_versions
+      WHEN NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_source_versions AS version
+        JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+        WHERE version.id = NEW.version_id
+          AND source.kind IN ('file', 'url')
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge source versions require a supported source'); END;
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_source_url_provenance (
+      version_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_source_versions(id),
+      source_id TEXT NOT NULL
+        REFERENCES candidate_knowledge_sources(id),
+      original_url TEXT NOT NULL CHECK (length(trim(original_url)) > 0),
+      final_url TEXT NOT NULL CHECK (length(trim(final_url)) > 0),
+      fetched_at TEXT NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('github', 'certification', 'profile', 'portfolio', 'job-description', 'generic')),
+      UNIQUE (source_id, version_id)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_url_provenance_require_valid_insert
+      BEFORE INSERT ON candidate_knowledge_source_url_provenance
+      WHEN NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_source_versions AS version
+        JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+        JOIN candidate_knowledge_managed_source_versions AS managed
+          ON managed.version_id = version.id
+        WHERE version.id = NEW.version_id
+          AND version.source_id = NEW.source_id
+          AND source.kind = 'url'
+          AND julianday(NEW.fetched_at) IS NOT NULL
+          AND julianday(NEW.fetched_at) = julianday(version.created_at)
+      )
+        OR lower(NEW.original_url) NOT LIKE 'https://%'
+        OR lower(NEW.final_url) NOT LIKE 'https://%'
+        OR instr(NEW.original_url, '#') > 0
+        OR instr(NEW.final_url, '#') > 0
+        OR (
+          instr(substr(NEW.original_url, 9), '@') > 0
+          AND instr(substr(NEW.original_url, 9), '@') < min(
+            CASE WHEN instr(substr(NEW.original_url, 9), '/') = 0
+              THEN length(substr(NEW.original_url, 9)) + 1
+              ELSE instr(substr(NEW.original_url, 9), '/') END,
+            CASE WHEN instr(substr(NEW.original_url, 9), '?') = 0
+              THEN length(substr(NEW.original_url, 9)) + 1
+              ELSE instr(substr(NEW.original_url, 9), '?') END
+          )
+        )
+        OR (
+          instr(substr(NEW.final_url, 9), '@') > 0
+          AND instr(substr(NEW.final_url, 9), '@') < min(
+            CASE WHEN instr(substr(NEW.final_url, 9), '/') = 0
+              THEN length(substr(NEW.final_url, 9)) + 1
+              ELSE instr(substr(NEW.final_url, 9), '/') END,
+            CASE WHEN instr(substr(NEW.final_url, 9), '?') = 0
+              THEN length(substr(NEW.final_url, 9)) + 1
+              ELSE instr(substr(NEW.final_url, 9), '?') END
+          )
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM candidate_knowledge_source_url_provenance AS prior
+          WHERE prior.source_id = NEW.source_id
+            AND prior.original_url <> NEW.original_url
+        )
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source URL provenance is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_url_provenance_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_source_url_provenance
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source URL provenance is immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_url_provenance_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_source_url_provenance
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source URL provenance is immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -1466,6 +1575,7 @@ const migrations: readonly Migration[] = [
   migrationNine,
   migrationTen,
   migrationEleven,
+  migrationTwelve,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -2170,8 +2280,15 @@ export class SqliteStorage
     ).trim();
     const requestedVersion = normalizeCandidateKnowledgeSourceVersionInput(input.version);
     const originPath =
-      input.kind === "create"
-        ? requireAbsolutePath(input.originPath, "managed candidate knowledge source origin path")
+      input.kind === "create" && input.source.kind === "file"
+        ? requireAbsolutePath(
+            input.originPath ?? "",
+            "managed candidate knowledge source origin path",
+          )
+        : undefined;
+    const urlProvenance =
+      input.kind === "create" && input.source.kind === "url"
+        ? normalizeCandidateKnowledgeSourceUrlProvenance(input.urlProvenance)
         : undefined;
     let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
     this.database.transaction(() => {
@@ -2198,9 +2315,9 @@ export class SqliteStorage
             "managed candidate knowledge write source does not match its intent",
           );
         }
-        if (source.kind !== "file") {
+        if (source.kind !== "file" && source.kind !== "url") {
           throw new StorageValidationError(
-            "managed candidate knowledge source versions require a file source",
+            "managed candidate knowledge source versions require a supported source",
           );
         }
         if (Date.parse(requestedVersion.createdAt) < Date.parse(source.createdAt)) {
@@ -2229,11 +2346,24 @@ export class SqliteStorage
         this.insertCandidateKnowledgeSource(source);
         this.insertCandidateKnowledgeSourceVersion(version);
         this.insertManagedCandidateKnowledgeSourceVersion(version.id);
-        this.insertCandidateKnowledgeSourceOriginBinding({
-          sourceId: source.id,
-          originPath: originPath as string,
-          boundAt: requestedVersion.createdAt,
-        });
+        if (source.kind === "file") {
+          this.insertCandidateKnowledgeSourceOriginBinding({
+            sourceId: source.id,
+            originPath: originPath as string,
+            boundAt: requestedVersion.createdAt,
+          });
+        } else {
+          if (urlProvenance === undefined) {
+            throw new StorageValidationError(
+              "Candidate knowledge source URL provenance is required",
+            );
+          }
+          this.insertCandidateKnowledgeSourceUrlProvenance({
+            sourceId: source.id,
+            versionId: version.id,
+            ...urlProvenance,
+          });
+        }
         this.insertManagedCandidateKnowledgeWriteEvent(
           operationId,
           "committed",
@@ -2365,6 +2495,36 @@ export class SqliteStorage
         knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
         kind: rowString(row, "kind") as CandidateKnowledgeSourceKind,
       }));
+  }
+
+  public async getCandidateKnowledgeSourceUrlProvenance(
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ): Promise<CandidateKnowledgeSourceUrlProvenanceRecord | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const normalizedVersionId = requireNonEmpty(
+      versionId,
+      "candidate knowledge source version id",
+    ).trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    const row = this.database
+      .prepare(
+        `SELECT provenance.source_id, provenance.version_id, provenance.original_url,
+                provenance.final_url, provenance.fetched_at, provenance.kind
+         FROM candidate_knowledge_source_url_provenance AS provenance
+         JOIN candidate_knowledge_sources AS source ON source.id = provenance.source_id
+         WHERE source.candidate_knowledge_base_id = ?
+           AND provenance.source_id = ?
+           AND provenance.version_id = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedSourceId, normalizedVersionId);
+    return row === undefined ? undefined : candidateKnowledgeSourceUrlProvenanceFromRow(row);
   }
 
   public async getCandidateKnowledgeSource(
@@ -2943,20 +3103,58 @@ export class SqliteStorage
         previousCreatedAt = versionCreatedAt;
       }
     }
-    const nonFileManagedVersion = this.database
+    const managedVersions = this.database
       .prepare(
-        `SELECT m.version_id
+        `SELECT m.version_id, v.source_id, v.created_at, s.kind
          FROM candidate_knowledge_managed_source_versions AS m
          JOIN candidate_knowledge_source_versions AS v ON v.id = m.version_id
          JOIN candidate_knowledge_sources AS s ON s.id = v.source_id
-         WHERE s.kind <> 'file'
-         LIMIT 1`,
+         ORDER BY v.source_id, v.version, v.id`,
       )
-      .get();
-    if (nonFileManagedVersion !== undefined) {
-      throw new StorageValidationError(
-        "Candidate knowledge store contains a managed version for a non-file source.",
-      );
+      .all<{
+        readonly version_id: string;
+        readonly source_id: string;
+        readonly created_at: string;
+        readonly kind: string;
+      }>();
+    const selectUrlProvenance = this.database.prepare(
+      `SELECT source_id, version_id, original_url, final_url, fetched_at, kind
+       FROM candidate_knowledge_source_url_provenance
+       WHERE version_id = ?`,
+    );
+    for (const managed of managedVersions) {
+      if (managed.kind === "file") {
+        if (selectUrlProvenance.get(managed.version_id) !== undefined) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains URL provenance for a file version.",
+          );
+        }
+        continue;
+      }
+      if (managed.kind !== "url") {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains a managed version for an unsupported source.",
+        );
+      }
+      const provenanceRow = selectUrlProvenance.get(managed.version_id);
+      if (provenanceRow === undefined) {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains a managed URL version without provenance.",
+        );
+      }
+      const provenance = candidateKnowledgeSourceUrlProvenanceFromRow(provenanceRow);
+      const normalizedProvenance = normalizeCandidateKnowledgeSourceUrlProvenance(provenance);
+      if (
+        provenance.sourceId !== managed.source_id ||
+        provenance.versionId !== managed.version_id ||
+        normalizedProvenance.originalUrl !== provenance.originalUrl ||
+        normalizedProvenance.finalUrl !== provenance.finalUrl ||
+        Date.parse(normalizedProvenance.fetchedAt) !== Date.parse(managed.created_at)
+      ) {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains invalid managed URL provenance.",
+        );
+      }
     }
     const originBindings = this.database
       .prepare(
@@ -3055,7 +3253,8 @@ export class SqliteStorage
       }
       if (
         source !== undefined &&
-        (source.candidate_knowledge_base_id !== operation.knowledgeBaseId || source.kind !== "file")
+        (source.candidate_knowledge_base_id !== operation.knowledgeBaseId ||
+          (source.kind !== "file" && source.kind !== "url"))
       ) {
         throw new StorageValidationError(
           "Candidate knowledge store contains an invalid managed write operation source.",
@@ -4607,6 +4806,23 @@ export class SqliteStorage
       .run(versionId);
   }
 
+  private insertCandidateKnowledgeSourceUrlProvenance(
+    record: CandidateKnowledgeSourceUrlProvenanceRecord,
+  ): void {
+    this.database
+      .prepare(
+        "INSERT INTO candidate_knowledge_source_url_provenance (version_id, source_id, original_url, final_url, fetched_at, kind) VALUES (?, ?, ?, ?, ?, ?)",
+      )
+      .run(
+        record.versionId,
+        record.sourceId,
+        record.originalUrl,
+        record.finalUrl,
+        record.fetchedAt,
+        record.kind,
+      );
+  }
+
   private insertCandidateKnowledgeSourceOriginBinding(
     record: CandidateKnowledgeSourceOriginBindingRecord,
   ): void {
@@ -4763,6 +4979,47 @@ function requireCandidateKnowledgeSourceRetirementReason(
   return value;
 }
 
+function normalizeCandidateKnowledgeSourceUrlProvenance(
+  input: CandidateKnowledgeSourceUrlProvenanceInput | undefined,
+): CandidateKnowledgeSourceUrlProvenanceInput {
+  if (input === undefined) {
+    throw new StorageValidationError("Candidate knowledge source URL provenance is required");
+  }
+  const originalUrl = requireNonEmpty(
+    input.originalUrl,
+    "candidate knowledge source original URL",
+  ).trim();
+  const finalUrl = requireNonEmpty(input.finalUrl, "candidate knowledge source final URL").trim();
+  const validateUrl = (value: string, label: string): string => {
+    let parsed: URL;
+    try {
+      parsed = new URL(value);
+    } catch {
+      throw new StorageValidationError(`Candidate knowledge source ${label} is invalid`);
+    }
+    if (
+      parsed.protocol !== "https:" ||
+      parsed.username !== "" ||
+      parsed.password !== "" ||
+      parsed.hash !== "" ||
+      parsed.hostname === ""
+    ) {
+      throw new StorageValidationError(`Candidate knowledge source ${label} is invalid`);
+    }
+    return parsed.href;
+  };
+  const kind = input.kind;
+  if (!candidateKnowledgeSourceUrlKinds.includes(kind)) {
+    throw new StorageValidationError("Candidate knowledge source URL kind is invalid");
+  }
+  return {
+    originalUrl: validateUrl(originalUrl, "original URL"),
+    finalUrl: validateUrl(finalUrl, "final URL"),
+    fetchedAt: requireTimestamp(input.fetchedAt, "candidate knowledge source URL fetchedAt"),
+    kind,
+  };
+}
+
 function workspaceFromRow(row: Record<string, unknown>): WorkspaceRecord {
   return {
     id: rowString(row, "id"),
@@ -4804,6 +5061,19 @@ function candidateKnowledgeSourceOriginBindingFromRow(
     sourceId: rowString(row, "source_id"),
     originPath: rowString(row, "origin_path"),
     boundAt: rowString(row, "bound_at"),
+  };
+}
+
+function candidateKnowledgeSourceUrlProvenanceFromRow(
+  row: Record<string, unknown>,
+): CandidateKnowledgeSourceUrlProvenanceRecord {
+  return {
+    sourceId: rowString(row, "source_id"),
+    versionId: rowString(row, "version_id"),
+    originalUrl: rowString(row, "original_url"),
+    finalUrl: rowString(row, "final_url"),
+    fetchedAt: rowString(row, "fetched_at"),
+    kind: rowString(row, "kind") as CandidateKnowledgeSourceUrlKind,
   };
 }
 

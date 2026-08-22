@@ -26,6 +26,7 @@ import { StorageConflictError, StorageValidationError } from "./index.js";
 import {
   initializeCandidateKnowledgeStore,
   type ManagedCandidateKnowledgeFileVersionInput,
+  type ManagedCandidateKnowledgeUrlVersionInput,
   maximumManagedCandidateKnowledgeFileBytes,
   maximumManagedCandidateKnowledgeInventoryEntries,
   openCandidateKnowledgeStore,
@@ -114,7 +115,7 @@ async function snapshotSourcesTree(root: string): Promise<readonly string[]> {
   return entries.sort();
 }
 
-function sha256(content: string | Buffer): string {
+function sha256(content: string | Buffer | Uint8Array): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
@@ -131,6 +132,27 @@ function managedVersion(
     checksum: sha256(bytes),
     sizeBytes: bytes.byteLength,
     createdAt: "2026-08-21T14:01:00.000Z",
+    ...overrides,
+  };
+}
+
+function managedUrlVersion(
+  responseBytes: Uint8Array,
+  overrides: Partial<ManagedCandidateKnowledgeUrlVersionInput> = {},
+): ManagedCandidateKnowledgeUrlVersionInput {
+  return {
+    id: "managed-url-version-1",
+    mediaType: "text/plain",
+    checksum: sha256(responseBytes),
+    sizeBytes: responseBytes.byteLength,
+    createdAt: "2026-08-21T14:01:00.000Z",
+    responseBytes,
+    provenance: {
+      originalUrl: "https://example.com/evidence",
+      finalUrl: "https://example.com/evidence",
+      fetchedAt: "2026-08-21T14:01:00.000Z",
+      kind: "generic",
+    },
     ...overrides,
   };
 }
@@ -282,6 +304,93 @@ describe("portable candidate knowledge store", () => {
       reopened.getManagedCandidateKnowledgeFilePath("ckb-default", sourceId, versionId),
     ).resolves.toBe(managedPath);
     await reopened.close();
+  });
+
+  it("stores exact URL response bytes with provenance without exposing URL state", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const body = new Uint8Array([65, 66, 67, 194, 162]);
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const written = await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Remote evidence",
+        createdAt,
+      },
+      managedUrlVersion(body),
+    );
+    expect(written).toMatchObject({
+      source: { id: "url-source", kind: "url" },
+      version: { checksum: sha256(body), sizeBytes: body.byteLength },
+      created: true,
+    });
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "url-source"),
+    ).resolves.toBeUndefined();
+    expect(
+      queryDatabase(
+        root,
+        "SELECT source_id, version_id, original_url, final_url, fetched_at, kind FROM candidate_knowledge_source_url_provenance",
+      ),
+    ).toEqual([
+      {
+        source_id: "url-source",
+        version_id: "managed-url-version-1",
+        original_url: "https://example.com/evidence",
+        final_url: "https://example.com/evidence",
+        fetched_at: "2026-08-21T14:01:00.000Z",
+        kind: "generic",
+      },
+    ]);
+    const inventory = await store.inspectManagedCandidateKnowledgeFiles();
+    expect(inventory.verifiedManagedFileCount).toBe(1);
+    expect(JSON.stringify(inventory)).not.toContain("example.com");
+    expect(
+      queryDatabase(
+        root,
+        "SELECT operation_id, state FROM candidate_knowledge_managed_write_events ORDER BY operation_id, sequence",
+      ),
+    ).toEqual([
+      { operation_id: expect.any(String), state: "targeted" },
+      { operation_id: expect.any(String), state: "published" },
+      { operation_id: expect.any(String), state: "committed" },
+      { operation_id: expect.any(String), state: "completed" },
+    ]);
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(reopened.listCandidateKnowledgeSources("ckb-default")).resolves.toMatchObject([
+      { id: "url-source", kind: "url" },
+    ]);
+    await reopened.close();
+
+    const afterReopen = await openCandidateKnowledgeStore(root);
+    const beforeSources = await snapshotSourcesTree(root);
+    await expect(
+      afterReopen.createManagedCandidateKnowledgeUrlSource(
+        {
+          id: "mismatched-url-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "url",
+          displayName: "Mismatched remote evidence",
+          createdAt,
+        },
+        managedUrlVersion(body, {
+          id: "mismatched-url-version",
+          checksum: "0".repeat(64),
+        }),
+      ),
+    ).rejects.toThrow(/integrity metadata/i);
+    await expect(snapshotSourcesTree(root)).resolves.toEqual(beforeSources);
+    expect(
+      queryDatabase(
+        root,
+        "SELECT COUNT(*) AS count FROM candidate_knowledge_managed_write_operations",
+      ),
+    ).toEqual([{ count: 1 }]);
+    await afterReopen.close();
   });
 
   it("remembers one canonical origin binding for a managed create and scopes reads", async () => {
@@ -762,7 +871,7 @@ describe("portable candidate knowledge store", () => {
     await store.close();
     mutateDatabase(
       root,
-      "DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version IN (8, 9, 10, 11)",
+      "DROP TABLE candidate_knowledge_source_url_provenance; DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version IN (8, 9, 10, 11, 12)",
     );
 
     const migrated = await openCandidateKnowledgeStore(root);

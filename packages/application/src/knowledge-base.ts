@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { lstat } from "node:fs/promises";
 import { basename } from "node:path";
 
@@ -12,7 +12,7 @@ import {
   createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
 } from "@draft-loop/domain";
-import { ingestFile } from "@draft-loop/ingestion";
+import { ingestFile, ingestUrl } from "@draft-loop/ingestion";
 import type {
   CandidateKnowledgeSourceRecord,
   CandidateKnowledgeSourceRefreshObservationRecord,
@@ -24,7 +24,9 @@ import {
   type CandidateKnowledgeStoreHandle,
   initializeCandidateKnowledgeStore,
   type ManagedCandidateKnowledgeFileInventory,
+  type ManagedCandidateKnowledgeUrlVersionInput,
   maximumManagedCandidateKnowledgeFileBytes,
+  maximumManagedCandidateKnowledgeUrlResponseBytes,
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
 
@@ -93,6 +95,14 @@ export interface ImportKnowledgeSourceFileCommand {
   readonly knowledgeBaseId: string;
   readonly sourcePath: string;
   readonly displayName?: string;
+}
+
+export interface ImportKnowledgeSourceUrlCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly url: string;
+  readonly displayName?: string;
+  readonly approved: boolean;
 }
 
 export interface AppendKnowledgeSourceFileVersionCommand {
@@ -272,6 +282,9 @@ export interface CandidateKnowledgeStoreService {
   readonly importKnowledgeSourceFile: (
     command: ImportKnowledgeSourceFileCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
+  readonly importKnowledgeSourceUrl: (
+    command: ImportKnowledgeSourceUrlCommand,
+  ) => Promise<CandidateKnowledgeSourceWriteResult>;
   readonly appendKnowledgeSourceFileVersion: (
     command: AppendKnowledgeSourceFileVersionCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
@@ -310,6 +323,7 @@ export interface CandidateKnowledgeStoreServiceDependencies {
   readonly initialize?: typeof initializeCandidateKnowledgeStore;
   readonly open?: typeof openCandidateKnowledgeStore;
   readonly ingestFile?: typeof ingestFile;
+  readonly ingestUrl?: typeof ingestUrl;
   /** @internal Narrow read-only seam for deterministic origin status checks. */
   readonly lstat?: typeof lstat;
 }
@@ -320,6 +334,7 @@ interface ResolvedDependencies {
   readonly initialize: typeof initializeCandidateKnowledgeStore;
   readonly open: typeof openCandidateKnowledgeStore;
   readonly ingestFile: typeof ingestFile;
+  readonly ingestUrl: typeof ingestUrl;
   readonly lstat: typeof lstat;
 }
 
@@ -363,6 +378,10 @@ function importFailure(): Error {
   return new Error("The selected candidate knowledge source file could not be imported.");
 }
 
+function importUrlFailure(): Error {
+  return new Error("The selected candidate knowledge source URL could not be imported.");
+}
+
 function appendFileVersionFailure(): Error {
   return new Error(
     "The selected candidate knowledge source file could not be added as a new version.",
@@ -393,6 +412,73 @@ async function ingestManagedCandidateKnowledgeFile(
     throw failure();
   }
   return normalized;
+}
+
+async function ingestManagedCandidateKnowledgeUrl(
+  ingest: typeof ingestUrl,
+  url: string,
+): Promise<NonNullable<Awaited<ReturnType<typeof ingestUrl>>["source"]>> {
+  let ingestion: Awaited<ReturnType<typeof ingestUrl>>;
+  try {
+    ingestion = await ingest(url, { approved: true });
+  } catch {
+    throw importUrlFailure();
+  }
+  const normalized = ingestion.source;
+  const provenance = normalized?.url;
+  const responseBytes = normalized?.urlResponseBytes;
+  const checksum =
+    responseBytes instanceof Uint8Array
+      ? createHash("sha256").update(responseBytes).digest("hex")
+      : "";
+  const validUrl = (value: unknown): value is string => {
+    if (typeof value !== "string" || value.trim() === "") return false;
+    try {
+      const parsed = new URL(value);
+      return (
+        parsed.protocol === "https:" &&
+        parsed.username === "" &&
+        parsed.password === "" &&
+        parsed.hash === "" &&
+        parsed.hostname !== ""
+      );
+    } catch {
+      return false;
+    }
+  };
+  const validKind =
+    provenance?.kind === "github" ||
+    provenance?.kind === "certification" ||
+    provenance?.kind === "profile" ||
+    provenance?.kind === "portfolio" ||
+    provenance?.kind === "job-description" ||
+    provenance?.kind === "generic";
+  if (
+    normalized === null ||
+    ingestion.issues.length > 0 ||
+    normalized.issues.length > 0 ||
+    normalized.chunks.length === 0 ||
+    normalized.chunks.some((chunk) => chunk.text.trim() === "") ||
+    provenance === undefined ||
+    !validUrl(provenance.originalUrl) ||
+    !validUrl(provenance.finalUrl) ||
+    typeof provenance.fetchedAt !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u.test(
+      provenance.fetchedAt,
+    ) ||
+    Number.isNaN(Date.parse(provenance.fetchedAt)) ||
+    !validKind ||
+    !(responseBytes instanceof Uint8Array) ||
+    responseBytes.byteLength !== normalized.sizeBytes ||
+    responseBytes.byteLength > maximumManagedCandidateKnowledgeUrlResponseBytes ||
+    normalized.checksum !== checksum
+  ) {
+    throw importUrlFailure();
+  }
+  return {
+    ...normalized,
+    urlResponseBytes: new Uint8Array(responseBytes),
+  };
 }
 
 function errorCode(error: unknown): unknown {
@@ -1056,6 +1142,7 @@ function resolveDependencies(
     initialize: dependencies.initialize ?? initializeCandidateKnowledgeStore,
     open: dependencies.open ?? openCandidateKnowledgeStore,
     ingestFile: dependencies.ingestFile ?? ingestFile,
+    ingestUrl: dependencies.ingestUrl ?? ingestUrl,
     lstat: dependencies.lstat ?? lstat,
   };
 }
@@ -1246,6 +1333,63 @@ export function createCandidateKnowledgeStoreService(
             sizeBytes: normalized.sizeBytes,
             createdAt,
           });
+          return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
+        },
+      );
+    },
+    importKnowledgeSourceUrl: async (command) => {
+      if (command.approved !== true) throw importUrlFailure();
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const url = requireText(command.url, "Candidate knowledge source URL");
+      let canonicalRequestedUrl: string;
+      try {
+        canonicalRequestedUrl = new URL(url).href;
+      } catch {
+        throw importUrlFailure();
+      }
+      const displayName = sourceDisplayName(
+        command.displayName ?? "Imported URL source",
+        command.displayName,
+      );
+      const knowledgeBase = await useHandle(
+        () => resolved.open(storeRoot),
+        (handle) => handle.getCandidateKnowledgeBase(knowledgeBaseId),
+      );
+      if (
+        knowledgeBase === undefined ||
+        knowledgeBase.id !== knowledgeBaseId ||
+        knowledgeBase.state !== "active"
+      ) {
+        throw importUrlFailure();
+      }
+      const normalized = await ingestManagedCandidateKnowledgeUrl(resolved.ingestUrl, url);
+      const provenance = normalized.url as NonNullable<typeof normalized.url>;
+      const responseBytes = normalized.urlResponseBytes as Uint8Array;
+      if (provenance.originalUrl !== canonicalRequestedUrl) throw importUrlFailure();
+      const sourceId = requireText(resolved.generateId(), "Candidate knowledge source id");
+      const versionId = requireText(resolved.generateId(), "Candidate knowledge source version id");
+      const source = createCandidateKnowledgeSource(
+        sourceId,
+        { knowledgeBaseId, kind: "url", displayName },
+        provenance.fetchedAt,
+      );
+      const initialVersion: ManagedCandidateKnowledgeUrlVersionInput = {
+        id: versionId,
+        mediaType: normalized.mediaType,
+        checksum: normalized.checksum,
+        sizeBytes: normalized.sizeBytes,
+        createdAt: provenance.fetchedAt,
+        responseBytes,
+        provenance,
+      };
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const result = await handle.createManagedCandidateKnowledgeUrlSource(
+            source,
+            initialVersion,
+          );
           return projectSourceWriteResult(handle, knowledgeBaseId, result.source, result.created);
         },
       );
@@ -1600,6 +1744,7 @@ export const archiveKnowledgeBase = defaultService.archiveKnowledgeBase;
 export const createKnowledgeSource = defaultService.createKnowledgeSource;
 export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSourceVersion;
 export const importKnowledgeSourceFile = defaultService.importKnowledgeSourceFile;
+export const importKnowledgeSourceUrl = defaultService.importKnowledgeSourceUrl;
 export const appendKnowledgeSourceFileVersion = defaultService.appendKnowledgeSourceFileVersion;
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;
 export const listKnowledgeSourceDuplicateGroups = defaultService.listKnowledgeSourceDuplicateGroups;

@@ -28,6 +28,7 @@ import {
   type CandidateKnowledgeSourceRefreshObservationRecord,
   type CandidateKnowledgeSourceRetirementInput,
   type CandidateKnowledgeSourceRetirementRecord,
+  type CandidateKnowledgeSourceUrlProvenanceInput,
   type CandidateKnowledgeSourceVersionInput,
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
@@ -47,6 +48,7 @@ const maximumDatabaseBytes = 16 * 1024 * 1024 * 1024;
 const descriptorKeyPrefix = "candidateKnowledgeStore";
 
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
+export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
 
 export interface ManagedCandidateKnowledgeFileInventory {
@@ -98,6 +100,21 @@ export interface ManagedCandidateKnowledgeFileVersionInput
   readonly beforeStagingCleanup?: () => Promise<void>;
 }
 
+export interface ManagedCandidateKnowledgeUrlVersionInput
+  extends CandidateKnowledgeSourceVersionInput {
+  /** Exact response bytes returned by the approved URL ingestion boundary. */
+  readonly responseBytes: Uint8Array;
+  readonly provenance: CandidateKnowledgeSourceUrlProvenanceInput;
+  /** @internal Test seam for simulating a failure after file publication but before SQLite. */
+  readonly beforeDatabaseWrite?: () => Promise<void>;
+  /** @internal Test seam after the no-replace link and before its published event. */
+  readonly afterTargetPublication?: () => Promise<void>;
+  /** @internal Test seam for simulating an integrity recheck failure after SQLite. */
+  readonly beforeCommittedFileRecheck?: () => Promise<void>;
+  /** @internal Test seam for simulating a staging cleanup failure after commit. */
+  readonly beforeStagingCleanup?: () => Promise<void>;
+}
+
 export interface RebindManagedCandidateKnowledgeFileInput {
   /** Explicit runtime selection; it is never persisted in a product projection. */
   readonly sourcePath: string;
@@ -125,6 +142,10 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
   readonly createManagedCandidateKnowledgeFileSource: (
     source: CandidateKnowledgeSourceInput,
     initialVersion: ManagedCandidateKnowledgeFileVersionInput,
+  ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
+  readonly createManagedCandidateKnowledgeUrlSource: (
+    source: CandidateKnowledgeSourceInput,
+    initialVersion: ManagedCandidateKnowledgeUrlVersionInput,
   ) => Promise<CandidateKnowledgeSourceVersionWriteResult>;
   readonly appendManagedCandidateKnowledgeFileVersion: (
     knowledgeBaseId: string,
@@ -239,6 +260,13 @@ interface CapturedManagedFile {
   readonly sizeBytes: number;
   /** Canonical physical path verified during capture; never part of product projections. */
   readonly originPath: string;
+  readonly temporaryPath: string;
+  readonly temporaryIdentity: FileIdentity;
+}
+
+interface CapturedManagedBytes {
+  readonly checksum: string;
+  readonly sizeBytes: number;
   readonly temporaryPath: string;
   readonly temporaryIdentity: FileIdentity;
 }
@@ -402,6 +430,77 @@ async function captureManagedFile(
       "Managed candidate knowledge source could not be read safely.",
     );
   }
+}
+
+async function captureManagedBytes(
+  root: string,
+  input: ManagedCandidateKnowledgeUrlVersionInput,
+  operationId: string,
+): Promise<CapturedManagedBytes> {
+  const bytes = validateManagedUrlResponseBytes(input);
+  const temporaryPath = join(root, sourcesDirectory, `.intake-${managedPathSegment(operationId)}`);
+  let temporaryHandle: FileHandle | undefined;
+  let temporaryIdentity: FileIdentity | undefined;
+  try {
+    temporaryHandle = await open(temporaryPath, "wx", 0o600);
+    const temporaryDetails = await temporaryHandle.stat();
+    temporaryIdentity = { dev: temporaryDetails.dev, ino: temporaryDetails.ino };
+    await writeComplete(temporaryHandle, Buffer.from(bytes));
+    await temporaryHandle.sync();
+    await temporaryHandle.close();
+    temporaryHandle = undefined;
+    await chmodWhereSupported(temporaryPath, 0o600);
+    return {
+      checksum: input.checksum,
+      sizeBytes: bytes.byteLength,
+      temporaryPath,
+      temporaryIdentity,
+    };
+  } catch (error) {
+    await closeQuietly(temporaryHandle);
+    if (temporaryIdentity !== undefined) {
+      await removeRegularFileIfIdentityMatches(temporaryPath, temporaryIdentity);
+    }
+    if (error instanceof StorageValidationError || error instanceof StorageConflictError) {
+      throw error;
+    }
+    throw new StorageValidationError(
+      "Managed candidate knowledge source URL response could not be staged safely.",
+    );
+  }
+}
+
+function validateManagedUrlResponseBytes(
+  input: ManagedCandidateKnowledgeUrlVersionInput,
+): Uint8Array {
+  if (!(input.responseBytes instanceof Uint8Array)) {
+    throw new StorageValidationError("Managed candidate knowledge URL response bytes are invalid.");
+  }
+  if (input.responseBytes.byteLength > maximumManagedCandidateKnowledgeUrlResponseBytes) {
+    throw new StorageValidationError("Managed candidate knowledge source exceeds the size limit.");
+  }
+  const expectedChecksum = requiredManagedText(
+    input.checksum,
+    "Managed candidate knowledge source expected checksum",
+  );
+  if (!/^[0-9a-f]{64}$/.test(expectedChecksum)) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source expected checksum must be a lowercase SHA-256 checksum.",
+    );
+  }
+  if (!Number.isInteger(input.sizeBytes) || input.sizeBytes < 0) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source expected size must be a non-negative integer.",
+    );
+  }
+  const bytes = new Uint8Array(input.responseBytes);
+  const checksum = createHash("sha256").update(bytes).digest("hex");
+  if (bytes.byteLength !== input.sizeBytes || checksum !== expectedChecksum) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge source does not match its expected integrity metadata.",
+    );
+  }
+  return bytes;
 }
 
 async function verifyManagedFileOrigin(
@@ -698,9 +797,9 @@ async function verifyManagedCandidateKnowledgeFileVersions(
   root: string,
 ): Promise<void> {
   for (const version of versions) {
-    if (version.kind !== "file") {
+    if (version.kind !== "file" && version.kind !== "url") {
       throw new StorageValidationError(
-        "Candidate knowledge store contains a managed version for a non-file source.",
+        "Candidate knowledge store contains a managed version for an unsupported source.",
       );
     }
     const sourceDirectory = join(root, sourcesDirectory, managedPathSegment(version.sourceId));
@@ -912,7 +1011,7 @@ async function readDescriptor(root: string): Promise<CandidateKnowledgeStoreDesc
 }
 
 function managedVersionMetadata(
-  input: ManagedCandidateKnowledgeFileVersionInput,
+  input: CandidateKnowledgeSourceVersionInput,
 ): CandidateKnowledgeSourceVersionInput {
   return {
     id: requiredManagedText(input.id, "Managed candidate knowledge source version id"),
@@ -927,7 +1026,7 @@ function managedVersionMetadata(
 }
 
 async function cleanUncommittedManagedWrite(
-  captured: CapturedManagedFile,
+  captured: Pick<CapturedManagedFile | CapturedManagedBytes, "temporaryPath" | "temporaryIdentity">,
   finalPath: string | undefined,
   published: boolean,
   createdDirectory: boolean,
@@ -1144,6 +1243,119 @@ async function writeManagedCandidateKnowledgeFile(
   }
 }
 
+async function writeManagedCandidateKnowledgeUrlSource(
+  storage: SqliteStorage,
+  root: string,
+  source: CandidateKnowledgeSourceInput,
+  initialVersion: ManagedCandidateKnowledgeUrlVersionInput,
+): Promise<CandidateKnowledgeSourceVersionWriteResult> {
+  const sourceId = requiredManagedText(source.id, "Managed candidate knowledge source id");
+  const knowledgeBaseId = requiredManagedText(
+    source.knowledgeBaseId,
+    "Managed candidate knowledge base id",
+  );
+  if (source.kind !== "url") {
+    throw new StorageValidationError(
+      "Managed candidate knowledge URL sources require a URL source.",
+    );
+  }
+  const requestedVersion = managedVersionMetadata(initialVersion);
+  validateManagedUrlResponseBytes(initialVersion);
+  const operationId = randomUUID();
+  await storage.prepareManagedCandidateKnowledgeWrite({
+    operationId,
+    knowledgeBaseId,
+    sourceId,
+    requestedVersionId: requestedVersion.id,
+    kind: "create",
+    createdAt: requestedVersion.createdAt,
+  });
+  let captured: CapturedManagedBytes | undefined;
+  let sourceDirectoryCreated = false;
+  let targetPath: string | undefined;
+  let published = false;
+  let targeted = false;
+  let committed = false;
+  try {
+    captured = await captureManagedBytes(root, initialVersion, operationId);
+    targetPath = managedVersionPath(root, sourceId, requestedVersion.id);
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      operationId,
+      "targeted",
+      requestedVersion.id,
+      requestedVersion.createdAt,
+    );
+    targeted = true;
+    const sourceDirectory = await ensureManagedSourceDirectory(root, sourceId);
+    sourceDirectoryCreated = sourceDirectory.created;
+    await publishManagedFile(
+      captured.temporaryPath,
+      captured.temporaryIdentity,
+      targetPath,
+      captured,
+    );
+    published = true;
+    await initialVersion.afterTargetPublication?.();
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      operationId,
+      "published",
+      requestedVersion.id,
+      requestedVersion.createdAt,
+    );
+    await initialVersion.beforeDatabaseWrite?.();
+    const result = await storage.commitManagedCandidateKnowledgeWrite({
+      kind: "create",
+      operationId,
+      source: { ...source, id: sourceId, knowledgeBaseId },
+      version: requestedVersion,
+      urlProvenance: initialVersion.provenance,
+    });
+    committed = true;
+    await initialVersion.beforeCommittedFileRecheck?.();
+    await verifyManagedFile(targetPath, result.version);
+    await initialVersion.beforeStagingCleanup?.();
+    if (
+      !(await removeRegularFileIfIdentityMatches(
+        captured.temporaryPath,
+        captured.temporaryIdentity,
+      ))
+    ) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source staging cleanup could not be verified.",
+      );
+    }
+    await storage.recordManagedCandidateKnowledgeWriteEvent(
+      operationId,
+      "completed",
+      result.version.id,
+      requestedVersion.createdAt,
+    );
+    return result;
+  } catch (error) {
+    if (!committed && captured !== undefined) {
+      const cleaned = await cleanUncommittedManagedWrite(
+        captured,
+        targetPath,
+        published,
+        sourceDirectoryCreated,
+      );
+      if (cleaned && targeted) {
+        try {
+          await storage.recordManagedCandidateKnowledgeWriteEvent(
+            operationId,
+            "aborted",
+            requestedVersion.id,
+            requestedVersion.createdAt,
+          );
+        } catch {
+          // The durable prepared/published journal remains safely inspectable.
+        }
+      }
+    }
+    throw error;
+  }
+}
+
 function latestCandidateKnowledgeSourceVersion(
   versions: readonly CandidateKnowledgeSourceVersionRecord[],
   sourceId: string,
@@ -1304,6 +1516,8 @@ function createHandle(
         source,
         version: initialVersion,
       }),
+    createManagedCandidateKnowledgeUrlSource: (source, initialVersion) =>
+      writeManagedCandidateKnowledgeUrlSource(storage, root, source, initialVersion),
     appendManagedCandidateKnowledgeFileVersion: (knowledgeBaseId, sourceId, version) =>
       writeManagedCandidateKnowledgeFile(storage, root, {
         kind: "append",
