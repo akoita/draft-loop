@@ -44,6 +44,18 @@ bytes create ordered parent-linked version N+1. Bytes identical to the current
 version return a no-op, persist no new timestamp, and provide no freshness or
 last-refresh evidence.
 
+An explicitly approved local directory can be used as a bounded recursive
+intake convenience selector. The complete traversal and extraction preflight
+finishes before managed writes begin; depth, scanned entries, accepted files,
+aggregate accepted bytes, and the existing 20 MiB per-file limit are enforced.
+The root must be a real non-symlink directory outside the CKB store. Traversal
+uses canonical containment and deterministic lexical relative-path order; child
+symlinks, special entries, dot-prefixed entries/subtrees, and unsupported files
+are skipped and counted. Each accepted file becomes an independent ordinary
+`file` source with its own origin binding. The directory path is runtime-only:
+there is no directory source kind, membership relation, binding, or incremental
+refresh.
+
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address
 resolution and every redirect, bounds time and response/text size, restricts
@@ -114,8 +126,9 @@ size exactly match the latest managed version. It creates no version, blob, or
 journal event, returns no path or integrity metadata, and deletes the superseded
 path from current local state rather than retaining path history or mutating
 refresh-observation state. Changed moved
-content must first be appended explicitly. The store has no directory binding,
-background refresh, time-based freshness policy, moved-origin
+content must first be appended explicitly. Directory intake does not create a
+directory binding or membership relation. The store has no background refresh,
+time-based freshness policy, moved-origin
 discovery, automatic duplicate resolution, normalized facts, or retrieval
 indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
 version integrity metadata and returns source/version IDs without checksums,
@@ -132,7 +145,7 @@ basename differs.
 Application workspaces continue to own their current evidence and run history,
 and no CKB data is provider data.
 
-The store path and any future import path are host configuration and are excluded
+The store path and each selected file or directory import path are host configuration and are excluded
 from portable records, provider requests, content-free audit data, and
 diagnostics. Source labels may themselves reveal candidate information, and a
 checksum can correlate a record with known content. They are appropriate for a
@@ -140,7 +153,8 @@ local user-facing CKB view, not a content-free diagnostic projection. Files with
 names such as `AGENTS.md`, `.env`, or other configuration-like names remain
 inert, untrusted candidate data during initial intake and version append; their
 names or contents cannot become application instructions, executable
-configuration, provider policy, or permissions.
+configuration, provider policy, or permissions. This remains true for files
+selected through bounded directory intake.
 
 The CKB SQLite file and managed raw blobs are plaintext. DraftLoop applies
 restrictive permissions where supported, but permissions are best-effort and
@@ -221,8 +235,8 @@ portable CKB store. Deleting the selected original or an application workspace
 does not delete the managed CKB copy. A SQLite-only backup is not a complete CKB
 backup because it omits managed raw blobs. Complete deletion across raw,
 unknown, derived, backed-up, and exported data and CKB backup/export/restore
-remain future privacy boundaries and must not be implied by managed-file intake
-or manual version append. Repair, lock/lease writer coordination, cleanup and
+remain future privacy boundaries and must not be implied by managed-file intake,
+bounded directory intake, or manual version append. Repair, lock/lease writer coordination, cleanup and
 approval UI, app/run CKB selection, indexing and retrieval, CLI or desktop
 controls, and origin lifecycle reporting are likewise not integrated.
 

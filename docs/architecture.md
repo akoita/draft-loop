@@ -54,7 +54,7 @@ flowchart TB
         direction LR
         Models["Anthropic + OpenAI<br/>or local compatible endpoint"]
         URL["User-approved URL fetch"]
-        LocalFile["Application-approved<br/>single local file"]
+        LocalFile["Application-approved<br/>single local file or bounded directory"]
         Export["Local Markdown · DOCX · PDF"]
     end
 
@@ -67,7 +67,7 @@ flowchart TB
     App --> WorkspaceStore
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
-    App -->|"validated add / append; origin status / refresh / rebind / inventory"| CKBStore
+    App -->|"validated file/directory add / append; origin status / refresh / rebind / inventory"| CKBStore
     CKBStore -.->|"selection and retrieval pending"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
@@ -75,7 +75,7 @@ flowchart TB
     Providers -->|"approved transmission only"| Models
     Host -->|"validated request"| URL
     URL --> Knowledge
-    LocalFile -->|"explicit approved add or version append"| App
+    LocalFile -->|"explicit approved add, append, or bounded directory intake"| App
     Host -->|"approved artifact only"| Export
 
     classDef ui fill:#e8f1ff,stroke:#2563eb,color:#172554;
@@ -93,12 +93,14 @@ flowchart TB
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
-solid CKB edge covers explicit managed-file add, approved URL intake and
-refresh, manual file-version append, and the local structural-inventory query.
-Each file write approval covers one local regular file; each URL approval covers one
-bounded validated HTTPS fetch. Extraction succeeds before persistence, and the
-application copies verified exact bytes into the portable store. Inventory is
-an explicit bounded, count-only read after normal referenced-blob validation. The dotted CKB edge
+solid CKB edge covers explicit managed-file add, bounded recursive directory
+intake, approved URL intake and refresh, manual file-version append, and the local
+structural-inventory query. Each file write approval covers one local regular
+file; a directory approval preflights one bounded real directory and still
+creates independent file sources; each URL approval covers one bounded validated
+HTTPS fetch. Extraction succeeds before persistence, and the application copies
+verified exact bytes into the portable store. Inventory is an explicit bounded,
+count-only read after normal referenced-blob validation. The dotted CKB edge
 marks the still-unintegrated workflow: application selection, retrieval, and
 provider use have not crossed that boundary yet.
 
@@ -190,6 +192,15 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   later selected path or basename differs. It does not drive retrieval or
   appear in CLI or desktop workflows. See
   [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
+- A bounded recursive directory-intake helper is a runtime-only convenience
+  selector over ordinary managed file sources. It requires a real non-symlink
+  root outside the CKB store, checks canonical containment, traverses in lexical
+  relative-path order, and preflights all extraction before any managed write.
+  Depth, scanned entries, accepted files, aggregate bytes, and the existing
+  20 MiB per-file limit are bounded. Dot-prefixed entries/subtrees, unsupported
+  files, special entries, and child symlinks are skipped and counted. The
+  component creates no directory source kind, membership relation, directory
+  binding, or incremental refresh state.
 - Managed source add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
   matching opaque bytes; file sources retain their additional regular-file and
@@ -384,7 +395,8 @@ last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
 Background refresh, time-based freshness policy, automatic moved-origin
-discovery, adapter-level refresh/rebind/duplicate controls, directory intake,
+discovery, adapter-level refresh/rebind/duplicate controls, directory
+membership/refresh,
 URL redirect history and conditional requests, automatic duplicate resolution,
 indexing and retrieval,
 application/run CKB selection, deletion, repair of missing/corrupt referenced blobs, durable

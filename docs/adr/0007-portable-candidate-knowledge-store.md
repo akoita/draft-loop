@@ -38,6 +38,12 @@ marker can logically retire a source without deleting any of that evidence.
 An approved URL intake operation uses the existing bounded HTTPS fetch boundary,
 then publishes the exact fetched response bytes under the same opaque layout and
 atomically records immutable per-version URL provenance.
+The first bounded recursive directory-intake component now reuses the local-file
+boundary as a runtime-only convenience selector: it preflights a real directory
+in deterministic lexical order, skips and counts dot-prefixed, unsupported,
+special, and child-symlink entries, and creates each accepted file as an
+independent managed file source. It does not create a directory source kind,
+membership relation, binding, or incremental refresh state.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -117,6 +123,20 @@ one file. Intake accepts only a regular file of at most 20 MiB in the five
 ingestion-supported media types: plain text, Markdown, HTML, PDF, and DOCX. The
 existing extraction and content-quality checks must succeed before any raw bytes
 or metadata are persisted.
+
+The application also exposes one explicit local directory-intake command. Its
+selected root must be a real non-symlink directory outside the CKB store. The
+ingestion component preflights the complete bounded recursive traversal and
+extraction before the application opens the store for writes: maximum depth is
+32, scanned entries are limited to 1024, accepted files to 256, aggregate
+accepted bytes to 256 MiB, and each accepted file retains the existing 20 MiB
+limit. Traversal is deterministic by lexical relative path, containment is
+checked against the canonical root, and child symlinks, special entries,
+dot-prefixed entries/subtrees, and unsupported files are skipped and counted.
+Every accepted file then becomes a new independent `file` source with its
+existing origin binding and managed journal guarantees. Repeating the command
+does not imply membership reconciliation or stable source mapping; directory
+additions, removals, bindings, and incremental refresh remain deferred.
 
 An explicit application operation can approve one local regular file as a
 manual new version of an existing file source. Every append repeats the same
@@ -313,7 +333,7 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- directory intake and directory bindings;
+- directory membership/bindings and incremental directory refresh;
 - redirect-observation history, conditional URL requests, and URL-specific
   failure or time-based readiness policy;
 - background refresh, time-based freshness policy, moved-origin discovery, and
@@ -366,6 +386,10 @@ a portable-store record must not make a workspace run read from it implicitly.
   identity. It does not yet improve application retrieval or monitor origins.
 - The application can explicitly inspect bounded structural counts without
   disclosing entry identifiers or turning unknown entries into owned residue.
+- The application can explicitly preflight a bounded recursive directory and
+  import accepted files as independent managed sources. Directory paths remain
+  runtime-only; skips and limits are counted, and no directory membership or
+  refresh claim follows from a successful import.
 - Prospective v7 journal events provide internal provenance evidence for new
   managed writes without claiming legacy or otherwise unjournaled entries.
 - Deleting an application workspace does not delete a separate CKB store, and
@@ -375,8 +399,9 @@ a portable-store record must not make a workspace run read from it implicitly.
 - A SQLite-only CKB copy is not a complete CKB backup because it
   does not include managed raw bytes. CKB deletion, backup, export, restore, and
   secure-erasure semantics remain unimplemented.
-- The architecture and threat model must be revisited before directory or URL
-  intake, retrieval cutover, export/restore, or provider use is enabled.
+- The architecture and threat model must be revisited before directory
+  membership/refresh, retrieval cutover, export/restore, or provider use is
+  enabled.
 
 ## Follow-up
 
