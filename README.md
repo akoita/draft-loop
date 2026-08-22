@@ -21,8 +21,12 @@ candidate decides what to approve and export.
 ## How DraftLoop works
 
 The workflow keeps the job description and candidate sources in a local
-workspace, then uses a bounded author–critic loop to improve a draft. The
-default cross-company pairing is Anthropic as author and OpenAI as critic.
+workspace, then applies an evidence-grounded
+[evaluator–optimizer workflow](https://github.com/anthropics/claude-cookbooks/blob/main/patterns/agents/evaluator_optimizer.ipynb):
+an author generates, an independent critic evaluates against a rubric, and
+accepted feedback drives bounded revision. The default cross-company pairing is
+Anthropic as author and OpenAI as critic. [ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md)
+records DraftLoop's adaptation and controls.
 
 ```mermaid
 flowchart LR
@@ -30,7 +34,7 @@ flowchart LR
         Inputs["Approved job requirements<br/>+ candidate sources"]
         Gate["Visible provider-transmission<br/>approval"]
         Author["Grounded author"]
-        Critic["Independent critic<br/>+ bounded revision"]
+        Critic["Independent evaluator / critic<br/>+ bounded revision"]
         Human["Human review<br/>and approval"]
         Export["Local CV export"]
         Inputs --> Gate --> Author --> Critic --> Human --> Export
@@ -120,7 +124,7 @@ pnpm test
 
 ```mermaid
 flowchart LR
-    UI["CLI / Desktop"] --> Core["Shared application and core<br/>contracts + workflow"]
+    UI["CLI / Desktop"] --> Core["Shared application and core<br/>evaluator–optimizer workflow"]
     Core --> Local["Local SQLite<br/>run history + exports"]
     Core --> Adapters["Provider adapters"]
     Adapters --> Anthropic["Approved Anthropic<br/>author route"]
