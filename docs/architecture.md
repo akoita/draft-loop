@@ -161,6 +161,14 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   groups from each source's latest version within one CKB. It returns only
   deterministically ordered source/version IDs, persists nothing, and never
   merges or removes evidence.
+  An explicit application operation can also record an immutable logical
+  retirement marker for one source. Retired sources reject version, rebind, and
+  refresh-observation writes while their source/version metadata, managed bytes,
+  binding, and last observation remain intact for audit and later retention
+  policy. Lifecycle remains separate from refresh freshness: selection and
+  retrieval must reject a retired source explicitly, and retirement neither
+  deletes indexes nor authorizes physical cleanup. Reactivation is not yet
+  defined.
   Exact paths remain absent from the portable
   descriptor, source/version metadata, manifests, journal rows, inventory,
   diagnostics, and application projections. Source identity and its sensitive

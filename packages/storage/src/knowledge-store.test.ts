@@ -455,6 +455,93 @@ describe("portable candidate knowledge store", () => {
     await store.close();
   });
 
+  it("keeps retired sources readable but rejects every mutating source path", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "candidate.md");
+    const content = "candidate evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const created = await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "retired-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt,
+      },
+      managedVersion(sourcePath, content),
+    );
+    const originBefore = await store.getCandidateKnowledgeSourceOriginBinding(
+      "ckb-default",
+      created.source.id,
+    );
+    const versionsBefore = await store.listCandidateKnowledgeSourceVersions(
+      "ckb-default",
+      created.source.id,
+    );
+    const sourcesBefore = await snapshotSourcesTree(root);
+    await expect(
+      store.getCandidateKnowledgeSourceRetirement("ckb-default", created.source.id),
+    ).resolves.toBeUndefined();
+
+    const retirement = await store.retireCandidateKnowledgeSource(
+      "ckb-default",
+      created.source.id,
+      { retiredAt: "2026-08-21T14:02:00.000Z", reason: "user-requested" },
+    );
+    expect(Object.isFrozen(retirement)).toBe(true);
+    await expect(
+      store.retireCandidateKnowledgeSource("ckb-default", created.source.id, {
+        retiredAt: "2026-08-21T14:03:00.000Z",
+        reason: "user-requested",
+      }),
+    ).rejects.toThrow(/conflicts/i);
+    await expect(
+      store.appendCandidateKnowledgeSourceVersion("ckb-default", created.source.id, {
+        id: "retired-version",
+        mediaType: "text/markdown",
+        checksum: sha256("new bytes"),
+        sizeBytes: 9,
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      store.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        created.source.id,
+        managedVersion(sourcePath, "new bytes", {
+          id: "retired-managed-version",
+          createdAt: "2026-08-21T14:03:00.000Z",
+        }),
+      ),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", created.source.id, {
+        ...managedVersion(sourcePath, content),
+        boundAt: "2026-08-21T14:03:00.000Z",
+      }),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      store.upsertCandidateKnowledgeSourceRefreshObservation("ckb-default", created.source.id, {
+        observedVersionId: created.version.id,
+        status: "current",
+        checkedAt: "2026-08-21T14:04:00.000Z",
+      }),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      store.getCandidateKnowledgeSource("ckb-default", created.source.id),
+    ).resolves.toEqual(created.source);
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", created.source.id),
+    ).resolves.toEqual(versionsBefore);
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", created.source.id),
+    ).resolves.toEqual(originBefore);
+    await expect(snapshotSourcesTree(root)).resolves.toEqual(sourcesBefore);
+    await store.close();
+  });
+
   it("rejects changed bytes before changing the binding or sources tree", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
@@ -675,7 +762,7 @@ describe("portable candidate knowledge store", () => {
     await store.close();
     mutateDatabase(
       root,
-      "DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version IN (8, 9, 10)",
+      "DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DELETE FROM schema_migrations WHERE version IN (8, 9, 10, 11)",
     );
 
     const migrated = await openCandidateKnowledgeStore(root);

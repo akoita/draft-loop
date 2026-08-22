@@ -16,6 +16,7 @@ import { ingestFile } from "@draft-loop/ingestion";
 import type {
   CandidateKnowledgeSourceRecord,
   CandidateKnowledgeSourceRefreshObservationRecord,
+  CandidateKnowledgeSourceRetirementRecord,
   CandidateKnowledgeSourceVersionRecord,
 } from "@draft-loop/storage";
 import {
@@ -140,6 +141,18 @@ export interface GetKnowledgeSourceRefreshStateCommand {
   readonly sourceId: string;
 }
 
+export interface RetireKnowledgeSourceCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+}
+
+export interface GetKnowledgeSourceRetirementCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+}
+
 export type KnowledgeSourceOriginStatus =
   | "unbound"
   | "current"
@@ -192,6 +205,22 @@ export interface KnowledgeSourceRefreshStateResult {
   readonly lastRefreshedAt?: string;
   readonly lastRefreshedVersionId?: string;
 }
+
+export interface KnowledgeSourceRetirementActiveResult {
+  readonly sourceId: string;
+  readonly status: "active";
+}
+
+export interface KnowledgeSourceRetirementRetiredResult {
+  readonly sourceId: string;
+  readonly status: "retired";
+  readonly retiredAt: string;
+  readonly reason: "user-requested";
+}
+
+export type KnowledgeSourceRetirementResult =
+  | KnowledgeSourceRetirementActiveResult
+  | KnowledgeSourceRetirementRetiredResult;
 
 /** Local application metadata; names and descriptions are not a diagnostic allowlist. */
 export interface CandidateKnowledgeStoreView {
@@ -267,6 +296,12 @@ export interface CandidateKnowledgeStoreService {
   readonly getKnowledgeSourceRefreshState: (
     command: GetKnowledgeSourceRefreshStateCommand,
   ) => Promise<KnowledgeSourceRefreshStateResult>;
+  readonly retireKnowledgeSource: (
+    command: RetireKnowledgeSourceCommand,
+  ) => Promise<KnowledgeSourceRetirementRetiredResult>;
+  readonly getKnowledgeSourceRetirement: (
+    command: GetKnowledgeSourceRetirementCommand,
+  ) => Promise<KnowledgeSourceRetirementResult>;
 }
 
 export interface CandidateKnowledgeStoreServiceDependencies {
@@ -542,6 +577,41 @@ function projectRefreshState(
     ...(observation.lastRefreshedVersionId === null
       ? {}
       : { lastRefreshedVersionId: observation.lastRefreshedVersionId }),
+  });
+}
+
+function retirementInvariantFailure(): Error {
+  return new Error("Candidate knowledge source retirement returned inconsistent storage state.");
+}
+
+function validateRetirementRecord(
+  retirement: CandidateKnowledgeSourceRetirementRecord,
+  sourceId: string,
+): void {
+  if (
+    typeof retirement !== "object" ||
+    retirement === null ||
+    retirement.sourceId !== sourceId ||
+    !isValidRefreshTimestamp(retirement.retiredAt) ||
+    retirement.reason !== "user-requested"
+  ) {
+    throw retirementInvariantFailure();
+  }
+}
+
+function projectRetirement(
+  retirement: CandidateKnowledgeSourceRetirementRecord | undefined,
+  sourceId: string,
+): KnowledgeSourceRetirementResult {
+  if (retirement === undefined) {
+    return Object.freeze({ sourceId, status: "active" as const });
+  }
+  validateRetirementRecord(retirement, sourceId);
+  return Object.freeze({
+    sourceId,
+    status: "retired" as const,
+    retiredAt: retirement.retiredAt,
+    reason: retirement.reason,
   });
 }
 
@@ -1400,6 +1470,62 @@ export function createCandidateKnowledgeStoreService(
         },
       );
     },
+    retireKnowledgeSource: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const source = await handle.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+          if (source === undefined) {
+            throw sourceNotFound(knowledgeBaseId, sourceId);
+          }
+          assertSourceInScope(source, knowledgeBaseId, sourceId);
+          const existingRetirement = await handle.getCandidateKnowledgeSourceRetirement(
+            knowledgeBaseId,
+            sourceId,
+          );
+          if (existingRetirement !== undefined) {
+            const projectedExisting = projectRetirement(existingRetirement, sourceId);
+            if (projectedExisting.status !== "retired") {
+              throw retirementInvariantFailure();
+            }
+            return projectedExisting;
+          }
+          const retirement = await handle.retireCandidateKnowledgeSource(
+            knowledgeBaseId,
+            sourceId,
+            { retiredAt: resolved.now(), reason: "user-requested" },
+          );
+          validateRetirementRecord(retirement, sourceId);
+          const projected = projectRetirement(retirement, sourceId);
+          if (projected.status !== "retired") {
+            throw retirementInvariantFailure();
+          }
+          return projected;
+        },
+      );
+    },
+    getKnowledgeSourceRetirement: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const source = await handle.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+          if (source === undefined) {
+            throw sourceNotFound(knowledgeBaseId, sourceId);
+          }
+          assertSourceInScope(source, knowledgeBaseId, sourceId);
+          return projectRetirement(
+            await handle.getCandidateKnowledgeSourceRetirement(knowledgeBaseId, sourceId),
+            sourceId,
+          );
+        },
+      );
+    },
     rebindKnowledgeSourceOrigin: async (command) => {
       const storeRoot = requireStoreRoot(command.storeRoot);
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
@@ -1480,6 +1606,8 @@ export const listKnowledgeSourceDuplicateGroups = defaultService.listKnowledgeSo
 export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const refreshKnowledgeSourceFromOrigin = defaultService.refreshKnowledgeSourceFromOrigin;
 export const getKnowledgeSourceRefreshState = defaultService.getKnowledgeSourceRefreshState;
+export const retireKnowledgeSource = defaultService.retireKnowledgeSource;
+export const getKnowledgeSourceRetirement = defaultService.getKnowledgeSourceRetirement;
 export const rebindKnowledgeSourceOrigin = defaultService.rebindKnowledgeSourceOrigin;
 export const inspectManagedCandidateKnowledgeFiles =
   defaultService.inspectManagedCandidateKnowledgeFiles;

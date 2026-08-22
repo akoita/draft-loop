@@ -150,6 +150,13 @@ duplicate groups from the latest versions within one CKB. It returns only
 deterministically ordered source/version IDs, exposes none of the integrity
 tuple used internally, persists no relationship, and never merges or removes a
 source. A later version change automatically changes the derived result.
+An explicit application operation now records an immutable logical-retirement
+marker for one source with the bounded reason `user-requested`. Retirement is
+idempotent, blocks subsequent version, rebind, and refresh-observation writes,
+and remains separate from refresh freshness. Existing source/version metadata,
+managed bytes, origin binding, observation, and journal evidence are retained;
+retirement is not physical deletion, index cleanup, or secure erasure, and no
+reactivation operation is currently exposed.
 The store retains no
 exact host paths in manifests, descriptors, journals, inventory, diagnostics,
 or application/provider projections, and retains no filename provenance,
@@ -179,7 +186,10 @@ guarded per-source refresh observations containing
 only source/version identities, bounded status, and timestamps; source/version
 scope, monotonic time, paired successful-refresh fields, immutable source
 identity, and no deletion are enforced. `stale` is derived when a newer version
-exists rather than persisted as a filesystem observation. Journal
+exists rather than persisted as a filesystem observation. SQLite migration v11
+adds the guarded logical-retirement marker: the source must belong to the
+requested active CKB, the timestamp cannot precede source creation, the only
+reason is `user-requested`, and marker update or deletion is forbidden. Journal
 records exclude origin paths, filenames, labels, checksums, source content,
 provider data, diagnostic projections, cleanup tokens, and approvals, and
 journal IDs are not exposed. Legacy v6 writes and entries without prospective
@@ -489,6 +499,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Added immutable logical source retirement as the fourth bounded #110 slice without advancing the v0.7 stage beyond component implementation | A candidate can withdraw one source from future readiness without erasing provenance. The path-free marker uses only a bounded user-requested reason, blocks later source mutations, and preserves bytes, versions, bindings, observations, and journal evidence; selection/retrieval enforcement, index cleanup, reactivation, physical deletion, adapters, and retention remain pending. |
 | 2026-08-22 | Added deterministic latest-version duplicate groups as the third bounded #110 slice without advancing the v0.7 stage beyond component implementation | Exact integrity metadata can surface redundant sources without changing their identity. The one-CKB-scoped read-only projection returns only ordered source/version IDs, persists no relationship, and grants no merge/delete authority; removal, URL/directory intake, indexing, selection, adapters, and lifecycle policy remain pending. |
 | 2026-08-22 | Persisted guarded, path-free refresh observations as the second bounded #110 slice without advancing the v0.7 stage beyond component implementation | Explicit refresh outcomes now survive restart with the exact observed source-version identity and optional last successful changed-byte refresh time. Status checks remain read-only, later manual version advances derive `stale`, and the record is last-observation evidence rather than a background or time-based freshness claim; directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair remain pending. |
 | 2026-08-22 | Added explicit exact-byte managed-file origin rebind as the first bounded #110 slice without advancing the v0.7 stage beyond component implementation | A moved origin needs a visible recovery path without allowing path changes to mutate candidate evidence. Rebind repeats ingestion and no-follow stable read/hash verification, requires an exact latest-managed-version match, replaces only sensitive local binding state, returns no path/checksum/content, creates no version/blob/journal event, and leaves automatic discovery, freshness persistence, directory/URL intake, duplicates, indexing, selection, adapters, deletion, and repair pending. |

@@ -217,6 +217,22 @@ export interface CandidateKnowledgeSourceInput {
   readonly displayName: string;
 }
 
+export const candidateKnowledgeSourceRetirementReasons = ["user-requested"] as const;
+export type CandidateKnowledgeSourceRetirementReason =
+  (typeof candidateKnowledgeSourceRetirementReasons)[number];
+
+export interface CandidateKnowledgeSourceRetirement {
+  readonly sourceId: CandidateKnowledgeSourceId;
+  readonly retiredAt: string;
+  readonly reason: CandidateKnowledgeSourceRetirementReason;
+}
+
+export interface CandidateKnowledgeSourceRetirementInput {
+  readonly sourceId: string;
+  readonly retiredAt: string;
+  readonly reason: CandidateKnowledgeSourceRetirementReason;
+}
+
 function requireCandidateKnowledgeSourceText(value: string, field: string): string {
   const normalized = value.trim();
   if (normalized === "") {
@@ -254,6 +270,22 @@ export function createCandidateKnowledgeSource(
     kind: input.kind,
     displayName: requireCandidateKnowledgeSourceText(input.displayName, "display name"),
     createdAt: requireCandidateKnowledgeSourceTimestamp(createdAt, "createdAt"),
+  };
+}
+
+export function createCandidateKnowledgeSourceRetirement(
+  input: CandidateKnowledgeSourceRetirementInput,
+): CandidateKnowledgeSourceRetirement {
+  if (!candidateKnowledgeSourceRetirementReasons.includes(input.reason)) {
+    throw new Error("Candidate knowledge source retirement reason must be user-requested.");
+  }
+  return {
+    sourceId: requireCandidateKnowledgeSourceText(
+      input.sourceId,
+      "source id",
+    ) as CandidateKnowledgeSourceId,
+    retiredAt: requireCandidateKnowledgeSourceTimestamp(input.retiredAt, "retiredAt"),
+    reason: input.reason,
   };
 }
 

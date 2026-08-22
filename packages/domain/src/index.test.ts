@@ -8,6 +8,7 @@ import {
   createAgentContextReference,
   createCandidateKnowledgeBase,
   createCandidateKnowledgeSource,
+  createCandidateKnowledgeSourceRetirement,
   createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
   createContextSnapshot,
@@ -775,6 +776,48 @@ describe("CandidateKnowledgeSource", () => {
         { knowledgeBaseId: "ckb-1", kind: "file", displayName: "Career" },
         "2026-08-21",
       ),
+    ).toThrow(/valid ISO timestamp/i);
+  });
+});
+
+describe("CandidateKnowledgeSourceRetirement", () => {
+  const createdAt = "2026-08-21T09:00:00.000Z";
+
+  it("creates the canonical user-requested marker", () => {
+    expect(
+      createCandidateKnowledgeSourceRetirement({
+        sourceId: "  source-1  ",
+        retiredAt: createdAt,
+        reason: "user-requested",
+      }),
+    ).toEqual({
+      sourceId: "source-1",
+      retiredAt: createdAt,
+      reason: "user-requested",
+    });
+  });
+
+  it("rejects unsupported reasons and malformed metadata", () => {
+    expect(() =>
+      createCandidateKnowledgeSourceRetirement({
+        sourceId: "source-1",
+        retiredAt: createdAt,
+        reason: "imported" as "user-requested",
+      }),
+    ).toThrow(/reason must be user-requested/i);
+    expect(() =>
+      createCandidateKnowledgeSourceRetirement({
+        sourceId: " ",
+        retiredAt: createdAt,
+        reason: "user-requested",
+      }),
+    ).toThrow(/source id is required/i);
+    expect(() =>
+      createCandidateKnowledgeSourceRetirement({
+        sourceId: "source-1",
+        retiredAt: "not-a-date",
+        reason: "user-requested",
+      }),
     ).toThrow(/valid ISO timestamp/i);
   });
 });

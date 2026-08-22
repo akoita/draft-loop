@@ -10,6 +10,8 @@ import {
   candidateKnowledgeBaseSchema,
   candidateKnowledgeBaseStateSchema,
   candidateKnowledgeSourceKindSchema,
+  candidateKnowledgeSourceRetirementReasonSchema,
+  candidateKnowledgeSourceRetirementSchema,
   candidateKnowledgeSourceSchema,
   candidateKnowledgeSourceVersionSchema,
   candidateKnowledgeStoreSchema,
@@ -626,6 +628,33 @@ describe("candidate knowledge source schemas", () => {
     expect(() =>
       candidateKnowledgeSourceSchema.parse({ ...valid, createdAt: ` ${createdAt} ` }),
     ).toThrow(/valid ISO timestamp/i);
+  });
+
+  it("parses and validates source retirement markers", () => {
+    expect(candidateKnowledgeSourceRetirementReasonSchema.parse("user-requested")).toBe(
+      "user-requested",
+    );
+    expect(
+      candidateKnowledgeSourceRetirementSchema.parse({
+        sourceId: "  source-1  ",
+        retiredAt: createdAt,
+        reason: "user-requested",
+      }),
+    ).toEqual({ sourceId: "source-1", retiredAt: createdAt, reason: "user-requested" });
+    expect(() =>
+      candidateKnowledgeSourceRetirementSchema.parse({
+        sourceId: "source-1",
+        retiredAt: "not-a-date",
+        reason: "user-requested",
+      }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeSourceRetirementSchema.parse({
+        sourceId: "source-1",
+        retiredAt: createdAt,
+        reason: "imported",
+      }),
+    ).toThrow();
   });
 
   it("normalizes immutable first and child version metadata", () => {
