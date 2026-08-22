@@ -52,13 +52,17 @@ managed create remembers the canonical physical origin path from its verified
 capture in sensitive local-only SQLite state; a later selected append path never
 replaces it. The binding is copied with the database but is not portable
 continuity, becomes stale when the store moves machines or the origin
-moves/disappears, is not yet refreshed/rebound/status-checked, and is never
-provider-facing. Source identity and its sensitive label stay stable even if a
+moves/disappears, is not refreshed/rebound, and is never provider-facing. An
+explicit read-only check can report unbound, current, changed, missing, or
+inaccessible with source identity and observation time only. It never returns
+the path or observed metadata/content, never mutates the source, binding, or
+versions, and never persists freshness; current is point-in-time only. Source
+identity and its sensitive label stay stable even if a
 later path or basename differs. Exact host paths remain excluded from the
 manifest, descriptor, journal, inventory, diagnostics, application
 serialization, provider requests, filename provenance, filename-derived
-physical names, and URLs. Automatic refresh, freshness/last-refresh,
-moved/deleted/inaccessible reporting, directory and URL intake, cross-source duplicate relationships,
+physical names, and URLs. Automatic refresh, persisted freshness/last-refresh,
+moved-origin discovery, rebind controls, directory and URL intake, cross-source duplicate relationships,
 indexes/retrieval, app/run CKB selection, CLI/desktop controls, deletion,
 cleanup/reconciliation, and complete backup/export/restore have not moved into
 that boundary.
@@ -102,7 +106,7 @@ threat-model review. They are not covered by the controls below.
 | Managed-write operation to internal ownership journal | Prospective ownership provenance and operation lifecycle                                           | Append-only opaque intent before staging; resolved target before publication; monotonic publication and atomic-commit events; completion after staging cleanup; terminal non-owning no-op; opaque operation-derived staging names; no sensitive source metadata, cleanup token, approval, diagnostic, provider, or application projection | Same-user database tampering remains possible; legacy and unjournaled entries stay unknown; journal evidence alone cannot coordinate writers or authorize cleanup                                                                        |
 | Application to local endpoint                         | Candidate data, credentials, and model output                                                      | Adapter contract, structured output validation, and explicit configuration                                                                                                                                                                                                                                                                | “Local” does not prove same-machine operation, privacy, identity, or trustworthy retention                                                                                                                                               |
 | Application to local history and retrieval            | Run metadata, evidence chunks, findings, decisions, and artifacts                                  | SQLite persistence, workspace identifiers, checksums, immutable records, FTS scoping, and `assertSafePayload` in `packages/storage/src/index.ts`                                                                                                                                                                                          | Host compromise, incomplete field checks, deletion bugs, or query mistakes can expose or mix workspace data                                                                                                                              |
-| User-approved local file to portable CKB store        | Raw candidate bytes, stable store/source identity, local labels, checksums, and lifecycle metadata | Explicit add/manual append operations; repeated regular-file/type/20 MiB/extraction/stable-copy gates; parent-linked changed versions; identical-byte no-op; opaque ID-derived no-replace copy; version-6 managed marker; no persisted host path or filename provenance; best-effort restrictive permissions                              | Plaintext bytes and labels remain readable to same-user processes and backups; crashes or concurrency can leave unreferenced residue; origin monitoring, selection, retrieval, reconciliation, and lifecycle controls are not integrated |
+| User-approved local file to portable CKB store        | Raw candidate bytes, stable store/source identity, local labels, checksums, and lifecycle metadata | Explicit add/manual append operations; repeated regular-file/type/20 MiB/extraction/stable-copy gates; parent-linked changed versions; identical-byte no-op; opaque ID-derived no-replace copy; version-6 managed marker; local-only path binding; explicit path-free, non-persisted origin status; best-effort restrictive permissions | Plaintext bytes and labels remain readable to same-user processes and backups; point-in-time status can race later changes; crashes or concurrency can leave unreferenced residue; refresh, rebind, selection, retrieval, reconciliation, and lifecycle controls are not integrated |
 | Backup, restore, retention purge, and diagnostics     | Copies of workspace data and operational metadata                                                  | Explicit local operations, integrity checks, confirmed purge, and content-free diagnostic design                                                                                                                                                                                                                                          | Backups can outlive workspace deletion; destination permissions and restore overwrite behavior need platform acceptance                                                                                                                  |
 | Approved artifact to renderer/export                  | Links, HTML/Markdown, and generated files                                                          | Local rendering, controlled formats, checksum records, and an approval boundary                                                                                                                                                                                                                                                           | Unsafe links, images, markup, or viewer behavior can create egress or content-spoofing risks                                                                                                                                             |
 | Source repository, CI, and release artifacts          | Credentials, fixtures, dependencies, build output, and update trust                                | Secret-free fixtures, lockfile, lint/type/test gates, license and secret scans, checksums, and SBOM generation                                                                                                                                                                                                                            | A compromised dependency, CI credential, unsigned installer, or unsafe update can alter releases                                                                                                                                         |
@@ -124,6 +128,7 @@ portable CKB store (logical UUID + CKB/source/version metadata + managed raw blo
 approved local file ----> journaled add/manual append ----> immutable raw version
                                 |
                                 +----> internal prospective operation events
+remembered origin ------> explicit ephemeral status check
      . . . future lifecycle, selection, retrieval, and provider integration . . .
 ```
 
@@ -219,7 +224,7 @@ The following remain open during the application-grade CV stage:
 - retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector/hybrid retrieval is enabled by default;
 - portable continuity for the local CKB origin binding, automatic refresh,
-  freshness/last-refresh, moved/deleted/inaccessible-origin reporting,
+  persisted freshness/last-refresh, moved-origin discovery and rebind controls,
   directory and URL intake, cross-source duplicate relationships, indexing and
   retrieval, application/run selection, CLI/desktop controls, repair of
   missing/corrupt referenced blobs, lock/lease writer coordination, deletion,

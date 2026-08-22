@@ -122,13 +122,17 @@ quarantined, or repaired. Successful managed creates now retain the canonical
 verified origin path in a separate sensitive local-only SQLite binding table;
 manual appends never update it. The binding is copied with the database but is
 not portable continuity, becomes stale when the store moves machines or the
-origin moves/disappears, is not yet refreshed/rebound/status-checked, and is
-never provider-facing. The store retains no exact host paths in manifests,
-descriptors, journals, inventory, diagnostics, or application/provider
-projections, and retains no filename provenance, filename-derived physical
-names, or URLs. It remains independent of application workspaces and run
-history. It does not yet automatically refresh or report freshness, last
-refresh, or moved/deleted/inaccessible origins; ingest directories or URLs; relate
+origin moves/disappears, is not refreshed/rebound, and is never provider-facing.
+An explicit read-only application check now classifies one source as unbound,
+current, changed, missing, or inaccessible without returning the path,
+checksum, content, label, or observed file metadata. It does not persist the
+observation or create freshness/last-refresh state; current is only a
+point-in-time byte match with the latest stored version. The store retains no
+exact host paths in manifests, descriptors, journals, inventory, diagnostics,
+or application/provider projections, and retains no filename provenance,
+filename-derived physical names, or URLs. It remains independent of application workspaces and run
+history. It does not yet automatically refresh, persist freshness or last
+refresh, discover moved origins, or rebind them; ingest directories or URLs; relate
 cross-source duplicates; index or retrieve; select a CKB for an application or
 run; expose CLI/desktop controls; repair missing/corrupt referenced blobs;
 coordinate writers through locks/leases; delete, clean up, or reconcile unknown
@@ -428,6 +432,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Added an explicit, read-only managed-file origin status check without advancing #78 or the application-grade stage beyond component implementation                                                                       | A local caller can distinguish unbound, current, changed, missing, and inaccessible origins without path/checksum/content projection or mutation; the observation is not persisted, “current” is point-in-time only, and automatic refresh, rebind, moved-origin discovery, directory/URL intake, selection, retrieval, deletion, and UI integration remain pending                                                                                 |
 | 2026-08-22 | Added remembered local-file origin bindings for successful managed CKB creates in SQLite migration v8 without advancing the application-grade stage beyond component implementation                                       | The canonical verified origin is useful local state but is sensitive, stale when the store or origin moves, not portable continuity, not yet refreshable/rebindable/status-checked, and never provider-facing; manual appends and legacy v7 sources remain unbound                                                                                                                                                                            |
 | 2026-08-21 | Added the prospective internal managed-write ownership journal in SQLite migration v7 without advancing #78 or the application-grade stage beyond component implementation                                                | New managed writes gain append-only intent/publication/commit/completion provenance and opaque operation-derived staging names, while legacy or unjournaled entries remain unknown and cleanup still requires writer coordination plus explicit visible approval                                                                                                                                                                              |
 | 2026-08-21 | Added an explicit bounded, count-only structural inventory query for the portable store without advancing the application-grade stage beyond component implementation                                                     | Inventory validates referenced blobs and classifies `sources/` entries without names, content, traversal, mutation, or provider exposure; unreferenced entries lack authenticated ownership evidence, so repair and cleanup remain blocked on a future durable journal, writer coordination, and explicit approval                                                                                                                            |
