@@ -64,6 +64,40 @@ function successfulIngestion(
   };
 }
 
+function successfulUrlIngestion(
+  originalUrl: string,
+  bytes: Uint8Array,
+  fetchedAt: string,
+  finalUrl = originalUrl,
+): IngestionResult {
+  const responseChecksum = createHash("sha256").update(bytes).digest("hex");
+  const provenance = { originalUrl, finalUrl, fetchedAt, kind: "generic" as const };
+  return {
+    source: {
+      source: { path: originalUrl, mediaType: "text/plain", url: provenance },
+      mediaType: "text/plain",
+      checksum: responseChecksum,
+      sizeBytes: bytes.byteLength,
+      urlResponseBytes: bytes,
+      text: new TextDecoder().decode(bytes),
+      chunks: [
+        {
+          id: "chunk-1",
+          sourcePath: originalUrl,
+          mediaType: "text/plain",
+          checksum: responseChecksum,
+          locator: { lineStart: 1, lineEnd: 1 },
+          text: new TextDecoder().decode(bytes),
+          url: provenance,
+        },
+      ],
+      issues: [],
+      url: provenance,
+    },
+    issues: [],
+  };
+}
+
 describe("candidate knowledge store application service", () => {
   let temporaryParent: string;
   let storeRoot: string;
@@ -410,6 +444,290 @@ describe("candidate knowledge store application service", () => {
     expect(Object.isFrozen(imported)).toBe(true);
     expect(Object.isFrozen(imported.source)).toBe(true);
     expect(Object.isFrozen(imported.versions)).toBe(true);
+  });
+
+  it("refreshes changed URL bytes with immutable provenance and restart-safe lineage", async () => {
+    const originalUrl = "https://example.com/candidate";
+    const firstBytes = new Uint8Array([65, 66, 67]);
+    const secondBytes = new Uint8Array([68, 69, 70, 71]);
+    const ingestUrl = vi
+      .fn<typeof import("@draft-loop/ingestion").ingestUrl>()
+      .mockResolvedValueOnce(successfulUrlIngestion(originalUrl, firstBytes, createdAt))
+      .mockResolvedValueOnce(
+        successfulUrlIngestion(
+          originalUrl,
+          secondBytes,
+          changedAt,
+          "https://cdn.example.com/candidate",
+        ),
+      );
+    const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-1", "version-2"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      ingestUrl,
+      now: () => changedAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      url: originalUrl,
+      approved: true,
+    });
+
+    const refreshed = await service.refreshKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      approved: true,
+    });
+    expect(refreshed).toEqual({
+      sourceId: "source-uuid",
+      checkedAt: changedAt,
+      status: "refreshed",
+      versionId: "version-2",
+    });
+    expect(Object.isFrozen(refreshed)).toBe(true);
+    expect(ingestUrl).toHaveBeenLastCalledWith(originalUrl, { approved: true });
+
+    const manifest = await service.listKnowledgeSourceManifests({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+    });
+    expect(manifest[0]?.versions).toMatchObject([
+      { id: "version-1", version: 1 },
+      { id: "version-2", version: 2, createdAt: changedAt },
+    ]);
+    const reopened = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        reopened.getCandidateKnowledgeSourceUrlProvenance(
+          "default-ckb-uuid",
+          "source-uuid",
+          "version-2",
+        ),
+      ).resolves.toMatchObject({
+        originalUrl,
+        finalUrl: "https://cdn.example.com/candidate",
+        fetchedAt: changedAt,
+      });
+      await expect(
+        reopened.getCandidateKnowledgeSourceRefreshObservation("default-ckb-uuid", "source-uuid"),
+      ).resolves.toMatchObject({
+        observedVersionId: "version-2",
+        lastRefreshedVersionId: "version-2",
+        lastRefreshedAt: changedAt,
+      });
+    } finally {
+      await reopened.close();
+    }
+  });
+
+  it("treats identical URL bytes and redirect-only drift as a current no-op", async () => {
+    const originalUrl = "https://example.com/candidate";
+    const bytes = new Uint8Array([65, 66, 67]);
+    const ingestUrl = vi
+      .fn<typeof import("@draft-loop/ingestion").ingestUrl>()
+      .mockResolvedValueOnce(successfulUrlIngestion(originalUrl, bytes, createdAt))
+      .mockResolvedValueOnce(
+        successfulUrlIngestion(originalUrl, bytes, changedAt, "https://cdn.example.com/candidate"),
+      );
+    const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-1", "unused-v2"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      ingestUrl,
+      now: () => changedAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      url: originalUrl,
+      approved: true,
+    });
+    const current = await service.refreshKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      approved: true,
+    });
+    expect(current).toEqual({ sourceId: "source-uuid", checkedAt: changedAt, status: "current" });
+    expect(
+      await service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).toMatchObject([{ versions: [{ id: "version-1", version: 1 }] }]);
+    await expect(
+      service.getKnowledgeSourceRefreshState({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toEqual({
+      sourceId: "source-uuid",
+      status: "current",
+      checkedAt: changedAt,
+      observedVersionId: "version-1",
+    });
+  });
+
+  it("requires approval and records URL refresh failures as inaccessible without leakage", async () => {
+    const originalUrl = "https://example.com/private?token=secret";
+    const bytes = new Uint8Array([65, 66, 67]);
+    const ingestUrl = vi
+      .fn<typeof import("@draft-loop/ingestion").ingestUrl>()
+      .mockResolvedValueOnce(successfulUrlIngestion(originalUrl, bytes, createdAt))
+      .mockRejectedValueOnce(new Error(`fetch failed for ${originalUrl}`));
+    const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-1"];
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      ingestUrl,
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      url: originalUrl,
+      approved: true,
+    });
+    await expect(
+      service.refreshKnowledgeSourceUrl({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+        approved: false,
+      }),
+    ).rejects.toThrow("could not be refreshed");
+    expect(ingestUrl).toHaveBeenCalledOnce();
+
+    now = changedAt;
+    const inaccessible = await service.refreshKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      approved: true,
+    });
+    expect(inaccessible).toEqual({
+      sourceId: "source-uuid",
+      checkedAt: changedAt,
+      status: "inaccessible",
+    });
+    expect(Object.isFrozen(inaccessible)).toBe(true);
+    expect(JSON.stringify(inaccessible)).not.toContain(originalUrl);
+    await expect(
+      service.getKnowledgeSourceRefreshState({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toEqual({
+      sourceId: "source-uuid",
+      status: "inaccessible",
+      checkedAt: changedAt,
+      observedVersionId: "version-1",
+    });
+  });
+
+  it("rejects malformed URL refresh preflight state without fetching or observing", async () => {
+    const originalUrl = "https://example.com/preflight";
+    const ingestUrl = vi.fn(async () =>
+      successfulUrlIngestion(originalUrl, new Uint8Array([1]), createdAt),
+    );
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "good-source",
+      "good-version",
+      "file-source",
+      "file-version",
+      "retired-source",
+      "retired-version",
+      "archived-ckb",
+      "archived-source",
+      "archived-version",
+      "missing-provenance-source",
+      "missing-provenance-version",
+    ];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      ingestUrl,
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      url: originalUrl,
+      approved: true,
+    });
+    await service.createKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      kind: "file",
+      displayName: "File source",
+      mediaType: "text/plain",
+      checksum: "a".repeat(64),
+      sizeBytes: 1,
+    });
+    await service.importKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      url: originalUrl,
+      approved: true,
+    });
+    await service.retireKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "retired-source",
+    });
+    const archived = await service.createKnowledgeBase({
+      storeRoot,
+      displayName: "Archived evidence",
+    });
+    await service.importKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "archived-ckb",
+      url: originalUrl,
+      approved: true,
+    });
+    await service.archiveKnowledgeBase({
+      storeRoot,
+      knowledgeBaseId: archived.knowledgeBases[1]?.id ?? "",
+    });
+    await service.createKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      kind: "url",
+      displayName: "Missing provenance",
+      mediaType: "text/plain",
+      checksum: "b".repeat(64),
+      sizeBytes: 1,
+    });
+
+    const cases = [
+      ["file-source", "default-ckb-uuid"],
+      ["retired-source", "default-ckb-uuid"],
+      ["archived-source", "archived-ckb"],
+      ["missing-provenance-source", "default-ckb-uuid"],
+    ] as const;
+    for (const [sourceId, knowledgeBaseId] of cases) {
+      await expect(
+        service.refreshKnowledgeSourceUrl({
+          storeRoot,
+          knowledgeBaseId,
+          sourceId,
+          approved: true,
+        }),
+      ).rejects.toThrow("could not be refreshed");
+      await expect(
+        service.getKnowledgeSourceRefreshState({ storeRoot, knowledgeBaseId, sourceId }),
+      ).resolves.toEqual({ sourceId, status: "unobserved" });
+    }
+    expect(ingestUrl).toHaveBeenCalledTimes(3);
+    expect(JSON.stringify(ingestUrl.mock.calls)).not.toContain("refresh");
   });
 
   it("requires URL approval and active scope before invoking ingestion", async () => {

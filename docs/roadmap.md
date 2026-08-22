@@ -163,7 +163,14 @@ the opaque managed-source layout. It atomically records immutable local
 per-version provenance for the approved original URL, validated final redirect,
 fetch time, and bounded URL kind. Generic manifests, journals, inventory,
 diagnostics, errors, and provider requests expose none of those URL fields. This
-does not yet provide URL refresh or redirect/failure readiness policy.
+is extended by an explicitly approved URL refresh operation that re-fetches only
+the stored original URL after active-scope, kind, provenance, and retirement
+checks. Changed bytes append a parent-linked exact snapshot with new per-version
+redirect provenance; identical bytes, including redirect-only drift, are a
+current no-op. Valid approved fetch/extraction failures persist only a URL-free
+`inaccessible` observation. This does not provide background or time-based
+freshness, redirect history, conditional requests, or URL-specific failure
+taxonomy.
 The store retains no
 exact host paths or URLs in manifests, descriptors, journals, inventory,
 diagnostics, or application/provider projections, and retains no filename
@@ -171,7 +178,7 @@ provenance or filename-derived physical names. Exact URLs exist only in the
 sensitive local provenance table. It remains independent of application workspaces and run
 history. It does not yet refresh in the background, apply a time-based freshness
 policy, automatically discover moved origins, expose refresh/rebind/duplicate
-controls through product adapters, ingest directories, or refresh URLs;
+controls through product adapters or ingest directories;
 automatically resolve duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
@@ -510,6 +517,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Added explicitly approved URL refresh as the sixth bounded #110 slice without advancing the v0.7 stage beyond component implementation | A managed URL source can now re-fetch only its immutable original URL after lifecycle preflight, append changed exact bytes with per-version redirect provenance, treat identical bytes as current, and record URL-free inaccessible attempts. Directory traversal, redirect history, conditional requests, adapters, indexing, selection, and deletion remain pending. |
 | 2026-08-22 | Added exact-byte approved URL intake as the fifth bounded #110 slice without advancing the v0.7 stage beyond component implementation | One explicitly approved URL can now cross the established HTTPS/DNS/redirect/size/extraction boundary into an opaque immutable CKB snapshot with local per-version original/final URL provenance. Generic results and operational records remain URL-free; URL refresh/readiness, directory traversal, indexing, selection, adapters, and deletion remain pending. |
 | 2026-08-22 | Added immutable logical source retirement as the fourth bounded #110 slice without advancing the v0.7 stage beyond component implementation | A candidate can withdraw one source from future readiness without erasing provenance. The path-free marker uses only a bounded user-requested reason, blocks later source mutations, and preserves bytes, versions, bindings, observations, and journal evidence; selection/retrieval enforcement, index cleanup, reactivation, physical deletion, adapters, and retention remain pending. |
 | 2026-08-22 | Added deterministic latest-version duplicate groups as the third bounded #110 slice without advancing the v0.7 stage beyond component implementation | Exact integrity metadata can surface redundant sources without changing their identity. The one-CKB-scoped read-only projection returns only ordered source/version IDs, persists no relationship, and grants no merge/delete authority; removal, URL/directory intake, indexing, selection, adapters, and lifecycle policy remain pending. |

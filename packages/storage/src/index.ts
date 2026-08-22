@@ -208,6 +208,10 @@ export type ManagedCandidateKnowledgeWriteCommitInput =
       readonly kind: "append";
       readonly operationId: string;
       readonly version: CandidateKnowledgeSourceVersionInput;
+      /** Required for URL appends; forbidden for file appends. */
+      readonly urlProvenance?: CandidateKnowledgeSourceUrlProvenanceInput;
+      /** Runtime lineage guard used by URL refresh; never persisted. */
+      readonly expectedCurrentVersionId?: string;
     };
 
 export interface CandidateKnowledgeBaseStoragePort {
@@ -250,6 +254,11 @@ export interface CandidateKnowledgeBaseStoragePort {
     knowledgeBaseId: string,
     sourceId: string,
   ) => Promise<readonly CandidateKnowledgeSourceVersionRecord[]>;
+  readonly getCandidateKnowledgeSourceUrlProvenance: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ) => Promise<CandidateKnowledgeSourceUrlProvenanceRecord | undefined>;
   readonly getCandidateKnowledgeSourceRefreshObservation: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -2149,9 +2158,9 @@ export class SqliteStorage
         }
       } else {
         const source = this.requireCandidateKnowledgeSource(knowledgeBaseId, sourceId);
-        if (source.kind !== "file") {
+        if (source.kind !== "file" && source.kind !== "url") {
           throw new StorageValidationError(
-            "managed candidate knowledge source versions require a file source",
+            "managed candidate knowledge source versions require a supported source",
           );
         }
         this.requireCandidateKnowledgeSourceActive(sourceId);
@@ -2206,6 +2215,7 @@ export class SqliteStorage
   public async recordManagedCandidateKnowledgeWriteNoop(
     operationIdInput: string,
     versionInput: CandidateKnowledgeSourceVersionInput,
+    expectedCurrentVersionId?: string,
   ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
     this.ensureOpen();
     const operationId = requireNonEmpty(
@@ -2227,9 +2237,9 @@ export class SqliteStorage
         operation.knowledgeBaseId,
         operation.sourceId,
       );
-      if (source.kind !== "file") {
+      if (source.kind !== "file" && source.kind !== "url") {
         throw new StorageValidationError(
-          "managed candidate knowledge source versions require a file source",
+          "managed candidate knowledge source versions require a supported source",
         );
       }
       this.requireCandidateKnowledgeSourceActive(operation.sourceId);
@@ -2244,6 +2254,23 @@ export class SqliteStorage
         );
       }
       const current = candidateKnowledgeSourceVersionFromRow(currentRow);
+      if (expectedCurrentVersionId !== undefined && current.id !== expectedCurrentVersionId) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write current version changed during publication",
+        );
+      }
+      if (source.kind === "url") {
+        const provenance = this.database
+          .prepare(
+            "SELECT version_id FROM candidate_knowledge_source_url_provenance WHERE source_id = ? AND version_id = ?",
+          )
+          .get(operation.sourceId, current.id);
+        if (provenance === undefined) {
+          throw new StorageValidationError(
+            "managed candidate knowledge URL noop requires URL provenance",
+          );
+        }
+      }
       if (
         current.checksum !== requestedVersion.checksum ||
         current.mediaType !== requestedVersion.mediaType ||
@@ -2287,9 +2314,9 @@ export class SqliteStorage
           )
         : undefined;
     const urlProvenance =
-      input.kind === "create" && input.source.kind === "url"
-        ? normalizeCandidateKnowledgeSourceUrlProvenance(input.urlProvenance)
-        : undefined;
+      input.urlProvenance === undefined
+        ? undefined
+        : normalizeCandidateKnowledgeSourceUrlProvenance(input.urlProvenance);
     let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
     this.database.transaction(() => {
       const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
@@ -2347,6 +2374,11 @@ export class SqliteStorage
         this.insertCandidateKnowledgeSourceVersion(version);
         this.insertManagedCandidateKnowledgeSourceVersion(version.id);
         if (source.kind === "file") {
+          if (urlProvenance !== undefined) {
+            throw new StorageValidationError(
+              "Candidate knowledge source URL provenance is forbidden for file sources",
+            );
+          }
           this.insertCandidateKnowledgeSourceOriginBinding({
             sourceId: source.id,
             originPath: originPath as string,
@@ -2378,10 +2410,18 @@ export class SqliteStorage
         operation.knowledgeBaseId,
         operation.sourceId,
       );
-      if (source.kind !== "file") {
+      if (source.kind !== "file" && source.kind !== "url") {
         throw new StorageValidationError(
-          "managed candidate knowledge source versions require a file source",
+          "managed candidate knowledge source versions require a supported source",
         );
+      }
+      if (source.kind === "file" && urlProvenance !== undefined) {
+        throw new StorageValidationError(
+          "Candidate knowledge source URL provenance is forbidden for file sources",
+        );
+      }
+      if (source.kind === "url" && urlProvenance === undefined) {
+        throw new StorageValidationError("Candidate knowledge source URL provenance is required");
       }
       this.requireCandidateKnowledgeSourceActive(operation.sourceId);
       const currentRow = this.database
@@ -2395,6 +2435,14 @@ export class SqliteStorage
         );
       }
       const current = candidateKnowledgeSourceVersionFromRow(currentRow);
+      if (
+        input.expectedCurrentVersionId !== undefined &&
+        input.expectedCurrentVersionId !== current.id
+      ) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write current version changed during publication",
+        );
+      }
       if (Date.parse(requestedVersion.createdAt) < Date.parse(current.createdAt)) {
         throw new StorageValidationError(
           "candidate knowledge source version createdAt must not precede the current version createdAt",
@@ -2407,6 +2455,11 @@ export class SqliteStorage
         ) {
           throw new StorageConflictError(
             "candidate knowledge source version checksum conflicts with its integrity metadata",
+          );
+        }
+        if (source.kind === "url") {
+          throw new StorageConflictError(
+            "managed candidate knowledge URL write must use the non-owning noop path",
           );
         }
         this.requireManagedCandidateKnowledgeWriteState(operationId, "published", current.id);
@@ -2439,6 +2492,13 @@ export class SqliteStorage
       };
       this.insertCandidateKnowledgeSourceVersion(version);
       this.insertManagedCandidateKnowledgeSourceVersion(version.id);
+      if (source.kind === "url") {
+        this.insertCandidateKnowledgeSourceUrlProvenance({
+          sourceId: source.id,
+          versionId: version.id,
+          ...(urlProvenance as CandidateKnowledgeSourceUrlProvenanceInput),
+        });
+      }
       this.insertManagedCandidateKnowledgeWriteEvent(
         operationId,
         "committed",
@@ -3245,7 +3305,7 @@ export class SqliteStorage
         operation.kind === "append" &&
         (source === undefined ||
           source.candidate_knowledge_base_id !== operation.knowledgeBaseId ||
-          source.kind !== "file")
+          (source.kind !== "file" && source.kind !== "url"))
       ) {
         throw new StorageValidationError(
           "Candidate knowledge store contains an invalid managed append operation source.",
