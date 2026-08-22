@@ -932,6 +932,161 @@ describe("candidate knowledge store application service", () => {
     });
   });
 
+  it("retires a source idempotently while preserving read-only projections", async () => {
+    const sourcePath = join(temporaryParent, "candidate.md");
+    const changedPath = join(temporaryParent, "changed.md");
+    const initialContent = "# Candidate evidence\n";
+    const changedContent = "# Changed candidate evidence\n";
+    await writeFile(sourcePath, initialContent, "utf8");
+    await writeFile(changedPath, changedContent, "utf8");
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: (() => {
+        const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+        return () => ids.shift() ?? "unexpected-id";
+      })(),
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath,
+    });
+    const active = await service.getKnowledgeSourceRetirement({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: imported.source.id,
+    });
+    expect(active).toEqual({ sourceId: "source-uuid", status: "active" });
+    expect(Object.isFrozen(active)).toBe(true);
+
+    now = changedAt;
+    const retired = await service.retireKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: imported.source.id,
+    });
+    expect(retired).toEqual({
+      sourceId: "source-uuid",
+      status: "retired",
+      retiredAt: changedAt,
+      reason: "user-requested",
+    });
+    expect(Object.isFrozen(retired)).toBe(true);
+    expect(JSON.stringify(retired)).not.toContain(temporaryParent);
+    expect(JSON.stringify(retired)).not.toContain(initialContent);
+    expect(JSON.stringify(retired)).not.toContain(sha256(initialContent));
+
+    now = "2026-08-21T11:00:00.000Z";
+    await expect(
+      service.retireKnowledgeSource({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: imported.source.id,
+      }),
+    ).resolves.toEqual(retired);
+    await expect(
+      service.getKnowledgeSourceRetirement({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: imported.source.id,
+      }),
+    ).resolves.toEqual(retired);
+    await expect(
+      service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toEqual([{ source: imported.source, versions: imported.versions }]);
+    await expect(
+      service.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: imported.source.id,
+      }),
+    ).resolves.toMatchObject({ sourceId: imported.source.id, status: "current" });
+
+    await expect(
+      service.appendKnowledgeSourceVersion({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: imported.source.id,
+        mediaType: "text/markdown",
+        checksum: sha256(changedContent),
+        sizeBytes: Buffer.byteLength(changedContent),
+      }),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      service.appendKnowledgeSourceFileVersion({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: imported.source.id,
+        sourcePath: changedPath,
+      }),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      service.rebindKnowledgeSourceOrigin({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: imported.source.id,
+        sourcePath,
+      }),
+    ).rejects.toThrow("The selected candidate knowledge source file could not be rebound.");
+    await writeFile(sourcePath, changedContent, "utf8");
+    await expect(
+      service.refreshKnowledgeSourceFromOrigin({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: imported.source.id,
+      }),
+    ).rejects.toThrow(/retired/i);
+  });
+
+  it("rejects malformed retirement dependency results without exposing sensitive fields", async () => {
+    const sourcePath = "/private/candidate/selected.md";
+    const source = {
+      id: "source-uuid",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Candidate source",
+      createdAt,
+    };
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      getCandidateKnowledgeSource: vi.fn(async () => source),
+      getCandidateKnowledgeSourceRetirement: vi.fn(async () => undefined),
+      retireCandidateKnowledgeSource: vi.fn(async () => ({
+        sourceId: "different-source",
+        retiredAt: changedAt,
+        reason: "user-requested" as const,
+        path: sourcePath,
+      })),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      now: () => changedAt,
+      open: vi.fn(async () => handle),
+    });
+
+    const error = await service
+      .retireKnowledgeSource({
+        storeRoot: "valid",
+        knowledgeBaseId: source.knowledgeBaseId,
+        sourceId: source.id,
+      })
+      .then(
+        () => undefined,
+        (failure) => failure,
+      );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      "Candidate knowledge source retirement returned inconsistent storage state.",
+    );
+    expect((error as Error).message).not.toContain(sourcePath);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("rejects a changed rebind selection without exposing path or integrity data", async () => {
     const originalPath = join(temporaryParent, "candidate.md");
     const changedPath = join(temporaryParent, "changed.md");

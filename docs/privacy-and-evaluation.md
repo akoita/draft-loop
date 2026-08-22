@@ -99,6 +99,12 @@ indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
 version integrity metadata and returns source/version IDs without checksums,
 labels, paths, URLs, content, or a derived group identifier. It is a current
 possible-duplicate signal, not ownership proof or merge/deletion authority.
+A separate explicit logical-retirement operation persists only source identity,
+the bounded reason `user-requested`, and retirement time. It blocks subsequent
+source mutations but preserves the managed bytes, immutable versions, origin
+binding, refresh observation, and journal evidence. Retirement is therefore
+not deletion or secure erasure, does not remove derived indexes or backups, and
+must not be presented as such. No reactivation operation is currently exposed.
 Source identity and label do not change when a later selected path or
 basename differs.
 Application workspaces continue to own their current evidence and run history,

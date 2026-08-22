@@ -33,8 +33,10 @@ that sensitive local path after a newly selected regular file passes the same
 ingestion and stable-capture checks and exactly matches the latest managed
 version. Managed creates, appends, and changed-byte refreshes have prospective
 write provenance in an internal append-only journal. Rebind writes only the
-guarded local binding and creates no managed-write event. These operations do
-not connect CKB selection or retrieval to an application workflow.
+guarded local binding and creates no managed-write event. A separate immutable
+marker can logically retire a source without deleting any of that evidence.
+These operations do not connect CKB selection or retrieval to an application
+workflow.
 
 ## Decision
 
@@ -59,6 +61,17 @@ size. It returns deterministically ordered source/version IDs but no checksum,
 label, path, URL, content, or derived group identifier. The relationship is
 recomputed on every query, so a later version can create or remove a group. It
 is neither persisted history nor authority to merge, remove, or prefer a source.
+
+Source retirement is a separate lifecycle fact. An explicit application
+operation records one immutable, CKB-scoped marker with the bounded reason
+`user-requested`; absence of a marker means active. Retirement is idempotent
+for the same marker and blocks later version appends, origin rebinding, and
+refresh-observation writes. Existing source/version metadata, managed bytes,
+origin binding, and refresh observation remain readable and unchanged. The
+marker is neither physical deletion nor index-cleanup authority, and it does
+not collapse lifecycle into refresh freshness. This slice deliberately provides
+no reactivation operation: selection/index invalidation, retention, backup, and
+restore policy must be defined before restoration can claim readiness again.
 
 The application command to add one local file is the approval boundary for that
 one file. Intake accepts only a regular file of at most 20 MiB in the five
@@ -211,6 +224,13 @@ fields cannot be split, timestamps cannot move backward, source identity is
 immutable, and deletion is forbidden. `stale` is derived when the observed
 version is no longer latest; it is not persisted as a filesystem observation.
 
+Storage migration version 11 adds the immutable logical-retirement marker.
+The marker must reference a source in the requested active CKB, its timestamp
+cannot precede source creation, and its only supported reason is
+`user-requested`. It cannot be updated or deleted. Retiring a source does not
+remove raw bytes, versions, bindings, observations, journals, indexes, backups,
+or run references; those remain governed by later lifecycle-storage policy.
+
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
 permissions are best-effort and are not encryption or protection from another
@@ -248,7 +268,8 @@ This decision deliberately leaves the following work unintegrated:
 - directory intake, URL/fetched source intake, and directory bindings;
 - background refresh, time-based freshness policy, moved-origin discovery, and
   product-adapter controls for refresh state or explicit rebind;
-- automatic duplicate merging, preference, retirement, and deletion handling;
+- automatic duplicate merging or preference, source reactivation, and physical
+  deletion handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to
   a run or provider-transmission approval;

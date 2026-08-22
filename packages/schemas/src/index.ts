@@ -1,6 +1,7 @@
 import {
   candidateKnowledgeBaseStates,
   candidateKnowledgeSourceKinds,
+  candidateKnowledgeSourceRetirementReasons,
   candidateKnowledgeStoreSchemaVersion,
   contextSchemaVersion,
   deriveModelLineage,
@@ -202,6 +203,22 @@ export const candidateKnowledgeSourceSchema = z.object({
 });
 
 export type CandidateKnowledgeSource = z.infer<typeof candidateKnowledgeSourceSchema>;
+
+export const candidateKnowledgeSourceRetirementReasonSchema = z.enum(
+  candidateKnowledgeSourceRetirementReasons,
+);
+export type CandidateKnowledgeSourceRetirementReason = z.infer<
+  typeof candidateKnowledgeSourceRetirementReasonSchema
+>;
+
+export const candidateKnowledgeSourceRetirementSchema = z.object({
+  sourceId: nonEmptyString,
+  retiredAt: strictTimestampSchema,
+  reason: candidateKnowledgeSourceRetirementReasonSchema,
+});
+export type CandidateKnowledgeSourceRetirement = z.infer<
+  typeof candidateKnowledgeSourceRetirementSchema
+>;
 
 export const candidateKnowledgeSourceVersionSchema = z
   .object({

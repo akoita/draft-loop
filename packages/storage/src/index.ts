@@ -125,6 +125,20 @@ export interface CandidateKnowledgeSourceRefreshObservationRecord
   readonly stale: boolean;
 }
 
+export const candidateKnowledgeSourceRetirementReasons = ["user-requested"] as const;
+export type CandidateKnowledgeSourceRetirementReason =
+  (typeof candidateKnowledgeSourceRetirementReasons)[number];
+
+export interface CandidateKnowledgeSourceRetirementInput {
+  readonly retiredAt: string;
+  readonly reason: CandidateKnowledgeSourceRetirementReason;
+}
+
+export interface CandidateKnowledgeSourceRetirementRecord
+  extends CandidateKnowledgeSourceRetirementInput {
+  readonly sourceId: string;
+}
+
 export interface CandidateKnowledgeSourceVersionWriteResult {
   readonly source: CandidateKnowledgeSourceRecord;
   readonly version: CandidateKnowledgeSourceVersionRecord;
@@ -221,6 +235,15 @@ export interface CandidateKnowledgeBaseStoragePort {
     sourceId: string,
     input: CandidateKnowledgeSourceRefreshObservationInput,
   ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord>;
+  readonly getCandidateKnowledgeSourceRetirement: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeSourceRetirementRecord | undefined>;
+  readonly retireCandidateKnowledgeSource: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    input: CandidateKnowledgeSourceRetirementInput,
+  ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
 }
 
 export interface ContextSnapshotInput {
@@ -601,7 +624,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 10 as const;
+export const storageSchemaVersion = 11 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -1396,6 +1419,41 @@ const migrationTen: Migration = {
   `.trim(),
 };
 
+const migrationEleven: Migration = {
+  version: 11,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_source_retirements (
+      source_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_sources(id),
+      retired_at TEXT NOT NULL,
+      reason TEXT NOT NULL CHECK (reason = 'user-requested')
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_retirements_require_valid_insert
+      BEFORE INSERT ON candidate_knowledge_source_retirements
+      WHEN julianday(NEW.retired_at) IS NULL
+        OR NEW.reason <> 'user-requested'
+        OR NOT EXISTS (
+          SELECT 1
+          FROM candidate_knowledge_sources AS source
+          JOIN candidate_knowledge_bases AS knowledge_base
+            ON knowledge_base.id = source.candidate_knowledge_base_id
+           AND knowledge_base.state = 'active'
+          WHERE source.id = NEW.source_id
+            AND julianday(NEW.retired_at) >= julianday(source.created_at)
+        )
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source retirement is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_retirements_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_source_retirements
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source retirements are immutable'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_retirements_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_source_retirements
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source retirements are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -1407,6 +1465,7 @@ const migrations: readonly Migration[] = [
   migrationEight,
   migrationNine,
   migrationTen,
+  migrationEleven,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -1887,6 +1946,7 @@ export class SqliteStorage
         normalizedKnowledgeBaseId,
         normalizedSourceId,
       );
+      this.requireCandidateKnowledgeSourceActive(normalizedSourceId);
       const currentRow = this.database
         .prepare(
           "SELECT id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC LIMIT 1",
@@ -1984,6 +2044,7 @@ export class SqliteStorage
             "managed candidate knowledge source versions require a file source",
           );
         }
+        this.requireCandidateKnowledgeSourceActive(sourceId);
       }
       this.database
         .prepare(
@@ -2061,6 +2122,7 @@ export class SqliteStorage
           "managed candidate knowledge source versions require a file source",
         );
       }
+      this.requireCandidateKnowledgeSourceActive(operation.sourceId);
       const currentRow = this.database
         .prepare(
           "SELECT id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC LIMIT 1",
@@ -2191,6 +2253,7 @@ export class SqliteStorage
           "managed candidate knowledge source versions require a file source",
         );
       }
+      this.requireCandidateKnowledgeSourceActive(operation.sourceId);
       const currentRow = this.database
         .prepare(
           "SELECT id, source_id, version, parent_version_id, media_type, checksum, size_bytes, created_at FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC LIMIT 1",
@@ -2354,6 +2417,82 @@ export class SqliteStorage
     return row === undefined ? undefined : candidateKnowledgeSourceOriginBindingFromRow(row);
   }
 
+  public async getCandidateKnowledgeSourceRetirement(
+    knowledgeBaseId: string,
+    sourceId: string,
+  ): Promise<CandidateKnowledgeSourceRetirementRecord | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    const row = this.database
+      .prepare(
+        `SELECT retirement.source_id, retirement.retired_at, retirement.reason
+         FROM candidate_knowledge_source_retirements AS retirement
+         JOIN candidate_knowledge_sources AS source ON source.id = retirement.source_id
+         WHERE source.candidate_knowledge_base_id = ?
+           AND source.id = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedSourceId);
+    return row === undefined ? undefined : candidateKnowledgeSourceRetirementFromRow(row);
+  }
+
+  public async retireCandidateKnowledgeSource(
+    knowledgeBaseId: string,
+    sourceId: string,
+    input: CandidateKnowledgeSourceRetirementInput,
+  ): Promise<CandidateKnowledgeSourceRetirementRecord> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const retiredAt = requireTimestamp(
+      input.retiredAt,
+      "candidate knowledge source retirement retiredAt",
+    );
+    const reason = requireCandidateKnowledgeSourceRetirementReason(input.reason);
+    let result: CandidateKnowledgeSourceRetirementRecord | undefined;
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      const source = this.requireCandidateKnowledgeSource(
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+      );
+      if (Date.parse(retiredAt) < Date.parse(source.createdAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge source retirement retiredAt must not precede source createdAt",
+        );
+      }
+      const currentRow = this.database
+        .prepare(
+          "SELECT source_id, retired_at, reason FROM candidate_knowledge_source_retirements WHERE source_id = ?",
+        )
+        .get(normalizedSourceId);
+      if (currentRow !== undefined) {
+        const current = candidateKnowledgeSourceRetirementFromRow(currentRow);
+        if (current.retiredAt !== retiredAt || current.reason !== reason) {
+          throw new StorageConflictError(
+            "candidate knowledge source retirement conflicts with its existing marker",
+          );
+        }
+        result = current;
+        return;
+      }
+      this.database
+        .prepare(
+          "INSERT INTO candidate_knowledge_source_retirements (source_id, retired_at, reason) VALUES (?, ?, ?)",
+        )
+        .run(normalizedSourceId, retiredAt, reason);
+      result = { sourceId: normalizedSourceId, retiredAt, reason };
+    })();
+    return result as CandidateKnowledgeSourceRetirementRecord;
+  }
+
   public async getCandidateKnowledgeSourceRefreshObservation(
     knowledgeBaseId: string,
     sourceId: string,
@@ -2448,6 +2587,7 @@ export class SqliteStorage
     this.database.transaction(() => {
       this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
       this.requireCandidateKnowledgeSource(normalizedKnowledgeBaseId, normalizedSourceId);
+      this.requireCandidateKnowledgeSourceActive(normalizedSourceId);
       const latestRow = this.database
         .prepare(
           "SELECT id, version FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC, id DESC LIMIT 1",
@@ -2660,6 +2800,7 @@ export class SqliteStorage
           "Candidate knowledge source origin bindings require a file source",
         );
       }
+      this.requireCandidateKnowledgeSourceActive(normalizedSourceId);
       const managed = this.database
         .prepare(
           `SELECT 1
@@ -4451,6 +4592,15 @@ export class SqliteStorage
     );
   }
 
+  private requireCandidateKnowledgeSourceActive(sourceId: string): void {
+    const retired = this.database
+      .prepare("SELECT source_id FROM candidate_knowledge_source_retirements WHERE source_id = ?")
+      .get(sourceId);
+    if (retired !== undefined) {
+      throw new StorageConflictError("candidate knowledge source is retired");
+    }
+  }
+
   private insertManagedCandidateKnowledgeSourceVersion(versionId: string): void {
     this.database
       .prepare("INSERT INTO candidate_knowledge_managed_source_versions (version_id) VALUES (?)")
@@ -4602,6 +4752,17 @@ function requireCandidateKnowledgeSourceRefreshObservationStatus(
   return value;
 }
 
+function requireCandidateKnowledgeSourceRetirementReason(
+  value: CandidateKnowledgeSourceRetirementReason,
+): CandidateKnowledgeSourceRetirementReason {
+  if (value !== "user-requested") {
+    throw new StorageValidationError(
+      "Candidate knowledge source retirement reason must be user-requested",
+    );
+  }
+  return value;
+}
+
 function workspaceFromRow(row: Record<string, unknown>): WorkspaceRecord {
   return {
     id: rowString(row, "id"),
@@ -4643,6 +4804,16 @@ function candidateKnowledgeSourceOriginBindingFromRow(
     sourceId: rowString(row, "source_id"),
     originPath: rowString(row, "origin_path"),
     boundAt: rowString(row, "bound_at"),
+  };
+}
+
+function candidateKnowledgeSourceRetirementFromRow(
+  row: Record<string, unknown>,
+): CandidateKnowledgeSourceRetirementRecord {
+  return {
+    sourceId: rowString(row, "source_id"),
+    retiredAt: rowString(row, "retired_at"),
+    reason: rowString(row, "reason") as CandidateKnowledgeSourceRetirementReason,
   };
 }
 

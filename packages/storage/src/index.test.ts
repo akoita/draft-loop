@@ -243,7 +243,7 @@ function removeMigrationTwo(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "PRAGMA foreign_keys = OFF; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3, 4, 5, 6, 7, 8, 9, 10);",
+    "PRAGMA foreign_keys = OFF; DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DROP TABLE run_snapshots; DROP TABLE exports; DROP TABLE decisions; DROP TABLE findings; DROP TABLE executions; DROP TABLE rounds; DROP TABLE runs; DELETE FROM schema_migrations WHERE version IN (2, 3, 4, 5, 6, 7, 8, 9, 10, 11);",
   );
   database.close();
 }
@@ -255,7 +255,7 @@ function removeMigrationFour(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DELETE FROM schema_migrations WHERE version IN (4, 5, 6, 7, 8, 9, 10);",
+    "DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DROP TABLE candidate_knowledge_bases; DELETE FROM schema_migrations WHERE version IN (4, 5, 6, 7, 8, 9, 10, 11);",
   );
   database.close();
 }
@@ -267,7 +267,7 @@ function removeMigrationFive(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DELETE FROM schema_migrations WHERE version IN (5, 6, 7, 8, 9, 10);",
+    "DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DROP TABLE candidate_knowledge_source_versions; DROP TABLE candidate_knowledge_sources; DELETE FROM schema_migrations WHERE version IN (5, 6, 7, 8, 9, 10, 11);",
   );
   database.close();
 }
@@ -279,7 +279,7 @@ function removeMigrationSix(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DELETE FROM schema_migrations WHERE version IN (6, 7, 8, 9, 10);",
+    "DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DROP TABLE candidate_knowledge_managed_source_versions; DELETE FROM schema_migrations WHERE version IN (6, 7, 8, 9, 10, 11);",
   );
   database.close();
 }
@@ -291,7 +291,7 @@ function removeMigrationSeven(filename: string): void {
   const Constructor = loaded.default ?? loaded;
   const database = new (Constructor as RawSqliteConstructor)(filename);
   database.exec(
-    "DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DELETE FROM schema_migrations WHERE version IN (7, 8, 9, 10);",
+    "DROP TABLE candidate_knowledge_source_retirements; DROP TABLE candidate_knowledge_source_refresh_observations; DROP TABLE candidate_knowledge_source_origin_bindings; DROP TABLE candidate_knowledge_managed_write_events; DROP TABLE candidate_knowledge_managed_write_operations; DELETE FROM schema_migrations WHERE version IN (7, 8, 9, 10, 11);",
   );
   database.close();
 }
@@ -300,9 +300,9 @@ describe("SQLite storage", () => {
   it("applies migrations idempotently and rejects sensitive key persistence", async () => {
     const storage = openSqliteStorage(":memory:");
 
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     storage.migrate();
-    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(storage.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
 
     await storage.set("ui.language", "en");
     await expect(storage.get("ui.language")).resolves.toBe("en");
@@ -326,10 +326,10 @@ describe("SQLite storage", () => {
 
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     upgraded.migrate();
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -343,7 +343,7 @@ describe("SQLite storage", () => {
 
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
       upgraded.ensureDefaultCandidateKnowledgeBase(knowledgeBase()),
@@ -361,7 +361,7 @@ describe("SQLite storage", () => {
 
     removeMigrationFive(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
       savedKnowledgeBase,
     );
@@ -385,7 +385,7 @@ describe("SQLite storage", () => {
 
     removeMigrationSix(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
     ).resolves.toBe(false);
@@ -451,7 +451,7 @@ describe("SQLite storage", () => {
 
     removeMigrationSeven(filename);
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged(
         managed.source.knowledgeBaseId,
@@ -522,7 +522,7 @@ describe("SQLite storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await expect(
       upgraded.getCandidateKnowledgeSourceOriginBinding("ckb-1", "ckb-source-1"),
     ).resolves.toEqual({
@@ -593,7 +593,7 @@ describe("SQLite storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRefreshObservation("ckb-1", "ckb-source-1"),
     ).resolves.toBeUndefined();
@@ -662,6 +662,151 @@ describe("SQLite storage", () => {
     expect(() =>
       guarded.exec(
         "DELETE FROM candidate_knowledge_source_refresh_observations WHERE source_id = 'ckb-source-1'",
+      ),
+    ).toThrow();
+    guarded.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("migrates v10 to immutable source retirements and preserves them across reopen", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-ckb-source-retirement-migration-"));
+    const filename = join(directory, "knowledge.sqlite");
+    const initial = openSqliteStorage(filename);
+    await initial.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await initial.createCandidateKnowledgeSource(
+      knowledgeSource(),
+      knowledgeSourceVersion({ createdAt: "2026-08-12T09:11:00.000Z" }),
+    );
+    await initial.close();
+
+    const legacy = openRawDatabase(filename);
+    legacy.exec(
+      "DROP TABLE candidate_knowledge_source_retirements; DELETE FROM schema_migrations WHERE version = 11",
+    );
+    legacy.close();
+
+    const upgraded = openSqliteStorage(filename);
+    expect(upgraded.appliedMigrationVersions()).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+    await expect(
+      upgraded.getCandidateKnowledgeSourceRetirement("ckb-1", "ckb-source-1"),
+    ).resolves.toBeUndefined();
+    const retirement = await upgraded.retireCandidateKnowledgeSource("ckb-1", "ckb-source-1", {
+      retiredAt: "2026-08-12T09:12:00.000Z",
+      reason: "user-requested",
+    });
+    expect(retirement).toEqual({
+      sourceId: "ckb-source-1",
+      retiredAt: "2026-08-12T09:12:00.000Z",
+      reason: "user-requested",
+    });
+    await upgraded.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(
+      reopened.getCandidateKnowledgeSourceRetirement("ckb-1", "ckb-source-1"),
+    ).resolves.toEqual(retirement);
+    await reopened.close();
+    const guarded = openRawDatabase(filename);
+    expect(() =>
+      guarded.exec(
+        "UPDATE candidate_knowledge_source_retirements SET retired_at = '2026-08-12T09:10:00.000Z' WHERE source_id = 'ckb-source-1'",
+      ),
+    ).toThrow();
+    expect(() =>
+      guarded.exec(
+        "UPDATE candidate_knowledge_source_retirements SET reason = 'imported' WHERE source_id = 'ckb-source-1'",
+      ),
+    ).toThrow();
+    expect(() =>
+      guarded.exec(
+        "DELETE FROM candidate_knowledge_source_retirements WHERE source_id = 'ckb-source-1'",
+      ),
+    ).toThrow();
+    guarded.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("validates scoped retirement markers, idempotence, and active-write guards", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-ckb-source-retirement-guards-"));
+    const filename = join(directory, "knowledge.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await storage.createCandidateKnowledgeBase(knowledgeBase({ id: "ckb-2", isDefault: false }));
+    const active = await storage.createCandidateKnowledgeSource(
+      knowledgeSource(),
+      knowledgeSourceVersion({ createdAt: "2026-08-12T09:11:00.000Z" }),
+    );
+    const archived = await storage.createCandidateKnowledgeSource(
+      knowledgeSource({ id: "archived-source", knowledgeBaseId: "ckb-2" }),
+      knowledgeSourceVersion({ id: "archived-version", createdAt: "2026-08-12T09:11:00.000Z" }),
+    );
+
+    await expect(
+      storage.getCandidateKnowledgeSourceRetirement("ckb-1", active.source.id),
+    ).resolves.toBeUndefined();
+    await expect(
+      storage.retireCandidateKnowledgeSource("ckb-2", active.source.id, {
+        retiredAt: "2026-08-12T09:12:00.000Z",
+        reason: "user-requested",
+      }),
+    ).rejects.toThrow(/not found in candidate knowledge base/i);
+    await expect(
+      storage.retireCandidateKnowledgeSource("ckb-1", active.source.id, {
+        retiredAt: "not-a-time",
+        reason: "user-requested",
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.retireCandidateKnowledgeSource("ckb-1", active.source.id, {
+        retiredAt: "2026-08-12T09:12:00.000Z",
+        reason: "imported" as never,
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.retireCandidateKnowledgeSource("ckb-1", active.source.id, {
+        retiredAt: "2026-08-12T09:09:00.000Z",
+        reason: "user-requested",
+      }),
+    ).rejects.toThrow(/must not precede/i);
+
+    const retirement = await storage.retireCandidateKnowledgeSource("ckb-1", active.source.id, {
+      retiredAt: "2026-08-12T09:12:00.000Z",
+      reason: "user-requested",
+    });
+    await expect(
+      storage.retireCandidateKnowledgeSource("ckb-1", active.source.id, retirement),
+    ).resolves.toEqual(retirement);
+    await expect(
+      storage.retireCandidateKnowledgeSource("ckb-1", active.source.id, {
+        retiredAt: "2026-08-12T09:13:00.000Z",
+        reason: "user-requested",
+      }),
+    ).rejects.toThrow(/conflicts/i);
+    await expect(
+      storage.appendCandidateKnowledgeSourceVersion(
+        "ckb-1",
+        active.source.id,
+        knowledgeSourceVersion({
+          id: "retired-append",
+          createdAt: "2026-08-12T09:13:00.000Z",
+        }),
+      ),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      storage.upsertCandidateKnowledgeSourceRefreshObservation("ckb-1", active.source.id, {
+        observedVersionId: active.version.id,
+        status: "current",
+        checkedAt: "2026-08-12T09:14:00.000Z",
+      }),
+    ).rejects.toThrow(/retired/i);
+    await storage.archiveCandidateKnowledgeBase("ckb-2", "2026-08-12T09:20:00.000Z");
+    await storage.close();
+
+    const guarded = openRawDatabase(filename);
+    expect(() =>
+      guarded.exec(
+        `INSERT INTO candidate_knowledge_source_retirements (source_id, retired_at, reason)
+         VALUES ('${archived.source.id}', '2026-08-12T09:21:00.000Z', 'user-requested')`,
       ),
     ).toThrow();
     guarded.close();

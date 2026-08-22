@@ -26,6 +26,8 @@ import {
   type CandidateKnowledgeSourceOriginBindingRecord,
   type CandidateKnowledgeSourceRefreshObservationInput,
   type CandidateKnowledgeSourceRefreshObservationRecord,
+  type CandidateKnowledgeSourceRetirementInput,
+  type CandidateKnowledgeSourceRetirementRecord,
   type CandidateKnowledgeSourceVersionInput,
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
@@ -148,6 +150,15 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     sourceId: string,
     input: CandidateKnowledgeSourceRefreshObservationInput,
   ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord>;
+  readonly getCandidateKnowledgeSourceRetirement: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeSourceRetirementRecord | undefined>;
+  readonly retireCandidateKnowledgeSource: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    input: CandidateKnowledgeSourceRetirementInput,
+  ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
   readonly getManagedCandidateKnowledgeFilePath: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1275,6 +1286,17 @@ function createHandle(
           sourceId,
           input,
         )),
+      }),
+    getCandidateKnowledgeSourceRetirement: async (knowledgeBaseId, sourceId) => {
+      const retirement = await storage.getCandidateKnowledgeSourceRetirement(
+        knowledgeBaseId,
+        sourceId,
+      );
+      return retirement === undefined ? undefined : Object.freeze({ ...retirement });
+    },
+    retireCandidateKnowledgeSource: async (knowledgeBaseId, sourceId, input) =>
+      Object.freeze({
+        ...(await storage.retireCandidateKnowledgeSource(knowledgeBaseId, sourceId, input)),
       }),
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
       writeManagedCandidateKnowledgeFile(storage, root, {
