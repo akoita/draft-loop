@@ -2,7 +2,7 @@
 
 **Status:** Living document
 **Last reviewed:** 2026-08-22
-**Current stage:** Application-grade CV workflow
+**Current stage:** Evidence-backed CV drafting
 
 This document describes product direction, not fixed delivery dates. The
 **Now** horizon is the current commitment; **Next** is planned but may change
@@ -139,11 +139,13 @@ exact host paths in manifests, descriptors, journals, inventory, diagnostics,
 or application/provider projections, and retains no filename provenance,
 filename-derived physical names, or URLs. It remains independent of application workspaces and run
 history. It does not yet refresh in the background, persist freshness or last
-refresh, discover moved origins, or rebind them; ingest directories or URLs; relate
-cross-source duplicates; index or retrieve; select a CKB for an application or
-run; expose CLI/desktop controls; repair missing/corrupt referenced blobs;
-coordinate writers through locks/leases; delete, clean up, or reconcile unknown
-entries; or completely backup, export, or restore. Safe future cleanup requires
+refresh, discover moved origins, or rebind them; ingest directories or URLs;
+relate cross-source duplicates; index or retrieve; select a CKB for an
+application or run; expose CLI/desktop controls; repair missing/corrupt
+referenced blobs; coordinate writers through locks/leases; delete, clean up, or
+reconcile unknown entries; or completely backup, export, or restore. Those
+remaining CKB outcomes are split across #110–#113 while #78 remains their
+tracking parent. Safe future cleanup requires
 prospective journal proof, writer coordination, and explicit approval;
 unjournaled entries remain unknown. SQLite migration v7 supplies that
 prospective internal append-only journal for new managed creates and appends.
@@ -163,9 +165,9 @@ cleanup. Same-current-byte managed appends record a terminal, non-owning no-op;
 metadata-only
 versions can be explicitly materialized without adopting pre-existing unowned
 targets based on matching bytes or shape. This remains component implementation
-under #78; the portable CKB is not authoritative for retrieval, and local
-vector and hybrid retrieval remain evaluation components pending representative
-comparison and lifecycle evidence.
+under #78; the portable CKB is not authoritative for retrieval. The v0.7
+retrieval path is the CKB-scoped lexical baseline in #80; local vector and
+hybrid comparison moved to the later evaluation issue #114.
 
 Several later-stage components also exist: local lexical/vector retrieval,
 provider retry and progress behavior, a consented pilot harness, backup and
@@ -180,7 +182,7 @@ explicit local file selection. The selected policy remains separate from
 candidate evidence, is versioned by checksum in run context, is visible before
 provider transmission, and supplies deterministic checks for supported rules.
 It does not complete #70: reusable global preferences, opportunity overrides,
-and in-product policy editing remain part of the v0.7 stage.
+and in-product policy editing remain part of the v0.7 drafting stage.
 
 The sanitized real-application validation for issue #104 failed its quality
 baseline: technical export completed, but major CV sections and chronology were
@@ -245,14 +247,16 @@ experience, contact employers, or submit applications.
 
 ## Roadmap
 
-| Horizon  | Stage                                                                                                             | Evidence status                                                                   | Outcome                                                                               | Remaining gate                                                                                                                           |
-| -------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                                                       | Preserve a reproducible integrated baseline without overstating application readiness | Closed with failed representative outcome carried into v0.7; see the [stage evidence](stage-evidence-v0.6.0.md)                          |
-| Now      | Application-grade CV workflow (#4, milestone v0.7.0)                                                              | Designed; portable CKB store component implemented; parity validation not started | Automate the proven manual author–critic workflow to application-ready parity         | Complete factual CV, independent critique, adjudication and revision, professional ATS-readable rendering, measured parity, v0.7 release |
-| Next     | Retrieval and provider quality                                                                                    | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable                              | Representative quality comparison, deletion/retention proof, integrated cancellation and provider recovery                               |
-| Next     | Real-application pilot                                                                                            | Implemented harness; not outcome-validated                                        | Validate factuality, quality, and user-effort hypotheses                              | Consented cases, calibrated measures, recorded results and limitations                                                                   |
-| Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated                                  | Distribute a safe, dependable desktop application                                     | Signed installers, safe updates/migrations, platform acceptance, recovery and accessibility evidence                                     |
-| Later    | Controlled expansion                                                                                              | Implemented prototypes and components; gated                                      | Extend a proven workflow without weakening trust boundaries                           | Core CV pilot evidence, separate integration/validation, updated threat decisions                                                        |
+| Horizon  | Stage                                                                                                             | Evidence status                                                                   | Outcome                                                                               | Remaining gate                                                                                                  |
+| -------- | ----------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                                                       | Preserve a reproducible integrated baseline without overstating application readiness | Closed with failed representative outcome carried into v0.7; see the [stage evidence](stage-evidence-v0.6.0.md) |
+| Now      | Evidence-backed CV drafting ([milestone v0.7.0](https://github.com/akoita/draft-loop/milestone/2))                | Designed; portable CKB store component implemented                                | Produce a complete factual, source-traceable application draft                        | Integrated CKB lifecycle and selection, reviewed profile and opportunity, lexical RAG, plan, complete CV, policy |
+| Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Designed; foundation components partially integrated                              | Turn the factual draft into a reviewed, revised, human-approvable artifact             | Structured critique, adjudication, calibrated readiness gates, professional rendering                              |
+| Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started                                            | Demonstrate the complete application-grade workflow and publish its evidence           | Consented comparison, zero factual regression, bounded editing, cross-platform release evidence                    |
+| Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; candidate components have partial benchmark evidence | Improve evidence selection and make live runs dependable                              | Vector/hybrid comparison, integrated cancellation and provider recovery                                               |
+| Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated                                        | Validate factuality, quality, and user-effort hypotheses across more cases             | Consented cases, calibrated measures, recorded results and limitations                                               |
+| Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated                                  | Distribute a safe, dependable desktop application                                     | Signed installers, safe updates/migrations, platform acceptance, recovery and accessibility evidence                |
+| Later    | Controlled expansion                                                                                              | Implemented prototypes and components; gated                                      | Extend a proven workflow without weakening trust boundaries                           | Core CV pilot evidence, separate integration/validation, updated threat decisions                                   |
 
 ### Released — Integration hardening and outcome validation (v0.6)
 
@@ -287,44 +291,65 @@ application readiness. v0.6.0 was published as an explicitly non-validated
 alpha baseline. The unmet outcome moves forward as the defining input to v0.7
 rather than being waived.
 
-### Now — Application-grade CV workflow
+### Now — Evidence-backed CV drafting (v0.7)
 
-Automate the proven private reference workflow before expanding retrieval,
-provider, or application-pilot capability. Issue #4 is the parent for
-milestone v0.7.0 and covers the application-grade path at roadmap level:
+Issue #4 remains the application-grade program parent, while milestone v0.7.0
+is limited to the first complete drafting vertical:
 
-- Establish reusable one-or-more Candidate Knowledge Bases and their source
-  lifecycle (#78), then derive the canonical candidate profile from the
-  explicitly selected material (#66).
-- Turn approved opportunity URLs and instructions into an opportunity brief,
-  allow bounded user-approved research, and retrieve from the selected CKBs
-  through measured local-first RAG (#67, #79, #80).
-- Plan requirement-to-achievement coverage and compose a complete CV that
-  preserves facts, required sections, and chronology under an explicit writing
-  policy (#68–#70).
-- Run a structured independent critic, record author adjudication and
-  revision, and enforce a readiness decision before human approval (#71–#73).
-- Produce professional ATS-readable output, measure parity with the private
-  manual baseline, and package the evidence for the v0.7 release (#74–#76).
+- Finish the reusable CKB through bounded delivery issues for source intake and
+  refresh (#110), application selection and immutable source-version snapshots
+  (#111), shared CLI/desktop controls (#112), and lifecycle storage safety
+  (#113). Issue #78 tracks the combined program outcome.
+- Derive a candidate-reviewed canonical profile (#66), assemble a reviewed
+  opportunity brief from explicitly supplied sources (#67), and use the
+  CKB-scoped SQLite FTS/BM25 baseline with lifecycle evidence (#80).
+- Plan requirement-to-achievement coverage, compose every required CV section
+  without factual or chronological regression, and apply a versioned candidate
+  writing policy (#68–#70).
 
-This ordering is an explicit tradeoff: v0.7 includes only the CKB-scoped,
-measured retrieval and approved research required for workflow parity. Broader
-retrieval/provider optimization and the real-application pilot follow this
-stage. Capability expansion moves later until the core CV workflow demonstrates
-parity with the proven manual process.
+Optional user-approved research (#79) and vector/hybrid retrieval evaluation
+(#114) are outside the critical path. They may improve a later workflow but are
+not required to prove that approved local evidence can produce a complete
+factual draft.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
-maintained and selected without source or retrieval leakage; CKB-scoped RAG and
-approved research support a complete factual CV with a structured independent
-critique, recorded author adjudication and revision, final human approval, and
-professional ATS-readable rendering; measured parity with the private manual
-baseline is demonstrated and v0.7.0 is released with traceable evidence and
-known limitations.
+maintained and explicitly selected without source or retrieval leakage; the
+selected source versions produce a reviewed canonical profile and opportunity
+brief; CKB-scoped lexical retrieval supports a planned, complete CV whose
+required sections, chronology, factual invariants, provenance, and writing
+policy checks pass.
 
-### Next — Retrieval and provider quality
+### Next — Independent review and readiness (v0.8)
 
-Optimize evidence selection and provider behavior only after the v0.7 CKB/RAG
-baseline demonstrates workflow parity.
+- Produce the structured independent application-readiness report (#71).
+- Record per-finding author adjudication and traceable artifact revision (#72).
+- Apply calibrated readiness stopping rules while preserving exact-artifact
+  human approval (#73).
+- Render a professional ATS-readable DOCX/PDF with visual QA (#74).
+
+**Exit criterion:** The complete factual draft receives an independent critique
+and traceable author revision; unresolved disagreements remain visible;
+deterministic factual, completeness, chronology, ATS, and approval gates prevent
+a regressed artifact from being labelled application-ready.
+
+### Next — Workflow parity and release (v0.9)
+
+- Compare the complete workflow with the consented private manual baseline
+  using predeclared factuality, completeness, recall, coverage, effort, cost,
+  confidence, and usability measures (#75).
+- Publish the application-grade release evidence, artifacts, manifests,
+  checksums, platform results, limitations, and next decision (#76).
+
+**Exit criterion:** The representative comparison records zero factual
+invariant violations or unsupported model-added facts, preserves required
+sections and chronology, meets the private relevance and coverage thresholds,
+and produces a professionally usable artifact after bounded human review;
+v0.9.0 is released with traceable cross-platform evidence.
+
+### Later — Retrieval and provider quality
+
+Optimize evidence selection and provider behavior only after the application-
+grade workflow demonstrates parity.
 
 - Preserve the provider-independent retrieval port and workspace-scoped SQLite
   FTS/BM25 baseline.
@@ -347,7 +372,7 @@ baseline demonstrates workflow parity.
 or evidence accuracy on representative cases without increasing unsupported
 claims, and failure/recovery behavior is demonstrated in the packaged app.
 
-### Next — Real-application pilot
+### Later — Broader real-application pilot
 
 Run a small, consented pilot with sanitized reporting. Compare first drafts,
 revised drafts, and manual baselines using:
@@ -397,7 +422,7 @@ require a separate architecture decision and threat-model update.
 - Cloud sync, accounts, or multi-tenancy during integration hardening.
 - Uncontrolled or autonomous web research, job discovery, messaging,
   publishing, or application submission. Bounded research approved per request
-  remains part of the v0.7 workflow.
+  remains planned in #79 but is outside the application-grade critical path.
 - General availability of additional artifacts before the CV pilot validates
   the core hypothesis.
 
@@ -439,6 +464,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                    | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-22 | Split the oversized application-grade milestone into v0.7 evidence-backed drafting, v0.8 independent review/readiness, and v0.9 workflow parity/release; decomposed #78 into #110–#113 and split hybrid retrieval from lexical #80 into #114 | Fifteen open issues combined storage lifecycle, drafting, review, rendering, validation, and publication in one release. The new sequence preserves the same #4 program outcome while giving each milestone a coherent exit, moving optional research (#79) and unproven vector/hybrid optimization (#114) off the critical path. |
 | 2026-08-22 | Added explicit refresh from a managed file source's remembered origin without advancing #78 or the application-grade stage beyond component implementation                                                               | Changed bytes can become the next immutable version only after the existing no-follow ingestion and stable managed-copy gates; current, unbound, missing, and inaccessible origins create no version, the path and observed content stay out of results, and background refresh, freshness persistence, moved-origin discovery, rebind, directory/URL intake, selection, retrieval, deletion, and UI integration remain pending                    |
 | 2026-08-22 | Added an explicit, read-only managed-file origin status check without advancing #78 or the application-grade stage beyond component implementation                                                                       | A local caller can distinguish unbound, current, changed, missing, and inaccessible origins without path/checksum/content projection or mutation; the observation is not persisted, “current” is point-in-time only, and automatic refresh, rebind, moved-origin discovery, directory/URL intake, selection, retrieval, deletion, and UI integration remain pending                                                                                 |
 | 2026-08-22 | Added remembered local-file origin bindings for successful managed CKB creates in SQLite migration v8 without advancing the application-grade stage beyond component implementation                                       | The canonical verified origin is useful local state but is sensitive, stale when the store or origin moves, not portable continuity, not yet refreshable/rebindable/status-checked, and never provider-facing; manual appends and legacy v7 sources remain unbound                                                                                                                                                                            |

@@ -17,8 +17,9 @@ candidate decides what to approve and export.
 > **Alpha status:** v0.6.0 is a released, non-validated alpha. Its representative
 > outcome was not application-ready: it missed important CV structure and
 > chronology and introduced unsupported content. The current stage is **v0.7
-> Application-grade CV workflow**, which is the work needed to reach application-
-> ready parity. This project is not production-ready.
+> Evidence-backed CV drafting**, the first increment toward application-ready
+> parity; independent review/readiness follows in v0.8 and parity evidence in
+> v0.9. This project is not production-ready.
 
 ## How DraftLoop works
 

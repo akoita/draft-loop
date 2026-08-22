@@ -89,11 +89,13 @@ The validation exit criterion was not met. The maintainer published v0.6.0 as a
 preflight and release evidence passed. The release preserves an integrated,
 reproducible baseline; it does not claim application readiness.
 
-The negative evidence directly defines the v0.7 Application-grade CV workflow:
-reusable candidate knowledge bases, a canonical career profile, a reviewed
-opportunity brief, requirement-to-achievement planning, complete structured CV
-composition under a customizable writing/template policy, independent critique
-and author adjudication, recoverable stopping rules, professional rendering,
-and parity evaluation against the private manual baseline. The v0.6 outcome
-issue remains a failed observation, not passed acceptance. The verified release
-closes v0.6, and v0.7 becomes the active corrective product stage.
+The negative evidence directly defines the application-grade corrective
+program: reusable candidate knowledge bases, a canonical career profile, a
+reviewed opportunity brief, requirement-to-achievement planning, complete
+structured CV composition under a customizable writing/template policy,
+independent critique and author adjudication, recoverable stopping rules,
+professional rendering, and parity evaluation against the private manual
+baseline. The v0.6 outcome issue remains a failed observation, not passed
+acceptance. The verified release closes v0.6; the corrective work is now
+sequenced through v0.7 evidence-backed drafting, v0.8 independent review and
+readiness, and v0.9 workflow parity and release.
