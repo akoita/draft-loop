@@ -329,6 +329,239 @@ describe("candidate knowledge store application service", () => {
     }
   });
 
+  it("imports an approved URL with exact injected response bytes and projects no URL state", async () => {
+    const originalUrl = "https://example.com/candidate?view=full";
+    const finalUrl = "https://cdn.example.com/candidate";
+    const responseBytes = new Uint8Array([65, 66, 67, 194, 162]);
+    const responseChecksum = createHash("sha256").update(responseBytes).digest("hex");
+    const fetchedAt = "2026-08-21T09:30:00.000Z";
+    const ingested: IngestionResult = {
+      source: {
+        source: {
+          path: originalUrl,
+          mediaType: "text/plain",
+          url: { originalUrl, finalUrl, fetchedAt, kind: "generic" },
+        },
+        mediaType: "text/plain",
+        checksum: responseChecksum,
+        sizeBytes: responseBytes.byteLength,
+        urlResponseBytes: responseBytes,
+        text: "ABC¢",
+        chunks: [
+          {
+            id: "chunk-1",
+            sourcePath: originalUrl,
+            mediaType: "text/plain",
+            checksum: responseChecksum,
+            locator: { lineStart: 1, lineEnd: 1 },
+            text: "ABC¢",
+            url: { originalUrl, finalUrl, fetchedAt, kind: "generic" },
+          },
+        ],
+        issues: [],
+        url: { originalUrl, finalUrl, fetchedAt, kind: "generic" },
+      },
+      issues: [],
+    };
+    const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+    const generateId = vi.fn(() => ids.shift() ?? "unexpected-id");
+    const ingestUrl = vi.fn(async () => ingested);
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      ingestUrl,
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const imported = await service.importKnowledgeSourceUrl({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      url: originalUrl,
+      displayName: "Remote evidence",
+      approved: true,
+    });
+    expect(ingestUrl).toHaveBeenCalledWith(originalUrl, { approved: true });
+    expect(imported).toMatchObject({
+      created: true,
+      source: {
+        id: "source-uuid",
+        knowledgeBaseId: "default-ckb-uuid",
+        kind: "url",
+        displayName: "Remote evidence",
+        createdAt: fetchedAt,
+      },
+      versions: [
+        {
+          id: "version-uuid",
+          sourceId: "source-uuid",
+          version: 1,
+          mediaType: "text/plain",
+          checksum: responseChecksum,
+          sizeBytes: responseBytes.byteLength,
+          createdAt: fetchedAt,
+        },
+      ],
+    });
+    const serialized = JSON.stringify(imported);
+    expect(serialized).not.toContain(originalUrl);
+    expect(serialized).not.toContain(finalUrl);
+    expect(serialized).not.toContain("ABC¢");
+    expect(imported.source).not.toHaveProperty("url");
+    expect(Object.isFrozen(imported)).toBe(true);
+    expect(Object.isFrozen(imported.source)).toBe(true);
+    expect(Object.isFrozen(imported.versions)).toBe(true);
+  });
+
+  it("requires URL approval and active scope before invoking ingestion", async () => {
+    const ingestUrl = vi.fn(async () => {
+      throw new Error("network must not be called");
+    });
+    const ids = ["store-uuid", "default-ckb-uuid", "other-ckb-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      ingestUrl,
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await expect(
+      service.importKnowledgeSourceUrl({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        url: "https://example.com/private",
+        approved: false,
+      }),
+    ).rejects.toThrow("The selected candidate knowledge source URL could not be imported.");
+    expect(ingestUrl).not.toHaveBeenCalled();
+
+    await expect(
+      service.importKnowledgeSourceUrl({
+        storeRoot,
+        knowledgeBaseId: "missing-ckb",
+        url: "https://example.com/private",
+        approved: true,
+      }),
+    ).rejects.toThrow("The selected candidate knowledge source URL could not be imported.");
+    expect(ingestUrl).not.toHaveBeenCalled();
+
+    const other = await service.createKnowledgeBase({
+      storeRoot,
+      displayName: "Other evidence",
+    });
+    await service.archiveKnowledgeBase({
+      storeRoot,
+      knowledgeBaseId: other.knowledgeBases[1]?.id ?? "",
+    });
+    await expect(
+      service.importKnowledgeSourceUrl({
+        storeRoot,
+        knowledgeBaseId: other.knowledgeBases[1]?.id ?? "",
+        url: "https://example.com/private",
+        approved: true,
+      }),
+    ).rejects.toThrow("The selected candidate knowledge source URL could not be imported.");
+    expect(ingestUrl).not.toHaveBeenCalled();
+  });
+
+  it("rejects an active prefetch result from a different knowledge base without ingesting", async () => {
+    const ingestUrl = vi.fn(async () => {
+      throw new Error("network must not be called");
+    });
+    const getCandidateKnowledgeBase = vi.fn(async () => ({
+      id: "different-ckb-uuid",
+      displayName: "Different evidence",
+      description: "",
+      state: "active" as const,
+      isDefault: false,
+      createdAt,
+      updatedAt: createdAt,
+      archivedAt: null,
+    }));
+    const close = vi.fn(async () => {});
+    const open = vi.fn(
+      async () =>
+        ({ getCandidateKnowledgeBase, close }) as unknown as CandidateKnowledgeStoreHandle,
+    );
+    const ids = ["store-uuid", "default-ckb-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      ingestUrl,
+      open,
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+
+    await expect(
+      service.importKnowledgeSourceUrl({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        url: "https://example.com/private",
+        approved: true,
+      }),
+    ).rejects.toThrow("The selected candidate knowledge source URL could not be imported.");
+    expect(getCandidateKnowledgeBase).toHaveBeenCalledWith("default-ckb-uuid");
+    expect(close).toHaveBeenCalledTimes(1);
+    expect(ingestUrl).not.toHaveBeenCalled();
+  });
+
+  it("rejects malformed URL ingestion results without consuming IDs or leaking URL data", async () => {
+    const originalUrl = "https://example.com/private?token=secret";
+    const malformedBytes = new Uint8Array([1, 2, 3, 4]);
+    const malformedChecksum = createHash("sha256").update(malformedBytes).digest("hex");
+    const generateId = vi
+      .fn<() => string>()
+      .mockReturnValueOnce("store-uuid")
+      .mockReturnValueOnce("default-ckb-uuid");
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      ingestUrl: vi.fn(async () => ({
+        source: {
+          source: { path: originalUrl },
+          mediaType: "text/plain",
+          checksum: malformedChecksum,
+          sizeBytes: malformedBytes.byteLength,
+          url: {
+            originalUrl: "https://different.example/private",
+            finalUrl: "https://different.example/private",
+            fetchedAt: createdAt,
+            kind: "generic",
+          },
+          urlResponseBytes: malformedBytes,
+          text: "safe",
+          chunks: [
+            {
+              id: "chunk-1",
+              sourcePath: originalUrl,
+              mediaType: "text/plain",
+              checksum: malformedChecksum,
+              locator: { lineStart: 1, lineEnd: 1 },
+              text: "safe",
+            },
+          ],
+          issues: [],
+        },
+        issues: [],
+      })) as never,
+    });
+    await service.initializeStore({ storeRoot });
+    const error = await service
+      .importKnowledgeSourceUrl({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        url: originalUrl,
+        approved: true,
+      })
+      .then(
+        () => undefined,
+        (failure) => failure,
+      );
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toBe(
+      "The selected candidate knowledge source URL could not be imported.",
+    );
+    expect((error as Error).message).not.toContain(originalUrl);
+    expect(generateId).toHaveBeenCalledTimes(2);
+  });
+
   it("appends approved managed bytes with lineage and deduplicates an identical approval", async () => {
     const initialPath = join(temporaryParent, "Career notes.md");
     const selectedVersionPath = join(temporaryParent, "AGENTS.md");

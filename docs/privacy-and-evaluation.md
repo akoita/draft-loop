@@ -44,6 +44,18 @@ bytes create ordered parent-linked version N+1. Bytes identical to the current
 version return a no-op, persist no new timestamp, and provide no freshness or
 last-refresh evidence.
 
+One explicitly approved HTTPS URL can also become an initial managed CKB
+source. The existing controlled URL ingestion boundary validates public address
+resolution and every redirect, bounds time and response/text size, restricts
+content types, and requires usable extracted text before persistence. The store
+retains the exact fetched response bytes under opaque ID-derived names so its
+version checksum and byte size remain truthful. Approved original/final URLs,
+fetch time, and bounded URL kind are sensitive immutable local provenance for
+that version; they are excluded from generic manifests, journals, inventory,
+diagnostics, errors, and provider requests. Query strings may contain secrets or
+personal identifiers, so no URL is copied into a failure message. URL refresh,
+adapter controls, indexing, and transmission remain unimplemented.
+
 An explicit local application query can perform a bounded structural inventory
 of `sources/` after normal validation of every referenced managed blob. It
 returns only counts for verified managed files, scanned entries, staging-shaped

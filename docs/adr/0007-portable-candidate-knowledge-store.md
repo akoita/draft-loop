@@ -35,6 +35,9 @@ version. Managed creates, appends, and changed-byte refreshes have prospective
 write provenance in an internal append-only journal. Rebind writes only the
 guarded local binding and creates no managed-write event. A separate immutable
 marker can logically retire a source without deleting any of that evidence.
+An approved URL intake operation uses the existing bounded HTTPS fetch boundary,
+then publishes the exact fetched response bytes under the same opaque layout and
+atomically records immutable per-version URL provenance.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -72,6 +75,24 @@ marker is neither physical deletion nor index-cleanup authority, and it does
 not collapse lifecycle into refresh freshness. This slice deliberately provides
 no reactivation operation: selection/index invalidation, retention, backup, and
 restore policy must be defined before restoration can claim readiness again.
+
+The application command to add one URL is the approval boundary for that one
+network fetch. It requires `approved: true` and reuses ingestion's HTTPS-only,
+no-credential/no-fragment, public-address resolution, manual redirect,
+timeout, response-size, supported text-content, extraction-size, and usable-text
+checks. Successful intake generates a stable source identity only after fetch
+and extraction succeed. It copies the exact fetched response bytes—not only the
+normalized text—so the immutable version checksum and byte size continue to
+describe the stored material. Re-adding the same URL creates a separate source;
+the existing exact-integrity duplicate projection remains only a signal.
+
+The approved original URL, validated final redirect URL, fetch time, and bounded
+URL kind are immutable sensitive local provenance for that exact source version.
+They do not enter generic manifests, descriptors, journals, inventory,
+diagnostics, errors, or provider requests. Redirects therefore remain historical
+provenance and never silently rebind source identity. This slice does not refresh
+a URL; later refresh must reject retired sources before any network request and
+define failure/readiness semantics separately.
 
 The application command to add one local file is the approval boundary for that
 one file. Intake accepts only a regular file of at most 20 MiB in the five
@@ -231,6 +252,12 @@ cannot precede source creation, and its only supported reason is
 remove raw bytes, versions, bindings, observations, journals, indexes, backups,
 or run references; those remain governed by later lifecycle-storage policy.
 
+Storage migration version 12 permits the managed opaque-byte marker for file or
+URL versions while preserving file-only origin bindings. It adds immutable,
+source/version-scoped URL provenance and requires every managed URL version to
+have matching provenance. URL provenance is committed atomically with the
+source, first version, managed marker, exact bytes, and journal transition.
+
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
 permissions are best-effort and are not encryption or protection from another
@@ -243,8 +270,8 @@ provider request data, and content-free audit or diagnostic projections. A UI
 may show the local location to the user, but it must not treat that location as
 candidate evidence or transmit it to a model provider.
 
-The same rule applies to source origins in all portable and provider-facing
-surfaces. The canonical path for a successful managed create is retained only
+The same rule applies to source origins in provider-facing and content-free
+surfaces. The canonical path for a successful managed file create is retained only
 as sensitive local state in the SQLite origin-binding table. It is copied with
 the database but is not portable continuity, may become stale when the store
 or origin moves or disappears, is not automatically updated, and never enters
@@ -254,8 +281,9 @@ refresh-state projection contains only source/version identities, bounded
 status, and timestamps. Exact managed
 provenance elsewhere consists of the logical store, CKB, source and version IDs
 plus the checksum, size, media type, and capture time of the copied bytes.
-Source labels are local user-visible metadata and checksums can correlate known
-content, so neither belongs in a content-free diagnostic projection or provider
+Approved original/final URLs are likewise retained only as sensitive local
+per-version provenance. Source labels, URLs, and checksums can correlate known
+content, so none belongs in a content-free diagnostic projection or provider
 request.
 
 Managed source bytes are inert candidate data. A source named `AGENTS.md`,
@@ -265,7 +293,8 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- directory intake, URL/fetched source intake, and directory bindings;
+- directory intake and directory bindings;
+- URL refresh, redirect-change readiness policy, and URL lifecycle controls;
 - background refresh, time-based freshness policy, moved-origin discovery, and
   product-adapter controls for refresh state or explicit rebind;
 - automatic duplicate merging or preference, source reactivation, and physical
@@ -297,8 +326,8 @@ a portable-store record must not make a workspace run read from it implicitly.
   opportunity and provider history has a different privacy, retention, and
   backup lifecycle from reusable candidate knowledge.
 - **Keep the store metadata-only until full source lifecycle exists.** Rejected
-  for this slice because a narrowly approved, immutable single-file copy can
-  establish portable byte provenance without prematurely enabling directory
+  because narrowly approved immutable file and URL snapshots can establish
+  portable byte provenance without prematurely enabling directory or URL
   refresh, retrieval, provider use, deletion, or backup claims.
 - **Use cloud storage or remote vectors.** Rejected for this stage because it
   would add accounts, authentication, remote retention, and new provider

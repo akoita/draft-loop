@@ -132,6 +132,8 @@ export interface NormalizedSource {
   readonly mediaType: SupportedMediaType;
   readonly checksum: string;
   readonly sizeBytes: number;
+  /** Exact response bytes for approved URL intake; absent for local-file intake. */
+  readonly urlResponseBytes?: Uint8Array;
   readonly text: string;
   readonly chunks: readonly SourceChunk[];
   readonly issues: readonly IngestionIssue[];
@@ -1442,6 +1444,7 @@ async function normalizeIngestedBytes(
   options: IngestionOptions,
   url: UrlProvenance | undefined = undefined,
   maxTextCharacters: number | undefined = undefined,
+  retainUrlResponseBytes = false,
 ): Promise<IngestionResult> {
   const sourceChecksum = checksum(bytes);
   const extracted = await extractSource(source, mediaType, bytes, sourceChecksum, options);
@@ -1495,6 +1498,7 @@ async function normalizeIngestedBytes(
       mediaType,
       checksum: sourceChecksum,
       sizeBytes: bytes.byteLength,
+      ...(retainUrlResponseBytes ? { urlResponseBytes: new Uint8Array(bytes) } : {}),
       text,
       chunks: createChunks(
         text,
@@ -1969,7 +1973,15 @@ export async function ingestUrl(
       mediaType,
       url: provenance,
     };
-    return normalizeIngestedBytes(source, mediaType, bytes, options, provenance, maxTextCharacters);
+    return normalizeIngestedBytes(
+      source,
+      mediaType,
+      bytes,
+      options,
+      provenance,
+      maxTextCharacters,
+      true,
+    );
   }
 }
 

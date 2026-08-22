@@ -93,11 +93,12 @@ flowchart TB
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
-solid CKB edge covers explicit managed-file add, manual version append, and the
-local structural-inventory query. Each write approval covers one local regular
-file, extraction succeeds before persistence, and the application copies
-verified raw bytes into the portable store. Inventory is an explicit bounded,
-count-only read after normal referenced-blob validation. The dotted CKB edge
+solid CKB edge covers explicit managed-file add, initial approved URL intake,
+manual file-version append, and the local structural-inventory query. Each file
+write approval covers one local regular file; each URL approval covers one
+bounded validated HTTPS fetch. Extraction succeeds before persistence, and the
+application copies verified exact bytes into the portable store. Inventory is
+an explicit bounded, count-only read after normal referenced-blob validation. The dotted CKB edge
 marks the still-unintegrated workflow: application selection, retrieval, and
 provider use have not crossed that boundary yet.
 
@@ -169,6 +170,14 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   retrieval must reject a retired source explicitly, and retirement neither
   deletes indexes nor authorizes physical cleanup. Reactivation is not yet
   defined.
+  Initial approved CKB URL intake reuses the bounded HTTPS ingestion boundary
+  and publishes the exact fetched response bytes under the same opaque layout.
+  Immutable per-version local provenance retains the approved original URL,
+  validated final redirect URL, fetch time, and bounded URL kind. Those fields
+  are excluded from generic manifests, journals, inventory, diagnostics,
+  errors, and provider requests. This component does not yet refresh URLs;
+  later refresh must reject retired sources before fetching and define
+  redirect/failure readiness semantics.
   Exact paths remain absent from the portable
   descriptor, source/version metadata, manifests, journal rows, inventory,
   diagnostics, and application projections. Source identity and its sensitive
@@ -176,9 +185,10 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   later selected path or basename differs. It does not drive retrieval or
   appear in CLI or desktop workflows. See
   [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
-- Managed-file add and append publish verified bytes without replacement before
+- Managed source add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
-  matching regular-file bytes. Ordinary failures clean up; crashes or
+  matching opaque bytes; file sources retain their additional regular-file and
+  origin-binding checks. Ordinary failures clean up; crashes or
   concurrency can leave unreferenced opaque files. Their shape does not prove
   DraftLoop ownership.
 - SQLite migration v7 adds an internal append-only ownership journal for new
