@@ -3,285 +3,105 @@
 [![CI](https://github.com/akoita/draft-loop/actions/workflows/ci.yml/badge.svg)](https://github.com/akoita/draft-loop/actions/workflows/ci.yml)
 ![Node.js](https://img.shields.io/badge/Node.js-24.5.0-339933?logo=node.js&logoColor=white)
 ![pnpm](https://img.shields.io/badge/pnpm-10.18.3-F69220?logo=pnpm&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-3178C6?logo=typescript&logoColor=white)
 ![Anthropic](https://img.shields.io/badge/provider-Anthropic-D97757)
 ![OpenAI](https://img.shields.io/badge/provider-OpenAI-412991)
 
-DraftLoop is a local-first, agentic CV-crafting workspace. It combines a job
-description and candidate-provided source material with a source-grounded
-evaluator–optimizer loop: an author drafts, an independent critic evaluates
-against an explicit rubric, and bounded revisions continue until the candidate
-reviews and approves the result.
+DraftLoop turns candidate-owned sources into a job-specific CV with local-first
+grounding, independent AI critique, and final human control.
 
-The agents are useful participants, not authorities: candidate sources stay
-traceable, provider exposure is explicit, and export requires human approval.
+It is designed for candidates who want useful drafting assistance without giving
+up traceability or control of their source material. Claims remain connected to
+candidate-provided evidence, provider and model identities are visible, and the
+candidate decides what to approve and export.
 
-Traceability does not mean that DraftLoop independently verifies a career. CVs,
-profiles, and private-project descriptions are valid candidate sources. The app
-guards against model-added facts and contradictions; it does not contact past
-employers or replace reference checks, interviews, or technical evaluation.
+> **Alpha status:** v0.6.0 is a released, non-validated alpha. Its representative
+> outcome was not application-ready: it missed important CV structure and
+> chronology and introduced unsupported content. The current stage is **v0.7
+> Application-grade CV workflow**, which is the work needed to reach application-
+> ready parity. This project is not production-ready.
 
-## What exists today
+## How DraftLoop works
 
-The repository currently provides the product foundation for the author–critic
-workflow:
-
-- canonical workspace, requirements, evidence, rubric, and model configuration
-  contracts;
-- Zod schemas for persisted and exchanged context;
-- Anthropic, OpenAI, and loopback-only local adapters with strict
-  structured-output requests;
-- independent-review checks by model lineage, data-exposure policy
-  enforcement, normalized provider errors, usage/cost metadata, and
-  deterministic tests;
-- local privacy guardrails, credential redaction, content-free operational
-  events, a repository-grounded threat model, and a first/revised/manual
-  evaluation comparison gate;
-- a phase-0 CLI workflow that connects local ingestion, SQLite history,
-  orchestration lifecycle, approval decisions, and local Markdown/DOCX/PDF
-  export;
-- a desktop review workspace with a typed, capability-limited host bridge and
-  deterministic browser fallback;
-- a packaged Electron desktop host that connects the bridge to the shared local
-  application driver, native workspace/file dialogs, SQLite history, and
-  restart-safe review state;
-- a portable Candidate Knowledge Base (CKB) store component with a logical UUID,
-  CKB/source/version metadata, immutable managed raw bytes for approved local
-  files, explicit manual version append, read-only origin status and explicit
-  bound-origin refresh operations, and a bounded structural inventory query at
-  the application boundary, plus an internal prospective managed-write journal;
-- bounded, approval-gated URL ingestion for GitHub, certification, profile,
-  portfolio, and job-description sources with provenance and typed facts;
-- explicit separation of blocking findings, warnings, artifact approval, and
-  local export, including persisted override rationales;
-- workspace-scoped SQLite FTS/BM25 retrieval, local vector and hybrid benchmark
-  implementations, provider retries, and content-free progress events;
-- component-level backup/restore, retention purge, diagnostic export, ATS and
-  accessibility checks, multilingual templates, additional artifact schemas,
-  portfolio ingestion, and an OpenAI-compatible local endpoint adapter.
-
-These capabilities are not all validated product outcomes. The current stage is
-the application-grade CV workflow. The portable CKB store records stable
-CKB-scoped source identity, a sensitive local label, and ordered immutable
-versions with SHA-256, media type, byte size, timestamp, and parent lineage. An
-explicit application command approves one local regular file of at most 20 MiB
-in the five supported media types; extraction must pass before its exact raw
-bytes are copied under an opaque ID-derived name. A second explicit command can
-approve a local file as a manual new version of that same source. It repeats the
-type, extraction, size, stable-file, and managed-copy checks. Changed bytes
-create ordered version N+1; bytes identical to the current version are a no-op
-and do not advance version time or imply freshness. The selected path is used
-for capture, and a successful managed create remembers its canonical physical
-path in a separate sensitive local-only SQLite binding. A later manual append
-uses its selected path only for that operation and never changes the initial
-binding; source identity and label remain stable even when the selected path or
-basename changes. The binding is copied with the SQLite database but is not
-portable continuity: it can become stale when the store moves to another
-machine or the origin moves or disappears. It is not automatically refreshed
-or rebound and is never provider-facing. An explicit read-only application
-check can classify one source as unbound, current, changed, missing, or
-inaccessible without returning the path, checksum, content, or persisting the
-observation. “Current” is only a
-point-in-time byte match against the latest stored version, not durable
-freshness. A separate explicit refresh operation follows only that remembered
-origin and appends changed bytes as the next immutable version under the same
-capture and extraction gates. Current, unbound, missing, or inaccessible
-origins create no version, and refresh neither changes the binding nor records
-durable freshness. Directory and URL intake, background refresh, persisted
-freshness or last-refresh state, moved-origin discovery, rebind controls, cross-source
-duplicate relationships, indexing and retrieval, application/run CKB selection,
-CLI and desktop controls, deletion, reconciliation or repair, and complete
-backup, export, and restore are not integrated. The local inventory query first
-validates every referenced managed blob, then reports only bounded counts for
-verified managed files, scanned entries, staging-shaped root files, other
-opaque root files/directories, extra entries inside expected managed-source
-directories, symlinks, special/other entries, and whether the scan completed or
-hit its limit. It returns no names, paths, IDs, labels, checksums, or content;
-never follows unknown symlinks, recurses into unknown directories, or reads
-unknown file bytes; and does not mutate or classify unknown entries as
-DraftLoop-owned residue. SQLite migration v8 adds a local-only origin-binding
-table for successful managed creates; it is not included in the manifest,
-descriptor, journal, inventory, diagnostics, or provider projections. SQLite
-migration v7 adds an internal, append-only
-managed-write journal for new creates and appends. It records opaque intent
-before staging, then records the resolved target before publication, the atomic
-managed-marker/database commit, and completion only after staging cleanup. New staging names are opaque
-operation-derived hashes. The journal contains no origin path, filename, label,
-checksum, source content, provider data, diagnostic projection, cleanup token,
-or approval, and its identifiers are not exposed. It does not retroactively
-claim legacy v6 writes or any entry without prospective journal proof. It
-authorizes no cleanup: deletion, adoption, quarantine, repair, reconciliation,
-automatic scanning, writer locks/leases, and approval UI remain unimplemented.
-Safe future cleanup still requires writer coordination and explicit visible
-approval. Same-current-byte managed appends record a terminal, non-owning no-op;
-metadata-only
-versions can be explicitly materialized without adopting a pre-existing
-unowned target based on matching bytes or shape. Application workspaces and
-their run-history databases remain separate from the CKB store.
-
-## Stack
-
-| Area                     | Technologies                                                        |
-| ------------------------ | ------------------------------------------------------------------- |
-| Language and runtime     | TypeScript, Node.js 24.5.0, pnpm 10.18.3                            |
-| Workspace                | pnpm monorepo with framework-free domain packages                   |
-| Model providers          | Anthropic SDK, OpenAI SDK, cross-provider author–critic pairing     |
-| Contracts and validation | Zod, strict TypeScript, JSON Schema structured outputs              |
-| CLI and desktop shell    | Commander, React 19, Vite, Electron 43, Electron Forge 7            |
-| Persistence and output   | Drizzle ORM, SQLite boundary, Markdown/PDF/DOCX rendering contracts |
-| Quality                  | Biome, ESLint, Markdownlint, Vitest, GitHub Actions                 |
-
-## Architecture
+The workflow keeps the job description and candidate sources in a local
+workspace, then uses a bounded author–critic loop to improve a draft. The
+default cross-company pairing is Anthropic as author and OpenAI as critic.
 
 ```mermaid
 flowchart LR
-    Inputs["Job requirements<br/>+ candidate source material"]
-    Adapters["CLI or desktop"]
-    Application["Shared application services"]
-    Context["Local ingestion<br/>+ evidence context"]
-    Loop["Bounded author–critic loop"]
-    Models["Anthropic + OpenAI<br/>provider adapters"]
-    Review["Validation<br/>+ human approval"]
-    Export["Local CV export"]
-    WorkspaceStore[("Application workspace<br/>+ SQLite run history")]
-    ApprovedFile["Approved single local file"]
-    CKBStore[("Portable CKB store<br/>raw blobs · metadata · internal write journal")]
-
-    Inputs --> Adapters --> Application
-    Application --> Context --> Loop
-    Loop <-->|"approved model requests"| Models
-    Loop --> Review --> Export
-    Application <--> WorkspaceStore
-    ApprovedFile -->|"explicit add or version approval"| Application
-    Application -->|"validated add / append; origin status / refresh / inventory"| CKBStore
-    CKBStore -.->|"selection and retrieval pending"| Context
+    subgraph Local["Local workspace"]
+        Inputs["Approved job requirements<br/>+ candidate sources"]
+        Gate["Visible provider-transmission<br/>approval"]
+        Author["Grounded author"]
+        Critic["Independent critic<br/>+ bounded revision"]
+        Human["Human review<br/>and approval"]
+        Export["Local CV export"]
+        Inputs --> Gate --> Author --> Critic --> Human --> Export
+    end
+    Anthropic["Anthropic<br/>author"]
+    OpenAI["OpenAI<br/>critic"]
+    Author <-->|"approved context"| Anthropic
+    Critic <-->|"approved draft and evidence"| OpenAI
 ```
 
-At a high level, DraftLoop keeps source material and run history local, sends
-only approved context through provider adapters, and requires human approval
-before local export. The portable CKB store is a separate, user-selected
-plaintext local store; its filesystem path is not part of its logical identity
-and is not persisted in the manifest or provider data. A successful managed
-create retains its canonical verified origin only in sensitive local-only
-SQLite state. That binding is copied with the database but is not portable
-continuity, can become stale when the store or origin moves/disappears, and is
-never provider-facing. An explicit local status check reports only unbound,
-current, changed, missing, or inaccessible plus source identity and observation
-time; it neither returns the path nor persists freshness or refresh state.
-An explicit bound-origin refresh may append changed bytes as a new immutable
-version but returns no path or observed content and never rebinds the source.
-Managed bytes use restrictive best-effort permissions; same-user processes and
-device backups remain risks.
-Source labels and checksums remain local CKB metadata and are not content-free
-diagnostics. A configuration-like name such as `AGENTS.md` remains inert
-candidate data, including when selected for a later version. Deleting the
-original or a workspace does not delete the CKB copy, and SQLite-only backup is
-incomplete. Unreferenced opaque entries have no authenticated ownership record;
-their shape alone cannot authorize deletion, adoption, quarantine, or repair.
-The prospective journal supplies evidence for future policy only; portable CKB
-data is still not authoritative for application retrieval.
-See the [detailed
-architecture](docs/architecture.md) and
-[ADR 0007](docs/adr/0007-portable-candidate-knowledge-store.md) for the current
-component boundary and its unimplemented workflow integrations.
+The loop is an assistant, not an authority. DraftLoop does not independently
+verify a career, contact past employers, replace interviews, or turn a
+candidate's source material into permission to invent facts.
 
-The monorepo separates product contracts from adapters:
+## Try the alpha desktop build
 
-- `domain` defines framework-free concepts and workflow states.
-- `schemas` validates exchanged and persisted structures.
-- `orchestrator` coordinates rounds without knowing provider SDK details.
-- `providers` contains the Anthropic, OpenAI, and local adapter boundaries and
-  the data-exposure policy they enforce. Independent review is decided in
-  `domain` by model lineage, not by provider company.
-- `ingestion` and `evidence` normalize local sources and connect claims to
-  evidence.
-- `validation`, `evaluations`, and `artifacts` check and represent drafts.
-- `security` owns privacy classifications, retention defaults, redaction, and
-  allowlisted operational events.
-- `rendering` and `storage` handle output and local persistence boundaries.
-- `application` defines the adapter-neutral use-case contract and safe command
-  boundary shared by user-facing adapters.
-- `apps/cli` is the first user-facing adapter.
-- `apps/desktop` is the React desktop UI shell.
+Download the [v0.6.0 release](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)
+and its `SHA256SUMS` file. The release currently provides these unsigned ZIPs:
 
-The evaluator–optimizer decision and its trade-offs are recorded in
-[ADR 0003](docs/adr/0003-evidence-grounded-evaluator-optimizer.md).
+- Linux x64
+- macOS arm64
+- Windows x64
 
-See [docs/releasing.md](docs/releasing.md) for the stage-based release policy,
-dry-run workflow, artifact manifest, and maintainer approval boundary.
+To verify one download, replace `<downloaded-archive>.zip` below with the ZIP
+you selected and compare that single digest with its matching line in
+`SHA256SUMS`:
 
-Product direction, stage outcomes, and exit criteria are maintained in the
-[living product roadmap](docs/roadmap.md).
+```sh
+# Linux
+sha256sum "./<downloaded-archive>.zip"
 
-Security and data handling are documented in [the threat model](docs/threat-model.md)
-and [privacy and evaluation policy](docs/privacy-and-evaluation.md).
+# macOS
+shasum -a 256 "./<downloaded-archive>.zip"
+```
 
-## Quick start
+On Windows, run `(Get-FileHash .\your-download.zip -Algorithm SHA256).Hash` in
+PowerShell and compare that output with the matching `SHA256SUMS` entry. Extract
+the matching ZIP and launch the desktop executable from the extracted folder.
+These are alpha test builds, not dependable real-application tooling; signing, updates, and
+application-readiness validation are still ahead. The CLI is source-only during
+the alpha stage and has no standalone installer.
 
-Requirements: Node 24.5.0 and pnpm 10.18.3.
+## Developer quick start
+
+Use Node.js **24.5.0** and pnpm **10.18.3**:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm validate
 ```
 
-To run the current CLI shell:
-
-```sh
-pnpm start
-```
-
-To run or package the native desktop shell:
+Start the desktop shell and choose **Try demo workspace** to exercise the
+deterministic fixture workflow:
 
 ```sh
 pnpm --filter @draft-loop/desktop start
-pnpm --filter @draft-loop/desktop package
 ```
 
-The packaged host is offline-first. Creating a real workspace starts empty and
-waits for a target job description and candidate source material. A separately
-labeled demo workspace starts the deterministic fixture workflow. The packaged desktop
-can collect Anthropic and OpenAI API keys through its typed native bridge and
-store them through the host credential store. Live execution remains opt-in and
-provider requests are denied unless the data-exposure policy allows them. The
-desktop preflight and credential-storage behavior still require cross-platform
-acceptance before the workflow is considered validated.
-
-The phase-0 CLI workflow is available with a local workspace manifest:
+Fixture mode is offline and uses no provider spend. To inspect the source-only
+CLI:
 
 ```sh
-pnpm --filter @draft-loop/cli start -- init ./workspace \
-  --job-description ./job.md --sources ./evidence --fixture
-pnpm --filter @draft-loop/cli start -- start ./workspace
-pnpm --filter @draft-loop/cli start -- status ./workspace
-pnpm --filter @draft-loop/cli start -- approve ./workspace
-pnpm --filter @draft-loop/cli start -- export ./workspace
-pnpm --filter @draft-loop/cli start -- export ./workspace --format pdf
-pnpm --filter @draft-loop/cli start -- export ./workspace --format docx
-
-# Run the offline phase-0 pilot and write pilot-report.md
-pnpm --filter @draft-loop/cli start -- pilot ./pilot-workspace
+pnpm --filter @draft-loop/cli start --help
 ```
 
-Fixture mode is deterministic and offline. Live provider execution requires
-both provider credentials and the explicit `--allow-provider-data` approval;
-the CLI prints the provider pairing and budget before starting. Progress output
-contains states, steps, counts, and codes, not prompts or source content.
+Live use requires an explicit provider-transmission approval in the workspace,
+configured provider credentials, and may incur provider cost. Keep real
+candidate material out of the repository.
 
-Keep candidate data out of the repository. Before using real application
-material, review the provider transmission and retention policy for the
-workspace.
-
-Approved artifacts are rendered locally. Every export records the artifact
-version, template version, timestamp, format, and SHA-256 checksum in local
-history.
-
-The `pilot` command creates synthetic local inputs, runs one critic finding and
-one bounded revision, approves and exports the result, and writes a report
-containing counts and the next decision. It does not use provider credentials
-or include source text, prompts, or provider responses in the report.
-
-## Validation
+For the normal quality gate, run:
 
 ```sh
 pnpm format:check
@@ -290,16 +110,50 @@ pnpm typecheck
 pnpm test
 ```
 
-For development, `pnpm format` applies the Biome formatter. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for change and pull request guidance.
+## Technology and architecture
 
-## Project status
+| Area | Technology or boundary |
+| --- | --- |
+| Runtime | TypeScript, Node.js 24.5.0, pnpm 10.18.3 |
+| User interfaces | React 19, Vite, Electron 43; source-only Commander CLI |
+| Product core | Framework-free domain contracts, Zod schemas, orchestrator ports |
+| Providers | Explicit Anthropic and OpenAI SDK adapters |
+| Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports |
+| Quality | Biome, ESLint, Markdownlint, Vitest, GitHub Actions |
 
-DraftLoop is an early-stage private project in integration hardening and outcome
-validation. The initial use case is a job-specific CV, but the contracts are
-intentionally shaped for other evidence-backed drafting and review workflows.
-Implemented components beyond the core CV path should not be treated as
-validated or production-ready until the roadmap exit criteria are met.
+```mermaid
+flowchart LR
+    UI["CLI / Desktop"] --> Core["Shared application and core<br/>contracts + workflow"]
+    Core --> Local["Local SQLite<br/>run history + exports"]
+    Core --> Adapters["Provider adapters"]
+    Adapters --> Anthropic["Approved Anthropic<br/>author route"]
+    Adapters --> OpenAI["Approved OpenAI<br/>critic route"]
+    CKB["Portable CKB component<br/>(selection/retrieval pending)"] -.-> Core
+```
 
-Human approval remains mandatory. DraftLoop does not submit applications,
-publish documents, or perform uncontrolled web research on a user's behalf.
+The portable Candidate Knowledge Base (CKB) component can store approved local
+source versions, but CKB selection and retrieval are not yet integrated into the
+user workflow. The existing workspace evidence path remains authoritative for
+application runs; the CKB should not be assumed to supply an application run.
+
+## Trust boundary
+
+- Source material, run history, and exports are local by default.
+- A provider receives only context covered by an explicit user approval; the
+  workspace shows the provider, model, transmission scope, and retention choice.
+- Independent review is a product constraint: the default author and critic use
+  different provider companies, and their identities are recorded.
+- DraftLoop prepares local artifacts. It does not submit applications, publish
+  documents, send messages, or perform uncontrolled web research on a user's
+  behalf.
+
+## Documentation
+
+- [Roadmap and current status](docs/roadmap.md) · [v0.6.0 stage evidence](docs/stage-evidence-v0.6.0.md)
+- [Architecture](docs/architecture.md) · [Architecture decision records](docs/adr/)
+- [Privacy and evaluation](docs/privacy-and-evaluation.md) · [Threat model](docs/threat-model.md)
+- [Contributing](CONTRIBUTING.md) · [Releasing](docs/releasing.md)
+
+Human approval is mandatory before an artifact is exported. DraftLoop can help
+prepare a CV, but the candidate remains responsible for factual review, final
+approval, and every action outside the local workspace.
