@@ -27,7 +27,8 @@ source version, and expose storage's existing managed-version append through an
 explicit application operation. A further application query provides bounded,
 count-only structural inventory of the managed `sources/` namespace, and a
 read-only origin check provides an ephemeral status without projecting the
-remembered path. These
+remembered path. A separate explicit refresh can append changed bytes from that
+binding without exposing or replacing it. These
 operations now have prospective managed-write provenance in an internal
 append-only journal. They do not connect CKB selection or retrieval to an
 application workflow.
@@ -81,7 +82,17 @@ observation time, and exactly one of unbound, current, changed, missing, or
 inaccessible. It returns no path, checksum, media type, byte size, label, or
 content and writes no source version, binding, freshness, or last-refresh state.
 Current is a point-in-time comparison with the latest stored version, not a
-durable freshness claim. The existing source ID, kind, creation time, and
+durable freshness claim. A separate explicit application operation may refresh
+from the remembered binding. It first applies the same no-follow, regular-file,
+20 MiB, supported-media, extraction, and latest-version comparison. Only a
+changed origin proceeds to storage's stable capture and managed-copy append;
+success creates the next immutable parent-linked version. Current, unbound,
+missing, inaccessible, and substituted-symlink origins create no version.
+Refresh returns source identity, observation time, action status, and the new
+version ID only when created; it returns no path or observed file metadata or
+content, does not update the binding, and does not persist freshness or
+last-refresh state. The operation must be invoked through a visible local user
+action and never runs as background monitoring. The existing source ID, kind, creation time, and
 display label remain stable; the
 binding is not included in the portable descriptor or source/version metadata,
 manifests, journals, inventory,
@@ -175,8 +186,8 @@ The same rule applies to source origins in all portable and provider-facing
 surfaces. The canonical path for a successful managed create is retained only
 as sensitive local state in the SQLite origin-binding table. It is copied with
 the database but is not portable continuity, may become stale when the store
-or origin moves or disappears, is not refreshed/rebound, and never enters a
-provider request or diagnostic projection. The explicit status operation does
+or origin moves or disappears, is not automatically updated or rebound, and
+never enters a provider request or diagnostic projection. The explicit status operation does
 not project that path and does not persist its observation. Exact managed
 provenance elsewhere consists of the logical store, CKB, source and version IDs
 plus the checksum, size, media type, and capture time of the copied bytes.
@@ -192,7 +203,7 @@ configuration. Its original filename is not used in the managed layout.
 This decision deliberately leaves the following work unintegrated:
 
 - directory intake, URL/fetched source intake, and directory bindings;
-- automatic refresh, persisted freshness or last-refresh state, moved-origin
+- background refresh, persisted freshness or last-refresh state, moved-origin
   discovery, and rebind controls for the local origin binding;
 - cross-source duplicate relationships and duplicate handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
