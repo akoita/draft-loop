@@ -1,4 +1,4 @@
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -460,6 +460,317 @@ describe("candidate knowledge store application service", () => {
     });
     expect(defaultManifests.map((manifest) => manifest.source.id)).toEqual(["default-source-uuid"]);
     expect(otherManifests.map((manifest) => manifest.source.id)).toEqual(["other-source-uuid"]);
+  });
+
+  it("checks current, changed, and missing bound origins without changing stored state", async () => {
+    const sourcePath = join(temporaryParent, "candidate.md");
+    const initialContent = "# Candidate evidence\n";
+    await writeFile(sourcePath, initialContent, "utf8");
+    const service = createCandidateKnowledgeStoreService({
+      generateId: vi
+        .fn<() => string>()
+        .mockReturnValueOnce("store-uuid")
+        .mockReturnValueOnce("default-ckb-uuid")
+        .mockReturnValueOnce("source-uuid")
+        .mockReturnValueOnce("version-uuid"),
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath,
+    });
+    const beforeManifest = await service.listKnowledgeSourceManifests({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+    });
+    const opened = await openCandidateKnowledgeStore(storeRoot);
+    const beforeBinding = await opened.getCandidateKnowledgeSourceOriginBinding(
+      "default-ckb-uuid",
+      "source-uuid",
+    );
+    await opened.close();
+
+    const current = await service.checkKnowledgeSourceOriginStatus({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: imported.source.id,
+    });
+    expect(current).toEqual({
+      sourceId: "source-uuid",
+      checkedAt: createdAt,
+      status: "current",
+    });
+
+    await writeFile(sourcePath, "# Changed evidence\n", "utf8");
+    await expect(
+      service.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toMatchObject({ sourceId: "source-uuid", status: "changed" });
+
+    await rm(sourcePath);
+    const missing = await service.checkKnowledgeSourceOriginStatus({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+    });
+    expect(missing.status).toBe("missing");
+    expect(
+      await service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).toEqual(beforeManifest);
+    const reopened = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        reopened.getCandidateKnowledgeSourceOriginBinding("default-ckb-uuid", "source-uuid"),
+      ).resolves.toEqual(beforeBinding);
+    } finally {
+      await reopened.close();
+    }
+    expect(Object.isFrozen(current)).toBe(true);
+    expect(JSON.stringify({ current, missing })).not.toContain(temporaryParent);
+    expect(JSON.stringify({ current, missing })).not.toContain(checksum);
+    expect(JSON.stringify({ current, missing })).not.toContain(initialContent);
+  });
+
+  it("reports inaccessible and non-regular bound origins without exposing local paths", async () => {
+    const sourcePath = join(temporaryParent, "candidate.md");
+    await writeFile(sourcePath, "# Candidate evidence\n", "utf8");
+    const base = createCandidateKnowledgeStoreService({
+      generateId: vi
+        .fn<() => string>()
+        .mockReturnValueOnce("store-uuid")
+        .mockReturnValueOnce("default-ckb-uuid")
+        .mockReturnValueOnce("source-uuid")
+        .mockReturnValueOnce("version-uuid"),
+      now: () => createdAt,
+    });
+    await base.initializeStore({ storeRoot });
+    await base.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath,
+    });
+
+    const permissionDenied = Object.assign(new Error("permission denied"), { code: "EACCES" });
+    const inaccessibleLstat = vi.fn(async () => {
+      throw permissionDenied;
+    });
+    const inaccessibleService = createCandidateKnowledgeStoreService({
+      now: () => createdAt,
+      lstat: inaccessibleLstat as never,
+    });
+    await expect(
+      inaccessibleService.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toMatchObject({ sourceId: "source-uuid", status: "inaccessible" });
+
+    const nonRegularLstat = vi.fn(async () => ({
+      isFile: () => false,
+      isSymbolicLink: () => false,
+    }));
+    const nonRegularService = createCandidateKnowledgeStoreService({
+      now: () => createdAt,
+      lstat: nonRegularLstat as never,
+    });
+    await expect(
+      nonRegularService.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toMatchObject({ sourceId: "source-uuid", status: "inaccessible" });
+    expect(
+      JSON.stringify(
+        await nonRegularService.checkKnowledgeSourceOriginStatus({
+          storeRoot,
+          knowledgeBaseId: "default-ckb-uuid",
+          sourceId: "source-uuid",
+        }),
+      ),
+    ).not.toContain(sourcePath);
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "reports a substituted symbolic-link origin as inaccessible without following its target",
+    async () => {
+      const sourcePath = join(temporaryParent, "candidate.md");
+      const targetPath = join(temporaryParent, "private-target.md");
+      const targetContent = "target content must never be read";
+      await writeFile(sourcePath, "# Candidate evidence\n", "utf8");
+      await writeFile(targetPath, targetContent, "utf8");
+      const service = createCandidateKnowledgeStoreService({
+        generateId: vi
+          .fn<() => string>()
+          .mockReturnValueOnce("store-uuid")
+          .mockReturnValueOnce("default-ckb-uuid")
+          .mockReturnValueOnce("source-uuid")
+          .mockReturnValueOnce("version-uuid"),
+        now: () => createdAt,
+      });
+      await service.initializeStore({ storeRoot });
+      await service.importKnowledgeSourceFile({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourcePath,
+      });
+
+      await rm(sourcePath);
+      await symlink(targetPath, sourcePath, "file");
+
+      const result = await service.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      });
+      expect(result).toEqual({
+        sourceId: "source-uuid",
+        checkedAt: createdAt,
+        status: "inaccessible",
+      });
+      expect(JSON.stringify(result)).not.toContain(targetPath);
+      expect(JSON.stringify(result)).not.toContain(targetContent);
+      await expect(readFile(targetPath, "utf8")).resolves.toBe(targetContent);
+    },
+  );
+
+  it("does not inspect an unbound source and rejects sources outside the requested CKB", async () => {
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "other-ckb-uuid",
+      "unbound-source-uuid",
+      "unbound-version-uuid",
+      "other-source-uuid",
+      "other-version-uuid",
+    ];
+    const lstat = vi.fn();
+    const ingestFile = vi.fn();
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+      lstat: lstat as never,
+      ingestFile: ingestFile as never,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.createKnowledgeBase({ storeRoot, displayName: "Other evidence" });
+    await service.createKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      kind: "file",
+      displayName: "Metadata only",
+      mediaType: "text/plain",
+      checksum,
+      sizeBytes: 12,
+    });
+    const otherSource = await service.createKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "other-ckb-uuid",
+      kind: "file",
+      displayName: "Other source",
+      mediaType: "text/plain",
+      checksum,
+      sizeBytes: 12,
+    });
+
+    await expect(
+      service.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "unbound-source-uuid",
+      }),
+    ).resolves.toMatchObject({ status: "unbound" });
+    expect(lstat).not.toHaveBeenCalled();
+    expect(ingestFile).not.toHaveBeenCalled();
+    await expect(
+      service.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: otherSource.source.id,
+      }),
+    ).rejects.toThrow(/not found in candidate knowledge base default-ckb-uuid/i);
+    await expect(
+      service.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "missing-source",
+      }),
+    ).rejects.toThrow(/not found in candidate knowledge base default-ckb-uuid/i);
+  });
+
+  it("uses the managed-file bound and compares only the latest recorded version", async () => {
+    const originPath = "/private/candidate/secret.md";
+    const close = vi.fn(async () => undefined);
+    const source = {
+      id: "source-uuid",
+      knowledgeBaseId: "ckb-1",
+      kind: "file" as const,
+      displayName: "Candidate source",
+      createdAt,
+    };
+    const ingestFile = vi.fn(async () => successfulIngestion(originPath));
+    const handle = {
+      getCandidateKnowledgeSource: vi.fn(async () => source),
+      getCandidateKnowledgeSourceOriginBinding: vi.fn(async () => ({
+        sourceId: source.id,
+        originPath,
+        boundAt: createdAt,
+      })),
+      listCandidateKnowledgeSourceVersions: vi.fn(async () => [
+        {
+          id: "version-2-uuid",
+          sourceId: source.id,
+          version: 2,
+          parentVersionId: "version-1-uuid",
+          mediaType: "text/plain",
+          checksum,
+          sizeBytes: 12,
+          createdAt,
+        },
+        {
+          id: "version-1-uuid",
+          sourceId: source.id,
+          version: 1,
+          parentVersionId: null,
+          mediaType: "text/markdown",
+          checksum: "b".repeat(64),
+          sizeBytes: 1,
+          createdAt,
+        },
+      ]),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      now: () => createdAt,
+      ingestFile,
+      lstat: vi.fn(async () => ({
+        isFile: () => true,
+        isSymbolicLink: () => false,
+      })) as never,
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.checkKnowledgeSourceOriginStatus({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+        sourceId: source.id,
+      }),
+    ).resolves.toEqual({ sourceId: source.id, checkedAt: createdAt, status: "current" });
+    expect(ingestFile).toHaveBeenCalledWith(
+      { path: originPath },
+      { maxSourceBytes: maximumManagedCandidateKnowledgeFileBytes },
+    );
+    expect(close).toHaveBeenCalledOnce();
   });
 
   it("returns portable local metadata without its host root and omits null archive dates", async () => {

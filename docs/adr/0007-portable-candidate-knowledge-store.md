@@ -25,7 +25,9 @@ SQLite lifecycle metadata. Its managed-file slices copy an explicitly approved
 local file into the store, bind those immutable bytes to a stable CKB-scoped
 source version, and expose storage's existing managed-version append through an
 explicit application operation. A further application query provides bounded,
-count-only structural inventory of the managed `sources/` namespace. These
+count-only structural inventory of the managed `sources/` namespace, and a
+read-only origin check provides an ephemeral status without projecting the
+remembered path. These
 operations now have prospective managed-write provenance in an internal
 append-only journal. They do not connect CKB selection or retrieval to an
 application workflow.
@@ -73,8 +75,14 @@ verified capture in a separate sensitive, local-only SQLite origin-binding
 table, together with its binding timestamp. This state is copied with the
 SQLite database but is not portable continuity: it can become stale when the
 store moves machines or the origin moves or disappears. It is not yet
-refreshed, rebound, or status-checked, and is never provider-facing. The
-existing source ID, kind, creation time, and display label remain stable; the
+refreshed or rebound, and is never provider-facing. An explicit read-only
+application operation may check one source binding. It reports source identity,
+observation time, and exactly one of unbound, current, changed, missing, or
+inaccessible. It returns no path, checksum, media type, byte size, label, or
+content and writes no source version, binding, freshness, or last-refresh state.
+Current is a point-in-time comparison with the latest stored version, not a
+durable freshness claim. The existing source ID, kind, creation time, and
+display label remain stable; the
 binding is not included in the portable descriptor or source/version metadata,
 manifests, journals, inventory,
 diagnostics, or application source projections.
@@ -167,8 +175,9 @@ The same rule applies to source origins in all portable and provider-facing
 surfaces. The canonical path for a successful managed create is retained only
 as sensitive local state in the SQLite origin-binding table. It is copied with
 the database but is not portable continuity, may become stale when the store
-or origin moves or disappears, is not yet refreshed/rebound/status-checked,
-and never enters a provider request or diagnostic projection. Exact managed
+or origin moves or disappears, is not refreshed/rebound, and never enters a
+provider request or diagnostic projection. The explicit status operation does
+not project that path and does not persist its observation. Exact managed
 provenance elsewhere consists of the logical store, CKB, source and version IDs
 plus the checksum, size, media type, and capture time of the copied bytes.
 Source labels are local user-visible metadata and checksums can correlate known
@@ -183,9 +192,8 @@ configuration. Its original filename is not used in the managed layout.
 This decision deliberately leaves the following work unintegrated:
 
 - directory intake, URL/fetched source intake, and directory bindings;
-- automatic refresh, freshness or last-refresh state, moved, deleted, or
-  inaccessible-origin reporting, and rebind/status controls for the local
-  origin binding;
+- automatic refresh, persisted freshness or last-refresh state, moved-origin
+  discovery, and rebind controls for the local origin binding;
 - cross-source duplicate relationships and duplicate handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to

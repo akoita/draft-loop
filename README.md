@@ -47,9 +47,9 @@ workflow:
   restart-safe review state;
 - a portable Candidate Knowledge Base (CKB) store component with a logical UUID,
   CKB/source/version metadata, immutable managed raw bytes for approved local
-  files, explicit manual version append, and an explicit bounded structural
-  inventory query at the application boundary, plus an internal prospective
-  managed-write journal;
+  files, explicit manual version append, a read-only origin status check, and an
+  explicit bounded structural inventory query at the application boundary, plus
+  an internal prospective managed-write journal;
 - bounded, approval-gated URL ingestion for GitHub, certification, profile,
   portfolio, and job-description sources with provenance and typed facts;
 - explicit separation of blocking findings, warnings, artifact approval, and
@@ -77,12 +77,17 @@ uses its selected path only for that operation and never changes the initial
 binding; source identity and label remain stable even when the selected path or
 basename changes. The binding is copied with the SQLite database but is not
 portable continuity: it can become stale when the store moves to another
-machine or the origin moves or disappears. It is not yet refreshed, rebound, or
-status-checked, and is never provider-facing. Directory and URL intake,
-automatic refresh, freshness or last-refresh state, moved/deleted/inaccessible-origin reporting, cross-source duplicate
-relationships, indexing and retrieval, application/run CKB selection, CLI and
-desktop controls, deletion, reconciliation or repair, and complete backup,
-export, and restore are not integrated. The local inventory query first
+machine or the origin moves or disappears. It is not automatically refreshed
+or rebound and is never provider-facing. An explicit read-only application
+check can classify one source as unbound, current, changed, missing, or
+inaccessible without returning the path, checksum, content, or persisting the
+observation. “Current” is only a
+point-in-time byte match against the latest stored version, not durable
+freshness. Directory and URL intake, automatic refresh, persisted freshness or
+last-refresh state, moved-origin discovery, rebind controls, cross-source
+duplicate relationships, indexing and retrieval, application/run CKB selection,
+CLI and desktop controls, deletion, reconciliation or repair, and complete
+backup, export, and restore are not integrated. The local inventory query first
 validates every referenced managed blob, then reports only bounded counts for
 verified managed files, scanned entries, staging-shaped root files, other
 opaque root files/directories, extra entries inside expected managed-source
@@ -144,7 +149,7 @@ flowchart LR
     Loop --> Review --> Export
     Application <--> WorkspaceStore
     ApprovedFile -->|"explicit add or version approval"| Application
-    Application -->|"validated add / append; explicit structural inventory"| CKBStore
+    Application -->|"validated add / append; explicit origin status / inventory"| CKBStore
     CKBStore -.->|"selection and retrieval pending"| Context
 ```
 
@@ -155,10 +160,12 @@ plaintext local store; its filesystem path is not part of its logical identity
 and is not persisted in the manifest or provider data. A successful managed
 create retains its canonical verified origin only in sensitive local-only
 SQLite state. That binding is copied with the database but is not portable
-continuity, can become stale when the store or origin moves/disappears, is not
-yet refreshed/rebound/status-checked, and is never provider-facing. Managed
-bytes use restrictive best-effort permissions; same-user processes and device
-backups remain risks.
+continuity, can become stale when the store or origin moves/disappears, and is
+never provider-facing. An explicit local status check reports only unbound,
+current, changed, missing, or inaccessible plus source identity and observation
+time; it neither returns the path nor persists freshness or refresh state.
+Managed bytes use restrictive best-effort permissions; same-user processes and
+device backups remain risks.
 Source labels and checksums remain local CKB metadata and are not content-free
 diagnostics. A configuration-like name such as `AGENTS.md` remains inert
 candidate data, including when selected for a later version. Deleting the

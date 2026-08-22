@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { lstat } from "node:fs/promises";
 import { basename } from "node:path";
 
 import {
@@ -108,6 +109,25 @@ export interface InspectManagedCandidateKnowledgeFilesCommand {
   readonly storeRoot: string;
 }
 
+export interface CheckKnowledgeSourceOriginStatusCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+}
+
+export type KnowledgeSourceOriginStatus =
+  | "unbound"
+  | "current"
+  | "changed"
+  | "missing"
+  | "inaccessible";
+
+export interface KnowledgeSourceOriginStatusResult {
+  readonly sourceId: string;
+  readonly checkedAt: string;
+  readonly status: KnowledgeSourceOriginStatus;
+}
+
 /** Local application metadata; names and descriptions are not a diagnostic allowlist. */
 export interface CandidateKnowledgeStoreView {
   readonly store: CandidateKnowledgeStore;
@@ -158,6 +178,9 @@ export interface CandidateKnowledgeStoreService {
   readonly inspectManagedCandidateKnowledgeFiles: (
     command: InspectManagedCandidateKnowledgeFilesCommand,
   ) => Promise<ManagedCandidateKnowledgeFileInventory>;
+  readonly checkKnowledgeSourceOriginStatus: (
+    command: CheckKnowledgeSourceOriginStatusCommand,
+  ) => Promise<KnowledgeSourceOriginStatusResult>;
 }
 
 export interface CandidateKnowledgeStoreServiceDependencies {
@@ -166,6 +189,8 @@ export interface CandidateKnowledgeStoreServiceDependencies {
   readonly initialize?: typeof initializeCandidateKnowledgeStore;
   readonly open?: typeof openCandidateKnowledgeStore;
   readonly ingestFile?: typeof ingestFile;
+  /** @internal Narrow read-only seam for deterministic origin status checks. */
+  readonly lstat?: typeof lstat;
 }
 
 interface ResolvedDependencies {
@@ -174,6 +199,7 @@ interface ResolvedDependencies {
   readonly initialize: typeof initializeCandidateKnowledgeStore;
   readonly open: typeof openCandidateKnowledgeStore;
   readonly ingestFile: typeof ingestFile;
+  readonly lstat: typeof lstat;
 }
 
 function requireText(value: string, label: string): string {
@@ -246,6 +272,63 @@ async function ingestManagedCandidateKnowledgeFile(
     throw failure();
   }
   return normalized;
+}
+
+function errorCode(error: unknown): unknown {
+  return typeof error === "object" && error !== null && "code" in error
+    ? (error as { readonly code?: unknown }).code
+    : undefined;
+}
+
+function isDefinitelyMissing(error: unknown): boolean {
+  return errorCode(error) === "ENOENT" || errorCode(error) === "ENOTDIR";
+}
+
+type LocalOriginPathStatus = "readable" | "missing" | "inaccessible";
+
+async function inspectLocalOriginPath(
+  inspect: typeof lstat,
+  originPath: string,
+): Promise<LocalOriginPathStatus> {
+  let details: Awaited<ReturnType<typeof lstat>>;
+  try {
+    details = await inspect(originPath);
+  } catch (error) {
+    return isDefinitelyMissing(error) ? "missing" : "inaccessible";
+  }
+  return details.isFile() && !details.isSymbolicLink() ? "readable" : "inaccessible";
+}
+
+function originStatusResult(
+  sourceId: string,
+  status: KnowledgeSourceOriginStatus,
+  now: () => string,
+): KnowledgeSourceOriginStatusResult {
+  return Object.freeze({ sourceId, checkedAt: now(), status });
+}
+
+function sourceNotFound(knowledgeBaseId: string, sourceId: string): Error {
+  return new Error(
+    `candidate knowledge source ${sourceId} was not found in candidate knowledge base ${knowledgeBaseId}`,
+  );
+}
+
+function latestSourceVersion(
+  versions: readonly CandidateKnowledgeSourceVersionRecord[],
+  sourceId: string,
+): CandidateKnowledgeSourceVersionRecord {
+  if (versions.length === 0 || versions.some((version) => version.sourceId !== sourceId)) {
+    throw new Error("Candidate knowledge source version graph is inconsistent.");
+  }
+  return versions.reduce((latest, version) => {
+    if (
+      version.version > latest.version ||
+      (version.version === latest.version && version.id.localeCompare(latest.id) > 0)
+    ) {
+      return version;
+    }
+    return latest;
+  });
 }
 
 function toKnowledgeBase(record: CandidateKnowledgeBaseRecord): CandidateKnowledgeBase {
@@ -390,6 +473,7 @@ function resolveDependencies(
     initialize: dependencies.initialize ?? initializeCandidateKnowledgeStore,
     open: dependencies.open ?? openCandidateKnowledgeStore,
     ingestFile: dependencies.ingestFile ?? ingestFile,
+    lstat: dependencies.lstat ?? lstat,
   };
 }
 
@@ -629,6 +713,72 @@ export function createCandidateKnowledgeStoreService(
         },
       );
     },
+    checkKnowledgeSourceOriginStatus: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        async (handle) => {
+          const source = await handle.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+          if (source === undefined) {
+            throw sourceNotFound(knowledgeBaseId, sourceId);
+          }
+          if (source.kind !== "file") {
+            return originStatusResult(sourceId, "unbound", resolved.now);
+          }
+
+          const binding = await handle.getCandidateKnowledgeSourceOriginBinding(
+            knowledgeBaseId,
+            sourceId,
+          );
+          if (binding === undefined) {
+            return originStatusResult(sourceId, "unbound", resolved.now);
+          }
+
+          const initialPathStatus = await inspectLocalOriginPath(
+            resolved.lstat,
+            binding.originPath,
+          );
+          if (initialPathStatus !== "readable") {
+            return originStatusResult(sourceId, initialPathStatus, resolved.now);
+          }
+
+          let normalized: NonNullable<Awaited<ReturnType<typeof ingestFile>>["source"]>;
+          try {
+            normalized = await ingestManagedCandidateKnowledgeFile(
+              resolved.ingestFile,
+              binding.originPath,
+              () => new Error("The bound candidate knowledge source could not be checked."),
+            );
+          } catch {
+            const finalPathStatus = await inspectLocalOriginPath(
+              resolved.lstat,
+              binding.originPath,
+            );
+            return originStatusResult(
+              sourceId,
+              finalPathStatus === "missing" ? "missing" : "inaccessible",
+              resolved.now,
+            );
+          }
+
+          const versions = await handle.listCandidateKnowledgeSourceVersions(
+            knowledgeBaseId,
+            sourceId,
+          );
+          const latest = latestSourceVersion(versions, sourceId);
+
+          const status: KnowledgeSourceOriginStatus =
+            normalized.mediaType === latest.mediaType &&
+            normalized.checksum === latest.checksum &&
+            normalized.sizeBytes === latest.sizeBytes
+              ? "current"
+              : "changed";
+          return originStatusResult(sourceId, status, resolved.now);
+        },
+      );
+    },
     inspectManagedCandidateKnowledgeFiles: async (command) => {
       const storeRoot = requireStoreRoot(command.storeRoot);
       return useHandle(
@@ -656,5 +806,6 @@ export const appendKnowledgeSourceVersion = defaultService.appendKnowledgeSource
 export const importKnowledgeSourceFile = defaultService.importKnowledgeSourceFile;
 export const appendKnowledgeSourceFileVersion = defaultService.appendKnowledgeSourceFileVersion;
 export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceManifests;
+export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const inspectManagedCandidateKnowledgeFiles =
   defaultService.inspectManagedCandidateKnowledgeFiles;

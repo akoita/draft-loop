@@ -67,15 +67,19 @@ The initial managed import remembers the canonical physical origin path in
 sensitive local-only SQLite state; a later selected append path never replaces
 it, including for an identical no-op. This binding is copied with the SQLite
 database but is not portable continuity, becomes stale when the store moves
-machines or the origin moves/disappears, is not yet refreshed/rebound/status-
-checked, and is never provider-facing. Exact host paths remain excluded from
+machines or the origin moves/disappears, is not refreshed/rebound, and is never
+provider-facing. An explicit local application operation can classify one
+source as unbound, current, changed, missing, or inaccessible. Its immutable
+result contains source identity and observation time but no path, checksum,
+media type, size, label, or content; the observation is not persisted and
+current is not a freshness claim. Exact host paths remain excluded from
 the manifest, descriptor, journal, inventory, diagnostics, application
 serialization, provider requests, filename provenance, filename-derived
 physical names, and URLs. The store has no directory binding, automatic
-refresh, freshness or last-refresh state, moved/deleted/inaccessible origin
-reports, cross-source duplicate relationships, normalized facts, or retrieval
-indexes. Source identity and label do not change when a later selected path or
-basename differs.
+refresh, persisted freshness or last-refresh state, moved-origin discovery or
+rebind control, cross-source duplicate relationships, normalized facts, or
+retrieval indexes. Source identity and label do not change when a later selected
+path or basename differs.
 Application workspaces continue to own their current evidence and run history,
 and no CKB data is provider data.
 
