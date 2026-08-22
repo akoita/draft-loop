@@ -15,6 +15,10 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const RELEASE_METADATA_FILE = "release.json";
 const ROOT_PACKAGE_FILE = "package.json";
+const README_FILE = "README.md";
+const CANONICAL_RELEASES_URL = "https://github.com/akoita/draft-loop/releases";
+const PINNED_RELEASE_TAG_URL_PATTERN =
+  /https:\/\/github\.com\/akoita\/draft-loop\/releases\/tag\/v?\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?(?:[/?#\s)"'<>]|$)/;
 const WORKSPACE_GROUPS = ["apps", "packages"];
 const MANIFEST_SCHEMA_VERSION = 1;
 export const SIZE_REPORT_SCHEMA_VERSION = 1;
@@ -213,6 +217,25 @@ export function validateReleaseMetadata(metadata, { project } = {}) {
   return metadata;
 }
 
+export function validateReadmeReleaseLinks(readmeContents) {
+  if (!nonEmptyString(readmeContents)) {
+    throw new ReleaseError(
+      `README release link check failed: ${README_FILE} must contain the canonical releases URL ${CANONICAL_RELEASES_URL}`,
+    );
+  }
+  if (PINNED_RELEASE_TAG_URL_PATTERN.test(readmeContents)) {
+    throw new ReleaseError(
+      `README release link check failed: ${README_FILE} must not contain version-pinned GitHub release-tag links; use ${CANONICAL_RELEASES_URL}`,
+    );
+  }
+  if (!readmeContents.includes(CANONICAL_RELEASES_URL)) {
+    throw new ReleaseError(
+      `README release link check failed: ${README_FILE} must contain the canonical releases URL ${CANONICAL_RELEASES_URL}`,
+    );
+  }
+  return readmeContents;
+}
+
 export function checkRelease(rootDirectory = findRepositoryRoot()) {
   const rootDir = resolve(rootDirectory);
   const packages = discoverPackages(rootDir);
@@ -227,6 +250,11 @@ export function checkRelease(rootDirectory = findRepositoryRoot()) {
     readJson(metadataPath, RELEASE_METADATA_FILE),
     project === undefined ? {} : { project },
   );
+  const readmePath = join(rootDir, README_FILE);
+  if (!existsSync(readmePath)) {
+    throw new ReleaseError(`README is missing at ${readmePath}`);
+  }
+  validateReadmeReleaseLinks(readFileSync(readmePath, "utf8"));
 
   return { rootDir, rootPackage, packages, releaseMetadata, version };
 }
