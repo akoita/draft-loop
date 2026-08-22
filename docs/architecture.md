@@ -67,7 +67,7 @@ flowchart TB
     App --> WorkspaceStore
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
-    App -->|"validated add / append; explicit origin status / inventory"| CKBStore
+    App -->|"validated add / append; origin status / refresh / inventory"| CKBStore
     CKBStore -.->|"selection and retrieval pending"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
@@ -144,7 +144,11 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   read-only application check can classify one source as unbound, current,
   changed, missing, or inaccessible. It returns no path, checksum, content,
   media type, size, or label and persists no observation; current means only
-  that the checked bytes matched the latest stored version at that moment.
+  that the checked bytes matched the latest stored version at that moment. A
+  separate explicit refresh follows the remembered path, repeats the same
+  no-follow ingestion and stable managed-copy gates, and appends changed bytes
+  as the next immutable version. Other origin states create no version; refresh
+  never changes the binding or persists freshness.
   Exact paths remain absent from the portable
   descriptor, source/version metadata, manifests, journal rows, inventory,
   diagnostics, and application projections. Source identity and its sensitive
@@ -329,7 +333,7 @@ sources, constructs a context snapshot, and drives the orchestration engine.
 That workspace and run history remain distinct from the portable CKB store.
 The application contract can approve and copy one supported local regular file
 into the store, manually append approved changed bytes to an existing file
-source, explicitly check one remembered origin without mutation or path
+source, explicitly check or refresh one remembered origin without path
 projection, or request its bounded count-only structural inventory.
 Neither user-facing adapter yet provides CKB controls. A successful managed
 create now records its canonical verified physical origin in a sensitive,
@@ -337,7 +341,9 @@ local-only SQLite binding table; manual appends never change it. The binding is
 copied with the SQLite database but is not portable continuity, can become
 stale when the store moves machines or the origin moves/disappears, and is never
 provider-facing. The explicit status result is point-in-time only and is not a
-freshness or last-refresh record. Automatic refresh, persisted freshness or
+freshness or last-refresh record. Explicit refresh appends only changed bound
+bytes under the normal immutable managed-copy contract and does not rebind.
+Background refresh, persisted freshness or
 last-refresh state, moved-origin discovery, rebind controls, directory and URL
 intake, cross-source duplicate relationships, indexing and retrieval,
 application/run CKB selection, deletion, repair of missing/corrupt referenced blobs, durable

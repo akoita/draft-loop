@@ -47,9 +47,9 @@ workflow:
   restart-safe review state;
 - a portable Candidate Knowledge Base (CKB) store component with a logical UUID,
   CKB/source/version metadata, immutable managed raw bytes for approved local
-  files, explicit manual version append, a read-only origin status check, and an
-  explicit bounded structural inventory query at the application boundary, plus
-  an internal prospective managed-write journal;
+  files, explicit manual version append, read-only origin status and explicit
+  bound-origin refresh operations, and a bounded structural inventory query at
+  the application boundary, plus an internal prospective managed-write journal;
 - bounded, approval-gated URL ingestion for GitHub, certification, profile,
   portfolio, and job-description sources with provenance and typed facts;
 - explicit separation of blocking findings, warnings, artifact approval, and
@@ -83,8 +83,12 @@ check can classify one source as unbound, current, changed, missing, or
 inaccessible without returning the path, checksum, content, or persisting the
 observation. “Current” is only a
 point-in-time byte match against the latest stored version, not durable
-freshness. Directory and URL intake, automatic refresh, persisted freshness or
-last-refresh state, moved-origin discovery, rebind controls, cross-source
+freshness. A separate explicit refresh operation follows only that remembered
+origin and appends changed bytes as the next immutable version under the same
+capture and extraction gates. Current, unbound, missing, or inaccessible
+origins create no version, and refresh neither changes the binding nor records
+durable freshness. Directory and URL intake, background refresh, persisted
+freshness or last-refresh state, moved-origin discovery, rebind controls, cross-source
 duplicate relationships, indexing and retrieval, application/run CKB selection,
 CLI and desktop controls, deletion, reconciliation or repair, and complete
 backup, export, and restore are not integrated. The local inventory query first
@@ -149,7 +153,7 @@ flowchart LR
     Loop --> Review --> Export
     Application <--> WorkspaceStore
     ApprovedFile -->|"explicit add or version approval"| Application
-    Application -->|"validated add / append; explicit origin status / inventory"| CKBStore
+    Application -->|"validated add / append; origin status / refresh / inventory"| CKBStore
     CKBStore -.->|"selection and retrieval pending"| Context
 ```
 
@@ -164,6 +168,8 @@ continuity, can become stale when the store or origin moves/disappears, and is
 never provider-facing. An explicit local status check reports only unbound,
 current, changed, missing, or inaccessible plus source identity and observation
 time; it neither returns the path nor persists freshness or refresh state.
+An explicit bound-origin refresh may append changed bytes as a new immutable
+version but returns no path or observed content and never rebinds the source.
 Managed bytes use restrictive best-effort permissions; same-user processes and
 device backups remain risks.
 Source labels and checksums remain local CKB metadata and are not content-free
