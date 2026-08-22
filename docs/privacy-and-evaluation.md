@@ -80,14 +80,20 @@ the remembered binding after the same no-follow, size, extraction, and
 latest-version checks. Only changed bytes are passed through stable capture and
 managed copy as a new immutable version; other statuses create no version. The
 result contains no path or observed metadata/content, the binding is unchanged,
-and no freshness or last-refresh state is persisted. A separate explicit rebind
+and a path-free last observation is persisted against the exact source version
+examined. A changed-byte success also records the new version and refresh time;
+the state exposes only bounded status, source/version identities, and
+timestamps. It is not transmitted to providers and is not proof that an origin
+remains unchanged. A later version advance derives `stale` until the next
+explicit refresh. A separate explicit rebind
 accepts one user-selected file, repeats ingestion and stable no-follow capture,
 and replaces the sensitive local binding only when media type, checksum, and
 size exactly match the latest managed version. It creates no version, blob, or
 journal event, returns no path or integrity metadata, and deletes the superseded
-path from current local state rather than retaining path history. Changed moved
+path from current local state rather than retaining path history or mutating
+refresh-observation state. Changed moved
 content must first be appended explicitly. The store has no directory binding,
-background refresh, persisted freshness or last-refresh state, moved-origin
+background refresh, time-based freshness policy, moved-origin
 discovery, cross-source duplicate relationships, normalized facts, or retrieval
 indexes. Source identity and label do not change when a later selected path or
 basename differs.

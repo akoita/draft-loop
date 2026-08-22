@@ -93,9 +93,16 @@ success creates the next immutable parent-linked version. Current, unbound,
 missing, inaccessible, and substituted-symlink origins create no version.
 Refresh returns source identity, observation time, action status, and the new
 version ID only when created; it returns no path or observed file metadata or
-content, does not update the binding, and does not persist freshness or
-last-refresh state. The operation must be invoked through a visible local user
-action and never runs as background monitoring. A separate explicit rebind
+content and does not update the binding. It persists a path-free observation
+against the exact latest source version examined. A successful changed-byte
+append records the new version as current together with its successful refresh
+time; other outcomes record current, unbound, missing, or inaccessible without
+claiming a successful refresh. This is evidence of the last explicit attempt,
+not a freshness TTL or proof that the origin remains unchanged. When another
+operation advances the source version, reads derive `stale` until a later
+explicit refresh records a new observation. The operation must be invoked
+through a visible local user action and never runs as background monitoring. A
+separate explicit rebind
 operation accepts one newly selected path and repeats supported-media,
 successful-extraction, no-follow, size, stable-file, and checksum checks through
 a read-and-hash verification that stages or publishes no copy. It replaces the
@@ -106,7 +113,7 @@ first pass the explicit manual append operation and can then be rebound as an
 exact match. A same-canonical-path selection is a no-op. The result contains
 only source identity, current/rebound status, and binding time. The superseded
 sensitive path is replaced rather than retained as history. Rebinding never
-discovers a path, runs automatically, or establishes freshness. The existing
+discovers a path, runs automatically, or changes refresh-observation state. The existing
 source ID, kind, creation time, and display label remain stable; the
 binding is not included in the portable descriptor or source/version metadata,
 manifests, journals, inventory,
@@ -190,6 +197,14 @@ the source must remain a managed file source, and a replacement binding time
 must not move backward. The replacement does not retain the superseded local
 path.
 
+Storage migration version 10 adds one guarded, path-free refresh-observation
+row per source. It records the source and observed-version identities, bounded
+outcome and observation time, and optional last successful changed-byte refresh
+version/time. Version references must belong to the source, paired refresh
+fields cannot be split, timestamps cannot move backward, source identity is
+immutable, and deletion is forbidden. `stale` is derived when the observed
+version is no longer latest; it is not persisted as a filesystem observation.
+
 The store is local and plaintext. Creation applies restrictive filesystem
 permissions where the operating system and filesystem support them, but those
 permissions are best-effort and are not encryption or protection from another
@@ -208,7 +223,9 @@ as sensitive local state in the SQLite origin-binding table. It is copied with
 the database but is not portable continuity, may become stale when the store
 or origin moves or disappears, is not automatically updated, and never enters
 a provider request or diagnostic projection. The explicit status operation does
-not project that path and does not persist its observation. Exact managed
+not project that path and does not persist its observation. The separate
+refresh-state projection contains only source/version identities, bounded
+status, and timestamps. Exact managed
 provenance elsewhere consists of the logical store, CKB, source and version IDs
 plus the checksum, size, media type, and capture time of the copied bytes.
 Source labels are local user-visible metadata and checksums can correlate known
@@ -223,8 +240,8 @@ configuration. Its original filename is not used in the managed layout.
 This decision deliberately leaves the following work unintegrated:
 
 - directory intake, URL/fetched source intake, and directory bindings;
-- background refresh, persisted freshness or last-refresh state, moved-origin
-  discovery, and product-adapter controls for explicit rebind;
+- background refresh, time-based freshness policy, moved-origin discovery, and
+  product-adapter controls for refresh state or explicit rebind;
 - cross-source duplicate relationships and duplicate handling;
 - normalized facts and lexical, vector, or hybrid retrieval indexes;
 - selecting one or more CKBs for an application and binding that selection to

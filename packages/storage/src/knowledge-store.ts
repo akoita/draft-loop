@@ -24,6 +24,8 @@ import {
   type CandidateKnowledgeBaseStoragePort,
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceOriginBindingRecord,
+  type CandidateKnowledgeSourceRefreshObservationInput,
+  type CandidateKnowledgeSourceRefreshObservationRecord,
   type CandidateKnowledgeSourceVersionInput,
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
@@ -137,6 +139,15 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     sourceId: string,
   ) => Promise<CandidateKnowledgeSourceOriginBindingRecord | undefined>;
+  readonly getCandidateKnowledgeSourceRefreshObservation: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord | undefined>;
+  readonly upsertCandidateKnowledgeSourceRefreshObservation: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    input: CandidateKnowledgeSourceRefreshObservationInput,
+  ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord>;
   readonly getManagedCandidateKnowledgeFilePath: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1250,6 +1261,21 @@ function createHandle(
       );
       return binding === undefined ? undefined : Object.freeze({ ...binding });
     },
+    getCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId) => {
+      const observation = await storage.getCandidateKnowledgeSourceRefreshObservation(
+        knowledgeBaseId,
+        sourceId,
+      );
+      return observation === undefined ? undefined : Object.freeze({ ...observation });
+    },
+    upsertCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId, input) =>
+      Object.freeze({
+        ...(await storage.upsertCandidateKnowledgeSourceRefreshObservation(
+          knowledgeBaseId,
+          sourceId,
+          input,
+        )),
+      }),
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
       writeManagedCandidateKnowledgeFile(storage, root, {
         kind: "create",

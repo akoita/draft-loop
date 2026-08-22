@@ -148,7 +148,11 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   separate explicit refresh follows the remembered path, repeats the same
   no-follow ingestion and stable managed-copy gates, and appends changed bytes
   as the next immutable version. Other origin states create no version; refresh
-  never changes the binding or persists freshness. A separate explicit rebind
+  never changes the binding. Each explicit refresh persists a path-free
+  observation against the exact source version examined, with optional last
+  successful changed-byte refresh identity/time. A later version advance makes
+  that observation deterministically stale; this is not a background watcher or
+  time-based freshness claim. A separate explicit rebind
   repeats ingestion and stable capture and replaces only the sensitive local
   path when the selected file exactly matches the latest managed version. It
   publishes no source version or blob, records no managed-write journal event,
@@ -345,14 +349,14 @@ create now records its canonical verified physical origin in a sensitive,
 local-only SQLite binding table; manual appends never change it. The binding is
 copied with the SQLite database but is not portable continuity, can become
 stale when the store moves machines or the origin moves/disappears, and is never
-provider-facing. The explicit status result is point-in-time only and is not a
-freshness or last-refresh record. Explicit refresh appends only changed bound
-bytes under the normal immutable managed-copy contract and does not rebind. An
+provider-facing. The explicit status result is point-in-time only and remains
+read-only. Explicit refresh appends only changed bound bytes under the normal
+immutable managed-copy contract, does not rebind, and records a path-free
+last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
-Background refresh, persisted freshness or
-last-refresh state, automatic moved-origin discovery, adapter-level rebind
-controls, directory and URL
+Background refresh, time-based freshness policy, automatic moved-origin
+discovery, adapter-level refresh/rebind controls, directory and URL
 intake, cross-source duplicate relationships, indexing and retrieval,
 application/run CKB selection, deletion, repair of missing/corrupt referenced blobs, durable
 writer coordination, cleanup approval/reconciliation, and complete

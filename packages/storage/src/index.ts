@@ -101,6 +101,30 @@ export interface CandidateKnowledgeSourceVersionRecord
   readonly parentVersionId: string | null;
 }
 
+export type CandidateKnowledgeSourceRefreshObservationStatus =
+  | "current"
+  | "changed"
+  | "missing"
+  | "inaccessible"
+  | "unbound";
+
+export interface CandidateKnowledgeSourceRefreshObservationInput {
+  readonly observedVersionId: string;
+  readonly status: CandidateKnowledgeSourceRefreshObservationStatus;
+  readonly checkedAt: string;
+  readonly lastRefreshedVersionId?: string | null;
+  readonly lastRefreshedAt?: string | null;
+}
+
+export interface CandidateKnowledgeSourceRefreshObservationRecord
+  extends CandidateKnowledgeSourceRefreshObservationInput {
+  readonly sourceId: string;
+  readonly lastRefreshedVersionId: string | null;
+  readonly lastRefreshedAt: string | null;
+  /** Derived from the source's current latest version; never persisted. */
+  readonly stale: boolean;
+}
+
 export interface CandidateKnowledgeSourceVersionWriteResult {
   readonly source: CandidateKnowledgeSourceRecord;
   readonly version: CandidateKnowledgeSourceVersionRecord;
@@ -188,6 +212,15 @@ export interface CandidateKnowledgeBaseStoragePort {
     knowledgeBaseId: string,
     sourceId: string,
   ) => Promise<readonly CandidateKnowledgeSourceVersionRecord[]>;
+  readonly getCandidateKnowledgeSourceRefreshObservation: (
+    knowledgeBaseId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord | undefined>;
+  readonly upsertCandidateKnowledgeSourceRefreshObservation: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    input: CandidateKnowledgeSourceRefreshObservationInput,
+  ) => Promise<CandidateKnowledgeSourceRefreshObservationRecord>;
 }
 
 export interface ContextSnapshotInput {
@@ -568,7 +601,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 9 as const;
+export const storageSchemaVersion = 10 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -1225,6 +1258,144 @@ const migrationNine: Migration = {
   `.trim(),
 };
 
+const migrationTen: Migration = {
+  version: 10,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_source_refresh_observations (
+      source_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_sources(id),
+      observed_version_id TEXT NOT NULL
+        REFERENCES candidate_knowledge_source_versions(id),
+      status TEXT NOT NULL CHECK (status IN ('current', 'changed', 'missing', 'inaccessible', 'unbound')),
+      checked_at TEXT NOT NULL,
+      last_refreshed_version_id TEXT NULL
+        REFERENCES candidate_knowledge_source_versions(id),
+      last_refreshed_at TEXT NULL,
+      CHECK ((last_refreshed_version_id IS NULL) = (last_refreshed_at IS NULL))
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_refresh_observations_require_valid_insert
+      BEFORE INSERT ON candidate_knowledge_source_refresh_observations
+      WHEN julianday(NEW.checked_at) IS NULL
+        OR NOT EXISTS (
+          SELECT 1
+          FROM candidate_knowledge_source_versions AS version
+          WHERE version.id = NEW.observed_version_id
+            AND version.source_id = NEW.source_id
+        )
+        OR (
+          NEW.last_refreshed_version_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM candidate_knowledge_source_versions AS version
+            WHERE version.id = NEW.last_refreshed_version_id
+              AND version.source_id = NEW.source_id
+          )
+        )
+        OR (
+          NEW.last_refreshed_at IS NOT NULL
+          AND julianday(NEW.last_refreshed_at) IS NULL
+        )
+        OR (
+          NEW.last_refreshed_at IS NOT NULL
+          AND julianday(NEW.last_refreshed_at) > julianday(NEW.checked_at)
+        )
+        OR ((NEW.last_refreshed_version_id IS NULL) <> (NEW.last_refreshed_at IS NULL))
+        OR (
+          NEW.last_refreshed_version_id IS NOT NULL
+          AND (
+            NEW.status <> 'current'
+            OR NEW.observed_version_id <> NEW.last_refreshed_version_id
+            OR julianday(NEW.checked_at) <> julianday(NEW.last_refreshed_at)
+          )
+        )
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source refresh observation is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_refresh_observations_guarded_update
+      BEFORE UPDATE ON candidate_knowledge_source_refresh_observations
+      WHEN NEW.source_id <> OLD.source_id
+        OR julianday(NEW.checked_at) IS NULL
+        OR julianday(OLD.checked_at) IS NULL
+        OR julianday(NEW.checked_at) < julianday(OLD.checked_at)
+        OR NOT EXISTS (
+          SELECT 1
+          FROM candidate_knowledge_source_versions AS version
+          WHERE version.id = NEW.observed_version_id
+            AND version.source_id = NEW.source_id
+        )
+        OR (
+          NEW.last_refreshed_version_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM candidate_knowledge_source_versions AS version
+            WHERE version.id = NEW.last_refreshed_version_id
+              AND version.source_id = NEW.source_id
+          )
+        )
+        OR ((NEW.last_refreshed_version_id IS NULL) <> (NEW.last_refreshed_at IS NULL))
+        OR (
+          NEW.last_refreshed_at IS NOT NULL
+          AND julianday(NEW.last_refreshed_at) IS NULL
+        )
+        OR (
+          NEW.last_refreshed_at IS NOT NULL
+          AND julianday(NEW.last_refreshed_at) > julianday(NEW.checked_at)
+        )
+        OR (
+          OLD.last_refreshed_at IS NOT NULL
+          AND (
+            NEW.last_refreshed_at IS NULL
+            OR julianday(NEW.last_refreshed_at) < julianday(OLD.last_refreshed_at)
+          )
+        )
+        OR (
+          OLD.last_refreshed_version_id IS NOT NULL
+          AND NEW.last_refreshed_version_id IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM candidate_knowledge_source_versions AS old_version
+            JOIN candidate_knowledge_source_versions AS new_version
+              ON new_version.id = NEW.last_refreshed_version_id
+             AND new_version.source_id = NEW.source_id
+            WHERE old_version.id = OLD.last_refreshed_version_id
+              AND old_version.source_id = OLD.source_id
+              AND new_version.version >= old_version.version
+          )
+        )
+        OR (
+          NEW.last_refreshed_version_id IS NOT NULL
+          AND (
+            OLD.last_refreshed_version_id IS NULL
+            OR EXISTS (
+              SELECT 1
+              FROM candidate_knowledge_source_versions AS old_version
+              JOIN candidate_knowledge_source_versions AS new_version
+                ON new_version.id = NEW.last_refreshed_version_id
+               AND new_version.source_id = NEW.source_id
+              WHERE old_version.id = OLD.last_refreshed_version_id
+                AND old_version.source_id = OLD.source_id
+                AND new_version.version > old_version.version
+            )
+          )
+          AND (
+            NEW.status <> 'current'
+            OR NEW.observed_version_id <> NEW.last_refreshed_version_id
+            OR julianday(NEW.checked_at) <> julianday(NEW.last_refreshed_at)
+          )
+        )
+        OR (
+          OLD.last_refreshed_version_id IS NOT NULL
+          AND NEW.last_refreshed_version_id = OLD.last_refreshed_version_id
+          AND julianday(NEW.last_refreshed_at) <> julianday(OLD.last_refreshed_at)
+        )
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source refresh observation replacement is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_refresh_observations_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_source_refresh_observations
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge source refresh observations are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -1235,6 +1406,7 @@ const migrations: readonly Migration[] = [
   migrationSeven,
   migrationEight,
   migrationNine,
+  migrationTen,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -2180,6 +2352,281 @@ export class SqliteStorage
       )
       .get(normalizedKnowledgeBaseId, normalizedSourceId);
     return row === undefined ? undefined : candidateKnowledgeSourceOriginBindingFromRow(row);
+  }
+
+  public async getCandidateKnowledgeSourceRefreshObservation(
+    knowledgeBaseId: string,
+    sourceId: string,
+  ): Promise<CandidateKnowledgeSourceRefreshObservationRecord | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    const row = this.database
+      .prepare(
+        `SELECT observation.source_id, observation.observed_version_id, observation.status,
+                observation.checked_at, observation.last_refreshed_version_id,
+                observation.last_refreshed_at
+         FROM candidate_knowledge_source_refresh_observations AS observation
+         JOIN candidate_knowledge_sources AS source
+           ON source.id = observation.source_id
+         WHERE source.candidate_knowledge_base_id = ?
+           AND source.id = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedSourceId);
+    if (row === undefined) return undefined;
+    const latestRow = this.database
+      .prepare(
+        "SELECT id FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC, id DESC LIMIT 1",
+      )
+      .get(normalizedSourceId);
+    if (latestRow === undefined) {
+      throw new StorageValidationError(
+        `candidate knowledge source ${normalizedSourceId} has no versions`,
+      );
+    }
+    return candidateKnowledgeSourceRefreshObservationFromRow(row, rowString(latestRow, "id"));
+  }
+
+  public async upsertCandidateKnowledgeSourceRefreshObservation(
+    knowledgeBaseId: string,
+    sourceId: string,
+    input: CandidateKnowledgeSourceRefreshObservationInput,
+  ): Promise<CandidateKnowledgeSourceRefreshObservationRecord> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const observedVersionId = requireNonEmpty(
+      input.observedVersionId,
+      "candidate knowledge source refresh observed version id",
+    ).trim();
+    const status = requireCandidateKnowledgeSourceRefreshObservationStatus(input.status);
+    const checkedAt = requireTimestamp(
+      input.checkedAt,
+      "candidate knowledge source refresh checkedAt",
+    );
+    const hasLastRefreshedVersion = input.lastRefreshedVersionId !== undefined;
+    const hasLastRefreshedAt = input.lastRefreshedAt !== undefined;
+    if (hasLastRefreshedVersion !== hasLastRefreshedAt) {
+      throw new StorageValidationError(
+        "candidate knowledge source refresh last-refreshed version and timestamp must be paired",
+      );
+    }
+    const requestedLastRefreshedVersion = hasLastRefreshedVersion
+      ? input.lastRefreshedVersionId === null
+        ? null
+        : requireNonEmpty(
+            input.lastRefreshedVersionId as string,
+            "candidate knowledge source refresh last-refreshed version id",
+          ).trim()
+      : undefined;
+    const requestedLastRefreshedAt = hasLastRefreshedAt
+      ? input.lastRefreshedAt === null
+        ? null
+        : requireTimestamp(
+            input.lastRefreshedAt as string,
+            "candidate knowledge source refresh lastRefreshedAt",
+          )
+      : undefined;
+    if (
+      requestedLastRefreshedAt !== undefined &&
+      requestedLastRefreshedAt !== null &&
+      Date.parse(requestedLastRefreshedAt) > Date.parse(checkedAt)
+    ) {
+      throw new StorageValidationError(
+        "candidate knowledge source refresh lastRefreshedAt must not follow checkedAt",
+      );
+    }
+
+    let result: CandidateKnowledgeSourceRefreshObservationRecord | undefined;
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      this.requireCandidateKnowledgeSource(normalizedKnowledgeBaseId, normalizedSourceId);
+      const latestRow = this.database
+        .prepare(
+          "SELECT id, version FROM candidate_knowledge_source_versions WHERE source_id = ? ORDER BY version DESC, id DESC LIMIT 1",
+        )
+        .get(normalizedSourceId);
+      if (latestRow === undefined) {
+        throw new StorageValidationError(
+          `candidate knowledge source ${normalizedSourceId} has no versions`,
+        );
+      }
+      const observed = this.database
+        .prepare(
+          "SELECT id FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+        )
+        .get(observedVersionId, normalizedSourceId);
+      if (observed === undefined) {
+        throw new StorageValidationError(
+          "candidate knowledge source refresh observed version does not belong to its source",
+        );
+      }
+      if (requestedLastRefreshedVersion !== undefined && requestedLastRefreshedVersion !== null) {
+        const refreshed = this.database
+          .prepare(
+            "SELECT id FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+          )
+          .get(requestedLastRefreshedVersion, normalizedSourceId);
+        if (refreshed === undefined) {
+          throw new StorageValidationError(
+            "candidate knowledge source refresh last-refreshed version does not belong to its source",
+          );
+        }
+      }
+      const currentRow = this.database
+        .prepare(
+          `SELECT source_id, observed_version_id, status, checked_at,
+                  last_refreshed_version_id, last_refreshed_at
+           FROM candidate_knowledge_source_refresh_observations
+           WHERE source_id = ?`,
+        )
+        .get(normalizedSourceId);
+      const current =
+        currentRow === undefined
+          ? undefined
+          : candidateKnowledgeSourceRefreshObservationFromRow(
+              currentRow,
+              rowString(latestRow, "id"),
+            );
+      const lastRefreshedVersion =
+        requestedLastRefreshedVersion === undefined
+          ? (current?.lastRefreshedVersionId ?? null)
+          : requestedLastRefreshedVersion;
+      const lastRefreshedAt =
+        requestedLastRefreshedAt === undefined
+          ? (current?.lastRefreshedAt ?? null)
+          : requestedLastRefreshedAt;
+      if (requestedLastRefreshedVersion !== undefined && requestedLastRefreshedVersion !== null) {
+        const currentRefreshVersion =
+          current?.lastRefreshedVersionId === null || current?.lastRefreshedVersionId === undefined
+            ? undefined
+            : this.database
+                .prepare(
+                  "SELECT version FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+                )
+                .get(current.lastRefreshedVersionId, normalizedSourceId);
+        const requestedRefreshVersion = this.database
+          .prepare(
+            "SELECT version FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+          )
+          .get(requestedLastRefreshedVersion, normalizedSourceId);
+        const advances =
+          currentRefreshVersion === undefined ||
+          (requestedRefreshVersion !== undefined &&
+            rowNumber(requestedRefreshVersion, "version") >
+              rowNumber(currentRefreshVersion, "version"));
+        if (
+          advances &&
+          (status !== "current" ||
+            observedVersionId !== requestedLastRefreshedVersion ||
+            lastRefreshedAt !== checkedAt)
+        ) {
+          throw new StorageValidationError(
+            "candidate knowledge source refresh success must observe its refreshed version at its refresh time",
+          );
+        }
+      }
+      if (current !== undefined) {
+        if (Date.parse(checkedAt) < Date.parse(current.checkedAt)) {
+          throw new StorageValidationError(
+            "candidate knowledge source refresh checkedAt must not precede its current checkedAt",
+          );
+        }
+        if (current.lastRefreshedAt !== null) {
+          if (lastRefreshedAt === null) {
+            throw new StorageValidationError(
+              "candidate knowledge source refresh cannot drop its last successful refresh",
+            );
+          }
+          if (Date.parse(lastRefreshedAt) < Date.parse(current.lastRefreshedAt)) {
+            throw new StorageValidationError(
+              "candidate knowledge source refresh lastRefreshedAt must not precede its current value",
+            );
+          }
+          if (
+            current.lastRefreshedVersionId === lastRefreshedVersion &&
+            Date.parse(lastRefreshedAt) !== Date.parse(current.lastRefreshedAt)
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge source refresh cannot change the time of its last successful refresh",
+            );
+          }
+          if (current.lastRefreshedVersionId !== null && lastRefreshedVersion !== null) {
+            const currentRefreshVersion = this.database
+              .prepare(
+                "SELECT version FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+              )
+              .get(current.lastRefreshedVersionId, normalizedSourceId);
+            const nextRefreshVersion = this.database
+              .prepare(
+                "SELECT version FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+              )
+              .get(lastRefreshedVersion, normalizedSourceId);
+            if (
+              currentRefreshVersion !== undefined &&
+              nextRefreshVersion !== undefined &&
+              rowNumber(nextRefreshVersion, "version") < rowNumber(currentRefreshVersion, "version")
+            ) {
+              throw new StorageValidationError(
+                "candidate knowledge source refresh version must not move backward",
+              );
+            }
+          }
+        }
+      }
+      if (currentRow === undefined) {
+        this.database
+          .prepare(
+            `INSERT INTO candidate_knowledge_source_refresh_observations
+               (source_id, observed_version_id, status, checked_at,
+                last_refreshed_version_id, last_refreshed_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(
+            normalizedSourceId,
+            observedVersionId,
+            status,
+            checkedAt,
+            lastRefreshedVersion,
+            lastRefreshedAt,
+          );
+      } else {
+        this.database
+          .prepare(
+            `UPDATE candidate_knowledge_source_refresh_observations
+             SET observed_version_id = ?, status = ?, checked_at = ?,
+                 last_refreshed_version_id = ?, last_refreshed_at = ?
+             WHERE source_id = ?`,
+          )
+          .run(
+            observedVersionId,
+            status,
+            checkedAt,
+            lastRefreshedVersion,
+            lastRefreshedAt,
+            normalizedSourceId,
+          );
+      }
+      result = candidateKnowledgeSourceRefreshObservationFromRow(
+        {
+          source_id: normalizedSourceId,
+          observed_version_id: observedVersionId,
+          status,
+          checked_at: checkedAt,
+          last_refreshed_version_id: lastRefreshedVersion,
+          last_refreshed_at: lastRefreshedAt,
+        },
+        rowString(latestRow, "id"),
+      );
+    })();
+    return result as CandidateKnowledgeSourceRefreshObservationRecord;
   }
 
   public async rebindCandidateKnowledgeSourceOrigin(
@@ -4138,6 +4585,23 @@ function normalizeCandidateKnowledgeSourceVersionInput(
   return { id, mediaType, checksum: input.checksum, sizeBytes, createdAt };
 }
 
+function requireCandidateKnowledgeSourceRefreshObservationStatus(
+  value: CandidateKnowledgeSourceRefreshObservationStatus,
+): CandidateKnowledgeSourceRefreshObservationStatus {
+  if (
+    value !== "current" &&
+    value !== "changed" &&
+    value !== "missing" &&
+    value !== "inaccessible" &&
+    value !== "unbound"
+  ) {
+    throw new StorageValidationError(
+      `Unsupported candidate knowledge source refresh observation status: ${value}`,
+    );
+  }
+  return value;
+}
+
 function workspaceFromRow(row: Record<string, unknown>): WorkspaceRecord {
   return {
     id: rowString(row, "id"),
@@ -4179,6 +4643,22 @@ function candidateKnowledgeSourceOriginBindingFromRow(
     sourceId: rowString(row, "source_id"),
     originPath: rowString(row, "origin_path"),
     boundAt: rowString(row, "bound_at"),
+  };
+}
+
+function candidateKnowledgeSourceRefreshObservationFromRow(
+  row: Record<string, unknown>,
+  latestVersionId: string,
+): CandidateKnowledgeSourceRefreshObservationRecord {
+  const observedVersionId = rowString(row, "observed_version_id");
+  return {
+    sourceId: rowString(row, "source_id"),
+    observedVersionId,
+    status: rowString(row, "status") as CandidateKnowledgeSourceRefreshObservationStatus,
+    checkedAt: rowString(row, "checked_at"),
+    lastRefreshedVersionId: rowNullableString(row, "last_refreshed_version_id"),
+    lastRefreshedAt: rowNullableString(row, "last_refreshed_at"),
+    stale: observedVersionId !== latestVersionId,
   };
 }
 
