@@ -94,6 +94,8 @@ export interface ManagedCandidateKnowledgeFileVersionInput
    * sensitive local origin binding; appends do not persist or replace it.
    */
   readonly sourcePath: string;
+  /** Runtime-only directory membership context for a new managed file source. */
+  readonly directoryId?: string;
   /** @internal Expected latest version for an explicitly guarded refresh append. */
   readonly expectedCurrentVersionId?: string;
   /** @internal Expected current origin revision for an explicitly guarded refresh append. */
@@ -1137,6 +1139,11 @@ async function writeManagedCandidateKnowledgeFile(
     );
   }
   if (operation.kind === "append") {
+    if (operation.version.directoryId !== undefined) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge directory membership is create-only.",
+      );
+    }
     const existingSource = await storage.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
     if (existingSource !== undefined && existingSource.kind !== "file") {
       throw new StorageValidationError(
@@ -1262,6 +1269,9 @@ async function writeManagedCandidateKnowledgeFile(
             source: { ...operation.source, id: sourceId, knowledgeBaseId },
             version: requestedVersion,
             originPath: captured.originPath,
+            ...(operation.version.directoryId === undefined
+              ? {}
+              : { directoryId: operation.version.directoryId }),
           }
         : {
             kind: "append",
