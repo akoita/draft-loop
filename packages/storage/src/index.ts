@@ -292,6 +292,11 @@ export interface CandidateKnowledgeBaseStoragePort {
     knowledgeBaseId: string,
     directoryId: string,
   ) => Promise<readonly CandidateKnowledgeDirectoryMemberRecord[]>;
+  readonly findCandidateKnowledgeDirectoryMemberByPath: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourcePath: string,
+  ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
   readonly getCandidateKnowledgeSourceUrlProvenance: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -3000,6 +3005,52 @@ export class SqliteStorage
       )
       .all(normalizedKnowledgeBaseId, normalizedDirectoryId)
       .map(candidateKnowledgeDirectoryMemberFromRow);
+  }
+
+  public async findCandidateKnowledgeDirectoryMemberByPath(
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourcePath: string,
+  ): Promise<CandidateKnowledgeDirectoryMemberRecord | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedDirectoryId = requireNonEmpty(
+      directoryId,
+      "candidate knowledge directory id",
+    ).trim();
+    const normalizedSourcePath = requireCanonicalAbsolutePath(
+      sourcePath,
+      "candidate knowledge directory member source path",
+    );
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    const binding = this.database
+      .prepare(
+        `SELECT id, candidate_knowledge_base_id, root_path
+         FROM candidate_knowledge_directory_bindings
+         WHERE candidate_knowledge_base_id = ? AND id = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedDirectoryId);
+    if (binding === undefined) {
+      throw new StorageValidationError("candidate knowledge directory binding was not found");
+    }
+    const rootPath = requireCanonicalAbsolutePath(
+      rowString(binding, "root_path"),
+      "candidate knowledge directory root path",
+    );
+    const relativePathHash = directoryMemberRelativePathHash(rootPath, normalizedSourcePath);
+    const row = this.database
+      .prepare(
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members
+         WHERE candidate_knowledge_base_id = ?
+           AND directory_id = ?
+           AND relative_path_hash = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedDirectoryId, relativePathHash);
+    return row === undefined ? undefined : candidateKnowledgeDirectoryMemberFromRow(row);
   }
 
   public async getCandidateKnowledgeSourceRetirement(

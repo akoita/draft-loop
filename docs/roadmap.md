@@ -186,14 +186,24 @@ rename, and member-retirement policy remain unimplemented. Membership is a
 stable historical mapping captured at binding time; later source version
 appends, explicit origin rebinding, or source retirement do not rewrite it.
 Actual incremental directory scan reconciliation remains deferred.
+An explicit local bounded read-only refresh preview now revalidates the stored
+root, repeats the intake preflight, and returns path-free `current`, `changed`,
+`missing`, `retired`, or `origin-conflict` member states plus an aggregate count
+of unmatched accepted files. It performs no source, version, membership,
+observation, or lifecycle writes; scan-level unreadable, unstable, limit, and
+extraction failures fail closed. Applied refresh, new-member persistence,
+rename/removal decisions, directory-root rebind, automatic retirement/deletion,
+adapters, indexing, and background refresh remain deferred.
 The store retains no
 exact host paths or URLs in manifests, descriptors, journals, inventory,
 diagnostics, or application/provider projections, and retains no filename
 provenance or filename-derived physical names. Exact URLs exist only in the
 sensitive local provenance table. It remains independent of application workspaces and run
-history. It does not yet refresh in the background, apply a time-based freshness
-policy, automatically discover moved origins, expose refresh/rebind/duplicate
-controls through product adapters, or maintain directory membership lifecycle;
+history. It does not yet apply directory refresh, persist new members, infer
+renames, decide removals, rebind a directory root, retire/delete automatically,
+refresh in the background, apply a time-based freshness policy, automatically
+discover moved origins, expose refresh/rebind/duplicate controls through product
+adapters, or maintain directory membership lifecycle;
 automatically resolve duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
@@ -230,7 +240,8 @@ origin bindings, and records no plaintext relative paths in membership. There
 is no backfill or directory source kind. Membership is stable historical
 binding-time state and is not rewritten by later source versioning, explicit
 origin rebinding, or retirement. Directory rebind, rename/removal lifecycle,
-and incremental scan reconciliation remain deferred; the v0.7 stage remains at
+and incremental scan reconciliation remain deferred. The read-only bounded
+refresh preview is a component implementation only; the v0.7 stage remains at
 component implementation.
 Journal records exclude origin paths, filenames, labels, checksums, source content,
 provider data, diagnostic projections, cleanup tokens, and approvals, and
@@ -542,6 +553,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                                       | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Added an explicit bounded read-only directory refresh preview as the ninth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                       | A persisted binding can now be revalidated and rescanned into path-free current/changed/missing/retired/origin-conflict member states plus an aggregate new-source count; no source, version, membership, observation, or lifecycle state is written, and applied refresh, reconciliation, adapters, indexing, and background refresh remain pending.                                                                                                                                                      |
 | 2026-08-23 | Persisted approved complete-directory root bindings and immutable hashed membership as the eighth bounded #110 slice without advancing the v0.7 stage beyond component implementation                                                        | Complete imports now atomically bind a canonical local root and ordered managed file sources through SHA-256 normalized-relative-path hashes; membership is stable historical binding-time state and later source versioning, origin rebinding, or retirement does not rewrite it; partial and legacy runtime-only imports remain without directory-root/membership binding, and incremental scan reconciliation, adapters, selection, indexing, and deletion remain pending.                              |
 | 2026-08-23 | Added bounded recursive directory intake as the seventh #110 slice without advancing the v0.7 stage beyond component implementation                                                                                                          | A selected real directory is preflighted in deterministic lexical order with depth, entry, file, aggregate-byte, and per-file limits; hidden, unsupported, special, and child-symlink entries are skipped and counted, while each accepted file becomes an independent managed source. Directory membership, binding, incremental refresh, adapters, selection, indexing, and deletion remain pending.                                                                                                     |
 | 2026-08-22 | Added explicitly approved URL refresh as the sixth bounded #110 slice without advancing the v0.7 stage beyond component implementation                                                                                                       | A managed URL source can now re-fetch only its immutable original URL after lifecycle preflight, append changed exact bytes with per-version redirect provenance, treat identical bytes as current, and record URL-free inaccessible attempts. Directory traversal, redirect history, conditional requests, adapters, indexing, selection, and deletion remain pending.                                                                                                                                    |

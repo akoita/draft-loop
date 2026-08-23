@@ -189,6 +189,11 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     directoryId: string,
   ) => Promise<readonly CandidateKnowledgeDirectoryMemberRecord[]>;
+  readonly findCandidateKnowledgeDirectoryMemberByPath: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourcePath: string,
+  ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
   readonly getCandidateKnowledgeSourceRefreshObservation: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1648,6 +1653,18 @@ function createHandle(
           (member) => Object.freeze({ ...member }),
         ),
       ),
+    findCandidateKnowledgeDirectoryMemberByPath: async (
+      knowledgeBaseId,
+      directoryId,
+      sourcePath,
+    ) => {
+      const member = await storage.findCandidateKnowledgeDirectoryMemberByPath(
+        knowledgeBaseId,
+        directoryId,
+        sourcePath,
+      );
+      return member === undefined ? undefined : Object.freeze({ ...member });
+    },
     getCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId) => {
       const observation = await storage.getCandidateKnowledgeSourceRefreshObservation(
         knowledgeBaseId,
