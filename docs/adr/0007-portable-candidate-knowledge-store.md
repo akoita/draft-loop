@@ -160,6 +160,14 @@ members as `current`, `changed`, `missing`, `retired`, or `origin-conflict` and
 count unmatched accepted files without exposing paths or writing state. It does
 not apply any refresh, persist new members, infer renames, or change lifecycle
 state.
+A separate explicit bounded directory observation operation reuses that one
+complete scan and records only path-free `current`, `changed`, or `missing`
+observations whose source origin still has the same historical membership and
+origin-binding revision. Retired, conflicted, and newly discovered files remain
+reported but are skipped. The eligible batch is validated and committed in one
+SQLite transaction with one shared checked-at timestamp; no IDs, bytes,
+versions, membership, origin bindings, retirements, or journal events are
+written. This records scan evidence, not an applied changed-byte refresh.
 SQLite migration v13 stores the opaque directory binding and immutable hashed
 members in separate local-only tables with same-CKB foreign-key scope; there is
 no backfill of earlier runtime-only imports.

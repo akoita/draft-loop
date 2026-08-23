@@ -96,6 +96,16 @@ duplicate resolution, indexes/retrieval, app/run CKB selection, CLI/desktop cont
 cleanup/reconciliation, and complete backup/export/restore have not moved into
 that boundary.
 
+A separate explicit bounded observation-only directory scan reuses one complete
+traversal and atomically persists only eligible active same-member
+`current`/`changed`/`missing` observations. Retired, origin-conflict, and new
+files remain report-only. The result and stored observation contain no paths,
+hashes, checksums, media types, sizes, labels, or content; the operation does
+not apply changed bytes or write sources, versions, membership, origin bindings,
+retirements, or journal events. Changed-byte refresh, reconciliation, root
+rebind, automatic retirement/deletion, adapters, indexing, and background
+refresh remain deferred.
+
 The inventory query runs only on request and only after normal referenced-blob
 validation. It counts verified managed files, scanned entries, staging-shaped
 root files, other opaque root files/directories, extra entries inside expected
