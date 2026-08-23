@@ -128,6 +128,9 @@ function service(
       configureWritingPolicy: vi.fn<ApplicationService["configureWritingPolicy"]>(
         async () => workspace,
       ),
+      configureKnowledgeSelection: vi.fn<ApplicationService["configureKnowledgeSelection"]>(
+        async () => workspace,
+      ),
       begin: vi.fn(async () => snapshot),
       start: vi.fn(async () => snapshot),
       resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),

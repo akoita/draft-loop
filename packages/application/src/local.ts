@@ -74,10 +74,15 @@ import { buildAuthorArtifact } from "./author-output.js";
 import type {
   ApplicationDriver,
   ApplicationIo,
+  ConfigureKnowledgeSelectionCommand,
   ConfigureWritingPolicyCommand,
   RecordReviewDecisionCommand,
   WorkspaceDescriptor,
 } from "./index.js";
+import {
+  createKnowledgeSelectionSnapshot,
+  type KnowledgeSelectionSnapshot,
+} from "./knowledge-base.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 
 const configDirectory = ".draft-loop";
@@ -148,6 +153,17 @@ export function resolveProviderAuthModes(
 
 export type SupportedModelCompany = (typeof supportedModelCompanies)[number];
 
+export interface WorkspaceKnowledgeSelectionEntry {
+  readonly storeRoot: string;
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+}
+
+export interface WorkspaceKnowledgeSelectionBinding {
+  readonly entries: readonly WorkspaceKnowledgeSelectionEntry[];
+  readonly combinationApproved?: true;
+}
+
 export interface WorkspaceConfig {
   readonly schemaVersion: 1;
   readonly id: string;
@@ -196,6 +212,8 @@ export interface WorkspaceConfig {
   readonly localEndpoint?: string;
   readonly fixtureMode: boolean;
   readonly latestRunId?: string;
+  /** Local-only roots and pinned identities used to build future run snapshots. */
+  readonly candidateKnowledgeSelection?: WorkspaceKnowledgeSelectionBinding;
 }
 
 export type CliIo = ApplicationIo;
@@ -277,6 +295,111 @@ function requireNonEmptyString(record: Record<string, unknown>, key: string): st
     throw new CliUserError(`Workspace configuration field ${key} is required.`);
   }
   return value.trim();
+}
+
+function lexicalCompare(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function selectionConfigurationFailure(): CliUserError {
+  return new CliUserError("The candidate knowledge selection could not be configured.");
+}
+
+function normalizeKnowledgeSelectionEntries(
+  value: unknown,
+  options: { readonly resolveRoots: boolean },
+): WorkspaceKnowledgeSelectionBinding {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw selectionConfigurationFailure();
+  }
+  const entries: WorkspaceKnowledgeSelectionEntry[] = [];
+  const logicalSelections = new Set<string>();
+  for (const entryValue of value) {
+    if (typeof entryValue !== "object" || entryValue === null || Array.isArray(entryValue)) {
+      throw selectionConfigurationFailure();
+    }
+    const entry = entryValue as Record<string, unknown>;
+    if (
+      Object.keys(entry).some(
+        (key) => key !== "storeRoot" && key !== "storeId" && key !== "knowledgeBaseId",
+      )
+    ) {
+      throw selectionConfigurationFailure();
+    }
+    if (
+      typeof entry.storeRoot !== "string" ||
+      typeof entry.storeId !== "string" ||
+      typeof entry.knowledgeBaseId !== "string" ||
+      entry.storeRoot.trim() === "" ||
+      entry.storeId.trim() === "" ||
+      entry.knowledgeBaseId.trim() === ""
+    ) {
+      throw selectionConfigurationFailure();
+    }
+    const storeId = entry.storeId.trim();
+    const knowledgeBaseId = entry.knowledgeBaseId.trim();
+    const storeRoot = entry.storeRoot.trim();
+    if (!options.resolveRoots && !isAbsolute(storeRoot)) {
+      throw selectionConfigurationFailure();
+    }
+    const logicalKey = `${storeId}\u0000${knowledgeBaseId}`;
+    if (logicalSelections.has(logicalKey)) {
+      throw selectionConfigurationFailure();
+    }
+    logicalSelections.add(logicalKey);
+    entries.push({
+      storeRoot: options.resolveRoots ? resolve(storeRoot) : storeRoot,
+      storeId,
+      knowledgeBaseId,
+    });
+  }
+  entries.sort(
+    (left, right) =>
+      lexicalCompare(left.storeId, right.storeId) ||
+      lexicalCompare(left.knowledgeBaseId, right.knowledgeBaseId),
+  );
+  return Object.freeze({
+    entries: Object.freeze(entries.map((entry) => Object.freeze(entry))),
+  });
+}
+
+function selectionEntriesMatchSnapshot(
+  binding: WorkspaceKnowledgeSelectionBinding,
+  snapshot: KnowledgeSelectionSnapshot,
+): boolean {
+  if (binding.entries.length !== snapshot.entries.length) return false;
+  return binding.entries.every((entry, index) => {
+    const snapshotEntry = snapshot.entries[index];
+    return (
+      snapshotEntry !== undefined &&
+      snapshotEntry.storeId === entry.storeId &&
+      snapshotEntry.knowledgeBaseId === entry.knowledgeBaseId
+    );
+  });
+}
+
+async function validateConfiguredKnowledgeSelection(
+  binding: WorkspaceKnowledgeSelectionBinding | undefined,
+): Promise<KnowledgeSelectionSnapshot | undefined> {
+  if (binding === undefined) return undefined;
+  if (binding.entries.length > 1 && binding.combinationApproved !== true) {
+    throw new CliUserError("The configured candidate knowledge selection is no longer valid.");
+  }
+  try {
+    const snapshot = await createKnowledgeSelectionSnapshot({
+      selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
+        storeRoot,
+        knowledgeBaseId,
+      })),
+      ...(binding.entries.length > 1 ? { combinationApproved: true } : {}),
+    });
+    if (!selectionEntriesMatchSnapshot(binding, snapshot)) {
+      throw selectionConfigurationFailure();
+    }
+    return snapshot;
+  } catch {
+    throw new CliUserError("The configured candidate knowledge selection is no longer valid.");
+  }
 }
 
 /**
@@ -389,6 +512,33 @@ function parseConfig(value: unknown): WorkspaceConfig {
   ) {
     throw new CliUserError("Workspace writingPolicyPath must name the managed policy file.");
   }
+  const candidateKnowledgeSelection =
+    record.candidateKnowledgeSelection === undefined
+      ? undefined
+      : (() => {
+          const value = record.candidateKnowledgeSelection;
+          if (typeof value !== "object" || value === null || Array.isArray(value)) {
+            throw selectionConfigurationFailure();
+          }
+          const binding = value as Record<string, unknown>;
+          if (
+            Object.keys(binding).some((key) => key !== "entries" && key !== "combinationApproved")
+          ) {
+            throw selectionConfigurationFailure();
+          }
+          const normalized = normalizeKnowledgeSelectionEntries(binding.entries, {
+            resolveRoots: false,
+          });
+          if (normalized.entries.length > 1 && binding.combinationApproved !== true) {
+            throw selectionConfigurationFailure();
+          }
+          if (normalized.entries.length <= 1 && binding.combinationApproved !== undefined) {
+            throw selectionConfigurationFailure();
+          }
+          return normalized.entries.length > 1
+            ? { ...normalized, combinationApproved: true as const }
+            : normalized;
+        })();
   return {
     schemaVersion: 1,
     id: requireNonEmptyString(record, "id"),
@@ -422,6 +572,7 @@ function parseConfig(value: unknown): WorkspaceConfig {
     ...(typeof record.latestRunId === "string" && record.latestRunId.trim() !== ""
       ? { latestRunId: record.latestRunId.trim() }
       : {}),
+    ...(candidateKnowledgeSelection === undefined ? {} : { candidateKnowledgeSelection }),
   };
 }
 
@@ -598,6 +749,54 @@ export async function configureWorkspaceWritingPolicy(
 }
 
 /**
+ * Validate and pin the local candidate-knowledge stores used by future runs.
+ *
+ * Store roots deliberately remain in this local configuration only. The
+ * selection builder reopens every store and returns opaque identities plus a
+ * path-free lifecycle snapshot; that snapshot is attached when a run is
+ * created, never when this configuration is persisted.
+ */
+export async function configureWorkspaceKnowledgeSelection(
+  command: ConfigureKnowledgeSelectionCommand,
+  io: CliIo = defaultIo,
+): Promise<WorkspaceConfig> {
+  if (typeof command !== "object" || command === null) {
+    throw selectionConfigurationFailure();
+  }
+  const root = resolve(command.root);
+  const config = await readWorkspace(root);
+  await assertNoRunExecuting(root, config, "the candidate knowledge selection");
+  const normalizedBinding = normalizeKnowledgeSelectionEntries(command.entries, {
+    resolveRoots: true,
+  });
+  if (normalizedBinding.entries.length > 1 && command.combinationApproved !== true) {
+    throw selectionConfigurationFailure();
+  }
+  const binding =
+    normalizedBinding.entries.length > 1
+      ? { ...normalizedBinding, combinationApproved: true as const }
+      : normalizedBinding;
+  try {
+    const snapshot = await createKnowledgeSelectionSnapshot({
+      selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
+        storeRoot,
+        knowledgeBaseId,
+      })),
+      ...(binding.entries.length > 1 ? { combinationApproved: true } : {}),
+    });
+    if (!selectionEntriesMatchSnapshot(binding, snapshot)) {
+      throw selectionConfigurationFailure();
+    }
+  } catch {
+    throw selectionConfigurationFailure();
+  }
+  const next = parseConfig({ ...config, candidateKnowledgeSelection: binding });
+  await saveWorkspaceConfig(root, next);
+  io.write("Candidate knowledge selection configured.");
+  return next;
+}
+
+/**
  * The complete model configuration an existing workspace can be given.
  *
  * Every field of the pairing is here because it is replaced wholesale rather
@@ -652,7 +851,11 @@ async function begunRunIds(
   return [...runIds];
 }
 
-async function assertNoRunExecuting(root: string, config: WorkspaceConfig): Promise<void> {
+async function assertNoRunExecuting(
+  root: string,
+  config: WorkspaceConfig,
+  changeDescription = "the models",
+): Promise<void> {
   try {
     await stat(databasePath(root));
   } catch {
@@ -676,7 +879,7 @@ async function assertNoRunExecuting(root: string, config: WorkspaceConfig): Prom
   }
   if (executing) {
     throw new CliUserError(
-      "A run is executing in this workspace. Pause or stop it before changing the models.",
+      `A run is executing in this workspace. Pause or stop it before changing ${changeDescription}.`,
     );
   }
 }
@@ -775,6 +978,9 @@ function requirementLines(jobDescription: string): readonly string[] {
 }
 
 async function prepareInputs(root: string, config: WorkspaceConfig): Promise<PreparedInputs> {
+  const candidateKnowledgeSelection = await validateConfiguredKnowledgeSelection(
+    config.candidateKnowledgeSelection,
+  );
   const jobDescriptionPath = pathFromWorkspace(root, config.jobDescriptionPath);
   const sourceDirectory = pathFromWorkspace(root, config.sourceDirectory);
   await ensureFile(jobDescriptionPath, "Job description");
@@ -838,6 +1044,7 @@ async function prepareInputs(root: string, config: WorkspaceConfig): Promise<Pre
       checksum: source.checksum,
     })),
     modelConfiguration: modelConfiguration(config),
+    ...(candidateKnowledgeSelection === undefined ? {} : { candidateKnowledgeSelection }),
   });
   return { context, sources: ingestion.sources };
 }
@@ -922,13 +1129,15 @@ async function saveInputs(
   for (const [sourceIndex, source] of inputs.sources.entries()) {
     const sourceId = inputs.context.evidenceManifest[sourceIndex]?.id;
     if (sourceId === undefined) continue;
+    const existingSource = await storage.getEvidenceSource(sourceId);
+    const evidenceCreatedAt = existingSource?.createdAt ?? now;
     const sourceRecord: EvidenceSourceRecord = {
       id: sourceId,
       workspaceId: config.id,
       path: source.source.path,
       mediaType: source.mediaType,
       checksum: source.checksum,
-      createdAt: now,
+      createdAt: evidenceCreatedAt,
     };
     await storage.saveEvidenceSource(sourceRecord);
     for (const [ordinal, chunk] of source.chunks.entries()) {
@@ -941,7 +1150,7 @@ async function saveInputs(
         lineEnd: chunk.locator.lineEnd,
         checksum: chunk.checksum,
         text: chunk.text,
-        createdAt: now,
+        createdAt: evidenceCreatedAt,
       };
       await storage.saveEvidenceChunk(chunkRecord);
     }
@@ -1269,12 +1478,14 @@ function parseCritique(value: JsonObject): Critique {
  */
 function modelFacingContext(context: ContextSnapshot): ContextSnapshot {
   const configuration = context.modelConfiguration;
+  const { candidateKnowledgeSelection: _candidateKnowledgeSelection, ...withoutSelection } =
+    context;
   const withoutLineage = <T extends { readonly lineage?: string }>(selection: T): T => {
     const { lineage: _lineage, ...rest } = selection;
     return rest as T;
   };
   return {
-    ...context,
+    ...withoutSelection,
     modelConfiguration: {
       author: withoutLineage(configuration.author),
       critic: withoutLineage(configuration.critic),
@@ -2205,6 +2416,15 @@ function workspaceDescriptor(root: string, config: WorkspaceConfig): WorkspaceDe
     ...(config.localEndpoint === undefined ? {} : { localEndpoint: config.localEndpoint }),
     fixtureMode: config.fixtureMode,
     ...(config.latestRunId === undefined ? {} : { latestRunId: config.latestRunId }),
+    ...(config.candidateKnowledgeSelection === undefined
+      ? {}
+      : {
+          candidateKnowledgeSelection: Object.freeze(
+            config.candidateKnowledgeSelection.entries.map(({ storeId, knowledgeBaseId }) =>
+              Object.freeze({ storeId, knowledgeBaseId }),
+            ),
+          ),
+        }),
   };
 }
 
@@ -2308,6 +2528,11 @@ export function createLocalApplicationDriver(
       workspaceDescriptor(
         resolve(command.root),
         await configureWorkspaceWritingPolicy(command, io),
+      ),
+    configureKnowledgeSelection: async (command, io) =>
+      workspaceDescriptor(
+        resolve(command.root),
+        await configureWorkspaceKnowledgeSelection(command, io),
       ),
     begin: async (command, io) =>
       beginRun(

@@ -68,7 +68,7 @@ flowchart TB
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
     App -->|"explicit CKB commands"| CKBStore
-    CKBStore -.->|"selection binding and retrieval pending"| Knowledge
+    CKBStore -.->|"selection snapshot bound; retrieval pending"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
     Credentials -.->|"key lookup; never projected back"| Providers
@@ -94,8 +94,8 @@ Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected to the renderer. Network and
 export edges require visible approval. The solid CKB edge covers the explicit
 file, URL, and bounded-directory commands described below. The dotted edge
-marks the implemented selection contract whose workspace binding and retrieval
-workflow remain unintegrated.
+marks the path-free selection evidence now bound to new run contexts; CKB
+content retrieval remains unintegrated.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -133,10 +133,12 @@ An application workspace contains opportunity context, run snapshots, review
 decisions, artifacts, exports, and application-specific SQLite history. A
 portable CKB is a separate local SQLite store for reusable candidate material.
 The CKB has a logical UUID independent of its selected filesystem path. A
-workspace does not implicitly read from a CKB. The shared application boundary
-can construct a canonical selection snapshot from explicitly named,
-lifecycle-ready CKBs, but no adapter or workspace flow binds that snapshot to a
-run yet.
+workspace does not implicitly read CKB content. Its local manifest may bind
+explicitly named CKBs by runtime store root and pinned logical store/CKB IDs.
+Before each new run, the shared application boundary reopens those stores,
+checks their logical identities and lifecycle readiness, and embeds a freshly
+canonicalized, path-free selection snapshot in the immutable run context.
+Existing runs continue to use the snapshot they originally recorded.
 
 The portable store is local and plaintext. Restrictive filesystem permissions
 are best-effort and are not encryption or protection from another process run
@@ -206,8 +208,11 @@ Entries and sources are canonicalized in lexical order. The snapshot excludes
 store roots, display labels, paths, filenames, URLs, hashes, checksums, media
 types, byte sizes, and content. It can be embedded in an immutable context
 snapshot without breaking older context records that predate the optional
-field. It does not authorize provider transmission, establish retrieval-index
-freshness, or by itself bind a workspace or run.
+field. The local workspace binding retains runtime roots only so future runs can
+revalidate the pinned identities; descriptors, context snapshots, run history,
+diagnostics, and provider requests expose only the path-free record. The record
+does not authorize provider transmission or establish retrieval-index
+freshness.
 
 ### Directory and member lifecycle
 
@@ -269,7 +274,7 @@ motivated each boundary.
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
-workspace/run binding of the selection snapshot, provider transmission scope,
+pre-provider lifecycle/index drift enforcement, provider transmission scope,
 CLI/desktop CKB controls, missing-blob repair, writer locks, deletion, cleanup,
 or complete portable backup/export/restore. Until those contracts are
 integrated and validated, the workspace-scoped evidence and retrieval path

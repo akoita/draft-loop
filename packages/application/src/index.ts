@@ -71,6 +71,22 @@ export interface ConfigureWritingPolicyCommand {
   readonly sourcePath: string;
 }
 
+export interface ConfigureKnowledgeSelectionEntry {
+  /** Local candidate-knowledge store root; retained only in local workspace configuration. */
+  readonly storeRoot: string;
+  /** Pinned opaque store identity, checked again whenever a run is created. */
+  readonly storeId: string;
+  /** Pinned candidate knowledge base identity within the store. */
+  readonly knowledgeBaseId: string;
+}
+
+export interface ConfigureKnowledgeSelectionCommand {
+  readonly root: string;
+  readonly entries: readonly ConfigureKnowledgeSelectionEntry[];
+  /** Required when selecting more than one logical store/base pair. */
+  readonly combinationApproved?: boolean;
+}
+
 export interface WorkspaceDescriptor {
   readonly id: string;
   readonly root: string;
@@ -92,6 +108,11 @@ export interface WorkspaceDescriptor {
   readonly localEndpoint?: string;
   readonly fixtureMode: boolean;
   readonly latestRunId?: string;
+  /** Safe summary of the configured candidate-knowledge selection; roots stay local-only. */
+  readonly candidateKnowledgeSelection?: readonly {
+    readonly storeId: string;
+    readonly knowledgeBaseId: string;
+  }[];
 }
 
 export interface StartRunCommand {
@@ -186,6 +207,11 @@ export interface ApplicationDriver {
     command: ConfigureWritingPolicyCommand,
     io?: ApplicationIo,
   ) => Promise<WorkspaceDescriptor>;
+  /** Validate and persist an explicit local candidate-knowledge selection. */
+  readonly configureKnowledgeSelection: (
+    command: ConfigureKnowledgeSelectionCommand,
+    io?: ApplicationIo,
+  ) => Promise<WorkspaceDescriptor>;
   /** Persist the run and its context without starting provider execution. */
   readonly begin: (command: BeginRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly start: (command: StartRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
@@ -243,6 +269,11 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.reconfigureModels({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     configureWritingPolicy: async (command, io) =>
       driver.configureWritingPolicy(
+        { ...command, root: requireRoot(command.root) },
+        normalizeIo(io),
+      ),
+    configureKnowledgeSelection: async (command, io) =>
+      driver.configureKnowledgeSelection(
         { ...command, root: requireRoot(command.root) },
         normalizeIo(io),
       ),

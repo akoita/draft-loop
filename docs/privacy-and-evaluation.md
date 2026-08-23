@@ -35,9 +35,11 @@ provider retention: not allowed unless explicitly configured
 
 The portable Candidate Knowledge Base (CKB) is a separate local component. It
 stores a logical CKB identity, source identity, immutable source versions, and
-approved managed bytes. The current CLI and desktop application-run flow does
-not select CKB content for provider requests; the existing workspace evidence
-boundary remains authoritative. [ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
+approved managed bytes. An application workspace may bind an explicit CKB
+selection and record its path-free source/version identities in new immutable
+run contexts. The current CLI and desktop flow still does not read or send CKB
+content to providers; the existing workspace evidence boundary remains
+authoritative. [ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
 defines the storage contract. The [threat model](threat-model.md) records the
 security risks and residual limitations.
 
@@ -140,6 +142,12 @@ approval before opening a store. Store roots, human-readable source-identifying
 fields, and content-derived fields remain outside the snapshot. The record is
 audit and future drift evidence, not consent to transmit content to a provider.
 
+Runtime store roots are retained only in the sensitive local workspace manifest
+so new runs can reopen the stores. They are excluded from workspace
+descriptors, context snapshots, run history, diagnostics, and provider
+requests. A new run revalidates readiness and logical identity before recording
+its snapshot; an existing run keeps its original immutable record.
+
 An approved HTTPS URL is subject to public-address and redirect validation,
 time, response, text-size, content-type, and extraction limits. Exact fetched
 bytes and original/final URL provenance remain sensitive local state. A new
@@ -184,10 +192,10 @@ SQLite-only backup is incomplete because it omits managed raw blobs.
 
 Complete deletion across raw, unknown, derived, backed-up, and exported data is
 not implemented. CKB backup/export/restore, retrieval-index cleanup,
-workspace/run binding and enforcement of CKB selections, and repair of missing
-blobs remain future privacy boundaries. Users remain responsible for selected
-directories, filesystems, devices, cloud backups, and copies made outside
-DraftLoop.
+pre-provider lifecycle/index enforcement of bound selections, and repair of
+missing blobs remain future privacy boundaries. Users remain responsible for
+selected directories, filesystems, devices, cloud backups, and copies made
+outside DraftLoop.
 
 ## Redaction and logging
 

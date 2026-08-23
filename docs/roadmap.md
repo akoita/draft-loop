@@ -75,7 +75,7 @@ The product status is easiest to read by outcome:
 | Workspace retrieval and policy     | Partial integration                   | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. The initial workspace writing-policy slice is integrated behind explicit local selection. Neither establishes reusable CKB selection or application-grade drafting.                                                                                                                                                                                              |
 | Portable CKB                       | Implemented component; not integrated | The separate local store has logical identity, source/version provenance, managed bytes, local-only origins, URL provenance, retirement markers, and a prospective write journal. Explicit file/URL operations and bounded directory operations are available behind application contracts.                                                                                                                                                  |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
-| Product CKB workflow               | Implemented selection component       | Lifecycle readiness can now produce a canonical path-free selection snapshot with exact store/CKB/source/version identities, safe revisions, and explicit multi-CKB approval. Workspace/run binding, normalized facts, CKB-scoped retrieval, adapter controls, indexing, repair, deletion, backup/export/restore, and provider use remain outside the product path.              |
+| Product CKB workflow               | Integrated binding foundation         | An explicit local workspace binding pins store/CKB identities and records a freshly validated, path-free source/version selection in every new immutable run context. Existing runs preserve their original selection. Normalized facts, CKB-scoped retrieval, adapter controls, indexing, drift enforcement, repair, deletion, backup/export/restore, and provider use remain outside the product path. |
 
 The portable store is therefore component progress, not a v0.7 stage exit. See
 [the architecture](architecture.md) for stable boundaries and
@@ -171,9 +171,10 @@ storage components:
   policy (#68–#70).
 
 Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
-outside this critical path. Source lifecycle work through #136 is implemented
-at component/application-contract level for #110, but it does not satisfy the
-stage without selection, retrieval, and drafting integration.
+outside this critical path. Source lifecycle work through #136 and the first
+workspace/run binding slice of #111 are implemented, but they do not satisfy
+the stage without adapter selection, retrieval enforcement, and drafting
+integration.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -255,9 +256,9 @@ decision.
 
 ## Explicitly deferred
 
-- Workspace/run binding and enforcement of CKB selection snapshots, retrieval
-  integration, normalized facts, index lifecycle, source repair, deletion,
-  backup/export/restore, and adapter controls.
+- Pre-provider lifecycle/index enforcement of bound CKB selection snapshots,
+  retrieval integration, normalized facts, index lifecycle, source repair,
+  deletion, backup/export/restore, and adapter controls.
 - Automatic move inference, reconciliation of unknown entries, background
   refresh, time-based freshness, and automatic retirement or deletion. The
   path-free lifecycle projection does not perform those actions or establish
@@ -301,6 +302,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Bound explicit local CKB choices to workspace configuration and freshly validated, immutable run-context snapshots.                                                                                                      | New runs pin exact path-free store/CKB/source/version identities while old runs remain reproducible; adapter controls, CKB retrieval, provider use, index versions, and pre-provider drift enforcement remain separate work.                                                      |
 | 2026-08-23 | Added the first #111 contract slice: canonical path-free CKB/source-version selection snapshots with explicit multi-CKB approval.                                                                                         | Safe lifecycle revisions make the selected versions auditable and available to immutable context records, while workspace/run binding, provider use, adapter controls, index versions, and drift enforcement remain unintegrated.                                               |
 | 2026-08-23 | Added the deterministic path-free lifecycle-readiness projection for #136 without claiming indexing or product integration.                                                                                               | One consistent CKB snapshot blocks ineligible latest source versions and exposes a structured non-sensitive revision for #80. Live checks, TTLs, index construction/freshness, application selection, adapters, deletion, and repair remain separately owned.                         |
 | 2026-08-23 | Added complete explicit missing-member reconciliation for #135 without advancing the v0.7 stage beyond component implementation.                                                                                          | One bounded scan partitions every member and unmatched file path-free; explicit retirement selections run in lexical source-ID order with guarded atomic markers and an explicit partial result after a later failure. Physical deletion, automatic decisions, adapters, indexing, and #136 remain deferred. |

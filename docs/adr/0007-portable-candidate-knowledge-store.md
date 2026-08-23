@@ -19,9 +19,10 @@ The product therefore needs two local persistence boundaries:
    independently of any application.
 
 The CKB component establishes durable identity, immutable source/version
-metadata, managed raw bytes, and narrowly approved local operations. It is
-component-level work: CKB selection, retrieval, lifecycle integration, and
-provider use are not yet connected to application runs.
+metadata, managed raw bytes, and narrowly approved local operations. Explicit
+workspace selection is connected to immutable run context, while retrieval,
+provider use, and complete lifecycle enforcement remain outside application
+runs.
 
 ## Decision
 
@@ -35,9 +36,10 @@ remain future policy; a UUID alone does not decide which copy is current.
 
 The workspace remains separate. Its manifest, opportunity inputs, run
 snapshots, review decisions, artifacts, exports, and SQLite history do not move
-into the CKB. The shared application boundary can create an explicit immutable
-CKB/source-version selection snapshot, but the current workspace flow never
-reads a CKB implicitly and does not yet bind that snapshot to a run.
+into the CKB. An explicit local binding records runtime store roots with pinned
+logical store/CKB IDs. Each new run reopens and validates those stores, then
+records a fresh immutable CKB/source-version selection snapshot. Existing runs
+retain their original snapshot.
 
 ### Source and version model
 
@@ -81,11 +83,12 @@ blocked CKBs are rejected. The snapshot excludes store roots, labels, paths,
 filenames, URLs, hashes, checksums, media types, sizes, and content. Older
 context snapshots remain valid without this optional record.
 
-This contract records selection evidence only. It does not authorize provider
-transmission, assert an index version, atomically coordinate separate CKB
-stores, or bind the selection into the current workspace/run flow. Later drift
-checks can compare the recorded structured revisions with current lifecycle
-readiness before indexing or provider use.
+This contract records selection evidence only. Workspace roots remain in the
+sensitive local manifest and are excluded from descriptors, snapshots, run
+history, diagnostics, and provider requests. The contract does not authorize
+provider transmission, assert an index version, or atomically coordinate
+separate CKB stores. Later drift checks can compare the recorded structured
+revisions with current lifecycle readiness before indexing or provider use.
 
 ### Approved local file and URL intake
 
@@ -278,9 +281,8 @@ ownership and do not authorize adoption or cleanup.
 This decision deliberately leaves the following outside the product workflow:
 
 - normalized facts and lexical, vector, or hybrid CKB indexes;
-- workspace and run binding of the canonical CKB/source-version selection,
-  retrieval/index versions, drift enforcement, and provider transmission
-  approval;
+- retrieval/index versions, pre-provider drift enforcement, and provider
+  transmission approval for the bound CKB selection;
 - CLI and desktop CKB creation, opening, selection, and lifecycle controls;
 - automatic directory removal/rename reconciliation and move inference,
   broader member-retirement policy, background refresh, and time-based
@@ -294,8 +296,8 @@ This decision deliberately leaves the following outside the product workflow:
 - URL redirect history, conditional requests, and URL-specific failure policy.
 
 Until those contracts are integrated and validated, workspace-scoped evidence
-and retrieval remain authoritative for application runs. The presence of a CKB
-record must not make a run read from it implicitly.
+and retrieval remain authoritative for application runs. A bound CKB records
+selection evidence but does not make a run read its content implicitly.
 
 ## Alternatives considered
 
@@ -330,14 +332,13 @@ record must not make a run read from it implicitly.
   file does not delete its managed copy. A SQLite-only copy is not a complete
   CKB backup.
 - Retrieval and provider use continue to read workspace-scoped evidence until
-  selection binding, isolation, lifecycle drift, and privacy contracts are
+  CKB isolation, lifecycle/index drift, and provider privacy contracts are
   integrated.
 
 ## Follow-up
 
-- Bind the canonical selection snapshot to application and run history, then
-  enforce fail-closed lifecycle and retrieval isolation before CKB data enters
-  a provider request.
+- Enforce fail-closed lifecycle and retrieval isolation against the bound
+  selection before CKB data enters a provider request.
 - Define deletion coverage for raw, normalized, indexed, cached, historical,
   exported, and backed-up data.
 - Define writer coordination and visible approval before reconciliation can act
