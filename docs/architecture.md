@@ -383,12 +383,14 @@ rules, retention defaults, and deterministic evaluation gates.
 The CLI and packaged desktop host are adapters over the shared application
 driver. The driver stores a workspace manifest beside application SQLite
 history, ingests selected local sources, constructs context snapshots, and
-drives orchestration. It can call explicit CKB commands, but neither user-facing
-adapter yet exposes CKB selection or lifecycle controls. Live provider execution
-is opt-in and the provider boundary enforces the request data policy before the
-SDK call. Approved artifacts render locally to Markdown, controlled DOCX, or
-controlled PDF; immutable export records retain artifact/template versions,
-timestamp, format, MIME type, and checksum.
+drives orchestration. CLI and desktop adapters expose path-safe CKB store setup,
+inspection, selection, and additional-CKB create/rename/archive controls over
+the same application contracts. Archival requires explicit confirmation and
+does not rewrite workspace selection. Live provider execution is opt-in and the
+provider boundary enforces the request data policy before the SDK call. Approved
+artifacts render locally to Markdown, controlled DOCX, or controlled PDF;
+immutable export records retain artifact/template versions, timestamp, format,
+MIME type, and checksum.
 
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not

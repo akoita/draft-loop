@@ -2781,6 +2781,61 @@ describe("candidate knowledge native controls", () => {
         value: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
       });
 
+      const additional = await createHost.invoke({
+        type: "knowledge.create-base",
+        input: {
+          storeId,
+          displayName: "Public projects",
+          description: "Selected public work",
+        },
+      });
+      if (!additional.ok) throw new Error("Expected additional CKB creation to succeed.");
+      const additionalId = (
+        additional.value as {
+          knowledgeBases: readonly { id: string; isDefault: boolean }[];
+        }
+      ).knowledgeBases.find((base) => !base.isDefault)?.id;
+      if (additionalId === undefined) throw new Error("Expected an additional knowledge base.");
+      await expect(
+        createHost.invoke({
+          type: "knowledge.rename-base",
+          input: { storeId, knowledgeBaseId: additionalId, displayName: "Open-source work" },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBases: [
+            { isDefault: true },
+            { id: additionalId, displayName: "Open-source work" },
+          ],
+        },
+      });
+      await expect(
+        createHost.invoke({
+          type: "knowledge.archive-base",
+          input: { storeId, knowledgeBaseId: additionalId, confirmed: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      const archived = await createHost.invoke({
+        type: "knowledge.archive-base",
+        input: { storeId, knowledgeBaseId: additionalId, confirmed: true },
+      });
+      expect(archived).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBases: [{ isDefault: true }, { id: additionalId, state: "archived" }],
+        },
+      });
+      expect(JSON.stringify(archived)).not.toContain(parent);
+      await expect(
+        createHost.invoke({
+          type: "knowledge.archive-base",
+          input: { storeId, knowledgeBaseId, confirmed: true },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
       const reopenRoots = [workspaceRoot, storeRoot];
       const restartedHost = createNativeHost({
         dialogs: {

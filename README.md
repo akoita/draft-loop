@@ -106,6 +106,7 @@ workspace; combining CKBs requires `--approve-combination`. For example:
 ```sh
 pnpm --filter @draft-loop/cli start knowledge store init ./candidate-knowledge
 pnpm --filter @draft-loop/cli start knowledge store list ./candidate-knowledge
+pnpm --filter @draft-loop/cli start knowledge base create ./candidate-knowledge "Public projects"
 pnpm --filter @draft-loop/cli start knowledge select ./workspace \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 ```
@@ -113,8 +114,9 @@ pnpm --filter @draft-loop/cli start knowledge select ./workspace \
 The desktop native boundary exposes the same operations without accepting or
 returning filesystem paths in renderer messages. Desktop selection accepts only
 stores explicitly opened in the current session and requires the same visible
-approval for combinations. Source mutation and destructive lifecycle controls
-remain staged work.
+approval for combinations. Both adapters can create, rename, and archive
+additional CKBs; archival requires explicit confirmation and cannot target the
+default CKB. Source maintenance, deletion, backup, and restore remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
