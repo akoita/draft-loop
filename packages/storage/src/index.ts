@@ -268,6 +268,10 @@ export type ManagedCandidateKnowledgeWriteCommitInput =
       readonly urlProvenance?: CandidateKnowledgeSourceUrlProvenanceInput;
       /** Runtime lineage guard used by URL refresh; never persisted. */
       readonly expectedCurrentVersionId?: string;
+      /** Runtime origin-revision guard used by guarded file refresh; never persisted. */
+      readonly expectedOriginBoundAt?: string;
+      /** Runtime canonical origin-path guard used by guarded file refresh; never persisted. */
+      readonly expectedOriginPath?: string;
     };
 
 export interface CandidateKnowledgeBaseStoragePort {
@@ -2437,6 +2441,8 @@ export class SqliteStorage
     operationIdInput: string,
     versionInput: CandidateKnowledgeSourceVersionInput,
     expectedCurrentVersionId?: string,
+    expectedOriginBoundAt?: string,
+    expectedOriginPath?: string,
   ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
     this.ensureOpen();
     const operationId = requireNonEmpty(
@@ -2475,11 +2481,14 @@ export class SqliteStorage
         );
       }
       const current = candidateKnowledgeSourceVersionFromRow(currentRow);
-      if (expectedCurrentVersionId !== undefined && current.id !== expectedCurrentVersionId) {
-        throw new StorageConflictError(
-          "managed candidate knowledge write current version changed during publication",
-        );
-      }
+      this.requireManagedCandidateKnowledgeWriteGuards(
+        operation,
+        source,
+        current,
+        expectedCurrentVersionId,
+        expectedOriginBoundAt,
+        expectedOriginPath,
+      );
       if (source.kind === "url") {
         const provenance = this.database
           .prepare(
@@ -2656,14 +2665,14 @@ export class SqliteStorage
         );
       }
       const current = candidateKnowledgeSourceVersionFromRow(currentRow);
-      if (
-        input.expectedCurrentVersionId !== undefined &&
-        input.expectedCurrentVersionId !== current.id
-      ) {
-        throw new StorageConflictError(
-          "managed candidate knowledge write current version changed during publication",
-        );
-      }
+      this.requireManagedCandidateKnowledgeWriteGuards(
+        operation,
+        source,
+        current,
+        input.expectedCurrentVersionId,
+        input.expectedOriginBoundAt,
+        input.expectedOriginPath,
+      );
       if (Date.parse(requestedVersion.createdAt) < Date.parse(current.createdAt)) {
         throw new StorageValidationError(
           "candidate knowledge source version createdAt must not precede the current version createdAt",
@@ -5909,6 +5918,81 @@ export class SqliteStorage
       ),
       originBoundAt,
     };
+  }
+
+  private requireManagedCandidateKnowledgeWriteGuards(
+    operation: ManagedCandidateKnowledgeWriteOperationRecord,
+    source: CandidateKnowledgeSourceRecord,
+    current: CandidateKnowledgeSourceVersionRecord,
+    expectedCurrentVersionId: string | undefined,
+    expectedOriginBoundAt: string | undefined,
+    expectedOriginPath: string | undefined,
+  ): void {
+    if (
+      expectedCurrentVersionId !== undefined &&
+      current.id !==
+        requireNonEmpty(
+          expectedCurrentVersionId,
+          "managed candidate knowledge expected current version id",
+        ).trim()
+    ) {
+      throw new StorageConflictError(
+        "managed candidate knowledge write current version changed during publication",
+      );
+    }
+    if (expectedOriginBoundAt === undefined) {
+      if (expectedOriginPath !== undefined) {
+        throw new StorageValidationError(
+          "managed candidate knowledge expected origin path requires an origin revision",
+        );
+      }
+      return;
+    }
+    if (source.kind !== "file") {
+      throw new StorageValidationError(
+        "managed candidate knowledge origin revision guards require a file source",
+      );
+    }
+    const normalizedExpectedBoundAt = requireTimestamp(
+      expectedOriginBoundAt,
+      `managed candidate knowledge source ${operation.sourceId} expected origin boundAt`,
+    );
+    const normalizedExpectedOriginPath = requireCanonicalAbsolutePath(
+      expectedOriginPath ?? "",
+      `managed candidate knowledge source ${operation.sourceId} expected origin path`,
+    );
+    const originRow = this.database
+      .prepare(
+        "SELECT source_id, origin_path, bound_at FROM candidate_knowledge_source_origin_bindings WHERE source_id = ?",
+      )
+      .get(operation.sourceId);
+    if (originRow === undefined) {
+      throw new StorageConflictError(
+        "managed candidate knowledge write origin binding changed during publication",
+      );
+    }
+    const origin = candidateKnowledgeSourceOriginBindingFromRow(originRow);
+    if (origin.sourceId !== operation.sourceId) {
+      throw new StorageValidationError("managed candidate knowledge source origin is malformed");
+    }
+    const currentBoundAt = requireTimestamp(
+      origin.boundAt,
+      `managed candidate knowledge source ${operation.sourceId} origin boundAt`,
+    );
+    if (currentBoundAt !== normalizedExpectedBoundAt) {
+      throw new StorageConflictError(
+        "managed candidate knowledge write origin binding changed during publication",
+      );
+    }
+    const currentOriginPath = requireCanonicalAbsolutePath(
+      origin.originPath,
+      `managed candidate knowledge source ${operation.sourceId} origin path`,
+    );
+    if (currentOriginPath !== normalizedExpectedOriginPath) {
+      throw new StorageConflictError(
+        "managed candidate knowledge write origin binding changed during publication",
+      );
+    }
   }
 
   private requireCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {

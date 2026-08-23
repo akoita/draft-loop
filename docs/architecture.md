@@ -94,7 +94,8 @@ Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
 solid CKB edge covers explicit managed-file add, bounded recursive directory
-intake, read-only bounded directory refresh preview, approved URL intake and refresh, manual file-version append, and the local
+intake, read-only bounded directory refresh preview and observation recording,
+applied existing-member directory refresh, approved URL intake and refresh, manual file-version append, and the local
 structural-inventory query. Each file write approval covers one local regular
 file; a directory approval preflights one bounded real directory and still
 creates independent file sources before atomically recording its local binding
@@ -219,9 +220,18 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   entries, and atomically records their path-free observations with one shared
   timestamp. Retired, origin-conflict, and new files remain report-only; the
   operation allocates no IDs and writes no bytes, versions, membership, origin
-  bindings, retirements, or journal events. Changed-byte application, new-member
-  persistence, rename/removal decisions, root rebind, automatic retirement or
+  bindings, retirements, or journal events. New-member persistence,
+  rename/removal decisions, root rebind, automatic retirement or
   deletion, adapters, indexing, and background refresh remain deferred.
+- An explicit bounded applied directory refresh reuses that same complete scan.
+  It processes active same-member files in source-ID order, appends only changed
+  bytes through the stable managed-file path with current-version/origin-revision
+  guards, and records current observations for successful changed, current, and
+  same-member-missing entries. Retired, origin-conflict, and new files remain
+  report-only. A later member failure returns a path-free partial result after
+  earlier member commits; new-member persistence, rename/removal decisions,
+  root rebind, automatic retirement/deletion, adapters, indexing, and
+  background refresh remain deferred.
 - Managed source add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
   matching opaque bytes; file sources retain their additional regular-file and
@@ -415,9 +425,9 @@ immutable managed-copy contract, does not rebind, and records a path-free
 last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
-Applied directory refresh, new-member persistence, rename/removal decisions,
-directory-root rebind, automatic retirement/deletion, background refresh,
-time-based freshness policy, automatic moved-origin
+New-member persistence, rename/removal decisions, directory-root rebind,
+automatic retirement/deletion, background refresh, time-based freshness policy,
+automatic moved-origin
 discovery, adapter-level refresh/rebind/duplicate controls, incremental
 directory reconciliation and membership lifecycle,
 URL redirect history and conditional requests, automatic duplicate resolution,

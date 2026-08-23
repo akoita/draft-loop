@@ -631,6 +631,7 @@ describe("candidate knowledge store application service", () => {
       "retired-source",
       "retired-version",
       "directory-binding",
+      "applied-changed-version",
     ];
     const generateId = vi.fn(() => generatedIds.shift() ?? "unexpected-id");
     const ingestDirectory = vi.fn<typeof ingestDirectoryImplementation>();
@@ -799,6 +800,113 @@ describe("candidate knowledge store application service", () => {
       undefined,
       undefined,
     ]);
+
+    ingestDirectory.mockClear();
+    const applyStore = await openCandidateKnowledgeStore(storeRoot);
+    const observationBatch = vi.fn<
+      CandidateKnowledgeStoreHandle["upsertCandidateKnowledgeDirectoryRefreshObservations"]
+    >(async (knowledgeBaseId, directoryId, input) =>
+      applyStore.upsertCandidateKnowledgeDirectoryRefreshObservations(
+        knowledgeBaseId,
+        directoryId,
+        input,
+      ),
+    );
+    const applyClose = vi.fn(async () => applyStore.close());
+    const applyService = createCandidateKnowledgeStoreService({
+      generateId,
+      ingestDirectory: ingestDirectory as never,
+      now: () => now,
+      open: vi.fn(
+        async () =>
+          ({
+            ...applyStore,
+            upsertCandidateKnowledgeDirectoryRefreshObservations: observationBatch,
+            close: applyClose,
+          }) as unknown as CandidateKnowledgeStoreHandle,
+      ),
+    });
+    const applied = await applyService.applyKnowledgeSourceDirectoryRefresh({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: "directory-binding",
+    });
+    expect(applied).toEqual({
+      directoryId: "directory-binding",
+      checkedAt: recordedAt,
+      members: [
+        { sourceId: "changed-source", status: "changed" },
+        { sourceId: "conflict-source", status: "origin-conflict" },
+        { sourceId: "current-source", status: "current" },
+        { sourceId: "missing-source", status: "missing" },
+        { sourceId: "retired-source", status: "retired" },
+      ],
+      newSourceCount: 1,
+      scannedEntryCount: 4,
+      discoveredFileCount: 4,
+      skippedEntryCount: 0,
+      refreshedSourceIds: ["changed-source"],
+      status: "complete",
+    });
+    expect(observationBatch).toHaveBeenCalledOnce();
+    expect(observationBatch).toHaveBeenCalledWith("default-ckb-uuid", "directory-binding", {
+      checkedAt: recordedAt,
+      entries: [
+        {
+          sourceId: "current-source",
+          observedVersionId: "current-version",
+          status: "current",
+          expectedOriginBoundAt: createdAt,
+        },
+        {
+          sourceId: "missing-source",
+          observedVersionId: "missing-version",
+          status: "missing",
+          expectedOriginBoundAt: createdAt,
+        },
+      ],
+    });
+    expect(applyClose).toHaveBeenCalledOnce();
+    expect(Object.isFrozen(applied)).toBe(true);
+    expect(Object.isFrozen(applied.members)).toBe(true);
+    expect(Object.isFrozen(applied.refreshedSourceIds)).toBe(true);
+    expect(ingestDirectory).toHaveBeenCalledOnce();
+    expect(generateId).toHaveBeenCalledTimes(14);
+    expect(JSON.stringify(applied)).not.toContain(temporaryParent);
+    expect(JSON.stringify(applied)).not.toContain("after");
+
+    const appliedStore = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        appliedStore.listCandidateKnowledgeSourceVersions("default-ckb-uuid", "changed-source"),
+      ).resolves.toHaveLength(2);
+      await expect(
+        appliedStore.getCandidateKnowledgeSourceRefreshObservation(
+          "default-ckb-uuid",
+          "changed-source",
+        ),
+      ).resolves.toMatchObject({
+        observedVersionId: "applied-changed-version",
+        status: "current",
+        lastRefreshedVersionId: "applied-changed-version",
+        lastRefreshedAt: recordedAt,
+        stale: false,
+      });
+      await expect(
+        appliedStore.getCandidateKnowledgeSourceRefreshObservation(
+          "default-ckb-uuid",
+          "current-source",
+        ),
+      ).resolves.toMatchObject({ observedVersionId: "current-version", status: "current" });
+      await expect(
+        appliedStore.getCandidateKnowledgeSourceRefreshObservation(
+          "default-ckb-uuid",
+          "missing-source",
+        ),
+      ).resolves.toMatchObject({ observedVersionId: "missing-version", status: "missing" });
+    } finally {
+      await appliedStore.close();
+    }
   });
 
   it("previews an empty bound directory without allocating IDs or writing state", async () => {
@@ -834,6 +942,152 @@ describe("candidate knowledge store application service", () => {
       skippedEntryCount: 0,
     });
     expect(generateId).toHaveBeenCalledTimes(3);
+  });
+
+  it("applies changed members in source order and returns a path-free partial result", async () => {
+    const directoryPath = join(temporaryParent, "partial-apply-directory");
+    const firstPath = join(directoryPath, "a-first.md");
+    const secondPath = join(directoryPath, "b-second.md");
+    await mkdir(directoryPath);
+    await writeFile(firstPath, "first before", "utf8");
+    await writeFile(secondPath, "second before", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "a-source",
+      "a-version",
+      "b-source",
+      "b-version",
+      "directory-binding",
+    ];
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+
+    await writeFile(firstPath, "first after", "utf8");
+    await writeFile(secondPath, "second after", "utf8");
+    now = changedAt;
+    await expect(
+      service.applyKnowledgeSourceDirectoryRefresh({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+        options: { maxScannedEntries: 1 },
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory refresh could not be applied.",
+    );
+    const afterScanFailure = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        afterScanFailure.listCandidateKnowledgeSourceVersions("default-ckb-uuid", "a-source"),
+      ).resolves.toHaveLength(1);
+      await expect(
+        afterScanFailure.getCandidateKnowledgeSourceRefreshObservation(
+          "default-ckb-uuid",
+          "a-source",
+        ),
+      ).resolves.toBeUndefined();
+      await expect(
+        afterScanFailure.listCandidateKnowledgeSourceVersions("default-ckb-uuid", "b-source"),
+      ).resolves.toHaveLength(1);
+      await expect(
+        afterScanFailure.getCandidateKnowledgeSourceRefreshObservation(
+          "default-ckb-uuid",
+          "b-source",
+        ),
+      ).resolves.toBeUndefined();
+    } finally {
+      await afterScanFailure.close();
+    }
+    const realStore = await openCandidateKnowledgeStore(storeRoot);
+    let appendCalls = 0;
+    const append = vi.fn<
+      CandidateKnowledgeStoreHandle["appendManagedCandidateKnowledgeFileVersion"]
+    >(async (knowledgeBaseId, sourceId, version) => {
+      appendCalls += 1;
+      if (appendCalls === 2) throw new Error("injected publication failure");
+      return realStore.appendManagedCandidateKnowledgeFileVersion(
+        knowledgeBaseId,
+        sourceId,
+        version,
+      );
+    });
+    const close = vi.fn(async () => realStore.close());
+    const applyService = createCandidateKnowledgeStoreService({
+      generateId: () => "a-version-2",
+      now: () => now,
+      open: vi.fn(
+        async () =>
+          ({
+            ...realStore,
+            appendManagedCandidateKnowledgeFileVersion: append,
+            close,
+          }) as unknown as CandidateKnowledgeStoreHandle,
+      ),
+    });
+
+    const result = await applyService.applyKnowledgeSourceDirectoryRefresh({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: "directory-binding",
+    });
+    expect(result).toEqual({
+      directoryId: "directory-binding",
+      checkedAt: changedAt,
+      members: [
+        { sourceId: "a-source", status: "changed" },
+        { sourceId: "b-source", status: "changed" },
+      ],
+      newSourceCount: 0,
+      scannedEntryCount: 2,
+      discoveredFileCount: 2,
+      skippedEntryCount: 0,
+      refreshedSourceIds: ["a-source"],
+      status: "partial",
+      failedSourceId: "b-source",
+      failedStatus: "changed",
+    });
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.refreshedSourceIds)).toBe(true);
+    expect(JSON.stringify(result)).not.toContain(temporaryParent);
+    expect(JSON.stringify(result)).not.toContain("publication");
+    expect(append).toHaveBeenCalledTimes(2);
+    expect(append.mock.calls[0]?.[1]).toBe("a-source");
+    expect(append.mock.calls[1]?.[1]).toBe("b-source");
+    expect(close).toHaveBeenCalledOnce();
+
+    const reopened = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        reopened.listCandidateKnowledgeSourceVersions("default-ckb-uuid", "a-source"),
+      ).resolves.toHaveLength(2);
+      await expect(
+        reopened.listCandidateKnowledgeSourceVersions("default-ckb-uuid", "b-source"),
+      ).resolves.toHaveLength(1);
+      await expect(
+        reopened.getCandidateKnowledgeSourceRefreshObservation("default-ckb-uuid", "a-source"),
+      ).resolves.toMatchObject({
+        observedVersionId: "a-version-2",
+        status: "current",
+        lastRefreshedVersionId: "a-version-2",
+        stale: false,
+      });
+      await expect(
+        reopened.getCandidateKnowledgeSourceRefreshObservation("default-ckb-uuid", "b-source"),
+      ).resolves.toBeUndefined();
+    } finally {
+      await reopened.close();
+    }
   });
 
   it("classifies an active member without an origin binding as an origin conflict", async () => {

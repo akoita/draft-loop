@@ -45,16 +45,17 @@ creates each accepted file as an independent managed file source. A complete
 import also persists a sensitive local-only canonical root binding and immutable
 membership rows containing only SHA-256 hashes of normalized relative paths; it
 does not create a directory source kind. Partial imports and legacy runtime-only
-imports have no directory binding or membership evidence. Incremental refresh,
-rebind, rename, removal, and member-retirement policy remain deferred. The
+imports have no directory binding or membership evidence. Applied refresh is
+limited to existing active same-member changed files; directory additions and
+removals, root rebind, rename, and member-retirement policy remain deferred. The
 membership is a stable historical mapping captured at binding time: later source
 version appends, explicit origin rebinding, or source retirement do not rewrite
 its rows, and actual incremental scan reconciliation remains deferred.
 A bounded explicit refresh preview now revalidates that persisted root, repeats
 the directory preflight, and reports only path-free member states plus an
-aggregate count of unmatched accepted files. It is read-only: applied refresh,
-new-member persistence, rename/removal decisions, directory-root rebind,
-automatic retirement/deletion, and background refresh remain deferred.
+aggregate count of unmatched accepted files. It is read-only: new-member
+persistence, rename/removal decisions, directory-root rebind, automatic
+retirement/deletion, and background refresh remain deferred.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -152,7 +153,7 @@ The selected root and exact file origins remain sensitive local state; generic
 manifests, diagnostics, journals, inventory, and provider projections expose
 neither. Repeating a bound root is rejected until a future refresh policy
 provides stable source reuse; directory additions, removals, rebind, rename,
-and incremental refresh remain deferred. The persisted membership remains a
+and complete incremental reconciliation remain deferred. The persisted membership remains a
 historical binding-time mapping even when an existing member later gains a
 version, has its origin explicitly rebound, or is retired.
 A separate explicit bounded refresh preview can classify these historical
@@ -168,6 +169,14 @@ reported but are skipped. The eligible batch is validated and committed in one
 SQLite transaction with one shared checked-at timestamp; no IDs, bytes,
 versions, membership, origin bindings, retirements, or journal events are
 written. This records scan evidence, not an applied changed-byte refresh.
+Another explicit bounded directory-refresh operation can apply only changed
+bytes for active same-member files, in source-ID order, through the existing
+stable managed-file append path. It records a current observation for each
+successful append and for current or same-member-missing files, while retired,
+origin-conflict, and unmatched files remain report-only. A later member failure
+returns a path-free partial result after already committed members; no new
+member, rename/removal, root-rebind, automatic-retirement, or background policy
+is inferred.
 SQLite migration v13 stores the opaque directory binding and immutable hashed
 members in separate local-only tables with same-CKB foreign-key scope; there is
 no backfill of earlier runtime-only imports.
@@ -367,8 +376,9 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- applied incremental directory refresh, directory rebind/rename/removal, and
-  member retirement policy (the read-only preview does not apply any of them);
+- directory additions/removals, directory rebind, rename/removal, and member
+  retirement policy (the applied operation handles only existing active
+  same-member changed files);
 - redirect-observation history, conditional URL requests, and URL-specific
   failure or time-based readiness policy;
 - background refresh, time-based freshness policy, moved-origin discovery, and
@@ -426,8 +436,10 @@ a portable-store record must not make a workspace run read from it implicitly.
   persists a sensitive local-only canonical root binding plus immutable
   SHA-256 relative-path membership; selected roots and exact origins remain
   runtime/local state outside product projections. Skips and limits are
-  counted, while incremental refresh and membership lifecycle decisions remain
-  unimplemented.
+  counted, while complete directory reconciliation and membership lifecycle
+  decisions remain unimplemented. Existing active same-member changed files can
+  be applied explicitly in deterministic source order; failures after an
+  earlier member commit return a path-free partial result.
 - Prospective v7 journal events provide internal provenance evidence for new
   managed writes without claiming legacy or otherwise unjournaled entries.
 - Deleting an application workspace does not delete a separate CKB store, and
