@@ -227,6 +227,14 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   membership and latest-byte agreement for every historical member, and
   returns only path-free readiness and scan counts. It does not mutate the
   persisted binding or membership; applying the root rebind remains deferred.
+  Storage now also provides the v14 append-only root-revision foundation: v13
+  bindings backfill as revision 1, fresh bindings receive revision 1, and a
+  current-root view drives path-sensitive reads. A verified storage/handle
+  transaction can validate every member and atomically update current origin
+  bindings plus the next revision, or return a guarded same-root no-op. The
+  immutable v13 binding/member rows remain historical evidence; an application
+  rebind command, rename/removal reconciliation, and broader lifecycle policy
+  remain deferred.
   A separate moved-candidate projection reuses that complete scan exactly once
   and emits only deterministic source IDs for unique one-to-one exact
   media-type/checksum/size matches between same-member missing sources and

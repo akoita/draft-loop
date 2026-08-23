@@ -28,6 +28,9 @@ import {
   type CandidateKnowledgeDirectoryMemberRecord,
   type CandidateKnowledgeDirectoryMemberRetirementInput,
   type CandidateKnowledgeDirectoryRefreshObservationBatchInput,
+  type CandidateKnowledgeDirectoryRootRebindInput,
+  type CandidateKnowledgeDirectoryRootRebindResult,
+  type CandidateKnowledgeDirectoryRootRevisionRecord,
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceOriginBindingRecord,
   type CandidateKnowledgeSourceRefreshObservationInput,
@@ -150,6 +153,32 @@ export interface RebindManagedCandidateKnowledgeFileResult {
   readonly rebound: boolean;
 }
 
+export interface RebindManagedCandidateKnowledgeDirectoryRootMemberInput {
+  readonly sourceId: string;
+  /** Explicit runtime source selection; it is never persisted in a product projection. */
+  readonly sourcePath: string;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly expectedVersionId: string;
+  readonly expectedOriginBoundAt: string;
+  /** @internal Test seam for mutating the selected source before its final stability check. */
+  readonly beforeSourceRecheck?: () => Promise<void>;
+}
+
+export interface RebindManagedCandidateKnowledgeDirectoryRootInput {
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly candidateRootPath: string;
+  readonly expectedRootPath: string;
+  readonly expectedRevision: number;
+  readonly reboundAt: string;
+  readonly members: readonly RebindManagedCandidateKnowledgeDirectoryRootMemberInput[];
+}
+
+export type RebindManagedCandidateKnowledgeDirectoryRootResult =
+  CandidateKnowledgeDirectoryRootRebindResult;
+
 export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseStoragePort {
   readonly descriptor: CandidateKnowledgeStoreDescriptor;
   /** Canonical physical root. It is runtime state and is never persisted in the manifest. */
@@ -190,6 +219,13 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     directoryId: string,
   ) => Promise<CandidateKnowledgeDirectoryBindingRecord | undefined>;
+  readonly getCandidateKnowledgeDirectoryCurrentRootRevision: (
+    knowledgeBaseId: string,
+    directoryId: string,
+  ) => Promise<CandidateKnowledgeDirectoryRootRevisionRecord | undefined>;
+  readonly rebindManagedCandidateKnowledgeDirectoryRoot: (
+    input: RebindManagedCandidateKnowledgeDirectoryRootInput,
+  ) => Promise<RebindManagedCandidateKnowledgeDirectoryRootResult>;
   readonly findCandidateKnowledgeDirectoryBinding: (
     knowledgeBaseId: string,
     rootPath: string,
@@ -672,6 +708,33 @@ async function verifyManagedFileOrigin(
     );
   } finally {
     await closeQuietly(sourceHandle);
+  }
+}
+
+async function verifyCandidateDirectoryRoot(
+  root: string,
+  candidateRootPath: string,
+): Promise<string> {
+  const selectedPath = resolve(requiredManagedText(candidateRootPath, "Candidate directory root"));
+  try {
+    const details = await lstat(selectedPath);
+    if (details.isSymbolicLink() || !details.isDirectory()) {
+      throw new StorageValidationError(
+        "Candidate knowledge directory root must be a real directory, not a symbolic link.",
+      );
+    }
+    const canonicalPath = await realpath(selectedPath);
+    if (isWithin(root, canonicalPath) || isWithin(canonicalPath, root)) {
+      throw new StorageValidationError(
+        "Candidate knowledge directory root must be outside its store.",
+      );
+    }
+    return canonicalPath;
+  } catch (error) {
+    if (error instanceof StorageValidationError || error instanceof StorageConflictError) {
+      throw error;
+    }
+    throw new StorageValidationError("Candidate knowledge directory root could not be verified.");
   }
 }
 
@@ -1699,6 +1762,78 @@ function createHandle(
         directoryId,
       );
       return binding === undefined ? undefined : Object.freeze({ ...binding });
+    },
+    getCandidateKnowledgeDirectoryCurrentRootRevision: async (knowledgeBaseId, directoryId) => {
+      const revision = await storage.getCandidateKnowledgeDirectoryCurrentRootRevision(
+        knowledgeBaseId,
+        directoryId,
+      );
+      return revision === undefined ? undefined : Object.freeze({ ...revision });
+    },
+    rebindManagedCandidateKnowledgeDirectoryRoot: async (input) => {
+      const candidateRootPath = await verifyCandidateDirectoryRoot(root, input.candidateRootPath);
+      if (!Array.isArray(input.members)) {
+        throw new StorageValidationError(
+          "Candidate knowledge directory root rebind members are required.",
+        );
+      }
+      const sourceIds = new Set<string>();
+      const verifiedMembers: Array<CandidateKnowledgeDirectoryRootRebindInput["members"][number]> =
+        [];
+      const members = [...input.members].sort((left, right) =>
+        left.sourceId.localeCompare(right.sourceId),
+      );
+      for (const member of members) {
+        const sourceId = requiredManagedText(
+          member.sourceId,
+          "Candidate knowledge directory root rebind source id",
+        );
+        if (sourceIds.has(sourceId)) {
+          throw new StorageConflictError(
+            "Candidate knowledge directory root rebind sources must be unique.",
+          );
+        }
+        sourceIds.add(sourceId);
+        const verified = await verifyManagedFileOrigin(root, {
+          sourcePath: member.sourcePath,
+          mediaType: member.mediaType,
+          checksum: member.checksum,
+          sizeBytes: member.sizeBytes,
+          boundAt: input.reboundAt,
+          beforeSourceRecheck: member.beforeSourceRecheck,
+        });
+        if (
+          verified.originPath === candidateRootPath ||
+          !isWithin(candidateRootPath, verified.originPath)
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge directory root rebind source must be strictly inside its root.",
+          );
+        }
+        verifiedMembers.push({
+          sourceId,
+          originPath: verified.originPath,
+          mediaType: member.mediaType,
+          checksum: verified.checksum,
+          sizeBytes: verified.sizeBytes,
+          expectedVersionId: member.expectedVersionId,
+          expectedOriginBoundAt: member.expectedOriginBoundAt,
+        });
+      }
+      const rebound = await storage.rebindCandidateKnowledgeDirectoryRoot({
+        knowledgeBaseId: input.knowledgeBaseId,
+        directoryId: input.directoryId,
+        candidateRootPath,
+        expectedRootPath: input.expectedRootPath,
+        expectedRevision: input.expectedRevision,
+        reboundAt: input.reboundAt,
+        members: verifiedMembers,
+      });
+      return Object.freeze({
+        binding: Object.freeze({ ...rebound.binding }),
+        revision: Object.freeze({ ...rebound.revision }),
+        rebound: rebound.rebound,
+      });
     },
     findCandidateKnowledgeDirectoryBinding: async (knowledgeBaseId, rootPath) => {
       const binding = await storage.findCandidateKnowledgeDirectoryBinding(

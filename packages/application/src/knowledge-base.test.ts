@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 
@@ -513,6 +522,7 @@ describe("candidate knowledge store application service", () => {
       }
     };
     const before = await snapshot();
+    const boundRoot = await realpath(boundDirectory);
 
     const current = await service.previewKnowledgeSourceDirectoryRootRebind({
       storeRoot,
@@ -552,6 +562,40 @@ describe("candidate knowledge store application service", () => {
     expect(JSON.stringify(ready)).not.toContain(sha256("same evidence"));
     expect(generateId).toHaveBeenCalledTimes(5);
     expect(await snapshot()).toEqual(before);
+
+    const reboundStore = await openCandidateKnowledgeStore(storeRoot);
+    await reboundStore.rebindManagedCandidateKnowledgeDirectoryRoot({
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: "directory-binding",
+      candidateRootPath: candidateDirectory,
+      expectedRootPath: boundRoot,
+      expectedRevision: 1,
+      reboundAt: changedAt,
+      members: [
+        {
+          sourceId: "source-uuid",
+          sourcePath: candidatePath,
+          mediaType: "text/plain",
+          checksum: sha256("same evidence"),
+          sizeBytes: Buffer.byteLength("same evidence"),
+          expectedVersionId: "version-uuid",
+          expectedOriginBoundAt: createdAt,
+        },
+      ],
+    });
+    await reboundStore.close();
+    await mkdir(dirname(boundPath), { recursive: true });
+    await writeFile(boundPath, "same evidence", "utf8");
+    await expect(
+      service.previewKnowledgeSourceDirectoryRootRebind({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+        directoryPath: boundDirectory,
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory root rebind preview could not be completed.",
+    );
   });
 
   it("rejects root-rebind candidates with missing, extra, changed, or duplicate membership", async () => {

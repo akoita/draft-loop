@@ -86,6 +86,16 @@ fresh-scan `missing` same-member source as logically removed with the existing
 observations, journal state, or immutable membership. Already retired members
 return an `already-removed` result without a write.
 
+The v14 storage foundation adds append-only sensitive directory-root revisions.
+Existing v13 bindings are backfilled as revision 1, every historical root is
+reserved within its CKB, and current-root reads use the max-revision projection.
+The verified storage/handle rebind transaction updates only sensitive origin
+bindings and the next root revision after checking every member; it preserves
+source, version, blob, observation, retirement, journal, and hashed-membership
+evidence. No application rebind command is exposed in this slice, and rename,
+removal, reconciliation, and broader membership lifecycle decisions remain
+deferred.
+
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address
 resolution and every redirect, bounds time and response/text size, restricts
