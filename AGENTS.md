@@ -11,6 +11,15 @@ priorities change.
 - Keep code synchronized with `README.md`, architecture documents and diagrams,
   examples, CLI help, and roadmap references.
 - Update affected documentation in the same PR, or state why no update is needed.
+- Write for the intended human reader and the document's purpose. Lead with the
+  useful information, give each paragraph or list item one coherent point, and
+  use headings, short paragraphs, and scannable lists where they improve
+  comprehension. Source line wrapping is not paragraph structure.
+- Keep only current, relevant detail in each document. Summarize and link to the
+  canonical source instead of copying implementation history across documents,
+  and restructure prose blocks longer than about 120 words.
+- Remove stale, redundant, or misplaced content whenever affected
+  documentation is updated.
 
 ## Architecture boundaries
 

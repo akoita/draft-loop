@@ -8,7 +8,7 @@ with the package boundaries described in [AGENTS.md](AGENTS.md).
 Use Node 24.5.0 and pnpm 10.18.3, then run:
 
 ```sh
-pnpm install
+pnpm install --frozen-lockfile
 pnpm validate
 ```
 

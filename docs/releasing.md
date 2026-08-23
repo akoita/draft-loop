@@ -154,11 +154,12 @@ author-critic flow belongs in fixture mode, which spends nothing — see
 iteration is what exhausts the provider budget this release validation depends
 on.
 
-The gate runs `claude-haiku-4-5` as author and `gpt-5.6-luna` as critic. These
-are deliberately the cheapest models that still exercise the real provider path,
-because the gate's purpose is to prove the path works, not to measure output
-quality. They remain a cross-company pair, so provider diversity is unchanged.
-Override either side for a run without editing code:
+Direct `pnpm test:e2e:live` runs default to `claude-haiku-4-5` as author and
+`gpt-5.6-luna` as critic. `pnpm release:preflight` deliberately overrides the
+critic with `gpt-5.3-codex-spark` for the required local mixed-auth release gate.
+Both pairs are chosen to exercise the provider path at bounded cost, not to
+measure output quality. Override either side for a direct run without editing
+code:
 
 ```text
 DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-4-5 pnpm test:e2e:live

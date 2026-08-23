@@ -21,9 +21,9 @@ provider traffic. Credential lifecycle results are produced by the separate
 
 Run the harness locally against a packaged executable:
 
-~~~text
+```text
 pnpm desktop:acceptance -- <packaged-executable> <evidence.json>
-~~~
+```
 
 This is installed-app integration evidence for sanitized offline material. It
 does not by itself validate live provider authentication, provider response
