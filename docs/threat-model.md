@@ -296,8 +296,13 @@ different source cannot silently claim an old relative path while the original
 source may return to its own history. The verified storage/handle move checks
 stable bytes and all scope/version/origin guards before atomically updating one
 sensitive origin and appending one revision, or returning a no-op. The
-application move command remains deferred with #135/#136, automatic inference,
-physical deletion, adapters, indexing, and background refresh.
+application command accepts only source identity, derives a unique target from
+one bounded local scan, and retains that target path only at runtime. It invokes
+the same guarded handle for both moves and already-current no-ops, maps every
+failure to one path-free error, and returns no path or integrity metadata.
+Complete reconciliation under #135, lifecycle readiness under #136, automatic
+inference, physical deletion, adapters, indexing, and background refresh remain
+deferred.
 
 The structural inventory is a local application query, not a provider-facing
 projection or content-diagnostic workflow. Missing or corrupt referenced blobs

@@ -260,9 +260,15 @@ identity; mutating v13 rows or adding a no-backfill overlay would erase baseline
 evidence or leave legacy members without a trustworthy history. The verified
 storage/handle move transaction updates one sensitive origin and appends its
 member revision atomically, with a guarded no-op when the current hash is
-unchanged. The application move command remains deferred, along with #135/#136,
-automatic move inference, physical deletion, adapters, indexing, and background
-refresh. This is a component implementation only and does not advance v0.7.
+unchanged. The second #134 slice adds an explicit application command for one
+selected source. It reuses exactly one bounded directory scan, accepts no target
+path, and forwards a runtime-only unique exact-integrity match—or the scanned
+current member for idempotency—through the verified handle. Its frozen result
+contains only directory/source identity, the shared check time, and
+`moved`/`current` status. Complete reconciliation under #135, lifecycle
+readiness under #136, automatic move inference, physical deletion, adapters,
+indexing, and background refresh remain deferred. This is a component
+implementation only and does not advance v0.7.
 
 An explicit application operation can approve one local regular file as a
 manual new version of an existing file source. Every append repeats the same
