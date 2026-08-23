@@ -171,10 +171,10 @@ storage components:
   policy (#68–#70).
 
 Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
-outside this critical path. Source lifecycle work through #136 and the first
-workspace/run binding slice of #111 are implemented, but they do not satisfy
-the stage without adapter selection, retrieval enforcement, and drafting
-integration.
+outside this critical path. Source lifecycle work through #136, workspace/run
+binding through #111, and the first path-safe CLI/desktop CKB controls from #112
+are implemented. They do not satisfy the stage without adapter selection,
+remaining lifecycle controls, retrieval enforcement, and drafting integration.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -257,8 +257,8 @@ decision.
 ## Explicitly deferred
 
 - Retrieval and index-version enforcement of bound CKB selection snapshots,
-  normalized facts, source repair, deletion, backup/export/restore, adapter
-  controls, and cross-store writer coordination.
+  normalized facts, source repair, deletion, backup/export/restore, remaining
+  adapter controls, and cross-store writer coordination.
 - Automatic move inference, reconciliation of unknown entries, background
   refresh, time-based freshness, and automatic retirement or deletion. The
   path-free lifecycle projection does not perform those actions or establish

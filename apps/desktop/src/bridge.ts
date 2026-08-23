@@ -19,6 +19,10 @@ export const bridgeCapabilities = [
   "workspace.open",
   "workspace.create",
   "workspace.configure-models",
+  "knowledge.create",
+  "knowledge.open",
+  "knowledge.list",
+  "knowledge.readiness",
   "run.status",
   "run.start",
   "run.pause",
@@ -156,6 +160,37 @@ export interface WorkspaceOpenInput {
 }
 
 const workspaceOpenKeys = inputKeys<WorkspaceOpenInput>()(["selection"]);
+
+export interface KnowledgeStoreCreateInput {
+  /** The native host owns the folder picker; no filesystem path crosses this API. */
+  readonly selection?: "native-dialog";
+  /** A new folder name beneath the directory selected by the native host. */
+  readonly name: string;
+  readonly displayName?: string;
+  readonly description?: string;
+}
+
+const knowledgeStoreCreateKeys = inputKeys<KnowledgeStoreCreateInput>()([
+  "selection",
+  "name",
+  "displayName",
+  "description",
+]);
+
+export type KnowledgeStoreOpenInput = WorkspaceOpenInput;
+const knowledgeStoreOpenKeys = workspaceOpenKeys;
+
+export interface KnowledgeStoreListInput {
+  readonly storeId: string;
+}
+
+const knowledgeStoreListKeys = inputKeys<KnowledgeStoreListInput>()(["storeId"]);
+
+export interface KnowledgeReadinessInput extends KnowledgeStoreListInput {
+  readonly knowledgeBaseId: string;
+}
+
+const knowledgeReadinessKeys = inputKeys<KnowledgeReadinessInput>()(["storeId", "knowledgeBaseId"]);
 
 /**
  * Everything a new workspace can be told about its models.
@@ -419,6 +454,47 @@ export interface WorkspaceResult {
 const workspaceResultKeys = resultKeys<WorkspaceResult>()(["workspace"]);
 const workspaceSummaryKeys = resultKeys<WorkspaceSummary>()(["id", "name"]);
 
+export interface KnowledgeBaseSummary {
+  readonly id: string;
+  readonly displayName: string;
+  readonly description: string;
+  readonly state: "active" | "archived";
+  readonly isDefault: boolean;
+}
+
+export interface KnowledgeStoreResult {
+  readonly storeId: string;
+  readonly knowledgeBases: readonly KnowledgeBaseSummary[];
+}
+
+export interface KnowledgeReadinessResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly state: "active" | "archived";
+  readonly sourceCount: number;
+  readonly readyCount: number;
+  readonly blockedCount: number;
+  readonly blockerReasons: readonly string[];
+}
+
+const knowledgeBaseSummaryKeys = resultKeys<KnowledgeBaseSummary>()([
+  "id",
+  "displayName",
+  "description",
+  "state",
+  "isDefault",
+]);
+const knowledgeStoreResultKeys = resultKeys<KnowledgeStoreResult>()(["storeId", "knowledgeBases"]);
+const knowledgeReadinessResultKeys = resultKeys<KnowledgeReadinessResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "state",
+  "sourceCount",
+  "readyCount",
+  "blockedCount",
+  "blockerReasons",
+]);
+
 /**
  * The pairing a workspace is configured with after a change.
  *
@@ -638,6 +714,10 @@ export interface BridgeCommandInputMap {
   "workspace.open": WorkspaceOpenInput;
   "workspace.create": WorkspaceCreateInput;
   "workspace.configure-models": WorkspaceConfigureModelsInput;
+  "knowledge.create": KnowledgeStoreCreateInput;
+  "knowledge.open": KnowledgeStoreOpenInput;
+  "knowledge.list": KnowledgeStoreListInput;
+  "knowledge.readiness": KnowledgeReadinessInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -659,6 +739,10 @@ export interface BridgeCommandOutputMap {
   "workspace.open": WorkspaceResult;
   "workspace.create": WorkspaceResult;
   "workspace.configure-models": WorkspaceModelsResult;
+  "knowledge.create": KnowledgeStoreResult;
+  "knowledge.open": KnowledgeStoreResult;
+  "knowledge.list": KnowledgeStoreResult;
+  "knowledge.readiness": KnowledgeReadinessResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -1058,6 +1142,58 @@ function validateWorkspaceOpenInput(value: unknown): WorkspaceOpenInput {
   return selection === undefined ? {} : { selection };
 }
 
+function nativeDialogSelection(value: unknown): "native-dialog" | undefined {
+  if (value !== undefined && value !== "native-dialog") return invalidInput();
+  return value;
+}
+
+function optionalDisplayName(value: unknown): string | undefined {
+  return value === undefined ? undefined : displayName(value);
+}
+
+function optionalDescription(value: unknown): string | undefined {
+  if (value === undefined) return undefined;
+  const result = stringValue(value, 500).trim();
+  if (result === "") return invalidInput();
+  return result;
+}
+
+function validateKnowledgeStoreCreateInput(value: unknown): KnowledgeStoreCreateInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeStoreCreateKeys)) return invalidInput();
+  const selection = nativeDialogSelection(input.selection);
+  const selectedDisplayName = optionalDisplayName(input.displayName);
+  const description = optionalDescription(input.description);
+  return {
+    name: workspaceName(input.name),
+    ...(selection === undefined ? {} : { selection }),
+    ...(selectedDisplayName === undefined ? {} : { displayName: selectedDisplayName }),
+    ...(description === undefined ? {} : { description }),
+  };
+}
+
+function validateKnowledgeStoreOpenInput(value: unknown): KnowledgeStoreOpenInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeStoreOpenKeys)) return invalidInput();
+  const selection = nativeDialogSelection(input.selection);
+  return selection === undefined ? {} : { selection };
+}
+
+function validateKnowledgeStoreListInput(value: unknown): KnowledgeStoreListInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeStoreListKeys)) return invalidInput();
+  return { storeId: identifier(input.storeId) };
+}
+
+function validateKnowledgeReadinessInput(value: unknown): KnowledgeReadinessInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeReadinessKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+  };
+}
+
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
@@ -1337,6 +1473,14 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "workspace.configure-models",
         input: validateWorkspaceConfigureModelsInput(command.input),
       };
+    case "knowledge.create":
+      return { type: "knowledge.create", input: validateKnowledgeStoreCreateInput(command.input) };
+    case "knowledge.open":
+      return { type: "knowledge.open", input: validateKnowledgeStoreOpenInput(command.input) };
+    case "knowledge.list":
+      return { type: "knowledge.list", input: validateKnowledgeStoreListInput(command.input) };
+    case "knowledge.readiness":
+      return { type: "knowledge.readiness", input: validateKnowledgeReadinessInput(command.input) };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
     case "run.start":
@@ -1487,6 +1631,67 @@ function normalizeWorkspaceResult(value: unknown): WorkspaceResult {
       id: identifier(workspace.id),
       name: displayName(workspace.name),
     },
+  };
+}
+
+const knowledgeBlockerReasons = [
+  "knowledge-base-archived",
+  "source-retired",
+  "latest-version-unmanaged",
+  "source-origin-unbound",
+  "directory-origin-conflict",
+  "refresh-stale",
+  "refresh-changed",
+  "refresh-missing",
+  "refresh-inaccessible",
+  "refresh-unbound",
+] as const;
+
+function normalizeKnowledgeStoreResult(value: unknown): KnowledgeStoreResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeStoreResultKeys) || !Array.isArray(result.knowledgeBases)) {
+    return invalidInput();
+  }
+  if (result.knowledgeBases.length > 100) return invalidInput();
+  const knowledgeBases = result.knowledgeBases.map((value) => {
+    const base = requireRecord(value);
+    if (!hasOnlyKeys(base, knowledgeBaseSummaryKeys)) return invalidInput();
+    return {
+      id: identifier(base.id),
+      displayName: displayName(base.displayName),
+      description: base.description === "" ? "" : stringValue(base.description, 500),
+      state: enumValue(base.state, ["active", "archived"] as const),
+      isDefault: booleanValue(base.isDefault),
+    } satisfies KnowledgeBaseSummary;
+  });
+  if (new Set(knowledgeBases.map((base) => base.id)).size !== knowledgeBases.length) {
+    return invalidInput();
+  }
+  return { storeId: identifier(result.storeId), knowledgeBases };
+}
+
+function normalizeKnowledgeReadinessResult(value: unknown): KnowledgeReadinessResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeReadinessResultKeys) || !Array.isArray(result.blockerReasons)) {
+    return invalidInput();
+  }
+  if (result.blockerReasons.length > knowledgeBlockerReasons.length) return invalidInput();
+  const sourceCount = finiteInteger(result.sourceCount, 1_000_000);
+  const readyCount = finiteInteger(result.readyCount, sourceCount);
+  const blockedCount = finiteInteger(result.blockedCount, sourceCount);
+  if (readyCount + blockedCount !== sourceCount) return invalidInput();
+  const blockerReasons = result.blockerReasons.map((reason) =>
+    enumValue(reason, knowledgeBlockerReasons),
+  );
+  if (new Set(blockerReasons).size !== blockerReasons.length) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    state: enumValue(result.state, ["active", "archived"] as const),
+    sourceCount,
+    readyCount,
+    blockedCount,
+    blockerReasons,
   };
 }
 
@@ -1740,6 +1945,12 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeWorkspaceResult(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
+    case "knowledge.create":
+    case "knowledge.open":
+    case "knowledge.list":
+      return normalizeKnowledgeStoreResult(value);
+    case "knowledge.readiness":
+      return normalizeKnowledgeReadinessResult(value);
     case "run.status":
     case "run.start":
     case "run.pause":

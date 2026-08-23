@@ -1,13 +1,16 @@
 import { resolve } from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { createCli } from "./index.js";
 import type {
   ApplicationIo,
   ApplicationService,
+  CandidateKnowledgeStoreService,
+  CandidateKnowledgeStoreView,
   IndependentReviewRecord,
   InitializeWorkspaceCommand,
+  KnowledgeBaseLifecycleReadinessResult,
   StatusCommand,
   WorkspaceDescriptor,
 } from "./workflow.js";
@@ -80,6 +83,65 @@ function harness(record?: IndependentReviewRecord): Harness {
     initializations,
     independenceQueries,
     lines,
+  };
+}
+
+function knowledgeStoreView(): CandidateKnowledgeStoreView {
+  return {
+    store: {
+      schemaVersion: 1,
+      id: "store-opaque" as CandidateKnowledgeStoreView["store"]["id"],
+      createdAt: "2026-08-23T10:00:00.000Z",
+    },
+    knowledgeBases: [
+      {
+        id: "base-two" as CandidateKnowledgeStoreView["knowledgeBases"][number]["id"],
+        displayName: "Private display name",
+        description: "Private description",
+        isDefault: false,
+        state: "active",
+        createdAt: "2026-08-23T10:00:00.000Z",
+        updatedAt: "2026-08-23T10:00:00.000Z",
+      },
+      {
+        id: "base-one" as CandidateKnowledgeStoreView["knowledgeBases"][number]["id"],
+        displayName: "Default private display name",
+        description: "Private default description",
+        isDefault: true,
+        state: "active",
+        createdAt: "2026-08-23T10:00:00.000Z",
+        updatedAt: "2026-08-23T10:00:00.000Z",
+      },
+    ],
+  };
+}
+
+function knowledgeReadiness(): KnowledgeBaseLifecycleReadinessResult {
+  return {
+    knowledgeBaseId: "base-one",
+    state: "active",
+    archivedAt: null,
+    sources: [
+      {
+        sourceId: "source-opaque",
+        latestVersionId: "version-opaque",
+        status: "ready",
+        reasons: [],
+        lifecycleRevision: {
+          knowledgeBaseState: "active",
+          knowledgeBaseArchivedAt: null,
+          versionId: "version-opaque",
+          version: 1,
+          createdAt: "2026-08-23T10:00:00.000Z",
+          managed: true,
+          originBoundAt: "2026-08-23T10:00:00.000Z",
+          observation: null,
+          retirement: null,
+          provenanceFetchedAt: null,
+          directory: null,
+        },
+      },
+    ],
   };
 }
 
@@ -182,5 +244,76 @@ describe("independent review in status output", () => {
       "workspace workspace-test",
       "Independent review: no lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.",
     ]);
+  });
+});
+
+describe("candidate knowledge CLI controls", () => {
+  it("maps path-explicit store and readiness commands to safe output", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-candidate-store");
+    const view = knowledgeStoreView();
+    const readiness = knowledgeReadiness();
+    const initializeStore = vi.fn(async () => view);
+    const openStore = vi.fn(async () => view);
+    const listKnowledgeBases = vi.fn(async () => view);
+    const getKnowledgeBaseLifecycleReadiness = vi.fn(async () => readiness);
+    const knowledgeService = {
+      initializeStore,
+      openStore,
+      listKnowledgeBases,
+      getKnowledgeBaseLifecycleReadiness,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "store",
+      "init",
+      storeRoot,
+      "--display-name",
+      "Private display name",
+      "--description",
+      "Private description",
+    ]);
+    await cli.parseAsync(["node", "draft-loop", "knowledge", "store", "create-default", storeRoot]);
+    await cli.parseAsync(["node", "draft-loop", "knowledge", "store", "open", storeRoot]);
+    await cli.parseAsync(["node", "draft-loop", "knowledge", "store", "list", storeRoot]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "lifecycle",
+      "readiness",
+      storeRoot,
+      "base-one",
+    ]);
+
+    expect(initializeStore).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      displayName: "Private display name",
+      description: "Private description",
+    });
+    expect(initializeStore).toHaveBeenNthCalledWith(2, { storeRoot });
+    expect(openStore).toHaveBeenCalledWith({ storeRoot });
+    expect(listKnowledgeBases).toHaveBeenCalledWith({ storeRoot });
+    expect(getKnowledgeBaseLifecycleReadiness).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId: "base-one",
+    });
+    const output = dependencies.lines.join("\n");
+    expect(output).toContain("knowledge store initialized: store-opaque");
+    expect(output).toContain("knowledge base base-one state=active default=true");
+    expect(output).toContain(
+      "source source-opaque version=version-opaque status=ready reasons=none",
+    );
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain("Private display name");
+    expect(output).not.toContain("Private description");
   });
 });

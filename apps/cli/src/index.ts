@@ -8,6 +8,10 @@ import {
   type ApplicationIo,
   type ApplicationService,
   applicationService,
+  type CandidateKnowledgeStoreService,
+  type CandidateKnowledgeStoreView,
+  type KnowledgeBaseLifecycleReadinessResult,
+  knowledgeService,
   runPilot,
   type StatusCommand,
   safeErrorMessage,
@@ -44,12 +48,45 @@ const stdoutIo: ApplicationIo = {
 export interface CliDependencies {
   /** The application boundary the commands drive; replaced in tests. */
   readonly service?: ApplicationService;
+  /** The candidate-knowledge boundary the path-explicit controls drive; replaced in tests. */
+  readonly knowledgeService?: CandidateKnowledgeStoreService;
   /** Where status lines are written; replaced in tests. */
   readonly io?: ApplicationIo;
 }
 
+function writeKnowledgeStoreView(
+  io: ApplicationIo,
+  action: string,
+  view: CandidateKnowledgeStoreView,
+): void {
+  io.write(`knowledge store ${action}: ${view.store.id}`);
+  for (const knowledgeBase of [...view.knowledgeBases].sort((left, right) =>
+    left.id.localeCompare(right.id),
+  )) {
+    io.write(
+      `knowledge base ${knowledgeBase.id} state=${knowledgeBase.state} default=${knowledgeBase.isDefault}`,
+    );
+  }
+}
+
+function writeKnowledgeBaseReadiness(
+  io: ApplicationIo,
+  readiness: KnowledgeBaseLifecycleReadinessResult,
+): void {
+  io.write(
+    `knowledge base ${readiness.knowledgeBaseId} state=${readiness.state} sources=${readiness.sources.length}`,
+  );
+  for (const source of readiness.sources) {
+    const reasons = source.reasons.length === 0 ? "none" : source.reasons.join(",");
+    io.write(
+      `source ${source.sourceId} version=${source.latestVersionId} status=${source.status} reasons=${reasons}`,
+    );
+  }
+}
+
 export function createCli(dependencies: CliDependencies = {}): Command {
   const service = dependencies.service ?? applicationService;
+  const candidateKnowledge = dependencies.knowledgeService ?? knowledgeService;
   const io = dependencies.io ?? stdoutIo;
 
   /** Reports the recorded independence claim, including that there is none. */
@@ -260,6 +297,63 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         ...(options.output === undefined ? {} : { outputPath: options.output as string }),
         format: options.format as "markdown" | "pdf" | "docx",
       });
+    });
+
+  const knowledge = command
+    .command("knowledge")
+    .description("Manage local candidate-knowledge stores and lifecycle readiness");
+  const knowledgeStore = knowledge.command("store").description("Open and inspect a local store");
+
+  knowledgeStore
+    .command("init")
+    .alias("create-default")
+    .description("Initialize a local store with its default knowledge base")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .option("--display-name <name>", "default knowledge-base display name")
+    .option("--description <text>", "default knowledge-base description")
+    .action(async (storeRoot: string, options: Record<string, unknown>) => {
+      const view = await candidateKnowledge.initializeStore({
+        storeRoot,
+        ...(options.displayName === undefined
+          ? {}
+          : { displayName: options.displayName as string }),
+        ...(options.description === undefined
+          ? {}
+          : { description: options.description as string }),
+      });
+      writeKnowledgeStoreView(io, "initialized", view);
+    });
+
+  for (const [name, action] of [
+    ["open", "opened"],
+    ["list", "listed"],
+  ] as const) {
+    knowledgeStore
+      .command(name)
+      .description(name === "open" ? "Open a local store" : "List knowledge bases in a local store")
+      .argument("<store-root>", "local candidate-knowledge store directory")
+      .action(async (storeRoot: string) => {
+        const view = await (name === "open"
+          ? candidateKnowledge.openStore({ storeRoot })
+          : candidateKnowledge.listKnowledgeBases({ storeRoot }));
+        writeKnowledgeStoreView(io, action, view);
+      });
+  }
+
+  const lifecycle = knowledge
+    .command("lifecycle")
+    .description("Inspect candidate-knowledge lifecycle state");
+  lifecycle
+    .command("readiness")
+    .description("Report path-free lifecycle readiness for one knowledge base")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .action(async (storeRoot: string, knowledgeBaseId: string) => {
+      const readiness = await candidateKnowledge.getKnowledgeBaseLifecycleReadiness({
+        storeRoot,
+        knowledgeBaseId,
+      });
+      writeKnowledgeBaseReadiness(io, readiness);
     });
 
   return command;

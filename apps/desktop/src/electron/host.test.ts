@@ -2712,3 +2712,75 @@ describe("native host", () => {
     });
   });
 });
+
+describe("candidate knowledge native controls", () => {
+  it("creates, reopens, lists, and inspects a store without returning its path", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-host-"));
+    const storeRoot = join(parent, "candidate-knowledge");
+    try {
+      const createHost = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+        },
+      });
+      const created = await createHost.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      expect(created).toMatchObject({
+        ok: true,
+        value: {
+          knowledgeBases: [{ displayName: "My evidence", state: "active", isDefault: true }],
+        },
+      });
+      expect(JSON.stringify(created)).not.toContain(parent);
+
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+
+      await expect(
+        createHost.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId } });
+      await expect(
+        createHost.invoke({
+          type: "knowledge.readiness",
+          input: { storeId, knowledgeBaseId },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { storeId, sourceCount: 0, readyCount: 0, blockedCount: 0 },
+      });
+
+      const reopened = await createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => storeRoot,
+          chooseFiles: async () => [],
+        },
+      }).invoke({ type: "knowledge.open", input: { selection: "native-dialog" } });
+      expect(reopened).toMatchObject({ ok: true, value: { storeId } });
+      expect(JSON.stringify(reopened)).not.toContain(storeRoot);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("reports native-dialog cancellation without calling the knowledge service", async () => {
+    const knowledgeService = {
+      initializeStore: vi.fn(),
+      openStore: vi.fn(),
+    };
+    const host = createNativeHost({
+      dialogs: { chooseDirectory: async () => undefined, chooseFiles: async () => [] },
+      knowledgeService: knowledgeService as never,
+    });
+
+    await expect(
+      host.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+    expect(knowledgeService.openStore).not.toHaveBeenCalled();
+  });
+});
