@@ -1083,4 +1083,47 @@ describe("desktop capability bridge", () => {
       value: { sourceCount: 2, readyCount: 1, blockedCount: 1 },
     });
   });
+
+  it("carries an explicit path-free knowledge selection and combination approval", async () => {
+    const input = {
+      workspaceId: "workspace-1",
+      entries: [
+        { storeId: "store-2", knowledgeBaseId: "kb-2" },
+        { storeId: "store-1", knowledgeBaseId: "kb-1" },
+      ],
+      combinationApproved: true,
+    } as const;
+    expect(validateBridgeCommand({ type: "knowledge.select", input })).toEqual({
+      type: "knowledge.select",
+      input,
+    });
+
+    const port = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: { workspaceId: "workspace-1", entries: input.entries },
+        }),
+        ["knowledge.select"],
+      ),
+    );
+    await expect(port.execute({ type: "knowledge.select", input })).resolves.toEqual({
+      ok: true,
+      value: { workspaceId: "workspace-1", entries: input.entries },
+    });
+
+    for (const invalidInput of [
+      { ...input, entries: [] },
+      { ...input, entries: [input.entries[0], input.entries[0]] },
+      { ...input, combinationApproved: "yes" },
+      {
+        ...input,
+        entries: [{ ...input.entries[0], storeRoot: "/private/candidate-data" }],
+      },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.select", input: invalidInput }),
+      ).toThrow("invalid");
+    }
+  });
 });

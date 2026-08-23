@@ -53,6 +53,7 @@ import {
   type FileSelectInput,
   type FileSelectResult,
   type KnowledgeReadinessResult,
+  type KnowledgeSelectionResult,
   type KnowledgeStoreResult,
   type ModelsListInput,
   type ModelsListResult,
@@ -1949,6 +1950,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "knowledge.readiness": {
           const root = knowledgeStoreRoot(command.input.storeId);
+          const view = await knowledgeService.listKnowledgeBases({ storeRoot: root });
+          if (view.store.id !== command.input.storeId) {
+            return fail(
+              "operation-failed",
+              "The open candidate knowledge store changed unexpectedly.",
+            );
+          }
           const readiness = await knowledgeService.getKnowledgeBaseLifecycleReadiness({
             storeRoot: root,
             knowledgeBaseId: command.input.knowledgeBaseId,
@@ -1965,6 +1973,36 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             readyCount,
             blockedCount: readiness.sources.length - readyCount,
             blockerReasons,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.select": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          const descriptor = await service.configureKnowledgeSelection({
+            root: workspace.root,
+            entries: command.input.entries.map((entry) => ({
+              storeRoot: knowledgeStoreRoot(entry.storeId),
+              storeId: entry.storeId,
+              knowledgeBaseId: entry.knowledgeBaseId,
+            })),
+            ...(command.input.combinationApproved === undefined
+              ? {}
+              : { combinationApproved: command.input.combinationApproved }),
+          });
+          if (
+            descriptor.id !== workspace.descriptor.id ||
+            resolve(descriptor.root) !== resolve(workspace.root)
+          ) {
+            return fail("operation-failed", "The open workspace changed unexpectedly.");
+          }
+          const entries = descriptor.candidateKnowledgeSelection;
+          if (entries === undefined || entries.length === 0) {
+            return fail("operation-failed", "The candidate knowledge selection was not persisted.");
+          }
+          active = { ...workspace, descriptor };
+          const result: KnowledgeSelectionResult = {
+            workspaceId: descriptor.id,
+            entries,
           };
           return { ok: true, value: result };
         }

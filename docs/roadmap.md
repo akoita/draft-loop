@@ -173,8 +173,9 @@ storage components:
 Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
 outside this critical path. Source lifecycle work through #136, workspace/run
 binding through #111, and the first path-safe CLI/desktop CKB controls from #112
-are implemented. They do not satisfy the stage without adapter selection,
-remaining lifecycle controls, retrieval enforcement, and drafting integration.
+are implemented, including explicit selection and combination approval. They do
+not satisfy the stage without remaining lifecycle controls, retrieval
+enforcement, and drafting integration.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
