@@ -302,9 +302,11 @@ immutable lineage, and neither outcome changes the remembered origin binding.
 Shared path-free controls now expose current origin status, persisted refresh
 state, explicit remembered-file refresh, and separately approved URL refresh.
 They return only source/version identity, status, and timestamps; local origins
-and URL provenance remain sensitive store state. Directory intake remains
-separate because of its bounded partial-progress semantics, and rebind remains a
-separate exact-byte decision.
+and URL provenance remain sensitive store state. Bounded directory intake is
+also exposed through both adapters. The CLI accepts the selected root as
+runtime-only input, while the desktop host owns a dedicated native picker;
+complete and partial results expose only counts and capped opaque
+source/version identities. Rebind remains a separate exact-byte decision.
 
 ## Deferred integration
 

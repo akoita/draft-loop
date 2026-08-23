@@ -409,6 +409,12 @@ and URL-refresh commands over the same application service. Remembered-file
 refresh never accepts a new path; URL refresh requires explicit approval and
 reuses the centralized network boundary. Results contain only opaque identity,
 status, timestamps, and a newly created version ID when applicable.
+Bounded directory intake follows the same adapter split: the CLI accepts an
+intentional runtime-only root and the desktop host owns a native directory
+picker. Both call the shared application contract and return complete or
+partial progress as scan counts plus capped opaque source/version identities;
+no root, filename, membership hash, label, checksum, or content crosses the
+generic result boundary.
 Live provider execution is opt-in and the provider boundary enforces the
 request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain

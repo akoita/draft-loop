@@ -27,6 +27,7 @@ export const bridgeCapabilities = [
   "knowledge.duplicates",
   "knowledge.inventory",
   "knowledge.import-file",
+  "knowledge.import-directory",
   "knowledge.import-url",
   "knowledge.append-file-version",
   "knowledge.source-origin-status",
@@ -226,6 +227,17 @@ const knowledgeFileImportKeys = inputKeys<KnowledgeFileImportInput>()([
   "knowledgeBaseId",
   "selection",
   "displayName",
+]);
+
+export interface KnowledgeDirectoryImportInput extends KnowledgeReadinessInput {
+  /** The native host owns the directory picker; no filesystem path crosses this API. */
+  readonly selection: "native-dialog";
+}
+
+const knowledgeDirectoryImportKeys = inputKeys<KnowledgeDirectoryImportInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "selection",
 ]);
 
 export interface KnowledgeUrlImportInput extends KnowledgeReadinessInput {
@@ -681,6 +693,26 @@ export interface KnowledgeFileImportResult {
   readonly created: boolean;
 }
 
+export interface KnowledgeDirectoryImportSourceResult {
+  readonly sourceId: string;
+  readonly versionId: string;
+  readonly version: number;
+  readonly created: boolean;
+}
+
+export interface KnowledgeDirectoryImportResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly status: "complete" | "partial";
+  readonly directoryId?: string;
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+  readonly sourceCount: number;
+  readonly sources: readonly KnowledgeDirectoryImportSourceResult[];
+  readonly sourcesTruncated: boolean;
+}
+
 export interface KnowledgeUrlImportResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -826,6 +858,21 @@ const knowledgeFileWriteResultKeys = resultKeys<KnowledgeFileImportResult>()([
   "versionId",
   "version",
   "created",
+]);
+const knowledgeDirectoryImportSourceResultKeys = resultKeys<KnowledgeDirectoryImportSourceResult>()(
+  ["sourceId", "versionId", "version", "created"],
+);
+const knowledgeDirectoryImportResultKeys = resultKeys<KnowledgeDirectoryImportResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "status",
+  "directoryId",
+  "scannedEntryCount",
+  "discoveredFileCount",
+  "skippedEntryCount",
+  "sourceCount",
+  "sources",
+  "sourcesTruncated",
 ]);
 const knowledgeUrlImportResultKeys = resultKeys<KnowledgeUrlImportResult>()([
   "storeId",
@@ -1093,6 +1140,7 @@ export interface BridgeCommandInputMap {
   "knowledge.duplicates": KnowledgeDuplicatesInput;
   "knowledge.inventory": KnowledgeInventoryInput;
   "knowledge.import-file": KnowledgeFileImportInput;
+  "knowledge.import-directory": KnowledgeDirectoryImportInput;
   "knowledge.import-url": KnowledgeUrlImportInput;
   "knowledge.append-file-version": KnowledgeFileVersionAppendInput;
   "knowledge.source-origin-status": KnowledgeSourceOriginStatusInput;
@@ -1132,6 +1180,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.duplicates": KnowledgeDuplicatesResult;
   "knowledge.inventory": KnowledgeInventoryResult;
   "knowledge.import-file": KnowledgeFileImportResult;
+  "knowledge.import-directory": KnowledgeDirectoryImportResult;
   "knowledge.import-url": KnowledgeUrlImportResult;
   "knowledge.append-file-version": KnowledgeFileVersionAppendResult;
   "knowledge.source-origin-status": KnowledgeSourceOriginStatusResult;
@@ -1641,6 +1690,18 @@ function validateKnowledgeFileImportInput(value: unknown): KnowledgeFileImportIn
   };
 }
 
+function validateKnowledgeDirectoryImportInput(value: unknown): KnowledgeDirectoryImportInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDirectoryImportKeys) || input.selection !== "native-dialog") {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    selection: "native-dialog",
+  };
+}
+
 function validateKnowledgeUrlImportInput(value: unknown): KnowledgeUrlImportInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeUrlImportKeys) || input.approved !== true) {
@@ -2059,6 +2120,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "knowledge.import-file",
         input: validateKnowledgeFileImportInput(command.input),
       };
+    case "knowledge.import-directory":
+      return {
+        type: "knowledge.import-directory",
+        input: validateKnowledgeDirectoryImportInput(command.input),
+      };
     case "knowledge.import-url":
       return {
         type: "knowledge.import-url",
@@ -2458,6 +2524,63 @@ function normalizeKnowledgeFileWriteResult(value: unknown): KnowledgeFileImportR
   };
 }
 
+function normalizeKnowledgeDirectoryImportResult(value: unknown): KnowledgeDirectoryImportResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeDirectoryImportResultKeys) ||
+    !Array.isArray(result.sources) ||
+    result.sources.length > maximumKnowledgeInspectionEntries
+  ) {
+    return invalidInput();
+  }
+  const status = enumValue(result.status, ["complete", "partial"] as const);
+  const directoryId = optionalIdentifier(result.directoryId);
+  if (
+    (status === "complete") !== (directoryId !== undefined) ||
+    (status === "partial" && Object.hasOwn(result, "directoryId"))
+  ) {
+    return invalidInput();
+  }
+  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
+  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
+  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
+  const sourceCount = finiteInteger(result.sourceCount, discoveredFileCount);
+  const sources = result.sources.map((value) => {
+    const source = requireRecord(value);
+    if (!hasOnlyKeys(source, knowledgeDirectoryImportSourceResultKeys)) return invalidInput();
+    const version = finiteInteger(source.version, 1_000_000);
+    if (version === 0) return invalidInput();
+    return {
+      sourceId: identifier(source.sourceId),
+      versionId: identifier(source.versionId),
+      version,
+      created: booleanValue(source.created),
+    } satisfies KnowledgeDirectoryImportSourceResult;
+  });
+  const sourcesTruncated = booleanValue(result.sourcesTruncated);
+  if (
+    discoveredFileCount + skippedEntryCount > scannedEntryCount ||
+    sourceCount < sources.length ||
+    (status === "complete" && sourceCount !== discoveredFileCount) ||
+    sourcesTruncated !== sourceCount > sources.length ||
+    new Set(sources.map((source) => source.sourceId)).size !== sources.length
+  ) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    status,
+    ...(directoryId === undefined ? {} : { directoryId }),
+    scannedEntryCount,
+    discoveredFileCount,
+    skippedEntryCount,
+    sourceCount,
+    sources,
+    sourcesTruncated,
+  };
+}
+
 function normalizeKnowledgeUrlImportResult(value: unknown): KnowledgeUrlImportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeUrlImportResultKeys)) return invalidInput();
@@ -2821,6 +2944,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "knowledge.import-file":
     case "knowledge.append-file-version":
       return normalizeKnowledgeFileWriteResult(value);
+    case "knowledge.import-directory":
+      return normalizeKnowledgeDirectoryImportResult(value);
     case "knowledge.import-url":
       return normalizeKnowledgeUrlImportResult(value);
     case "knowledge.source-origin-status":

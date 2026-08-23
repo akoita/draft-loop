@@ -51,8 +51,12 @@ network-safety boundary, and returns no URL, query string, label, or fetched
 content through generic CLI or renderer results. File-version append likewise
 keeps the selected path outside generic results and renderer IPC. Atomic
 latest-version checks reject stale concurrent mutation; a successful append
-does not replace the sensitive remembered origin binding. Path-free status and
-refresh-state results omit origins and provenance. Explicit file refresh uses
+does not replace the sensitive remembered origin binding. Directory intake is
+exposed through the same bounded application contract: the CLI root is
+runtime-only, the desktop host owns the picker, and generic complete or partial
+results carry only scan counts and capped opaque source/version identities.
+Directory roots, filenames, membership hashes, and content remain local.
+Path-free status and refresh-state results omit origins and provenance. Explicit file refresh uses
 only the remembered origin; URL refresh requires fresh approval and preserves
 the existing SSRF, redirect, time, size, and content limits. No application run
 retrieves CKB content yet, so the existing workspace evidence boundary remains
