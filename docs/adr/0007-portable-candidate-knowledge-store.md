@@ -50,7 +50,7 @@ add-members operation can append unmatched accepted files from an existing
 binding as new managed file sources and immutable members in deterministic path
 order; existing member states remain report-only and a later candidate failure
 returns a path-free partial result. Applied refresh is limited to existing
-active same-member changed files; complete removal reconciliation, root rebind,
+active same-member changed files; complete removal reconciliation, applied root rebind,
 rename, and broader member-retirement policy remain deferred. The membership is a stable historical
 mapping captured at binding or explicit append time: later source version
 appends, explicit origin rebinding, or source retirement do not rewrite its
@@ -59,8 +59,13 @@ A bounded explicit refresh preview now revalidates that persisted root, repeats
 the directory preflight, and reports only path-free member states plus an
 aggregate count of unmatched accepted files. It is read-only; the separate
 explicit add-members operation owns append-only persistence for those unmatched
-files. Rename/removal decisions, directory-root rebind, automatic
-retirement/deletion, and background refresh remain deferred.
+files. Rename/removal decisions, applying a directory-root rebind, automatic
+retirement/deletion, and background refresh remain deferred. A separate
+read-only directory-root-rebind eligibility preview accepts a candidate real
+non-symlink root, rescans it once, and requires exact historical relative-path
+membership plus latest-byte agreement. It returns only a path-free
+readiness/count result and performs no writes; applying a root rebind remains
+deferred.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -158,7 +163,7 @@ The selected root and exact file origins remain sensitive local state; generic
 manifests, diagnostics, journals, inventory, and provider projections expose
 neither. Repeating a bound root is rejected; explicit add-members provides
 stable source reuse for approved directory additions one candidate at a time,
-while removals, rebind, rename, and complete incremental reconciliation remain
+while removals, applied root rebind, rename, and complete incremental reconciliation remain
 deferred. The persisted membership remains a
 historical mapping captured at binding or explicit append time even when an
 existing member later gains a version, has its origin explicitly rebound, or is
@@ -168,6 +173,11 @@ members as `current`, `changed`, `missing`, `retired`, or `origin-conflict` and
 count unmatched accepted files without exposing paths or writing state. The
 preview itself does not apply any refresh, persist new members, infer renames,
 or change lifecycle state.
+A separate read-only directory-root-rebind eligibility preview rescans one
+candidate root, requires an exact path-hash/member and latest-byte match for
+every historical member, and returns only path-free readiness and scan counts.
+It does not mutate the immutable binding or membership; applying the rebind and
+complete reconciliation remain deferred.
 A separate explicit bounded directory observation operation reuses that one
 complete scan and records only path-free `current`, `changed`, or `missing`
 observations whose source origin still has the same historical membership and
@@ -400,7 +410,7 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- complete directory removal reconciliation, directory rebind, rename/removal,
+- complete directory removal reconciliation, applied directory rebind, rename/removal,
   and broader member-retirement policy (the explicit operation handles only one
   approved missing same-member member; add-members handles only unmatched
   additions, while applied refresh handles only existing active same-member

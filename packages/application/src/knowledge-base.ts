@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { lstat, realpath } from "node:fs/promises";
-import { basename, isAbsolute, relative } from "node:path";
+import { basename, isAbsolute, relative, resolve } from "node:path";
 
 import {
   type CandidateKnowledgeBase,
@@ -119,6 +119,14 @@ export interface PreviewKnowledgeSourceDirectoryRefreshCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
   readonly directoryId: string;
+  readonly options?: DirectoryIngestionOptions;
+}
+
+export interface PreviewKnowledgeSourceDirectoryRootRebindCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly directoryPath: string;
   readonly options?: DirectoryIngestionOptions;
 }
 
@@ -360,6 +368,16 @@ export interface PreviewKnowledgeSourceDirectoryRefreshResult {
   readonly skippedEntryCount: number;
 }
 
+export interface PreviewKnowledgeSourceDirectoryRootRebindResult {
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly status: "current" | "ready";
+  readonly memberCount: number;
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
 export interface RecordKnowledgeSourceDirectoryRefreshResult
   extends PreviewKnowledgeSourceDirectoryRefreshResult {
   readonly recordedObservationCount: number;
@@ -447,6 +465,9 @@ export interface CandidateKnowledgeStoreService {
   readonly previewKnowledgeSourceDirectoryRefresh: (
     command: PreviewKnowledgeSourceDirectoryRefreshCommand,
   ) => Promise<PreviewKnowledgeSourceDirectoryRefreshResult>;
+  readonly previewKnowledgeSourceDirectoryRootRebind: (
+    command: PreviewKnowledgeSourceDirectoryRootRebindCommand,
+  ) => Promise<PreviewKnowledgeSourceDirectoryRootRebindResult>;
   readonly recordKnowledgeSourceDirectoryRefresh: (
     command: RecordKnowledgeSourceDirectoryRefreshCommand,
   ) => Promise<RecordKnowledgeSourceDirectoryRefreshResult>;
@@ -570,6 +591,12 @@ function importDirectoryFailure(): Error {
 function previewDirectoryRefreshFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory refresh preview could not be completed.",
+  );
+}
+
+function previewDirectoryRootRebindFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge source directory root rebind preview could not be completed.",
   );
 }
 
@@ -1106,6 +1133,247 @@ async function collectDirectoryRefresh(
       lexicalCompare(left.source.path, right.source.path),
     ),
   };
+}
+
+interface CollectedDirectoryRootRebindPreview {
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly status: "current" | "ready";
+  readonly memberCount: number;
+  readonly preflight: DirectoryIngestionResult;
+}
+
+async function collectDirectoryRootRebindPreview(
+  handle: CandidateKnowledgeStoreHandle,
+  dependencies: ResolvedDependencies,
+  storeRoot: string,
+  knowledgeBaseId: string,
+  directoryId: string,
+  directoryPath: string,
+  options: DirectoryIngestionOptions | undefined,
+): Promise<CollectedDirectoryRootRebindPreview> {
+  const knowledgeBase = await handle.getCandidateKnowledgeBase(knowledgeBaseId);
+  if (
+    knowledgeBase === undefined ||
+    typeof knowledgeBase !== "object" ||
+    knowledgeBase === null ||
+    knowledgeBase.id !== knowledgeBaseId ||
+    knowledgeBase.state !== "active"
+  ) {
+    throw previewDirectoryRootRebindFailure();
+  }
+
+  const binding = validatePreviewDirectoryBinding(
+    await handle.getCandidateKnowledgeDirectoryBinding(knowledgeBaseId, directoryId),
+    knowledgeBaseId,
+    directoryId,
+  );
+  if (!isAbsolute(binding.rootPath) || resolve(binding.rootPath) !== binding.rootPath) {
+    throw previewDirectoryRootRebindFailure();
+  }
+  const canonicalCandidateRoot = await validateDirectoryImportScope(
+    dependencies.lstat,
+    dependencies.realpath,
+    directoryPath,
+    storeRoot,
+  );
+  const existingBinding = await handle.findCandidateKnowledgeDirectoryBinding(
+    knowledgeBaseId,
+    canonicalCandidateRoot,
+  );
+  if (existingBinding !== undefined) {
+    if (typeof existingBinding.id !== "string" || existingBinding.id.trim() === "") {
+      throw previewDirectoryRootRebindFailure();
+    }
+    const validatedExistingBinding = validatePreviewDirectoryBinding(
+      existingBinding,
+      knowledgeBaseId,
+      existingBinding.id,
+    );
+    if (
+      validatedExistingBinding.rootPath !== canonicalCandidateRoot ||
+      validatedExistingBinding.id !== directoryId
+    ) {
+      throw previewDirectoryRootRebindFailure();
+    }
+  }
+
+  let preflight: DirectoryIngestionResult;
+  try {
+    preflight = await dependencies.ingestDirectory(canonicalCandidateRoot, options);
+    validateDirectoryIngestionResult(preflight);
+  } catch {
+    throw previewDirectoryRootRebindFailure();
+  }
+
+  const historicalMembers = await handle.listCandidateKnowledgeDirectoryMembers(
+    knowledgeBaseId,
+    directoryId,
+  );
+  if (!Array.isArray(historicalMembers)) {
+    throw previewDirectoryRootRebindFailure();
+  }
+  const historicalBySource = new Map<string, CandidateKnowledgeDirectoryMemberRecord>();
+  const historicalByHash = new Map<string, CandidateKnowledgeDirectoryMemberRecord>();
+  const historicalSourceIds = new Set<string>();
+  const historicalHashes = new Set<string>();
+  for (const member of historicalMembers) {
+    validatePreviewDirectoryMember(
+      member,
+      knowledgeBaseId,
+      directoryId,
+      historicalSourceIds,
+      historicalHashes,
+    );
+    historicalBySource.set(member.sourceId, member);
+    historicalByHash.set(member.relativePathHash, member);
+  }
+
+  const latestBySource = new Map<string, CandidateKnowledgeSourceVersionRecord>();
+  const sourceById = new Map<string, CandidateKnowledgeSourceRecord>();
+  const originBoundAtBySource = new Map<string, string>();
+  for (const member of [...historicalMembers].sort((left, right) =>
+    lexicalCompare(left.sourceId, right.sourceId),
+  )) {
+    const source = validatePreviewDirectorySource(
+      await handle.getCandidateKnowledgeSource(knowledgeBaseId, member.sourceId),
+      knowledgeBaseId,
+      member.sourceId,
+    );
+    sourceById.set(member.sourceId, source);
+    const latestVersion = latestPreviewDirectorySourceVersion(
+      await handle.listCandidateKnowledgeSourceVersions(knowledgeBaseId, member.sourceId),
+      member.sourceId,
+    );
+    const managedPath = await handle.getManagedCandidateKnowledgeFilePath(
+      knowledgeBaseId,
+      member.sourceId,
+      latestVersion.id,
+    );
+    if (typeof managedPath !== "string" || managedPath.trim() === "") {
+      throw previewDirectoryRootRebindFailure();
+    }
+    const relation = validatePreviewDirectoryOriginRelation(
+      await handle.getCandidateKnowledgeDirectoryMemberOriginRelation(
+        knowledgeBaseId,
+        directoryId,
+        member.sourceId,
+      ),
+      knowledgeBaseId,
+      directoryId,
+      member.sourceId,
+    );
+    if (relation.relation !== "same-member" || relation.originBoundAt === undefined) {
+      throw previewDirectoryRootRebindFailure();
+    }
+    const retirement = await handle.getCandidateKnowledgeSourceRetirement(
+      knowledgeBaseId,
+      member.sourceId,
+    );
+    if (retirement !== undefined) {
+      validateRetirementRecord(retirement, member.sourceId);
+      throw previewDirectoryRootRebindFailure();
+    }
+    latestBySource.set(member.sourceId, latestVersion);
+    originBoundAtBySource.set(member.sourceId, relation.originBoundAt);
+  }
+
+  const scannedPaths = new Set<string>();
+  const matchedSourceIds = new Set<string>();
+  for (const normalized of preflight.sources) {
+    const sourcePath = normalized.source.path;
+    if (!isAbsolute(sourcePath) || scannedPaths.has(sourcePath)) {
+      throw previewDirectoryRootRebindFailure();
+    }
+    scannedPaths.add(sourcePath);
+    const matched = await handle.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+      knowledgeBaseId,
+      directoryId,
+      canonicalCandidateRoot,
+      sourcePath,
+    );
+    if (
+      matched === undefined ||
+      typeof matched !== "object" ||
+      matched === null ||
+      matched.directoryId !== directoryId ||
+      matched.knowledgeBaseId !== knowledgeBaseId ||
+      typeof matched.sourceId !== "string" ||
+      matched.sourceId.trim() === "" ||
+      !/^[0-9a-f]{64}$/u.test(matched.relativePathHash)
+    ) {
+      throw previewDirectoryRootRebindFailure();
+    }
+    const expectedBySource = historicalBySource.get(matched.sourceId);
+    const expectedByHash = historicalByHash.get(matched.relativePathHash);
+    const latestVersion = latestBySource.get(matched.sourceId);
+    const originBoundAt = originBoundAtBySource.get(matched.sourceId);
+    if (
+      expectedBySource === undefined ||
+      expectedByHash === undefined ||
+      expectedBySource.sourceId !== expectedByHash.sourceId ||
+      expectedBySource.relativePathHash !== matched.relativePathHash ||
+      latestVersion === undefined ||
+      originBoundAt === undefined ||
+      matchedSourceIds.has(matched.sourceId) ||
+      normalized.mediaType !== latestVersion.mediaType ||
+      normalized.checksum !== latestVersion.checksum ||
+      normalized.sizeBytes !== latestVersion.sizeBytes
+    ) {
+      throw previewDirectoryRootRebindFailure();
+    }
+    matchedSourceIds.add(matched.sourceId);
+  }
+  if (matchedSourceIds.size !== historicalMembers.length) {
+    throw previewDirectoryRootRebindFailure();
+  }
+
+  const checkedAt = dependencies.now();
+  if (!isValidRefreshTimestamp(checkedAt)) {
+    throw previewDirectoryRootRebindFailure();
+  }
+  const checkedAtMillis = Date.parse(checkedAt);
+  if (checkedAtMillis < Date.parse(binding.boundAt)) {
+    throw previewDirectoryRootRebindFailure();
+  }
+  for (const member of historicalMembers) {
+    const source = sourceById.get(member.sourceId);
+    if (source === undefined || checkedAtMillis < Date.parse(source.createdAt)) {
+      throw previewDirectoryRootRebindFailure();
+    }
+    const latestVersion = latestBySource.get(member.sourceId);
+    const originBoundAt = originBoundAtBySource.get(member.sourceId);
+    if (
+      latestVersion === undefined ||
+      originBoundAt === undefined ||
+      checkedAtMillis < Date.parse(latestVersion.createdAt) ||
+      checkedAtMillis < Date.parse(originBoundAt)
+    ) {
+      throw previewDirectoryRootRebindFailure();
+    }
+  }
+
+  return {
+    directoryId,
+    checkedAt,
+    status: canonicalCandidateRoot === binding.rootPath ? "current" : "ready",
+    memberCount: historicalMembers.length,
+    preflight,
+  };
+}
+
+function directoryRootRebindPreviewResult(
+  collected: CollectedDirectoryRootRebindPreview,
+): PreviewKnowledgeSourceDirectoryRootRebindResult {
+  return Object.freeze({
+    directoryId: collected.directoryId,
+    checkedAt: collected.checkedAt,
+    status: collected.status,
+    memberCount: collected.memberCount,
+    scannedEntryCount: collected.preflight.scannedEntryCount,
+    discoveredFileCount: collected.preflight.discoveredFileCount,
+    skippedEntryCount: collected.preflight.skippedEntryCount,
+  });
 }
 
 function recordDirectoryRefreshResult(
@@ -2628,6 +2896,43 @@ export function createCandidateKnowledgeStoreService(
         throw previewDirectoryRefreshFailure();
       }
     },
+    previewKnowledgeSourceDirectoryRootRebind: async (command) => {
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let directoryId: string;
+      let directoryPath: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
+        directoryPath = requireText(
+          command.directoryPath,
+          "Candidate knowledge source directory path",
+        );
+      } catch {
+        throw previewDirectoryRootRebindFailure();
+      }
+
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) =>
+            directoryRootRebindPreviewResult(
+              await collectDirectoryRootRebindPreview(
+                handle,
+                resolved,
+                storeRoot,
+                knowledgeBaseId,
+                directoryId,
+                directoryPath,
+                command.options,
+              ),
+            ),
+        );
+      } catch {
+        throw previewDirectoryRootRebindFailure();
+      }
+    },
     recordKnowledgeSourceDirectoryRefresh: async (command) => {
       let storeRoot: string;
       let knowledgeBaseId: string;
@@ -3493,6 +3798,8 @@ export const listKnowledgeSourceManifests = defaultService.listKnowledgeSourceMa
 export const listKnowledgeSourceDuplicateGroups = defaultService.listKnowledgeSourceDuplicateGroups;
 export const previewKnowledgeSourceDirectoryRefresh =
   defaultService.previewKnowledgeSourceDirectoryRefresh;
+export const previewKnowledgeSourceDirectoryRootRebind =
+  defaultService.previewKnowledgeSourceDirectoryRootRebind;
 export const recordKnowledgeSourceDirectoryRefresh =
   defaultService.recordKnowledgeSourceDirectoryRefresh;
 export const applyKnowledgeSourceDirectoryRefresh =

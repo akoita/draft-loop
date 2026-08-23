@@ -94,7 +94,8 @@ Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
 solid CKB edge covers explicit managed-file add, bounded recursive directory
-intake and add-members operation, read-only bounded directory refresh preview and
+intake and add-members operation, read-only bounded directory refresh and
+directory-root-rebind eligibility previews, and
 observation recording, applied existing-member directory refresh, approved URL
 intake and refresh, manual file-version append, and the local
 structural-inventory query. Each file write approval covers one local regular
@@ -214,20 +215,25 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   partial IDs after a later failure. That membership is a stable historical
   mapping captured at binding or explicit append time:
   later source version appends, explicit origin rebinding, or source retirement
-  do not rewrite it. Incremental directory scan reconciliation, directory
-  rebind, rename, complete removal reconciliation, and broader member-retirement
+  do not rewrite it. Incremental directory scan reconciliation, applied
+  directory rebind, rename, complete removal reconciliation, and broader member-retirement
   policy remain unimplemented.
   A local explicit bounded refresh preview can classify historical members as
   `current`, `changed`, `missing`, `retired`, or `origin-conflict` and count
   unmatched accepted files. It exposes no paths or integrity metadata and makes
   no source, version, membership, observation, or lifecycle writes.
+  A separate read-only directory-root-rebind eligibility preview rescans one
+  candidate real non-symlink root, requires exact normalized-relative-path
+  membership and latest-byte agreement for every historical member, and
+  returns only path-free readiness and scan counts. It does not mutate the
+  persisted binding or membership; applying the root rebind remains deferred.
   A separate explicit bounded observation operation reuses exactly one complete
   scan, selects only active `current`, `changed`, or same-member `missing`
   entries, and atomically records their path-free observations with one shared
   timestamp. Retired, origin-conflict, and new files remain report-only; the
   operation allocates no IDs and writes no bytes, versions, membership, origin
-  bindings, retirements, or journal events. Rename/removal decisions, root
-  rebind, automatic retirement or deletion, adapters, indexing, and background
+  bindings, retirements, or journal events. Rename/removal decisions, applying
+  a root rebind, automatic retirement or deletion, adapters, indexing, and background
   refresh remain deferred.
 - An explicit bounded applied directory refresh reuses that same complete scan.
   It processes active same-member files in source-ID order, appends only changed
@@ -236,14 +242,14 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   same-member-missing entries. Retired, origin-conflict, and new files remain
   report-only. A later member failure returns a path-free partial result after
   earlier member commits; rename/removal decisions, member-retirement
-  lifecycle, root rebind, automatic retirement/deletion, adapters, indexing, and
+  lifecycle, applied root rebind, automatic retirement/deletion, adapters, indexing, and
   background refresh remain deferred.
 - An explicit bounded add-members operation reuses one complete scan of an
   existing binding, allocates IDs only for unmatched accepted files, and creates
   each file source, initial version, sensitive origin binding, managed blob,
   journal event, and immutable membership atomically per candidate. Existing
   member states are report-only, new members receive no refresh observation, and
-  complete removal reconciliation, renames, root rebind, automatic retirement/deletion, and writer
+  complete removal reconciliation, renames, applied root rebind, automatic retirement/deletion, and writer
   coordination remain deferred.
 - An explicit approved directory-member retirement operation reuses one complete
   bounded scan and accepts only an active same-member `missing` member. It
@@ -449,7 +455,7 @@ exact latest-managed-version match and exposes no path or integrity metadata.
 New-member persistence is available only through the explicit bounded add-members
 operation, and explicit missing-member retirement is available only through the
 approved directory-member operation; complete removal reconciliation,
-directory-root rebind,
+applied directory-root rebind,
 automatic retirement/deletion, background refresh, time-based freshness policy,
 automatic moved-origin
 discovery, adapter-level refresh/rebind/duplicate controls, incremental

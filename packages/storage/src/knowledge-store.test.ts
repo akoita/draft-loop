@@ -1326,12 +1326,16 @@ describe("portable candidate knowledge store", () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
     const selectedDirectory = join(parent, "selected");
+    const candidateDirectory = join(parent, "candidate-root");
     const sourcePath = join(selectedDirectory, "first.md");
     const movedPath = join(selectedDirectory, "moved.md");
+    const candidatePath = join(candidateDirectory, "first.md");
     const content = "directory evidence";
     await mkdir(selectedDirectory);
+    await mkdir(candidateDirectory);
     await writeFile(sourcePath, content, "utf8");
     await writeFile(movedPath, content, "utf8");
+    await writeFile(candidatePath, content, "utf8");
     const store = await initializeCandidateKnowledgeStore(initialization(root));
     await store.createCandidateKnowledgeBase({
       id: "ckb-other",
@@ -1367,6 +1371,54 @@ describe("portable candidate knowledge store", () => {
       relativePathHash: sha256("first.md"),
     });
     expect(originalMember && Object.isFrozen(originalMember)).toBe(true);
+    const candidateMember = await store.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+      "ckb-default",
+      "lookup-directory",
+      await realpath(candidateDirectory),
+      await realpath(candidatePath),
+    );
+    expect(candidateMember).toEqual(originalMember);
+    expect(candidateMember && Object.isFrozen(candidateMember)).toBe(true);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        "ckb-other",
+        "lookup-directory",
+        await realpath(candidateDirectory),
+        await realpath(candidatePath),
+      ),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        "ckb-default",
+        "missing-directory",
+        await realpath(candidateDirectory),
+        await realpath(candidatePath),
+      ),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(candidateDirectory),
+        join(candidateDirectory, "unbound.md"),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(candidateDirectory),
+        await realpath(root),
+      ),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(candidatePath),
+        await realpath(candidatePath),
+      ),
+    ).rejects.toThrow(StorageValidationError);
     await expect(
       store.findCandidateKnowledgeDirectoryMemberByPath(
         "ckb-default",
@@ -1424,7 +1476,25 @@ describe("portable candidate knowledge store", () => {
         await realpath(movedPath),
       ),
     ).resolves.toBeUndefined();
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(candidateDirectory),
+        await realpath(candidatePath),
+      ),
+    ).resolves.toEqual(originalMember);
     await store.close();
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(candidateDirectory),
+        await realpath(candidatePath),
+      ),
+    ).resolves.toEqual(originalMember);
+    await reopened.close();
   });
 
   it("reports path-free origin relations without rewriting historical membership", async () => {

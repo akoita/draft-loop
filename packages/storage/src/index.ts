@@ -344,6 +344,13 @@ export interface CandidateKnowledgeBaseStoragePort {
     directoryId: string,
     sourcePath: string,
   ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
+  /** Resolve a historical member hash using a candidate root without mutating the binding. */
+  readonly findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    candidateRootPath: string,
+    sourcePath: string,
+  ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
   readonly getCandidateKnowledgeDirectoryMemberOriginRelation: (
     knowledgeBaseId: string,
     directoryId: string,
@@ -3150,6 +3157,56 @@ export class SqliteStorage
       "candidate knowledge directory root path",
     );
     const relativePathHash = directoryMemberRelativePathHash(rootPath, normalizedSourcePath);
+    const row = this.database
+      .prepare(
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members
+         WHERE candidate_knowledge_base_id = ?
+           AND directory_id = ?
+           AND relative_path_hash = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedDirectoryId, relativePathHash);
+    return row === undefined ? undefined : candidateKnowledgeDirectoryMemberFromRow(row);
+  }
+
+  public async findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+    knowledgeBaseId: string,
+    directoryId: string,
+    candidateRootPath: string,
+    sourcePath: string,
+  ): Promise<CandidateKnowledgeDirectoryMemberRecord | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedDirectoryId = requireNonEmpty(
+      directoryId,
+      "candidate knowledge directory id",
+    ).trim();
+    const normalizedCandidateRootPath = requireCanonicalAbsolutePath(
+      candidateRootPath,
+      "candidate knowledge directory candidate root path",
+    );
+    const normalizedSourcePath = requireCanonicalAbsolutePath(
+      sourcePath,
+      "candidate knowledge directory candidate source path",
+    );
+    this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    const binding = this.database
+      .prepare(
+        `SELECT id
+         FROM candidate_knowledge_directory_bindings
+         WHERE candidate_knowledge_base_id = ? AND id = ?`,
+      )
+      .get(normalizedKnowledgeBaseId, normalizedDirectoryId);
+    if (binding === undefined) {
+      throw new StorageValidationError("candidate knowledge directory binding was not found");
+    }
+    const relativePathHash = directoryMemberRelativePathHash(
+      normalizedCandidateRootPath,
+      normalizedSourcePath,
+    );
     const row = this.database
       .prepare(
         `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
