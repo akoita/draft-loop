@@ -94,6 +94,10 @@ export interface ManagedCandidateKnowledgeFileVersionInput
    * sensitive local origin binding; appends do not persist or replace it.
    */
   readonly sourcePath: string;
+  /** @internal Expected latest version for an explicitly guarded refresh append. */
+  readonly expectedCurrentVersionId?: string;
+  /** @internal Expected current origin revision for an explicitly guarded refresh append. */
+  readonly expectedOriginBoundAt?: string;
   /** @internal Test seam for mutating the opened source before its final stability check. */
   readonly beforeSourceRecheck?: () => Promise<void>;
   /** @internal Test seam for simulating a failure after file publication but before SQLite. */
@@ -1211,7 +1215,15 @@ async function writeManagedCandidateKnowledgeFile(
       }
       await operation.version.beforeCommittedFileRecheck?.();
       await verifyManagedFile(targetPath as string, integrity);
-      return storage.recordManagedCandidateKnowledgeWriteNoop(operationId, requestedVersion);
+      const expectedOriginPath =
+        operation.version.expectedOriginBoundAt === undefined ? undefined : captured.originPath;
+      return storage.recordManagedCandidateKnowledgeWriteNoop(
+        operationId,
+        requestedVersion,
+        operation.version.expectedCurrentVersionId,
+        operation.version.expectedOriginBoundAt,
+        expectedOriginPath,
+      );
     }
 
     if (publicationRequired) {
@@ -1251,7 +1263,20 @@ async function writeManagedCandidateKnowledgeFile(
             version: requestedVersion,
             originPath: captured.originPath,
           }
-        : { kind: "append", operationId, version: requestedVersion },
+        : {
+            kind: "append",
+            operationId,
+            version: requestedVersion,
+            ...(operation.version.expectedCurrentVersionId === undefined
+              ? {}
+              : { expectedCurrentVersionId: operation.version.expectedCurrentVersionId }),
+            ...(operation.version.expectedOriginBoundAt === undefined
+              ? {}
+              : { expectedOriginBoundAt: operation.version.expectedOriginBoundAt }),
+            ...(operation.version.expectedOriginBoundAt === undefined
+              ? {}
+              : { expectedOriginPath: captured.originPath }),
+          },
     );
     committed = true;
     const committedPath = managedVersionPath(root, sourceId, result.version.id);

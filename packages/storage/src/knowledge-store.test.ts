@@ -2152,6 +2152,175 @@ describe("portable candidate knowledge store", () => {
     await store.close();
   });
 
+  it("enforces guarded managed file appends on changed and no-op database paths", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const inputPath = join(selectedDirectory, "candidate.md");
+    const replacementPath = join(selectedDirectory, "replacement.md");
+    await mkdir(selectedDirectory);
+    await writeFile(inputPath, "first", "utf8");
+    await writeFile(replacementPath, "second", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "guarded-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "first", { id: "guarded-version-1" }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "guarded-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["guarded-source"],
+    });
+    const origin = await store.getCandidateKnowledgeSourceOriginBinding(
+      "ckb-default",
+      "guarded-source",
+    );
+    if (origin === undefined) throw new Error("expected guarded origin");
+
+    await writeFile(inputPath, "second", "utf8");
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "guarded-source",
+      managedVersion(inputPath, "second", {
+        id: "guarded-version-2",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    );
+    await writeFile(inputPath, "third", "utf8");
+    await expect(
+      store.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "guarded-source",
+        managedVersion(inputPath, "third", {
+          id: "guarded-version-stale",
+          createdAt: "2026-08-21T14:04:00.000Z",
+          expectedCurrentVersionId: "guarded-version-1",
+          expectedOriginBoundAt: origin.boundAt,
+        }),
+      ),
+    ).rejects.toThrow(/current version changed/i);
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", "guarded-source"),
+    ).resolves.toHaveLength(2);
+
+    await writeFile(inputPath, "second", "utf8");
+    const sourcesBeforeNoopOriginRace = await snapshotSourcesTree(root);
+    await expect(
+      store.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "guarded-source",
+        managedVersion(inputPath, "second", {
+          id: "guarded-version-noop-origin",
+          createdAt: "2026-08-21T14:05:30.000Z",
+          expectedCurrentVersionId: "guarded-version-2",
+          expectedOriginBoundAt: origin.boundAt,
+          beforeDatabaseWrite: async () => {
+            await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "guarded-source", {
+              sourcePath: replacementPath,
+              mediaType: "text/markdown",
+              checksum: sha256("second"),
+              sizeBytes: Buffer.byteLength("second"),
+              boundAt: origin.boundAt,
+            });
+          },
+        }),
+      ),
+    ).rejects.toThrow(/origin binding changed/i);
+    await expect(snapshotSourcesTree(root)).resolves.toEqual(sourcesBeforeNoopOriginRace);
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", "guarded-source"),
+    ).resolves.toHaveLength(2);
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "guarded-source", {
+      sourcePath: inputPath,
+      mediaType: "text/markdown",
+      checksum: sha256("second"),
+      sizeBytes: Buffer.byteLength("second"),
+      boundAt: origin.boundAt,
+    });
+
+    await expect(
+      store.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "guarded-source",
+        managedVersion(inputPath, "second", {
+          id: "guarded-version-noop-stale",
+          createdAt: "2026-08-21T14:05:00.000Z",
+          expectedCurrentVersionId: "guarded-version-1",
+          expectedOriginBoundAt: origin.boundAt,
+        }),
+      ),
+    ).rejects.toThrow(/current version changed/i);
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", "guarded-source"),
+    ).resolves.toHaveLength(2);
+
+    await writeFile(inputPath, "third", "utf8");
+    await expect(
+      store.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "guarded-source",
+        managedVersion(inputPath, "third", {
+          id: "guarded-version-rebound",
+          createdAt: "2026-08-21T14:06:00.000Z",
+          expectedCurrentVersionId: "guarded-version-2",
+          expectedOriginBoundAt: origin.boundAt,
+          beforeDatabaseWrite: async () => {
+            await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "guarded-source", {
+              sourcePath: replacementPath,
+              mediaType: "text/markdown",
+              checksum: sha256("second"),
+              sizeBytes: Buffer.byteLength("second"),
+              boundAt: origin.boundAt,
+            });
+          },
+        }),
+      ),
+    ).rejects.toThrow(/origin binding changed/i);
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", "guarded-source"),
+    ).resolves.toHaveLength(2);
+
+    await writeFile(inputPath, "second", "utf8");
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "guarded-source", {
+      sourcePath: inputPath,
+      mediaType: "text/markdown",
+      checksum: sha256("second"),
+      sizeBytes: Buffer.byteLength("second"),
+      boundAt: origin.boundAt,
+    });
+    await writeFile(inputPath, "fourth", "utf8");
+    await expect(
+      store.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "guarded-source",
+        managedVersion(inputPath, "fourth", {
+          id: "guarded-version-retired",
+          createdAt: "2026-08-21T14:07:00.000Z",
+          expectedCurrentVersionId: "guarded-version-2",
+          expectedOriginBoundAt: origin.boundAt,
+          beforeDatabaseWrite: async () => {
+            await store.retireCandidateKnowledgeSource("ckb-default", "guarded-source", {
+              retiredAt: "2026-08-21T14:07:00.000Z",
+              reason: "user-requested",
+            });
+          },
+        }),
+      ),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      store.listCandidateKnowledgeSourceVersions("ckb-default", "guarded-source"),
+    ).resolves.toHaveLength(2);
+    await store.close();
+  });
+
   it("journals intent before staging and records create, changed append, and managed no-op sequences", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");

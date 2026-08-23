@@ -129,6 +129,13 @@ export interface RecordKnowledgeSourceDirectoryRefreshCommand {
   readonly options?: DirectoryIngestionOptions;
 }
 
+export interface ApplyKnowledgeSourceDirectoryRefreshCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly options?: DirectoryIngestionOptions;
+}
+
 export interface ImportKnowledgeSourceUrlCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -343,6 +350,27 @@ export interface RecordKnowledgeSourceDirectoryRefreshResult
   readonly recordedObservationCount: number;
 }
 
+export interface ApplyKnowledgeSourceDirectoryRefreshBaseResult
+  extends PreviewKnowledgeSourceDirectoryRefreshResult {
+  readonly refreshedSourceIds: readonly string[];
+}
+
+export interface ApplyKnowledgeSourceDirectoryRefreshCompleteResult
+  extends ApplyKnowledgeSourceDirectoryRefreshBaseResult {
+  readonly status: "complete";
+}
+
+export interface ApplyKnowledgeSourceDirectoryRefreshPartialResult
+  extends ApplyKnowledgeSourceDirectoryRefreshBaseResult {
+  readonly status: "partial";
+  readonly failedSourceId: string;
+  readonly failedStatus: PreviewKnowledgeSourceDirectoryRefreshMemberStatus;
+}
+
+export type ApplyKnowledgeSourceDirectoryRefreshResult =
+  | ApplyKnowledgeSourceDirectoryRefreshCompleteResult
+  | ApplyKnowledgeSourceDirectoryRefreshPartialResult;
+
 export interface CandidateKnowledgeStoreService {
   readonly initializeStore: (
     command: InitializeStoreCommand,
@@ -378,6 +406,9 @@ export interface CandidateKnowledgeStoreService {
   readonly recordKnowledgeSourceDirectoryRefresh: (
     command: RecordKnowledgeSourceDirectoryRefreshCommand,
   ) => Promise<RecordKnowledgeSourceDirectoryRefreshResult>;
+  readonly applyKnowledgeSourceDirectoryRefresh: (
+    command: ApplyKnowledgeSourceDirectoryRefreshCommand,
+  ) => Promise<ApplyKnowledgeSourceDirectoryRefreshResult>;
   readonly importKnowledgeSourceUrl: (
     command: ImportKnowledgeSourceUrlCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
@@ -495,6 +526,12 @@ function previewDirectoryRefreshFailure(): Error {
 function recordDirectoryRefreshFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory refresh observations could not be recorded.",
+  );
+}
+
+function applyDirectoryRefreshFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge source directory refresh could not be applied.",
   );
 }
 
@@ -761,6 +798,7 @@ interface CollectedDirectoryRefreshMember {
   readonly sourceId: string;
   readonly status: PreviewKnowledgeSourceDirectoryRefreshMemberStatus;
   readonly observedVersionId: string;
+  readonly latestVersion: CandidateKnowledgeSourceVersionRecord;
   readonly expectedOriginBoundAt?: string;
   readonly originRelation: CandidateKnowledgeDirectoryMemberOriginRelationRecord["relation"];
 }
@@ -771,6 +809,10 @@ interface CollectedDirectoryRefresh {
   readonly preflight: DirectoryIngestionResult;
   readonly members: readonly CollectedDirectoryRefreshMember[];
   readonly newSourceCount: number;
+  readonly matchedSources: ReadonlyMap<
+    string,
+    NonNullable<DirectoryIngestionResult["sources"][number]>
+  >;
 }
 
 function validatePreviewDirectoryOriginRelation(
@@ -841,7 +883,7 @@ async function collectDirectoryRefresh(
     preflight = await dependencies.ingestDirectory(canonicalRoot, options);
     validateDirectoryIngestionResult(preflight);
   } catch {
-    throw recordDirectoryRefreshFailure();
+    throw previewDirectoryRefreshFailure();
   }
 
   const historicalMembers = await handle.listCandidateKnowledgeDirectoryMembers(
@@ -869,6 +911,10 @@ async function collectDirectoryRefresh(
 
   const scannedByPath = new Map<string, NonNullable<DirectoryIngestionResult["sources"][number]>>();
   const matchedPathBySource = new Map<string, string>();
+  const matchedSources = new Map<
+    string,
+    NonNullable<DirectoryIngestionResult["sources"][number]>
+  >();
   let newSourceCount = 0;
   for (const normalized of preflight.sources) {
     const sourcePath = normalized.source.path;
@@ -908,6 +954,7 @@ async function collectDirectoryRefresh(
       throw previewDirectoryRefreshFailure();
     }
     matchedPathBySource.set(matched.sourceId, sourcePath);
+    matchedSources.set(matched.sourceId, normalized);
   }
 
   const collectedMembers: CollectedDirectoryRefreshMember[] = [];
@@ -971,6 +1018,7 @@ async function collectDirectoryRefresh(
       sourceId: member.sourceId,
       status,
       observedVersionId: latestVersion.id,
+      latestVersion,
       ...(relation.originBoundAt === undefined
         ? {}
         : { expectedOriginBoundAt: relation.originBoundAt }),
@@ -988,6 +1036,7 @@ async function collectDirectoryRefresh(
     preflight,
     members: collectedMembers,
     newSourceCount,
+    matchedSources,
   };
 }
 
@@ -1009,6 +1058,40 @@ function recordDirectoryRefreshResult(
     skippedEntryCount: collected.preflight.skippedEntryCount,
     recordedObservationCount,
   });
+}
+
+function applyDirectoryRefreshResult(
+  collected: CollectedDirectoryRefresh,
+  refreshedSourceIds: readonly string[],
+  failure?: {
+    readonly sourceId: string;
+    readonly status: PreviewKnowledgeSourceDirectoryRefreshMemberStatus;
+  },
+): ApplyKnowledgeSourceDirectoryRefreshResult {
+  const common = {
+    directoryId: collected.directoryId,
+    checkedAt: collected.checkedAt,
+    members: Object.freeze(
+      collected.members.map((member) =>
+        Object.freeze({ sourceId: member.sourceId, status: member.status }),
+      ),
+    ),
+    newSourceCount: collected.newSourceCount,
+    scannedEntryCount: collected.preflight.scannedEntryCount,
+    discoveredFileCount: collected.preflight.discoveredFileCount,
+    skippedEntryCount: collected.preflight.skippedEntryCount,
+    refreshedSourceIds: Object.freeze([...refreshedSourceIds]),
+  };
+  return Object.freeze(
+    failure === undefined
+      ? { ...common, status: "complete" as const }
+      : {
+          ...common,
+          status: "partial" as const,
+          failedSourceId: failure.sourceId,
+          failedStatus: failure.status,
+        },
+  );
 }
 
 function validateRecordedDirectoryRefreshObservations(
@@ -1497,6 +1580,60 @@ function validateRefreshAppendResult(
     result.version.createdAt < latestVersion.createdAt
   ) {
     throw refreshAppendInvariantFailure();
+  }
+}
+
+function validateAppliedDirectoryAppendResult(
+  result: Awaited<
+    ReturnType<CandidateKnowledgeStoreHandle["appendManagedCandidateKnowledgeFileVersion"]>
+  >,
+  knowledgeBaseId: string,
+  sourceId: string,
+  requestedVersion: {
+    readonly id: string;
+    readonly mediaType: string;
+    readonly checksum: string;
+    readonly sizeBytes: number;
+    readonly createdAt: string;
+  },
+  latestVersion: CandidateKnowledgeSourceVersionRecord,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    typeof result.source !== "object" ||
+    result.source === null ||
+    typeof result.version !== "object" ||
+    result.version === null ||
+    typeof result.created !== "boolean" ||
+    result.source.id !== sourceId ||
+    result.source.knowledgeBaseId !== knowledgeBaseId ||
+    result.source.kind !== "file" ||
+    result.version.sourceId !== sourceId ||
+    result.version.mediaType !== requestedVersion.mediaType ||
+    result.version.checksum !== requestedVersion.checksum ||
+    result.version.sizeBytes !== requestedVersion.sizeBytes
+  ) {
+    throw applyDirectoryRefreshFailure();
+  }
+  if (result.created) {
+    if (
+      result.version.id !== requestedVersion.id ||
+      result.version.version !== latestVersion.version + 1 ||
+      result.version.parentVersionId !== latestVersion.id ||
+      result.version.createdAt !== requestedVersion.createdAt
+    ) {
+      throw applyDirectoryRefreshFailure();
+    }
+    return;
+  }
+  if (
+    result.version.id !== latestVersion.id ||
+    result.version.version !== latestVersion.version ||
+    result.version.parentVersionId !== latestVersion.parentVersionId ||
+    result.version.createdAt !== latestVersion.createdAt
+  ) {
+    throw applyDirectoryRefreshFailure();
   }
 }
 
@@ -2415,6 +2552,133 @@ export function createCandidateKnowledgeStoreService(
         throw recordDirectoryRefreshFailure();
       }
     },
+    applyKnowledgeSourceDirectoryRefresh: async (command) => {
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let directoryId: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
+      } catch {
+        throw applyDirectoryRefreshFailure();
+      }
+
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const collected = await collectDirectoryRefresh(
+              handle,
+              resolved,
+              storeRoot,
+              knowledgeBaseId,
+              directoryId,
+              command.options,
+            );
+            const observationEntries = collected.members
+              .filter(
+                (member) =>
+                  member.originRelation === "same-member" &&
+                  (member.status === "current" || member.status === "missing") &&
+                  member.expectedOriginBoundAt !== undefined,
+              )
+              .map((member) => ({
+                sourceId: member.sourceId,
+                observedVersionId: member.observedVersionId,
+                status: member.status as "current" | "missing",
+                expectedOriginBoundAt: member.expectedOriginBoundAt as string,
+              }));
+            const previousObservations = await Promise.all(
+              observationEntries.map((entry) =>
+                handle.getCandidateKnowledgeSourceRefreshObservation(
+                  knowledgeBaseId,
+                  entry.sourceId,
+                ),
+              ),
+            );
+            const observations = await handle.upsertCandidateKnowledgeDirectoryRefreshObservations(
+              knowledgeBaseId,
+              directoryId,
+              { checkedAt: collected.checkedAt, entries: observationEntries },
+            );
+            validateRecordedDirectoryRefreshObservations(
+              observations,
+              observationEntries,
+              previousObservations,
+              collected.checkedAt,
+            );
+            const refreshedSourceIds: string[] = [];
+            for (const member of collected.members.filter(({ status }) => status === "changed")) {
+              try {
+                const normalized = collected.matchedSources.get(member.sourceId);
+                if (normalized === undefined || member.expectedOriginBoundAt === undefined) {
+                  throw applyDirectoryRefreshFailure();
+                }
+                const versionId = requireText(
+                  resolved.generateId(),
+                  "Candidate knowledge source version id",
+                );
+                const requestedVersion = {
+                  id: versionId,
+                  sourcePath: normalized.source.path,
+                  mediaType: normalized.mediaType,
+                  checksum: normalized.checksum,
+                  sizeBytes: normalized.sizeBytes,
+                  createdAt: collected.checkedAt,
+                  expectedCurrentVersionId: member.observedVersionId,
+                  expectedOriginBoundAt: member.expectedOriginBoundAt,
+                };
+                const result = await handle.appendManagedCandidateKnowledgeFileVersion(
+                  knowledgeBaseId,
+                  member.sourceId,
+                  requestedVersion,
+                );
+                validateAppliedDirectoryAppendResult(
+                  result,
+                  knowledgeBaseId,
+                  member.sourceId,
+                  requestedVersion,
+                  member.latestVersion,
+                );
+                const observationInput = result.created
+                  ? {
+                      observedVersionId: result.version.id,
+                      status: "current" as const,
+                      checkedAt: collected.checkedAt,
+                      lastRefreshedVersionId: result.version.id,
+                      lastRefreshedAt: collected.checkedAt,
+                    }
+                  : {
+                      observedVersionId: result.version.id,
+                      status: "current" as const,
+                      checkedAt: collected.checkedAt,
+                    };
+                const observation = await handle.upsertCandidateKnowledgeSourceRefreshObservation(
+                  knowledgeBaseId,
+                  member.sourceId,
+                  observationInput,
+                );
+                validateRefreshObservationWriteResult(
+                  observation,
+                  member.sourceId,
+                  observationInput,
+                );
+                if (result.created) refreshedSourceIds.push(member.sourceId);
+              } catch {
+                return applyDirectoryRefreshResult(collected, refreshedSourceIds, {
+                  sourceId: member.sourceId,
+                  status: member.status,
+                });
+              }
+            }
+            return applyDirectoryRefreshResult(collected, refreshedSourceIds);
+          },
+        );
+      } catch {
+        throw applyDirectoryRefreshFailure();
+      }
+    },
     importKnowledgeSourceUrl: async (command) => {
       if (command.approved !== true) throw importUrlFailure();
       const storeRoot = requireStoreRoot(command.storeRoot);
@@ -2936,6 +3200,8 @@ export const previewKnowledgeSourceDirectoryRefresh =
   defaultService.previewKnowledgeSourceDirectoryRefresh;
 export const recordKnowledgeSourceDirectoryRefresh =
   defaultService.recordKnowledgeSourceDirectoryRefresh;
+export const applyKnowledgeSourceDirectoryRefresh =
+  defaultService.applyKnowledgeSourceDirectoryRefresh;
 export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const refreshKnowledgeSourceFromOrigin = defaultService.refreshKnowledgeSourceFromOrigin;
 export const refreshKnowledgeSourceUrl = defaultService.refreshKnowledgeSourceUrl;

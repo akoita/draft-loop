@@ -87,9 +87,10 @@ identical bytes are current, and failed approved attempts persist only a URL-fre
 inaccessible observation. A local explicit bounded directory refresh preview
 returns only path-free current/changed/missing/retired/origin-conflict states
 and an aggregate unmatched-file count; scan-level unreadable, unstable, limit,
-and extraction failures fail closed. Applied directory refresh, new-member
-persistence, rename/removal decisions, directory-root rebind, automatic
-retirement/deletion, background refresh, time-based freshness policy,
+and extraction failures fail closed. Applied directory refresh is limited to
+existing active same-member changed files; new-member persistence,
+rename/removal decisions, directory-root rebind, automatic retirement/deletion,
+background refresh, time-based freshness policy,
 moved-origin discovery, adapter-level refresh/rebind/duplicate controls,
 directory reconciliation and membership lifecycle, URL redirect history/conditional requests, automatic
 duplicate resolution, indexes/retrieval, app/run CKB selection, CLI/desktop controls, deletion,
@@ -102,9 +103,12 @@ traversal and atomically persists only eligible active same-member
 files remain report-only. The result and stored observation contain no paths,
 hashes, checksums, media types, sizes, labels, or content; the operation does
 not apply changed bytes or write sources, versions, membership, origin bindings,
-retirements, or journal events. Changed-byte refresh, reconciliation, root
-rebind, automatic retirement/deletion, adapters, indexing, and background
-refresh remain deferred.
+retirements, or journal events. A separate explicit bounded applied operation
+appends changed bytes only for active same-member files with current-version and
+origin-revision guards, records current observations for successful members,
+and returns a path-free partial result after a later member failure. New-member
+persistence, reconciliation, root rebind, automatic retirement/deletion,
+adapters, indexing, and background refresh remain deferred.
 
 The inventory query runs only on request and only after normal referenced-blob
 validation. It counts verified managed files, scanned entries, staging-shaped
@@ -195,7 +199,7 @@ remembered origin ------> explicit status / changed-byte refresh / exact-byte re
 | T-017 | Medium / medium       | Structural inventory leaks sensitive entry identity/content, escapes through a symlink or unknown directory, or is mistaken for cleanup authority.                                      | Count-only bounded result; normal referenced-blob validation first; no names, paths, IDs, labels, checksums, content, unknown-byte reads, unknown symlink following, unknown-directory recursion, mutation, automatic execution, or provider exposure.                                                                                                                                                                                                               | Counts can disclose limited store shape and scan-limit status can be incomplete. Keep the query separate from content diagnostics and require prospective journal evidence, writer coordination, and explicit approval before any future cleanup.   |
 | T-018 | Medium / medium       | A journal record, matching bytes, or a staging-shaped name is mistaken for current ownership or cleanup approval.                                                                       | Prospective append-only operation events, opaque hashed staging names, no retroactive v6 claims, no cleanup token/approval field, no journal-ID projection, and no adoption of pre-existing targets based on bytes or shape.                                                                                                                                                                                                                                         | Same-user tampering is in scope; journal provenance is only one future policy input. Add writer locks/leases and explicit visible approval before enabling cleanup.                                                                                 |
 | T-019 | High / medium         | A logically retired CKB source remains selectable or retrievable, or retirement is misrepresented as physical deletion.                                                                 | A separate immutable, CKB-scoped retirement marker; storage-boundary rejection of append, rebind, and refresh-observation writes; path-free lifecycle query; retained immutable source/version and local evidence.                                                                                                                                                                                                                                                   | #111 and #80 must consume lifecycle state atomically and fail closed; index removal, retention, backup/restore, reactivation, and physical deletion remain separate policy work under #113.                                                         |
-| T-020 | High / medium         | A selected directory traversal follows a symlink, escapes its root, opens a special or hidden entry, exceeds resource bounds, or partially writes sources after a preflight failure.    | Real non-symlink root; canonical containment and repeated lstat checks; deterministic bounded traversal; skipped hidden, unsupported, special, and child-symlink entries counted without opening or following; complete extraction preflight; one store handle; generic errors; independent file-source writes; complete imports atomically persist a sensitive root binding plus immutable relative-path hashes; partial-result reporting only after a later commit | Same-user processes can mutate entries between checks; directory additions/removals are not represented after intake; counts can disclose limited shape; incremental refresh, membership lifecycle, and cleanup require separate design and review. |
+| T-020 | High / medium         | A selected directory traversal follows a symlink, escapes its root, opens a special or hidden entry, exceeds resource bounds, or partially writes sources after a preflight failure.    | Real non-symlink root; canonical containment and repeated lstat checks; deterministic bounded traversal; skipped hidden, unsupported, special, and child-symlink entries counted without opening or following; complete extraction preflight; one store handle; generic errors; independent file-source writes; complete imports atomically persist a sensitive root binding plus immutable relative-path hashes; partial-result reporting only after a later commit | Same-user processes can mutate entries between checks; directory additions/removals are not represented after intake; counts can disclose limited shape; bounded applied refresh handles only existing active same-member changes; full reconciliation, membership lifecycle, and cleanup require separate design and review. |
 
 ## Runtime and build-time controls
 
@@ -240,7 +244,8 @@ the CKB and partial or legacy runtime-only imports have no directory-root/
 membership binding. Existing member rows remain historical evidence rather
 than a live directory reconciliation map; source versioning, origin rebinding,
 and retirement do not rewrite them. The explicit bounded preview is read-only
-and path-free; it does not apply refresh, persist new members, infer renames,
+and path-free; the separate applied operation handles only existing active
+same-member changed files and does not persist new members, infer renames,
 decide removals, rebind the root, or retire/delete sources automatically.
 
 The structural inventory is a local application query, not a provider-facing
