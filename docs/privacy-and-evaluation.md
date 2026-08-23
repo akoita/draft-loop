@@ -55,7 +55,9 @@ or concurrent writer can still leave an unreferenced opaque entry. Structural
 inventory is count-only and never treats a filename, byte match, or staging
 shape as ownership evidence. The prospective managed-write journal does not
 retroactively claim legacy entries and is not a cleanup token. Unknown entries
-remain unknown until a future, explicitly approved reconciliation design.
+remain unknown: missing-member reconciliation can retire only historical
+members selected by source ID and never adopts or cleans up an unrecognized
+managed-store entry.
 
 ### Sensitive origins, URLs, labels, and paths
 
@@ -91,8 +93,8 @@ explicit add time. Later version append, origin rebind, or retirement does not
 rewrite it. A path-free preview can report bounded member states and unmatched
 files without writing. Explicit add-members appends unmatched accepted files;
 applied directory refresh handles only existing active same-member changed
-files. Automatic rename inference, full reconciliation, background refresh,
-and automatic deletion remain deferred.
+files. Automatic rename inference, reconciliation of unknown entries,
+background refresh, and automatic deletion remain deferred.
 
 Root rebind is a separate explicit operation. It performs one complete bounded
 scan, stable per-member final verification, and one guarded all-member origin
@@ -107,14 +109,19 @@ bounded local scan, and retains that target path only in runtime memory. It
 uses the same guarded local handle for the move and an already-current no-op,
 and maps failures to a path-free error. The store persists only the sensitive
 origin binding and append-only member revision; its public result exposes no
-path, filename, checksum, content, integrity tuple, or version identity. Full
-automatic inference and reconciliation remain deferred.
+path, filename, checksum, content, integrity tuple, or version identity.
+Automatic move inference and cleanup remain deferred.
 
 An explicit retirement action can logically retire one approved fresh-scan
-missing member with the bounded reason `user-requested`. It does not delete
-bytes, versions, bindings, observations, journal state, indexes, backups, or
-membership. Retirement is not secure erasure, and no reactivation operation is
-currently exposed.
+missing member with the bounded reason `user-requested`. Complete
+reconciliation still requires an explicit source-ID selection for every member
+to retire; moved-candidate evidence is advisory and may be explicitly retired
+rather than treated as proof of identity. Selected sources are processed in
+deterministic order. Each marker is atomic, and a later failure returns only
+path-free partial IDs while preserving earlier markers. Incomplete scans write
+nothing. Retirement does not delete bytes, versions, bindings, observations,
+journal state, indexes, backups, or membership. It is not secure erasure, and
+no reactivation operation is currently exposed.
 
 An approved HTTPS URL is subject to public-address and redirect validation,
 time, response, text-size, content-type, and extraction limits. Exact fetched

@@ -288,6 +288,12 @@ export interface CandidateKnowledgeSourceRetirementRecord
 
 export interface CandidateKnowledgeDirectoryMemberRetirementInput {
   readonly retiredAt: string;
+  /** Current directory root revision observed during the scan. */
+  readonly expectedRootPath: string;
+  readonly expectedRootRevision: number;
+  /** Current immutable-member revision/hash observed during the scan. */
+  readonly expectedMemberRevision: number;
+  readonly expectedRelativePathHash: string;
   /** The latest managed version observed during the directory scan. */
   readonly expectedVersionId: string;
   /** The origin-binding revision observed during the directory scan. */
@@ -4644,12 +4650,31 @@ export class SqliteStorage
       input.expectedOriginBoundAt,
       "candidate knowledge directory member expected origin boundAt",
     );
+    const expectedRootPath = requireCanonicalAbsolutePath(
+      input.expectedRootPath,
+      "candidate knowledge directory member expected root path",
+    );
+    if (!Number.isSafeInteger(input.expectedRootRevision) || input.expectedRootRevision < 1) {
+      throw new StorageValidationError(
+        "candidate knowledge directory member expected root revision must be a positive safe integer",
+      );
+    }
+    if (!Number.isSafeInteger(input.expectedMemberRevision) || input.expectedMemberRevision < 1) {
+      throw new StorageValidationError(
+        "candidate knowledge directory member expected member revision must be a positive safe integer",
+      );
+    }
+    if (!/^[0-9a-f]{64}$/.test(input.expectedRelativePathHash)) {
+      throw new StorageValidationError(
+        "candidate knowledge directory member expected relative path hash is invalid",
+      );
+    }
     let result: CandidateKnowledgeSourceRetirementRecord | undefined;
     this.database.transaction(() => {
       this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
       const binding = this.database
         .prepare(
-          `SELECT id, candidate_knowledge_base_id, root_path, bound_at
+          `SELECT id, candidate_knowledge_base_id, revision, root_path, bound_at
            FROM candidate_knowledge_directory_current_roots
            WHERE candidate_knowledge_base_id = ? AND id = ?`,
         )
@@ -4659,9 +4684,13 @@ export class SqliteStorage
       }
       if (
         rowString(binding, "id") !== normalizedDirectoryId ||
-        rowString(binding, "candidate_knowledge_base_id") !== normalizedKnowledgeBaseId
+        rowString(binding, "candidate_knowledge_base_id") !== normalizedKnowledgeBaseId ||
+        rowNumber(binding, "revision") !== input.expectedRootRevision ||
+        rowString(binding, "root_path") !== expectedRootPath
       ) {
-        throw new StorageValidationError("candidate knowledge directory binding is malformed");
+        throw new StorageConflictError(
+          "candidate knowledge directory root changed during retirement",
+        );
       }
       requireCanonicalAbsolutePath(
         rowString(binding, "root_path"),
@@ -4679,7 +4708,8 @@ export class SqliteStorage
 
       const member = this.database
         .prepare(
-          `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+          `SELECT directory_id, candidate_knowledge_base_id, source_id,
+                  revision, relative_path_hash, bound_at
           FROM candidate_knowledge_directory_current_members
            WHERE candidate_knowledge_base_id = ?
              AND directory_id = ?
@@ -4697,6 +4727,14 @@ export class SqliteStorage
         !/^[0-9a-f]{64}$/.test(memberRecord.relativePathHash)
       ) {
         throw new StorageValidationError("candidate knowledge directory member is malformed");
+      }
+      if (
+        rowNumber(member, "revision") !== input.expectedMemberRevision ||
+        memberRecord.relativePathHash !== input.expectedRelativePathHash
+      ) {
+        throw new StorageConflictError(
+          "candidate knowledge directory member revision changed during retirement",
+        );
       }
 
       const source = this.requireCandidateKnowledgeSource(

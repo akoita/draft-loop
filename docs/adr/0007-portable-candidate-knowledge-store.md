@@ -152,10 +152,11 @@ The explicit operations are intentionally separate:
 | Add members             | A complete scan of an existing binding appends unmatched accepted files in lexical order. Each candidate commits its source, version, origin binding, managed bytes, journal event, and immutable member atomically; a later failure returns path-free partial IDs.                                                              |
 | Observation             | One complete scan records path-free current/changed/same-member-missing observations with one timestamp. It allocates no IDs and writes no bytes, versions, membership, bindings, retirements, or journal events.                                                                                                                |
 | Applied refresh         | Existing active same-member changed files are processed in source-ID order through the managed append path. Current observations are recorded for successful changed/current/missing members; a later failure returns a path-free partial result. New files, conflicts, and retired members remain report-only.                  |
-| Member retirement       | A fresh bounded scan may approve one active same-member `missing` source. The existing `user-requested` retirement marker is written with latest-version, origin-revision, and chronology guards; `removed` is logical only and an already retired member returns `already-removed`.                                             |
+| Member retirement       | A fresh bounded scan may approve one active same-member `missing` source. The existing `user-requested` retirement marker is written with root, member, latest-version, origin-revision, and chronology guards; `removed` is logical only and an already retired member returns `already-removed`.                               |
 | Root rebind             | A read-only eligibility scan requires exact historical membership and latest-byte agreement for every member. The application command reuses that scan, performs final stable verification, and atomically updates all origins plus the next root revision, returning path-free `rebound` counts or `current` for the same root. |
 | Moved-candidate preview | The scan compares exact media type, checksum, and size between eligible same-member missing sources and unmatched files. Only unique one-to-one source IDs are returned; ambiguous matches are omitted and no state changes.                                                                                                     |
 | One-source member move  | The explicit #134 command reuses exactly one bounded scan for one selected source, accepts no target path, and forwards either the scanned current member for idempotency or one unique exact-integrity missing-member match through the verified member handle.                                                                 |
+| Reconciliation          | One bounded scan partitions every member as current, changed, moved-candidate, missing, already-retired, or conflicted and counts all unmatched accepted files. Apply accepts only explicit source-ID retirement selections, refuses incomplete scans, and processes guarded markers in lexical source-ID order. A later failure returns frozen path-free partial progress; earlier per-source commits remain. |
 
 The one-source move returns a frozen, path-free result containing directory/source
 identity, the shared check time, and `moved` or `current` status. It appends one
@@ -165,10 +166,10 @@ evidence. The match is runtime-only; paths and integrity tuples are not
 returned. Append-only root and member revisions preserve historical roots and
 membership hashes while current views expose the latest verified state.
 
-Complete reconciliation, applied rename inference, broader member lifecycle,
-automatic move inference, physical deletion, adapter controls, indexing, and
-background refresh remain deferred under #135/#136. The bounded explicit move
-does not imply automatic discovery or full reconciliation.
+Applied rename inference, broader lifecycle readiness, automatic move
+inference, physical deletion, adapter controls, indexing, and background
+refresh remain deferred under #136 and the owning roadmap issues. Explicit
+reconciliation does not imply automatic discovery, retirement, or cleanup.
 
 ### Managed publication and journal
 
@@ -253,7 +254,7 @@ This decision deliberately leaves the following outside the product workflow:
 - application and run CKB selection, source-version scope, and provider
   transmission approval;
 - CLI and desktop CKB creation, opening, selection, and lifecycle controls;
-- complete directory removal/rename reconciliation, automatic move inference,
+- automatic directory removal/rename reconciliation and move inference,
   broader member-retirement policy, background refresh, and time-based
   readiness;
 - automatic duplicate preference or merging, source reactivation, and physical

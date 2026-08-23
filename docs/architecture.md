@@ -200,10 +200,11 @@ privacy invariants are canonical in [ADR 0007][adr-0007].
 | Inventory and refresh preview | Count-only store inventory; path-free member states (`current`, `changed`, `missing`, `retired`, `origin-conflict`) and unmatched-file count               | None                                                                                                            |
 | Add members                   | Append unmatched accepted files as independent sources in lexical order                                                                                    | Each candidate's source, version, origin binding, managed bytes, journal event, and immutable member atomically |
 | Observation / applied refresh | Record path-free observations, or append changed bytes for existing active same-member files in source-ID order                                            | Observation batch is atomic; applied refresh may return path-free partial progress after a later member failure |
-| Member retirement             | Approve one active same-member `missing` member                                                                                                            | Existing immutable `user-requested` retirement marker only; bytes and membership remain                         |
+| Member retirement             | Approve one active same-member `missing` member with root/member/version/origin guards                                                                    | Existing immutable `user-requested` retirement marker only; bytes and membership remain                         |
 | Root rebind                   | Reuse one complete scan, verify every historical member, and update all origins                                                                            | Guarded append-only root revision with path-free `rebound` counts, or path-free `current` no-op                 |
 | Moved-candidate preview       | Compare exact media type, checksum, and size for same-member missing sources and unmatched files                                                           | None; ambiguous matches are omitted                                                                             |
 | One-source member move        | Reuse exactly one bounded scan for one selected source; accept a unique exact-integrity missing-member match or the scanned current member for idempotency | Verified append-only member revision, or guarded no-op; result is frozen, path-free `moved`/`current`           |
+| Missing-member reconciliation | Partition one complete scan into path-free current, changed, moved-candidate, missing, already-retired, conflicted, and unmatched/new state; apply only explicitly selected retirements in source-ID order | Each retirement marker is atomic; all-success returns `applied`/`current`, while a later failure returns frozen path-free partial IDs |
 
 The explicit move command accepts no target path. It forwards a runtime-only
 match through the verified member handle and does not change source identity,
@@ -211,10 +212,10 @@ version, observation, retirement, blob, journal, or baseline membership
 evidence. Root rebind and member move are implemented component/application
 contracts; they do not infer renames or reconcile all removals.
 
-Complete reconciliation, broader member lifecycle, automatic move inference,
-physical deletion, adapter controls, indexing, and background refresh remain
-deferred under #135/#136. Historical membership is not rewritten by later
-source versions, explicit origin rebinds, or retirement.
+Broader lifecycle readiness, automatic move inference, physical deletion,
+adapter controls, indexing, and background refresh remain deferred under #136
+and their owning roadmap issues. Historical membership is not rewritten by
+later source versions, explicit origin rebinds, or retirement.
 
 ### Managed publication and journal
 

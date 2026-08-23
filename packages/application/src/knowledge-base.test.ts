@@ -1385,6 +1385,30 @@ describe("candidate knowledge store application service", () => {
     expect(await snapshot()).toEqual(before);
 
     await expect(
+      service.previewKnowledgeSourceDirectoryReconciliation({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+        options: { maxScannedEntries: 1 },
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory reconciliation preview could not be completed.",
+    );
+    await expect(
+      service.applyKnowledgeSourceDirectoryReconciliation({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+        approvedRetirementSourceIds: ["a-source"],
+        options: { maxScannedEntries: 1 },
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory reconciliation could not be applied.",
+    );
+    expect(ingestDirectory).toHaveBeenCalledTimes(3);
+    expect(await snapshot()).toEqual(before);
+
+    await expect(
       service.previewKnowledgeSourceDirectoryMovedCandidates({
         storeRoot,
         knowledgeBaseId: "default-ckb-uuid",
@@ -1394,9 +1418,364 @@ describe("candidate knowledge store application service", () => {
     ).rejects.toThrow(
       "The selected candidate knowledge source directory moved-candidate preview could not be completed.",
     );
-    expect(ingestDirectory).toHaveBeenCalledTimes(2);
+    expect(ingestDirectory).toHaveBeenCalledTimes(4);
     expect(await snapshot()).toEqual(before);
   });
+
+  it("previews and applies a deterministic missing-member reconciliation plan", async () => {
+    const directoryPath = join(temporaryParent, "reconciliation-directory");
+    await mkdir(directoryPath);
+    const paths = {
+      moved: join(directoryPath, "a-moved.md"),
+      missing: join(directoryPath, "b-missing.md"),
+      current: join(directoryPath, "c-current.md"),
+      changed: join(directoryPath, "d-changed.md"),
+      retired: join(directoryPath, "e-retired.md"),
+      conflict: join(directoryPath, "f-conflict.md"),
+    };
+    await writeFile(paths.moved, "moved evidence", "utf8");
+    await writeFile(paths.missing, "missing evidence", "utf8");
+    await writeFile(paths.current, "current evidence", "utf8");
+    await writeFile(paths.changed, "before evidence", "utf8");
+    await writeFile(paths.retired, "retired evidence", "utf8");
+    await writeFile(paths.conflict, "conflict evidence", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "a-source",
+      "a-version",
+      "b-source",
+      "b-version",
+      "c-source",
+      "c-version",
+      "d-source",
+      "d-version",
+      "e-source",
+      "e-version",
+      "f-source",
+      "f-version",
+      "directory-id",
+    ];
+    let now = createdAt;
+    const ingestDirectory = vi.fn(ingestDirectoryImplementation);
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => now,
+      ingestDirectory: ingestDirectory as never,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+
+    await rm(paths.moved);
+    await rm(paths.missing);
+    await rm(paths.retired);
+    await rm(paths.conflict);
+    await writeFile(paths.changed, "changed evidence", "utf8");
+    const conflictReplacement = join(temporaryParent, "reconciliation-conflict.md");
+    await writeFile(conflictReplacement, "conflict evidence", "utf8");
+    now = changedAt;
+    await service.rebindKnowledgeSourceOrigin({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "f-source",
+      sourcePath: conflictReplacement,
+    });
+    await service.retireKnowledgeSourceDirectoryMember({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+      sourceId: "e-source",
+      approved: true,
+    });
+    await writeFile(join(directoryPath, "renamed-a.md"), "moved evidence", "utf8");
+    ingestDirectory.mockClear();
+
+    const preview = await service.previewKnowledgeSourceDirectoryReconciliation({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+    });
+    expect(preview).toEqual({
+      directoryId: imported.directoryId,
+      checkedAt: changedAt,
+      members: [
+        { sourceId: "a-source", status: "moved-candidate" },
+        { sourceId: "b-source", status: "missing" },
+        { sourceId: "c-source", status: "current" },
+        { sourceId: "d-source", status: "changed" },
+        { sourceId: "e-source", status: "already-retired" },
+        { sourceId: "f-source", status: "conflicted" },
+      ],
+      currentCount: 1,
+      changedCount: 1,
+      alreadyRetiredCount: 1,
+      conflictedCount: 1,
+      movedCandidateCount: 1,
+      missingCount: 1,
+      newSourceCount: 1,
+      scanStatus: "complete",
+      scannedEntryCount: 3,
+      discoveredFileCount: 3,
+      skippedEntryCount: 0,
+    });
+    expect(Object.isFrozen(preview)).toBe(true);
+    expect(Object.isFrozen(preview.members)).toBe(true);
+    expect(preview.members.every((member) => Object.isFrozen(member))).toBe(true);
+    expect(JSON.stringify(preview)).not.toContain(temporaryParent);
+    expect(JSON.stringify(preview)).not.toContain("moved evidence");
+    expect(JSON.stringify(preview)).not.toContain(sha256("moved evidence"));
+    expect(ingestDirectory).toHaveBeenCalledOnce();
+
+    const applied = await service.applyKnowledgeSourceDirectoryReconciliation({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+      approvedRetirementSourceIds: ["b-source", "e-source", "a-source"],
+    });
+    expect(applied).toEqual({
+      directoryId: imported.directoryId,
+      checkedAt: changedAt,
+      status: "applied",
+      retiredSourceIds: ["a-source", "b-source"],
+      alreadyRetiredSourceIds: ["e-source"],
+    });
+    expect(Object.isFrozen(applied)).toBe(true);
+    expect(Object.isFrozen(applied.retiredSourceIds)).toBe(true);
+    expect(Object.isFrozen(applied.alreadyRetiredSourceIds)).toBe(true);
+    expect(ingestDirectory).toHaveBeenCalledTimes(2);
+
+    const repeated = await service.applyKnowledgeSourceDirectoryReconciliation({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+      approvedRetirementSourceIds: ["e-source", "a-source"],
+    });
+    expect(repeated).toEqual({
+      directoryId: imported.directoryId,
+      checkedAt: changedAt,
+      status: "current",
+      retiredSourceIds: [],
+      alreadyRetiredSourceIds: ["a-source", "e-source"],
+    });
+    expect(ingestDirectory).toHaveBeenCalledTimes(3);
+
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        store.getCandidateKnowledgeSourceRetirement("default-ckb-uuid", "a-source"),
+      ).resolves.toEqual({
+        sourceId: "a-source",
+        retiredAt: changedAt,
+        reason: "user-requested",
+      });
+      await expect(
+        store.getCandidateKnowledgeSourceRetirement("default-ckb-uuid", "b-source"),
+      ).resolves.toEqual({
+        sourceId: "b-source",
+        retiredAt: changedAt,
+        reason: "user-requested",
+      });
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("returns a deterministic partial reconciliation result after a later retirement failure", async () => {
+    const directoryPath = join(temporaryParent, "reconciliation-partial-directory");
+    const firstPath = join(directoryPath, "a-first.md");
+    const secondPath = join(directoryPath, "b-second.md");
+    await mkdir(directoryPath);
+    await writeFile(firstPath, "first missing", "utf8");
+    await writeFile(secondPath, "second missing", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "a-source",
+      "a-version",
+      "b-source",
+      "b-version",
+      "directory-id",
+    ];
+    let now = createdAt;
+    let injectFailure = false;
+    const open = vi.fn(async (root: string) => {
+      const handle = await openCandidateKnowledgeStore(root);
+      if (injectFailure) {
+        const original = handle.retireCandidateKnowledgeDirectoryMember.bind(handle);
+        let retirementCalls = 0;
+        return Object.create(handle, {
+          retireCandidateKnowledgeDirectoryMember: {
+            configurable: true,
+            enumerable: true,
+            value: async (...args: Parameters<typeof original>) => {
+              retirementCalls += 1;
+              if (retirementCalls === 2) {
+                throw new Error("injected retirement failure");
+              }
+              return original(...args);
+            },
+          },
+        }) as CandidateKnowledgeStoreHandle;
+      }
+      return handle;
+    });
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => now,
+      open: open as never,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+    await rm(firstPath);
+    await rm(secondPath);
+    now = changedAt;
+    injectFailure = true;
+
+    const result = await service.applyKnowledgeSourceDirectoryReconciliation({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+      approvedRetirementSourceIds: ["b-source", "a-source"],
+    });
+    expect(result).toEqual({
+      directoryId: imported.directoryId,
+      checkedAt: changedAt,
+      status: "partial",
+      retiredSourceIds: ["a-source"],
+      alreadyRetiredSourceIds: [],
+      failedSourceId: "b-source",
+    });
+    expect(Object.isFrozen(result)).toBe(true);
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        store.getCandidateKnowledgeSourceRetirement("default-ckb-uuid", "a-source"),
+      ).resolves.toEqual({
+        sourceId: "a-source",
+        retiredAt: changedAt,
+        reason: "user-requested",
+      });
+      await expect(
+        store.getCandidateKnowledgeSourceRetirement("default-ckb-uuid", "b-source"),
+      ).resolves.toBeUndefined();
+    } finally {
+      await store.close();
+    }
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "reports incomplete child-symlink scans and refuses reconciliation writes",
+    async () => {
+      const directoryPath = join(temporaryParent, "reconciliation-incomplete-directory");
+      const sourcePath = join(directoryPath, "missing.md");
+      const targetPath = join(temporaryParent, "symlink-target.md");
+      const linkPath = join(directoryPath, "child-link.md");
+      await mkdir(directoryPath);
+      await writeFile(sourcePath, "missing evidence", "utf8");
+      const ingestDirectory = vi.fn(ingestDirectoryImplementation);
+      const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid", "directory-id"];
+      let now = createdAt;
+      const service = createCandidateKnowledgeStoreService({
+        generateId: () => ids.shift() ?? "unexpected-id",
+        now: () => now,
+        ingestDirectory: ingestDirectory as never,
+      });
+      await service.initializeStore({ storeRoot });
+      const imported = await service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath,
+      });
+      if (imported.status !== "complete") throw new Error("expected complete directory import");
+      await rm(sourcePath);
+      await writeFile(targetPath, "private target", "utf8");
+      await symlink(targetPath, linkPath, "file");
+      now = changedAt;
+      ingestDirectory.mockClear();
+
+      const before = await openCandidateKnowledgeStore(storeRoot);
+      const beforeState = {
+        members: await before.listCandidateKnowledgeDirectoryMembers(
+          "default-ckb-uuid",
+          imported.directoryId,
+        ),
+        retirement: await before.getCandidateKnowledgeSourceRetirement(
+          "default-ckb-uuid",
+          "source-uuid",
+        ),
+      };
+      await before.close();
+
+      const preview = await service.previewKnowledgeSourceDirectoryReconciliation({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+      });
+      expect(preview).toMatchObject({
+        directoryId: imported.directoryId,
+        checkedAt: changedAt,
+        members: [{ sourceId: "source-uuid", status: "missing" }],
+        missingCount: 1,
+        newSourceCount: 0,
+        scanStatus: "incomplete",
+        discoveredFileCount: 0,
+        skippedEntryCount: 1,
+      });
+      expect(Object.isFrozen(preview)).toBe(true);
+      expect(JSON.stringify(preview)).not.toContain(targetPath);
+      expect(JSON.stringify(preview)).not.toContain("private target");
+      expect(ingestDirectory).toHaveBeenCalledOnce();
+
+      await expect(
+        service.applyKnowledgeSourceDirectoryReconciliation({
+          storeRoot,
+          knowledgeBaseId: "default-ckb-uuid",
+          directoryId: imported.directoryId,
+          approvedRetirementSourceIds: ["source-uuid"],
+        }),
+      ).rejects.toThrow(
+        "The selected candidate knowledge source directory reconciliation could not be applied.",
+      );
+      expect(ingestDirectory).toHaveBeenCalledTimes(2);
+
+      ingestDirectory.mockRejectedValueOnce(new Error(`unstable input at ${sourcePath}`));
+      const unstableError = await service
+        .applyKnowledgeSourceDirectoryReconciliation({
+          storeRoot,
+          knowledgeBaseId: "default-ckb-uuid",
+          directoryId: imported.directoryId,
+          approvedRetirementSourceIds: ["source-uuid"],
+        })
+        .catch((error: unknown) => error);
+      expect(unstableError).toBeInstanceOf(Error);
+      expect((unstableError as Error).message).toBe(
+        "The selected candidate knowledge source directory reconciliation could not be applied.",
+      );
+      expect((unstableError as Error).message).not.toContain(sourcePath);
+
+      const after = await openCandidateKnowledgeStore(storeRoot);
+      try {
+        await expect(
+          after.listCandidateKnowledgeDirectoryMembers("default-ckb-uuid", imported.directoryId),
+        ).resolves.toEqual(beforeState.members);
+        await expect(
+          after.getCandidateKnowledgeSourceRetirement("default-ckb-uuid", "source-uuid"),
+        ).resolves.toEqual(beforeState.retirement);
+      } finally {
+        await after.close();
+      }
+    },
+  );
 
   it("fails closed when a moved candidate latest managed backing is unavailable", async () => {
     const sourcePath = "/selected/moved.txt";

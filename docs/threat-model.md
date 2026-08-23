@@ -55,9 +55,14 @@ path-free error, and persists only the sensitive origin binding and append-only
 member revision. Its public result exposes no path, filename, checksum,
 content, integrity tuple, or version identity.
 
-File shape never proves ownership. Automatic move inference, full directory
-reconciliation, automatic retirement or deletion, backup/export/restore,
-retrieval integration, and background refresh remain deferred.
+File shape never proves ownership. Complete reconciliation reports
+moved-candidate evidence separately and acts only on explicit retirement
+source IDs. Incomplete scans perform no writes. Selected retirements run in
+deterministic order with root/member/version/origin guards; each marker is
+atomic, and a later failure exposes only path-free partial source IDs.
+Automatic move inference, automatic retirement or deletion,
+backup/export/restore, retrieval integration, and background refresh remain
+deferred.
 
 The count-only structural inventory does not adopt or delete unknown entries.
 The prospective managed-write journal does not retroactively claim legacy
@@ -157,8 +162,8 @@ The following remain open during the **Evidence-backed CV drafting** stage:
   review whenever supported sources or formats expand.
 - Retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector or hybrid retrieval is enabled by default.
-- Automatic moved-origin inference, full directory reconciliation, member
-  lifecycle, physical deletion, backup/export/restore, retrieval integration,
+- Automatic moved-origin inference, automatic retirement, lifecycle readiness,
+  physical deletion, backup/export/restore, retrieval integration,
   application/run CKB selection, and background refresh remain deferred.
 - Plaintext permissions, copied stores, missing/corrupt blobs, writer
   coordination, cleanup approval, migration rollback, and backup destinations
