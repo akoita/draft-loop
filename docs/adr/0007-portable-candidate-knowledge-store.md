@@ -87,8 +87,13 @@ This contract records selection evidence only. Workspace roots remain in the
 sensitive local manifest and are excluded from descriptors, snapshots, run
 history, diagnostics, and provider requests. The contract does not authorize
 provider transmission, assert an index version, or atomically coordinate
-separate CKB stores. Later drift checks can compare the recorded structured
-revisions with current lifecycle readiness before indexing or provider use.
+separate CKB stores. At provider-capable operation boundaries, the application
+compares the recorded structured revisions with current lifecycle readiness.
+Start, resume, and revision revalidate the current local binding and require its
+canonical entries to equal the run's immutable selection, ignoring only the new
+capture timestamp. Drift fails before provider execution or run mutation. This
+is not a cross-store transaction or writer lock; a same-user writer can still
+change a store after the final check.
 
 ### Approved local file and URL intake
 
@@ -281,8 +286,8 @@ ownership and do not authorize adoption or cleanup.
 This decision deliberately leaves the following outside the product workflow:
 
 - normalized facts and lexical, vector, or hybrid CKB indexes;
-- retrieval/index versions, pre-provider drift enforcement, and provider
-  transmission approval for the bound CKB selection;
+- retrieval/index versions and provider transmission approval for the bound CKB
+  selection;
 - CLI and desktop CKB creation, opening, selection, and lifecycle controls;
 - automatic directory removal/rename reconciliation and move inference,
   broader member-retirement policy, background refresh, and time-based
@@ -332,13 +337,13 @@ selection evidence but does not make a run read its content implicitly.
   file does not delete its managed copy. A SQLite-only copy is not a complete
   CKB backup.
 - Retrieval and provider use continue to read workspace-scoped evidence until
-  CKB isolation, lifecycle/index drift, and provider privacy contracts are
+  CKB retrieval isolation, index drift, and provider privacy contracts are
   integrated.
 
 ## Follow-up
 
-- Enforce fail-closed lifecycle and retrieval isolation against the bound
-  selection before CKB data enters a provider request.
+- Bind retrieval and index versions to the fail-closed run selection before CKB
+  data enters a provider request.
 - Define deletion coverage for raw, normalized, indexed, cached, historical,
   exported, and backed-up data.
 - Define writer coordination and visible approval before reconciliation can act

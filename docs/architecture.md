@@ -138,7 +138,11 @@ explicitly named CKBs by runtime store root and pinned logical store/CKB IDs.
 Before each new run, the shared application boundary reopens those stores,
 checks their logical identities and lifecycle readiness, and embeds a freshly
 canonicalized, path-free selection snapshot in the immutable run context.
-Existing runs continue to use the snapshot they originally recorded.
+Existing runs continue to use the snapshot they originally recorded. Before a
+provider-capable start, resume, or revision transition, the application reopens
+the current local binding and compares its complete canonical entries with that
+record. Missing, replaced, unready, or changed evidence fails with a path-free
+review-required error before provider execution or run-state mutation.
 
 The portable store is local and plaintext. Restrictive filesystem permissions
 are best-effort and are not encryption or protection from another process run
@@ -274,11 +278,11 @@ motivated each boundary.
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
-pre-provider lifecycle/index drift enforcement, provider transmission scope,
-CLI/desktop CKB controls, missing-blob repair, writer locks, deletion, cleanup,
-or complete portable backup/export/restore. Until those contracts are
-integrated and validated, the workspace-scoped evidence and retrieval path
-remains authoritative for application runs.
+retrieval-index drift enforcement, provider transmission scope, CLI/desktop CKB
+controls, missing-blob repair, writer locks, deletion, cleanup, or complete
+portable backup/export/restore. Until those contracts are integrated and
+validated, the workspace-scoped evidence and retrieval path remains
+authoritative for application runs.
 
 ## Evidence-grounded evaluator–optimizer
 

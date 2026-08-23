@@ -402,6 +402,47 @@ async function validateConfiguredKnowledgeSelection(
   }
 }
 
+function selectionDriftFailure(): CliUserError {
+  return new CliUserError(
+    "The candidate knowledge selection changed; review is required before provider execution.",
+  );
+}
+
+function selectionSnapshotsMatch(
+  historical: KnowledgeSelectionSnapshot,
+  current: KnowledgeSelectionSnapshot,
+): boolean {
+  return (
+    historical.schemaVersion === current.schemaVersion &&
+    JSON.stringify(historical.entries) === JSON.stringify(current.entries)
+  );
+}
+
+/**
+ * Reopen the configured stores and prove that a persisted run selection still
+ * describes exactly the same lifecycle-ready sources. The capture timestamp
+ * is intentionally excluded: it records when the snapshot was taken, not the
+ * selected evidence itself.
+ */
+async function assertCandidateKnowledgeSelectionStable(
+  root: string,
+  historical: ContextSnapshot["candidateKnowledgeSelection"],
+): Promise<void> {
+  if (historical === undefined) return;
+  try {
+    const config = await readWorkspace(root);
+    const current = await validateConfiguredKnowledgeSelection(config.candidateKnowledgeSelection);
+    if (
+      current === undefined ||
+      !selectionSnapshotsMatch(historical as KnowledgeSelectionSnapshot, current)
+    ) {
+      throw selectionDriftFailure();
+    }
+  } catch {
+    throw selectionDriftFailure();
+  }
+}
+
 /**
  * Read an optional configured string, trimmed and bounded.
  *
@@ -1994,6 +2035,12 @@ async function createRun(
       context: inputs.context,
       budget: runBudget,
     };
+    if (advance) {
+      await assertCandidateKnowledgeSelectionStable(
+        root,
+        inputs.context.candidateKnowledgeSelection,
+      );
+    }
     const snapshot = advance ? await runEngine.start(request) : await runEngine.begin(request);
     await saveTypedHistory(storage, config, snapshot);
     await saveWorkspaceConfig(root, { ...config, latestRunId: runId });
@@ -2056,6 +2103,7 @@ export async function resumeRun(
   const storage = await openStorage(root);
   try {
     const context = await contextForRun(storage, runId);
+    await assertCandidateKnowledgeSelectionStable(root, context.candidateKnowledgeSelection);
     const runEngine = engine(
       storage,
       config,
@@ -2103,6 +2151,9 @@ export async function lifecycleRun(
   const storage = await openStorage(root);
   try {
     const context = await contextForRun(storage, runId);
+    if (action === "revision") {
+      await assertCandidateKnowledgeSelectionStable(root, context.candidateKnowledgeSelection);
+    }
     const runEngine = engine(storage, config, context, false, false, environmentCredentialResolver);
     const snapshot =
       action === "pause"

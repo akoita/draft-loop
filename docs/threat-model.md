@@ -77,8 +77,10 @@ The selection boundary records only portable store, CKB, source, and version
 IDs plus those safe revisions. It requires explicit approval before combining
 CKBs and excludes runtime store roots. A workspace retains roots only in its
 sensitive local manifest, pins logical store/CKB identities, and revalidates
-readiness before each new run records a path-free snapshot. Provider enforcement
-and retrieval-index drift checks remain separate controls.
+readiness before each new run records a path-free snapshot. Provider-capable
+start, resume, and revision operations also require the current canonical
+entries to match the run's immutable record. CKB-content authorization and
+retrieval-index drift checks remain separate controls.
 
 The count-only structural inventory does not adopt or delete unknown entries.
 The prospective managed-write journal does not retroactively claim legacy
@@ -136,7 +138,7 @@ expanded.
 | T-018 | Medium / medium       | A journal entry, matching bytes, or staging-shaped name is mistaken for ownership.                                                     | Journal has opaque operation events but no cleanup/approval field; no retroactive legacy claims or adoption by bytes/shape.                                                            | Add writer locks/leases and visible approval before any reconciliation or cleanup.                                               |
 | T-019 | High / medium         | A retired or otherwise ineligible source remains selectable/retrievable, or logical retirement is presented as deletion.                | Immutable retirement plus a consistent path-free readiness projection blocks retired, archived, stale/adverse, unmanaged, unbound, and directory-conflicted state while preserving evidence. | #80 must bind index state and queries to the projected revision; backup/restore, reactivation, and physical deletion remain future work. |
 | T-020 | High / medium         | Directory traversal follows a symlink, escapes its root, opens special/hidden files, exceeds limits, or writes after failed preflight. | Real non-symlink root, canonical containment, deterministic limits, skipped unsafe entries, complete extraction preflight, path-free results, guarded root rebind and one-source move. | Same-user races remain; additions/removals, automatic reconciliation, automatic deletion, and membership lifecycle are deferred. |
-| T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous source scope, accepts a replaced store, or leaks a local store root through selection history. | Workspace bindings pin logical identities; each new run reopens and validates them before recording a canonical path-free snapshot with explicit combination approval. | Cross-store validation is not atomic; pre-provider lifecycle drift enforcement and retrieval-index version checks remain under #111/#80. |
+| T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous source scope, accepts a replaced store, continues after lifecycle drift, or leaks a local store root through history. | Bindings pin logical identities; new runs record canonical path-free snapshots, and provider-capable operations revalidate and compare complete entries before execution or mutation. | Cross-store validation is not atomic; same-user writes can race the final check, and retrieval-index version checks remain under #80. |
 
 ## Runtime and build-time controls
 
@@ -180,8 +182,8 @@ The following remain open during the **Evidence-backed CV drafting** stage:
 - Retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector or hybrid retrieval is enabled by default.
 - Automatic moved-origin inference, automatic retirement, physical deletion,
-  backup/export/restore, retrieval integration, pre-provider enforcement of
-  bound CKB selections, and background refresh remain deferred.
+  backup/export/restore, retrieval integration, cross-store writer coordination,
+  and background refresh remain deferred.
 - Plaintext permissions, copied stores, missing/corrupt blobs, writer
   coordination, cleanup approval, migration rollback, and backup destinations
   require explicit policy and platform evidence.
