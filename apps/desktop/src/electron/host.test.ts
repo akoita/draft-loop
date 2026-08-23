@@ -3000,9 +3000,112 @@ describe("candidate knowledge native controls", () => {
     expect(knowledgeService.openStore).not.toHaveBeenCalled();
   });
 
+  it("appends one selected file version without exposing paths or content", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-append-host-"));
+    const storeRoot = join(parent, "candidate-knowledge");
+    const initialPath = join(parent, "initial-private-resume.md");
+    const changedPath = join(parent, "changed-private-resume.md");
+    await writeFile(initialPath, "Initial private evidence.\n", "utf8");
+    await writeFile(changedPath, "Changed private evidence.\n", "utf8");
+    const selectedKnowledgeFiles = [initialPath, changedPath, changedPath];
+    try {
+      const host = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceFile: async () => selectedKnowledgeFiles.shift(),
+        },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      const imported = await host.invoke({
+        type: "knowledge.import-file",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      if (!imported.ok) throw new Error("Expected candidate knowledge file intake to succeed.");
+      const sourceId = (imported.value as { sourceId: string }).sourceId;
+
+      const appended = await host.invoke({
+        type: "knowledge.append-file-version",
+        input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+      });
+      expect(appended).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          sourceId,
+          kind: "file",
+          version: 2,
+          created: true,
+        },
+      });
+      expect(JSON.stringify(appended)).not.toContain(parent);
+      expect(JSON.stringify(appended)).not.toContain("changed-private-resume.md");
+      expect(JSON.stringify(appended)).not.toContain("Changed private evidence");
+
+      await expect(
+        host.invoke({
+          type: "knowledge.append-file-version",
+          input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { sourceId, kind: "file", version: 2, created: false },
+      });
+      await expect(
+        host.invoke({
+          type: "knowledge.append-file-version",
+          input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+
+      const chooseKnowledgeSourceFile = vi.fn(async () => changedPath);
+      const reopenedRoots = [storeRoot];
+      const restarted = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => reopenedRoots.shift(),
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceFile,
+        },
+      });
+      await expect(
+        restarted.invoke({
+          type: "knowledge.append-file-version",
+          input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      expect(chooseKnowledgeSourceFile).not.toHaveBeenCalled();
+      await expect(
+        restarted.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId } });
+      await expect(
+        restarted.invoke({
+          type: "knowledge.append-file-version",
+          input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { sourceId, kind: "file", version: 2, created: false },
+      });
+      expect(chooseKnowledgeSourceFile).toHaveBeenCalledOnce();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("imports approved URL sources without exposing their URL or content", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-url-host-"));
     const storeRoot = join(parent, "candidate-knowledge");
+    const wrongKindPath = join(parent, "wrong-kind-private-source.md");
+    await writeFile(wrongKindPath, "Must not append to a URL source.\n", "utf8");
     const resolveHostname = vi.fn(async () => ["93.184.216.34"]);
     const fetchUrl = vi.fn(
       async () =>
@@ -3012,7 +3115,11 @@ describe("candidate knowledge native controls", () => {
     );
     try {
       const host = createNativeHost({
-        dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceFile: async () => wrongKindPath,
+        },
         urlHostnameResolver: resolveHostname,
         urlFetcher: fetchUrl,
       });
@@ -3056,6 +3163,18 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify(imported)).not.toContain("Private candidate evidence");
       expect(resolveHostname).toHaveBeenCalledOnce();
       expect(fetchUrl).toHaveBeenCalledOnce();
+      if (!imported.ok) throw new Error("Expected candidate knowledge URL intake to succeed.");
+      const sourceId = (imported.value as { sourceId: string }).sourceId;
+      const wrongKindAppend = await host.invoke({
+        type: "knowledge.append-file-version",
+        input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+      });
+      expect(wrongKindAppend).toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+      expect(JSON.stringify(wrongKindAppend)).not.toContain(parent);
+      expect(JSON.stringify(wrongKindAppend)).not.toContain("wrong-kind-private-source.md");
       await expect(
         host.invoke({ type: "knowledge.sources", input: { storeId, knowledgeBaseId } }),
       ).resolves.toMatchObject({

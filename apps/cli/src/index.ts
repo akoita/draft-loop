@@ -162,11 +162,12 @@ function writeKnowledgeSourceDuplicateGroups(
   });
 }
 
-function writeKnowledgeSourceImport(
+function writeKnowledgeSourceWriteResult(
   io: ApplicationIo,
   knowledgeBaseId: string,
   result: CandidateKnowledgeSourceWriteResult,
   expectedKind: "file" | "url",
+  expectedSourceId?: string,
 ): void {
   if (
     typeof result !== "object" ||
@@ -177,11 +178,12 @@ function writeKnowledgeSourceImport(
     result.source.knowledgeBaseId !== knowledgeBaseId ||
     typeof result.source.id !== "string" ||
     result.source.id.trim() === "" ||
+    (expectedSourceId !== undefined && result.source.id !== expectedSourceId) ||
     result.source.kind !== expectedKind ||
     !Array.isArray(result.versions) ||
     result.versions.length === 0
   ) {
-    throw new Error("The imported candidate knowledge source result was invalid.");
+    throw new Error("The candidate knowledge source write result was invalid.");
   }
   const versions = [...result.versions].sort(
     (left, right) => right.version - left.version || lexicalCompare(left.id, right.id),
@@ -195,7 +197,7 @@ function writeKnowledgeSourceImport(
     !Number.isSafeInteger(latest.version) ||
     latest.version < 1
   ) {
-    throw new Error("The imported candidate knowledge source result was invalid.");
+    throw new Error("The candidate knowledge source write result was invalid.");
   }
   writeJson(io, {
     knowledgeBaseId,
@@ -592,7 +594,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
             ? {}
             : { displayName: options.displayName as string }),
         });
-        writeKnowledgeSourceImport(io, knowledgeBaseId, result, "file");
+        writeKnowledgeSourceWriteResult(io, knowledgeBaseId, result, "file");
       },
     );
 
@@ -623,7 +625,26 @@ export function createCli(dependencies: CliDependencies = {}): Command {
             ? {}
             : { displayName: options.displayName as string }),
         });
-        writeKnowledgeSourceImport(io, knowledgeBaseId, result, "url");
+        writeKnowledgeSourceWriteResult(io, knowledgeBaseId, result, "url");
+      },
+    );
+
+  knowledgeSource
+    .command("append-file-version")
+    .description("Append one explicitly selected local file as a source version")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque file source id")
+    .argument("<source-path>", "local source file path")
+    .action(
+      async (storeRoot: string, knowledgeBaseId: string, sourceId: string, sourcePath: string) => {
+        const result = await candidateKnowledge.appendKnowledgeSourceFileVersion({
+          storeRoot,
+          knowledgeBaseId,
+          sourceId,
+          sourcePath,
+        });
+        writeKnowledgeSourceWriteResult(io, knowledgeBaseId, result, "file", sourceId);
       },
     );
 

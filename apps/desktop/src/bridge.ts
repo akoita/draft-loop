@@ -28,6 +28,7 @@ export const bridgeCapabilities = [
   "knowledge.inventory",
   "knowledge.import-file",
   "knowledge.import-url",
+  "knowledge.append-file-version",
   "knowledge.select",
   "knowledge.create-base",
   "knowledge.rename-base",
@@ -236,6 +237,19 @@ const knowledgeUrlImportKeys = inputKeys<KnowledgeUrlImportInput>()([
   "url",
   "approved",
   "displayName",
+]);
+
+export interface KnowledgeFileVersionAppendInput extends KnowledgeReadinessInput {
+  readonly sourceId: string;
+  /** The native host owns the file picker; no filesystem path crosses this API. */
+  readonly selection: "native-dialog";
+}
+
+const knowledgeFileVersionAppendKeys = inputKeys<KnowledgeFileVersionAppendInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "selection",
 ]);
 
 export interface KnowledgeSelectionEntry {
@@ -647,6 +661,8 @@ export interface KnowledgeUrlImportResult {
   readonly created: boolean;
 }
 
+export type KnowledgeFileVersionAppendResult = KnowledgeFileImportResult;
+
 export interface KnowledgeSelectionResult {
   readonly workspaceId: string;
   readonly entries: readonly KnowledgeSelectionEntry[];
@@ -714,7 +730,7 @@ const knowledgeInventoryResultKeys = resultKeys<KnowledgeInventoryResult>()([
   "complete",
   "scanLimitReached",
 ]);
-const knowledgeFileImportResultKeys = resultKeys<KnowledgeFileImportResult>()([
+const knowledgeFileWriteResultKeys = resultKeys<KnowledgeFileImportResult>()([
   "storeId",
   "knowledgeBaseId",
   "sourceId",
@@ -965,6 +981,7 @@ export interface BridgeCommandInputMap {
   "knowledge.inventory": KnowledgeInventoryInput;
   "knowledge.import-file": KnowledgeFileImportInput;
   "knowledge.import-url": KnowledgeUrlImportInput;
+  "knowledge.append-file-version": KnowledgeFileVersionAppendInput;
   "knowledge.select": KnowledgeSelectionInput;
   "knowledge.create-base": KnowledgeBaseCreateInput;
   "knowledge.rename-base": KnowledgeBaseRenameInput;
@@ -999,6 +1016,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.inventory": KnowledgeInventoryResult;
   "knowledge.import-file": KnowledgeFileImportResult;
   "knowledge.import-url": KnowledgeUrlImportResult;
+  "knowledge.append-file-version": KnowledgeFileVersionAppendResult;
   "knowledge.select": KnowledgeSelectionResult;
   "knowledge.create-base": KnowledgeStoreResult;
   "knowledge.rename-base": KnowledgeStoreResult;
@@ -1507,6 +1525,19 @@ function validateKnowledgeUrlImportInput(value: unknown): KnowledgeUrlImportInpu
   };
 }
 
+function validateKnowledgeFileVersionAppendInput(value: unknown): KnowledgeFileVersionAppendInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeFileVersionAppendKeys) || input.selection !== "native-dialog") {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    sourceId: identifier(input.sourceId),
+    selection: "native-dialog",
+  };
+}
+
 const maximumKnowledgeSelections = 32;
 
 function validateKnowledgeSelectionEntry(value: unknown): KnowledgeSelectionEntry {
@@ -1879,6 +1910,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "knowledge.import-url",
         input: validateKnowledgeUrlImportInput(command.input),
       };
+    case "knowledge.append-file-version":
+      return {
+        type: "knowledge.append-file-version",
+        input: validateKnowledgeFileVersionAppendInput(command.input),
+      };
     case "knowledge.select":
       return { type: "knowledge.select", input: validateKnowledgeSelectionInput(command.input) };
     case "knowledge.create-base":
@@ -2232,9 +2268,9 @@ function normalizeKnowledgeInventoryResult(value: unknown): KnowledgeInventoryRe
   };
 }
 
-function normalizeKnowledgeFileImportResult(value: unknown): KnowledgeFileImportResult {
+function normalizeKnowledgeFileWriteResult(value: unknown): KnowledgeFileImportResult {
   const result = requireRecord(value);
-  if (!hasOnlyKeys(result, knowledgeFileImportResultKeys)) return invalidInput();
+  if (!hasOnlyKeys(result, knowledgeFileWriteResultKeys)) return invalidInput();
   const version = finiteInteger(result.version, 1_000_000);
   if (version === 0) return invalidInput();
   return {
@@ -2546,7 +2582,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "knowledge.inventory":
       return normalizeKnowledgeInventoryResult(value);
     case "knowledge.import-file":
-      return normalizeKnowledgeFileImportResult(value);
+    case "knowledge.append-file-version":
+      return normalizeKnowledgeFileWriteResult(value);
     case "knowledge.import-url":
       return normalizeKnowledgeUrlImportResult(value);
     case "knowledge.select":

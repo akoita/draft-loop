@@ -50,6 +50,11 @@ CLI output and desktop renderer results expose only opaque source/version
 identity and creation status. URL provenance and fetched bytes remain inside
 the sensitive local CKB store.
 
+Explicit file-version append is also local-only. A CLI path is runtime input,
+and the desktop path remains inside the native picker/host boundary. Neither is
+persisted as a replacement origin or included in generic output. Changed bytes
+become an immutable managed version; identical current bytes create nothing.
+
 ### Managed bytes and immutable versions
 
 Intake and manual append require explicit approval for one local regular file,

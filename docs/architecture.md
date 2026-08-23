@@ -398,6 +398,12 @@ also uses the shared application contract and centralized ingestion boundary:
 the renderer must provide explicit approval, while the host enforces HTTPS,
 public-address resolution, redirect, time, size, and content limits. Its result
 contains only opaque source/version identity, never the URL or fetched content.
+One-source file-version append follows the same adapter split as file intake:
+the CLI accepts an intentional runtime-only path, while the desktop host owns
+the picker. The application/storage boundary atomically guards the current
+version; identical bytes return the current identity and changed bytes append
+immutable lineage without replacing the remembered origin binding. Generic
+results expose only opaque identity and creation status.
 Live provider execution is opt-in and the provider boundary enforces the
 request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain

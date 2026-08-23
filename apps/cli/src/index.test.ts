@@ -207,10 +207,11 @@ function knowledgeSourceManifests(): readonly CandidateKnowledgeSourceManifest[]
 function knowledgeSourceWriteResult(
   created = true,
   kind: "file" | "url" = "file",
+  sourceId = "source-imported",
 ): CandidateKnowledgeSourceWriteResult {
   return {
     source: {
-      id: "source-imported",
+      id: sourceId,
       knowledgeBaseId: "base-one",
       kind,
       displayName: kind === "url" ? "https://private.example/source" : "private-source.md",
@@ -219,7 +220,7 @@ function knowledgeSourceWriteResult(
     versions: [
       {
         id: "version-two",
-        sourceId: "source-imported",
+        sourceId,
         version: 2,
         parentVersionId: "version-one",
         mediaType: "text/markdown",
@@ -229,7 +230,7 @@ function knowledgeSourceWriteResult(
       },
       {
         id: "version-one",
-        sourceId: "source-imported",
+        sourceId,
         version: 1,
         mediaType: "text/markdown",
         checksum: "e".repeat(64),
@@ -695,7 +696,7 @@ describe("candidate knowledge source inspection CLI controls", () => {
 
     await expect(cli.parseAsync(command)).rejects.toBe(failure);
     await expect(cli.parseAsync(command)).rejects.toThrow(
-      "The imported candidate knowledge source result was invalid.",
+      "The candidate knowledge source write result was invalid.",
     );
     expect(dependencies.lines).toEqual([]);
   });
@@ -780,6 +781,127 @@ describe("candidate knowledge source inspection CLI controls", () => {
     expect(JSON.parse(dependencies.lines[0] ?? "{}").created).toBe(false);
   });
 
+  it("maps changed and identical file-version appends to safe latest-version JSON", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-append-store");
+    const knowledgeBaseId = "base-one";
+    const sourceId = "source-append";
+    const changedPath = resolve("private-resume-updated.md");
+    const identicalPath = resolve("private-resume-copy.md");
+    const appendKnowledgeSourceFileVersion = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceWriteResult(true, "file", sourceId))
+      .mockResolvedValueOnce(knowledgeSourceWriteResult(false, "file", sourceId));
+    const knowledgeService = {
+      appendKnowledgeSourceFileVersion,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "append-file-version",
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      changedPath,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "append-file-version",
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      identicalPath,
+    ]);
+
+    expect(appendKnowledgeSourceFileVersion).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      sourcePath: changedPath,
+    });
+    expect(appendKnowledgeSourceFileVersion).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      sourcePath: identicalPath,
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        sourceId,
+        kind: "file",
+        versionId: "version-two",
+        version: 2,
+        created: true,
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        kind: "file",
+        versionId: "version-two",
+        version: 2,
+        created: false,
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(changedPath);
+    expect(output).not.toContain(identicalPath);
+    expect(output).not.toContain("private-source.md");
+    expect(output).not.toContain("text/markdown");
+    expect(output).not.toContain("d".repeat(64));
+  });
+
+  it("propagates append failures and rejects wrong-source or wrong-kind results", async () => {
+    const dependencies = harness();
+    const failure = new Error("file version append failed");
+    const appendKnowledgeSourceFileVersion = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(knowledgeSourceWriteResult(true, "file", "other-source"))
+      .mockResolvedValueOnce(knowledgeSourceWriteResult(true, "url", "source-append"));
+    const knowledgeService = {
+      appendKnowledgeSourceFileVersion,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const command = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "append-file-version",
+      resolve("private-append-store"),
+      "base-one",
+      "source-append",
+      resolve("private-resume.md"),
+    ] as const;
+
+    await expect(cli.parseAsync(command)).rejects.toBe(failure);
+    await expect(cli.parseAsync(command)).rejects.toThrow(
+      "The candidate knowledge source write result was invalid.",
+    );
+    await expect(cli.parseAsync(command)).rejects.toThrow(
+      "The candidate knowledge source write result was invalid.",
+    );
+    expect(appendKnowledgeSourceFileVersion).toHaveBeenCalledTimes(3);
+    expect(dependencies.lines).toEqual([]);
+  });
+
   it("propagates file-import service failures and rejects malformed results safely", async () => {
     const dependencies = harness();
     const failure = new Error("file import failed");
@@ -808,7 +930,7 @@ describe("candidate knowledge source inspection CLI controls", () => {
 
     await expect(cli.parseAsync(command)).rejects.toBe(failure);
     await expect(cli.parseAsync(command)).rejects.toThrow(
-      "The imported candidate knowledge source result was invalid.",
+      "The candidate knowledge source write result was invalid.",
     );
     expect(dependencies.lines).toEqual([]);
   });
