@@ -146,7 +146,11 @@ Runtime store roots are retained only in the sensitive local workspace manifest
 so new runs can reopen the stores. They are excluded from workspace
 descriptors, context snapshots, run history, diagnostics, and provider
 requests. A new run revalidates readiness and logical identity before recording
-its snapshot; an existing run keeps its original immutable record.
+its snapshot; an existing run keeps its original immutable record. Before
+provider-capable start, resume, or revision operations, DraftLoop compares a
+fresh path-free projection from the current local binding with that record.
+Drift requires review before provider execution and does not add roots or
+selection metadata to the provider request.
 
 An approved HTTPS URL is subject to public-address and redirect validation,
 time, response, text-size, content-type, and extraction limits. Exact fetched
@@ -191,11 +195,10 @@ original file or application workspace does not delete its managed CKB copy; a
 SQLite-only backup is incomplete because it omits managed raw blobs.
 
 Complete deletion across raw, unknown, derived, backed-up, and exported data is
-not implemented. CKB backup/export/restore, retrieval-index cleanup,
-pre-provider lifecycle/index enforcement of bound selections, and repair of
-missing blobs remain future privacy boundaries. Users remain responsible for
-selected directories, filesystems, devices, cloud backups, and copies made
-outside DraftLoop.
+not implemented. CKB backup/export/restore, retrieval-index lifecycle and
+cleanup, cross-store writer coordination, and repair of missing blobs remain
+future privacy boundaries. Users remain responsible for selected directories,
+filesystems, devices, cloud backups, and copies made outside DraftLoop.
 
 ## Redaction and logging
 

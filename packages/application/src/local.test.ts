@@ -225,6 +225,52 @@ async function initializeReadyCandidateKnowledgeStore(
   });
 }
 
+async function appendManagedCandidateVersion(
+  storeRoot: string,
+  knowledgeBaseId: string,
+  sourceId: string,
+  sourcePath: string,
+  versionId: string,
+  content: string,
+  createdAt: string,
+): Promise<void> {
+  await writeFile(sourcePath, content, "utf8");
+  const store = await openCandidateKnowledgeStore(storeRoot);
+  try {
+    await store.appendManagedCandidateKnowledgeFileVersion(knowledgeBaseId, sourceId, {
+      id: versionId,
+      sourcePath,
+      mediaType: "text/plain",
+      checksum: createHash("sha256").update(content, "utf8").digest("hex"),
+      sizeBytes: Buffer.byteLength(content, "utf8"),
+      createdAt,
+    });
+  } finally {
+    await store.close();
+  }
+}
+
+async function persistedRunState(
+  root: string,
+  runId: string,
+): Promise<{
+  readonly run: unknown;
+  readonly decisions: readonly unknown[];
+  readonly events: readonly unknown[];
+}> {
+  const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+  try {
+    const config = await workspaceConfig(root);
+    return {
+      run: await storage.getRun(runId),
+      decisions: await storage.listDecisions(runId),
+      events: await storage.listAuditEvents(String(config.id)),
+    };
+  } finally {
+    await storage.close();
+  }
+}
+
 /** A workspace whose author and critic are two distinct local models. */
 async function localPairingWorkspace(prefix: string): Promise<string> {
   const root = await providerWorkspace(prefix);
@@ -1309,6 +1355,11 @@ describe("workspace candidate knowledge selection binding", () => {
       expect(JSON.stringify(firstSelection)).not.toContain(storeRoot);
       expect(JSON.stringify(firstSelection)).not.toContain(candidatePath);
       expect(JSON.stringify(firstSelection)).not.toContain("Candidate evidence");
+      const resumed = await restartedDriver.resume(
+        { root, runId: first.runId, allowProviderData: false },
+        silent,
+      );
+      expect(resumed.state).toBe("awaiting-approval");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -1392,6 +1443,210 @@ describe("workspace candidate knowledge selection binding", () => {
           entries: [{ storeRoot, storeId: "version-store", knowledgeBaseId: "version-ckb" }],
         },
       });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects resume on selection drift before opening a provider adapter", async () => {
+    const root = await localPairingWorkspace("draft-loop-selection-drift-resume-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-resume.md");
+    await writeFile(candidatePath, "Initial selected evidence.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "drift-store",
+      "drift-ckb",
+      "drift-source",
+      "drift-version-one",
+    ]);
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "drift-store", knowledgeBaseId: "drift-ckb" }],
+        },
+        silent,
+      );
+      const begun = await driver.begin({ root, allowProviderData: true }, silent);
+      const before = await persistedRunState(root, begun.runId);
+      const providerFactory = vi.fn(() => {
+        throw new Error("provider adapter must not be opened after selection drift");
+      });
+      await appendManagedCandidateVersion(
+        storeRoot,
+        "drift-ckb",
+        "drift-source",
+        candidatePath,
+        "drift-version-two",
+        "New selected evidence.\n",
+        "2026-08-23T11:00:00.000Z",
+      );
+
+      const restarted = createLocalApplicationDriver({
+        providerClientFactories: { local: providerFactory },
+      });
+      const failure = restarted.resume(
+        { root, runId: begun.runId, allowProviderData: true },
+        silent,
+      );
+      await expect(failure).rejects.toThrow("review is required before provider execution");
+      await expect(failure).rejects.not.toThrow(root);
+      await expect(failure).rejects.not.toThrow("drift-source");
+      await expect(failure).rejects.not.toThrow("drift-version-two");
+      expect(providerFactory).not.toHaveBeenCalled();
+      expect(await persistedRunState(root, begun.runId)).toEqual(before);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a missing or newly unready binding with the same path-free review error", async () => {
+    const root = await localPairingWorkspace("draft-loop-selection-missing-binding-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-missing.md");
+    await writeFile(candidatePath, "Selected evidence.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "missing-store",
+      "missing-ckb",
+      "missing-source",
+      "missing-version",
+    ]);
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "missing-store", knowledgeBaseId: "missing-ckb" }],
+        },
+        silent,
+      );
+      const begun = await driver.begin({ root, allowProviderData: true }, silent);
+      const configPath = join(root, ".draft-loop", "workspace.json");
+      const config = await workspaceConfig(root);
+      const binding = config.candidateKnowledgeSelection;
+      await writeFile(configPath, JSON.stringify({ ...config }, null, 2), "utf8");
+      const missingBindingConfig = JSON.parse(await readFile(configPath, "utf8")) as Record<
+        string,
+        unknown
+      >;
+      delete missingBindingConfig.candidateKnowledgeSelection;
+      await writeFile(configPath, JSON.stringify(missingBindingConfig, null, 2), "utf8");
+
+      const missingBindingFailure = driver.resume(
+        { root, runId: begun.runId, allowProviderData: true },
+        silent,
+      );
+      await expect(missingBindingFailure).rejects.toThrow(
+        "review is required before provider execution",
+      );
+      await expect(missingBindingFailure).rejects.not.toThrow(root);
+
+      await writeFile(
+        configPath,
+        JSON.stringify({ ...missingBindingConfig, candidateKnowledgeSelection: binding }, null, 2),
+        "utf8",
+      );
+      await rm(storeRoot, { recursive: true, force: true });
+      const unreadyFailure = driver.resume(
+        { root, runId: begun.runId, allowProviderData: true },
+        silent,
+      );
+      await expect(unreadyFailure).rejects.toThrow("review is required before provider execution");
+      await expect(unreadyFailure).rejects.not.toThrow("missing-ckb");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a revision request on selection drift without changing run state or decisions", async () => {
+    const root = await providerWorkspace("draft-loop-selection-drift-revision-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-revision.md");
+    await writeFile(candidatePath, "Initial revision evidence.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "revision-store",
+      "revision-ckb",
+      "revision-source",
+      "revision-version-one",
+    ]);
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "revision-store", knowledgeBaseId: "revision-ckb" }],
+        },
+        silent,
+      );
+      const started = await driver.start({ root, allowProviderData: false }, silent);
+      const before = await persistedRunState(root, started.runId);
+      await appendManagedCandidateVersion(
+        storeRoot,
+        "revision-ckb",
+        "revision-source",
+        candidatePath,
+        "revision-version-two",
+        "Changed revision evidence.\n",
+        "2026-08-23T11:00:00.000Z",
+      );
+
+      const failure = driver.lifecycle({ root, action: "revision", runId: started.runId }, silent);
+      await expect(failure).rejects.toThrow("review is required before provider execution");
+      await expect(failure).rejects.not.toThrow(root);
+      await expect(failure).rejects.not.toThrow("revision-source");
+      expect(await persistedRunState(root, started.runId)).toEqual(before);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("allows a legacy context to resume after a binding is added later", async () => {
+    const root = await providerWorkspace("draft-loop-selection-legacy-context-");
+    const driver = createLocalApplicationDriver();
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-legacy.md");
+    await writeFile(candidatePath, "Legacy selection evidence.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "legacy-store",
+      "legacy-ckb",
+      "legacy-source",
+      "legacy-version",
+    ]);
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      const begun = await driver.begin({ root, allowProviderData: false }, silent);
+      expect(
+        await recordedCandidateKnowledgeSelection(root, begun.contextSnapshotId),
+      ).toBeUndefined();
+      await driver.lifecycle({ root, action: "pause", runId: begun.runId }, silent);
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "legacy-store", knowledgeBaseId: "legacy-ckb" }],
+        },
+        silent,
+      );
+
+      const resumed = await driver.resume(
+        { root, runId: begun.runId, allowProviderData: false },
+        silent,
+      );
+      expect(resumed.state).toBe("awaiting-approval");
+      expect(
+        await recordedCandidateKnowledgeSelection(root, resumed.contextSnapshotId),
+      ).toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }
