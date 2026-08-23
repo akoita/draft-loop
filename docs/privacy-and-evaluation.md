@@ -55,11 +55,11 @@ are skipped and counted. Each accepted file becomes an independent ordinary
 `file` source with its own origin binding. A complete import also records the
 canonical directory root and immutable membership hashes only in sensitive
 local SQLite state; partial and legacy runtime-only imports have no membership
-evidence. There is no directory source kind, and complete directory
-reconciliation or membership lifecycle is not implemented. Membership is a stable historical
-mapping captured at binding time: later source version appends, explicit origin
-rebinding, or source retirement do not rewrite it. Actual incremental directory
-scan reconciliation remains deferred.
+evidence. There is no directory source kind; complete directory reconciliation
+and membership lifecycle are not implemented. Membership is a stable historical
+mapping captured at binding or explicit append time: later source version
+appends, explicit origin rebinding, or source retirement do not rewrite it.
+Actual incremental directory scan reconciliation remains deferred.
 A local explicit bounded refresh preview can report only path-free `current`,
 `changed`, `missing`, `retired`, and `origin-conflict` states plus an aggregate
 count of unmatched accepted files. It writes no source, version, membership,
@@ -70,11 +70,15 @@ atomically persists only eligible active `current`, `changed`, and same-member
 `missing` observations. Its result remains path-free and includes the aggregate
 new-file count plus the number recorded; conflicted, retired, and new files are
 reported but skipped. This is evidence of one user-invoked scan, not an applied
-changed-byte refresh. A separate explicit bounded applied operation can append
+changed-byte refresh. A separate explicit bounded add-members operation can
+append each unmatched accepted file as a new managed source and immutable
+member in lexical path order, committing one candidate at a time and returning
+only path-free added source IDs. It creates no refresh observation for new
+members. The explicit bounded applied operation appends
 changed bytes only for active same-member files in source-ID order and records
 current observations for successful changed, current, and same-member-missing
-entries. New-member persistence, rename/removal decisions, root or origin
-rebind, automatic retirement/deletion, adapters, indexing, and background
+entries. Rename/removal decisions, root or origin rebind, automatic
+retirement/deletion, adapters, indexing, and background
 refresh remain deferred; a later member failure returns a path-free partial
 result after earlier member commits.
 
@@ -154,11 +158,11 @@ sensitive local SQLite state: each member stores a SHA-256 hash of its
 normalized relative path, while each accepted file retains its existing
 canonical origin binding. Partial and legacy runtime-only imports have no
 directory membership evidence. The store has a read-only explicit bounded
-directory refresh preview and an applied operation limited to existing active
-same-member changed files, but no new-member persistence, rename/removal
-decisions, directory-root rebind, automatic retirement/deletion,
-or background refresh,
-time-based freshness policy, moved-origin
+directory refresh preview, an explicit add-members operation, and an applied
+operation limited to existing active same-member changed files. Add-members
+persists only unmatched accepted files as append-only new members; rename/removal
+decisions, directory-root rebind, automatic retirement/deletion, background
+refresh, time-based freshness policy, moved-origin
 discovery, automatic duplicate resolution, normalized facts, or retrieval
 indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
 version integrity metadata and returns source/version IDs without checksums,

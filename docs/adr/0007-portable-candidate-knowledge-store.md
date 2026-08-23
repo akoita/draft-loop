@@ -45,16 +45,21 @@ creates each accepted file as an independent managed file source. A complete
 import also persists a sensitive local-only canonical root binding and immutable
 membership rows containing only SHA-256 hashes of normalized relative paths; it
 does not create a directory source kind. Partial imports and legacy runtime-only
-imports have no directory binding or membership evidence. Applied refresh is
-limited to existing active same-member changed files; directory additions and
-removals, root rebind, rename, and member-retirement policy remain deferred. The
-membership is a stable historical mapping captured at binding time: later source
-version appends, explicit origin rebinding, or source retirement do not rewrite
-its rows, and actual incremental scan reconciliation remains deferred.
+imports have no directory binding or membership evidence. An explicit
+add-members operation can append unmatched accepted files from an existing
+binding as new managed file sources and immutable members in deterministic path
+order; existing member states remain report-only and a later candidate failure
+returns a path-free partial result. Applied refresh is limited to existing
+active same-member changed files; directory removals, root rebind, rename, and
+member-retirement policy remain deferred. The membership is a stable historical
+mapping captured at binding or explicit append time: later source version
+appends, explicit origin rebinding, or source retirement do not rewrite its
+rows, and actual incremental scan reconciliation remains deferred.
 A bounded explicit refresh preview now revalidates that persisted root, repeats
 the directory preflight, and reports only path-free member states plus an
-aggregate count of unmatched accepted files. It is read-only: new-member
-persistence, rename/removal decisions, directory-root rebind, automatic
+aggregate count of unmatched accepted files. It is read-only; the separate
+explicit add-members operation owns append-only persistence for those unmatched
+files. Rename/removal decisions, directory-root rebind, automatic
 retirement/deletion, and background refresh remain deferred.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
@@ -151,16 +156,18 @@ succeed, the application atomically records one opaque directory binding and
 one immutable hashed member per source in the same local SQLite transaction.
 The selected root and exact file origins remain sensitive local state; generic
 manifests, diagnostics, journals, inventory, and provider projections expose
-neither. Repeating a bound root is rejected until a future refresh policy
-provides stable source reuse; directory additions, removals, rebind, rename,
-and complete incremental reconciliation remain deferred. The persisted membership remains a
-historical binding-time mapping even when an existing member later gains a
-version, has its origin explicitly rebound, or is retired.
+neither. Repeating a bound root is rejected; explicit add-members provides
+stable source reuse for approved directory additions one candidate at a time,
+while removals, rebind, rename, and complete incremental reconciliation remain
+deferred. The persisted membership remains a
+historical mapping captured at binding or explicit append time even when an
+existing member later gains a version, has its origin explicitly rebound, or is
+retired.
 A separate explicit bounded refresh preview can classify these historical
 members as `current`, `changed`, `missing`, `retired`, or `origin-conflict` and
-count unmatched accepted files without exposing paths or writing state. It does
-not apply any refresh, persist new members, infer renames, or change lifecycle
-state.
+count unmatched accepted files without exposing paths or writing state. The
+preview itself does not apply any refresh, persist new members, infer renames,
+or change lifecycle state.
 A separate explicit bounded directory observation operation reuses that one
 complete scan and records only path-free `current`, `changed`, or `missing`
 observations whose source origin still has the same historical membership and
@@ -176,7 +183,16 @@ successful append and for current or same-member-missing files, while retired,
 origin-conflict, and unmatched files remain report-only. A later member failure
 returns a path-free partial result after already committed members; no new
 member, rename/removal, root-rebind, automatic-retirement, or background policy
-is inferred.
+is inferred by that refresh operation. The add-members operation is separate and
+does not append versions for existing members or create refresh observations for
+new members.
+An explicit add-members operation can approve one complete bounded scan of an
+already bound root and append each unmatched accepted file as a new managed file
+source. Each source, version, canonical origin binding, managed blob, journal
+commit, and immutable directory member is committed atomically per candidate;
+the operation stops on the first later failure and returns only path-free
+partial IDs. It does not create observations for new members or infer renames,
+removals, rebinding, or retirement.
 SQLite migration v13 stores the opaque directory binding and immutable hashed
 members in separate local-only tables with same-CKB foreign-key scope; there is
 no backfill of earlier runtime-only imports.
@@ -376,9 +392,9 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- directory additions/removals, directory rebind, rename/removal, and member
-  retirement policy (the applied operation handles only existing active
-  same-member changed files);
+- directory removals, directory rebind, rename/removal, and member retirement
+  policy (the explicit add-members operation handles only unmatched additions,
+  while applied refresh handles only existing active same-member changed files);
 - redirect-observation history, conditional URL requests, and URL-specific
   failure or time-based readiness policy;
 - background refresh, time-based freshness policy, moved-origin discovery, and

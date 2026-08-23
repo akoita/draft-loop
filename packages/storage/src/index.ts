@@ -258,6 +258,8 @@ export type ManagedCandidateKnowledgeWriteCommitInput =
       readonly version: CandidateKnowledgeSourceVersionInput;
       /** Canonical physical path returned by the verified managed-file capture. */
       readonly originPath?: string;
+      /** Runtime-only directory membership context for a new managed file source. */
+      readonly directoryId?: string;
       readonly urlProvenance?: CandidateKnowledgeSourceUrlProvenanceInput;
     }
   | {
@@ -2564,6 +2566,10 @@ export class SqliteStorage
 
       if (input.kind === "create") {
         const source = normalizeCandidateKnowledgeSourceInput(input.source);
+        const directoryId =
+          input.directoryId === undefined
+            ? undefined
+            : requireNonEmpty(input.directoryId, "managed candidate knowledge directory id").trim();
         if (
           source.id !== operation.sourceId ||
           source.knowledgeBaseId !== operation.knowledgeBaseId
@@ -2589,6 +2595,15 @@ export class SqliteStorage
         ) {
           throw new StorageConflictError(`candidate knowledge source ${source.id} already exists`);
         }
+        const member =
+          directoryId === undefined
+            ? undefined
+            : this.validateManagedCandidateKnowledgeDirectoryMemberCreate(
+                source,
+                requestedVersion,
+                directoryId,
+                originPath,
+              );
         this.requireManagedCandidateKnowledgeWriteState(
           operationId,
           "published",
@@ -2614,7 +2629,15 @@ export class SqliteStorage
             originPath: originPath as string,
             boundAt: requestedVersion.createdAt,
           });
+          if (member !== undefined) {
+            this.insertCandidateKnowledgeDirectoryMember(member);
+          }
         } else {
+          if (directoryId !== undefined) {
+            throw new StorageValidationError(
+              "Managed candidate knowledge directory membership requires a file source",
+            );
+          }
           if (urlProvenance === undefined) {
             throw new StorageValidationError(
               "Candidate knowledge source URL provenance is required",
@@ -4098,10 +4121,7 @@ export class SqliteStorage
           "Candidate knowledge store contains a non-canonical directory root path.",
         );
       }
-      const directoryBoundAt = requireTimestamp(
-        directory.bound_at,
-        `candidate knowledge directory ${directoryId} boundAt`,
-      );
+      requireTimestamp(directory.bound_at, `candidate knowledge directory ${directoryId} boundAt`);
       const members = selectDirectoryMembers.all<{
         readonly directory_id: string;
         readonly candidate_knowledge_base_id: string;
@@ -4152,11 +4172,6 @@ export class SqliteStorage
           rowString(originRow, "bound_at"),
           `candidate knowledge source ${member.source_id} origin binding boundAt`,
         );
-        if (Date.parse(source.createdAt) > Date.parse(directoryBoundAt)) {
-          throw new StorageValidationError(
-            "Candidate knowledge store contains a directory member created after its binding.",
-          );
-        }
       }
     }
     this.validateManagedCandidateKnowledgeWriteJournal();
@@ -5727,6 +5742,91 @@ export class SqliteStorage
         "INSERT INTO candidate_knowledge_sources (id, candidate_knowledge_base_id, kind, display_name, created_at) VALUES (?, ?, ?, ?, ?)",
       )
       .run(record.id, record.knowledgeBaseId, record.kind, record.displayName, record.createdAt);
+  }
+
+  private validateManagedCandidateKnowledgeDirectoryMemberCreate(
+    source: CandidateKnowledgeSourceRecord,
+    version: CandidateKnowledgeSourceVersionInput,
+    directoryId: string,
+    originPath: string | undefined,
+  ): CandidateKnowledgeDirectoryMemberRecord {
+    if (source.kind !== "file") {
+      throw new StorageValidationError(
+        "Managed candidate knowledge directory membership requires a file source",
+      );
+    }
+    const binding = this.database
+      .prepare(
+        `SELECT id, candidate_knowledge_base_id, root_path, bound_at
+         FROM candidate_knowledge_directory_bindings
+         WHERE candidate_knowledge_base_id = ? AND id = ?`,
+      )
+      .get(source.knowledgeBaseId, directoryId);
+    if (binding === undefined) {
+      throw new StorageValidationError("candidate knowledge directory binding was not found");
+    }
+    if (rowString(binding, "id") !== directoryId) {
+      throw new StorageValidationError("candidate knowledge directory binding is malformed");
+    }
+    const rootPath = requireCanonicalAbsolutePath(
+      rowString(binding, "root_path"),
+      "candidate knowledge directory root path",
+    );
+    const boundAt = requireTimestamp(
+      rowString(binding, "bound_at"),
+      `candidate knowledge directory ${directoryId} boundAt`,
+    );
+    if (
+      Date.parse(source.createdAt) < Date.parse(boundAt) ||
+      Date.parse(version.createdAt) < Date.parse(boundAt)
+    ) {
+      throw new StorageValidationError(
+        "candidate knowledge directory member state must not precede its binding",
+      );
+    }
+    const canonicalOriginPath = requireCanonicalAbsolutePath(
+      originPath ?? "",
+      `candidate knowledge source ${source.id} origin path`,
+    );
+    const relativePathHash = directoryMemberRelativePathHash(rootPath, canonicalOriginPath);
+    const existingPath = this.database
+      .prepare(
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members
+         WHERE directory_id = ? AND candidate_knowledge_base_id = ? AND relative_path_hash = ?`,
+      )
+      .get(directoryId, source.knowledgeBaseId, relativePathHash);
+    if (existingPath !== undefined) {
+      throw new StorageConflictError(
+        "candidate knowledge directory member relative path is already bound",
+      );
+    }
+    const existingSource = this.database
+      .prepare(
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members
+         WHERE source_id = ?`,
+      )
+      .get(source.id);
+    if (existingSource !== undefined) {
+      throw new StorageConflictError("candidate knowledge source is already a directory member");
+    }
+    return {
+      directoryId,
+      knowledgeBaseId: source.knowledgeBaseId,
+      sourceId: source.id,
+      relativePathHash,
+    };
+  }
+
+  private insertCandidateKnowledgeDirectoryMember(
+    record: CandidateKnowledgeDirectoryMemberRecord,
+  ): void {
+    this.database
+      .prepare(
+        "INSERT INTO candidate_knowledge_directory_members (directory_id, candidate_knowledge_base_id, source_id, relative_path_hash) VALUES (?, ?, ?, ?)",
+      )
+      .run(record.directoryId, record.knowledgeBaseId, record.sourceId, record.relativePathHash);
   }
 
   private insertCandidateKnowledgeSourceVersion(

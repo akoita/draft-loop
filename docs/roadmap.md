@@ -181,18 +181,26 @@ skipped entries are counted. A complete import now persists an opaque local
 directory-root binding plus immutable SHA-256 membership hashes for accepted
 files, while partial and legacy runtime-only imports have no directory
 membership evidence. The selected root and exact origins remain sensitive local
-state outside generic projections. Incremental add/remove refresh, rebind,
-rename, and member-retirement policy remain unimplemented. Membership is a
-stable historical mapping captured at binding time; later source version
-appends, explicit origin rebinding, or source retirement do not rewrite it.
+state outside generic projections. Incremental removal/rename refresh, root
+rebind, and member-retirement policy remain unimplemented. Membership is a
+stable historical mapping captured at binding or explicit append time; later
+source version appends, explicit origin rebinding, or source retirement do not
+rewrite it.
 Actual incremental directory scan reconciliation remains deferred.
+An explicit bounded add-members operation can rescan an existing binding and
+append unmatched accepted files as new managed file sources and immutable
+members in deterministic path order. Each candidate commits its source,
+version, origin binding, managed bytes, journal event, and membership atomically;
+later failures return path-free partial added IDs, and new members receive no
+refresh observations. Removal, rename, root rebind, and member-retirement
+policy remain deferred.
 An explicit local bounded read-only refresh preview now revalidates the stored
 root, repeats the intake preflight, and returns path-free `current`, `changed`,
 `missing`, `retired`, or `origin-conflict` member states plus an aggregate count
 of unmatched accepted files. It performs no source, version, membership,
 observation, or lifecycle writes; scan-level unreadable, unstable, limit, and
 extraction failures fail closed. Applied refresh is limited to existing active
-same-member changed files; new-member persistence, rename/removal decisions,
+same-member changed files; rename/removal decisions, member-retirement lifecycle,
 directory-root rebind, automatic retirement/deletion, adapters, indexing, and
 background refresh remain deferred.
 An explicit bounded observation-only directory refresh now reuses one complete
@@ -201,22 +209,23 @@ scan and atomically records path-free `current`, `changed`, and same-member
 new files remain report-only; the operation allocates no IDs and writes no
 bytes, versions, membership, origin bindings, retirements, or journal events.
 This is not an applied changed-byte refresh, and reconciliation/lifecycle policy
-remains deferred. A separate explicit bounded applied operation can append
-changed bytes only for active same-member files in deterministic source-ID order,
-record current observations for successful changed/current/missing members, and
-return a path-free partial result after a later member failure. New-member
-persistence, rename/removal, root rebind, automatic retirement/deletion,
+remains deferred. The explicit bounded applied operation appends changed bytes
+only for active same-member files in deterministic source-ID order, records
+current observations for successful changed/current/missing members, and
+returns a path-free partial result after a later member failure. Rename/removal,
+root rebind, automatic retirement/deletion,
 adapters, indexing, and background refresh remain deferred.
 The store retains no
 exact host paths or URLs in manifests, descriptors, journals, inventory,
 diagnostics, or application/provider projections, and retains no filename
 provenance or filename-derived physical names. Exact URLs exist only in the
 sensitive local provenance table. It remains independent of application workspaces and run
-history. It does not persist new members, infer renames, decide removals, rebind
-a directory root, retire/delete automatically,
-refresh in the background, apply a time-based freshness policy, automatically
-discover moved origins, expose refresh/rebind/duplicate controls through product
-adapters, or maintain directory membership lifecycle;
+history. Append-only new-member persistence is available only through the
+explicit bounded add-members operation. It does not infer renames, decide
+removals, rebind a directory root, retire/delete automatically, refresh in the
+background, apply a time-based freshness policy, automatically discover moved
+origins, expose refresh/rebind/duplicate controls through product adapters, or
+maintain directory membership lifecycle;
 automatically resolve duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
@@ -250,12 +259,14 @@ v13 adds the sensitive local-only directory-root binding and
 immutable member tables for complete imports. It stores only SHA-256 hashes of
 normalized relative member paths, derives them from existing canonical file
 origin bindings, and records no plaintext relative paths in membership. There
-is no backfill or directory source kind. Membership is stable historical
-binding-time state and is not rewritten by later source versioning, explicit
-origin rebinding, or retirement. Directory rebind, rename/removal lifecycle,
-and incremental scan reconciliation remain deferred. The read-only preview and
-bounded existing-member applied refresh are component implementations only; the
-v0.7 stage remains at component implementation.
+is no backfill or directory source kind. Membership is stable historical state
+captured at binding or explicit append time and is not rewritten by later source
+versioning, explicit origin rebinding, or retirement. Directory rebind,
+rename/removal lifecycle,
+and incremental scan reconciliation remain deferred. The read-only preview,
+bounded existing-member applied refresh, and explicit add-members operation are
+component implementations only; the v0.7 stage remains at component
+implementation.
 Journal records exclude origin paths, filenames, labels, checksums, source content,
 provider data, diagnostic projections, cleanup tokens, and approvals, and
 journal IDs are not exposed. Legacy v6 writes and entries without prospective
@@ -566,6 +577,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                                       | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Added explicit bounded directory member addition as the twelfth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                                  | One complete scan of an existing binding can now append unmatched accepted files as independent managed sources and immutable hashed members in lexical path order, one candidate atomically at a time, with path-free added IDs and partial results; refresh observations, rename/removal, root rebind, retirement, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added explicit applied bounded directory refresh for existing active same-member files as the eleventh #110 slice without advancing the v0.7 stage beyond component implementation                                                                 | One complete local scan can now append changed bytes in deterministic source-ID order through guarded managed-file publication, persist current observations for successful changed/current/missing members, and return a path-free partial result after a later member failure; new-member persistence, reconciliation, lifecycle, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added explicit bounded directory observation recording as the tenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                              | One complete local scan can now atomically persist path-free current/changed/same-member-missing observations for eligible active members with one checked-at timestamp; retired, origin-conflict, and new files remain report-only, and changed-byte application, new-member persistence, reconciliation, lifecycle, adapters, indexing, and background refresh remain pending.                                                                                                                                            |
 | 2026-08-23 | Added an explicit bounded read-only directory refresh preview as the ninth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                       | A persisted binding can now be revalidated and rescanned into path-free current/changed/missing/retired/origin-conflict member states plus an aggregate new-source count; no source, version, membership, observation, or lifecycle state is written, and applied refresh, reconciliation, adapters, indexing, and background refresh remain pending.                                                                                                                                                      |

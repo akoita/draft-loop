@@ -1090,6 +1090,213 @@ describe("candidate knowledge store application service", () => {
     }
   });
 
+  it("adds unmatched directory members deterministically, supports retry after partial failure, and allocates no IDs for existing files", async () => {
+    const directoryPath = join(temporaryParent, "add-members-directory");
+    const initialPath = join(directoryPath, "m-initial.md");
+    const firstNewPath = join(directoryPath, "a-new.md");
+    const secondNewPath = join(directoryPath, "z-new.md");
+    await mkdir(directoryPath);
+    await writeFile(initialPath, "initial", "utf8");
+    const generatedIds = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "initial-source",
+      "initial-version",
+      "directory-binding",
+      "a-source",
+      "a-version",
+      "z-source",
+      "z-version",
+    ];
+    const generateId = vi.fn(() => generatedIds.shift() ?? "unexpected-id");
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+
+    await writeFile(firstNewPath, "first new", "utf8");
+    await writeFile(secondNewPath, "second new", "utf8");
+    now = changedAt;
+    const beforeAddIdCount = generateId.mock.calls.length;
+    await expect(
+      service.addKnowledgeSourceDirectoryMembers({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        options: { maxScannedEntries: 1 },
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory members could not be added.",
+    );
+    expect(generateId).toHaveBeenCalledTimes(beforeAddIdCount);
+    const afterScanFailure = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        afterScanFailure.listCandidateKnowledgeDirectoryMembers(
+          "default-ckb-uuid",
+          imported.directoryId,
+        ),
+      ).resolves.toHaveLength(1);
+      await expect(
+        afterScanFailure.listCandidateKnowledgeSources("default-ckb-uuid"),
+      ).resolves.toHaveLength(1);
+    } finally {
+      await afterScanFailure.close();
+    }
+
+    const added = await service.addKnowledgeSourceDirectoryMembers({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+    });
+    expect(added).toEqual({
+      directoryId: imported.directoryId,
+      checkedAt: changedAt,
+      members: [{ sourceId: "initial-source", status: "current" }],
+      newSourceCount: 2,
+      scannedEntryCount: 3,
+      discoveredFileCount: 3,
+      skippedEntryCount: 0,
+      addedSourceIds: ["a-source", "z-source"],
+      addedSourceCount: 2,
+      status: "complete",
+    });
+    expect(Object.isFrozen(added)).toBe(true);
+    expect(Object.isFrozen(added.members)).toBe(true);
+    expect(Object.isFrozen(added.addedSourceIds)).toBe(true);
+    expect(JSON.stringify(added)).not.toContain(temporaryParent);
+    expect(JSON.stringify(added)).not.toContain("first new");
+    expect(generateId).toHaveBeenCalledTimes(9);
+
+    const noOp = await service.addKnowledgeSourceDirectoryMembers({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+    });
+    expect(noOp).toMatchObject({
+      directoryId: imported.directoryId,
+      newSourceCount: 0,
+      addedSourceIds: [],
+      addedSourceCount: 0,
+      status: "complete",
+    });
+    expect(generateId).toHaveBeenCalledTimes(9);
+  });
+
+  it("returns a path-free partial add result and retries only the remaining unmatched member", async () => {
+    const directoryPath = join(temporaryParent, "partial-add-members-directory");
+    const initialPath = join(directoryPath, "initial.md");
+    const firstNewPath = join(directoryPath, "a-new.md");
+    const secondNewPath = join(directoryPath, "b-new.md");
+    await mkdir(directoryPath);
+    await writeFile(initialPath, "initial", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "initial-source",
+      "initial-version",
+      "directory-binding",
+    ];
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+    await writeFile(firstNewPath, "first new", "utf8");
+    await writeFile(secondNewPath, "second new", "utf8");
+    now = changedAt;
+
+    const realStore = await openCandidateKnowledgeStore(storeRoot);
+    let createCalls = 0;
+    const create = vi.fn<
+      CandidateKnowledgeStoreHandle["createManagedCandidateKnowledgeFileSource"]
+    >(async (source, version) => {
+      createCalls += 1;
+      if (createCalls === 2) throw new Error("injected member failure");
+      return realStore.createManagedCandidateKnowledgeFileSource(source, version);
+    });
+    const close = vi.fn(async () => realStore.close());
+    const partialService = createCandidateKnowledgeStoreService({
+      generateId: vi
+        .fn()
+        .mockReturnValueOnce("a-source")
+        .mockReturnValueOnce("a-version")
+        .mockReturnValueOnce("b-source")
+        .mockReturnValueOnce("b-version"),
+      now: () => now,
+      open: vi.fn(
+        async () =>
+          ({
+            ...realStore,
+            createManagedCandidateKnowledgeFileSource: create,
+            close,
+          }) as unknown as CandidateKnowledgeStoreHandle,
+      ),
+    });
+    const partial = await partialService.addKnowledgeSourceDirectoryMembers({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+    });
+    expect(partial).toEqual({
+      directoryId: imported.directoryId,
+      checkedAt: changedAt,
+      members: [{ sourceId: "initial-source", status: "current" }],
+      newSourceCount: 2,
+      scannedEntryCount: 3,
+      discoveredFileCount: 3,
+      skippedEntryCount: 0,
+      addedSourceIds: ["a-source"],
+      addedSourceCount: 1,
+      status: "partial",
+    });
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledOnce();
+    const retryIds = vi
+      .fn()
+      .mockReturnValueOnce("b-retry-source")
+      .mockReturnValueOnce("b-retry-version");
+    const retryService = createCandidateKnowledgeStoreService({
+      generateId: retryIds,
+      now: () => now,
+    });
+    const retry = await retryService.addKnowledgeSourceDirectoryMembers({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+    });
+    expect(retry).toMatchObject({
+      newSourceCount: 1,
+      addedSourceIds: ["b-retry-source"],
+      addedSourceCount: 1,
+      status: "complete",
+    });
+    expect(retryIds).toHaveBeenCalledTimes(2);
+    const reopened = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        reopened.listCandidateKnowledgeDirectoryMembers("default-ckb-uuid", imported.directoryId),
+      ).resolves.toHaveLength(3);
+    } finally {
+      await reopened.close();
+    }
+  });
+
   it("classifies an active member without an origin binding as an origin conflict", async () => {
     const sourcePath = "/selected/current.txt";
     const normalized = successfulIngestion(sourcePath, {

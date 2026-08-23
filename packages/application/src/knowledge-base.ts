@@ -136,6 +136,13 @@ export interface ApplyKnowledgeSourceDirectoryRefreshCommand {
   readonly options?: DirectoryIngestionOptions;
 }
 
+export interface AddKnowledgeSourceDirectoryMembersCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly options?: DirectoryIngestionOptions;
+}
+
 export interface ImportKnowledgeSourceUrlCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -371,6 +378,26 @@ export type ApplyKnowledgeSourceDirectoryRefreshResult =
   | ApplyKnowledgeSourceDirectoryRefreshCompleteResult
   | ApplyKnowledgeSourceDirectoryRefreshPartialResult;
 
+export interface AddKnowledgeSourceDirectoryMembersBaseResult
+  extends PreviewKnowledgeSourceDirectoryRefreshResult {
+  readonly addedSourceIds: readonly string[];
+  readonly addedSourceCount: number;
+}
+
+export interface AddKnowledgeSourceDirectoryMembersCompleteResult
+  extends AddKnowledgeSourceDirectoryMembersBaseResult {
+  readonly status: "complete";
+}
+
+export interface AddKnowledgeSourceDirectoryMembersPartialResult
+  extends AddKnowledgeSourceDirectoryMembersBaseResult {
+  readonly status: "partial";
+}
+
+export type AddKnowledgeSourceDirectoryMembersResult =
+  | AddKnowledgeSourceDirectoryMembersCompleteResult
+  | AddKnowledgeSourceDirectoryMembersPartialResult;
+
 export interface CandidateKnowledgeStoreService {
   readonly initializeStore: (
     command: InitializeStoreCommand,
@@ -409,6 +436,9 @@ export interface CandidateKnowledgeStoreService {
   readonly applyKnowledgeSourceDirectoryRefresh: (
     command: ApplyKnowledgeSourceDirectoryRefreshCommand,
   ) => Promise<ApplyKnowledgeSourceDirectoryRefreshResult>;
+  readonly addKnowledgeSourceDirectoryMembers: (
+    command: AddKnowledgeSourceDirectoryMembersCommand,
+  ) => Promise<AddKnowledgeSourceDirectoryMembersResult>;
   readonly importKnowledgeSourceUrl: (
     command: ImportKnowledgeSourceUrlCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
@@ -533,6 +563,10 @@ function applyDirectoryRefreshFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory refresh could not be applied.",
   );
+}
+
+function addDirectoryMembersFailure(): Error {
+  return new Error("The selected candidate knowledge source directory members could not be added.");
 }
 
 function importUrlFailure(): Error {
@@ -813,6 +847,7 @@ interface CollectedDirectoryRefresh {
     string,
     NonNullable<DirectoryIngestionResult["sources"][number]>
   >;
+  readonly unmatchedSources: readonly NonNullable<DirectoryIngestionResult["sources"][number]>[];
 }
 
 function validatePreviewDirectoryOriginRelation(
@@ -915,6 +950,7 @@ async function collectDirectoryRefresh(
     string,
     NonNullable<DirectoryIngestionResult["sources"][number]>
   >();
+  const unmatchedSources: NonNullable<DirectoryIngestionResult["sources"][number]>[] = [];
   let newSourceCount = 0;
   for (const normalized of preflight.sources) {
     const sourcePath = normalized.source.path;
@@ -929,6 +965,7 @@ async function collectDirectoryRefresh(
     );
     if (matched === undefined) {
       newSourceCount += 1;
+      unmatchedSources.push(normalized);
       continue;
     }
     if (
@@ -1037,6 +1074,9 @@ async function collectDirectoryRefresh(
     members: collectedMembers,
     newSourceCount,
     matchedSources,
+    unmatchedSources: [...unmatchedSources].sort((left, right) =>
+      lexicalCompare(left.source.path, right.source.path),
+    ),
   };
 }
 
@@ -1092,6 +1132,29 @@ function applyDirectoryRefreshResult(
           failedStatus: failure.status,
         },
   );
+}
+
+function addDirectoryMembersResult(
+  collected: CollectedDirectoryRefresh,
+  addedSourceIds: readonly string[],
+  status: "complete" | "partial",
+): AddKnowledgeSourceDirectoryMembersResult {
+  return Object.freeze({
+    directoryId: collected.directoryId,
+    checkedAt: collected.checkedAt,
+    members: Object.freeze(
+      collected.members.map((member) =>
+        Object.freeze({ sourceId: member.sourceId, status: member.status }),
+      ),
+    ),
+    newSourceCount: collected.newSourceCount,
+    scannedEntryCount: collected.preflight.scannedEntryCount,
+    discoveredFileCount: collected.preflight.discoveredFileCount,
+    skippedEntryCount: collected.preflight.skippedEntryCount,
+    addedSourceIds: Object.freeze([...addedSourceIds]),
+    addedSourceCount: addedSourceIds.length,
+    status,
+  });
 }
 
 function validateRecordedDirectoryRefreshObservations(
@@ -1634,6 +1697,39 @@ function validateAppliedDirectoryAppendResult(
     result.version.createdAt !== latestVersion.createdAt
   ) {
     throw applyDirectoryRefreshFailure();
+  }
+}
+
+function validateAddedDirectorySourceWriteResult(
+  result: Awaited<
+    ReturnType<CandidateKnowledgeStoreHandle["createManagedCandidateKnowledgeFileSource"]>
+  >,
+  requestedSource: CandidateKnowledgeSource,
+  requestedVersion: CandidateKnowledgeSourceVersionRecord,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    typeof result.source !== "object" ||
+    result.source === null ||
+    typeof result.version !== "object" ||
+    result.version === null ||
+    result.created !== true ||
+    result.source.id !== requestedSource.id ||
+    result.source.knowledgeBaseId !== requestedSource.knowledgeBaseId ||
+    result.source.kind !== "file" ||
+    result.source.displayName !== requestedSource.displayName ||
+    result.source.createdAt !== requestedSource.createdAt ||
+    result.version.id !== requestedVersion.id ||
+    result.version.sourceId !== requestedVersion.sourceId ||
+    result.version.version !== 1 ||
+    result.version.parentVersionId !== null ||
+    result.version.mediaType !== requestedVersion.mediaType ||
+    result.version.checksum !== requestedVersion.checksum ||
+    result.version.sizeBytes !== requestedVersion.sizeBytes ||
+    result.version.createdAt !== requestedVersion.createdAt
+  ) {
+    throw addDirectoryMembersFailure();
   }
 }
 
@@ -2679,6 +2775,83 @@ export function createCandidateKnowledgeStoreService(
         throw applyDirectoryRefreshFailure();
       }
     },
+    addKnowledgeSourceDirectoryMembers: async (command) => {
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let directoryId: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
+      } catch {
+        throw addDirectoryMembersFailure();
+      }
+
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const collected = await collectDirectoryRefresh(
+              handle,
+              resolved,
+              storeRoot,
+              knowledgeBaseId,
+              directoryId,
+              command.options,
+            );
+            const addedSourceIds: string[] = [];
+            const createdAt = collected.checkedAt;
+            for (const normalized of collected.unmatchedSources) {
+              try {
+                const sourceId = requireText(
+                  resolved.generateId(),
+                  "Candidate knowledge source id",
+                );
+                const versionId = requireText(
+                  resolved.generateId(),
+                  "Candidate knowledge source version id",
+                );
+                const source = createCandidateKnowledgeSource(
+                  sourceId,
+                  {
+                    knowledgeBaseId,
+                    kind: "file",
+                    displayName: sourceDisplayName(normalized.source.path),
+                  },
+                  createdAt,
+                );
+                const requestedVersion: CandidateKnowledgeSourceVersionRecord = {
+                  id: versionId,
+                  sourceId,
+                  version: 1,
+                  parentVersionId: null,
+                  mediaType: normalized.mediaType,
+                  checksum: normalized.checksum,
+                  sizeBytes: normalized.sizeBytes,
+                  createdAt,
+                };
+                const result = await handle.createManagedCandidateKnowledgeFileSource(source, {
+                  id: versionId,
+                  sourcePath: normalized.source.path,
+                  mediaType: normalized.mediaType,
+                  checksum: normalized.checksum,
+                  sizeBytes: normalized.sizeBytes,
+                  createdAt,
+                  directoryId,
+                });
+                validateAddedDirectorySourceWriteResult(result, source, requestedVersion);
+                addedSourceIds.push(sourceId);
+              } catch {
+                return addDirectoryMembersResult(collected, addedSourceIds, "partial");
+              }
+            }
+            return addDirectoryMembersResult(collected, addedSourceIds, "complete");
+          },
+        );
+      } catch {
+        throw addDirectoryMembersFailure();
+      }
+    },
     importKnowledgeSourceUrl: async (command) => {
       if (command.approved !== true) throw importUrlFailure();
       const storeRoot = requireStoreRoot(command.storeRoot);
@@ -3202,6 +3375,7 @@ export const recordKnowledgeSourceDirectoryRefresh =
   defaultService.recordKnowledgeSourceDirectoryRefresh;
 export const applyKnowledgeSourceDirectoryRefresh =
   defaultService.applyKnowledgeSourceDirectoryRefresh;
+export const addKnowledgeSourceDirectoryMembers = defaultService.addKnowledgeSourceDirectoryMembers;
 export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const refreshKnowledgeSourceFromOrigin = defaultService.refreshKnowledgeSourceFromOrigin;
 export const refreshKnowledgeSourceUrl = defaultService.refreshKnowledgeSourceUrl;
