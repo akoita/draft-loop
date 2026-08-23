@@ -133,6 +133,13 @@ changed, missing, inaccessible, and unbound observations block but do not become
 time-based freshness claims. The projection neither reads live origins nor
 modifies sources or indexes.
 
+An explicit selection snapshot may retain only the portable store ID, CKB ID,
+exact selected source/version IDs, capture time, and the same safe structured
+lifecycle revision. Combining more than one CKB requires a separate explicit
+approval before opening a store. Store roots, human-readable source-identifying
+fields, and content-derived fields remain outside the snapshot. The record is
+audit and future drift evidence, not consent to transmit content to a provider.
+
 An approved HTTPS URL is subject to public-address and redirect validation,
 time, response, text-size, content-type, and extraction limits. Exact fetched
 bytes and original/final URL provenance remain sensitive local state. A new
@@ -176,10 +183,11 @@ original file or application workspace does not delete its managed CKB copy; a
 SQLite-only backup is incomplete because it omits managed raw blobs.
 
 Complete deletion across raw, unknown, derived, backed-up, and exported data is
-not implemented. CKB backup/export/restore, retrieval-index cleanup, app/run
-CKB selection, and repair or reconciliation of missing blobs remain future
-privacy boundaries. Users remain responsible for selected directories,
-filesystems, devices, cloud backups, and copies made outside DraftLoop.
+not implemented. CKB backup/export/restore, retrieval-index cleanup,
+workspace/run binding and enforcement of CKB selections, and repair of missing
+blobs remain future privacy boundaries. Users remain responsible for selected
+directories, filesystems, devices, cloud backups, and copies made outside
+DraftLoop.
 
 ## Redaction and logging
 

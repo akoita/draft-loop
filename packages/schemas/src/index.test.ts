@@ -9,6 +9,7 @@ import {
   agentContextReferenceSchema,
   candidateKnowledgeBaseSchema,
   candidateKnowledgeBaseStateSchema,
+  candidateKnowledgeSelectionSnapshotSchema,
   candidateKnowledgeSourceKindSchema,
   candidateKnowledgeSourceRetirementReasonSchema,
   candidateKnowledgeSourceRetirementSchema,
@@ -82,6 +83,37 @@ function validInput(): ContextSnapshotInput {
   };
 }
 
+function validSelection() {
+  return {
+    capturedAt: "2026-08-12T10:00:00.000Z",
+    entries: [
+      {
+        storeId: "store-z",
+        knowledgeBaseId: "knowledge-z",
+        sources: [
+          {
+            sourceId: "source-z",
+            versionId: "version-z",
+            lifecycleRevision: {
+              knowledgeBaseState: "active" as const,
+              knowledgeBaseArchivedAt: null,
+              versionId: "version-z",
+              version: 1,
+              createdAt: "2026-08-12T09:00:00.000Z",
+              managed: true,
+              originBoundAt: "2026-08-12T09:00:00.000Z",
+              observation: null,
+              retirement: null,
+              provenanceFetchedAt: null,
+              directory: null,
+            },
+          },
+        ],
+      },
+    ],
+  };
+}
+
 describe("canonical context snapshot schemas", () => {
   it("accepts a domain-created snapshot without losing canonical data", () => {
     const snapshot = createContextSnapshot(validInput());
@@ -91,6 +123,80 @@ describe("canonical context snapshot schemas", () => {
     expect(parsed.schemaVersion).toBe(1);
     expect(parsed.evidenceManifest[0]?.checksum).toBe(checksum);
     expect(parsed.modelConfiguration.author.modelId).toBe("claude-opus-exact");
+  });
+
+  it("canonicalizes and round-trips optional candidate knowledge selection evidence", () => {
+    const snapshot = createContextSnapshot({
+      ...validInput(),
+      candidateKnowledgeSelection: validSelection(),
+    });
+    const parsed = contextSnapshotSchema.parse(snapshot);
+    const serialized = serializeContextSnapshot(snapshot);
+    const roundTripped = parseContextSnapshot(serialized);
+
+    expect(parsed.candidateKnowledgeSelection).toEqual(snapshot.candidateKnowledgeSelection);
+    expect(roundTripped.candidateKnowledgeSelection).toEqual(snapshot.candidateKnowledgeSelection);
+    expect(Object.isFrozen(parsed.candidateKnowledgeSelection)).toBe(true);
+    expect(Object.isFrozen(roundTripped.candidateKnowledgeSelection?.entries[0])).toBe(true);
+    expect(
+      candidateKnowledgeSelectionSnapshotSchema.parse({
+        ...validSelection(),
+        entries: [...validSelection().entries].reverse(),
+      }).entries[0]?.storeId,
+    ).toBe("store-z");
+  });
+
+  it("rejects ineligible serialized or contextual selection evidence", () => {
+    const base = validSelection();
+    const baseEntry = base.entries[0];
+    const source = base.entries[0]?.sources[0];
+    if (baseEntry === undefined || source === undefined) {
+      throw new Error("The selection fixture must contain a source.");
+    }
+    const rejectedRevisions = [
+      {
+        ...source.lifecycleRevision,
+        knowledgeBaseState: "archived" as const,
+        knowledgeBaseArchivedAt: "2026-08-12T11:00:00.000Z",
+      },
+      { ...source.lifecycleRevision, managed: false },
+      {
+        ...source.lifecycleRevision,
+        retirement: {
+          retiredAt: "2026-08-12T11:00:00.000Z" as const,
+          reason: "user-requested" as const,
+        },
+      },
+      {
+        ...source.lifecycleRevision,
+        observation: {
+          observedVersionId: source.versionId,
+          status: "changed" as const,
+          checkedAt: "2026-08-12T11:00:00.000Z",
+          lastRefreshedVersionId: null,
+          lastRefreshedAt: null,
+          stale: true,
+        },
+      },
+    ];
+
+    for (const lifecycleRevision of rejectedRevisions) {
+      const rejected = {
+        ...base,
+        entries: [
+          {
+            ...baseEntry,
+            sources: [{ ...source, lifecycleRevision }],
+          },
+        ],
+      };
+      expect(() => candidateKnowledgeSelectionSnapshotSchema.parse(rejected)).toThrow();
+      const contextual = {
+        ...createContextSnapshot(validInput()),
+        candidateKnowledgeSelection: rejected,
+      };
+      expect(() => contextSnapshotSchema.parse(contextual)).toThrow();
+    }
   });
 
   it("round-trips an optional versioned writing policy", () => {

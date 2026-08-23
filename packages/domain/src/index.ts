@@ -351,6 +351,95 @@ export function createCandidateKnowledgeSourceVersion(
   };
 }
 
+export const candidateKnowledgeSelectionSnapshotSchemaVersion = 1 as const;
+export type CandidateKnowledgeSelectionSnapshotSchemaVersion =
+  typeof candidateKnowledgeSelectionSnapshotSchemaVersion;
+
+export const candidateKnowledgeSelectionLifecycleObservationStatuses = [
+  "current",
+  "changed",
+  "missing",
+  "inaccessible",
+  "unbound",
+] as const;
+export type CandidateKnowledgeSelectionLifecycleObservationStatus =
+  (typeof candidateKnowledgeSelectionLifecycleObservationStatuses)[number];
+
+export interface CandidateKnowledgeSelectionLifecycleObservationRevision {
+  readonly observedVersionId: string;
+  readonly status: CandidateKnowledgeSelectionLifecycleObservationStatus;
+  readonly checkedAt: string;
+  readonly lastRefreshedVersionId: string | null;
+  readonly lastRefreshedAt: string | null;
+  readonly stale: boolean;
+}
+
+export interface CandidateKnowledgeSelectionLifecycleRetirementRevision {
+  readonly retiredAt: string;
+  readonly reason: "user-requested";
+}
+
+export interface CandidateKnowledgeSelectionLifecycleDirectoryRevision {
+  readonly directoryId: string;
+  readonly rootRevision: number;
+  readonly rootBoundAt: string;
+  readonly memberRevision: number;
+  readonly memberBoundAt: string;
+}
+
+export interface CandidateKnowledgeSelectionLifecycleRevision {
+  readonly knowledgeBaseState: CandidateKnowledgeBaseState;
+  readonly knowledgeBaseArchivedAt: string | null;
+  readonly versionId: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly managed: boolean;
+  readonly originBoundAt: string | null;
+  readonly observation: CandidateKnowledgeSelectionLifecycleObservationRevision | null;
+  readonly retirement: CandidateKnowledgeSelectionLifecycleRetirementRevision | null;
+  readonly provenanceFetchedAt: string | null;
+  readonly directory: CandidateKnowledgeSelectionLifecycleDirectoryRevision | null;
+}
+
+export interface CandidateKnowledgeSelectionLifecycleRevisionInput
+  extends CandidateKnowledgeSelectionLifecycleRevision {}
+
+export interface CandidateKnowledgeSelectionSnapshotSourceInput {
+  readonly sourceId: string;
+  readonly versionId: string;
+  readonly lifecycleRevision: CandidateKnowledgeSelectionLifecycleRevisionInput;
+}
+
+export interface CandidateKnowledgeSelectionSnapshotEntryInput {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sources: readonly CandidateKnowledgeSelectionSnapshotSourceInput[];
+}
+
+export interface CandidateKnowledgeSelectionSnapshotInput {
+  readonly schemaVersion?: number;
+  readonly capturedAt: string;
+  readonly entries: readonly CandidateKnowledgeSelectionSnapshotEntryInput[];
+}
+
+export interface CandidateKnowledgeSelectionSnapshotSource {
+  readonly sourceId: CandidateKnowledgeSourceId;
+  readonly versionId: CandidateKnowledgeSourceVersionId;
+  readonly lifecycleRevision: CandidateKnowledgeSelectionLifecycleRevision;
+}
+
+export interface CandidateKnowledgeSelectionSnapshotEntry {
+  readonly storeId: CandidateKnowledgeStoreId;
+  readonly knowledgeBaseId: CandidateKnowledgeBaseId;
+  readonly sources: readonly CandidateKnowledgeSelectionSnapshotSource[];
+}
+
+export interface CandidateKnowledgeSelectionSnapshot {
+  readonly schemaVersion: CandidateKnowledgeSelectionSnapshotSchemaVersion;
+  readonly capturedAt: string;
+  readonly entries: readonly CandidateKnowledgeSelectionSnapshotEntry[];
+}
+
 export const contextSchemaVersion = 1 as const;
 export type ContextSchemaVersion = typeof contextSchemaVersion;
 
@@ -570,6 +659,8 @@ export interface ContextSnapshot {
   readonly readinessRubric: ReadinessRubric;
   readonly evidenceManifest: readonly EvidenceSource[];
   readonly modelConfiguration: ModelConfiguration;
+  /** Optional immutable evidence of the CKBs selected for this run. */
+  readonly candidateKnowledgeSelection?: CandidateKnowledgeSelectionSnapshot;
   readonly profileId?: ProfileId;
 }
 
@@ -601,6 +692,7 @@ export interface ContextSnapshotInput {
   readonly readinessRubric?: ReadinessRubricInput;
   readonly evidenceManifest?: readonly EvidenceSourceInput[];
   readonly modelConfiguration?: ModelConfigurationInput;
+  readonly candidateKnowledgeSelection?: CandidateKnowledgeSelectionSnapshotInput;
   readonly profileId?: string;
 }
 
@@ -635,6 +727,392 @@ export class SemanticValidationError extends Error {
     this.name = "SemanticValidationError";
     this.issues = issues;
   }
+}
+
+function selectionValidationIssue(
+  issues: SemanticValidationIssue[],
+  field: string,
+  message: string,
+): void {
+  addIssue(issues, "invalid-value", field, message);
+}
+
+function isSafePositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function validateCandidateKnowledgeSelectionLifecycleRevision(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeSelectionLifecycleRevisionInput {
+  if (!isRecord(value)) {
+    selectionValidationIssue(issues, field, "a lifecycle revision object is required.");
+    return false;
+  }
+  const revision = value as Partial<CandidateKnowledgeSelectionLifecycleRevisionInput>;
+  if (
+    !candidateKnowledgeBaseStates.includes(
+      revision.knowledgeBaseState as CandidateKnowledgeBaseState,
+    )
+  ) {
+    selectionValidationIssue(issues, `${field}.knowledgeBaseState`, "must be active or archived.");
+  }
+  if (revision.knowledgeBaseState === "active" && revision.knowledgeBaseArchivedAt !== null) {
+    selectionValidationIssue(
+      issues,
+      `${field}.knowledgeBaseArchivedAt`,
+      "must be null for an active knowledge base.",
+    );
+  }
+  if (
+    revision.knowledgeBaseState === "archived" &&
+    !isIsoTimestamp(revision.knowledgeBaseArchivedAt)
+  ) {
+    selectionValidationIssue(
+      issues,
+      `${field}.knowledgeBaseArchivedAt`,
+      "must be a valid timestamp for an archived knowledge base.",
+    );
+  }
+  if (revision.knowledgeBaseState !== "active" || revision.knowledgeBaseArchivedAt !== null) {
+    selectionValidationIssue(
+      issues,
+      field,
+      "selected lifecycle evidence requires an active knowledge base.",
+    );
+  }
+  if (!isNonEmptyString(revision.versionId)) {
+    selectionValidationIssue(issues, `${field}.versionId`, "a version id is required.");
+  }
+  if (!isSafePositiveInteger(revision.version)) {
+    selectionValidationIssue(issues, `${field}.version`, "must be a positive safe integer.");
+  }
+  if (!isIsoTimestamp(revision.createdAt)) {
+    selectionValidationIssue(issues, `${field}.createdAt`, "must be a valid ISO timestamp.");
+  }
+  if (typeof revision.managed !== "boolean") {
+    selectionValidationIssue(issues, `${field}.managed`, "must be a boolean.");
+  } else if (!revision.managed) {
+    selectionValidationIssue(
+      issues,
+      `${field}.managed`,
+      "selected lifecycle evidence requires a managed latest version.",
+    );
+  }
+  if (revision.originBoundAt !== null && !isIsoTimestamp(revision.originBoundAt)) {
+    selectionValidationIssue(
+      issues,
+      `${field}.originBoundAt`,
+      "must be null or a valid ISO timestamp.",
+    );
+  }
+  if (revision.provenanceFetchedAt !== null && !isIsoTimestamp(revision.provenanceFetchedAt)) {
+    selectionValidationIssue(
+      issues,
+      `${field}.provenanceFetchedAt`,
+      "must be null or a valid ISO timestamp.",
+    );
+  }
+  if (revision.originBoundAt !== null && revision.provenanceFetchedAt !== null) {
+    selectionValidationIssue(
+      issues,
+      field,
+      "must not contain both file-origin and URL-provenance evidence.",
+    );
+  }
+  if (
+    revision.managed === true &&
+    revision.originBoundAt === null &&
+    revision.provenanceFetchedAt === null
+  ) {
+    selectionValidationIssue(
+      issues,
+      field,
+      "managed lifecycle evidence requires an origin or URL provenance timestamp.",
+    );
+  }
+
+  if (revision.observation !== null) {
+    if (!isRecord(revision.observation)) {
+      selectionValidationIssue(
+        issues,
+        `${field}.observation`,
+        "must be null or an observation object.",
+      );
+    } else {
+      const observation =
+        revision.observation as Partial<CandidateKnowledgeSelectionLifecycleObservationRevision>;
+      if (!isNonEmptyString(observation.observedVersionId)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation.observedVersionId`,
+          "an observed version id is required.",
+        );
+      }
+      if (
+        !candidateKnowledgeSelectionLifecycleObservationStatuses.includes(
+          observation.status as CandidateKnowledgeSelectionLifecycleObservationStatus,
+        )
+      ) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation.status`,
+          "must be a recognized refresh status.",
+        );
+      }
+      if (observation.status !== "current" || observation.stale !== false) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation`,
+          "selected lifecycle evidence requires a current, non-stale observation.",
+        );
+      }
+      if (!isIsoTimestamp(observation.checkedAt)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation.checkedAt`,
+          "must be a valid ISO timestamp.",
+        );
+      }
+      if (
+        observation.lastRefreshedVersionId !== null &&
+        !isNonEmptyString(observation.lastRefreshedVersionId)
+      ) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation.lastRefreshedVersionId`,
+          "must be null or a non-empty version id.",
+        );
+      }
+      if (observation.lastRefreshedAt !== null && !isIsoTimestamp(observation.lastRefreshedAt)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation.lastRefreshedAt`,
+          "must be null or a valid ISO timestamp.",
+        );
+      }
+      if (
+        (observation.lastRefreshedVersionId === null) !==
+        (observation.lastRefreshedAt === null)
+      ) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation`,
+          "last-refreshed version and timestamp must be paired.",
+        );
+      }
+      if (typeof observation.stale !== "boolean") {
+        selectionValidationIssue(issues, `${field}.observation.stale`, "must be a boolean.");
+      }
+      if (
+        isIsoTimestamp(observation.lastRefreshedAt) &&
+        isIsoTimestamp(observation.checkedAt) &&
+        Date.parse(observation.lastRefreshedAt) > Date.parse(observation.checkedAt)
+      ) {
+        selectionValidationIssue(
+          issues,
+          `${field}.observation`,
+          "last-refreshed timestamp must not follow checkedAt.",
+        );
+      }
+    }
+  }
+
+  if (revision.retirement !== null) {
+    selectionValidationIssue(
+      issues,
+      `${field}.retirement`,
+      "selected lifecycle evidence must not be retired.",
+    );
+    if (!isRecord(revision.retirement)) {
+      selectionValidationIssue(
+        issues,
+        `${field}.retirement`,
+        "must be null or a retirement object.",
+      );
+    } else {
+      const retirement =
+        revision.retirement as Partial<CandidateKnowledgeSelectionLifecycleRetirementRevision>;
+      if (!isIsoTimestamp(retirement.retiredAt)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.retirement.retiredAt`,
+          "must be a valid ISO timestamp.",
+        );
+      }
+      if (retirement.reason !== "user-requested") {
+        selectionValidationIssue(issues, `${field}.retirement.reason`, "must be user-requested.");
+      }
+    }
+  }
+
+  if (revision.directory !== null) {
+    if (!isRecord(revision.directory)) {
+      selectionValidationIssue(
+        issues,
+        `${field}.directory`,
+        "must be null or a directory revision object.",
+      );
+    } else {
+      const directory =
+        revision.directory as Partial<CandidateKnowledgeSelectionLifecycleDirectoryRevision>;
+      if (!isNonEmptyString(directory.directoryId)) {
+        selectionValidationIssue(issues, `${field}.directory.directoryId`, "an id is required.");
+      }
+      if (!isSafePositiveInteger(directory.rootRevision)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.directory.rootRevision`,
+          "must be a positive safe integer.",
+        );
+      }
+      if (!isSafePositiveInteger(directory.memberRevision)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.directory.memberRevision`,
+          "must be a positive safe integer.",
+        );
+      }
+      if (!isIsoTimestamp(directory.rootBoundAt)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.directory.rootBoundAt`,
+          "must be a valid ISO timestamp.",
+        );
+      }
+      if (!isIsoTimestamp(directory.memberBoundAt)) {
+        selectionValidationIssue(
+          issues,
+          `${field}.directory.memberBoundAt`,
+          "must be a valid ISO timestamp.",
+        );
+      }
+      if (revision.originBoundAt === null || revision.provenanceFetchedAt !== null) {
+        selectionValidationIssue(
+          issues,
+          `${field}.directory`,
+          "directory evidence requires a file origin binding.",
+        );
+      }
+    }
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeSelectionSnapshotInput(
+  value: unknown,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeSelectionSnapshotInput {
+  if (!isRecord(value)) {
+    selectionValidationIssue(issues, "candidateKnowledgeSelection", "an object is required.");
+    return false;
+  }
+  const snapshot = value as Partial<CandidateKnowledgeSelectionSnapshotInput>;
+  if (
+    snapshot.schemaVersion !== undefined &&
+    snapshot.schemaVersion !== candidateKnowledgeSelectionSnapshotSchemaVersion
+  ) {
+    selectionValidationIssue(
+      issues,
+      "candidateKnowledgeSelection.schemaVersion",
+      "only schema version 1 is supported.",
+    );
+  }
+  if (!isIsoTimestamp(snapshot.capturedAt)) {
+    selectionValidationIssue(
+      issues,
+      "candidateKnowledgeSelection.capturedAt",
+      "must be a valid ISO timestamp.",
+    );
+  }
+  if (!Array.isArray(snapshot.entries) || snapshot.entries.length === 0) {
+    selectionValidationIssue(
+      issues,
+      "candidateKnowledgeSelection.entries",
+      "at least one knowledge-base entry is required.",
+    );
+    return false;
+  }
+  const logicalEntries = new Set<string>();
+  for (const [entryIndex, entryValue] of snapshot.entries.entries()) {
+    const field = `candidateKnowledgeSelection.entries[${entryIndex}]`;
+    if (!isRecord(entryValue)) {
+      selectionValidationIssue(issues, field, "must be an object.");
+      continue;
+    }
+    const entry = entryValue as Partial<CandidateKnowledgeSelectionSnapshotEntryInput>;
+    const storeId = typeof entry.storeId === "string" ? entry.storeId.trim() : "";
+    const knowledgeBaseId =
+      typeof entry.knowledgeBaseId === "string" ? entry.knowledgeBaseId.trim() : "";
+    if (storeId === "") selectionValidationIssue(issues, `${field}.storeId`, "an id is required.");
+    if (knowledgeBaseId === "") {
+      selectionValidationIssue(issues, `${field}.knowledgeBaseId`, "an id is required.");
+    }
+    const logicalKey = `${storeId}\u0000${knowledgeBaseId}`;
+    if (logicalEntries.has(logicalKey)) {
+      selectionValidationIssue(
+        issues,
+        field,
+        "store and knowledge-base selections must be unique.",
+      );
+    }
+    logicalEntries.add(logicalKey);
+    if (!Array.isArray(entry.sources) || entry.sources.length === 0) {
+      selectionValidationIssue(
+        issues,
+        `${field}.sources`,
+        "at least one lifecycle-ready source is required.",
+      );
+      continue;
+    }
+    const sourceIds = new Set<string>();
+    for (const [sourceIndex, sourceValue] of entry.sources.entries()) {
+      const sourceField = `${field}.sources[${sourceIndex}]`;
+      if (!isRecord(sourceValue)) {
+        selectionValidationIssue(issues, sourceField, "must be an object.");
+        continue;
+      }
+      const source = sourceValue as Partial<CandidateKnowledgeSelectionSnapshotSourceInput>;
+      const sourceId = typeof source.sourceId === "string" ? source.sourceId.trim() : "";
+      const versionId = typeof source.versionId === "string" ? source.versionId.trim() : "";
+      if (sourceId === "")
+        selectionValidationIssue(issues, `${sourceField}.sourceId`, "an id is required.");
+      if (versionId === "") {
+        selectionValidationIssue(issues, `${sourceField}.versionId`, "an id is required.");
+      }
+      if (sourceIds.has(sourceId)) {
+        selectionValidationIssue(issues, `${sourceField}.sourceId`, "source ids must be unique.");
+      }
+      sourceIds.add(sourceId);
+      validateCandidateKnowledgeSelectionLifecycleRevision(
+        source.lifecycleRevision,
+        `${sourceField}.lifecycleRevision`,
+        issues,
+      );
+      if (
+        isRecord(source.lifecycleRevision) &&
+        typeof source.lifecycleRevision.versionId === "string" &&
+        source.lifecycleRevision.versionId.trim() !== "" &&
+        source.lifecycleRevision.versionId.trim() !== versionId
+      ) {
+        selectionValidationIssue(
+          issues,
+          `${sourceField}.versionId`,
+          "must match lifecycleRevision.versionId.",
+        );
+      }
+    }
+  }
+  return true;
+}
+
+export function validateCandidateKnowledgeSelectionSnapshot(
+  value: unknown,
+): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeSelectionSnapshotInput(value, issues);
+  return { valid: issues.length === 0, issues };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -1057,6 +1535,14 @@ export function validateContextSnapshotInput(input: unknown): SemanticValidation
   validateModelConfiguration(candidate, issues);
   validateRubric(candidate, issues);
   validateOutputConstraints(candidate, issues);
+  if (candidate.candidateKnowledgeSelection !== undefined) {
+    const selectionValidation = validateCandidateKnowledgeSelectionSnapshot(
+      candidate.candidateKnowledgeSelection,
+    );
+    for (const issue of selectionValidation.issues) {
+      addIssue(issues, issue.code, issue.field, issue.message);
+    }
+  }
 
   return { valid: issues.length === 0, issues };
 }
@@ -1074,6 +1560,97 @@ function cloneAndFreeze<T>(value: T): T {
     return Object.freeze(clone) as T;
   }
   return value;
+}
+
+function normalizeSelectionLifecycleRevision(
+  revision: CandidateKnowledgeSelectionLifecycleRevisionInput,
+): CandidateKnowledgeSelectionLifecycleRevision {
+  return {
+    knowledgeBaseState: revision.knowledgeBaseState,
+    knowledgeBaseArchivedAt:
+      revision.knowledgeBaseArchivedAt === null ? null : revision.knowledgeBaseArchivedAt.trim(),
+    versionId: revision.versionId.trim(),
+    version: revision.version,
+    createdAt: revision.createdAt.trim(),
+    managed: revision.managed,
+    originBoundAt: revision.originBoundAt === null ? null : revision.originBoundAt.trim(),
+    observation:
+      revision.observation === null
+        ? null
+        : {
+            observedVersionId: revision.observation.observedVersionId.trim(),
+            status: revision.observation.status,
+            checkedAt: revision.observation.checkedAt.trim(),
+            lastRefreshedVersionId:
+              revision.observation.lastRefreshedVersionId === null
+                ? null
+                : revision.observation.lastRefreshedVersionId.trim(),
+            lastRefreshedAt:
+              revision.observation.lastRefreshedAt === null
+                ? null
+                : revision.observation.lastRefreshedAt.trim(),
+            stale: revision.observation.stale,
+          },
+    retirement:
+      revision.retirement === null
+        ? null
+        : {
+            retiredAt: revision.retirement.retiredAt.trim(),
+            reason: revision.retirement.reason,
+          },
+    provenanceFetchedAt:
+      revision.provenanceFetchedAt === null ? null : revision.provenanceFetchedAt.trim(),
+    directory:
+      revision.directory === null
+        ? null
+        : {
+            directoryId: revision.directory.directoryId.trim(),
+            rootRevision: revision.directory.rootRevision,
+            rootBoundAt: revision.directory.rootBoundAt.trim(),
+            memberRevision: revision.directory.memberRevision,
+            memberBoundAt: revision.directory.memberBoundAt.trim(),
+          },
+  };
+}
+
+export function createCandidateKnowledgeSelectionSnapshot(
+  input: CandidateKnowledgeSelectionSnapshotInput,
+): CandidateKnowledgeSelectionSnapshot {
+  const validation = validateCandidateKnowledgeSelectionSnapshot(input);
+  if (!validation.valid) {
+    throw new SemanticValidationError(validation.issues);
+  }
+
+  const entries = input.entries
+    .map((entry) => ({
+      storeId: entry.storeId.trim() as CandidateKnowledgeStoreId,
+      knowledgeBaseId: entry.knowledgeBaseId.trim() as CandidateKnowledgeBaseId,
+      sources: entry.sources
+        .map((source) => ({
+          sourceId: source.sourceId.trim() as CandidateKnowledgeSourceId,
+          versionId: source.versionId.trim() as CandidateKnowledgeSourceVersionId,
+          lifecycleRevision: normalizeSelectionLifecycleRevision(source.lifecycleRevision),
+        }))
+        .sort((left, right) => {
+          const sourceOrder =
+            left.sourceId < right.sourceId ? -1 : left.sourceId > right.sourceId ? 1 : 0;
+          if (sourceOrder !== 0) return sourceOrder;
+          return left.versionId < right.versionId ? -1 : left.versionId > right.versionId ? 1 : 0;
+        }),
+    }))
+    .sort((left, right) => {
+      if (left.storeId !== right.storeId) return left.storeId < right.storeId ? -1 : 1;
+      if (left.knowledgeBaseId !== right.knowledgeBaseId) {
+        return left.knowledgeBaseId < right.knowledgeBaseId ? -1 : 1;
+      }
+      return 0;
+    });
+
+  return cloneAndFreeze({
+    schemaVersion: candidateKnowledgeSelectionSnapshotSchemaVersion,
+    capturedAt: input.capturedAt.trim(),
+    entries,
+  });
 }
 
 function normalizeRequirement(requirement: JobRequirementInput): JobRequirement {
@@ -1491,6 +2068,13 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
     },
     evidenceManifest: (input.evidenceManifest ?? []).map(normalizeEvidenceSource),
     modelConfiguration: normalizeModelConfiguration(modelConfiguration),
+    ...(input.candidateKnowledgeSelection === undefined
+      ? {}
+      : {
+          candidateKnowledgeSelection: createCandidateKnowledgeSelectionSnapshot(
+            input.candidateKnowledgeSelection,
+          ),
+        }),
     ...(input.profileId ? { profileId: input.profileId.trim() as ProfileId } : {}),
   };
 

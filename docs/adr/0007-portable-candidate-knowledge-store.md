@@ -35,9 +35,9 @@ remain future policy; a UUID alone does not decide which copy is current.
 
 The workspace remains separate. Its manifest, opportunity inputs, run
 snapshots, review decisions, artifacts, exports, and SQLite history do not move
-into the CKB. A workspace will eventually record an explicit CKB selection and
-source-version scope, but the current implementation never reads a CKB
-implicitly.
+into the CKB. The shared application boundary can create an explicit immutable
+CKB/source-version selection snapshot, but the current workspace flow never
+reads a CKB implicitly and does not yet bind that snapshot to a run.
 
 ### Source and version model
 
@@ -71,6 +71,21 @@ observation to be ready. Retired sources, archived CKBs, unmanaged latest
 versions, unbound managed files, conflicted directory origins, and stale,
 changed, missing, inaccessible, or unbound observations are blocked. This is
 not a live origin check, index-freshness claim, or time-based freshness policy.
+
+An explicit selection snapshot is a separate schema-versioned product record.
+It contains a capture timestamp and deterministic entries for portable store
+ID, CKB ID, exact selected source/version IDs, and the safe structured lifecycle
+revision that justified each selection. More than one selected CKB requires an
+explicit combination approval before any store is opened. Archived, empty, or
+blocked CKBs are rejected. The snapshot excludes store roots, labels, paths,
+filenames, URLs, hashes, checksums, media types, sizes, and content. Older
+context snapshots remain valid without this optional record.
+
+This contract records selection evidence only. It does not authorize provider
+transmission, assert an index version, atomically coordinate separate CKB
+stores, or bind the selection into the current workspace/run flow. Later drift
+checks can compare the recorded structured revisions with current lifecycle
+readiness before indexing or provider use.
 
 ### Approved local file and URL intake
 
@@ -263,8 +278,9 @@ ownership and do not authorize adoption or cleanup.
 This decision deliberately leaves the following outside the product workflow:
 
 - normalized facts and lexical, vector, or hybrid CKB indexes;
-- application and run CKB selection, source-version scope, and provider
-  transmission approval;
+- workspace and run binding of the canonical CKB/source-version selection,
+  retrieval/index versions, drift enforcement, and provider transmission
+  approval;
 - CLI and desktop CKB creation, opening, selection, and lifecycle controls;
 - automatic directory removal/rename reconciliation and move inference,
   broader member-retirement policy, background refresh, and time-based
@@ -314,12 +330,14 @@ record must not make a run read from it implicitly.
   file does not delete its managed copy. A SQLite-only copy is not a complete
   CKB backup.
 - Retrieval and provider use continue to read workspace-scoped evidence until
-  selection, isolation, lifecycle, and privacy contracts are integrated.
+  selection binding, isolation, lifecycle drift, and privacy contracts are
+  integrated.
 
 ## Follow-up
 
-- Define explicit application-to-CKB selection and fail-closed retrieval
-  isolation before CKB data enters a run.
+- Bind the canonical selection snapshot to application and run history, then
+  enforce fail-closed lifecycle and retrieval isolation before CKB data enters
+  a provider request.
 - Define deletion coverage for raw, normalized, indexed, cached, historical,
   exported, and backed-up data.
 - Define writer coordination and visible approval before reconciliation can act
