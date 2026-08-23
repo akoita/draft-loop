@@ -68,7 +68,7 @@ flowchart TB
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
     App -->|"explicit CKB commands"| CKBStore
-    CKBStore -.->|"selection and retrieval pending"| Knowledge
+    CKBStore -.->|"selection binding and retrieval pending"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
     Credentials -.->|"key lookup; never projected back"| Providers
@@ -93,8 +93,9 @@ flowchart TB
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected to the renderer. Network and
 export edges require visible approval. The solid CKB edge covers the explicit
-file, URL, and bounded-directory commands described below; the dotted edge
-marks the still-unintegrated selection and retrieval workflow.
+file, URL, and bounded-directory commands described below. The dotted edge
+marks the implemented selection contract whose workspace binding and retrieval
+workflow remain unintegrated.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -132,8 +133,10 @@ An application workspace contains opportunity context, run snapshots, review
 decisions, artifacts, exports, and application-specific SQLite history. A
 portable CKB is a separate local SQLite store for reusable candidate material.
 The CKB has a logical UUID independent of its selected filesystem path. A
-workspace does not implicitly read from a CKB: the application must eventually
-record an explicit CKB selection and source-version scope for a run.
+workspace does not implicitly read from a CKB. The shared application boundary
+can construct a canonical selection snapshot from explicitly named,
+lifecycle-ready CKBs, but no adapter or workspace flow binds that snapshot to a
+run yet.
 
 The portable store is local and plaintext. Restrictive filesystem permissions
 are best-effort and are not encryption or protection from another process run
@@ -189,6 +192,22 @@ changes when eligibility-relevant persisted evidence changes. Labels, paths,
 URLs, relative-path hashes, content checksums, media types, sizes, and bytes are
 excluded. Fresh intake is eligible without a refresh observation; adverse or
 stale observations block without creating a TTL or live-filesystem claim.
+
+### Selection snapshot contract
+
+An explicit application selection produces an immutable schema-versioned
+snapshot containing the portable store ID, CKB ID, exact selected source and
+version IDs, and each source's safe structured lifecycle revision. A single CKB
+needs no additional combination approval; selecting more than one requires an
+explicit approval before any store is opened. Archived, empty, or blocked CKBs
+fail closed.
+
+Entries and sources are canonicalized in lexical order. The snapshot excludes
+store roots, display labels, paths, filenames, URLs, hashes, checksums, media
+types, byte sizes, and content. It can be embedded in an immutable context
+snapshot without breaking older context records that predate the optional
+field. It does not authorize provider transmission, establish retrieval-index
+freshness, or by itself bind a workspace or run.
 
 ### Directory and member lifecycle
 
@@ -250,11 +269,11 @@ motivated each boundary.
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
-application or run selection, provider transmission scope, CLI/desktop CKB
-controls, missing-blob repair, writer locks, deletion, cleanup, or complete
-portable backup/export/restore. Until those contracts are integrated and
-validated, the workspace-scoped evidence and retrieval path remains
-authoritative for application runs.
+workspace/run binding of the selection snapshot, provider transmission scope,
+CLI/desktop CKB controls, missing-blob repair, writer locks, deletion, cleanup,
+or complete portable backup/export/restore. Until those contracts are
+integrated and validated, the workspace-scoped evidence and retrieval path
+remains authoritative for application runs.
 
 ## Evidence-grounded evaluator–optimizer
 

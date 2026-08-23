@@ -150,6 +150,247 @@ describe("candidate knowledge store application service", () => {
     await expect(service.listKnowledgeBases({ storeRoot })).resolves.toEqual(initialized);
   });
 
+  it("creates a deterministic path-free selection snapshot from one lifecycle-ready CKB", async () => {
+    const sourcePath = join(temporaryParent, "resume.md");
+    const content = "Local candidate evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const ids = ["store-uuid", "default-ckb-uuid", "source-uuid", "version-uuid"];
+    const baseService = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await baseService.initializeStore({ storeRoot });
+    await baseService.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath,
+    });
+
+    let closeCount = 0;
+    const open = vi.fn(async (root: string) => {
+      const handle = await openCandidateKnowledgeStore(root);
+      const close = handle.close;
+      return {
+        ...handle,
+        close: async () => {
+          closeCount += 1;
+          await close();
+        },
+      } as CandidateKnowledgeStoreHandle;
+    });
+    const service = createCandidateKnowledgeStoreService({
+      now: () => changedAt,
+      open: open as never,
+    });
+
+    const snapshot = await service.createKnowledgeSelectionSnapshot({
+      selections: [{ storeRoot, knowledgeBaseId: "default-ckb-uuid" }],
+    });
+
+    expect(snapshot).toMatchObject({
+      schemaVersion: 1,
+      capturedAt: changedAt,
+      entries: [
+        {
+          storeId: "store-uuid",
+          knowledgeBaseId: "default-ckb-uuid",
+          sources: [
+            {
+              sourceId: "source-uuid",
+              versionId: "version-uuid",
+              lifecycleRevision: {
+                knowledgeBaseState: "active",
+                managed: true,
+                version: 1,
+                versionId: "version-uuid",
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(Object.isFrozen(snapshot.entries)).toBe(true);
+    expect(Object.isFrozen(snapshot.entries[0])).toBe(true);
+    expect(Object.isFrozen(snapshot.entries[0]?.sources[0])).toBe(true);
+    const serialized = JSON.stringify(snapshot);
+    expect(serialized).not.toContain(storeRoot);
+    expect(serialized).not.toContain(sourcePath);
+    expect(serialized).not.toContain("resume.md");
+    expect(serialized).not.toContain(content);
+    expect(serialized).not.toContain("checksum");
+    expect(closeCount).toBe(1);
+    expect(open).toHaveBeenCalledOnce();
+  });
+
+  it("requires explicit approval for multiple selections before opening stores", async () => {
+    const open = vi.fn();
+    const service = createCandidateKnowledgeStoreService({ open: open as never });
+
+    await expect(
+      service.createKnowledgeSelectionSnapshot({
+        selections: [
+          { storeRoot: join(temporaryParent, "one"), knowledgeBaseId: "one" },
+          { storeRoot: join(temporaryParent, "two"), knowledgeBaseId: "two" },
+        ],
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge base selection snapshot could not be created.",
+    );
+    expect(open).not.toHaveBeenCalled();
+  });
+
+  it("combines explicitly approved ready CKBs in deterministic order and closes both handles", async () => {
+    const secondStoreRoot = join(temporaryParent, "second-candidate-knowledge");
+    const firstSourcePath = join(temporaryParent, "z-evidence.md");
+    const secondSourcePath = join(temporaryParent, "a-evidence.md");
+    await writeFile(firstSourcePath, "z evidence", "utf8");
+    await writeFile(secondSourcePath, "a evidence", "utf8");
+    const ids = [
+      "store-z",
+      "ckb-z",
+      "z-source",
+      "z-version",
+      "store-a",
+      "ckb-a",
+      "a-source",
+      "a-version",
+    ];
+    const baseService = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await baseService.initializeStore({ storeRoot });
+    await baseService.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "ckb-z",
+      sourcePath: firstSourcePath,
+    });
+    await baseService.initializeStore({ storeRoot: secondStoreRoot });
+    await baseService.importKnowledgeSourceFile({
+      storeRoot: secondStoreRoot,
+      knowledgeBaseId: "ckb-a",
+      sourcePath: secondSourcePath,
+    });
+
+    let closeCount = 0;
+    const open = vi.fn(async (root: string) => {
+      const handle = await openCandidateKnowledgeStore(root);
+      const close = handle.close;
+      return {
+        ...handle,
+        close: async () => {
+          closeCount += 1;
+          await close();
+        },
+      } as CandidateKnowledgeStoreHandle;
+    });
+    const service = createCandidateKnowledgeStoreService({
+      now: () => changedAt,
+      open: open as never,
+    });
+
+    const snapshot = await service.createKnowledgeSelectionSnapshot({
+      combinationApproved: true,
+      selections: [
+        { storeRoot, knowledgeBaseId: "ckb-z" },
+        { storeRoot: secondStoreRoot, knowledgeBaseId: "ckb-a" },
+      ],
+    });
+
+    expect(snapshot.entries.map((entry) => `${entry.storeId}:${entry.knowledgeBaseId}`)).toEqual([
+      "store-a:ckb-a",
+      "store-z:ckb-z",
+    ]);
+    expect(
+      snapshot.entries.flatMap((entry) => entry.sources.map((source) => source.sourceId)),
+    ).toEqual(["a-source", "z-source"]);
+    expect(snapshot.capturedAt).toBe(changedAt);
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(open).toHaveBeenCalledTimes(2);
+    expect(closeCount).toBe(2);
+  });
+
+  it("closes a handle when lifecycle selection validation fails", async () => {
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      descriptor: { schemaVersion: 1, id: "store-uuid", createdAt },
+      close,
+      getCandidateKnowledgeBaseLifecycleReadiness: vi.fn(async () => undefined),
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.createKnowledgeSelectionSnapshot({
+        selections: [{ storeRoot, knowledgeBaseId: "missing-ckb" }],
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge base selection snapshot could not be created.",
+    );
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("rejects archived, empty, blocked, and duplicate logical selections generically", async () => {
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "blocked-source",
+      "blocked-version",
+      "archived-ckb-uuid",
+    ];
+    const baseService = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await baseService.initializeStore({ storeRoot });
+    await baseService.createKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      kind: "file",
+      displayName: "Unmanaged",
+      mediaType: "text/plain",
+      checksum,
+      sizeBytes: 1,
+    });
+    const archived = await baseService.createKnowledgeBase({
+      storeRoot,
+      displayName: "Archived",
+    });
+    await baseService.archiveKnowledgeBase({
+      storeRoot,
+      knowledgeBaseId: archived.knowledgeBases[1]?.id ?? "archived-ckb-uuid",
+    });
+
+    const failure =
+      "The selected candidate knowledge base selection snapshot could not be created.";
+    await expect(
+      baseService.createKnowledgeSelectionSnapshot({
+        selections: [{ storeRoot, knowledgeBaseId: "default-ckb-uuid" }],
+      }),
+    ).rejects.toThrow(failure);
+    await expect(
+      baseService.createKnowledgeSelectionSnapshot({
+        selections: [{ storeRoot, knowledgeBaseId: "archived-ckb-uuid" }],
+      }),
+    ).rejects.toThrow(failure);
+
+    const duplicateService = createCandidateKnowledgeStoreService({
+      now: () => createdAt,
+      open: vi.fn(async (root: string) => openCandidateKnowledgeStore(root)),
+    });
+    await expect(
+      duplicateService.createKnowledgeSelectionSnapshot({
+        combinationApproved: true,
+        selections: [
+          { storeRoot, knowledgeBaseId: "default-ckb-uuid" },
+          { storeRoot, knowledgeBaseId: "default-ckb-uuid" },
+        ],
+      }),
+    ).rejects.toThrow(failure);
+  });
+
   it("creates, renames, and archives an additional knowledge base across reopens", async () => {
     const ids = ["store-uuid", "default-ckb-uuid", "other-ckb-uuid"];
     let now = createdAt;

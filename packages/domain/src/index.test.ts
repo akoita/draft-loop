@@ -7,6 +7,7 @@ import {
   canonicalizeModelId,
   createAgentContextReference,
   createCandidateKnowledgeBase,
+  createCandidateKnowledgeSelectionSnapshot,
   createCandidateKnowledgeSource,
   createCandidateKnowledgeSourceRetirement,
   createCandidateKnowledgeSourceVersion,
@@ -23,6 +24,7 @@ import {
   maximumIndependenceOverrideRationaleLength,
   renameCandidateKnowledgeBase,
   SemanticValidationError,
+  validateCandidateKnowledgeSelectionSnapshot,
   workflowStates,
 } from "./index.js";
 
@@ -84,6 +86,57 @@ function validInput(
   } as ContextSnapshotInput;
 }
 
+function validSelectionRevision(versionId = "version-1") {
+  return {
+    knowledgeBaseState: "active" as const,
+    knowledgeBaseArchivedAt: null,
+    versionId,
+    version: 1,
+    createdAt: "2026-08-12T09:00:00.000Z",
+    managed: true,
+    originBoundAt: "2026-08-12T09:00:00.000Z",
+    observation: null,
+    retirement: null,
+    provenanceFetchedAt: null,
+    directory: null,
+  };
+}
+
+function validSelectionInput() {
+  return {
+    capturedAt: "2026-08-12T10:00:00.000Z",
+    entries: [
+      {
+        storeId: "store-z",
+        knowledgeBaseId: "knowledge-z",
+        sources: [
+          {
+            sourceId: "source-z",
+            versionId: "version-z",
+            lifecycleRevision: validSelectionRevision("version-z"),
+          },
+        ],
+      },
+      {
+        storeId: "store-a",
+        knowledgeBaseId: "knowledge-a",
+        sources: [
+          {
+            sourceId: "source-b",
+            versionId: "version-b",
+            lifecycleRevision: validSelectionRevision("version-b"),
+          },
+          {
+            sourceId: "source-a",
+            versionId: "version-a",
+            lifecycleRevision: validSelectionRevision("version-a"),
+          },
+        ],
+      },
+    ],
+  };
+}
+
 describe("domain workspace and context snapshots", () => {
   it("preserves the workspace lifecycle API", () => {
     expect(createWorkspace("example")).toEqual({ id: "example", state: "collecting" });
@@ -105,6 +158,124 @@ describe("domain workspace and context snapshots", () => {
       },
     });
     expect(snapshot.evidenceManifest[0]?.checksum).toBe(checksum);
+  });
+
+  it("canonicalizes and freezes a portable candidate knowledge selection", () => {
+    const input = validSelectionInput();
+    const snapshot = createCandidateKnowledgeSelectionSnapshot(input);
+
+    expect(snapshot).toMatchObject({
+      schemaVersion: 1,
+      capturedAt: "2026-08-12T10:00:00.000Z",
+      entries: [
+        {
+          storeId: "store-a",
+          knowledgeBaseId: "knowledge-a",
+          sources: [{ sourceId: "source-a" }, { sourceId: "source-b" }],
+        },
+        { storeId: "store-z", knowledgeBaseId: "knowledge-z" },
+      ],
+    });
+    expect(validateCandidateKnowledgeSelectionSnapshot(snapshot).valid).toBe(true);
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(Object.isFrozen(snapshot.entries)).toBe(true);
+    expect(Object.isFrozen(snapshot.entries[0])).toBe(true);
+    expect(Object.isFrozen(snapshot.entries[0]?.sources)).toBe(true);
+    const firstEntry = input.entries[0];
+    const firstSource = firstEntry?.sources[0];
+    if (firstEntry === undefined || firstSource === undefined) {
+      throw new Error("The selection fixture must contain a source.");
+    }
+    firstSource.sourceId = "mutated";
+    expect(snapshot.entries[1]?.sources[0]?.sourceId).toBe("source-z");
+    expect(JSON.stringify(snapshot)).not.toContain("storeRoot");
+    expect(JSON.stringify(snapshot)).not.toContain("checksum");
+  });
+
+  it("rejects duplicate selections and lifecycle evidence contradictions", () => {
+    const input = validSelectionInput();
+    const firstEntry = input.entries[0];
+    const firstSource = firstEntry?.sources[0];
+    if (firstEntry === undefined || firstSource === undefined) {
+      throw new Error("The selection fixture must contain a source.");
+    }
+    expect(() =>
+      createCandidateKnowledgeSelectionSnapshot({
+        ...input,
+        entries: [firstEntry, firstEntry],
+      }),
+    ).toThrow(/unique/i);
+    expect(() =>
+      createCandidateKnowledgeSelectionSnapshot({
+        ...input,
+        entries: [
+          {
+            ...firstEntry,
+            sources: [
+              {
+                ...firstSource,
+                lifecycleRevision: {
+                  ...firstSource.lifecycleRevision,
+                  originBoundAt: "2026-08-12T09:00:00.000Z",
+                  provenanceFetchedAt: "2026-08-12T09:01:00.000Z",
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/both file-origin and URL-provenance/i);
+  });
+
+  it("rejects lifecycle-ineligible selection evidence", () => {
+    const input = validSelectionInput();
+    const firstEntry = input.entries[0];
+    const firstSource = firstEntry?.sources[0];
+    if (firstEntry === undefined || firstSource === undefined) {
+      throw new Error("The selection fixture must contain a source.");
+    }
+    const rejectedRevisions = [
+      {
+        ...firstSource.lifecycleRevision,
+        knowledgeBaseState: "archived" as const,
+        knowledgeBaseArchivedAt: "2026-08-12T11:00:00.000Z",
+      },
+      { ...firstSource.lifecycleRevision, managed: false },
+      {
+        ...firstSource.lifecycleRevision,
+        retirement: {
+          retiredAt: "2026-08-12T11:00:00.000Z" as const,
+          reason: "user-requested" as const,
+        },
+      },
+      {
+        ...firstSource.lifecycleRevision,
+        observation: {
+          observedVersionId: firstSource.versionId,
+          status: "changed" as const,
+          checkedAt: "2026-08-12T11:00:00.000Z",
+          lastRefreshedVersionId: null,
+          lastRefreshedAt: null,
+          stale: true,
+        },
+      },
+    ];
+
+    for (const lifecycleRevision of rejectedRevisions) {
+      const rejected = {
+        ...input,
+        entries: [
+          {
+            ...firstEntry,
+            sources: [{ ...firstSource, lifecycleRevision }],
+          },
+        ],
+      };
+      expect(() => createCandidateKnowledgeSelectionSnapshot(rejected)).toThrow();
+      expect(() =>
+        createContextSnapshot(validInput({ candidateKnowledgeSelection: rejected })),
+      ).toThrow(SemanticValidationError);
+    }
   });
 
   it("preserves a versioned writing policy separately from evidence", () => {
@@ -149,6 +320,15 @@ describe("domain workspace and context snapshots", () => {
     expect(Object.isFrozen(snapshot.requirements)).toBe(true);
     expect(Object.isFrozen(snapshot.requirements[0])).toBe(true);
     expect(Object.isFrozen(snapshot.modelConfiguration.author)).toBe(true);
+  });
+
+  it("preserves an optional candidate knowledge selection in the context snapshot", () => {
+    const selection = createCandidateKnowledgeSelectionSnapshot(validSelectionInput());
+    const snapshot = createContextSnapshot(validInput({ candidateKnowledgeSelection: selection }));
+
+    expect(snapshot.candidateKnowledgeSelection).toEqual(selection);
+    expect(Object.isFrozen(snapshot.candidateKnowledgeSelection)).toBe(true);
+    expect(Object.isFrozen(snapshot.candidateKnowledgeSelection?.entries[0])).toBe(true);
   });
 
   it("creates author and critic references to one snapshot id", () => {

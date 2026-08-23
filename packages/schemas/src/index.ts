@@ -1,9 +1,13 @@
+import type { CandidateKnowledgeSelectionSnapshotInput } from "@draft-loop/domain";
 import {
   candidateKnowledgeBaseStates,
+  candidateKnowledgeSelectionLifecycleObservationStatuses,
+  candidateKnowledgeSelectionSnapshotSchemaVersion,
   candidateKnowledgeSourceKinds,
   candidateKnowledgeSourceRetirementReasons,
   candidateKnowledgeStoreSchemaVersion,
   contextSchemaVersion,
+  createCandidateKnowledgeSelectionSnapshot,
   deriveModelLineage,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
@@ -250,6 +254,73 @@ export const candidateKnowledgeSourceVersionSchema = z
 
 export type CandidateKnowledgeSourceVersion = z.infer<typeof candidateKnowledgeSourceVersionSchema>;
 
+const candidateKnowledgeSelectionLifecycleObservationSchema = z.object({
+  observedVersionId: nonEmptyString,
+  status: z.enum(candidateKnowledgeSelectionLifecycleObservationStatuses),
+  checkedAt: strictTimestampSchema,
+  lastRefreshedVersionId: nonEmptyString.nullable(),
+  lastRefreshedAt: strictTimestampSchema.nullable(),
+  stale: z.boolean(),
+});
+
+const candidateKnowledgeSelectionLifecycleRetirementSchema = z.object({
+  retiredAt: strictTimestampSchema,
+  reason: z.literal("user-requested"),
+});
+
+const candidateKnowledgeSelectionLifecycleDirectorySchema = z.object({
+  directoryId: nonEmptyString,
+  rootRevision: z.number().finite().int().positive(),
+  rootBoundAt: strictTimestampSchema,
+  memberRevision: z.number().finite().int().positive(),
+  memberBoundAt: strictTimestampSchema,
+});
+
+const candidateKnowledgeSelectionLifecycleRevisionSchema = z.object({
+  knowledgeBaseState: candidateKnowledgeBaseStateSchema,
+  knowledgeBaseArchivedAt: strictTimestampSchema.nullable(),
+  versionId: nonEmptyString,
+  version: z.number().finite().int().positive(),
+  createdAt: strictTimestampSchema,
+  managed: z.boolean(),
+  originBoundAt: strictTimestampSchema.nullable(),
+  observation: candidateKnowledgeSelectionLifecycleObservationSchema.nullable(),
+  retirement: candidateKnowledgeSelectionLifecycleRetirementSchema.nullable(),
+  provenanceFetchedAt: strictTimestampSchema.nullable(),
+  directory: candidateKnowledgeSelectionLifecycleDirectorySchema.nullable(),
+});
+
+const candidateKnowledgeSelectionSnapshotSourceSchema = z.object({
+  sourceId: nonEmptyString,
+  versionId: nonEmptyString,
+  lifecycleRevision: candidateKnowledgeSelectionLifecycleRevisionSchema,
+});
+
+const candidateKnowledgeSelectionSnapshotEntrySchema = z.object({
+  storeId: nonEmptyString,
+  knowledgeBaseId: nonEmptyString,
+  sources: z.array(candidateKnowledgeSelectionSnapshotSourceSchema).min(1),
+});
+
+export const candidateKnowledgeSelectionSnapshotSchema = z
+  .object({
+    schemaVersion: z.literal(candidateKnowledgeSelectionSnapshotSchemaVersion).optional(),
+    capturedAt: strictTimestampSchema,
+    entries: z.array(candidateKnowledgeSelectionSnapshotEntrySchema).min(1),
+  })
+  .transform((snapshot) =>
+    createCandidateKnowledgeSelectionSnapshot(
+      snapshot as unknown as CandidateKnowledgeSelectionSnapshotInput,
+    ),
+  );
+
+export type CandidateKnowledgeSelectionSnapshotSchemaInput = z.input<
+  typeof candidateKnowledgeSelectionSnapshotSchema
+>;
+export type CandidateKnowledgeSelectionSnapshotSchemaOutput = z.output<
+  typeof candidateKnowledgeSelectionSnapshotSchema
+>;
+
 export const outputConstraintsSchema = z.object({
   format: z.enum(outputFormats).default("markdown"),
   maxWords: z.number().finite().int().positive().optional(),
@@ -373,6 +444,7 @@ const contextSnapshotShape = z.object({
   readinessRubric: readinessRubricSchema,
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,
+  candidateKnowledgeSelection: candidateKnowledgeSelectionSnapshotSchema.optional(),
   profileId: nonEmptyString.optional(),
 });
 
@@ -414,6 +486,7 @@ const contextSnapshotInputShape = z.object({
   readinessRubric: readinessRubricSchema,
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,
+  candidateKnowledgeSelection: candidateKnowledgeSelectionSnapshotSchema.optional(),
   profileId: nonEmptyString.optional(),
 });
 

@@ -72,6 +72,12 @@ numeric directory revisions, so newer persisted lifecycle evidence invalidates
 an older selection without exposing paths, URLs, labels, hashes, checksums, or
 content. It is not an index-freshness or live-origin assertion.
 
+The selection boundary records only portable store, CKB, source, and version
+IDs plus those safe revisions. It requires explicit approval before combining
+CKBs and excludes runtime store roots. This prevents the selection record from
+becoming a host-path manifest, but workspace binding, provider enforcement, and
+retrieval-index drift checks remain separate controls.
+
 The count-only structural inventory does not adopt or delete unknown entries.
 The prospective managed-write journal does not retroactively claim legacy
 entries and is not cleanup authority. A crash or concurrent writer can leave
@@ -128,6 +134,7 @@ expanded.
 | T-018 | Medium / medium       | A journal entry, matching bytes, or staging-shaped name is mistaken for ownership.                                                     | Journal has opaque operation events but no cleanup/approval field; no retroactive legacy claims or adoption by bytes/shape.                                                            | Add writer locks/leases and visible approval before any reconciliation or cleanup.                                               |
 | T-019 | High / medium         | A retired or otherwise ineligible source remains selectable/retrievable, or logical retirement is presented as deletion.                | Immutable retirement plus a consistent path-free readiness projection blocks retired, archived, stale/adverse, unmanaged, unbound, and directory-conflicted state while preserving evidence. | #80 must bind index state and queries to the projected revision; backup/restore, reactivation, and physical deletion remain future work. |
 | T-020 | High / medium         | Directory traversal follows a symlink, escapes its root, opens special/hidden files, exceeds limits, or writes after failed preflight. | Real non-symlink root, canonical containment, deterministic limits, skipped unsafe entries, complete extraction preflight, path-free results, guarded root rebind and one-source move. | Same-user races remain; additions/removals, automatic reconciliation, automatic deletion, and membership lifecycle are deferred. |
+| T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous source scope, or leaks a local store root through selection history.                | Canonical path-free selection snapshots require explicit combination approval and record exact store/CKB/source/version IDs with safe lifecycle revisions.                           | Workspace/run binding, pre-provider drift enforcement, and retrieval-index version checks remain to be integrated under #111/#80. |
 
 ## Runtime and build-time controls
 
@@ -171,8 +178,8 @@ The following remain open during the **Evidence-backed CV drafting** stage:
 - Retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector or hybrid retrieval is enabled by default.
 - Automatic moved-origin inference, automatic retirement, physical deletion,
-  backup/export/restore, retrieval integration, application/run CKB selection,
-  and background refresh remain deferred.
+  backup/export/restore, retrieval integration, workspace/run binding of CKB
+  selections, and background refresh remain deferred.
 - Plaintext permissions, copied stores, missing/corrupt blobs, writer
   coordination, cleanup approval, migration rollback, and backup destinations
   require explicit policy and platform evidence.

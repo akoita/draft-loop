@@ -4,10 +4,13 @@ import { basename, isAbsolute, relative, resolve } from "node:path";
 
 import {
   type CandidateKnowledgeBase,
+  type CandidateKnowledgeSelectionSnapshot,
+  type CandidateKnowledgeSelectionSnapshotEntryInput,
   type CandidateKnowledgeSource,
   type CandidateKnowledgeSourceKind,
   type CandidateKnowledgeSourceVersion,
   type CandidateKnowledgeStore,
+  createCandidateKnowledgeSelectionSnapshot,
   createCandidateKnowledgeSource,
   createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
@@ -67,6 +70,20 @@ export interface GetKnowledgeBaseLifecycleReadinessCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
 }
+
+export interface CreateKnowledgeSelectionSnapshotSelection {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+}
+
+export interface CreateKnowledgeSelectionSnapshotCommand {
+  readonly selections: readonly CreateKnowledgeSelectionSnapshotSelection[];
+  readonly combinationApproved?: boolean;
+}
+
+export type CreateCandidateKnowledgeSelectionSnapshotCommand =
+  CreateKnowledgeSelectionSnapshotCommand;
+export type KnowledgeSelectionSnapshot = CandidateKnowledgeSelectionSnapshot;
 
 export interface ListKnowledgeBasesCommand {
   readonly storeRoot: string;
@@ -626,6 +643,9 @@ export interface CandidateKnowledgeStoreService {
   readonly getKnowledgeBaseLifecycleReadiness: (
     command: GetKnowledgeBaseLifecycleReadinessCommand,
   ) => Promise<KnowledgeBaseLifecycleReadinessResult>;
+  readonly createKnowledgeSelectionSnapshot: (
+    command: CreateKnowledgeSelectionSnapshotCommand,
+  ) => Promise<KnowledgeSelectionSnapshot>;
   readonly listKnowledgeBases: (
     command: ListKnowledgeBasesCommand,
   ) => Promise<CandidateKnowledgeStoreView>;
@@ -794,6 +814,12 @@ function importDirectoryFailure(): Error {
 function lifecycleReadinessFailure(): Error {
   return new Error(
     "The selected candidate knowledge base lifecycle readiness could not be determined.",
+  );
+}
+
+function selectionSnapshotFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge base selection snapshot could not be created.",
   );
 }
 
@@ -1110,6 +1136,27 @@ function validateLifecycleReadinessResult(
     archivedAt: value.archivedAt,
     sources: Object.freeze(sources),
   });
+}
+
+function toKnowledgeSelectionSnapshotEntry(
+  storeId: string,
+  readiness: KnowledgeBaseLifecycleReadinessResult,
+): CandidateKnowledgeSelectionSnapshotEntryInput {
+  if (readiness.state !== "active" || readiness.sources.length === 0) {
+    throw lifecycleReadinessInvariantFailure();
+  }
+  if (readiness.sources.some((source) => source.status !== "ready")) {
+    throw lifecycleReadinessInvariantFailure();
+  }
+  return {
+    storeId: requireText(storeId, "Candidate knowledge store id"),
+    knowledgeBaseId: readiness.knowledgeBaseId,
+    sources: readiness.sources.map((source) => ({
+      sourceId: source.sourceId,
+      versionId: source.latestVersionId,
+      lifecycleRevision: source.lifecycleRevision,
+    })),
+  };
 }
 
 function importUrlFailure(): Error {
@@ -3674,6 +3721,48 @@ export function createCandidateKnowledgeStoreService(
         throw lifecycleReadinessFailure();
       }
     },
+    createKnowledgeSelectionSnapshot: async (command) => {
+      try {
+        if (
+          !command ||
+          !Array.isArray(command.selections) ||
+          command.selections.length === 0 ||
+          (command.selections.length > 1 && command.combinationApproved !== true)
+        ) {
+          throw selectionSnapshotFailure();
+        }
+        const selections = command.selections.map((selection) => ({
+          storeRoot: requireStoreRoot(selection.storeRoot),
+          knowledgeBaseId: requireText(selection.knowledgeBaseId, "Candidate knowledge base id"),
+        }));
+        const entries: CandidateKnowledgeSelectionSnapshotEntryInput[] = [];
+        const logicalSelections = new Set<string>();
+        for (const selection of selections) {
+          const entry = await useHandle(
+            () => resolved.open(selection.storeRoot),
+            async (handle) => {
+              const storeId = requireText(handle.descriptor.id, "Candidate knowledge store id");
+              const logicalKey = `${storeId}\u0000${selection.knowledgeBaseId}`;
+              if (logicalSelections.has(logicalKey)) {
+                throw selectionSnapshotFailure();
+              }
+              const readiness = validateLifecycleReadinessResult(
+                await handle.getCandidateKnowledgeBaseLifecycleReadiness(selection.knowledgeBaseId),
+                selection.knowledgeBaseId,
+              );
+              const projected = toKnowledgeSelectionSnapshotEntry(storeId, readiness);
+              logicalSelections.add(logicalKey);
+              return projected;
+            },
+          );
+          entries.push(entry);
+        }
+        const capturedAt = resolved.now();
+        return createCandidateKnowledgeSelectionSnapshot({ capturedAt, entries });
+      } catch {
+        throw selectionSnapshotFailure();
+      }
+    },
     listKnowledgeBases: async (command) => openAndProject(requireStoreRoot(command.storeRoot)),
     createKnowledgeBase: async (command) => {
       const storeRoot = requireStoreRoot(command.storeRoot);
@@ -5227,6 +5316,7 @@ const defaultService = createCandidateKnowledgeStoreService();
 export const initializeStore = defaultService.initializeStore;
 export const openStore = defaultService.openStore;
 export const getKnowledgeBaseLifecycleReadiness = defaultService.getKnowledgeBaseLifecycleReadiness;
+export const createKnowledgeSelectionSnapshot = defaultService.createKnowledgeSelectionSnapshot;
 export const listKnowledgeBases = defaultService.listKnowledgeBases;
 export const createKnowledgeBase = defaultService.createKnowledgeBase;
 export const renameKnowledgeBase = defaultService.renameKnowledgeBase;
