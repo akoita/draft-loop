@@ -14,6 +14,9 @@ import {
   type CandidateKnowledgeStoreView,
   type KnowledgeBaseLifecycleReadinessResult,
   type KnowledgeSourceDuplicateGroup,
+  type KnowledgeSourceOriginRefreshResult,
+  type KnowledgeSourceOriginStatusResult,
+  type KnowledgeSourceRefreshStateResult,
   knowledgeService,
   runPilot,
   type StatusCommand,
@@ -207,6 +210,135 @@ function writeKnowledgeSourceWriteResult(
     version: latest.version,
     created: result.created,
   });
+}
+
+const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
+
+function isValidIsoTimestamp(value: unknown): value is string {
+  return (
+    typeof value === "string" && isoTimestampPattern.test(value) && !Number.isNaN(Date.parse(value))
+  );
+}
+
+function isOptionalIsoTimestamp(value: unknown): value is string | undefined {
+  return value === undefined || isValidIsoTimestamp(value);
+}
+
+function isOptionalVersionId(value: unknown): value is string | undefined {
+  return value === undefined || (typeof value === "string" && value.trim() !== "");
+}
+
+function writeKnowledgeSourceOriginStatus(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  result: KnowledgeSourceOriginStatusResult,
+  expectedSourceId: string,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.sourceId !== expectedSourceId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !["unbound", "current", "changed", "missing", "inaccessible"].includes(result.status)
+  ) {
+    throw new Error("The candidate knowledge source origin status result was invalid.");
+  }
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      sourceId: expectedSourceId,
+      checkedAt: result.checkedAt,
+      status: result.status,
+    }),
+  );
+}
+
+function writeKnowledgeSourceRefreshState(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  result: KnowledgeSourceRefreshStateResult,
+  expectedSourceId: string,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.sourceId !== expectedSourceId ||
+    !["unobserved", "stale", "current", "changed", "missing", "inaccessible", "unbound"].includes(
+      result.status,
+    ) ||
+    !isOptionalIsoTimestamp(result.checkedAt) ||
+    !isOptionalIsoTimestamp(result.lastRefreshedAt) ||
+    !isOptionalVersionId(result.observedVersionId) ||
+    !isOptionalVersionId(result.lastRefreshedVersionId)
+  ) {
+    throw new Error("The candidate knowledge source refresh state result was invalid.");
+  }
+  const hasCheckedAt = result.checkedAt !== undefined;
+  const hasObservedVersionId = result.observedVersionId !== undefined;
+  const hasLastRefreshedAt = result.lastRefreshedAt !== undefined;
+  const hasLastRefreshedVersionId = result.lastRefreshedVersionId !== undefined;
+  if (
+    hasCheckedAt !== hasObservedVersionId ||
+    hasLastRefreshedAt !== hasLastRefreshedVersionId ||
+    (result.status === "unobserved"
+      ? hasCheckedAt || hasObservedVersionId || hasLastRefreshedAt || hasLastRefreshedVersionId
+      : !hasCheckedAt || !hasObservedVersionId) ||
+    (hasLastRefreshedAt &&
+      Date.parse(result.lastRefreshedAt as string) > Date.parse(result.checkedAt as string))
+  ) {
+    throw new Error("The candidate knowledge source refresh state result was invalid.");
+  }
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      sourceId: expectedSourceId,
+      status: result.status,
+      ...(result.checkedAt === undefined ? {} : { checkedAt: result.checkedAt }),
+      ...(result.observedVersionId === undefined
+        ? {}
+        : { observedVersionId: result.observedVersionId }),
+      ...(result.lastRefreshedAt === undefined ? {} : { lastRefreshedAt: result.lastRefreshedAt }),
+      ...(result.lastRefreshedVersionId === undefined
+        ? {}
+        : { lastRefreshedVersionId: result.lastRefreshedVersionId }),
+    }),
+  );
+}
+
+function writeKnowledgeSourceOriginRefresh(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  result: KnowledgeSourceOriginRefreshResult,
+  expectedSourceId: string,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.sourceId !== expectedSourceId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !["unbound", "current", "refreshed", "missing", "inaccessible"].includes(result.status) ||
+    !isOptionalVersionId(result.versionId)
+  ) {
+    throw new Error("The candidate knowledge source refresh result was invalid.");
+  }
+  if (
+    (result.status === "refreshed" && result.versionId === undefined) ||
+    (result.status !== "refreshed" && result.versionId !== undefined)
+  ) {
+    throw new Error("The candidate knowledge source refresh result was invalid.");
+  }
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      sourceId: expectedSourceId,
+      checkedAt: result.checkedAt,
+      status: result.status,
+      ...(result.versionId === undefined ? {} : { versionId: result.versionId }),
+    }),
+  );
 }
 
 function writeManagedKnowledgeInventory(
@@ -571,7 +703,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   const knowledgeSource = knowledge
     .command("source")
-    .description("Import and inspect candidate knowledge sources");
+    .description("Import, refresh, and inspect candidate knowledge sources");
   knowledgeSource
     .command("import")
     .description("Import one explicitly selected local source file")
@@ -645,6 +777,78 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           sourcePath,
         });
         writeKnowledgeSourceWriteResult(io, knowledgeBaseId, result, "file", sourceId);
+      },
+    );
+
+  knowledgeSource
+    .command("origin-status")
+    .description("Check one remembered local file origin without exposing its path")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque source id")
+    .action(async (storeRoot: string, knowledgeBaseId: string, sourceId: string) => {
+      const result = await candidateKnowledge.checkKnowledgeSourceOriginStatus({
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+      });
+      writeKnowledgeSourceOriginStatus(io, knowledgeBaseId, result, sourceId);
+    });
+
+  knowledgeSource
+    .command("refresh-state")
+    .description("Read one path-free remembered source refresh state")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque source id")
+    .action(async (storeRoot: string, knowledgeBaseId: string, sourceId: string) => {
+      const result = await candidateKnowledge.getKnowledgeSourceRefreshState({
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+      });
+      writeKnowledgeSourceRefreshState(io, knowledgeBaseId, result, sourceId);
+    });
+
+  knowledgeSource
+    .command("refresh-file")
+    .description("Refresh one remembered local file origin explicitly")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque source id")
+    .action(async (storeRoot: string, knowledgeBaseId: string, sourceId: string) => {
+      const result = await candidateKnowledge.refreshKnowledgeSourceFromOrigin({
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+      });
+      writeKnowledgeSourceOriginRefresh(io, knowledgeBaseId, result, sourceId);
+    });
+
+  knowledgeSource
+    .command("refresh-url")
+    .description("Refresh one explicitly approved URL source")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque source id")
+    .option("--approve", "approve retrieving and storing this URL")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        sourceId: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.approve !== true) {
+          throw new Error("knowledge source refresh-url requires --approve.");
+        }
+        const result = await candidateKnowledge.refreshKnowledgeSourceUrl({
+          storeRoot,
+          knowledgeBaseId,
+          sourceId,
+          approved: true,
+        });
+        writeKnowledgeSourceOriginRefresh(io, knowledgeBaseId, result, sourceId);
       },
     );
 

@@ -15,6 +15,9 @@ import type {
   InitializeWorkspaceCommand,
   KnowledgeBaseLifecycleReadinessResult,
   KnowledgeSourceDuplicateGroup,
+  KnowledgeSourceOriginRefreshResult,
+  KnowledgeSourceOriginStatusResult,
+  KnowledgeSourceRefreshStateResult,
   StatusCommand,
   WorkspaceDescriptor,
 } from "./workflow.js";
@@ -240,6 +243,41 @@ function knowledgeSourceWriteResult(
     ],
     created,
   } as unknown as CandidateKnowledgeSourceWriteResult;
+}
+
+function knowledgeSourceOriginStatusResult(
+  status: KnowledgeSourceOriginStatusResult["status"] = "current",
+  sourceId = "source-refresh",
+): KnowledgeSourceOriginStatusResult {
+  return {
+    sourceId,
+    checkedAt: "2026-08-23T10:02:00.000Z",
+    status,
+  };
+}
+
+function knowledgeSourceOriginRefreshResult(
+  status: KnowledgeSourceOriginRefreshResult["status"] = "current",
+  versionId?: string,
+  sourceId = "source-refresh",
+): KnowledgeSourceOriginRefreshResult {
+  return {
+    sourceId,
+    checkedAt: "2026-08-23T10:02:00.000Z",
+    status,
+    ...(versionId === undefined ? {} : { versionId }),
+  };
+}
+
+function knowledgeSourceRefreshStateResult(
+  status: KnowledgeSourceRefreshStateResult["status"] = "current",
+  overrides: Partial<KnowledgeSourceRefreshStateResult> = {},
+): KnowledgeSourceRefreshStateResult {
+  return {
+    sourceId: "source-refresh",
+    status,
+    ...overrides,
+  };
 }
 
 function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
@@ -899,6 +937,514 @@ describe("candidate knowledge source inspection CLI controls", () => {
       "The candidate knowledge source write result was invalid.",
     );
     expect(appendKnowledgeSourceFileVersion).toHaveBeenCalledTimes(3);
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("maps origin status and every refresh-state status without exposing local details", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-refresh-store");
+    const knowledgeBaseId = "base-one";
+    const sourceId = "source-refresh";
+    const checkKnowledgeSourceOriginStatus = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...knowledgeSourceOriginStatusResult("unbound"),
+        originPath: "private-origin.md",
+        displayName: "Private refresh label",
+        checksum: "f".repeat(64),
+      } as unknown as KnowledgeSourceOriginStatusResult)
+      .mockResolvedValueOnce(knowledgeSourceOriginStatusResult("current"))
+      .mockResolvedValueOnce(knowledgeSourceOriginStatusResult("changed"))
+      .mockResolvedValueOnce(knowledgeSourceOriginStatusResult("missing"))
+      .mockResolvedValueOnce(knowledgeSourceOriginStatusResult("inaccessible"));
+    const getKnowledgeSourceRefreshState = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceRefreshStateResult("unobserved"))
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("current", {
+          checkedAt: "2026-08-23T10:03:00.000Z",
+          observedVersionId: "version-current",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("stale", {
+          checkedAt: "2026-08-23T10:04:00.000Z",
+          observedVersionId: "version-stale",
+          lastRefreshedAt: "2026-08-23T10:02:00.000Z",
+          lastRefreshedVersionId: "version-refreshed",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("changed", {
+          checkedAt: "2026-08-23T10:05:00.000Z",
+          observedVersionId: "version-changed",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("missing", {
+          checkedAt: "2026-08-23T10:06:00.000Z",
+          observedVersionId: "version-missing",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("inaccessible", {
+          checkedAt: "2026-08-23T10:07:00.000Z",
+          observedVersionId: "version-inaccessible",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("unbound", {
+          checkedAt: "2026-08-23T10:08:00.000Z",
+          observedVersionId: "version-unbound",
+        }),
+      );
+    const knowledgeService = {
+      checkKnowledgeSourceOriginStatus,
+      getKnowledgeSourceRefreshState,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    for (let index = 0; index < 5; index += 1) {
+      await cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "origin-status",
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+      ]);
+    }
+    for (let index = 0; index < 7; index += 1) {
+      await cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "refresh-state",
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+      ]);
+    }
+
+    expect(checkKnowledgeSourceOriginStatus).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+    });
+    expect(getKnowledgeSourceRefreshState).toHaveBeenCalledTimes(7);
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "unbound",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "current",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "changed",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "missing",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "inaccessible",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "unobserved",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "current",
+        checkedAt: "2026-08-23T10:03:00.000Z",
+        observedVersionId: "version-current",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "stale",
+        checkedAt: "2026-08-23T10:04:00.000Z",
+        observedVersionId: "version-stale",
+        lastRefreshedAt: "2026-08-23T10:02:00.000Z",
+        lastRefreshedVersionId: "version-refreshed",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "changed",
+        checkedAt: "2026-08-23T10:05:00.000Z",
+        observedVersionId: "version-changed",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "missing",
+        checkedAt: "2026-08-23T10:06:00.000Z",
+        observedVersionId: "version-missing",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "inaccessible",
+        checkedAt: "2026-08-23T10:07:00.000Z",
+        observedVersionId: "version-inaccessible",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "unbound",
+        checkedAt: "2026-08-23T10:08:00.000Z",
+        observedVersionId: "version-unbound",
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain("private-origin.md");
+    expect(output).not.toContain("https://private.example/refresh");
+    expect(output).not.toContain("Private refresh label");
+    expect(output).not.toContain("text/markdown");
+    expect(output).not.toContain("f".repeat(64));
+  });
+
+  it("maps file and approved URL refresh results, including refreshed and no-version states", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-refresh-store");
+    const knowledgeBaseId = "base-one";
+    const sourceId = "source-refresh";
+    const refreshKnowledgeSourceFromOrigin = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...knowledgeSourceOriginRefreshResult("refreshed", "version-new"),
+        originPath: "private-origin.md",
+        url: "https://private.example/refresh?secret=yes",
+        displayName: "Private refresh label",
+        checksum: "f".repeat(64),
+        mediaType: "text/markdown",
+      } as unknown as KnowledgeSourceOriginRefreshResult)
+      .mockResolvedValueOnce(knowledgeSourceOriginRefreshResult("current"))
+      .mockResolvedValueOnce(knowledgeSourceOriginRefreshResult("missing"))
+      .mockResolvedValueOnce(knowledgeSourceOriginRefreshResult("inaccessible"))
+      .mockResolvedValueOnce(knowledgeSourceOriginRefreshResult("unbound"));
+    const refreshKnowledgeSourceUrl = vi.fn(async () =>
+      knowledgeSourceOriginRefreshResult("refreshed", "version-url"),
+    );
+    const knowledgeService = {
+      refreshKnowledgeSourceFromOrigin,
+      refreshKnowledgeSourceUrl,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    for (let index = 0; index < 5; index += 1) {
+      await cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "refresh-file",
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+      ]);
+    }
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "refresh-url",
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      "--approve",
+    ]);
+
+    expect(refreshKnowledgeSourceFromOrigin).toHaveBeenCalledTimes(5);
+    expect(refreshKnowledgeSourceFromOrigin).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+    });
+    expect(refreshKnowledgeSourceUrl).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      approved: true,
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "refreshed",
+        versionId: "version-new",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "current",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "missing",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "inaccessible",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "unbound",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        checkedAt: "2026-08-23T10:02:00.000Z",
+        status: "refreshed",
+        versionId: "version-url",
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain("private-origin.md");
+    expect(output).not.toContain("https://private.example/refresh?secret=yes");
+    expect(output).not.toContain("Private refresh label");
+    expect(output).not.toContain("text/markdown");
+    expect(output).not.toContain("f".repeat(64));
+  });
+
+  it("requires refresh URL approval before calling the URL refresh service", async () => {
+    const dependencies = harness();
+    const refreshKnowledgeSourceUrl = vi.fn(async () =>
+      knowledgeSourceOriginRefreshResult("refreshed", "version-url"),
+    );
+    const knowledgeService = {
+      refreshKnowledgeSourceUrl,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "refresh-url",
+        resolve("private-refresh-store"),
+        "base-one",
+        "source-refresh",
+      ]),
+    ).rejects.toThrow("knowledge source refresh-url requires --approve");
+    expect(refreshKnowledgeSourceUrl).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("rejects malformed or wrong-source refresh results and propagates service failures", async () => {
+    const dependencies = harness();
+    const failure = new Error("origin status failed");
+    const checkKnowledgeSourceOriginStatus = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceOriginStatusResult("current", "other-source"))
+      .mockRejectedValueOnce(failure);
+    const getKnowledgeSourceRefreshState = vi.fn(async () =>
+      knowledgeSourceRefreshStateResult("current", {
+        checkedAt: "not-a-timestamp",
+      }),
+    );
+    const refreshKnowledgeSourceFromOrigin = vi.fn(
+      async () =>
+        ({
+          ...knowledgeSourceOriginRefreshResult("current"),
+          versionId: "   ",
+        }) as unknown as KnowledgeSourceOriginRefreshResult,
+    );
+    const knowledgeService = {
+      checkKnowledgeSourceOriginStatus,
+      getKnowledgeSourceRefreshState,
+      refreshKnowledgeSourceFromOrigin,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "origin-status",
+        resolve("private-refresh-store"),
+        "base-one",
+        "source-refresh",
+      ]),
+    ).rejects.toThrow("The candidate knowledge source origin status result was invalid.");
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "refresh-state",
+        resolve("private-refresh-store"),
+        "base-one",
+        "source-refresh",
+      ]),
+    ).rejects.toThrow("The candidate knowledge source refresh state result was invalid.");
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "refresh-file",
+        resolve("private-refresh-store"),
+        "base-one",
+        "source-refresh",
+      ]),
+    ).rejects.toThrow("The candidate knowledge source refresh result was invalid.");
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "origin-status",
+        resolve("private-refresh-store"),
+        "base-one",
+        "source-refresh",
+      ]),
+    ).rejects.toBe(failure);
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("rejects inconsistent refresh observation and refresh-result relationships", async () => {
+    const dependencies = harness();
+    const getKnowledgeSourceRefreshState = vi
+      .fn()
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("unobserved", {
+          checkedAt: "2026-08-23T10:01:00.000Z",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("current", {
+          checkedAt: "2026-08-23T10:01:00.000Z",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("current", {
+          observedVersionId: "version-current",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("current", {
+          checkedAt: "2026-08-23T10:01:00.000Z",
+          observedVersionId: "version-current",
+          lastRefreshedAt: "2026-08-23T10:01:00.000Z",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("current", {
+          checkedAt: "2026-08-23T10:01:00.000Z",
+          observedVersionId: "version-current",
+          lastRefreshedVersionId: "version-refreshed",
+        }),
+      )
+      .mockResolvedValueOnce(
+        knowledgeSourceRefreshStateResult("current", {
+          checkedAt: "2026-08-23T10:01:00.000Z",
+          observedVersionId: "version-current",
+          lastRefreshedAt: "2026-08-23T10:02:00.000Z",
+          lastRefreshedVersionId: "version-refreshed",
+        }),
+      );
+    const refreshKnowledgeSourceFromOrigin = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceOriginRefreshResult("refreshed"))
+      .mockResolvedValueOnce({
+        ...knowledgeSourceOriginRefreshResult("current"),
+        versionId: "version-current",
+      } as unknown as KnowledgeSourceOriginRefreshResult);
+    const knowledgeService = {
+      getKnowledgeSourceRefreshState,
+      refreshKnowledgeSourceFromOrigin,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const stateCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "refresh-state",
+      resolve("private-refresh-store"),
+      "base-one",
+      "source-refresh",
+    ] as const;
+    const fileRefreshCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "refresh-file",
+      resolve("private-refresh-store"),
+      "base-one",
+      "source-refresh",
+    ] as const;
+
+    for (let index = 0; index < 6; index += 1) {
+      await expect(cli.parseAsync(stateCommand)).rejects.toThrow(
+        "The candidate knowledge source refresh state result was invalid.",
+      );
+    }
+    await expect(cli.parseAsync(fileRefreshCommand)).rejects.toThrow(
+      "The candidate knowledge source refresh result was invalid.",
+    );
+    await expect(cli.parseAsync(fileRefreshCommand)).rejects.toThrow(
+      "The candidate knowledge source refresh result was invalid.",
+    );
     expect(dependencies.lines).toEqual([]);
   });
 

@@ -118,6 +118,12 @@ pnpm --filter @draft-loop/cli start knowledge source import-url \
   ./candidate-knowledge KNOWLEDGE_BASE_ID https://example.com/profile --approve
 pnpm --filter @draft-loop/cli start knowledge source append-file-version \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID ./updated-career-history.md
+pnpm --filter @draft-loop/cli start knowledge source origin-status \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
+pnpm --filter @draft-loop/cli start knowledge source refresh-file \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
+pnpm --filter @draft-loop/cli start knowledge source refresh-url \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID --approve
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -139,8 +145,10 @@ opaque source/version identity. URL intake requires explicit approval, applies
 the shared HTTPS and network-safety checks, and likewise returns no URL or
 content. File-version append uses the same native picker, preserves the existing
 origin binding, and reports whether immutable managed bytes created a new
-version or matched the current one. Directory intake, explicit refresh/rebind,
-deletion, backup, and restore remain staged.
+version or matched the current one. Path-free status and refresh-state controls
+inspect remembered lifecycle evidence. File refresh uses the remembered local
+origin; URL refresh requires fresh approval and the same network-safety checks
+as intake. Directory intake, rebind, deletion, backup, and restore remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

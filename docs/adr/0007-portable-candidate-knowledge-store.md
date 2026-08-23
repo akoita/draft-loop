@@ -299,8 +299,12 @@ version append is a separate adapter command: CLI users supply a runtime-only
 path, the desktop host owns the picker, and both return only source/version
 identity plus creation status. Identical bytes are a no-op, changed bytes extend
 immutable lineage, and neither outcome changes the remembered origin binding.
-Directory intake remains separate because of its bounded partial-progress
-semantics.
+Shared path-free controls now expose current origin status, persisted refresh
+state, explicit remembered-file refresh, and separately approved URL refresh.
+They return only source/version identity, status, and timestamps; local origins
+and URL provenance remain sensitive store state. Directory intake remains
+separate because of its bounded partial-progress semantics, and rebind remains a
+separate exact-byte decision.
 
 ## Deferred integration
 

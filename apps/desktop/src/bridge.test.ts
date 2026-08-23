@@ -1370,6 +1370,119 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("validates path-free candidate-knowledge source status and refresh results", async () => {
+    const input = { storeId: "store-1", knowledgeBaseId: "kb-1", sourceId: "source-1" } as const;
+    for (const type of [
+      "knowledge.source-origin-status",
+      "knowledge.source-refresh-state",
+      "knowledge.refresh-file",
+    ] as const) {
+      expect(validateBridgeCommand({ type, input })).toEqual({ type, input });
+      expect(() =>
+        validateBridgeCommand({ type, input: { ...input, sourcePath: "/private" } }),
+      ).toThrow("invalid");
+    }
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.refresh-url",
+        input: { ...input, approved: true },
+      }),
+    ).toEqual({ type: "knowledge.refresh-url", input: { ...input, approved: true } });
+    expect(() =>
+      validateBridgeCommand({
+        type: "knowledge.refresh-url",
+        input: { ...input, approved: false },
+      }),
+    ).toThrow("invalid");
+
+    const checkedAt = "2026-08-24T10:00:00.000Z";
+    const originPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { ...input, checkedAt, status: "changed" } }),
+        ["knowledge.source-origin-status"],
+      ),
+    );
+    await expect(
+      originPort.execute({ type: "knowledge.source-origin-status", input }),
+    ).resolves.toEqual({ ok: true, value: { ...input, checkedAt, status: "changed" } });
+
+    const unobservedPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { ...input, status: "unobserved" } }),
+        ["knowledge.source-refresh-state"],
+      ),
+    );
+    await expect(
+      unobservedPort.execute({ type: "knowledge.source-refresh-state", input }),
+    ).resolves.toEqual({ ok: true, value: { ...input, status: "unobserved" } });
+
+    const statePort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            ...input,
+            status: "current",
+            checkedAt,
+            observedVersionId: "version-2",
+            lastRefreshedAt: checkedAt,
+            lastRefreshedVersionId: "version-2",
+          },
+        }),
+        ["knowledge.source-refresh-state"],
+      ),
+    );
+    await expect(
+      statePort.execute({ type: "knowledge.source-refresh-state", input }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { status: "current", observedVersionId: "version-2" },
+    });
+
+    const refreshedPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: { ...input, checkedAt, status: "refreshed", versionId: "version-2" },
+        }),
+        ["knowledge.refresh-file"],
+      ),
+    );
+    await expect(refreshedPort.execute({ type: "knowledge.refresh-file", input })).resolves.toEqual(
+      {
+        ok: true,
+        value: { ...input, checkedAt, status: "refreshed", versionId: "version-2" },
+      },
+    );
+
+    for (const { capability, value } of [
+      {
+        capability: "knowledge.refresh-file" as const,
+        value: { ...input, checkedAt, status: "refreshed" },
+      },
+      {
+        capability: "knowledge.refresh-file" as const,
+        value: { ...input, checkedAt, status: "current", versionId: "version-2" },
+      },
+      {
+        capability: "knowledge.source-refresh-state" as const,
+        value: { ...input, status: "current", observedVersionId: "version-2" },
+      },
+      {
+        capability: "knowledge.source-origin-status" as const,
+        value: { ...input, checkedAt, status: "changed", sourcePath: "/private/resume.md" },
+      },
+    ]) {
+      const leakingPort = createCapabilityPort(
+        bridge(async () => ({ ok: true, value }), [capability]),
+      );
+      await expect(leakingPort.execute({ type: capability, input })).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("requires approval and redacts candidate-knowledge URL intake results", async () => {
     const input = {
       storeId: "store-1",

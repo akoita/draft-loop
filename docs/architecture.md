@@ -404,6 +404,11 @@ the picker. The application/storage boundary atomically guards the current
 version; identical bytes return the current identity and changed bytes append
 immutable lineage without replacing the remembered origin binding. Generic
 results expose only opaque identity and creation status.
+Source maintenance uses separate path-free status, refresh-state, file-refresh,
+and URL-refresh commands over the same application service. Remembered-file
+refresh never accepts a new path; URL refresh requires explicit approval and
+reuses the centralized network boundary. Results contain only opaque identity,
+status, timestamps, and a newly created version ID when applicable.
 Live provider execution is opt-in and the provider boundary enforces the
 request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain
