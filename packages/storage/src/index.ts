@@ -272,6 +272,73 @@ export interface CandidateKnowledgeSourceRefreshObservationRecord
   readonly stale: boolean;
 }
 
+export const candidateKnowledgeSourceLifecycleBlockerReasons = [
+  "knowledge-base-archived",
+  "source-retired",
+  "latest-version-unmanaged",
+  "source-origin-unbound",
+  "directory-origin-conflict",
+  "refresh-stale",
+  "refresh-changed",
+  "refresh-missing",
+  "refresh-inaccessible",
+  "refresh-unbound",
+] as const;
+export type CandidateKnowledgeSourceLifecycleBlockerReason =
+  (typeof candidateKnowledgeSourceLifecycleBlockerReasons)[number];
+export type CandidateKnowledgeSourceLifecycleReadinessStatus = "ready" | "blocked";
+
+export interface CandidateKnowledgeSourceLifecycleObservationRevision {
+  readonly observedVersionId: string;
+  readonly status: CandidateKnowledgeSourceRefreshObservationStatus;
+  readonly checkedAt: string;
+  readonly lastRefreshedVersionId: string | null;
+  readonly lastRefreshedAt: string | null;
+  readonly stale: boolean;
+}
+
+export interface CandidateKnowledgeSourceLifecycleRetirementRevision {
+  readonly retiredAt: string;
+  readonly reason: CandidateKnowledgeSourceRetirementReason;
+}
+
+export interface CandidateKnowledgeSourceLifecycleDirectoryRevision {
+  readonly directoryId: string;
+  readonly rootRevision: number;
+  readonly rootBoundAt: string;
+  readonly memberRevision: number;
+  readonly memberBoundAt: string;
+}
+
+export interface CandidateKnowledgeSourceLifecycleRevision {
+  readonly knowledgeBaseState: CandidateKnowledgeBaseState;
+  readonly knowledgeBaseArchivedAt: string | null;
+  readonly versionId: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly managed: boolean;
+  readonly originBoundAt: string | null;
+  readonly observation: CandidateKnowledgeSourceLifecycleObservationRevision | null;
+  readonly retirement: CandidateKnowledgeSourceLifecycleRetirementRevision | null;
+  readonly provenanceFetchedAt: string | null;
+  readonly directory: CandidateKnowledgeSourceLifecycleDirectoryRevision | null;
+}
+
+export interface CandidateKnowledgeSourceLifecycleReadinessRecord {
+  readonly sourceId: string;
+  readonly latestVersionId: string;
+  readonly status: CandidateKnowledgeSourceLifecycleReadinessStatus;
+  readonly reasons: readonly CandidateKnowledgeSourceLifecycleBlockerReason[];
+  readonly lifecycleRevision: CandidateKnowledgeSourceLifecycleRevision;
+}
+
+export interface CandidateKnowledgeBaseLifecycleReadinessRecord {
+  readonly knowledgeBaseId: string;
+  readonly state: CandidateKnowledgeBaseState;
+  readonly archivedAt: string | null;
+  readonly sources: readonly CandidateKnowledgeSourceLifecycleReadinessRecord[];
+}
+
 export const candidateKnowledgeSourceRetirementReasons = ["user-requested"] as const;
 export type CandidateKnowledgeSourceRetirementReason =
   (typeof candidateKnowledgeSourceRetirementReasons)[number];
@@ -398,6 +465,9 @@ export interface CandidateKnowledgeBaseStoragePort {
     knowledgeBaseId: string,
     sourceId: string,
   ) => Promise<readonly CandidateKnowledgeSourceVersionRecord[]>;
+  readonly getCandidateKnowledgeBaseLifecycleReadiness: (
+    knowledgeBaseId: string,
+  ) => Promise<CandidateKnowledgeBaseLifecycleReadinessRecord | undefined>;
   readonly createCandidateKnowledgeDirectoryBinding: (
     input: CandidateKnowledgeDirectoryBindingInput,
   ) => Promise<CandidateKnowledgeDirectoryBindingRecord>;
@@ -5277,6 +5347,586 @@ export class SqliteStorage
       .map(candidateKnowledgeSourceVersionFromRow);
   }
 
+  public async getCandidateKnowledgeBaseLifecycleReadiness(
+    knowledgeBaseId: string,
+  ): Promise<CandidateKnowledgeBaseLifecycleReadinessRecord | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    let result: CandidateKnowledgeBaseLifecycleReadinessRecord | undefined;
+    this.database.transaction(() => {
+      const knowledgeBaseRow = this.database
+        .prepare(
+          `SELECT id, display_name, description, state, is_default,
+                  created_at, updated_at, archived_at
+           FROM candidate_knowledge_bases
+           WHERE id = ?`,
+        )
+        .get(normalizedKnowledgeBaseId);
+      if (knowledgeBaseRow === undefined) {
+        result = undefined;
+        return;
+      }
+      const knowledgeBase = candidateKnowledgeBaseFromRow(knowledgeBaseRow);
+      if (
+        knowledgeBase.id !== normalizedKnowledgeBaseId ||
+        (knowledgeBase.state !== "active" && knowledgeBase.state !== "archived") ||
+        !isValidCandidateKnowledgeBaseLifecycleState(knowledgeBase)
+      ) {
+        throw new StorageValidationError("candidate knowledge base lifecycle state is malformed");
+      }
+
+      const sourceRows = this.database
+        .prepare(
+          `SELECT id, candidate_knowledge_base_id, kind, display_name, created_at
+           FROM candidate_knowledge_sources
+           WHERE candidate_knowledge_base_id = ?
+           ORDER BY id`,
+        )
+        .all(normalizedKnowledgeBaseId);
+      const sources: CandidateKnowledgeSourceLifecycleReadinessRecord[] = [];
+      for (const sourceRow of sourceRows) {
+        const source = candidateKnowledgeSourceFromRow(sourceRow);
+        if (
+          source.knowledgeBaseId !== normalizedKnowledgeBaseId ||
+          (source.kind !== "file" && source.kind !== "url") ||
+          source.id.trim() === "" ||
+          source.displayName.trim() === ""
+        ) {
+          throw new StorageValidationError(
+            "candidate knowledge source lifecycle state is malformed",
+          );
+        }
+        const sourceCreatedAt = requireTimestamp(
+          source.createdAt,
+          `candidate knowledge source ${source.id} createdAt`,
+        );
+
+        const versionRows = this.database
+          .prepare(
+            `SELECT id, source_id, version, parent_version_id,
+                    media_type, checksum, size_bytes, created_at
+             FROM candidate_knowledge_source_versions
+             WHERE source_id = ?
+             ORDER BY version, id`,
+          )
+          .all(source.id);
+        if (versionRows.length === 0) {
+          throw new StorageValidationError(
+            `candidate knowledge source ${source.id} has no source versions`,
+          );
+        }
+        const versions = versionRows.map(candidateKnowledgeSourceVersionFromRow);
+        const versionIds = new Set<string>();
+        let previousVersionId: string | null = null;
+        let previousVersionCreatedAt = sourceCreatedAt;
+        for (const [index, version] of versions.entries()) {
+          if (
+            version.sourceId !== source.id ||
+            version.id.trim() === "" ||
+            versionIds.has(version.id) ||
+            !Number.isSafeInteger(version.version) ||
+            version.version !== index + 1 ||
+            version.parentVersionId !== previousVersionId ||
+            version.mediaType.trim() === "" ||
+            !/^[0-9a-f]{64}$/.test(version.checksum) ||
+            !Number.isSafeInteger(version.sizeBytes) ||
+            version.sizeBytes < 0
+          ) {
+            throw new StorageValidationError(
+              `candidate knowledge source ${source.id} version chain is malformed`,
+            );
+          }
+          const versionCreatedAt = requireTimestamp(
+            version.createdAt,
+            `candidate knowledge source version ${version.id} createdAt`,
+          );
+          if (Date.parse(versionCreatedAt) < Date.parse(previousVersionCreatedAt)) {
+            throw new StorageValidationError(
+              `candidate knowledge source ${source.id} version chronology is malformed`,
+            );
+          }
+          versionIds.add(version.id);
+          previousVersionId = version.id;
+          previousVersionCreatedAt = versionCreatedAt;
+        }
+        const latestVersion = versions[versions.length - 1];
+        if (latestVersion === undefined) {
+          throw new StorageValidationError(
+            `candidate knowledge source ${source.id} has no latest version`,
+          );
+        }
+        const latestVersionCreatedAt = requireTimestamp(
+          latestVersion.createdAt,
+          `candidate knowledge source ${source.id} latest version createdAt`,
+        );
+        const managedRow = this.database
+          .prepare(
+            `SELECT version_id
+             FROM candidate_knowledge_managed_source_versions
+             WHERE version_id = ?`,
+          )
+          .get(latestVersion.id);
+        const managed = managedRow !== undefined;
+
+        const provenanceRows = this.database
+          .prepare(
+            `SELECT provenance.source_id, provenance.version_id,
+                    provenance.original_url, provenance.final_url,
+                    provenance.fetched_at, provenance.kind,
+                    version.source_id AS version_source_id,
+                    source.candidate_knowledge_base_id AS version_knowledge_base_id
+             FROM candidate_knowledge_source_url_provenance AS provenance
+             LEFT JOIN candidate_knowledge_source_versions AS version
+               ON version.id = provenance.version_id
+             LEFT JOIN candidate_knowledge_sources AS source
+               ON source.id = version.source_id
+             WHERE provenance.source_id = ? OR version.source_id = ?
+             ORDER BY provenance.version_id`,
+          )
+          .all(source.id, source.id);
+        const provenanceByVersion = new Map<string, CandidateKnowledgeSourceUrlProvenanceRecord>();
+        let provenanceOriginalUrl: string | undefined;
+        for (const provenanceRow of provenanceRows) {
+          const provenance = candidateKnowledgeSourceUrlProvenanceFromRow(provenanceRow);
+          const versionSourceId = rowNullableString(provenanceRow, "version_source_id");
+          const versionKnowledgeBaseId = rowNullableString(
+            provenanceRow,
+            "version_knowledge_base_id",
+          );
+          if (
+            provenance.sourceId !== source.id ||
+            versionSourceId !== source.id ||
+            versionKnowledgeBaseId !== normalizedKnowledgeBaseId ||
+            !versionIds.has(provenance.versionId)
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge source URL provenance is malformed or out of scope",
+            );
+          }
+          const version = versions.find((candidate) => candidate.id === provenance.versionId);
+          if (version === undefined) {
+            throw new StorageValidationError(
+              "candidate knowledge source URL provenance version is malformed",
+            );
+          }
+          const normalizedProvenance = normalizeCandidateKnowledgeSourceUrlProvenance(provenance);
+          if (
+            normalizedProvenance.originalUrl !== provenance.originalUrl ||
+            normalizedProvenance.finalUrl !== provenance.finalUrl ||
+            Date.parse(normalizedProvenance.fetchedAt) !== Date.parse(version.createdAt)
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge source URL provenance is malformed",
+            );
+          }
+          if (
+            provenanceOriginalUrl !== undefined &&
+            provenanceOriginalUrl !== normalizedProvenance.originalUrl
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge source URL provenance is contradictory",
+            );
+          }
+          provenanceOriginalUrl = normalizedProvenance.originalUrl;
+          if (provenanceByVersion.has(provenance.versionId)) {
+            throw new StorageValidationError(
+              "candidate knowledge source URL provenance is duplicated",
+            );
+          }
+          provenanceByVersion.set(provenance.versionId, {
+            sourceId: provenance.sourceId,
+            versionId: provenance.versionId,
+            ...normalizedProvenance,
+          });
+        }
+        if (source.kind === "file" && provenanceRows.length > 0) {
+          throw new StorageValidationError(
+            "candidate knowledge source file contains URL provenance",
+          );
+        }
+        if (source.kind === "url" && managed && !provenanceByVersion.has(latestVersion.id)) {
+          throw new StorageValidationError(
+            "managed candidate knowledge URL source has no latest provenance",
+          );
+        }
+        const latestProvenance = provenanceByVersion.get(latestVersion.id);
+
+        const originRows = this.database
+          .prepare(
+            `SELECT source_id, origin_path, bound_at
+             FROM candidate_knowledge_source_origin_bindings
+             WHERE source_id = ?`,
+          )
+          .all(source.id);
+        if (originRows.length > 1) {
+          throw new StorageValidationError(
+            "candidate knowledge source origin binding is duplicated",
+          );
+        }
+        let origin: CandidateKnowledgeSourceOriginBindingRecord | undefined;
+        if (originRows[0] !== undefined) {
+          origin = candidateKnowledgeSourceOriginBindingFromRow(originRows[0]);
+          if (origin.sourceId !== source.id || source.kind !== "file") {
+            throw new StorageValidationError(
+              "candidate knowledge source origin binding is malformed",
+            );
+          }
+          requireCanonicalAbsolutePath(
+            origin.originPath,
+            `candidate knowledge source ${source.id} origin path`,
+          );
+          const originBoundAt = requireTimestamp(
+            origin.boundAt,
+            `candidate knowledge source ${source.id} origin boundAt`,
+          );
+          if (Date.parse(originBoundAt) < Date.parse(sourceCreatedAt)) {
+            throw new StorageValidationError(
+              `candidate knowledge source ${source.id} origin chronology is malformed`,
+            );
+          }
+        }
+
+        const observationRows = this.database
+          .prepare(
+            `SELECT source_id, observed_version_id, status, checked_at,
+                    last_refreshed_version_id, last_refreshed_at
+             FROM candidate_knowledge_source_refresh_observations
+             WHERE source_id = ?`,
+          )
+          .all(source.id);
+        if (observationRows.length > 1) {
+          throw new StorageValidationError(
+            "candidate knowledge source refresh observation is duplicated",
+          );
+        }
+        let observation: CandidateKnowledgeSourceLifecycleObservationRevision | null = null;
+        if (observationRows[0] !== undefined) {
+          const observed = candidateKnowledgeSourceRefreshObservationFromRow(
+            observationRows[0],
+            latestVersion.id,
+          );
+          if (
+            observed.sourceId !== source.id ||
+            !versionIds.has(observed.observedVersionId) ||
+            (observed.lastRefreshedVersionId !== null &&
+              !versionIds.has(observed.lastRefreshedVersionId)) ||
+            (observed.lastRefreshedVersionId === null) !== (observed.lastRefreshedAt === null)
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge source refresh observation is malformed",
+            );
+          }
+          requireCandidateKnowledgeSourceRefreshObservationStatus(observed.status);
+          const checkedAt = requireTimestamp(
+            observed.checkedAt,
+            `candidate knowledge source ${source.id} refresh checkedAt`,
+          );
+          const observedVersion = versions.find(
+            (version) => version.id === observed.observedVersionId,
+          );
+          if (observedVersion === undefined) {
+            throw new StorageValidationError(
+              `candidate knowledge source ${source.id} refresh observed version is malformed`,
+            );
+          }
+          const observedVersionCreatedAt = requireTimestamp(
+            observedVersion.createdAt,
+            `candidate knowledge source ${source.id} observed version createdAt`,
+          );
+          if (Date.parse(checkedAt) < Date.parse(observedVersionCreatedAt)) {
+            throw new StorageValidationError(
+              `candidate knowledge source ${source.id} refresh chronology is malformed`,
+            );
+          }
+          if (observed.lastRefreshedAt !== null) {
+            const lastRefreshedAt = requireTimestamp(
+              observed.lastRefreshedAt,
+              `candidate knowledge source ${source.id} lastRefreshedAt`,
+            );
+            if (Date.parse(lastRefreshedAt) > Date.parse(checkedAt)) {
+              throw new StorageValidationError(
+                `candidate knowledge source ${source.id} refresh chronology is malformed`,
+              );
+            }
+            const lastRefreshedVersion = versions.find(
+              (version) => version.id === observed.lastRefreshedVersionId,
+            );
+            if (lastRefreshedVersion === undefined) {
+              throw new StorageValidationError(
+                `candidate knowledge source ${source.id} last-refreshed version is malformed`,
+              );
+            }
+            const lastRefreshedVersionCreatedAt = requireTimestamp(
+              lastRefreshedVersion.createdAt,
+              `candidate knowledge source ${source.id} last-refreshed version createdAt`,
+            );
+            if (Date.parse(lastRefreshedAt) < Date.parse(lastRefreshedVersionCreatedAt)) {
+              throw new StorageValidationError(
+                `candidate knowledge source ${source.id} refresh chronology is malformed`,
+              );
+            }
+          }
+          observation = {
+            observedVersionId: observed.observedVersionId,
+            status: observed.status,
+            checkedAt,
+            lastRefreshedVersionId: observed.lastRefreshedVersionId,
+            lastRefreshedAt: observed.lastRefreshedAt,
+            stale: observed.stale,
+          };
+        }
+
+        const retirementRows = this.database
+          .prepare(
+            `SELECT source_id, retired_at, reason
+             FROM candidate_knowledge_source_retirements
+             WHERE source_id = ?`,
+          )
+          .all(source.id);
+        if (retirementRows.length > 1) {
+          throw new StorageValidationError("candidate knowledge source retirement is duplicated");
+        }
+        let retirement: CandidateKnowledgeSourceLifecycleRetirementRevision | null = null;
+        if (retirementRows[0] !== undefined) {
+          const record = candidateKnowledgeSourceRetirementFromRow(retirementRows[0]);
+          if (record.sourceId !== source.id || record.reason !== "user-requested") {
+            throw new StorageValidationError("candidate knowledge source retirement is malformed");
+          }
+          const retiredAt = requireTimestamp(
+            record.retiredAt,
+            `candidate knowledge source ${source.id} retiredAt`,
+          );
+          if (Date.parse(retiredAt) < Date.parse(latestVersionCreatedAt)) {
+            throw new StorageValidationError(
+              `candidate knowledge source ${source.id} retirement chronology is malformed`,
+            );
+          }
+          retirement = { retiredAt, reason: record.reason };
+        }
+
+        const directoryRows = this.database
+          .prepare(
+            `SELECT directory_id, candidate_knowledge_base_id, source_id,
+                    revision, relative_path_hash, bound_at
+             FROM candidate_knowledge_directory_current_members
+             WHERE candidate_knowledge_base_id = ? AND source_id = ?`,
+          )
+          .all(normalizedKnowledgeBaseId, source.id);
+        const allScopedDirectoryRows = this.database
+          .prepare(
+            `SELECT directory_id, candidate_knowledge_base_id, source_id,
+                    revision, relative_path_hash, bound_at
+             FROM candidate_knowledge_directory_current_members
+             WHERE source_id = ?`,
+          )
+          .all(source.id);
+        if (allScopedDirectoryRows.length > 1 || directoryRows.length > 1) {
+          throw new StorageValidationError(
+            `candidate knowledge source ${source.id} has ambiguous directory membership`,
+          );
+        }
+        if (allScopedDirectoryRows.length !== directoryRows.length) {
+          throw new StorageValidationError(
+            `candidate knowledge source ${source.id} directory membership is out of scope`,
+          );
+        }
+        let directory: CandidateKnowledgeSourceLifecycleDirectoryRevision | null = null;
+        let directoryOriginConflict = false;
+        if (directoryRows[0] !== undefined) {
+          const member = candidateKnowledgeDirectoryMemberRevisionFromRow(directoryRows[0]);
+          if (
+            member.directoryId.trim() === "" ||
+            member.knowledgeBaseId !== normalizedKnowledgeBaseId ||
+            member.sourceId !== source.id ||
+            !Number.isSafeInteger(member.revision) ||
+            member.revision < 1 ||
+            !/^[0-9a-f]{64}$/.test(member.relativePathHash)
+          ) {
+            throw new StorageValidationError("candidate knowledge directory member is malformed");
+          }
+          const rootRows = this.database
+            .prepare(
+              `SELECT id, candidate_knowledge_base_id, root_path, bound_at, revision
+               FROM candidate_knowledge_directory_current_roots
+               WHERE candidate_knowledge_base_id = ? AND id = ?`,
+            )
+            .all(normalizedKnowledgeBaseId, member.directoryId);
+          if (rootRows.length !== 1) {
+            throw new StorageValidationError("candidate knowledge directory root is malformed");
+          }
+          const root = rootRows[0];
+          if (root === undefined) {
+            throw new StorageValidationError("candidate knowledge directory root is malformed");
+          }
+          if (
+            rowString(root, "id") !== member.directoryId ||
+            rowString(root, "candidate_knowledge_base_id") !== normalizedKnowledgeBaseId ||
+            !Number.isSafeInteger(rowNumber(root, "revision")) ||
+            rowNumber(root, "revision") < 1
+          ) {
+            throw new StorageValidationError("candidate knowledge directory root is malformed");
+          }
+          const rootPath = requireCanonicalAbsolutePath(
+            rowString(root, "root_path"),
+            `candidate knowledge directory ${member.directoryId} root path`,
+          );
+          const rootBoundAt = requireTimestamp(
+            rowString(root, "bound_at"),
+            `candidate knowledge directory ${member.directoryId} root boundAt`,
+          );
+          const memberBoundAt = requireTimestamp(
+            member.boundAt,
+            `candidate knowledge directory member ${source.id} boundAt`,
+          );
+          if (Date.parse(memberBoundAt) < Date.parse(sourceCreatedAt)) {
+            throw new StorageValidationError(
+              `candidate knowledge directory member ${source.id} chronology is malformed`,
+            );
+          }
+          const memberRows = this.database
+            .prepare(
+              `SELECT directory_id, candidate_knowledge_base_id, source_id,
+                      revision, relative_path_hash, bound_at
+               FROM candidate_knowledge_directory_current_members
+               WHERE candidate_knowledge_base_id = ? AND directory_id = ?
+               ORDER BY source_id`,
+            )
+            .all(normalizedKnowledgeBaseId, member.directoryId);
+          const memberHashes = new Set<string>();
+          const memberSources = new Set<string>();
+          for (const memberRow of memberRows) {
+            const current = candidateKnowledgeDirectoryMemberRevisionFromRow(memberRow);
+            if (
+              current.directoryId !== member.directoryId ||
+              current.knowledgeBaseId !== normalizedKnowledgeBaseId ||
+              current.sourceId.trim() === "" ||
+              !/^[0-9a-f]{64}$/.test(current.relativePathHash) ||
+              memberHashes.has(current.relativePathHash) ||
+              memberSources.has(current.sourceId) ||
+              !Number.isSafeInteger(current.revision) ||
+              current.revision < 1
+            ) {
+              throw new StorageValidationError(
+                "candidate knowledge directory membership is malformed",
+              );
+            }
+            const currentMemberBoundAt = requireTimestamp(
+              current.boundAt,
+              `candidate knowledge directory member ${current.sourceId} boundAt`,
+            );
+            const currentSource = this.requireCandidateKnowledgeSource(
+              normalizedKnowledgeBaseId,
+              current.sourceId,
+            );
+            if (currentSource.kind !== "file") {
+              throw new StorageValidationError(
+                "candidate knowledge directory membership contains a non-file source",
+              );
+            }
+            const currentSourceCreatedAt = requireTimestamp(
+              currentSource.createdAt,
+              `candidate knowledge source ${current.sourceId} createdAt`,
+            );
+            if (Date.parse(currentMemberBoundAt) < Date.parse(currentSourceCreatedAt)) {
+              throw new StorageValidationError(
+                "candidate knowledge directory membership chronology is malformed",
+              );
+            }
+            const currentManaged = this.database
+              .prepare(
+                `SELECT version.id
+                 FROM candidate_knowledge_source_versions AS version
+                 JOIN candidate_knowledge_managed_source_versions AS managed
+                   ON managed.version_id = version.id
+                 WHERE version.source_id = ?
+                 LIMIT 1`,
+              )
+              .get(current.sourceId);
+            if (currentManaged === undefined) {
+              throw new StorageValidationError(
+                "candidate knowledge directory membership contains an unmanaged source",
+              );
+            }
+            memberHashes.add(current.relativePathHash);
+            memberSources.add(current.sourceId);
+          }
+          if (!memberHashes.has(member.relativePathHash)) {
+            throw new StorageValidationError(
+              "candidate knowledge directory membership is incomplete",
+            );
+          }
+          if (origin !== undefined) {
+            directoryOriginConflict =
+              directoryMemberOriginRelation(
+                rootPath,
+                origin.originPath,
+                member.relativePathHash,
+                memberHashes,
+              ) !== "same-member";
+          } else {
+            directoryOriginConflict = true;
+          }
+          directory = {
+            directoryId: member.directoryId,
+            rootRevision: rowNumber(root, "revision"),
+            rootBoundAt,
+            memberRevision: member.revision,
+            memberBoundAt,
+          };
+        }
+
+        const reasons: CandidateKnowledgeSourceLifecycleBlockerReason[] = [];
+        if (knowledgeBase.state === "archived") reasons.push("knowledge-base-archived");
+        if (retirement !== null) reasons.push("source-retired");
+        if (!managed) reasons.push("latest-version-unmanaged");
+        if (source.kind === "file" && origin === undefined) {
+          reasons.push("source-origin-unbound");
+        }
+        if (directory !== null && directoryOriginConflict) {
+          reasons.push("directory-origin-conflict");
+        }
+        if (observation !== null) {
+          if (observation.stale) reasons.push("refresh-stale");
+          if (observation.status !== "current") {
+            reasons.push(
+              `refresh-${observation.status}` as CandidateKnowledgeSourceLifecycleBlockerReason,
+            );
+          }
+        }
+        const lifecycleRevision: CandidateKnowledgeSourceLifecycleRevision = {
+          knowledgeBaseState: knowledgeBase.state,
+          knowledgeBaseArchivedAt: knowledgeBase.archivedAt,
+          versionId: latestVersion.id,
+          version: latestVersion.version,
+          createdAt: latestVersion.createdAt,
+          managed,
+          originBoundAt: origin?.boundAt ?? null,
+          observation,
+          retirement,
+          provenanceFetchedAt: latestProvenance?.fetchedAt ?? null,
+          directory,
+        };
+        sources.push({
+          sourceId: source.id,
+          latestVersionId: latestVersion.id,
+          status: reasons.length === 0 ? "ready" : "blocked",
+          reasons,
+          lifecycleRevision,
+        });
+      }
+      result = freezeCandidateKnowledgeBaseLifecycleReadiness({
+        knowledgeBaseId: normalizedKnowledgeBaseId,
+        state: knowledgeBase.state,
+        archivedAt: knowledgeBase.archivedAt,
+        sources,
+      });
+    })();
+    return result;
+  }
+
   public validateCandidateKnowledgeSourceGraph(): void {
     this.ensureOpen();
     const foreignKeyViolations = this.database.pragma("foreign_key_check");
@@ -8386,6 +9036,74 @@ function candidateKnowledgeSourceVersionFromRow(
     sizeBytes: rowNumber(row, "size_bytes"),
     createdAt: rowString(row, "created_at"),
   };
+}
+
+function isValidCandidateKnowledgeBaseLifecycleState(
+  knowledgeBase: CandidateKnowledgeBaseRecord,
+): boolean {
+  if (
+    !isValidCandidateKnowledgeBaseState(knowledgeBase.state) ||
+    !isValidTimestampValue(knowledgeBase.createdAt) ||
+    !isValidTimestampValue(knowledgeBase.updatedAt) ||
+    Date.parse(knowledgeBase.updatedAt) < Date.parse(knowledgeBase.createdAt)
+  ) {
+    return false;
+  }
+  if (knowledgeBase.state === "active") {
+    return knowledgeBase.archivedAt === null;
+  }
+  return (
+    knowledgeBase.archivedAt !== null &&
+    isValidTimestampValue(knowledgeBase.archivedAt) &&
+    Date.parse(knowledgeBase.archivedAt) >= Date.parse(knowledgeBase.createdAt) &&
+    Date.parse(knowledgeBase.archivedAt) <= Date.parse(knowledgeBase.updatedAt)
+  );
+}
+
+function isValidCandidateKnowledgeBaseState(value: unknown): value is CandidateKnowledgeBaseState {
+  return value === "active" || value === "archived";
+}
+
+function isValidTimestampValue(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) &&
+    !Number.isNaN(Date.parse(value))
+  );
+}
+
+function freezeCandidateKnowledgeBaseLifecycleReadiness(
+  result: CandidateKnowledgeBaseLifecycleReadinessRecord,
+): CandidateKnowledgeBaseLifecycleReadinessRecord {
+  const sources = result.sources.map((source) => {
+    const observation =
+      source.lifecycleRevision.observation === null
+        ? null
+        : Object.freeze({ ...source.lifecycleRevision.observation });
+    const retirement =
+      source.lifecycleRevision.retirement === null
+        ? null
+        : Object.freeze({ ...source.lifecycleRevision.retirement });
+    const directory =
+      source.lifecycleRevision.directory === null
+        ? null
+        : Object.freeze({ ...source.lifecycleRevision.directory });
+    const lifecycleRevision = Object.freeze({
+      ...source.lifecycleRevision,
+      observation,
+      retirement,
+      directory,
+    });
+    return Object.freeze({
+      ...source,
+      reasons: Object.freeze([...source.reasons]),
+      lifecycleRevision,
+    });
+  });
+  return Object.freeze({
+    ...result,
+    sources: Object.freeze(sources),
+  });
 }
 
 function contextFromRow(row: Record<string, unknown>): ContextSnapshotRecord {

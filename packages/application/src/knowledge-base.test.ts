@@ -7292,4 +7292,284 @@ describe("candidate knowledge store application service", () => {
       knowledgeBases: [{ id: "default-ckb-uuid" }],
     });
   });
+
+  it("projects deterministic lifecycle readiness without sensitive source details", async () => {
+    const readyPath = join(temporaryParent, "ready.md");
+    const changedPath = join(temporaryParent, "changed.md");
+    const retiredPath = join(temporaryParent, "retired.md");
+    const privateContent = "Private lifecycle evidence.";
+    await writeFile(readyPath, privateContent, "utf8");
+    await writeFile(changedPath, privateContent, "utf8");
+    await writeFile(retiredPath, privateContent, "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "a-source",
+      "a-version",
+      "b-source",
+      "b-version",
+      "c-source",
+      "c-version",
+      "d-source",
+      "d-version",
+    ];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath: readyPath,
+    });
+    await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath: changedPath,
+    });
+    await service.createKnowledgeSource({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      kind: "file",
+      displayName: "Unmanaged private label",
+      mediaType: "text/plain",
+      checksum: "c".repeat(64),
+      sizeBytes: privateContent.length,
+    });
+    await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourcePath: retiredPath,
+    });
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    await store.upsertCandidateKnowledgeSourceRefreshObservation("default-ckb-uuid", "b-source", {
+      observedVersionId: "b-version",
+      status: "changed",
+      checkedAt: changedAt,
+    });
+    await store.retireCandidateKnowledgeSource("default-ckb-uuid", "d-source", {
+      retiredAt: changedAt,
+      reason: "user-requested",
+    });
+    await store.close();
+
+    const result = await service.getKnowledgeBaseLifecycleReadiness({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+    });
+    expect(result).toMatchObject({
+      knowledgeBaseId: "default-ckb-uuid",
+      state: "active",
+      archivedAt: null,
+      sources: [
+        { sourceId: "a-source", status: "ready", reasons: [] },
+        { sourceId: "b-source", status: "blocked", reasons: ["refresh-changed"] },
+        {
+          sourceId: "c-source",
+          status: "blocked",
+          reasons: ["latest-version-unmanaged", "source-origin-unbound"],
+        },
+        { sourceId: "d-source", status: "blocked", reasons: ["source-retired"] },
+      ],
+    });
+    expect(result.sources.map((source) => source.sourceId)).toEqual([
+      "a-source",
+      "b-source",
+      "c-source",
+      "d-source",
+    ]);
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.sources)).toBe(true);
+    expect(Object.isFrozen(result.sources[0])).toBe(true);
+    expect(Object.isFrozen(result.sources[0]?.lifecycleRevision)).toBe(true);
+    expect(JSON.stringify(result)).not.toContain(temporaryParent);
+    expect(JSON.stringify(result)).not.toContain(privateContent);
+    expect(JSON.stringify(result)).not.toContain("Unmanaged private label");
+
+    const reopened = await openCandidateKnowledgeStore(storeRoot);
+    const persisted =
+      await reopened.getCandidateKnowledgeBaseLifecycleReadiness("default-ckb-uuid");
+    await reopened.close();
+    expect(persisted).toEqual(expect.objectContaining({ sources: result.sources }));
+  });
+
+  it("maps malformed lifecycle readiness dependency output to one generic error", async () => {
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      getCandidateKnowledgeBaseLifecycleReadiness: vi.fn(async () => ({
+        knowledgeBaseId: "ckb-1",
+        state: "active",
+        archivedAt: null,
+        sources: [
+          {
+            sourceId: "source-1",
+            latestVersionId: "version-1",
+            status: "ready",
+            reasons: ["refresh-changed"],
+            lifecycleRevision: {},
+          },
+        ],
+      })),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.getKnowledgeBaseLifecycleReadiness({
+        storeRoot: "valid",
+        knowledgeBaseId: "ckb-1",
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge base lifecycle readiness could not be determined.",
+    );
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("rejects semantically contradictory lifecycle readiness projections", async () => {
+    const revision = {
+      knowledgeBaseState: "active" as const,
+      knowledgeBaseArchivedAt: null,
+      versionId: "version-1",
+      version: 1,
+      createdAt,
+      managed: true,
+      originBoundAt: changedAt,
+      observation: null,
+      retirement: null,
+      provenanceFetchedAt: null,
+      directory: null,
+    };
+    const source = {
+      sourceId: "source-1",
+      latestVersionId: "version-1",
+      status: "ready" as const,
+      reasons: [] as const,
+      lifecycleRevision: revision,
+    };
+    const baseline = {
+      knowledgeBaseId: "ckb-1",
+      state: "active" as const,
+      archivedAt: null,
+      sources: [source],
+    };
+    const malformed: readonly unknown[] = [
+      {
+        ...baseline,
+        sources: [{ ...source, status: "blocked", reasons: ["knowledge-base-archived"] }],
+      },
+      {
+        ...baseline,
+        sources: [{ ...source, status: "blocked", reasons: ["source-retired"] }],
+      },
+      {
+        ...baseline,
+        sources: [
+          {
+            ...source,
+            status: "blocked",
+            reasons: ["latest-version-unmanaged"],
+            lifecycleRevision: { ...revision, managed: true },
+          },
+        ],
+      },
+      {
+        ...baseline,
+        sources: [
+          {
+            ...source,
+            status: "blocked",
+            reasons: ["source-origin-unbound"],
+            lifecycleRevision: { ...revision, managed: false, originBoundAt: null },
+          },
+        ],
+      },
+      {
+        ...baseline,
+        sources: [
+          {
+            ...source,
+            status: "blocked",
+            reasons: ["refresh-stale"],
+            lifecycleRevision: {
+              ...revision,
+              observation: {
+                observedVersionId: "version-1",
+                status: "current",
+                checkedAt: changedAt,
+                lastRefreshedVersionId: null,
+                lastRefreshedAt: null,
+                stale: false,
+              },
+            },
+          },
+        ],
+      },
+      {
+        ...baseline,
+        sources: [
+          {
+            ...source,
+            status: "blocked",
+            reasons: ["refresh-changed"],
+            lifecycleRevision: {
+              ...revision,
+              observation: {
+                observedVersionId: "version-1",
+                status: "current",
+                checkedAt: changedAt,
+                lastRefreshedVersionId: null,
+                lastRefreshedAt: null,
+                stale: false,
+              },
+            },
+          },
+        ],
+      },
+      {
+        ...baseline,
+        sources: [
+          {
+            ...source,
+            lifecycleRevision: {
+              ...revision,
+              originBoundAt: changedAt,
+              provenanceFetchedAt: changedAt,
+            },
+          },
+        ],
+      },
+      {
+        ...baseline,
+        sources: [
+          {
+            ...source,
+            lifecycleRevision: { ...revision, managed: true, originBoundAt: null },
+          },
+        ],
+      },
+    ];
+
+    for (const value of malformed) {
+      const close = vi.fn(async () => undefined);
+      const handle = {
+        getCandidateKnowledgeBaseLifecycleReadiness: vi.fn(async () => value),
+        close,
+      } as unknown as CandidateKnowledgeStoreHandle;
+      const service = createCandidateKnowledgeStoreService({
+        open: vi.fn(async () => handle),
+      });
+      await expect(
+        service.getKnowledgeBaseLifecycleReadiness({
+          storeRoot: "valid",
+          knowledgeBaseId: "ckb-1",
+        }),
+      ).rejects.toThrow(
+        "The selected candidate knowledge base lifecycle readiness could not be determined.",
+      );
+      expect(close).toHaveBeenCalledOnce();
+    }
+  });
 });

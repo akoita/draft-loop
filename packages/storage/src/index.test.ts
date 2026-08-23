@@ -756,6 +756,26 @@ describe("SQLite storage", () => {
       lastRefreshedAt: null,
       stale: false,
     });
+    await expect(
+      upgraded.getCandidateKnowledgeBaseLifecycleReadiness("ckb-1"),
+    ).resolves.toMatchObject({
+      knowledgeBaseId: "ckb-1",
+      state: "active",
+      sources: [
+        {
+          sourceId: "ckb-source-1",
+          latestVersionId: source.version.id,
+          status: "blocked",
+          reasons: ["latest-version-unmanaged", "source-origin-unbound"],
+        },
+        {
+          sourceId: "other-source",
+          latestVersionId: "other-version",
+          status: "blocked",
+          reasons: ["latest-version-unmanaged", "source-origin-unbound"],
+        },
+      ],
+    });
     await upgraded.close();
 
     const reopened = openSqliteStorage(filename);
@@ -901,6 +921,22 @@ describe("SQLite storage", () => {
     );
     raw.close();
     expect(() => upgraded.validateCandidateKnowledgeSourceGraph()).not.toThrow();
+    await expect(
+      upgraded.getCandidateKnowledgeBaseLifecycleReadiness("ckb-1"),
+    ).resolves.toMatchObject({
+      sources: [
+        {
+          sourceId: "url-source",
+          latestVersionId: "url-version",
+          status: "ready",
+          reasons: [],
+          lifecycleRevision: {
+            managed: true,
+            provenanceFetchedAt: "2026-08-12T09:11:00.000Z",
+          },
+        },
+      ],
+    });
     await expect(
       upgraded.getCandidateKnowledgeSourceUrlProvenance("ckb-1", "url-source", "url-version"),
     ).resolves.toEqual({

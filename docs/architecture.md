@@ -181,6 +181,15 @@ version, rebind, and refresh-observation writes while preserving source/version
 metadata, managed bytes, bindings, observations, and journal evidence. It is
 not physical deletion, index cleanup, or reactivation.
 
+Lifecycle readiness is a CKB-scoped read projection over one consistent SQLite
+snapshot. Each source exposes its latest version identity, `ready` or `blocked`
+state, bounded reasons, and a structured revision containing only safe IDs,
+timestamps, booleans, and numeric current-directory revisions. The revision
+changes when eligibility-relevant persisted evidence changes. Labels, paths,
+URLs, relative-path hashes, content checksums, media types, sizes, and bytes are
+excluded. Fresh intake is eligible without a refresh observation; adverse or
+stale observations block without creating a TTL or live-filesystem claim.
+
 ### Directory and member lifecycle
 
 Directory intake is a bounded selector over ordinary managed file sources, not
@@ -212,10 +221,10 @@ version, observation, retirement, blob, journal, or baseline membership
 evidence. Root rebind and member move are implemented component/application
 contracts; they do not infer renames or reconcile all removals.
 
-Broader lifecycle readiness, automatic move inference, physical deletion,
-adapter controls, indexing, and background refresh remain deferred under #136
-and their owning roadmap issues. Historical membership is not rewritten by
-later source versions, explicit origin rebinds, or retirement.
+Automatic move inference, physical deletion, adapter controls, indexing, and
+background refresh remain deferred under their owning roadmap issues.
+Historical membership is not rewritten by later source versions, explicit
+origin rebinds, retirement, or readiness projection.
 
 ### Managed publication and journal
 

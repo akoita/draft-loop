@@ -123,6 +123,16 @@ nothing. Retirement does not delete bytes, versions, bindings, observations,
 journal state, indexes, backups, or membership. It is not secure erasure, and
 no reactivation operation is currently exposed.
 
+Lifecycle readiness is recomputed from persisted evidence in one CKB-scoped
+snapshot. Its public surface contains only CKB/source/latest-version identities,
+bounded readiness state and reasons, safe lifecycle timestamps, and structured
+numeric revision evidence. It excludes labels, paths, filenames, URLs,
+relative-path hashes, content checksums, media types, byte sizes, and content.
+Fresh explicit intake can be ready without a later observation; stale,
+changed, missing, inaccessible, and unbound observations block but do not become
+time-based freshness claims. The projection neither reads live origins nor
+modifies sources or indexes.
+
 An approved HTTPS URL is subject to public-address and redirect validation,
 time, response, text-size, content-type, and extraction limits. Exact fetched
 bytes and original/final URL provenance remain sensitive local state. A new

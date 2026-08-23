@@ -21,9 +21,11 @@ import {
   supportedMediaTypes,
 } from "@draft-loop/ingestion";
 import type {
+  CandidateKnowledgeBaseLifecycleReadinessRecord,
   CandidateKnowledgeDirectoryBindingRecord,
   CandidateKnowledgeDirectoryMemberOriginRelationRecord,
   CandidateKnowledgeDirectoryMemberRecord,
+  CandidateKnowledgeSourceLifecycleBlockerReason,
   CandidateKnowledgeSourceRecord,
   CandidateKnowledgeSourceRefreshObservationRecord,
   CandidateKnowledgeSourceRetirementRecord,
@@ -59,6 +61,11 @@ export interface InitializeStoreCommand {
 
 export interface OpenStoreCommand {
   readonly storeRoot: string;
+}
+
+export interface GetKnowledgeBaseLifecycleReadinessCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
 }
 
 export interface ListKnowledgeBasesCommand {
@@ -346,6 +353,60 @@ export interface CandidateKnowledgeStoreView {
   readonly knowledgeBases: readonly CandidateKnowledgeBase[];
 }
 
+export type KnowledgeSourceLifecycleBlockerReason = CandidateKnowledgeSourceLifecycleBlockerReason;
+export type KnowledgeSourceLifecycleReadinessStatus = "ready" | "blocked";
+
+export interface KnowledgeSourceLifecycleObservationRevision {
+  readonly observedVersionId: string;
+  readonly status: CandidateKnowledgeSourceRefreshObservationRecord["status"];
+  readonly checkedAt: string;
+  readonly lastRefreshedVersionId: string | null;
+  readonly lastRefreshedAt: string | null;
+  readonly stale: boolean;
+}
+
+export interface KnowledgeSourceLifecycleRetirementRevision {
+  readonly retiredAt: string;
+  readonly reason: "user-requested";
+}
+
+export interface KnowledgeSourceLifecycleDirectoryRevision {
+  readonly directoryId: string;
+  readonly rootRevision: number;
+  readonly rootBoundAt: string;
+  readonly memberRevision: number;
+  readonly memberBoundAt: string;
+}
+
+export interface KnowledgeSourceLifecycleRevision {
+  readonly knowledgeBaseState: "active" | "archived";
+  readonly knowledgeBaseArchivedAt: string | null;
+  readonly versionId: string;
+  readonly version: number;
+  readonly createdAt: string;
+  readonly managed: boolean;
+  readonly originBoundAt: string | null;
+  readonly observation: KnowledgeSourceLifecycleObservationRevision | null;
+  readonly retirement: KnowledgeSourceLifecycleRetirementRevision | null;
+  readonly provenanceFetchedAt: string | null;
+  readonly directory: KnowledgeSourceLifecycleDirectoryRevision | null;
+}
+
+export interface KnowledgeSourceLifecycleReadiness {
+  readonly sourceId: string;
+  readonly latestVersionId: string;
+  readonly status: KnowledgeSourceLifecycleReadinessStatus;
+  readonly reasons: readonly KnowledgeSourceLifecycleBlockerReason[];
+  readonly lifecycleRevision: KnowledgeSourceLifecycleRevision;
+}
+
+export interface KnowledgeBaseLifecycleReadinessResult {
+  readonly knowledgeBaseId: string;
+  readonly state: "active" | "archived";
+  readonly archivedAt: string | null;
+  readonly sources: readonly KnowledgeSourceLifecycleReadiness[];
+}
+
 export interface CandidateKnowledgeSourceManifest {
   readonly source: CandidateKnowledgeSource;
   readonly versions: readonly CandidateKnowledgeSourceVersion[];
@@ -562,6 +623,9 @@ export interface CandidateKnowledgeStoreService {
     command: InitializeStoreCommand,
   ) => Promise<CandidateKnowledgeStoreView>;
   readonly openStore: (command: OpenStoreCommand) => Promise<CandidateKnowledgeStoreView>;
+  readonly getKnowledgeBaseLifecycleReadiness: (
+    command: GetKnowledgeBaseLifecycleReadinessCommand,
+  ) => Promise<KnowledgeBaseLifecycleReadinessResult>;
   readonly listKnowledgeBases: (
     command: ListKnowledgeBasesCommand,
   ) => Promise<CandidateKnowledgeStoreView>;
@@ -727,6 +791,12 @@ function importDirectoryFailure(): Error {
   return new Error("The selected candidate knowledge source directory could not be imported.");
 }
 
+function lifecycleReadinessFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge base lifecycle readiness could not be determined.",
+  );
+}
+
 function previewDirectoryRefreshFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory refresh preview could not be completed.",
@@ -789,6 +859,257 @@ function retireDirectoryMemberFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory member could not be removed.",
   );
+}
+
+const lifecycleBlockerReasonOrder = [
+  "knowledge-base-archived",
+  "source-retired",
+  "latest-version-unmanaged",
+  "source-origin-unbound",
+  "directory-origin-conflict",
+  "refresh-stale",
+  "refresh-changed",
+  "refresh-missing",
+  "refresh-inaccessible",
+  "refresh-unbound",
+] as const satisfies readonly KnowledgeSourceLifecycleBlockerReason[];
+
+function lifecycleReadinessInvariantFailure(): Error {
+  return new Error("Candidate knowledge base lifecycle readiness returned inconsistent state.");
+}
+
+function validateLifecycleReadinessResult(
+  value: CandidateKnowledgeBaseLifecycleReadinessRecord | undefined,
+  knowledgeBaseId: string,
+): KnowledgeBaseLifecycleReadinessResult {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    value.knowledgeBaseId !== knowledgeBaseId ||
+    (value.state !== "active" && value.state !== "archived") ||
+    (value.state === "active" && value.archivedAt !== null) ||
+    (value.state === "archived" && !isValidRefreshTimestamp(value.archivedAt)) ||
+    !Array.isArray(value.sources)
+  ) {
+    throw lifecycleReadinessInvariantFailure();
+  }
+  if (value.archivedAt !== null && !isValidRefreshTimestamp(value.archivedAt)) {
+    throw lifecycleReadinessInvariantFailure();
+  }
+  const sourceIds = new Set<string>();
+  let previousSourceId: string | undefined;
+  const sources = value.sources.map((source) => {
+    if (
+      typeof source !== "object" ||
+      source === null ||
+      typeof source.sourceId !== "string" ||
+      source.sourceId.trim() === "" ||
+      sourceIds.has(source.sourceId) ||
+      (previousSourceId !== undefined && lexicalCompare(previousSourceId, source.sourceId) >= 0) ||
+      typeof source.latestVersionId !== "string" ||
+      source.latestVersionId.trim() === "" ||
+      (source.status !== "ready" && source.status !== "blocked") ||
+      !Array.isArray(source.reasons) ||
+      typeof source.lifecycleRevision !== "object" ||
+      source.lifecycleRevision === null
+    ) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    sourceIds.add(source.sourceId);
+    previousSourceId = source.sourceId;
+    const reasons = source.reasons as readonly unknown[];
+    let previousReasonIndex = -1;
+    const validatedReasons = reasons.map((reason) => {
+      const reasonIndex = lifecycleBlockerReasonOrder.indexOf(
+        reason as KnowledgeSourceLifecycleBlockerReason,
+      );
+      if (reasonIndex < 0 || reasonIndex <= previousReasonIndex) {
+        throw lifecycleReadinessInvariantFailure();
+      }
+      previousReasonIndex = reasonIndex;
+      return reason as KnowledgeSourceLifecycleBlockerReason;
+    });
+    if (
+      (source.status === "ready" && validatedReasons.length !== 0) ||
+      (source.status === "blocked" && validatedReasons.length === 0)
+    ) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    const revision = source.lifecycleRevision;
+    if (
+      revision.knowledgeBaseState !== value.state ||
+      revision.knowledgeBaseArchivedAt !== value.archivedAt ||
+      (revision.knowledgeBaseState !== "active" && revision.knowledgeBaseState !== "archived") ||
+      (revision.knowledgeBaseState === "active" && revision.knowledgeBaseArchivedAt !== null) ||
+      (revision.knowledgeBaseState === "archived" &&
+        !isValidRefreshTimestamp(revision.knowledgeBaseArchivedAt)) ||
+      revision.versionId !== source.latestVersionId ||
+      typeof revision.versionId !== "string" ||
+      revision.versionId.trim() === "" ||
+      !Number.isSafeInteger(revision.version) ||
+      revision.version < 1 ||
+      !isValidRefreshTimestamp(revision.createdAt) ||
+      typeof revision.managed !== "boolean" ||
+      (revision.originBoundAt !== null && !isValidRefreshTimestamp(revision.originBoundAt)) ||
+      (revision.provenanceFetchedAt !== null &&
+        !isValidRefreshTimestamp(revision.provenanceFetchedAt))
+    ) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    let observation: KnowledgeSourceLifecycleObservationRevision | null = null;
+    if (revision.observation !== null) {
+      const candidate = revision.observation;
+      if (
+        typeof candidate !== "object" ||
+        candidate === null ||
+        typeof candidate.observedVersionId !== "string" ||
+        candidate.observedVersionId.trim() === "" ||
+        !["current", "changed", "missing", "inaccessible", "unbound"].includes(candidate.status) ||
+        !isValidRefreshTimestamp(candidate.checkedAt) ||
+        (candidate.lastRefreshedVersionId !== null &&
+          (typeof candidate.lastRefreshedVersionId !== "string" ||
+            candidate.lastRefreshedVersionId.trim() === "")) ||
+        (candidate.lastRefreshedAt !== null &&
+          !isValidRefreshTimestamp(candidate.lastRefreshedAt)) ||
+        (candidate.lastRefreshedVersionId === null) !== (candidate.lastRefreshedAt === null) ||
+        typeof candidate.stale !== "boolean" ||
+        (candidate.lastRefreshedAt !== null &&
+          Date.parse(candidate.lastRefreshedAt) > Date.parse(candidate.checkedAt))
+      ) {
+        throw lifecycleReadinessInvariantFailure();
+      }
+      observation = Object.freeze({
+        observedVersionId: candidate.observedVersionId,
+        status: candidate.status,
+        checkedAt: candidate.checkedAt,
+        lastRefreshedVersionId: candidate.lastRefreshedVersionId,
+        lastRefreshedAt: candidate.lastRefreshedAt,
+        stale: candidate.stale,
+      });
+    }
+    let retirement: KnowledgeSourceLifecycleRetirementRevision | null = null;
+    if (revision.retirement !== null) {
+      const candidate = revision.retirement;
+      if (
+        typeof candidate !== "object" ||
+        candidate === null ||
+        !isValidRefreshTimestamp(candidate.retiredAt) ||
+        candidate.reason !== "user-requested"
+      ) {
+        throw lifecycleReadinessInvariantFailure();
+      }
+      retirement = Object.freeze({ retiredAt: candidate.retiredAt, reason: candidate.reason });
+    }
+    let directory: KnowledgeSourceLifecycleDirectoryRevision | null = null;
+    if (revision.directory !== null) {
+      const candidate = revision.directory;
+      if (
+        typeof candidate !== "object" ||
+        candidate === null ||
+        typeof candidate.directoryId !== "string" ||
+        candidate.directoryId.trim() === "" ||
+        !Number.isSafeInteger(candidate.rootRevision) ||
+        candidate.rootRevision < 1 ||
+        !Number.isSafeInteger(candidate.memberRevision) ||
+        candidate.memberRevision < 1 ||
+        !isValidRefreshTimestamp(candidate.rootBoundAt) ||
+        !isValidRefreshTimestamp(candidate.memberBoundAt)
+      ) {
+        throw lifecycleReadinessInvariantFailure();
+      }
+      directory = Object.freeze({
+        directoryId: candidate.directoryId,
+        rootRevision: candidate.rootRevision,
+        rootBoundAt: candidate.rootBoundAt,
+        memberRevision: candidate.memberRevision,
+        memberBoundAt: candidate.memberBoundAt,
+      });
+    }
+    const hasReason = (reason: KnowledgeSourceLifecycleBlockerReason): boolean =>
+      validatedReasons.includes(reason);
+    if (hasReason("knowledge-base-archived") !== (value.state === "archived")) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    if (hasReason("source-retired") !== (retirement !== null)) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    if (hasReason("latest-version-unmanaged") !== !revision.managed) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    if (revision.originBoundAt !== null && revision.provenanceFetchedAt !== null) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    const originEvidenceMissing =
+      revision.originBoundAt === null && revision.provenanceFetchedAt === null;
+    if (hasReason("source-origin-unbound") && !originEvidenceMissing) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    if (revision.managed && originEvidenceMissing && !hasReason("source-origin-unbound")) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    if (directory !== null && revision.originBoundAt === null) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    // The storage layer owns the sensitive path/hash relation. The application
+    // validates only the safe directory presence/origin prerequisites here.
+    if (directory === null && hasReason("directory-origin-conflict")) {
+      throw lifecycleReadinessInvariantFailure();
+    }
+    if (observation === null) {
+      if (
+        hasReason("refresh-stale") ||
+        hasReason("refresh-changed") ||
+        hasReason("refresh-missing") ||
+        hasReason("refresh-inaccessible") ||
+        hasReason("refresh-unbound")
+      ) {
+        throw lifecycleReadinessInvariantFailure();
+      }
+    } else {
+      if (hasReason("refresh-stale") !== observation.stale) {
+        throw lifecycleReadinessInvariantFailure();
+      }
+      const refreshReasons: readonly [
+        CandidateKnowledgeSourceRefreshObservationRecord["status"],
+        KnowledgeSourceLifecycleBlockerReason,
+      ][] = [
+        ["changed", "refresh-changed"],
+        ["missing", "refresh-missing"],
+        ["inaccessible", "refresh-inaccessible"],
+        ["unbound", "refresh-unbound"],
+      ];
+      for (const [status, reason] of refreshReasons) {
+        if (hasReason(reason) !== (observation.status === status)) {
+          throw lifecycleReadinessInvariantFailure();
+        }
+      }
+    }
+    return Object.freeze({
+      sourceId: source.sourceId,
+      latestVersionId: source.latestVersionId,
+      status: source.status,
+      reasons: Object.freeze(validatedReasons),
+      lifecycleRevision: Object.freeze({
+        knowledgeBaseState: revision.knowledgeBaseState,
+        knowledgeBaseArchivedAt: revision.knowledgeBaseArchivedAt,
+        versionId: revision.versionId,
+        version: revision.version,
+        createdAt: revision.createdAt,
+        managed: revision.managed,
+        originBoundAt: revision.originBoundAt,
+        observation,
+        retirement,
+        provenanceFetchedAt: revision.provenanceFetchedAt,
+        directory,
+      }),
+    });
+  });
+  return Object.freeze({
+    knowledgeBaseId: value.knowledgeBaseId,
+    state: value.state,
+    archivedAt: value.archivedAt,
+    sources: Object.freeze(sources),
+  });
 }
 
 function importUrlFailure(): Error {
@@ -3337,6 +3658,22 @@ export function createCandidateKnowledgeStoreService(
       );
     },
     openStore: async (command) => openAndProject(requireStoreRoot(command.storeRoot)),
+    getKnowledgeBaseLifecycleReadiness: async (command) => {
+      try {
+        const storeRoot = requireStoreRoot(command.storeRoot);
+        const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) =>
+            validateLifecycleReadinessResult(
+              await handle.getCandidateKnowledgeBaseLifecycleReadiness(knowledgeBaseId),
+              knowledgeBaseId,
+            ),
+        );
+      } catch {
+        throw lifecycleReadinessFailure();
+      }
+    },
     listKnowledgeBases: async (command) => openAndProject(requireStoreRoot(command.storeRoot)),
     createKnowledgeBase: async (command) => {
       const storeRoot = requireStoreRoot(command.storeRoot);
@@ -4889,6 +5226,7 @@ const defaultService = createCandidateKnowledgeStoreService();
 
 export const initializeStore = defaultService.initializeStore;
 export const openStore = defaultService.openStore;
+export const getKnowledgeBaseLifecycleReadiness = defaultService.getKnowledgeBaseLifecycleReadiness;
 export const listKnowledgeBases = defaultService.listKnowledgeBases;
 export const createKnowledgeBase = defaultService.createKnowledgeBase;
 export const renameKnowledgeBase = defaultService.renameKnowledgeBase;
