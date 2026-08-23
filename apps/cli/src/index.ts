@@ -9,6 +9,7 @@ import {
   type ApplicationService,
   applicationService,
   type CandidateKnowledgeSourceManifest,
+  type CandidateKnowledgeSourceWriteResult,
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
   type KnowledgeBaseLifecycleReadinessResult,
@@ -158,6 +159,50 @@ function writeKnowledgeSourceDuplicateGroups(
     groupCount: ordered.length,
     groups: duplicateGroups,
     groupsTruncated: ordered.length > maximumKnowledgeInspectionItems,
+  });
+}
+
+function writeKnowledgeSourceImport(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  result: CandidateKnowledgeSourceWriteResult,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    typeof result.created !== "boolean" ||
+    typeof result.source !== "object" ||
+    result.source === null ||
+    result.source.knowledgeBaseId !== knowledgeBaseId ||
+    typeof result.source.id !== "string" ||
+    result.source.id.trim() === "" ||
+    result.source.kind !== "file" ||
+    !Array.isArray(result.versions) ||
+    result.versions.length === 0
+  ) {
+    throw new Error("The imported candidate knowledge source result was invalid.");
+  }
+  const versions = [...result.versions].sort(
+    (left, right) => right.version - left.version || lexicalCompare(left.id, right.id),
+  );
+  const latest = versions[0];
+  if (
+    latest === undefined ||
+    typeof latest.id !== "string" ||
+    latest.id.trim() === "" ||
+    latest.sourceId !== result.source.id ||
+    !Number.isSafeInteger(latest.version) ||
+    latest.version < 1
+  ) {
+    throw new Error("The imported candidate knowledge source result was invalid.");
+  }
+  writeJson(io, {
+    knowledgeBaseId,
+    sourceId: result.source.id,
+    kind: result.source.kind,
+    versionId: latest.id,
+    version: latest.version,
+    created: result.created,
   });
 }
 
@@ -523,7 +568,33 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   const knowledgeSource = knowledge
     .command("source")
-    .description("Inspect path-free source and duplicate projections");
+    .description("Import and inspect candidate knowledge sources");
+  knowledgeSource
+    .command("import")
+    .description("Import one explicitly selected local source file")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-path>", "local source file path")
+    .option("--display-name <name>", "optional source display name")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        sourcePath: string,
+        options: Record<string, unknown>,
+      ) => {
+        const result = await candidateKnowledge.importKnowledgeSourceFile({
+          storeRoot,
+          knowledgeBaseId,
+          sourcePath,
+          ...(options.displayName === undefined
+            ? {}
+            : { displayName: options.displayName as string }),
+        });
+        writeKnowledgeSourceImport(io, knowledgeBaseId, result);
+      },
+    );
+
   knowledgeSource
     .command("list")
     .description("List source kinds and version identities")

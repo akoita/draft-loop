@@ -7,6 +7,7 @@ import type {
   ApplicationIo,
   ApplicationService,
   CandidateKnowledgeSourceManifest,
+  CandidateKnowledgeSourceWriteResult,
   CandidateKnowledgeStoreService,
   CandidateKnowledgeStoreView,
   ConfigureKnowledgeSelectionCommand,
@@ -201,6 +202,40 @@ function knowledgeSourceManifests(): readonly CandidateKnowledgeSourceManifest[]
       ],
     },
   ] as unknown as readonly CandidateKnowledgeSourceManifest[];
+}
+
+function knowledgeSourceWriteResult(created = true): CandidateKnowledgeSourceWriteResult {
+  return {
+    source: {
+      id: "source-imported",
+      knowledgeBaseId: "base-one",
+      kind: "file",
+      displayName: "private-source.md",
+      createdAt: "2026-08-23T10:00:00.000Z",
+    },
+    versions: [
+      {
+        id: "version-two",
+        sourceId: "source-imported",
+        version: 2,
+        parentVersionId: "version-one",
+        mediaType: "text/markdown",
+        checksum: "d".repeat(64),
+        sizeBytes: 12,
+        createdAt: "2026-08-23T10:01:00.000Z",
+      },
+      {
+        id: "version-one",
+        sourceId: "source-imported",
+        version: 1,
+        mediaType: "text/markdown",
+        checksum: "e".repeat(64),
+        sizeBytes: 10,
+        createdAt: "2026-08-23T10:00:00.000Z",
+      },
+    ],
+    created,
+  } as unknown as CandidateKnowledgeSourceWriteResult;
 }
 
 function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
@@ -550,6 +585,119 @@ describe("candidate knowledge base maintenance CLI controls", () => {
 });
 
 describe("candidate knowledge source inspection CLI controls", () => {
+  it("maps file import with an optional display name to a safe latest-version JSON result", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-intake-store");
+    const sourcePath = resolve("private-resume.md");
+    const knowledgeBaseId = "base-one";
+    const importKnowledgeSourceFile = vi.fn(async () => knowledgeSourceWriteResult());
+    const knowledgeService = {
+      importKnowledgeSourceFile,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    }).parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import",
+      storeRoot,
+      knowledgeBaseId,
+      sourcePath,
+      "--display-name",
+      "Private resume display name",
+    ]);
+
+    expect(importKnowledgeSourceFile).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId,
+      sourcePath,
+      displayName: "Private resume display name",
+    });
+    expect(JSON.parse(dependencies.lines[0] ?? "{}")).toEqual({
+      knowledgeBaseId,
+      sourceId: "source-imported",
+      kind: "file",
+      versionId: "version-two",
+      version: 2,
+      created: true,
+    });
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(sourcePath);
+    expect(output).not.toContain("private-source.md");
+    expect(output).not.toContain("Private resume display name");
+    expect(output).not.toContain("text/markdown");
+    expect(output).not.toContain("d".repeat(64));
+  });
+
+  it("forwards an omitted display name without adding an optional field", async () => {
+    const dependencies = harness();
+    const importKnowledgeSourceFile = vi.fn(async () => knowledgeSourceWriteResult(false));
+    const knowledgeService = {
+      importKnowledgeSourceFile,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    }).parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import",
+      resolve("private-intake-store"),
+      "base-one",
+      resolve("private-resume.md"),
+    ]);
+
+    expect(importKnowledgeSourceFile).toHaveBeenCalledWith({
+      storeRoot: resolve("private-intake-store"),
+      knowledgeBaseId: "base-one",
+      sourcePath: resolve("private-resume.md"),
+    });
+    expect(JSON.parse(dependencies.lines[0] ?? "{}").created).toBe(false);
+  });
+
+  it("propagates file-import service failures and rejects malformed results safely", async () => {
+    const dependencies = harness();
+    const failure = new Error("file import failed");
+    const importKnowledgeSourceFile = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce({} as never);
+    const knowledgeService = {
+      importKnowledgeSourceFile,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const command = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import",
+      resolve("private-intake-store"),
+      "base-one",
+      resolve("private-resume.md"),
+    ] as const;
+
+    await expect(cli.parseAsync(command)).rejects.toBe(failure);
+    await expect(cli.parseAsync(command)).rejects.toThrow(
+      "The imported candidate knowledge source result was invalid.",
+    );
+    expect(dependencies.lines).toEqual([]);
+  });
+
   it("maps source list, duplicate, and inventory commands to bounded safe JSON", async () => {
     const dependencies = harness();
     const storeRoot = resolve("private-inspection-store");

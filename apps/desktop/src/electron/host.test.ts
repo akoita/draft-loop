@@ -2721,11 +2721,13 @@ describe("candidate knowledge native controls", () => {
     const storeRoot = join(parent, "candidate-knowledge");
     try {
       const knowledgeService = createCandidateKnowledgeStoreService();
+      const selectedKnowledgeFiles: string[] = [];
       const createHost = createNativeHost({
         knowledgeService,
         dialogs: {
           chooseDirectory: async () => parent,
           chooseFiles: async () => [],
+          chooseKnowledgeSourceFile: async () => selectedKnowledgeFiles.shift(),
         },
       });
       const workspace = await createHost.invoke({
@@ -2753,11 +2755,29 @@ describe("candidate knowledge native controls", () => {
       if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
       const sourcePath = join(parent, "resume.md");
       await writeFile(sourcePath, "Local candidate evidence.\n", "utf8");
-      await knowledgeService.importKnowledgeSourceFile({
-        storeRoot,
-        knowledgeBaseId,
-        sourcePath,
+      selectedKnowledgeFiles.push(sourcePath);
+      const imported = await createHost.invoke({
+        type: "knowledge.import-file",
+        input: {
+          storeId,
+          knowledgeBaseId,
+          selection: "native-dialog",
+          displayName: "Career history",
+        },
       });
+      expect(imported).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          kind: "file",
+          version: 1,
+          created: true,
+        },
+      });
+      expect(JSON.stringify(imported)).not.toContain(parent);
+      expect(JSON.stringify(imported)).not.toContain("resume.md");
+      expect(JSON.stringify(imported)).not.toContain("Career history");
 
       await expect(
         createHost.invoke({ type: "knowledge.list", input: { storeId } }),
@@ -2828,6 +2848,24 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify({ sources, duplicates, inventory })).not.toContain("resume.md");
       await expect(
         createHost.invoke({
+          type: "knowledge.import-file",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      await expect(
+        createHost.invoke({ type: "knowledge.sources", input: { storeId, knowledgeBaseId } }),
+      ).resolves.toMatchObject({ ok: true, value: { sourceCount: 2 } });
+      const unavailableSourcePath = join(parent, "missing-private-source.md");
+      selectedKnowledgeFiles.push(unavailableSourcePath);
+      const failedImport = await createHost.invoke({
+        type: "knowledge.import-file",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      expect(failedImport).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(JSON.stringify(failedImport)).not.toContain(parent);
+      expect(JSON.stringify(failedImport)).not.toContain("missing-private-source.md");
+      await expect(
+        createHost.invoke({
           type: "knowledge.select",
           input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
         }),
@@ -2892,10 +2930,12 @@ describe("candidate knowledge native controls", () => {
       ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
 
       const reopenRoots = [workspaceRoot, storeRoot];
+      const chooseKnowledgeSourceFile = vi.fn(async () => sourcePath);
       const restartedHost = createNativeHost({
         dialogs: {
           chooseDirectory: async () => reopenRoots.shift(),
           chooseFiles: async () => [],
+          chooseKnowledgeSourceFile,
         },
       });
       await expect(
@@ -2913,12 +2953,26 @@ describe("candidate knowledge native controls", () => {
           input: { storeId, knowledgeBaseId },
         }),
       ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      await expect(
+        restartedHost.invoke({
+          type: "knowledge.import-file",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      expect(chooseKnowledgeSourceFile).not.toHaveBeenCalled();
       const reopened = await restartedHost.invoke({
         type: "knowledge.open",
         input: { selection: "native-dialog" },
       });
       expect(reopened).toMatchObject({ ok: true, value: { storeId } });
       expect(JSON.stringify(reopened)).not.toContain(storeRoot);
+      await expect(
+        restartedHost.invoke({
+          type: "knowledge.import-file",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId, knowledgeBaseId, kind: "file" } });
+      expect(chooseKnowledgeSourceFile).toHaveBeenCalledOnce();
       await expect(
         restartedHost.invoke({
           type: "knowledge.select",

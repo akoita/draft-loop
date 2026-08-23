@@ -287,6 +287,14 @@ omits roots, labels, filenames, URLs, checksums, content, and relative-path
 hashes. Each operation is an independent read; callers refresh after concurrent
 changes rather than treating several responses as one snapshot.
 
+The shared CLI and desktop adapters also expose explicit single-file intake
+through the existing application contract. CLI users supply a local path; the
+desktop host owns a dedicated one-file native picker and never accepts or
+returns that path through renderer IPC. Both adapters return only CKB, source,
+and initial-version identity plus creation status. Later-version append,
+directory intake, and approved URL intake remain separate adapter operations
+because their lineage, partial-progress, and network-approval semantics differ.
+
 ## Deferred integration
 
 This decision deliberately leaves the following outside the product workflow:
