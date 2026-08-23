@@ -274,6 +274,14 @@ is read-only and does not apply a rebind. None of these operations infers
 renames, complete removal reconciliation, or root rebind application, and no operation
 physically deletes sources automatically.
 
+Migration v14 adds append-only sensitive root revisions and a current-root
+projection without changing immutable v13 binding/member rows. Revision 1 is
+backfilled for existing bindings, historical roots remain reserved, and the
+storage/handle foundation verifies every candidate member before atomically
+updating origin bindings and recording the next revision. Same-root requests
+are guarded no-ops. The application rebind command, rename/removal
+reconciliation, and broader membership lifecycle remain deferred.
+
 The structural inventory is a local application query, not a provider-facing
 projection or content-diagnostic workflow. Missing or corrupt referenced blobs
 still fail normal validation; inventory is not repair mode. Unknown entries are

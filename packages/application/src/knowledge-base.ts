@@ -1224,7 +1224,8 @@ async function collectDirectoryRootRebindPreview(
     );
     if (
       validatedExistingBinding.rootPath !== canonicalCandidateRoot ||
-      validatedExistingBinding.id !== directoryId
+      validatedExistingBinding.id !== directoryId ||
+      validatedExistingBinding.rootPath !== binding.rootPath
     ) {
       throw previewDirectoryRootRebindFailure();
     }

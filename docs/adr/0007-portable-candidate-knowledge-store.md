@@ -228,6 +228,20 @@ SQLite migration v13 stores the opaque directory binding and immutable hashed
 members in separate local-only tables with same-CKB foreign-key scope; there is
 no backfill of earlier runtime-only imports.
 
+The sixteenth #110 storage slice adds migration v14 as an append-only root-
+revision foundation. Existing v13 bindings are backfilled as revision 1;
+future bindings receive revision 1 through an insert trigger, and the current
+root is exposed only through a max-revision view. Revisions reserve every
+historical root in a CKB and retain their canonical root and timestamp in the
+sensitive local store. The storage/handle rebind transaction verifies every
+member and atomically updates current origin bindings plus revision N+1, while
+same-root requests are guarded no-ops. v13 binding/member rows remain
+immutable. A mutable v13 root or a no-backfill overlay was rejected because it
+would erase historical roots, make moved-root conflicts ambiguous, or leave
+legacy bindings without a trustworthy revision baseline. Application rebind
+command, rename/removal reconciliation, and lifecycle policy remain
+deferred; this is a component implementation only and does not advance v0.7.
+
 An explicit application operation can approve one local regular file as a
 manual new version of an existing file source. Every append repeats the same
 supported-media, successful-extraction, 20 MiB, stable-file, and managed-copy
