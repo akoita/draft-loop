@@ -3003,11 +3003,25 @@ describe("candidate knowledge native controls", () => {
   it("imports one selected candidate-knowledge directory without exposing its paths", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-directory-host-"));
     const directoryPath = join(parent, "private-career-directory");
+    const reboundDirectoryPath = join(parent, "relocated-private-career-directory");
     await mkdir(directoryPath);
+    await mkdir(reboundDirectoryPath);
     await writeFile(join(directoryPath, "career.md"), "Private career evidence.\n", "utf8");
     await writeFile(join(directoryPath, "projects.txt"), "Private project evidence.\n", "utf8");
+    await writeFile(join(reboundDirectoryPath, "career.md"), "Private career evidence.\n", "utf8");
+    await writeFile(
+      join(reboundDirectoryPath, "projects.txt"),
+      "Private project evidence.\n",
+      "utf8",
+    );
     try {
-      const selectedDirectories = [directoryPath];
+      const selectedDirectories: Array<string | undefined> = [
+        directoryPath,
+        undefined,
+        reboundDirectoryPath,
+        reboundDirectoryPath,
+        reboundDirectoryPath,
+      ];
       const chooseKnowledgeSourceDirectory = vi.fn(async () => selectedDirectories.shift());
       const host = createNativeHost({
         dialogs: {
@@ -3051,6 +3065,8 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify(imported)).not.toContain("career.md");
       expect(JSON.stringify(imported)).not.toContain("projects.txt");
       expect(JSON.stringify(imported)).not.toContain("Private career evidence");
+      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
+      const directoryId = (imported.value as { directoryId: string }).directoryId;
 
       await expect(
         host.invoke({
@@ -3059,6 +3075,70 @@ describe("candidate knowledge native controls", () => {
         }),
       ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
       expect(chooseKnowledgeSourceDirectory).toHaveBeenCalledTimes(2);
+
+      const rebindInput = {
+        storeId,
+        knowledgeBaseId,
+        directoryId,
+        selection: "native-dialog" as const,
+      };
+      const preview = await host.invoke({
+        type: "knowledge.directory-rebind-preview",
+        input: rebindInput,
+      });
+      expect(preview).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          directoryId,
+          status: "ready",
+          memberCount: 2,
+          discoveredFileCount: 2,
+        },
+      });
+      expect(JSON.stringify(preview)).not.toContain(parent);
+      expect(JSON.stringify(preview)).not.toContain("career.md");
+
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-rebind-apply",
+          input: { ...rebindInput, confirmed: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      expect(chooseKnowledgeSourceDirectory).toHaveBeenCalledTimes(3);
+      const rebound = await host.invoke({
+        type: "knowledge.directory-rebind-apply",
+        input: { ...rebindInput, confirmed: true },
+      });
+      expect(rebound).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          directoryId,
+          status: "rebound",
+          memberCount: 2,
+        },
+      });
+      expect(JSON.stringify(rebound)).not.toContain(parent);
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-rebind-apply",
+          input: { ...rebindInput, confirmed: true },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { directoryId, status: "current", memberCount: 2 },
+      });
+      expect(chooseKnowledgeSourceDirectory).toHaveBeenCalledTimes(5);
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-rebind-apply",
+          input: { ...rebindInput, confirmed: true },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      expect(chooseKnowledgeSourceDirectory).toHaveBeenCalledTimes(6);
 
       const unopenedPicker = vi.fn(async () => directoryPath);
       const restartedHost = createNativeHost({
@@ -3072,6 +3152,12 @@ describe("candidate knowledge native controls", () => {
         restartedHost.invoke({
           type: "knowledge.import-directory",
           input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      await expect(
+        restartedHost.invoke({
+          type: "knowledge.directory-rebind-preview",
+          input: rebindInput,
         }),
       ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
       expect(unopenedPicker).not.toHaveBeenCalled();
@@ -3089,6 +3175,18 @@ describe("candidate knowledge native controls", () => {
         unavailableHost.invoke({
           type: "knowledge.import-directory",
           input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "capability-unavailable" } });
+      await expect(
+        unavailableHost.invoke({
+          type: "knowledge.directory-rebind-preview",
+          input: rebindInput,
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "capability-unavailable" } });
+      await expect(
+        unavailableHost.invoke({
+          type: "knowledge.directory-rebind-apply",
+          input: { ...rebindInput, confirmed: true },
         }),
       ).resolves.toMatchObject({ ok: false, error: { code: "capability-unavailable" } });
     } finally {

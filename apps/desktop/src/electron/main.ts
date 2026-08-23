@@ -47,7 +47,7 @@ async function chooseDirectory(mode: "open" | "create"): Promise<string | undefi
 async function chooseKnowledgeSourceDirectory(): Promise<string | undefined> {
   const result = await dialog.showOpenDialog({
     properties: ["openDirectory"] as const,
-    title: "Add directory to candidate knowledge base",
+    title: "Select candidate knowledge directory",
   });
   return result.canceled ? undefined : result.filePaths[0];
 }

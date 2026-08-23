@@ -70,6 +70,13 @@ status, and a timestamp. Retirement state is likewise path-free. Explicitly
 confirmed retirement is logical and idempotent: it blocks later mutation but
 does not delete bytes or metadata, and no reactivation control exists.
 
+Directory-root rebind is local-only. Preview and confirmed apply each receive
+one selected root as runtime CLI input or through the native desktop picker;
+the path never crosses renderer IPC or appears in generic output. Preview is
+read-only. Apply performs a fresh bounded exact-membership scan and uses atomic
+revision and origin guards, returning only opaque directory identity, status,
+time, and counts.
+
 Origin status and refresh-state results are content-free. They expose only
 opaque source/version identity, lifecycle status, and timestamps. Explicit file
 refresh reads the sensitive remembered local origin without returning it. URL

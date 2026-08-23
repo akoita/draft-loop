@@ -7,6 +7,7 @@ import { generateSanitizedPilotReport } from "./pilot-report.js";
 import {
   type ApplicationIo,
   type ApplicationService,
+  type ApplyKnowledgeSourceDirectoryRootRebindResult,
   applicationService,
   type CandidateKnowledgeSourceManifest,
   type CandidateKnowledgeSourceWriteResult,
@@ -21,6 +22,7 @@ import {
   type KnowledgeSourceRefreshStateResult,
   type KnowledgeSourceRetirementResult,
   knowledgeService,
+  type PreviewKnowledgeSourceDirectoryRootRebindResult,
   runPilot,
   type StatusCommand,
   safeErrorMessage,
@@ -306,6 +308,47 @@ function writeKnowledgeSourceDirectoryImport(
       sourceCount: ordered.length,
       sources,
       sourcesTruncated: ordered.length > maximumKnowledgeInspectionItems,
+    }),
+  );
+}
+
+function writeKnowledgeSourceDirectoryRootRebind(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  directoryId: string,
+  result:
+    | PreviewKnowledgeSourceDirectoryRootRebindResult
+    | ApplyKnowledgeSourceDirectoryRootRebindResult,
+  expectedStatuses: readonly ("current" | "ready" | "rebound")[],
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.directoryId !== directoryId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !expectedStatuses.includes(result.status) ||
+    ![
+      result.memberCount,
+      result.scannedEntryCount,
+      result.discoveredFileCount,
+      result.skippedEntryCount,
+    ].every((count) => Number.isSafeInteger(count) && count >= 0) ||
+    result.memberCount !== result.discoveredFileCount ||
+    result.discoveredFileCount + result.skippedEntryCount > result.scannedEntryCount
+  ) {
+    throw new Error("The candidate knowledge source directory root rebind result was invalid.");
+  }
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      directoryId,
+      checkedAt: result.checkedAt,
+      status: result.status,
+      memberCount: result.memberCount,
+      scannedEntryCount: result.scannedEntryCount,
+      discoveredFileCount: result.discoveredFileCount,
+      skippedEntryCount: result.skippedEntryCount,
     }),
   );
 }
@@ -918,6 +961,65 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       });
       writeKnowledgeSourceDirectoryImport(io, knowledgeBaseId, result);
     });
+
+  knowledgeSource
+    .command("directory-rebind-preview")
+    .description("Preview rebinding one directory root without changing stored state")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .argument("<directory-path>", "candidate local directory path")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        directoryPath: string,
+      ) => {
+        const result = await candidateKnowledge.previewKnowledgeSourceDirectoryRootRebind({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          directoryPath,
+        });
+        writeKnowledgeSourceDirectoryRootRebind(io, knowledgeBaseId, directoryId, result, [
+          "current",
+          "ready",
+        ]);
+      },
+    );
+
+  knowledgeSource
+    .command("directory-rebind-apply")
+    .description("Apply rebinding one directory root after explicit confirmation")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .argument("<directory-path>", "candidate local directory path")
+    .option("--confirm", "confirm the directory-root rebind")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        directoryPath: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.confirm !== true) {
+          throw new Error("knowledge source directory-rebind-apply requires --confirm.");
+        }
+        const result = await candidateKnowledge.applyKnowledgeSourceDirectoryRootRebind({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          directoryPath,
+        });
+        writeKnowledgeSourceDirectoryRootRebind(io, knowledgeBaseId, directoryId, result, [
+          "current",
+          "rebound",
+        ]);
+      },
+    );
 
   knowledgeSource
     .command("import-url")

@@ -311,6 +311,11 @@ separate native selection, returning only `current` or `rebound` plus the
 binding timestamp. Path-free retirement state and explicitly confirmed,
 idempotent logical retirement are also exposed; retirement preserves all
 evidence and has no reactivation control.
+Directory-root rebind is exposed as separate preview and apply controls. The
+CLI root is runtime-only and desktop owns a native picker. Preview is advisory;
+confirmed apply performs its own fresh bounded scan and relies on the existing
+atomic root-revision and per-origin guards. Both results expose only directory
+identity, status, timestamp, and counts.
 
 ## Deferred integration
 
