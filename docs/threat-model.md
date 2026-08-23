@@ -78,6 +78,12 @@ opaque identity, status, time, and counts. Apply does not trust preview state:
 it repeats the bounded exact-membership scan, then storage atomically guards
 the root revision and every member origin against races.
 
+Directory refresh uses the sensitive remembered root entirely inside the
+application and native host. Preview is read-only; apply requires explicit
+confirmation before store access and repeats the bounded scan. Generic results
+cap and sort opaque member/refreshed identities, report partial progress
+explicitly, and omit paths, filenames, hashes, checksums, labels, and content.
+
 Lifecycle actions are explicit and bounded. A root rebind performs one complete
 bounded scan, stable per-member verification, and a guarded all-member origin
 commit or same-root no-op. The implemented one-source member-move command

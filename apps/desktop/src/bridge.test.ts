@@ -1457,6 +1457,108 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("validates bounded path-free directory refresh controls", async () => {
+    const input = { storeId: "store-1", knowledgeBaseId: "kb-1", directoryId: "directory-1" };
+    expect(validateBridgeCommand({ type: "knowledge.directory-refresh-preview", input })).toEqual({
+      type: "knowledge.directory-refresh-preview",
+      input,
+    });
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.directory-refresh-apply",
+        input: { ...input, confirmed: true },
+      }),
+    ).toEqual({
+      type: "knowledge.directory-refresh-apply",
+      input: { ...input, confirmed: true },
+    });
+    expect(() =>
+      validateBridgeCommand({
+        type: "knowledge.directory-refresh-preview",
+        input: { ...input, directoryPath: "/private/career" },
+      }),
+    ).toThrow("invalid");
+
+    const previewValue = {
+      ...input,
+      checkedAt: "2026-08-24T10:00:00.000Z",
+      members: [
+        { sourceId: "source-1", status: "changed" },
+        { sourceId: "source-2", status: "changed" },
+      ],
+      memberCount: 2,
+      membersTruncated: false,
+      newSourceCount: 1,
+      scannedEntryCount: 4,
+      discoveredFileCount: 3,
+      skippedEntryCount: 1,
+    } as const;
+    const previewPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: previewValue }),
+        ["knowledge.directory-refresh-preview"],
+      ),
+    );
+    await expect(
+      previewPort.execute({ type: "knowledge.directory-refresh-preview", input }),
+    ).resolves.toEqual({ ok: true, value: previewValue });
+
+    const applyValue = {
+      ...previewValue,
+      status: "partial" as const,
+      refreshedSourceIds: ["source-1"],
+      refreshedSourceCount: 1,
+      refreshedSourceIdsTruncated: false,
+      failedSourceId: "source-2",
+      failedStatus: "changed" as const,
+    };
+    const applyPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: applyValue }), ["knowledge.directory-refresh-apply"]),
+    );
+    await expect(
+      applyPort.execute({
+        type: "knowledge.directory-refresh-apply",
+        input: { ...input, confirmed: true },
+      }),
+    ).resolves.toEqual({ ok: true, value: applyValue });
+
+    for (const invalidValue of [
+      { ...previewValue, membersTruncated: true },
+      { ...previewValue, members: [previewValue.members[0], previewValue.members[0]] },
+      { ...previewValue, checkedAt: "not-a-time" },
+      { ...previewValue, sourcePath: "/private/career" },
+    ]) {
+      const port = createCapabilityPort(
+        bridge(
+          async () => ({ ok: true, value: invalidValue }),
+          ["knowledge.directory-refresh-preview"],
+        ),
+      );
+      await expect(
+        port.execute({ type: "knowledge.directory-refresh-preview", input }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+    for (const invalidValue of [
+      { ...applyValue, status: "complete" },
+      { ...applyValue, refreshedSourceIdsTruncated: true },
+      { ...applyValue, failedStatus: undefined },
+      { ...applyValue, refreshedSourceIds: ["source-2"] },
+    ]) {
+      const port = createCapabilityPort(
+        bridge(
+          async () => ({ ok: true, value: invalidValue }),
+          ["knowledge.directory-refresh-apply"],
+        ),
+      );
+      await expect(
+        port.execute({
+          type: "knowledge.directory-refresh-apply",
+          input: { ...input, confirmed: true },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+  });
+
   it("validates path-free candidate-knowledge file-version append", async () => {
     const input = {
       storeId: "store-1",

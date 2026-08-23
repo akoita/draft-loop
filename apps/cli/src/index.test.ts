@@ -6,6 +6,7 @@ import { createCli } from "./index.js";
 import type {
   ApplicationIo,
   ApplicationService,
+  ApplyKnowledgeSourceDirectoryRefreshResult,
   ApplyKnowledgeSourceDirectoryRootRebindResult,
   CandidateKnowledgeSourceManifest,
   CandidateKnowledgeSourceWriteResult,
@@ -22,6 +23,7 @@ import type {
   KnowledgeSourceOriginStatusResult,
   KnowledgeSourceRefreshStateResult,
   KnowledgeSourceRetirementResult,
+  PreviewKnowledgeSourceDirectoryRefreshResult,
   PreviewKnowledgeSourceDirectoryRootRebindResult,
   StatusCommand,
   WorkspaceDescriptor,
@@ -342,6 +344,39 @@ function knowledgeSourceDirectoryRootRebindResult(
   } as
     | PreviewKnowledgeSourceDirectoryRootRebindResult
     | ApplyKnowledgeSourceDirectoryRootRebindResult;
+}
+
+function knowledgeSourceDirectoryRefreshPreviewResult(
+  overrides: Partial<PreviewKnowledgeSourceDirectoryRefreshResult> = {},
+): PreviewKnowledgeSourceDirectoryRefreshResult {
+  return {
+    directoryId: "directory-opaque",
+    checkedAt: "2026-08-23T10:06:00.000Z",
+    members: [
+      { sourceId: "source-b", status: "changed" },
+      { sourceId: "source-a", status: "current" },
+    ],
+    newSourceCount: 1,
+    scannedEntryCount: 5,
+    discoveredFileCount: 3,
+    skippedEntryCount: 2,
+    ...overrides,
+  };
+}
+
+function knowledgeSourceDirectoryRefreshApplyResult(
+  status: "complete" | "partial" = "complete",
+  overrides: Partial<ApplyKnowledgeSourceDirectoryRefreshResult> = {},
+): ApplyKnowledgeSourceDirectoryRefreshResult {
+  return {
+    ...knowledgeSourceDirectoryRefreshPreviewResult(),
+    status,
+    refreshedSourceIds: status === "partial" ? [] : ["source-b"],
+    ...(status === "partial"
+      ? { failedSourceId: "source-b", failedStatus: "changed" as const }
+      : {}),
+    ...overrides,
+  } as ApplyKnowledgeSourceDirectoryRefreshResult;
 }
 
 function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
@@ -1374,6 +1409,410 @@ describe("candidate knowledge source inspection CLI controls", () => {
     await expect(cli.parseAsync(applyCommand)).rejects.toThrow(
       "The candidate knowledge source directory root rebind result was invalid.",
     );
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("maps preview and apply directory refresh results with deterministic path-free output", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-directory-store");
+    const knowledgeBaseId = "base-one";
+    const directoryId = "directory-opaque";
+    const oldDirectoryPath = resolve("private-old-directory");
+    const newDirectoryPath = resolve("private-new-directory");
+    const previewKnowledgeSourceDirectoryRefresh = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...knowledgeSourceDirectoryRefreshPreviewResult(),
+        oldRootPath: oldDirectoryPath,
+        newRootPath: newDirectoryPath,
+        relativePathHash: "a".repeat(64),
+        content: "private directory content",
+      } as unknown as PreviewKnowledgeSourceDirectoryRefreshResult)
+      .mockResolvedValueOnce(knowledgeSourceDirectoryRefreshPreviewResult());
+    const applyKnowledgeSourceDirectoryRefresh = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceDirectoryRefreshApplyResult("complete"))
+      .mockResolvedValueOnce(
+        knowledgeSourceDirectoryRefreshApplyResult("partial", {
+          refreshedSourceIds: [],
+          failedSourceId: "source-b",
+          failedStatus: "changed",
+        }),
+      );
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryRefresh,
+      applyKnowledgeSourceDirectoryRefresh,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-preview",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--max-depth",
+      "4",
+      "--max-scanned-entries",
+      "8",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-preview",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-apply",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--confirm",
+      "--max-accepted-files",
+      "2",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-apply",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--confirm",
+    ]);
+
+    expect(previewKnowledgeSourceDirectoryRefresh).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      options: { maxDepth: 4, maxScannedEntries: 8 },
+    });
+    expect(previewKnowledgeSourceDirectoryRefresh).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+    });
+    expect(applyKnowledgeSourceDirectoryRefresh).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      options: { maxAcceptedFiles: 2 },
+    });
+    expect(applyKnowledgeSourceDirectoryRefresh).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:06:00.000Z",
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-b", status: "changed" },
+        ],
+        memberCount: 2,
+        membersTruncated: false,
+        newSourceCount: 1,
+        scannedEntryCount: 5,
+        discoveredFileCount: 3,
+        skippedEntryCount: 2,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:06:00.000Z",
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-b", status: "changed" },
+        ],
+        memberCount: 2,
+        membersTruncated: false,
+        newSourceCount: 1,
+        scannedEntryCount: 5,
+        discoveredFileCount: 3,
+        skippedEntryCount: 2,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:06:00.000Z",
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-b", status: "changed" },
+        ],
+        memberCount: 2,
+        membersTruncated: false,
+        newSourceCount: 1,
+        scannedEntryCount: 5,
+        discoveredFileCount: 3,
+        skippedEntryCount: 2,
+        status: "complete",
+        refreshedSourceIds: ["source-b"],
+        refreshedSourceCount: 1,
+        refreshedSourceIdsTruncated: false,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:06:00.000Z",
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-b", status: "changed" },
+        ],
+        memberCount: 2,
+        membersTruncated: false,
+        newSourceCount: 1,
+        scannedEntryCount: 5,
+        discoveredFileCount: 3,
+        skippedEntryCount: 2,
+        status: "partial",
+        refreshedSourceIds: [],
+        refreshedSourceCount: 0,
+        refreshedSourceIdsTruncated: false,
+        failedSourceId: "source-b",
+        failedStatus: "changed",
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(oldDirectoryPath);
+    expect(output).not.toContain(newDirectoryPath);
+    expect(output).not.toContain("a".repeat(64));
+    expect(output).not.toContain("private directory content");
+  });
+
+  it("requires explicit confirmation before applying a directory refresh", async () => {
+    const dependencies = harness();
+    const applyKnowledgeSourceDirectoryRefresh = vi.fn(async () =>
+      knowledgeSourceDirectoryRefreshApplyResult("complete"),
+    );
+    const knowledgeService = {
+      applyKnowledgeSourceDirectoryRefresh,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "directory-refresh-apply",
+        resolve("private-directory-store"),
+        "base-one",
+        "directory-opaque",
+      ]),
+    ).rejects.toThrow("knowledge source directory-refresh-apply requires --confirm");
+    expect(applyKnowledgeSourceDirectoryRefresh).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("caps directory refresh arrays only after validating their full contents", async () => {
+    const dependencies = harness();
+    const members = Array.from({ length: 300 }, (_, index) => ({
+      sourceId: `source-${String(index).padStart(3, "0")}`,
+      status: "changed" as const,
+    }));
+    const sourceIds = members.map(({ sourceId }) => sourceId);
+    const previewResult = knowledgeSourceDirectoryRefreshPreviewResult({
+      members,
+      newSourceCount: 0,
+      scannedEntryCount: members.length,
+      discoveredFileCount: members.length,
+      skippedEntryCount: 0,
+    });
+    const applyResult = {
+      ...previewResult,
+      status: "complete" as const,
+      refreshedSourceIds: sourceIds,
+    } as ApplyKnowledgeSourceDirectoryRefreshResult;
+    const previewKnowledgeSourceDirectoryRefresh = vi.fn(async () => previewResult);
+    const applyKnowledgeSourceDirectoryRefresh = vi.fn(async () => applyResult);
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryRefresh,
+      applyKnowledgeSourceDirectoryRefresh,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-preview",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-apply",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      "--confirm",
+    ]);
+
+    const [previewOutput, applyOutput] = dependencies.lines.map((line) => JSON.parse(line));
+    expect(previewOutput).toMatchObject({
+      memberCount: 300,
+      membersTruncated: true,
+      members: members.slice(0, 256),
+    });
+    expect(applyOutput).toMatchObject({
+      status: "complete",
+      refreshedSourceCount: 300,
+      refreshedSourceIdsTruncated: true,
+      refreshedSourceIds: sourceIds.slice(0, 256),
+    });
+    expect(previewKnowledgeSourceDirectoryRefresh).toHaveBeenCalledOnce();
+    expect(applyKnowledgeSourceDirectoryRefresh).toHaveBeenCalledOnce();
+  });
+
+  it("rejects wrong-phase and malformed directory refresh results", async () => {
+    const dependencies = harness();
+    const validPreview = knowledgeSourceDirectoryRefreshPreviewResult();
+    const previewResults = [
+      { ...validPreview, status: "complete" },
+      { ...validPreview, directoryId: "other-directory" },
+      { ...validPreview, checkedAt: "not-a-timestamp" },
+      { ...validPreview, members: [{ sourceId: "", status: "current" }] },
+      { ...validPreview, members: [{ sourceId: "source-a", status: "invalid" }] },
+      { ...validPreview, newSourceCount: 4 },
+      { ...validPreview, scannedEntryCount: 4 },
+    ];
+    const applyResults = [
+      { ...knowledgeSourceDirectoryRefreshApplyResult("complete"), status: undefined },
+      {
+        ...knowledgeSourceDirectoryRefreshApplyResult("complete"),
+        failedSourceId: "source-b",
+        failedStatus: "changed",
+      },
+      {
+        ...knowledgeSourceDirectoryRefreshApplyResult("partial"),
+        failedSourceId: undefined,
+        failedStatus: undefined,
+      },
+      {
+        ...knowledgeSourceDirectoryRefreshApplyResult("partial"),
+        refreshedSourceIds: ["source-a"],
+      },
+      {
+        ...knowledgeSourceDirectoryRefreshApplyResult("partial"),
+        refreshedSourceIds: ["source-b"],
+      },
+    ];
+    const previewKnowledgeSourceDirectoryRefresh = vi.fn();
+    for (const result of previewResults) {
+      previewKnowledgeSourceDirectoryRefresh.mockResolvedValueOnce(
+        result as unknown as PreviewKnowledgeSourceDirectoryRefreshResult,
+      );
+    }
+    const applyKnowledgeSourceDirectoryRefresh = vi.fn();
+    for (const result of applyResults) {
+      applyKnowledgeSourceDirectoryRefresh.mockResolvedValueOnce(
+        result as unknown as ApplyKnowledgeSourceDirectoryRefreshResult,
+      );
+    }
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryRefresh,
+      applyKnowledgeSourceDirectoryRefresh,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const previewCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-preview",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+    ] as const;
+    const applyCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-refresh-apply",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      "--confirm",
+    ] as const;
+
+    for (let index = 0; index < previewResults.length; index += 1) {
+      await expect(cli.parseAsync(previewCommand)).rejects.toThrow(
+        "The candidate knowledge source directory refresh result was invalid.",
+      );
+    }
+    for (let index = 0; index < applyResults.length; index += 1) {
+      await expect(cli.parseAsync(applyCommand)).rejects.toThrow(
+        "The candidate knowledge source directory refresh result was invalid.",
+      );
+    }
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("propagates directory refresh service failures without CLI output", async () => {
+    const dependencies = harness();
+    const failure = new Error("directory refresh failed");
+    const previewKnowledgeSourceDirectoryRefresh = vi.fn(async () => {
+      throw failure;
+    });
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryRefresh,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "directory-refresh-preview",
+        resolve("private-directory-store"),
+        "base-one",
+        "directory-opaque",
+      ]),
+    ).rejects.toBe(failure);
     expect(dependencies.lines).toEqual([]);
   });
 

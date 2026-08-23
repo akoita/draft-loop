@@ -3194,6 +3194,96 @@ describe("candidate knowledge native controls", () => {
     }
   });
 
+  it("previews and explicitly applies a path-free directory refresh", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-directory-refresh-host-"));
+    const directoryPath = join(parent, "private-career-directory");
+    await mkdir(directoryPath);
+    const sourcePath = join(directoryPath, "career.md");
+    await writeFile(sourcePath, "Private career evidence.\n", "utf8");
+    try {
+      const underlying = createCandidateKnowledgeStoreService();
+      const applyRefresh = vi.fn(underlying.applyKnowledgeSourceDirectoryRefresh);
+      const knowledgeService = {
+        ...underlying,
+        applyKnowledgeSourceDirectoryRefresh: applyRefresh,
+      };
+      const host = createNativeHost({
+        knowledgeService,
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceDirectory: async () => directoryPath,
+        },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      const imported = await host.invoke({
+        type: "knowledge.import-directory",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
+      const directoryId = (imported.value as { directoryId: string }).directoryId;
+      const input = { storeId, knowledgeBaseId, directoryId };
+
+      await expect(
+        host.invoke({ type: "knowledge.directory-refresh-preview", input }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: {
+          ...input,
+          members: [{ status: "current" }],
+          memberCount: 1,
+          membersTruncated: false,
+          newSourceCount: 0,
+        },
+      });
+      await writeFile(sourcePath, "Updated private career evidence.\n", "utf8");
+      const preview = await host.invoke({ type: "knowledge.directory-refresh-preview", input });
+      expect(preview).toMatchObject({
+        ok: true,
+        value: { ...input, members: [{ status: "changed" }], memberCount: 1 },
+      });
+      expect(JSON.stringify(preview)).not.toContain(parent);
+      expect(JSON.stringify(preview)).not.toContain("career.md");
+      expect(JSON.stringify(preview)).not.toContain("Updated private career evidence");
+
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-refresh-apply",
+          input: { ...input, confirmed: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      expect(applyRefresh).not.toHaveBeenCalled();
+
+      const applied = await host.invoke({
+        type: "knowledge.directory-refresh-apply",
+        input: { ...input, confirmed: true },
+      });
+      expect(applied).toMatchObject({
+        ok: true,
+        value: {
+          ...input,
+          status: "complete",
+          refreshedSourceCount: 1,
+          refreshedSourceIdsTruncated: false,
+        },
+      });
+      expect(JSON.stringify(applied)).not.toContain(parent);
+      expect(JSON.stringify(applied)).not.toContain("career.md");
+      expect(JSON.stringify(applied)).not.toContain("Updated private career evidence");
+      expect(applyRefresh).toHaveBeenCalledOnce();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("preserves path-free partial directory intake and rejects inconsistent results", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-directory-result-host-"));
     const directoryPath = join(parent, "private-career-directory");

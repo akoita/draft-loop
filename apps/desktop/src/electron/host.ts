@@ -13,6 +13,7 @@ import {
   defaultLocalModelEndpoint,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
+  type PreviewKnowledgeSourceDirectoryRefreshResult,
   type ProviderAuthMode,
   type ProviderAuthModeConfiguration,
   type ProviderUserSessionRunners,
@@ -54,6 +55,9 @@ import {
   type FileSelectResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeDirectoryImportSourceResult,
+  type KnowledgeDirectoryRefreshApplyResult,
+  type KnowledgeDirectoryRefreshMemberResult,
+  type KnowledgeDirectoryRefreshPreviewResult,
   type KnowledgeDirectoryRootRebindResult,
   type KnowledgeDuplicatesResult,
   type KnowledgeFileImportResult,
@@ -106,6 +110,13 @@ const maximumKnowledgeInspectionEntries = 256;
 const sourceProvenanceFilename = "source-provenance.json";
 const providerTransmissionAcknowledgementFilename = "provider-transmission-acknowledgement.json";
 const maxImportedFileBytes = 20 * 1024 * 1024;
+const knowledgeDirectoryRefreshStatuses = new Set([
+  "current",
+  "changed",
+  "missing",
+  "retired",
+  "origin-conflict",
+]);
 
 function isValidTimestamp(value: unknown): value is string {
   return (
@@ -114,6 +125,65 @@ function isValidTimestamp(value: unknown): value is string {
     value.length <= 64 &&
     Number.isFinite(Date.parse(value))
   );
+}
+
+function projectKnowledgeDirectoryRefresh(
+  storeId: string,
+  knowledgeBaseId: string,
+  expectedDirectoryId: string,
+  result: PreviewKnowledgeSourceDirectoryRefreshResult,
+): KnowledgeDirectoryRefreshPreviewResult {
+  const sourceIds = new Set<string>();
+  const members: KnowledgeDirectoryRefreshMemberResult[] = [];
+  for (const member of result.members) {
+    if (
+      typeof member.sourceId !== "string" ||
+      member.sourceId.trim() === "" ||
+      sourceIds.has(member.sourceId) ||
+      !knowledgeDirectoryRefreshStatuses.has(member.status)
+    ) {
+      return fail(
+        "operation-failed",
+        "Candidate knowledge directory refresh returned inconsistent state.",
+      );
+    }
+    sourceIds.add(member.sourceId);
+    members.push({ sourceId: member.sourceId, status: member.status });
+  }
+  if (
+    result.directoryId !== expectedDirectoryId ||
+    !isValidTimestamp(result.checkedAt) ||
+    !Number.isSafeInteger(result.newSourceCount) ||
+    result.newSourceCount < 0 ||
+    !Number.isSafeInteger(result.scannedEntryCount) ||
+    result.scannedEntryCount < 0 ||
+    !Number.isSafeInteger(result.discoveredFileCount) ||
+    result.discoveredFileCount < 0 ||
+    !Number.isSafeInteger(result.skippedEntryCount) ||
+    result.skippedEntryCount < 0 ||
+    result.newSourceCount > result.discoveredFileCount ||
+    result.discoveredFileCount + result.skippedEntryCount > result.scannedEntryCount
+  ) {
+    return fail(
+      "operation-failed",
+      "Candidate knowledge directory refresh returned inconsistent state.",
+    );
+  }
+  members.sort((left, right) => left.sourceId.localeCompare(right.sourceId));
+  const projectedMembers = members.slice(0, maximumKnowledgeInspectionEntries);
+  return {
+    storeId,
+    knowledgeBaseId,
+    directoryId: result.directoryId,
+    checkedAt: result.checkedAt,
+    members: projectedMembers,
+    memberCount: members.length,
+    membersTruncated: projectedMembers.length < members.length,
+    newSourceCount: result.newSourceCount,
+    scannedEntryCount: result.scannedEntryCount,
+    discoveredFileCount: result.discoveredFileCount,
+    skippedEntryCount: result.skippedEntryCount,
+  };
 }
 
 const transmissionScope = [
@@ -2349,6 +2419,90 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             scannedEntryCount: preview.scannedEntryCount,
             discoveredFileCount: preview.discoveredFileCount,
             skippedEntryCount: preview.skippedEntryCount,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-refresh-preview": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const preview = await knowledgeService.previewKnowledgeSourceDirectoryRefresh({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+          });
+          return {
+            ok: true,
+            value: projectKnowledgeDirectoryRefresh(
+              command.input.storeId,
+              command.input.knowledgeBaseId,
+              command.input.directoryId,
+              preview,
+            ),
+          };
+        }
+        case "knowledge.directory-refresh-apply": {
+          if (!command.input.confirmed) {
+            return fail(
+              "permission-denied",
+              "Candidate knowledge directory refresh requires confirmation.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const applied = await knowledgeService.applyKnowledgeSourceDirectoryRefresh({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+          });
+          const preview = projectKnowledgeDirectoryRefresh(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+            command.input.directoryId,
+            applied,
+          );
+          const refreshedSourceIds = [...applied.refreshedSourceIds].sort((left, right) =>
+            left.localeCompare(right),
+          );
+          const failedSourceId = applied.status === "partial" ? applied.failedSourceId : undefined;
+          const failedStatus = applied.status === "partial" ? applied.failedStatus : undefined;
+          const hasFailedSourceId = Object.hasOwn(applied, "failedSourceId");
+          const hasFailedStatus = Object.hasOwn(applied, "failedStatus");
+          if (
+            (applied.status !== "complete" && applied.status !== "partial") ||
+            new Set(refreshedSourceIds).size !== refreshedSourceIds.length ||
+            refreshedSourceIds.some(
+              (sourceId) =>
+                !applied.members.some(
+                  (member) => member.sourceId === sourceId && member.status === "changed",
+                ),
+            ) ||
+            (applied.status === "complete" && (hasFailedSourceId || hasFailedStatus)) ||
+            (applied.status === "partial" &&
+              (!applied.members.some(
+                (member) => member.sourceId === failedSourceId && member.status === failedStatus,
+              ) ||
+                failedStatus !== "changed" ||
+                refreshedSourceIds.includes(applied.failedSourceId)))
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory refresh returned inconsistent state.",
+            );
+          }
+          const projectedSourceIds = refreshedSourceIds.slice(0, maximumKnowledgeInspectionEntries);
+          const result: KnowledgeDirectoryRefreshApplyResult = {
+            ...preview,
+            status: applied.status,
+            refreshedSourceIds: projectedSourceIds,
+            refreshedSourceCount: refreshedSourceIds.length,
+            refreshedSourceIdsTruncated: projectedSourceIds.length < refreshedSourceIds.length,
+            ...(failedSourceId === undefined || failedStatus === undefined
+              ? {}
+              : { failedSourceId, failedStatus }),
           };
           return { ok: true, value: result };
         }

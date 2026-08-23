@@ -28,6 +28,8 @@ export const bridgeCapabilities = [
   "knowledge.inventory",
   "knowledge.import-file",
   "knowledge.import-directory",
+  "knowledge.directory-refresh-preview",
+  "knowledge.directory-refresh-apply",
   "knowledge.directory-rebind-preview",
   "knowledge.directory-rebind-apply",
   "knowledge.import-url",
@@ -250,6 +252,28 @@ export interface KnowledgeDirectoryRootRebindPreviewInput extends KnowledgeReadi
   /** The native host owns the directory picker; no filesystem path crosses this API. */
   readonly selection: "native-dialog";
 }
+
+export interface KnowledgeDirectoryRefreshPreviewInput extends KnowledgeReadinessInput {
+  readonly directoryId: string;
+}
+
+const knowledgeDirectoryRefreshPreviewKeys = inputKeys<KnowledgeDirectoryRefreshPreviewInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "directoryId",
+]);
+
+export interface KnowledgeDirectoryRefreshApplyInput extends KnowledgeDirectoryRefreshPreviewInput {
+  /** Appending changed directory members requires an explicit confirmation. */
+  readonly confirmed: boolean;
+}
+
+const knowledgeDirectoryRefreshApplyKeys = inputKeys<KnowledgeDirectoryRefreshApplyInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "directoryId",
+  "confirmed",
+]);
 
 const knowledgeDirectoryRootRebindPreviewKeys =
   inputKeys<KnowledgeDirectoryRootRebindPreviewInput>()([
@@ -783,6 +807,45 @@ export interface KnowledgeDirectoryRootRebindResult {
   readonly skippedEntryCount: number;
 }
 
+export const knowledgeDirectoryRefreshMemberStatuses = [
+  "current",
+  "changed",
+  "missing",
+  "retired",
+  "origin-conflict",
+] as const;
+export type KnowledgeDirectoryRefreshMemberStatus =
+  (typeof knowledgeDirectoryRefreshMemberStatuses)[number];
+
+export interface KnowledgeDirectoryRefreshMemberResult {
+  readonly sourceId: string;
+  readonly status: KnowledgeDirectoryRefreshMemberStatus;
+}
+
+export interface KnowledgeDirectoryRefreshPreviewResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly members: readonly KnowledgeDirectoryRefreshMemberResult[];
+  readonly memberCount: number;
+  readonly membersTruncated: boolean;
+  readonly newSourceCount: number;
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
+export interface KnowledgeDirectoryRefreshApplyResult
+  extends KnowledgeDirectoryRefreshPreviewResult {
+  readonly status: "complete" | "partial";
+  readonly refreshedSourceIds: readonly string[];
+  readonly refreshedSourceCount: number;
+  readonly refreshedSourceIdsTruncated: boolean;
+  readonly failedSourceId?: string;
+  readonly failedStatus?: KnowledgeDirectoryRefreshMemberStatus;
+}
+
 export interface KnowledgeUrlImportResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -972,6 +1035,33 @@ const knowledgeDirectoryRootRebindResultKeys = resultKeys<KnowledgeDirectoryRoot
   "discoveredFileCount",
   "skippedEntryCount",
 ]);
+const knowledgeDirectoryRefreshMemberResultKeys =
+  resultKeys<KnowledgeDirectoryRefreshMemberResult>()(["sourceId", "status"]);
+const knowledgeDirectoryRefreshPreviewResultKeys =
+  resultKeys<KnowledgeDirectoryRefreshPreviewResult>()([
+    "storeId",
+    "knowledgeBaseId",
+    "directoryId",
+    "checkedAt",
+    "members",
+    "memberCount",
+    "membersTruncated",
+    "newSourceCount",
+    "scannedEntryCount",
+    "discoveredFileCount",
+    "skippedEntryCount",
+  ]);
+const knowledgeDirectoryRefreshApplyResultKeys = resultKeys<KnowledgeDirectoryRefreshApplyResult>()(
+  [
+    ...knowledgeDirectoryRefreshPreviewResultKeys,
+    "status",
+    "refreshedSourceIds",
+    "refreshedSourceCount",
+    "refreshedSourceIdsTruncated",
+    "failedSourceId",
+    "failedStatus",
+  ],
+);
 const knowledgeUrlImportResultKeys = resultKeys<KnowledgeUrlImportResult>()([
   "storeId",
   "knowledgeBaseId",
@@ -1254,6 +1344,8 @@ export interface BridgeCommandInputMap {
   "knowledge.inventory": KnowledgeInventoryInput;
   "knowledge.import-file": KnowledgeFileImportInput;
   "knowledge.import-directory": KnowledgeDirectoryImportInput;
+  "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewInput;
+  "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyInput;
   "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindPreviewInput;
   "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindApplyInput;
   "knowledge.import-url": KnowledgeUrlImportInput;
@@ -1299,6 +1391,8 @@ export interface BridgeCommandOutputMap {
   "knowledge.inventory": KnowledgeInventoryResult;
   "knowledge.import-file": KnowledgeFileImportResult;
   "knowledge.import-directory": KnowledgeDirectoryImportResult;
+  "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewResult;
+  "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyResult;
   "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindResult;
   "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindResult;
   "knowledge.import-url": KnowledgeUrlImportResult;
@@ -1825,6 +1919,31 @@ function validateKnowledgeDirectoryImportInput(value: unknown): KnowledgeDirecto
   };
 }
 
+function validateKnowledgeDirectoryRefreshPreviewInput(
+  value: unknown,
+): KnowledgeDirectoryRefreshPreviewInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDirectoryRefreshPreviewKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    directoryId: identifier(input.directoryId),
+  };
+}
+
+function validateKnowledgeDirectoryRefreshApplyInput(
+  value: unknown,
+): KnowledgeDirectoryRefreshApplyInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDirectoryRefreshApplyKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    directoryId: identifier(input.directoryId),
+    confirmed: booleanValue(input.confirmed),
+  };
+}
+
 function validateKnowledgeDirectoryRootRebindPreviewInput(
   value: unknown,
 ): KnowledgeDirectoryRootRebindPreviewInput {
@@ -2308,6 +2427,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.import-directory",
         input: validateKnowledgeDirectoryImportInput(command.input),
+      };
+    case "knowledge.directory-refresh-preview":
+      return {
+        type: "knowledge.directory-refresh-preview",
+        input: validateKnowledgeDirectoryRefreshPreviewInput(command.input),
+      };
+    case "knowledge.directory-refresh-apply":
+      return {
+        type: "knowledge.directory-refresh-apply",
+        input: validateKnowledgeDirectoryRefreshApplyInput(command.input),
       };
     case "knowledge.directory-rebind-preview":
       return {
@@ -2819,6 +2948,128 @@ function normalizeKnowledgeDirectoryRootRebindResult(
   };
 }
 
+function normalizeKnowledgeDirectoryRefreshMembers(
+  value: unknown,
+): readonly KnowledgeDirectoryRefreshMemberResult[] {
+  if (!Array.isArray(value) || value.length > maximumKnowledgeInspectionEntries) {
+    return invalidInput();
+  }
+  const members = value.map((entry) => {
+    const member = requireRecord(entry);
+    if (!hasOnlyKeys(member, knowledgeDirectoryRefreshMemberResultKeys)) return invalidInput();
+    return {
+      sourceId: identifier(member.sourceId),
+      status: enumValue(member.status, knowledgeDirectoryRefreshMemberStatuses),
+    } satisfies KnowledgeDirectoryRefreshMemberResult;
+  });
+  if (new Set(members.map(({ sourceId }) => sourceId)).size !== members.length) {
+    return invalidInput();
+  }
+  return members.sort((left, right) => left.sourceId.localeCompare(right.sourceId));
+}
+
+function normalizeKnowledgeDirectoryRefreshPreviewResult(
+  value: unknown,
+): KnowledgeDirectoryRefreshPreviewResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeDirectoryRefreshPreviewResultKeys)) return invalidInput();
+  const members = normalizeKnowledgeDirectoryRefreshMembers(result.members);
+  const memberCount = finiteInteger(result.memberCount, 1_000_000);
+  const membersTruncated = booleanValue(result.membersTruncated);
+  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
+  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
+  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
+  if (
+    memberCount < members.length ||
+    membersTruncated !== memberCount > members.length ||
+    discoveredFileCount + skippedEntryCount > scannedEntryCount
+  ) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    directoryId: identifier(result.directoryId),
+    checkedAt: timestampValue(result.checkedAt),
+    members,
+    memberCount,
+    membersTruncated,
+    newSourceCount: finiteInteger(result.newSourceCount, discoveredFileCount),
+    scannedEntryCount,
+    discoveredFileCount,
+    skippedEntryCount,
+  };
+}
+
+function normalizeKnowledgeDirectoryRefreshApplyResult(
+  value: unknown,
+): KnowledgeDirectoryRefreshApplyResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeDirectoryRefreshApplyResultKeys) ||
+    !Array.isArray(result.refreshedSourceIds) ||
+    result.refreshedSourceIds.length > maximumKnowledgeInspectionEntries
+  ) {
+    return invalidInput();
+  }
+  const preview = normalizeKnowledgeDirectoryRefreshPreviewResult({
+    storeId: result.storeId,
+    knowledgeBaseId: result.knowledgeBaseId,
+    directoryId: result.directoryId,
+    checkedAt: result.checkedAt,
+    members: result.members,
+    memberCount: result.memberCount,
+    membersTruncated: result.membersTruncated,
+    newSourceCount: result.newSourceCount,
+    scannedEntryCount: result.scannedEntryCount,
+    discoveredFileCount: result.discoveredFileCount,
+    skippedEntryCount: result.skippedEntryCount,
+  });
+  const status = enumValue(result.status, ["complete", "partial"] as const);
+  const refreshedSourceIds = result.refreshedSourceIds
+    .map((sourceId) => identifier(sourceId))
+    .sort((left, right) => left.localeCompare(right));
+  const refreshedSourceCount = finiteInteger(result.refreshedSourceCount, 1_000_000);
+  const refreshedSourceIdsTruncated = booleanValue(result.refreshedSourceIdsTruncated);
+  const failedSourceId = optionalIdentifier(result.failedSourceId);
+  const failedStatus =
+    result.failedStatus === undefined
+      ? undefined
+      : enumValue(result.failedStatus, knowledgeDirectoryRefreshMemberStatuses);
+  const changedSourceIds = new Set(
+    preview.members.filter(({ status }) => status === "changed").map(({ sourceId }) => sourceId),
+  );
+  const visibleSourceIds = new Set(preview.members.map(({ sourceId }) => sourceId));
+  const isChangedOrTruncated = (sourceId: string): boolean =>
+    changedSourceIds.has(sourceId) || (preview.membersTruncated && !visibleSourceIds.has(sourceId));
+  if (
+    new Set(refreshedSourceIds).size !== refreshedSourceIds.length ||
+    refreshedSourceIds.some((sourceId) => !isChangedOrTruncated(sourceId)) ||
+    refreshedSourceCount < refreshedSourceIds.length ||
+    refreshedSourceIdsTruncated !== refreshedSourceCount > refreshedSourceIds.length ||
+    (status === "partial") !== (failedSourceId !== undefined && failedStatus !== undefined) ||
+    (status === "partial" &&
+      (failedStatus !== "changed" ||
+        failedSourceId === undefined ||
+        refreshedSourceIds.includes(failedSourceId) ||
+        !isChangedOrTruncated(failedSourceId))) ||
+    (status === "complete" &&
+      (Object.hasOwn(result, "failedSourceId") || Object.hasOwn(result, "failedStatus")))
+  ) {
+    return invalidInput();
+  }
+  return {
+    ...preview,
+    status,
+    refreshedSourceIds,
+    refreshedSourceCount,
+    refreshedSourceIdsTruncated,
+    ...(failedSourceId === undefined || failedStatus === undefined
+      ? {}
+      : { failedSourceId, failedStatus }),
+  };
+}
+
 function normalizeKnowledgeUrlImportResult(value: unknown): KnowledgeUrlImportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeUrlImportResultKeys)) return invalidInput();
@@ -3222,6 +3473,10 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeFileWriteResult(value);
     case "knowledge.import-directory":
       return normalizeKnowledgeDirectoryImportResult(value);
+    case "knowledge.directory-refresh-preview":
+      return normalizeKnowledgeDirectoryRefreshPreviewResult(value);
+    case "knowledge.directory-refresh-apply":
+      return normalizeKnowledgeDirectoryRefreshApplyResult(value);
     case "knowledge.directory-rebind-preview":
       return normalizeKnowledgeDirectoryRootRebindResult(value, ["current", "ready"] as const);
     case "knowledge.directory-rebind-apply":

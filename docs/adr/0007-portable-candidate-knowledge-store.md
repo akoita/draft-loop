@@ -200,9 +200,9 @@ evidence. The match is runtime-only; paths and integrity tuples are not
 returned. Append-only root and member revisions preserve historical roots and
 membership hashes while current views expose the latest verified state.
 
-Applied rename inference, automatic move inference, physical deletion, adapter
-controls, indexing, and background refresh remain deferred under their owning
-roadmap issues. Explicit reconciliation and lifecycle projection do not imply
+Applied rename inference, automatic move inference, physical deletion, remaining
+lifecycle adapters, indexing, and background refresh remain deferred under
+their owning roadmap issues. Explicit reconciliation and lifecycle projection do not imply
 automatic discovery, retirement, cleanup, or retrieval eligibility outside the
 returned snapshot.
 
@@ -316,6 +316,12 @@ CLI root is runtime-only and desktop owns a native picker. Preview is advisory;
 confirmed apply performs its own fresh bounded scan and relies on the existing
 atomic root-revision and per-origin guards. Both results expose only directory
 identity, status, timestamp, and counts.
+Directory refresh is exposed through separate path-free preview and confirmed
+apply controls over the remembered local root. Preview performs no write.
+Apply rescans, records refresh observations, and appends changed active
+same-member bytes in source-ID order. Results cap opaque member and refreshed
+source identities and preserve explicit partial-failure semantics without
+exposing paths, filenames, hashes, checksums, labels, or content.
 
 ## Deferred integration
 
