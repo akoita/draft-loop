@@ -55,6 +55,13 @@ and the desktop path remains inside the native picker/host boundary. Neither is
 persisted as a replacement origin or included in generic output. Changed bytes
 become an immutable managed version; identical current bytes create nothing.
 
+Explicit directory intake is local-only and bounded by the shared ingestion
+limits. The CLI accepts the selected root as runtime input; desktop renderer
+messages request a native picker without carrying a path. Complete and partial
+results expose scan counts and capped opaque source/version identities only.
+Directory roots, filenames, membership hashes, labels, checksums, and content
+remain sensitive local state.
+
 Origin status and refresh-state results are content-free. They expose only
 opaque source/version identity, lifecycle status, and timestamps. Explicit file
 refresh reads the sensitive remembered local origin without returning it. URL

@@ -11,6 +11,7 @@ import type {
   CandidateKnowledgeStoreService,
   CandidateKnowledgeStoreView,
   ConfigureKnowledgeSelectionCommand,
+  ImportKnowledgeSourceDirectoryResult,
   IndependentReviewRecord,
   InitializeWorkspaceCommand,
   KnowledgeBaseLifecycleReadinessResult,
@@ -278,6 +279,23 @@ function knowledgeSourceRefreshStateResult(
     status,
     ...overrides,
   };
+}
+
+function knowledgeSourceDirectoryImportResult(
+  status: "complete" | "partial" = "complete",
+  sources: readonly CandidateKnowledgeSourceWriteResult[] = [
+    knowledgeSourceWriteResult(true, "file", "source-b"),
+    knowledgeSourceWriteResult(false, "file", "source-a"),
+  ],
+): ImportKnowledgeSourceDirectoryResult {
+  return {
+    sources,
+    status,
+    ...(status === "complete" ? { directoryId: "directory-opaque" } : {}),
+    scannedEntryCount: sources.length + 2,
+    discoveredFileCount: sources.length,
+    skippedEntryCount: 1,
+  } as ImportKnowledgeSourceDirectoryResult;
 }
 
 function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
@@ -817,6 +835,251 @@ describe("candidate knowledge source inspection CLI controls", () => {
       sourcePath: resolve("private-resume.md"),
     });
     expect(JSON.parse(dependencies.lines[0] ?? "{}").created).toBe(false);
+  });
+
+  it("maps complete and partial directory imports to deterministic path-free JSON", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-directory-store");
+    const knowledgeBaseId = "base-one";
+    const firstDirectory = resolve("private-source-directory");
+    const secondDirectory = resolve("private-source-directory-retry");
+    const importKnowledgeSourceDirectory = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceDirectoryImportResult("complete"))
+      .mockResolvedValueOnce(knowledgeSourceDirectoryImportResult("partial"));
+    const knowledgeService = {
+      importKnowledgeSourceDirectory,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import-directory",
+      storeRoot,
+      knowledgeBaseId,
+      firstDirectory,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import-directory",
+      storeRoot,
+      knowledgeBaseId,
+      secondDirectory,
+    ]);
+
+    expect(importKnowledgeSourceDirectory).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryPath: firstDirectory,
+    });
+    expect(importKnowledgeSourceDirectory).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryPath: secondDirectory,
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        status: "complete",
+        directoryId: "directory-opaque",
+        scannedEntryCount: 4,
+        discoveredFileCount: 2,
+        skippedEntryCount: 1,
+        sourceCount: 2,
+        sources: [
+          {
+            sourceId: "source-a",
+            versionId: "version-two",
+            version: 2,
+            created: false,
+          },
+          {
+            sourceId: "source-b",
+            versionId: "version-two",
+            version: 2,
+            created: true,
+          },
+        ],
+        sourcesTruncated: false,
+      },
+      {
+        knowledgeBaseId,
+        status: "partial",
+        scannedEntryCount: 4,
+        discoveredFileCount: 2,
+        skippedEntryCount: 1,
+        sourceCount: 2,
+        sources: [
+          {
+            sourceId: "source-a",
+            versionId: "version-two",
+            version: 2,
+            created: false,
+          },
+          {
+            sourceId: "source-b",
+            versionId: "version-two",
+            version: 2,
+            created: true,
+          },
+        ],
+        sourcesTruncated: false,
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(firstDirectory);
+    expect(output).not.toContain(secondDirectory);
+    expect(output).not.toContain("private-source.md");
+    expect(output).not.toContain("text/markdown");
+    expect(output).not.toContain("d".repeat(64));
+  });
+
+  it("bounds directory import source projections at 256 while preserving total count", async () => {
+    const dependencies = harness();
+    const sources = Array.from({ length: 300 }, (_, index) =>
+      knowledgeSourceWriteResult(
+        index % 2 === 0,
+        "file",
+        `source-${String(index).padStart(3, "0")}`,
+      ),
+    );
+    const importKnowledgeSourceDirectory = vi.fn(async () =>
+      knowledgeSourceDirectoryImportResult("complete", sources),
+    );
+    const knowledgeService = {
+      importKnowledgeSourceDirectory,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    }).parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import-directory",
+      resolve("private-directory-store"),
+      "base-one",
+      resolve("private-source-directory"),
+    ]);
+
+    const output = JSON.parse(dependencies.lines[0] ?? "{}");
+    expect(output.sourceCount).toBe(300);
+    expect(output.sourcesTruncated).toBe(true);
+    expect(output.sources).toHaveLength(256);
+    expect(output.sources[0]).toMatchObject({ sourceId: "source-000" });
+    expect(output.sources[255]).toMatchObject({ sourceId: "source-255" });
+    expect(output.sources.map((source: { sourceId: string }) => source.sourceId)).toEqual(
+      [...output.sources]
+        .map((source: { sourceId: string }) => source.sourceId)
+        .sort((left: string, right: string) => left.localeCompare(right)),
+    );
+  });
+
+  it("rejects malformed directory import results without emitting output", async () => {
+    const dependencies = harness();
+    const valid = knowledgeSourceDirectoryImportResult("complete");
+    const source = knowledgeSourceWriteResult(true, "file", "source-invalid");
+    const malformedResults = [
+      { ...valid, directoryId: "" },
+      { ...knowledgeSourceDirectoryImportResult("partial"), directoryId: "unexpected" },
+      {
+        ...valid,
+        sources: [{ ...source, source: { ...source.source, knowledgeBaseId: "other-base" } }],
+      },
+      {
+        ...valid,
+        sources: [{ ...source, source: { ...source.source, kind: "url" } }],
+      },
+      {
+        ...valid,
+        sources: [
+          {
+            ...source,
+            versions: [{ ...source.versions[0], sourceId: "other-source" }],
+          },
+        ],
+      },
+      { ...valid, scannedEntryCount: -1 },
+      { ...valid, scannedEntryCount: 2, discoveredFileCount: 2, skippedEntryCount: 1 },
+      { ...valid, discoveredFileCount: 0 },
+      { ...valid, scannedEntryCount: 5, discoveredFileCount: 3 },
+      { ...valid, sources: [source, source] },
+    ];
+    const importKnowledgeSourceDirectory = vi.fn();
+    for (const result of malformedResults) {
+      importKnowledgeSourceDirectory.mockResolvedValueOnce(
+        result as unknown as ImportKnowledgeSourceDirectoryResult,
+      );
+    }
+    const knowledgeService = {
+      importKnowledgeSourceDirectory,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const command = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import-directory",
+      resolve("private-directory-store"),
+      "base-one",
+      resolve("private-source-directory"),
+    ] as const;
+
+    for (let index = 0; index < malformedResults.length; index += 1) {
+      await expect(cli.parseAsync(command)).rejects.toThrow(
+        "The candidate knowledge source directory result was invalid.",
+      );
+    }
+    expect(importKnowledgeSourceDirectory).toHaveBeenCalledTimes(malformedResults.length);
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("propagates directory import service failures without CLI output", async () => {
+    const dependencies = harness();
+    const failure = new Error("directory import failed");
+    const importKnowledgeSourceDirectory = vi.fn(async () => {
+      throw failure;
+    });
+    const knowledgeService = {
+      importKnowledgeSourceDirectory,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "import-directory",
+        resolve("private-directory-store"),
+        "base-one",
+        resolve("private-source-directory"),
+      ]),
+    ).rejects.toBe(failure);
+    expect(dependencies.lines).toEqual([]);
   });
 
   it("maps changed and identical file-version appends to safe latest-version JSON", async () => {

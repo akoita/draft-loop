@@ -101,9 +101,10 @@ pnpm --filter @draft-loop/cli start --help
 The CLI exposes shared CKB controls through `knowledge`: initialize a portable
 store with its default CKB, open or list a store, inspect path-free lifecycle
 readiness, list path-free source/version identities, report duplicate groups,
-inspect the count-only managed-file inventory, and import one explicitly chosen
-local file or explicitly approved HTTPS URL. A later local file version can be
-appended to an existing file source without replacing its remembered origin.
+inspect the count-only managed-file inventory, and import an explicitly chosen
+local file, bounded local directory, or explicitly approved HTTPS URL. A later
+local file version can be appended to an existing file source without replacing
+its remembered origin.
 The CLI can also bind one or more ready CKBs to a workspace; combining CKBs
 requires `--approve-combination`. For example:
 
@@ -114,6 +115,8 @@ pnpm --filter @draft-loop/cli start knowledge store inventory ./candidate-knowle
 pnpm --filter @draft-loop/cli start knowledge base create ./candidate-knowledge "Public projects"
 pnpm --filter @draft-loop/cli start knowledge source import \
   ./candidate-knowledge KNOWLEDGE_BASE_ID ./career-history.md
+pnpm --filter @draft-loop/cli start knowledge source import-directory \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID ./career-material
 pnpm --filter @draft-loop/cli start knowledge source import-url \
   ./candidate-knowledge KNOWLEDGE_BASE_ID https://example.com/profile --approve
 pnpm --filter @draft-loop/cli start knowledge source append-file-version \
@@ -148,7 +151,11 @@ origin binding, and reports whether immutable managed bytes created a new
 version or matched the current one. Path-free status and refresh-state controls
 inspect remembered lifecycle evidence. File refresh uses the remembered local
 origin; URL refresh requires fresh approval and the same network-safety checks
-as intake. Directory intake, rebind, deletion, backup, and restore remain staged.
+as intake. Directory intake uses the same bounded application contract: CLI
+users choose a local directory path, while the desktop host owns a dedicated
+native directory picker. Complete and partial results report only scan counts
+and opaque source/version identities; roots, filenames, labels, hashes, and
+content remain local. Rebind, deletion, backup, and restore remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

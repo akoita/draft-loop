@@ -1295,6 +1295,82 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("validates bounded path-free candidate-knowledge directory intake", async () => {
+    const input = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      selection: "native-dialog",
+    } as const;
+    expect(validateBridgeCommand({ type: "knowledge.import-directory", input })).toEqual({
+      type: "knowledge.import-directory",
+      input,
+    });
+    for (const invalid of [
+      { ...input, selection: "path" },
+      { ...input, directoryPath: "/private/career" },
+      { storeId: "store-1", knowledgeBaseId: "kb-1" },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.import-directory", input: invalid }),
+      ).toThrow("invalid");
+    }
+
+    const value = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      status: "complete",
+      directoryId: "directory-1",
+      scannedEntryCount: 3,
+      discoveredFileCount: 2,
+      skippedEntryCount: 1,
+      sourceCount: 2,
+      sources: [
+        { sourceId: "source-1", versionId: "version-1", version: 1, created: true },
+        { sourceId: "source-2", versionId: "version-2", version: 1, created: true },
+      ],
+      sourcesTruncated: false,
+    } as const;
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value }), ["knowledge.import-directory"]),
+    );
+    await expect(port.execute({ type: "knowledge.import-directory", input })).resolves.toEqual({
+      ok: true,
+      value,
+    });
+
+    for (const invalidValue of [
+      { ...value, status: "partial" },
+      { ...value, directoryId: undefined },
+      { ...value, sourceCount: 1 },
+      { ...value, discoveredFileCount: 1 },
+      { ...value, scannedEntryCount: 4, discoveredFileCount: 3 },
+      { ...value, sourcesTruncated: true },
+      { ...value, sources: [value.sources[0], value.sources[0]] },
+      { ...value, directoryPath: "/private/career" },
+    ]) {
+      const invalidPort = createCapabilityPort(
+        bridge(async () => ({ ok: true, value: invalidValue }), ["knowledge.import-directory"]),
+      );
+      await expect(
+        invalidPort.execute({ type: "knowledge.import-directory", input }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+
+    const { directoryId: _directoryId, ...valueWithoutDirectoryId } = value;
+    const partialValue = {
+      ...valueWithoutDirectoryId,
+      status: "partial" as const,
+      sourceCount: 1,
+      sources: [value.sources[0]],
+    };
+    const partialPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: partialValue }), ["knowledge.import-directory"]),
+    );
+    await expect(
+      partialPort.execute({ type: "knowledge.import-directory", input }),
+    ).resolves.toMatchObject({ ok: true, value: { status: "partial", sourceCount: 1 } });
+  });
+
   it("validates path-free candidate-knowledge file-version append", async () => {
     const input = {
       storeId: "store-1",

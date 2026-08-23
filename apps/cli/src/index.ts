@@ -12,6 +12,7 @@ import {
   type CandidateKnowledgeSourceWriteResult,
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
+  type ImportKnowledgeSourceDirectoryResult,
   type KnowledgeBaseLifecycleReadinessResult,
   type KnowledgeSourceDuplicateGroup,
   type KnowledgeSourceOriginRefreshResult,
@@ -210,6 +211,101 @@ function writeKnowledgeSourceWriteResult(
     version: latest.version,
     created: result.created,
   });
+}
+
+function writeKnowledgeSourceDirectoryImport(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  result: ImportKnowledgeSourceDirectoryResult,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    (result.status !== "complete" && result.status !== "partial") ||
+    !Array.isArray(result.sources) ||
+    ![result.scannedEntryCount, result.discoveredFileCount, result.skippedEntryCount].every(
+      (count) => Number.isSafeInteger(count) && count >= 0,
+    ) ||
+    result.discoveredFileCount + result.skippedEntryCount > result.scannedEntryCount ||
+    result.discoveredFileCount < result.sources.length ||
+    (result.status === "complete" && result.discoveredFileCount !== result.sources.length)
+  ) {
+    throw new Error("The candidate knowledge source directory result was invalid.");
+  }
+  const hasDirectoryId = Object.hasOwn(result, "directoryId");
+  if (
+    (result.status === "complete" &&
+      (typeof result.directoryId !== "string" || result.directoryId.trim() === "")) ||
+    (result.status === "partial" && hasDirectoryId)
+  ) {
+    throw new Error("The candidate knowledge source directory result was invalid.");
+  }
+
+  const sourceIds = new Set<string>();
+  for (const manifest of result.sources) {
+    if (
+      typeof manifest !== "object" ||
+      manifest === null ||
+      typeof manifest.created !== "boolean" ||
+      typeof manifest.source !== "object" ||
+      manifest.source === null ||
+      typeof manifest.source.id !== "string" ||
+      manifest.source.id.trim() === "" ||
+      sourceIds.has(manifest.source.id) ||
+      manifest.source.knowledgeBaseId !== knowledgeBaseId ||
+      manifest.source.kind !== "file" ||
+      !Array.isArray(manifest.versions) ||
+      manifest.versions.length === 0
+    ) {
+      throw new Error("The candidate knowledge source directory result was invalid.");
+    }
+    sourceIds.add(manifest.source.id);
+    const versionIds = new Set<string>();
+    for (const version of manifest.versions) {
+      if (
+        typeof version !== "object" ||
+        version === null ||
+        typeof version.id !== "string" ||
+        version.id.trim() === "" ||
+        versionIds.has(version.id) ||
+        version.sourceId !== manifest.source.id ||
+        !Number.isSafeInteger(version.version) ||
+        version.version < 1
+      ) {
+        throw new Error("The candidate knowledge source directory result was invalid.");
+      }
+      versionIds.add(version.id);
+    }
+  }
+
+  const ordered = [...result.sources].sort((left, right) =>
+    lexicalCompare(left.source.id, right.source.id),
+  );
+  const sources = ordered.slice(0, maximumKnowledgeInspectionItems).map((manifest) => {
+    const latest = [...manifest.versions].sort(
+      (left, right) => right.version - left.version || lexicalCompare(left.id, right.id),
+    )[0];
+    return {
+      sourceId: manifest.source.id,
+      versionId: latest.id,
+      version: latest.version,
+      created: manifest.created,
+    };
+  });
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      status: result.status,
+      ...(result.status === "complete" ? { directoryId: result.directoryId } : {}),
+      scannedEntryCount: result.scannedEntryCount,
+      discoveredFileCount: result.discoveredFileCount,
+      skippedEntryCount: result.skippedEntryCount,
+      sourceCount: ordered.length,
+      sources,
+      sourcesTruncated: ordered.length > maximumKnowledgeInspectionItems,
+    }),
+  );
 }
 
 const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
@@ -729,6 +825,21 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         writeKnowledgeSourceWriteResult(io, knowledgeBaseId, result, "file");
       },
     );
+
+  knowledgeSource
+    .command("import-directory")
+    .description("Import an explicitly selected local directory recursively")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-path>", "local source directory path")
+    .action(async (storeRoot: string, knowledgeBaseId: string, directoryPath: string) => {
+      const result = await candidateKnowledge.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId,
+        directoryPath,
+      });
+      writeKnowledgeSourceDirectoryImport(io, knowledgeBaseId, result);
+    });
 
   knowledgeSource
     .command("import-url")

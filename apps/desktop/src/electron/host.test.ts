@@ -3000,6 +3000,207 @@ describe("candidate knowledge native controls", () => {
     expect(knowledgeService.openStore).not.toHaveBeenCalled();
   });
 
+  it("imports one selected candidate-knowledge directory without exposing its paths", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-directory-host-"));
+    const directoryPath = join(parent, "private-career-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "career.md"), "Private career evidence.\n", "utf8");
+    await writeFile(join(directoryPath, "projects.txt"), "Private project evidence.\n", "utf8");
+    try {
+      const selectedDirectories = [directoryPath];
+      const chooseKnowledgeSourceDirectory = vi.fn(async () => selectedDirectories.shift());
+      const host = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceDirectory,
+        },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+
+      const imported = await host.invoke({
+        type: "knowledge.import-directory",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      expect(imported).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          status: "complete",
+          scannedEntryCount: 2,
+          discoveredFileCount: 2,
+          skippedEntryCount: 0,
+          sourceCount: 2,
+          sources: [
+            { version: 1, created: true },
+            { version: 1, created: true },
+          ],
+          sourcesTruncated: false,
+        },
+      });
+      expect(JSON.stringify(imported)).not.toContain(parent);
+      expect(JSON.stringify(imported)).not.toContain("career.md");
+      expect(JSON.stringify(imported)).not.toContain("projects.txt");
+      expect(JSON.stringify(imported)).not.toContain("Private career evidence");
+
+      await expect(
+        host.invoke({
+          type: "knowledge.import-directory",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      expect(chooseKnowledgeSourceDirectory).toHaveBeenCalledTimes(2);
+
+      const unopenedPicker = vi.fn(async () => directoryPath);
+      const restartedHost = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => undefined,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceDirectory: unopenedPicker,
+        },
+      });
+      await expect(
+        restartedHost.invoke({
+          type: "knowledge.import-directory",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      expect(unopenedPicker).not.toHaveBeenCalled();
+
+      const unavailableHost = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => join(parent, "candidate-knowledge"),
+          chooseFiles: async () => [],
+        },
+      });
+      await expect(
+        unavailableHost.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId } });
+      await expect(
+        unavailableHost.invoke({
+          type: "knowledge.import-directory",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "capability-unavailable" } });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("preserves path-free partial directory intake and rejects inconsistent results", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-directory-result-host-"));
+    const directoryPath = join(parent, "private-career-directory");
+    await mkdir(directoryPath);
+    try {
+      const underlying = createCandidateKnowledgeStoreService();
+      const imported = {
+        status: "partial" as const,
+        scannedEntryCount: 2,
+        discoveredFileCount: 2,
+        skippedEntryCount: 0,
+        sources: [
+          {
+            created: true,
+            source: {
+              id: "source-1",
+              knowledgeBaseId: "placeholder",
+              kind: "file" as const,
+            },
+            versions: [{ id: "version-1", sourceId: "source-1", version: 1 }],
+          },
+        ],
+      };
+      let knowledgeBaseId = "";
+      const importKnowledgeSourceDirectory = vi.fn(async () => ({
+        ...imported,
+        sources: [
+          {
+            ...imported.sources[0],
+            source: { ...imported.sources[0]?.source, knowledgeBaseId },
+          },
+        ],
+      }));
+      const host = createNativeHost({
+        knowledgeService: { ...underlying, importKnowledgeSourceDirectory } as never,
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceDirectory: async () => directoryPath,
+        },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      knowledgeBaseId =
+        (created.value as { knowledgeBases: readonly { id: string }[] }).knowledgeBases[0]?.id ??
+        "";
+
+      const result = await host.invoke({
+        type: "knowledge.import-directory",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      expect(result).toMatchObject({
+        ok: true,
+        value: {
+          status: "partial",
+          sourceCount: 1,
+          sources: [{ sourceId: "source-1", versionId: "version-1" }],
+        },
+      });
+      expect(result.ok && result.value).not.toHaveProperty("directoryId");
+      expect(JSON.stringify(result)).not.toContain(parent);
+
+      importKnowledgeSourceDirectory.mockResolvedValueOnce({
+        ...imported,
+        discoveredFileCount: 0,
+        sources: [
+          {
+            ...imported.sources[0],
+            source: { ...imported.sources[0]?.source, knowledgeBaseId },
+          },
+        ],
+      });
+      await expect(
+        host.invoke({
+          type: "knowledge.import-directory",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
+      importKnowledgeSourceDirectory.mockResolvedValueOnce({
+        ...imported,
+        status: "complete",
+        directoryId: "directory-1",
+        sources: [
+          {
+            ...imported.sources[0],
+            source: { ...imported.sources[0]?.source, knowledgeBaseId },
+          },
+        ],
+      } as never);
+      await expect(
+        host.invoke({
+          type: "knowledge.import-directory",
+          input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("appends one selected file version without exposing paths or content", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-append-host-"));
     const storeRoot = join(parent, "candidate-knowledge");
