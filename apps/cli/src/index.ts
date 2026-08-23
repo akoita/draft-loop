@@ -7,6 +7,7 @@ import { generateSanitizedPilotReport } from "./pilot-report.js";
 import {
   type ApplicationIo,
   type ApplicationService,
+  type ApplyKnowledgeSourceDirectoryRefreshResult,
   type ApplyKnowledgeSourceDirectoryRootRebindResult,
   applicationService,
   type CandidateKnowledgeSourceManifest,
@@ -22,6 +23,7 @@ import {
   type KnowledgeSourceRefreshStateResult,
   type KnowledgeSourceRetirementResult,
   knowledgeService,
+  type PreviewKnowledgeSourceDirectoryRefreshResult,
   type PreviewKnowledgeSourceDirectoryRootRebindResult,
   runPilot,
   type StatusCommand,
@@ -29,6 +31,15 @@ import {
   type WorkspaceDescriptor,
   workspaceRoot,
 } from "./workflow.js";
+
+type DirectoryIngestionOptions = {
+  readonly maxDepth?: number;
+  readonly maxScannedEntries?: number;
+  readonly maxAcceptedFiles?: number;
+  readonly maxAcceptedBytes?: number;
+  readonly maxSourceBytes?: number;
+  readonly maxChunkCharacters?: number;
+};
 
 function numberOption(value: string): number {
   const parsed = Number(value);
@@ -44,6 +55,30 @@ function integerOption(value: string): number {
     throw new Error(`Expected an integer, received ${value}.`);
   }
   return parsed;
+}
+
+function directoryIngestionOptions(
+  options: Record<string, unknown>,
+): DirectoryIngestionOptions | undefined {
+  const normalized: DirectoryIngestionOptions = {
+    ...(typeof options.maxDepth === "number" ? { maxDepth: options.maxDepth } : {}),
+    ...(typeof options.maxScannedEntries === "number"
+      ? { maxScannedEntries: options.maxScannedEntries }
+      : {}),
+    ...(typeof options.maxAcceptedFiles === "number"
+      ? { maxAcceptedFiles: options.maxAcceptedFiles }
+      : {}),
+    ...(typeof options.maxAcceptedBytes === "number"
+      ? { maxAcceptedBytes: options.maxAcceptedBytes }
+      : {}),
+    ...(typeof options.maxSourceBytes === "number"
+      ? { maxSourceBytes: options.maxSourceBytes }
+      : {}),
+    ...(typeof options.maxChunkCharacters === "number"
+      ? { maxChunkCharacters: options.maxChunkCharacters }
+      : {}),
+  };
+  return Object.keys(normalized).length === 0 ? undefined : normalized;
 }
 
 function boolOption(options: Record<string, unknown>, key: string): boolean {
@@ -351,6 +386,138 @@ function writeKnowledgeSourceDirectoryRootRebind(
       skippedEntryCount: result.skippedEntryCount,
     }),
   );
+}
+
+function writeKnowledgeSourceDirectoryRefresh(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  directoryId: string,
+  result: PreviewKnowledgeSourceDirectoryRefreshResult | ApplyKnowledgeSourceDirectoryRefreshResult,
+  phase: "preview" | "apply",
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.directoryId !== directoryId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !Array.isArray(result.members) ||
+    ![
+      result.newSourceCount,
+      result.scannedEntryCount,
+      result.discoveredFileCount,
+      result.skippedEntryCount,
+    ].every((count) => Number.isSafeInteger(count) && count >= 0) ||
+    result.newSourceCount > result.discoveredFileCount ||
+    result.discoveredFileCount + result.skippedEntryCount > result.scannedEntryCount
+  ) {
+    throw new Error("The candidate knowledge source directory refresh result was invalid.");
+  }
+
+  const memberIds = new Set<string>();
+  const memberStatuses = new Map<string, string>();
+  for (const member of result.members) {
+    if (
+      typeof member !== "object" ||
+      member === null ||
+      typeof member.sourceId !== "string" ||
+      member.sourceId.trim() === "" ||
+      memberIds.has(member.sourceId) ||
+      !["current", "changed", "missing", "retired", "origin-conflict"].includes(member.status)
+    ) {
+      throw new Error("The candidate knowledge source directory refresh result was invalid.");
+    }
+    memberIds.add(member.sourceId);
+    memberStatuses.set(member.sourceId, member.status);
+  }
+
+  const hasStatus = Object.hasOwn(result, "status");
+  if (
+    phase === "preview" &&
+    (hasStatus ||
+      Object.hasOwn(result, "refreshedSourceIds") ||
+      Object.hasOwn(result, "failedSourceId") ||
+      Object.hasOwn(result, "failedStatus"))
+  ) {
+    throw new Error("The candidate knowledge source directory refresh result was invalid.");
+  }
+  if (
+    phase === "apply" &&
+    (!hasStatus ||
+      !["complete", "partial"].includes(
+        (result as ApplyKnowledgeSourceDirectoryRefreshResult).status,
+      ))
+  ) {
+    throw new Error("The candidate knowledge source directory refresh result was invalid.");
+  }
+
+  const orderedMembers = [...result.members].sort((left, right) =>
+    lexicalCompare(left.sourceId, right.sourceId),
+  );
+  const projection: Record<string, unknown> = {
+    knowledgeBaseId,
+    directoryId,
+    checkedAt: result.checkedAt,
+    members: orderedMembers
+      .slice(0, maximumKnowledgeInspectionItems)
+      .map(({ sourceId, status }) => ({ sourceId, status })),
+    memberCount: orderedMembers.length,
+    membersTruncated: orderedMembers.length > maximumKnowledgeInspectionItems,
+    newSourceCount: result.newSourceCount,
+    scannedEntryCount: result.scannedEntryCount,
+    discoveredFileCount: result.discoveredFileCount,
+    skippedEntryCount: result.skippedEntryCount,
+  };
+
+  if (phase === "apply") {
+    const applyResult = result as ApplyKnowledgeSourceDirectoryRefreshResult;
+    if (!Array.isArray(applyResult.refreshedSourceIds)) {
+      throw new Error("The candidate knowledge source directory refresh result was invalid.");
+    }
+    const refreshedSourceIds = new Set<string>();
+    for (const sourceId of applyResult.refreshedSourceIds) {
+      if (
+        typeof sourceId !== "string" ||
+        sourceId.trim() === "" ||
+        refreshedSourceIds.has(sourceId) ||
+        !memberIds.has(sourceId) ||
+        memberStatuses.get(sourceId) !== "changed"
+      ) {
+        throw new Error("The candidate knowledge source directory refresh result was invalid.");
+      }
+      refreshedSourceIds.add(sourceId);
+    }
+    const orderedRefreshedSourceIds = [...refreshedSourceIds].sort(lexicalCompare);
+    projection.status = applyResult.status;
+    projection.refreshedSourceIds = orderedRefreshedSourceIds.slice(
+      0,
+      maximumKnowledgeInspectionItems,
+    );
+    projection.refreshedSourceCount = orderedRefreshedSourceIds.length;
+    projection.refreshedSourceIdsTruncated =
+      orderedRefreshedSourceIds.length > maximumKnowledgeInspectionItems;
+    const hasFailedSourceId = Object.hasOwn(applyResult, "failedSourceId");
+    const hasFailedStatus = Object.hasOwn(applyResult, "failedStatus");
+    if (applyResult.status === "complete") {
+      if (hasFailedSourceId || hasFailedStatus) {
+        throw new Error("The candidate knowledge source directory refresh result was invalid.");
+      }
+    } else if (
+      !hasFailedSourceId ||
+      !hasFailedStatus ||
+      typeof applyResult.failedSourceId !== "string" ||
+      applyResult.failedSourceId.trim() === "" ||
+      !memberIds.has(applyResult.failedSourceId) ||
+      memberStatuses.get(applyResult.failedSourceId) !== "changed" ||
+      refreshedSourceIds.has(applyResult.failedSourceId) ||
+      applyResult.failedStatus !== "changed"
+    ) {
+      throw new Error("The candidate knowledge source directory refresh result was invalid.");
+    } else {
+      projection.failedSourceId = applyResult.failedSourceId;
+      projection.failedStatus = applyResult.failedStatus;
+    }
+  }
+  writeJson(io, Object.freeze(projection));
 }
 
 const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
@@ -961,6 +1128,70 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       });
       writeKnowledgeSourceDirectoryImport(io, knowledgeBaseId, result);
     });
+
+  knowledgeSource
+    .command("directory-refresh-preview")
+    .description("Preview one bounded directory refresh without changing stored state")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .option("--max-depth <number>", "maximum directory depth", integerOption)
+    .option("--max-scanned-entries <number>", "maximum scanned directory entries", integerOption)
+    .option("--max-accepted-files <number>", "maximum accepted directory files", integerOption)
+    .option("--max-accepted-bytes <number>", "maximum accepted directory bytes", integerOption)
+    .option("--max-source-bytes <number>", "maximum bytes per source file", integerOption)
+    .option("--max-chunk-characters <number>", "maximum extracted chunk characters", integerOption)
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        options: Record<string, unknown>,
+      ) => {
+        const ingestionOptions = directoryIngestionOptions(options);
+        const result = await candidateKnowledge.previewKnowledgeSourceDirectoryRefresh({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
+        });
+        writeKnowledgeSourceDirectoryRefresh(io, knowledgeBaseId, directoryId, result, "preview");
+      },
+    );
+
+  knowledgeSource
+    .command("directory-refresh-apply")
+    .description("Apply one bounded directory refresh after explicit confirmation")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .option("--max-depth <number>", "maximum directory depth", integerOption)
+    .option("--max-scanned-entries <number>", "maximum scanned directory entries", integerOption)
+    .option("--max-accepted-files <number>", "maximum accepted directory files", integerOption)
+    .option("--max-accepted-bytes <number>", "maximum accepted directory bytes", integerOption)
+    .option("--max-source-bytes <number>", "maximum bytes per source file", integerOption)
+    .option("--max-chunk-characters <number>", "maximum extracted chunk characters", integerOption)
+    .option("--confirm", "confirm applying the directory refresh")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.confirm !== true) {
+          throw new Error("knowledge source directory-refresh-apply requires --confirm.");
+        }
+        const ingestionOptions = directoryIngestionOptions(options);
+        const result = await candidateKnowledge.applyKnowledgeSourceDirectoryRefresh({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
+        });
+        writeKnowledgeSourceDirectoryRefresh(io, knowledgeBaseId, directoryId, result, "apply");
+      },
+    );
 
   knowledgeSource
     .command("directory-rebind-preview")

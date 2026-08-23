@@ -137,6 +137,10 @@ pnpm --filter @draft-loop/cli start knowledge source directory-rebind-preview \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID ./relocated-career-material
 pnpm --filter @draft-loop/cli start knowledge source directory-rebind-apply \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID ./relocated-career-material --confirm
+pnpm --filter @draft-loop/cli start knowledge source directory-refresh-preview \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID
+pnpm --filter @draft-loop/cli start knowledge source directory-refresh-apply \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID --confirm
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -171,8 +175,11 @@ Logical source retirement is idempotent, preserves evidence, and requires
 explicit confirmation; there is no reactivation control. Directory-root
 rebind uses separate bounded preview and confirmed apply commands. Apply
 rescans the selected root and atomically updates member origins only when every
-historical member still matches exactly. Directory refresh/reconciliation,
-deletion, backup, and restore remain staged.
+historical member still matches exactly. Directory refresh likewise separates
+read-only preview from confirmed apply. Apply rescans the remembered root,
+records current and missing observations, and appends changed same-member bytes
+in source-ID order; a later failure reports bounded path-free partial progress.
+Adding members, reconciliation, deletion, backup, and restore remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

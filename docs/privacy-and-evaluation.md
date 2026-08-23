@@ -77,6 +77,13 @@ read-only. Apply performs a fresh bounded exact-membership scan and uses atomic
 revision and origin guards, returning only opaque directory identity, status,
 time, and counts.
 
+Directory refresh is local-only and never accepts or returns the remembered
+root. Preview exposes only opaque member identity, lifecycle status, time, and
+bounded scan counts. Confirmed apply performs its own scan, records local
+observations, and may append changed managed bytes. Complete or partial results
+contain only capped opaque source identities and status; filenames, roots,
+hashes, checksums, labels, and content remain local.
+
 Origin status and refresh-state results are content-free. They expose only
 opaque source/version identity, lifecycle status, and timestamps. Explicit file
 refresh reads the sensitive remembered local origin without returning it. URL

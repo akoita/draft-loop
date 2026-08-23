@@ -430,6 +430,13 @@ Preview performs no write; confirmed apply repeats the bounded exact-membership
 scan and atomically advances the root revision plus every member origin, or
 fails on drift. Results contain only opaque directory identity, status,
 timestamp, and counts.
+Directory refresh also uses separate shared preview and confirmed-apply
+contracts, but reads the sensitive remembered root rather than accepting a new
+one. Preview reports bounded path-free member states and scan counts. Apply
+rescans, records observations, and appends changed active same-member sources
+in deterministic source-ID order. If a later append fails, already completed
+source updates remain and the result reports capped opaque refreshed IDs plus
+the failed source and status.
 Live provider execution is opt-in and the provider boundary enforces the
 request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain
