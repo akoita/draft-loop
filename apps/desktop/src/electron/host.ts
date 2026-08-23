@@ -53,6 +53,7 @@ import {
   type FileSelectInput,
   type FileSelectResult,
   type KnowledgeDuplicatesResult,
+  type KnowledgeFileImportResult,
   type KnowledgeInventoryResult,
   type KnowledgeReadinessResult,
   type KnowledgeSelectionResult,
@@ -115,6 +116,7 @@ interface PersistedProviderTransmissionAcknowledgement {
 export interface NativeHostDialogs {
   readonly chooseDirectory: (mode: "open" | "create") => Promise<string | undefined>;
   readonly chooseFiles: (input: FileSelectInput) => Promise<readonly string[]>;
+  readonly chooseKnowledgeSourceFile?: () => Promise<string | undefined>;
   readonly chooseMarkdownExportPath?: (defaultPath: string) => Promise<string | undefined>;
 }
 
@@ -212,10 +214,14 @@ const emptyOverrides: ReviewOverrides = { decisions: {}, rationales: {}, edits: 
 const defaultIo: ApplicationIo = { write: () => undefined };
 
 class NativeHostError extends Error {
-  public readonly code: "permission-denied" | "not-found" | "operation-failed";
+  public readonly code:
+    | "permission-denied"
+    | "not-found"
+    | "operation-failed"
+    | "capability-unavailable";
 
   public constructor(
-    code: "permission-denied" | "not-found" | "operation-failed",
+    code: "permission-denied" | "not-found" | "operation-failed" | "capability-unavailable",
     message: string,
   ) {
     super(message);
@@ -225,7 +231,7 @@ class NativeHostError extends Error {
 }
 
 function fail(
-  code: "permission-denied" | "not-found" | "operation-failed",
+  code: "permission-denied" | "not-found" | "operation-failed" | "capability-unavailable",
   message: string,
 ): never {
   throw new NativeHostError(code, message);
@@ -2092,6 +2098,53 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             },
             complete: inventory.complete,
             scanLimitReached: inventory.scanLimitReached,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.import-file": {
+          const chooseKnowledgeSourceFile = options.dialogs.chooseKnowledgeSourceFile;
+          if (chooseKnowledgeSourceFile === undefined) {
+            return fail(
+              "capability-unavailable",
+              "Candidate knowledge file intake is unavailable in this host.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const sourcePath = await chooseKnowledgeSourceFile();
+          if (sourcePath === undefined) {
+            return fail("permission-denied", "Candidate knowledge file intake was cancelled.");
+          }
+          const imported = await knowledgeService.importKnowledgeSourceFile({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourcePath: resolve(sourcePath),
+            ...(command.input.displayName === undefined
+              ? {}
+              : { displayName: command.input.displayName }),
+          });
+          const version = imported.versions.at(-1);
+          if (
+            imported.source.knowledgeBaseId !== command.input.knowledgeBaseId ||
+            imported.source.kind !== "file" ||
+            version === undefined ||
+            version.sourceId !== imported.source.id
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge file intake returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeFileImportResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: imported.source.id,
+            kind: "file",
+            versionId: version.id,
+            version: version.version,
+            created: imported.created,
           };
           return { ok: true, value: result };
         }

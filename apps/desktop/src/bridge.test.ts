@@ -1220,6 +1220,81 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("validates native-only path-free candidate-knowledge file intake", async () => {
+    const input = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      selection: "native-dialog",
+      displayName: "Career history",
+    } as const;
+    expect(validateBridgeCommand({ type: "knowledge.import-file", input })).toEqual({
+      type: "knowledge.import-file",
+      input,
+    });
+    for (const invalid of [
+      { ...input, selection: "path" },
+      { ...input, sourcePath: "/private/resume.md" },
+      { storeId: "store-1", knowledgeBaseId: "kb-1" },
+      { ...input, displayName: " " },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.import-file", input: invalid }),
+      ).toThrow("invalid");
+    }
+
+    const port = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceId: "source-1",
+            kind: "file",
+            versionId: "version-1",
+            version: 1,
+            created: true,
+          },
+        }),
+        ["knowledge.import-file"],
+      ),
+    );
+    await expect(port.execute({ type: "knowledge.import-file", input })).resolves.toEqual({
+      ok: true,
+      value: {
+        storeId: "store-1",
+        knowledgeBaseId: "kb-1",
+        sourceId: "source-1",
+        kind: "file",
+        versionId: "version-1",
+        version: 1,
+        created: true,
+      },
+    });
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceId: "source-1",
+            kind: "file",
+            versionId: "version-1",
+            version: 1,
+            created: true,
+            sourcePath: "/private/resume.md",
+          },
+        }),
+        ["knowledge.import-file"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({ type: "knowledge.import-file", input }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("carries an explicit path-free knowledge selection and combination approval", async () => {
     const input = {
       workspaceId: "workspace-1",

@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-08-23<br>
+**Last reviewed:** 2026-08-24<br>
 **Current stage:** Evidence-backed CV drafting (v0.7)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -75,7 +75,7 @@ The product status is easiest to read by outcome:
 | Workspace retrieval and policy     | Partial integration                   | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. The initial workspace writing-policy slice is integrated behind explicit local selection. Neither establishes reusable CKB selection or application-grade drafting.                                                                                                                                                                                              |
 | Portable CKB                       | Implemented component; not integrated | The separate local store has logical identity, source/version provenance, managed bytes, local-only origins, URL provenance, retirement markers, and a prospective write journal. Explicit file/URL operations and bounded directory operations are available behind application contracts.                                                                                                                                                  |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
-| Product CKB workflow               | Integrated control foundation         | Shared CLI/desktop controls create, open, select, rename, and archive CKBs without projecting roots through the renderer; archive has an explicit confirmation boundary. Read-only adapters now expose bounded path-free source/version summaries, duplicate groups, lifecycle readiness, and count-only structural inventory. Workspace bindings pin store/CKB identities and record freshly validated source/version selections in new run contexts, with fail-closed drift checks. Retrieval, source intake/mutation controls, deletion, backup/restore, and provider use remain outside the product path. |
+| Product CKB workflow               | Integrated control foundation         | Shared CLI/desktop controls create, open, select, rename, and archive CKBs without projecting roots through the renderer; archive has an explicit confirmation boundary. Read-only adapters expose bounded path-free source/version summaries, duplicate groups, lifecycle readiness, and count-only structural inventory. Explicit single-file intake now uses the shared application contract and a host-owned desktop picker. Workspace bindings pin store/CKB identities and record freshly validated source/version selections in new run contexts, with fail-closed drift checks. Retrieval, directory/URL intake, later-version mutation, deletion, backup/restore, and provider use remain outside the product path. |
 
 The portable store is therefore component progress, not a v0.7 stage exit. See
 [the architecture](architecture.md) for stable boundaries and
@@ -174,9 +174,9 @@ Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
 outside this critical path. Source lifecycle work through #136, workspace/run
 binding through #111, and the first path-safe CLI/desktop CKB controls from #112
 are implemented, including explicit selection and combination approval plus
-bounded source, duplicate, and structural inventory inspection. They do not
-satisfy the stage without remaining source mutation controls, retrieval
-enforcement, and drafting integration.
+bounded source, duplicate, and structural inventory inspection and explicit
+single-file intake. They do not satisfy the stage without remaining source
+intake/mutation controls, retrieval enforcement, and drafting integration.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -259,8 +259,9 @@ decision.
 ## Explicitly deferred
 
 - Retrieval and index-version enforcement of bound CKB selection snapshots,
-  normalized facts, source repair, deletion, backup/export/restore, remaining
-  adapter controls, and cross-store writer coordination.
+  normalized facts, directory/URL intake, later-version source mutation, source
+  repair, deletion, backup/export/restore, remaining adapter controls, and
+  cross-store writer coordination.
 - Automatic move inference, reconciliation of unknown entries, background
   refresh, time-based freshness, and automatic retirement or deletion. The
   path-free lifecycle projection does not perform those actions or establish
@@ -304,6 +305,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-24 | Exposed explicit single-file CKB intake through shared CLI and desktop application contracts.                                                                                                                              | The CLI accepts an intentional local path while the desktop host owns a dedicated picker; renderer results contain only opaque source/version identity. Directory/URL intake and later-version mutation remain separate controls.                                                |
 | 2026-08-23 | Exposed bounded, path-free CKB source, duplicate, and managed-file inventory inspection through the shared CLI/desktop boundary.                                                                                           | Users can review source identities and structural warnings without renderer-visible roots or generic diagnostic leakage; intake, refresh/rebind, cleanup, and one cross-command snapshot remain separate controls.                                                               |
 | 2026-08-23 | Added fail-closed application-operation drift checks for immutable run CKB selections.                                                                                                                                    | Provider-capable start, resume, and revision compare fresh lifecycle evidence with the run record before execution or mutation; retrieval/index versions, adapter controls, and cross-store writer coordination remain separate.                                                  |
 | 2026-08-23 | Bound explicit local CKB choices to workspace configuration and freshly validated, immutable run-context snapshots.                                                                                                      | New runs pin exact path-free store/CKB/source/version identities while old runs remain reproducible; adapter controls, CKB retrieval, provider use, index versions, and pre-provider drift enforcement remain separate work.                                                      |

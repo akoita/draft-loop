@@ -42,7 +42,10 @@ Labels and checksums are local CKB metadata but remain excluded from provider
 and content-free surfaces. The shared application contract can bind path-free
 selection evidence to new runs. CLI and desktop expose selection and bounded CKB
 metadata maintenance without carrying roots through the desktop renderer
-boundary; archival requires explicit confirmation. No application run retrieves
+boundary; archival requires explicit confirmation. Single-file desktop intake
+uses a dedicated native picker, keeps the selected path in the host, and
+returns only opaque source/version identity. Cancellation performs no import,
+and ingestion failures use path-free diagnostics. No application run retrieves
 CKB content yet, so the existing workspace evidence boundary remains
 authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
 [privacy policy](privacy-and-evaluation.md), and [architecture](architecture.md)

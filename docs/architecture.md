@@ -389,12 +389,15 @@ application contracts. Their read-only inspection surface projects bounded
 source/version identities, duplicate groups, lifecycle readiness, and a
 count-only structural inventory; it excludes roots, source labels, filenames,
 URLs, checksums, and content. Separate inspection calls are fresh reads rather
-than one cross-command snapshot. Archival requires explicit confirmation and
-does not rewrite workspace selection. Live provider execution is opt-in and the
-provider boundary enforces the request data policy before the SDK call. Approved
-artifacts render locally to Markdown, controlled DOCX, or controlled PDF;
-immutable export records retain artifact/template versions, timestamp, format,
-MIME type, and checksum.
+than one cross-command snapshot. Explicit single-file CKB intake uses the same
+application import contract in both adapters: the CLI accepts a local path,
+while the desktop host owns a dedicated native picker and projects only opaque
+source/version identity to the renderer. Archival requires explicit
+confirmation and does not rewrite workspace selection. Live provider execution
+is opt-in and the provider boundary enforces the request data policy before the
+SDK call. Approved artifacts render locally to Markdown, controlled DOCX, or
+controlled PDF; immutable export records retain artifact/template versions,
+timestamp, format, MIME type, and checksum.
 
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not

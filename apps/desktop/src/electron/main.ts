@@ -9,6 +9,7 @@ import {
   safeStorage,
   session,
 } from "electron";
+import { supportedFileExtensions } from "../bridge.js";
 import { type PackagedAcceptancePhase, runPackagedAcceptance } from "./acceptance.js";
 import {
   type CredentialAcceptancePhase,
@@ -46,6 +47,7 @@ async function chooseDirectory(mode: "open" | "create"): Promise<string | undefi
 async function chooseFiles(input: {
   readonly extensions?: readonly string[];
   readonly multiple?: boolean;
+  readonly title?: string;
 }) {
   const properties: OpenDialogOptions["properties"] =
     input.multiple === false ? ["openFile"] : ["openFile", "multiSelections"];
@@ -61,7 +63,7 @@ async function chooseFiles(input: {
             },
           ],
         }),
-    title: "Select local evidence",
+    title: input.title ?? "Select local evidence",
   });
   return result.canceled ? [] : result.filePaths;
 }
@@ -268,6 +270,14 @@ app.whenReady().then(() => {
             : {
                 chooseDirectory,
                 chooseFiles,
+                chooseKnowledgeSourceFile: async () =>
+                  (
+                    await chooseFiles({
+                      extensions: supportedFileExtensions,
+                      multiple: false,
+                      title: "Add file to candidate knowledge base",
+                    })
+                  )[0],
                 chooseMarkdownExportPath: (defaultPath) =>
                   chooseMarkdownExportPath(mainWindow, defaultPath, dialog),
               },
