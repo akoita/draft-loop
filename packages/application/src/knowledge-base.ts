@@ -130,6 +130,14 @@ export interface PreviewKnowledgeSourceDirectoryRootRebindCommand {
   readonly options?: DirectoryIngestionOptions;
 }
 
+export interface ApplyKnowledgeSourceDirectoryRootRebindCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly directoryPath: string;
+  readonly options?: DirectoryIngestionOptions;
+}
+
 export interface PreviewKnowledgeSourceDirectoryMovedCandidatesCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -385,6 +393,16 @@ export interface PreviewKnowledgeSourceDirectoryRootRebindResult {
   readonly skippedEntryCount: number;
 }
 
+export interface ApplyKnowledgeSourceDirectoryRootRebindResult {
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly status: "current" | "rebound";
+  readonly memberCount: number;
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
 export interface PreviewKnowledgeSourceDirectoryMovedCandidate {
   readonly sourceId: string;
   readonly status: "moved-candidate";
@@ -491,6 +509,9 @@ export interface CandidateKnowledgeStoreService {
   readonly previewKnowledgeSourceDirectoryRootRebind: (
     command: PreviewKnowledgeSourceDirectoryRootRebindCommand,
   ) => Promise<PreviewKnowledgeSourceDirectoryRootRebindResult>;
+  readonly applyKnowledgeSourceDirectoryRootRebind: (
+    command: ApplyKnowledgeSourceDirectoryRootRebindCommand,
+  ) => Promise<ApplyKnowledgeSourceDirectoryRootRebindResult>;
   readonly previewKnowledgeSourceDirectoryMovedCandidates: (
     command: PreviewKnowledgeSourceDirectoryMovedCandidatesCommand,
   ) => Promise<PreviewKnowledgeSourceDirectoryMovedCandidatesResult>;
@@ -623,6 +644,12 @@ function previewDirectoryRefreshFailure(): Error {
 function previewDirectoryRootRebindFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory root rebind preview could not be completed.",
+  );
+}
+
+function applyDirectoryRootRebindFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge source directory root rebind could not be applied.",
   );
 }
 
@@ -804,6 +831,38 @@ function validatePreviewDirectoryBinding(
     throw previewDirectoryRefreshFailure();
   }
   return binding;
+}
+
+type CandidateKnowledgeDirectoryCurrentRootRevision = NonNullable<
+  Awaited<
+    ReturnType<CandidateKnowledgeStoreHandle["getCandidateKnowledgeDirectoryCurrentRootRevision"]>
+  >
+>;
+
+function validatePreviewDirectoryCurrentRootRevision(
+  revision: CandidateKnowledgeDirectoryCurrentRootRevision | undefined,
+  binding: CandidateKnowledgeDirectoryBindingRecord,
+  knowledgeBaseId: string,
+  directoryId: string,
+): CandidateKnowledgeDirectoryCurrentRootRevision {
+  if (
+    revision === undefined ||
+    typeof revision !== "object" ||
+    revision === null ||
+    revision.directoryId !== directoryId ||
+    revision.knowledgeBaseId !== knowledgeBaseId ||
+    !Number.isSafeInteger(revision.revision) ||
+    revision.revision < 1 ||
+    typeof revision.rootPath !== "string" ||
+    !isAbsolute(revision.rootPath) ||
+    resolve(revision.rootPath) !== revision.rootPath ||
+    revision.rootPath !== binding.rootPath ||
+    !isValidRefreshTimestamp(revision.boundAt) ||
+    revision.boundAt !== binding.boundAt
+  ) {
+    throw previewDirectoryRootRebindFailure();
+  }
+  return revision;
 }
 
 function validatePreviewDirectoryMember(
@@ -1169,10 +1228,26 @@ async function collectDirectoryRefresh(
 
 interface CollectedDirectoryRootRebindPreview {
   readonly directoryId: string;
+  readonly knowledgeBaseId: string;
   readonly checkedAt: string;
   readonly status: "current" | "ready";
   readonly memberCount: number;
   readonly preflight: DirectoryIngestionResult;
+  readonly candidateRootPath: string;
+  readonly expectedRootPath: string;
+  readonly expectedRootRevision: number;
+  readonly expectedRootBoundAt: string;
+  readonly members: readonly CollectedDirectoryRootRebindMember[];
+}
+
+interface CollectedDirectoryRootRebindMember {
+  readonly sourceId: string;
+  readonly sourcePath: string;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly expectedVersionId: string;
+  readonly expectedOriginBoundAt: string;
 }
 
 async function collectDirectoryRootRebindPreview(
@@ -1203,6 +1278,12 @@ async function collectDirectoryRootRebindPreview(
   if (!isAbsolute(binding.rootPath) || resolve(binding.rootPath) !== binding.rootPath) {
     throw previewDirectoryRootRebindFailure();
   }
+  const currentRevision = validatePreviewDirectoryCurrentRootRevision(
+    await handle.getCandidateKnowledgeDirectoryCurrentRootRevision(knowledgeBaseId, directoryId),
+    binding,
+    knowledgeBaseId,
+    directoryId,
+  );
   const canonicalCandidateRoot = await validateDirectoryImportScope(
     dependencies.lstat,
     dependencies.realpath,
@@ -1313,6 +1394,7 @@ async function collectDirectoryRootRebindPreview(
 
   const scannedPaths = new Set<string>();
   const matchedSourceIds = new Set<string>();
+  const rebindMembers = new Map<string, CollectedDirectoryRootRebindMember>();
   for (const normalized of preflight.sources) {
     const sourcePath = normalized.source.path;
     if (!isAbsolute(sourcePath) || scannedPaths.has(sourcePath)) {
@@ -1356,6 +1438,15 @@ async function collectDirectoryRootRebindPreview(
       throw previewDirectoryRootRebindFailure();
     }
     matchedSourceIds.add(matched.sourceId);
+    rebindMembers.set(matched.sourceId, {
+      sourceId: matched.sourceId,
+      sourcePath,
+      mediaType: normalized.mediaType,
+      checksum: normalized.checksum,
+      sizeBytes: normalized.sizeBytes,
+      expectedVersionId: latestVersion.id,
+      expectedOriginBoundAt: originBoundAt,
+    });
   }
   if (matchedSourceIds.size !== historicalMembers.length) {
     throw previewDirectoryRootRebindFailure();
@@ -1388,10 +1479,18 @@ async function collectDirectoryRootRebindPreview(
 
   return {
     directoryId,
+    knowledgeBaseId,
     checkedAt,
     status: canonicalCandidateRoot === binding.rootPath ? "current" : "ready",
     memberCount: historicalMembers.length,
     preflight,
+    candidateRootPath: canonicalCandidateRoot,
+    expectedRootPath: binding.rootPath,
+    expectedRootRevision: currentRevision.revision,
+    expectedRootBoundAt: binding.boundAt,
+    members: [...rebindMembers.values()].sort((left, right) =>
+      lexicalCompare(left.sourceId, right.sourceId),
+    ),
   };
 }
 
@@ -1402,6 +1501,61 @@ function directoryRootRebindPreviewResult(
     directoryId: collected.directoryId,
     checkedAt: collected.checkedAt,
     status: collected.status,
+    memberCount: collected.memberCount,
+    scannedEntryCount: collected.preflight.scannedEntryCount,
+    discoveredFileCount: collected.preflight.discoveredFileCount,
+    skippedEntryCount: collected.preflight.skippedEntryCount,
+  });
+}
+
+function validateAppliedDirectoryRootRebindResult(
+  result: Awaited<
+    ReturnType<CandidateKnowledgeStoreHandle["rebindManagedCandidateKnowledgeDirectoryRoot"]>
+  >,
+  collected: CollectedDirectoryRootRebindPreview,
+): void {
+  const expectedRebound = collected.status === "ready";
+  const expectedRoot = expectedRebound ? collected.candidateRootPath : collected.expectedRootPath;
+  const expectedBoundAt = expectedRebound ? collected.checkedAt : collected.expectedRootBoundAt;
+  const expectedRevision = expectedRebound
+    ? collected.expectedRootRevision + 1
+    : collected.expectedRootRevision;
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.rebound !== expectedRebound ||
+    typeof result.binding !== "object" ||
+    result.binding === null ||
+    typeof result.revision !== "object" ||
+    result.revision === null
+  ) {
+    throw applyDirectoryRootRebindFailure();
+  }
+  if (
+    result.binding.id !== collected.directoryId ||
+    result.binding.knowledgeBaseId !== collected.knowledgeBaseId ||
+    result.binding.rootPath !== expectedRoot ||
+    result.binding.boundAt !== expectedBoundAt ||
+    result.revision.directoryId !== collected.directoryId ||
+    result.revision.knowledgeBaseId !== collected.knowledgeBaseId ||
+    !Number.isSafeInteger(result.revision.revision) ||
+    result.revision.revision !== expectedRevision ||
+    result.revision.rootPath !== expectedRoot ||
+    result.revision.boundAt !== expectedBoundAt ||
+    !isValidRefreshTimestamp(result.binding.boundAt) ||
+    !isValidRefreshTimestamp(result.revision.boundAt)
+  ) {
+    throw applyDirectoryRootRebindFailure();
+  }
+}
+
+function directoryRootRebindApplyResult(
+  collected: CollectedDirectoryRootRebindPreview,
+): ApplyKnowledgeSourceDirectoryRootRebindResult {
+  return Object.freeze({
+    directoryId: collected.directoryId,
+    checkedAt: collected.checkedAt,
+    status: collected.status === "current" ? ("current" as const) : ("rebound" as const),
     memberCount: collected.memberCount,
     scannedEntryCount: collected.preflight.scannedEntryCount,
     discoveredFileCount: collected.preflight.discoveredFileCount,
@@ -3062,6 +3216,53 @@ export function createCandidateKnowledgeStoreService(
         throw previewDirectoryRootRebindFailure();
       }
     },
+    applyKnowledgeSourceDirectoryRootRebind: async (command) => {
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let directoryId: string;
+      let directoryPath: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
+        directoryPath = requireText(
+          command.directoryPath,
+          "Candidate knowledge source directory path",
+        );
+      } catch {
+        throw applyDirectoryRootRebindFailure();
+      }
+
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const collected = await collectDirectoryRootRebindPreview(
+              handle,
+              resolved,
+              storeRoot,
+              knowledgeBaseId,
+              directoryId,
+              directoryPath,
+              command.options,
+            );
+            const rebound = await handle.rebindManagedCandidateKnowledgeDirectoryRoot({
+              knowledgeBaseId,
+              directoryId,
+              candidateRootPath: collected.candidateRootPath,
+              expectedRootPath: collected.expectedRootPath,
+              expectedRevision: collected.expectedRootRevision,
+              reboundAt: collected.checkedAt,
+              members: collected.members,
+            });
+            validateAppliedDirectoryRootRebindResult(rebound, collected);
+            return directoryRootRebindApplyResult(collected);
+          },
+        );
+      } catch {
+        throw applyDirectoryRootRebindFailure();
+      }
+    },
     previewKnowledgeSourceDirectoryMovedCandidates: async (command) => {
       let storeRoot: string;
       let knowledgeBaseId: string;
@@ -3960,6 +4161,8 @@ export const previewKnowledgeSourceDirectoryRefresh =
   defaultService.previewKnowledgeSourceDirectoryRefresh;
 export const previewKnowledgeSourceDirectoryRootRebind =
   defaultService.previewKnowledgeSourceDirectoryRootRebind;
+export const applyKnowledgeSourceDirectoryRootRebind =
+  defaultService.applyKnowledgeSourceDirectoryRootRebind;
 export const previewKnowledgeSourceDirectoryMovedCandidates =
   defaultService.previewKnowledgeSourceDirectoryMovedCandidates;
 export const recordKnowledgeSourceDirectoryRefresh =

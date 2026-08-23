@@ -77,8 +77,9 @@ only path-free added source IDs. It creates no refresh observation for new
 members. The explicit bounded applied operation appends
 changed bytes only for active same-member files in source-ID order and records
 current observations for successful changed, current, and same-member-missing
-entries. Complete removal reconciliation, root or origin rebind, automatic
-retirement/deletion, adapters, indexing, and background refresh remain deferred;
+entries. Complete removal reconciliation, automatic retirement/deletion,
+adapters, indexing, and background refresh remain deferred; explicit root rebind
+has its own bounded application command and does not revise membership;
 a later member failure returns a path-free partial result after earlier member
 commits. An explicit approved directory-member retirement operation can mark one
 fresh-scan `missing` same-member source as logically removed with the existing
@@ -92,9 +93,10 @@ reserved within its CKB, and current-root reads use the max-revision projection.
 The verified storage/handle rebind transaction updates only sensitive origin
 bindings and the next root revision after checking every member; it preserves
 source, version, blob, observation, retirement, journal, and hashed-membership
-evidence. No application rebind command is exposed in this slice, and rename,
-removal, reconciliation, and broader membership lifecycle decisions remain
-deferred.
+evidence. The application rebind command performs one complete bounded scan,
+stable per-member final verification, and one guarded all-member commit (or a
+same-root no-op), returning only path-free status and counts. Rename, removal,
+reconciliation, and broader membership lifecycle decisions remain deferred.
 
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address
@@ -176,9 +178,11 @@ directory refresh preview, an explicit add-members operation, and an applied
 operation limited to existing active same-member changed files. A separate
 read-only directory-root-rebind eligibility preview rescans one candidate root,
 requires exact historical membership and latest-byte matches, and returns only
-path-free readiness and scan counts without changing the binding. Add-members
+path-free readiness and scan counts without changing the binding. The explicit
+application operation reuses that scan and atomically applies the guarded root
+revision/origin update or current-root no-op. Add-members
 persists only unmatched accepted files as append-only new members; complete
-removal reconciliation, applied directory-root rebind, automatic retirement/deletion, background
+removal reconciliation, automatic retirement/deletion, background
 refresh, time-based freshness policy, moved-origin
 discovery, automatic duplicate resolution, normalized facts, or retrieval
 indexes. A read-only, one-CKB-scoped duplicate projection compares only latest

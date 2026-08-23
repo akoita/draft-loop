@@ -193,8 +193,10 @@ append unmatched accepted files as new managed file sources and immutable
 members in deterministic path order. Each candidate commits its source,
 version, origin binding, managed bytes, journal event, and membership atomically;
 later failures return path-free partial added IDs, and new members receive no
-refresh observations. Complete removal reconciliation, rename, applied root rebind, and
-broader member-retirement policy remain deferred.
+refresh observations. Complete removal reconciliation, rename, and broader
+member-retirement policy remain deferred. The explicit root-rebind application
+command now reuses one bounded scan and performs a guarded all-member
+origin/revision commit or a same-root no-op.
 An explicit local bounded read-only refresh preview now revalidates the stored
 root, repeats the intake preflight, and returns path-free `current`, `changed`,
 `missing`, `retired`, or `origin-conflict` member states plus an aggregate count
@@ -202,8 +204,8 @@ of unmatched accepted files. It performs no source, version, membership,
 observation, or lifecycle writes; scan-level unreadable, unstable, limit, and
 extraction failures fail closed. Applied refresh is limited to existing active
 same-member changed files; rename/removal decisions, member-retirement lifecycle,
-applied directory-root rebind, automatic retirement/deletion, adapters, indexing, and
-background refresh remain deferred. An explicit approved directory-member
+automatic retirement/deletion, adapters, indexing, and background refresh remain
+deferred. An explicit approved directory-member
 retirement operation can mark one active same-member `missing` source as
 logically removed using the existing `user-requested` retirement marker after
 latest-version, origin-revision, and chronology guards. It returns path-free
@@ -213,16 +215,19 @@ reconciliation and physical cleanup remain deferred.
 A separate read-only directory-root-rebind eligibility preview now rescans one
 candidate real non-symlink root, requires exact historical normalized-relative-path
 membership and latest managed bytes for every member, and returns only frozen
-path-free readiness and scan counts. It does not mutate the persisted binding or
-membership; applying the root rebind and complete reconciliation remain deferred.
+path-free readiness and scan counts. The explicit application operation reuses
+that scan, performs stable per-member final verification, and atomically applies
+the guarded root revision/origin update or a current-root no-op; complete
+reconciliation remains deferred.
 A v14 storage/handle foundation now preserves append-only directory-root
 revisions: existing v13 bindings backfill as revision 1, every historical root
 is reserved within its CKB, and current-root reads use the max-revision view. A
 verified transaction can update all member origins and record the next root
 revision atomically, with a guarded same-root no-op; the immutable v13 binding
-and member rows remain unchanged. No application apply command exists yet, and
-rename/removal reconciliation, membership lifecycle, adapters, indexing, and
-background refresh remain deferred.
+and member rows remain unchanged. The application command now owns the explicit
+scan-and-commit boundary and returns only path-free `current`/`rebound` status
+and counts; rename/removal reconciliation, membership lifecycle, adapters,
+indexing, and background refresh remain deferred.
 A separate moved-candidate preview now reuses that scan exactly once and emits
 only path-free source IDs for unique one-to-one exact media-type/checksum/size
 matches between same-member missing sources and unmatched files. Ambiguous
@@ -239,7 +244,7 @@ remains deferred. The explicit bounded applied operation appends changed bytes
 only for active same-member files in deterministic source-ID order, records
 current observations for successful changed/current/missing members, and
 returns a path-free partial result after a later member failure. Rename/removal,
-applied root rebind, automatic retirement/deletion,
+automatic retirement/deletion,
 adapters, indexing, and background refresh remain deferred.
 The store retains no
 exact host paths or URLs in manifests, descriptors, journals, inventory,
@@ -604,6 +609,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                                       | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Added the explicit application directory-root rebind command as the seventeenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                   | One complete bounded scan now feeds stable per-member final verification and one guarded all-member origin/revision transaction; same-root requests are no-ops, results are path-free `current`/`rebound` counts, and generic failures expose no partial state. Rename/removal reconciliation, membership lifecycle, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added append-only directory-root revisions and the verified storage/handle rebind foundation as the sixteenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                 | Migration v14 backfills existing bindings as revision 1, reserves historical roots, and drives current-root reads from a max-revision view; a guarded transaction can atomically update verified member origins plus the next revision or return a same-root no-op. The application apply command, rename/removal reconciliation, membership lifecycle, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added a read-only exact-integrity moved-candidate projection as the fifteenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                  | One bounded directory refresh scan can now emit only deterministic source IDs for unique one-to-one media-type/checksum/size matches between same-member missing sources and unmatched files; ambiguous tuples are omitted, `newSourceCount` is unchanged for add-members, and applied rename, membership revision, root rebind, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added a read-only directory-root-rebind eligibility preview as the fourteenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                 | One explicit bounded scan can now verify a candidate real root against every historical member's normalized relative-path hash and latest managed bytes, returning only frozen path-free readiness and counts; the immutable binding is not changed and applied rebind, rename/removal, complete reconciliation, adapters, indexing, and background refresh remain pending. |
