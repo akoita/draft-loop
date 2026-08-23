@@ -8,9 +8,11 @@ import {
   type ApplicationIo,
   type ApplicationService,
   applicationService,
+  type CandidateKnowledgeSourceManifest,
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
   type KnowledgeBaseLifecycleReadinessResult,
+  type KnowledgeSourceDuplicateGroup,
   knowledgeService,
   runPilot,
   type StatusCommand,
@@ -83,6 +85,103 @@ function writeKnowledgeBaseReadiness(
       `source ${source.sourceId} version=${source.latestVersionId} status=${source.status} reasons=${reasons}`,
     );
   }
+}
+
+const maximumKnowledgeInspectionItems = 256;
+
+function lexicalCompare(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function writeJson(io: ApplicationIo, value: unknown): void {
+  io.write(JSON.stringify(value));
+}
+
+function writeKnowledgeSourceManifests(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  manifests: readonly CandidateKnowledgeSourceManifest[],
+): void {
+  const ordered = [...manifests].sort((left, right) =>
+    lexicalCompare(left.source.id, right.source.id),
+  );
+  const sources = ordered.slice(0, maximumKnowledgeInspectionItems).map((manifest) => {
+    const versions = [...manifest.versions].sort(
+      (left, right) => left.version - right.version || lexicalCompare(left.id, right.id),
+    );
+    return {
+      sourceId: manifest.source.id,
+      kind: manifest.source.kind,
+      versionCount: versions.length,
+      versionIds: versions.slice(0, maximumKnowledgeInspectionItems).map((version) => version.id),
+      versionIdsTruncated: versions.length > maximumKnowledgeInspectionItems,
+    };
+  });
+  writeJson(io, {
+    knowledgeBaseId,
+    sourceCount: ordered.length,
+    sources,
+    sourcesTruncated: ordered.length > maximumKnowledgeInspectionItems,
+  });
+}
+
+function writeKnowledgeSourceDuplicateGroups(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  groups: readonly KnowledgeSourceDuplicateGroup[],
+): void {
+  const ordered = groups
+    .map((group) => ({
+      ...group,
+      members: [...group.members].sort(
+        (left, right) =>
+          lexicalCompare(left.sourceId, right.sourceId) ||
+          lexicalCompare(left.versionId, right.versionId),
+      ),
+    }))
+    .sort((left, right) => {
+      const leftKey = left.members
+        .map((member) => `${member.sourceId}\u0000${member.versionId}`)
+        .join("\u0001");
+      const rightKey = right.members
+        .map((member) => `${member.sourceId}\u0000${member.versionId}`)
+        .join("\u0001");
+      return lexicalCompare(leftKey, rightKey);
+    });
+  const duplicateGroups = ordered.slice(0, maximumKnowledgeInspectionItems).map((group) => ({
+    memberCount: group.members.length,
+    members: group.members.slice(0, maximumKnowledgeInspectionItems),
+    membersTruncated: group.members.length > maximumKnowledgeInspectionItems,
+  }));
+  writeJson(io, {
+    knowledgeBaseId,
+    groupCount: ordered.length,
+    groups: duplicateGroups,
+    groupsTruncated: ordered.length > maximumKnowledgeInspectionItems,
+  });
+}
+
+function writeManagedKnowledgeInventory(
+  io: ApplicationIo,
+  inventory: Awaited<
+    ReturnType<CandidateKnowledgeStoreService["inspectManagedCandidateKnowledgeFiles"]>
+  >,
+): void {
+  writeJson(io, {
+    schemaVersion: inventory.schemaVersion,
+    verifiedManagedFileCount: inventory.verifiedManagedFileCount,
+    scannedEntryCount: inventory.scannedEntryCount,
+    unknownEntries: {
+      intakeShapedFilesAtSourcesRoot: inventory.unknownEntries.intakeShapedFilesAtSourcesRoot,
+      opaqueEntriesAtSourcesRoot: inventory.unknownEntries.opaqueEntriesAtSourcesRoot,
+      entriesInsideManagedSourceDirectories:
+        inventory.unknownEntries.entriesInsideManagedSourceDirectories,
+      symbolicLinks: inventory.unknownEntries.symbolicLinks,
+      otherEntries: inventory.unknownEntries.otherEntries,
+    },
+    complete: inventory.complete,
+    scanLimitReached: inventory.scanLimitReached,
+  });
 }
 
 function writeKnowledgeSelection(io: ApplicationIo, descriptor: WorkspaceDescriptor): void {
@@ -357,6 +456,17 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       });
   }
 
+  knowledgeStore
+    .command("inventory")
+    .description("Inspect managed-file inventory counts without exposing local paths")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .action(async (storeRoot: string) => {
+      writeManagedKnowledgeInventory(
+        io,
+        await candidateKnowledge.inspectManagedCandidateKnowledgeFiles({ storeRoot }),
+      );
+    });
+
   const knowledgeBase = knowledge
     .command("base")
     .description("Create and maintain knowledge bases in a local store");
@@ -410,6 +520,35 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         writeKnowledgeStoreView(io, "base-archived", view);
       },
     );
+
+  const knowledgeSource = knowledge
+    .command("source")
+    .description("Inspect path-free source and duplicate projections");
+  knowledgeSource
+    .command("list")
+    .description("List source kinds and version identities")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .action(async (storeRoot: string, knowledgeBaseId: string) => {
+      writeKnowledgeSourceManifests(
+        io,
+        knowledgeBaseId,
+        await candidateKnowledge.listKnowledgeSourceManifests({ storeRoot, knowledgeBaseId }),
+      );
+    });
+
+  knowledgeSource
+    .command("duplicates")
+    .description("List duplicate source/version identities")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .action(async (storeRoot: string, knowledgeBaseId: string) => {
+      writeKnowledgeSourceDuplicateGroups(
+        io,
+        knowledgeBaseId,
+        await candidateKnowledge.listKnowledgeSourceDuplicateGroups({ storeRoot, knowledgeBaseId }),
+      );
+    });
 
   const lifecycle = knowledge
     .command("lifecycle")

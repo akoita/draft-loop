@@ -281,6 +281,12 @@ symlinks, recurses into unknown directories, reads unknown file bytes, or
 mutates state. Structural shape and prospective journal evidence do not prove
 ownership and do not authorize adoption or cleanup.
 
+CLI and desktop adapters expose that count-only inventory together with bounded
+source/version identity summaries and duplicate groups. The generic projection
+omits roots, labels, filenames, URLs, checksums, content, and relative-path
+hashes. Each operation is an independent read; callers refresh after concurrent
+changes rather than treating several responses as one snapshot.
+
 ## Deferred integration
 
 This decision deliberately leaves the following outside the product workflow:

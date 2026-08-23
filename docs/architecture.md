@@ -384,8 +384,12 @@ The CLI and packaged desktop host are adapters over the shared application
 driver. The driver stores a workspace manifest beside application SQLite
 history, ingests selected local sources, constructs context snapshots, and
 drives orchestration. CLI and desktop adapters expose path-safe CKB store setup,
-inspection, selection, and additional-CKB create/rename/archive controls over
-the same application contracts. Archival requires explicit confirmation and
+selection, and additional-CKB create/rename/archive controls over the same
+application contracts. Their read-only inspection surface projects bounded
+source/version identities, duplicate groups, lifecycle readiness, and a
+count-only structural inventory; it excludes roots, source labels, filenames,
+URLs, checksums, and content. Separate inspection calls are fresh reads rather
+than one cross-command snapshot. Archival requires explicit confirmation and
 does not rewrite workspace selection. Live provider execution is opt-in and the
 provider boundary enforces the request data policy before the SDK call. Approved
 artifacts render locally to Markdown, controlled DOCX, or controlled PDF;

@@ -6,12 +6,14 @@ import { createCli } from "./index.js";
 import type {
   ApplicationIo,
   ApplicationService,
+  CandidateKnowledgeSourceManifest,
   CandidateKnowledgeStoreService,
   CandidateKnowledgeStoreView,
   ConfigureKnowledgeSelectionCommand,
   IndependentReviewRecord,
   InitializeWorkspaceCommand,
   KnowledgeBaseLifecycleReadinessResult,
+  KnowledgeSourceDuplicateGroup,
   StatusCommand,
   WorkspaceDescriptor,
 } from "./workflow.js";
@@ -143,6 +145,91 @@ function knowledgeReadiness(): KnowledgeBaseLifecycleReadinessResult {
         },
       },
     ],
+  };
+}
+
+function knowledgeSourceManifests(): readonly CandidateKnowledgeSourceManifest[] {
+  return [
+    {
+      source: {
+        id: "source-b",
+        knowledgeBaseId: "base-one",
+        kind: "url",
+        displayName: "https://private.example/source",
+        createdAt: "2026-08-23T10:00:00.000Z",
+      },
+      versions: [
+        {
+          id: "version-b2",
+          sourceId: "source-b",
+          version: 2,
+          parentVersionId: "version-b1",
+          mediaType: "text/plain",
+          checksum: "b".repeat(64),
+          sizeBytes: 2,
+          createdAt: "2026-08-23T10:02:00.000Z",
+        },
+        {
+          id: "version-b1",
+          sourceId: "source-b",
+          version: 1,
+          mediaType: "text/plain",
+          checksum: "a".repeat(64),
+          sizeBytes: 1,
+          createdAt: "2026-08-23T10:01:00.000Z",
+        },
+      ],
+    },
+    {
+      source: {
+        id: "source-a",
+        knowledgeBaseId: "base-one",
+        kind: "file",
+        displayName: "resume-private.md",
+        createdAt: "2026-08-23T10:00:00.000Z",
+      },
+      versions: [
+        {
+          id: "version-a1",
+          sourceId: "source-a",
+          version: 1,
+          mediaType: "text/markdown",
+          checksum: "c".repeat(64),
+          sizeBytes: 3,
+          createdAt: "2026-08-23T10:00:00.000Z",
+        },
+      ],
+    },
+  ] as unknown as readonly CandidateKnowledgeSourceManifest[];
+}
+
+function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
+  return [
+    {
+      members: [
+        { sourceId: "source-b", versionId: "version-b2" },
+        { sourceId: "source-a", versionId: "version-a1" },
+      ],
+    },
+  ];
+}
+
+function knowledgeInventory(
+  complete: boolean,
+): Awaited<ReturnType<CandidateKnowledgeStoreService["inspectManagedCandidateKnowledgeFiles"]>> {
+  return {
+    schemaVersion: 1,
+    verifiedManagedFileCount: complete ? 2 : 0,
+    scannedEntryCount: complete ? 4 : 1,
+    unknownEntries: {
+      intakeShapedFilesAtSourcesRoot: complete ? 0 : 1,
+      opaqueEntriesAtSourcesRoot: 0,
+      entriesInsideManagedSourceDirectories: 0,
+      symbolicLinks: complete ? 0 : 1,
+      otherEntries: 0,
+    },
+    complete,
+    scanLimitReached: !complete,
   };
 }
 
@@ -456,6 +543,183 @@ describe("candidate knowledge base maintenance CLI controls", () => {
         "create",
         resolve("private-maintenance-store"),
         "Base",
+      ]),
+    ).rejects.toBe(failure);
+    expect(dependencies.lines).toEqual([]);
+  });
+});
+
+describe("candidate knowledge source inspection CLI controls", () => {
+  it("maps source list, duplicate, and inventory commands to bounded safe JSON", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-inspection-store");
+    const knowledgeBaseId = "base-one";
+    const listKnowledgeSourceManifests = vi.fn(async () => knowledgeSourceManifests());
+    const listKnowledgeSourceDuplicateGroups = vi.fn(async () => knowledgeDuplicateGroups());
+    const inspectManagedCandidateKnowledgeFiles = vi.fn(async () => knowledgeInventory(true));
+    const knowledgeService = {
+      listKnowledgeSourceManifests,
+      listKnowledgeSourceDuplicateGroups,
+      inspectManagedCandidateKnowledgeFiles,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "list",
+      storeRoot,
+      knowledgeBaseId,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "duplicates",
+      storeRoot,
+      knowledgeBaseId,
+    ]);
+    await cli.parseAsync(["node", "draft-loop", "knowledge", "store", "inventory", storeRoot]);
+
+    expect(listKnowledgeSourceManifests).toHaveBeenCalledWith({ storeRoot, knowledgeBaseId });
+    expect(listKnowledgeSourceDuplicateGroups).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId,
+    });
+    expect(inspectManagedCandidateKnowledgeFiles).toHaveBeenCalledWith({ storeRoot });
+
+    const [sourceOutput, duplicateOutput, inventoryOutput] = dependencies.lines.map((line) =>
+      JSON.parse(line),
+    );
+    expect(sourceOutput).toEqual({
+      knowledgeBaseId,
+      sourceCount: 2,
+      sources: [
+        {
+          sourceId: "source-a",
+          kind: "file",
+          versionCount: 1,
+          versionIds: ["version-a1"],
+          versionIdsTruncated: false,
+        },
+        {
+          sourceId: "source-b",
+          kind: "url",
+          versionCount: 2,
+          versionIds: ["version-b1", "version-b2"],
+          versionIdsTruncated: false,
+        },
+      ],
+      sourcesTruncated: false,
+    });
+    expect(duplicateOutput).toEqual({
+      knowledgeBaseId,
+      groupCount: 1,
+      groups: [
+        {
+          memberCount: 2,
+          members: [
+            { sourceId: "source-a", versionId: "version-a1" },
+            { sourceId: "source-b", versionId: "version-b2" },
+          ],
+          membersTruncated: false,
+        },
+      ],
+      groupsTruncated: false,
+    });
+    expect(inventoryOutput).toEqual({
+      schemaVersion: 1,
+      verifiedManagedFileCount: 2,
+      scannedEntryCount: 4,
+      unknownEntries: {
+        intakeShapedFilesAtSourcesRoot: 0,
+        opaqueEntriesAtSourcesRoot: 0,
+        entriesInsideManagedSourceDirectories: 0,
+        symbolicLinks: 0,
+        otherEntries: 0,
+      },
+      complete: true,
+      scanLimitReached: false,
+    });
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain("resume-private.md");
+    expect(output).not.toContain("https://private.example/source");
+    expect(output).not.toContain("Private display name");
+    expect(output).not.toContain("a".repeat(64));
+    expect(output).not.toContain("relative-path-hash");
+  });
+
+  it("reports empty source results and an incomplete inventory without paths", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-empty-inspection-store");
+    const knowledgeBaseId = "base-empty";
+    const knowledgeService = {
+      listKnowledgeSourceManifests: vi.fn(async () => []),
+      listKnowledgeSourceDuplicateGroups: vi.fn(async () => []),
+      inspectManagedCandidateKnowledgeFiles: vi.fn(async () => knowledgeInventory(false)),
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "list",
+      storeRoot,
+      knowledgeBaseId,
+    ]);
+    await cli.parseAsync(["node", "draft-loop", "knowledge", "store", "inventory", storeRoot]);
+
+    expect(JSON.parse(dependencies.lines[0] ?? "{}")).toMatchObject({
+      knowledgeBaseId,
+      sourceCount: 0,
+      sources: [],
+      sourcesTruncated: false,
+    });
+    expect(JSON.parse(dependencies.lines[1] ?? "{}")).toMatchObject({
+      verifiedManagedFileCount: 0,
+      complete: false,
+      scanLimitReached: true,
+    });
+    expect(dependencies.lines.join("\n")).not.toContain(storeRoot);
+  });
+
+  it("propagates source inspection service failures", async () => {
+    const dependencies = harness();
+    const failure = new Error("source inspection failed");
+    const listKnowledgeSourceManifests = vi.fn(async () => {
+      throw failure;
+    });
+    const knowledgeService = {
+      listKnowledgeSourceManifests,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "list",
+        resolve("private-inspection-store"),
+        "base-one",
       ]),
     ).rejects.toBe(failure);
     expect(dependencies.lines).toEqual([]);

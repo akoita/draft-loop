@@ -98,15 +98,22 @@ CLI:
 pnpm --filter @draft-loop/cli start --help
 ```
 
-The CLI now exposes the first shared CKB controls through `knowledge`: initialize
-a portable store with its default CKB, open or list a store, and inspect
-path-free lifecycle readiness. It can also bind one or more ready CKBs to a
-workspace; combining CKBs requires `--approve-combination`. For example:
+The CLI exposes shared CKB controls through `knowledge`: initialize a portable
+store with its default CKB, open or list a store, inspect path-free lifecycle
+readiness, list path-free source/version identities, report duplicate groups,
+and inspect the count-only managed-file inventory. It can also bind one or more
+ready CKBs to a workspace; combining CKBs requires `--approve-combination`. For
+example:
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge store init ./candidate-knowledge
 pnpm --filter @draft-loop/cli start knowledge store list ./candidate-knowledge
+pnpm --filter @draft-loop/cli start knowledge store inventory ./candidate-knowledge
 pnpm --filter @draft-loop/cli start knowledge base create ./candidate-knowledge "Public projects"
+pnpm --filter @draft-loop/cli start knowledge source list \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
+pnpm --filter @draft-loop/cli start knowledge source duplicates \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge select ./workspace \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 ```
@@ -115,8 +122,11 @@ The desktop native boundary exposes the same operations without accepting or
 returning filesystem paths in renderer messages. Desktop selection accepts only
 stores explicitly opened in the current session and requires the same visible
 approval for combinations. Both adapters can create, rename, and archive
-additional CKBs; archival requires explicit confirmation and cannot target the
-default CKB. Source maintenance, deletion, backup, and restore remain staged.
+additional CKBs and expose the same bounded source, duplicate, and structural
+inventory inspection contracts. These generic diagnostics omit roots, source
+labels, filenames, URLs, checksums, and content. Archival requires explicit
+confirmation and cannot target the default CKB. Source intake and mutation,
+deletion, backup, and restore remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

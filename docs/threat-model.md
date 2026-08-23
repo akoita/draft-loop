@@ -87,8 +87,13 @@ retrieval-index drift checks remain separate controls.
 The count-only structural inventory does not adopt or delete unknown entries.
 The prospective managed-write journal does not retroactively claim legacy
 entries and is not cleanup authority. A crash or concurrent writer can leave
-unknown opaque residue. The [threat risks below](#ranked-abuse-paths) cover
-these limitations without repeating the implementation chronology.
+unknown opaque residue. CLI and desktop can request this inventory, path-free
+source/version identity summaries, and duplicate groups through the same
+read-only application contracts. Adapter projections are bounded and omit
+roots, labels, filenames, URLs, checksums, content, and relative-path hashes;
+separate calls can observe different valid states if another local writer acts
+between them. The [threat risks below](#ranked-abuse-paths) cover these
+limitations without repeating the implementation chronology.
 
 Future cloud sync, authentication, multi-tenancy, remote retrieval, autonomous
 tools, or job submission require a new threat-model review.

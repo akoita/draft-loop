@@ -2771,6 +2771,61 @@ describe("candidate knowledge native controls", () => {
         ok: true,
         value: { storeId, sourceCount: 1, readyCount: 1, blockedCount: 0 },
       });
+
+      const duplicatePath = join(parent, "duplicate-resume.md");
+      await writeFile(duplicatePath, "Local candidate evidence.\n", "utf8");
+      await knowledgeService.importKnowledgeSourceFile({
+        storeRoot,
+        knowledgeBaseId,
+        sourcePath: duplicatePath,
+      });
+      const sources = await createHost.invoke({
+        type: "knowledge.sources",
+        input: { storeId, knowledgeBaseId },
+      });
+      expect(sources).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          sourceCount: 2,
+          sources: [
+            { kind: "file", versionCount: 1 },
+            { kind: "file", versionCount: 1 },
+          ],
+          truncated: false,
+        },
+      });
+      const duplicates = await createHost.invoke({
+        type: "knowledge.duplicates",
+        input: { storeId, knowledgeBaseId },
+      });
+      expect(duplicates).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          groupCount: 1,
+          groups: [{ memberCount: 2, members: [{}, {}], truncated: false }],
+          truncated: false,
+        },
+      });
+      const inventory = await createHost.invoke({
+        type: "knowledge.inventory",
+        input: { storeId },
+      });
+      expect(inventory).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          schemaVersion: 1,
+          verifiedManagedFileCount: 2,
+          complete: true,
+          scanLimitReached: false,
+        },
+      });
+      expect(JSON.stringify({ sources, duplicates, inventory })).not.toContain(parent);
+      expect(JSON.stringify({ sources, duplicates, inventory })).not.toContain("resume.md");
       await expect(
         createHost.invoke({
           type: "knowledge.select",
@@ -2850,6 +2905,12 @@ describe("candidate knowledge native controls", () => {
         restartedHost.invoke({
           type: "knowledge.select",
           input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      await expect(
+        restartedHost.invoke({
+          type: "knowledge.sources",
+          input: { storeId, knowledgeBaseId },
         }),
       ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
       const reopened = await restartedHost.invoke({
