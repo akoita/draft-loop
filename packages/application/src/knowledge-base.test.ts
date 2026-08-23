@@ -1297,6 +1297,259 @@ describe("candidate knowledge store application service", () => {
     }
   });
 
+  it("logically retires a missing directory member and is idempotent without deleting evidence", async () => {
+    const directoryPath = join(temporaryParent, "retire-directory");
+    const sourcePath = join(directoryPath, "missing.md");
+    const content = "missing candidate evidence";
+    await mkdir(directoryPath);
+    await writeFile(sourcePath, content, "utf8");
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId: (() => {
+        const ids = [
+          "store-uuid",
+          "default-ckb-uuid",
+          "source-uuid",
+          "version-uuid",
+          "directory-id",
+        ];
+        return () => ids.shift() ?? "unexpected-id";
+      })(),
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+
+    const beforeStore = await openCandidateKnowledgeStore(storeRoot);
+    const beforeState = {
+      source: await beforeStore.getCandidateKnowledgeSource("default-ckb-uuid", "source-uuid"),
+      versions: await beforeStore.listCandidateKnowledgeSourceVersions(
+        "default-ckb-uuid",
+        "source-uuid",
+      ),
+      origin: await beforeStore.getCandidateKnowledgeSourceOriginBinding(
+        "default-ckb-uuid",
+        "source-uuid",
+      ),
+      members: await beforeStore.listCandidateKnowledgeDirectoryMembers(
+        "default-ckb-uuid",
+        imported.directoryId,
+      ),
+      inventory: await beforeStore.inspectManagedCandidateKnowledgeFiles(),
+    };
+    await beforeStore.close();
+    await rm(sourcePath);
+    now = changedAt;
+
+    const removed = await service.retireKnowledgeSourceDirectoryMember({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: imported.directoryId,
+      sourceId: "source-uuid",
+      approved: true,
+    });
+    expect(removed).toEqual({
+      directoryId: imported.directoryId,
+      sourceId: "source-uuid",
+      status: "removed",
+      checkedAt: changedAt,
+      retiredAt: changedAt,
+      reason: "user-requested",
+    });
+    expect(Object.isFrozen(removed)).toBe(true);
+    expect(JSON.stringify(removed)).not.toContain(temporaryParent);
+    expect(JSON.stringify(removed)).not.toContain(content);
+
+    const afterStore = await openCandidateKnowledgeStore(storeRoot);
+    const afterState = {
+      source: await afterStore.getCandidateKnowledgeSource("default-ckb-uuid", "source-uuid"),
+      versions: await afterStore.listCandidateKnowledgeSourceVersions(
+        "default-ckb-uuid",
+        "source-uuid",
+      ),
+      origin: await afterStore.getCandidateKnowledgeSourceOriginBinding(
+        "default-ckb-uuid",
+        "source-uuid",
+      ),
+      members: await afterStore.listCandidateKnowledgeDirectoryMembers(
+        "default-ckb-uuid",
+        imported.directoryId,
+      ),
+      inventory: await afterStore.inspectManagedCandidateKnowledgeFiles(),
+      retirement: await afterStore.getCandidateKnowledgeSourceRetirement(
+        "default-ckb-uuid",
+        "source-uuid",
+      ),
+    };
+    await afterStore.close();
+    expect({ ...afterState, retirement: undefined }).toEqual({
+      ...beforeState,
+      retirement: undefined,
+    });
+    expect(afterState.retirement).toEqual({
+      sourceId: "source-uuid",
+      retiredAt: changedAt,
+      reason: "user-requested",
+    });
+
+    now = "2026-08-21T11:00:00.000Z";
+    await expect(
+      service.retireKnowledgeSourceDirectoryMember({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        sourceId: "source-uuid",
+        approved: true,
+      }),
+    ).resolves.toEqual({
+      directoryId: imported.directoryId,
+      sourceId: "source-uuid",
+      status: "already-removed",
+      checkedAt: "2026-08-21T11:00:00.000Z",
+      retiredAt: changedAt,
+      reason: "user-requested",
+    });
+  });
+
+  it("rejects unapproved, non-missing, conflicting, wrong-member, and failed scans generically", async () => {
+    const directoryPath = join(temporaryParent, "retire-rejections");
+    const sourcePath = join(directoryPath, "selected.md");
+    const replacementPath = join(temporaryParent, "replacement.md");
+    const initialContent = "initial candidate evidence";
+    const changedContent = "changed candidate evidence";
+    await mkdir(directoryPath);
+    await writeFile(sourcePath, initialContent, "utf8");
+    await writeFile(replacementPath, changedContent, "utf8");
+    let now = createdAt;
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "source-uuid",
+      "version-uuid",
+      "directory-id",
+      "changed-version-uuid",
+    ];
+    const ingestDirectory = vi.fn(ingestDirectoryImplementation);
+    const open = vi.fn(async (root: string) => openCandidateKnowledgeStore(root));
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => now,
+      ingestDirectory: ingestDirectory as never,
+      open: open as never,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+    ingestDirectory.mockClear();
+    open.mockClear();
+
+    await expect(
+      service.retireKnowledgeSourceDirectoryMember({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        sourceId: "source-uuid",
+        approved: false,
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory member could not be removed.",
+    );
+    expect(ingestDirectory).not.toHaveBeenCalled();
+    expect(open).not.toHaveBeenCalled();
+
+    now = changedAt;
+    await expect(
+      service.retireKnowledgeSourceDirectoryMember({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        sourceId: "source-uuid",
+        approved: true,
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory member could not be removed.",
+    );
+    await writeFile(sourcePath, changedContent, "utf8");
+    await expect(
+      service.appendKnowledgeSourceFileVersion({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+        sourcePath,
+      }),
+    ).resolves.toMatchObject({ created: true });
+    now = "2026-08-21T10:30:00.000Z";
+    await expect(
+      service.retireKnowledgeSourceDirectoryMember({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        sourceId: "source-uuid",
+        approved: true,
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory member could not be removed.",
+    );
+    await expect(
+      service.rebindKnowledgeSourceOrigin({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+        sourcePath: replacementPath,
+      }),
+    ).resolves.toMatchObject({ status: "rebound" });
+    await expect(
+      service.retireKnowledgeSourceDirectoryMember({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        sourceId: "source-uuid",
+        approved: true,
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory member could not be removed.",
+    );
+    await expect(
+      service.retireKnowledgeSourceDirectoryMember({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        sourceId: "missing-source",
+        approved: true,
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory member could not be removed.",
+    );
+
+    ingestDirectory.mockRejectedValueOnce(new Error("scan failed"));
+    await expect(
+      service.retireKnowledgeSourceDirectoryMember({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: imported.directoryId,
+        sourceId: "source-uuid",
+        approved: true,
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory member could not be removed.",
+    );
+
+    const reopened = await openCandidateKnowledgeStore(storeRoot);
+    await expect(
+      reopened.getCandidateKnowledgeSourceRetirement("default-ckb-uuid", "source-uuid"),
+    ).resolves.toBeUndefined();
+    await reopened.close();
+  });
+
   it("classifies an active member without an origin binding as an origin conflict", async () => {
     const sourcePath = "/selected/current.txt";
     const normalized = successfulIngestion(sourcePath, {

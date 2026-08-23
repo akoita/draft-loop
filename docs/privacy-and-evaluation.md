@@ -77,10 +77,14 @@ only path-free added source IDs. It creates no refresh observation for new
 members. The explicit bounded applied operation appends
 changed bytes only for active same-member files in source-ID order and records
 current observations for successful changed, current, and same-member-missing
-entries. Rename/removal decisions, root or origin rebind, automatic
-retirement/deletion, adapters, indexing, and background
-refresh remain deferred; a later member failure returns a path-free partial
-result after earlier member commits.
+entries. Complete removal reconciliation, root or origin rebind, automatic
+retirement/deletion, adapters, indexing, and background refresh remain deferred;
+a later member failure returns a path-free partial result after earlier member
+commits. An explicit approved directory-member retirement operation can mark one
+fresh-scan `missing` same-member source as logically removed with the existing
+`user-requested` marker; it does not delete bytes, versions, bindings,
+observations, journal state, or immutable membership. Already retired members
+return an `already-removed` result without a write.
 
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address
@@ -160,8 +164,8 @@ canonical origin binding. Partial and legacy runtime-only imports have no
 directory membership evidence. The store has a read-only explicit bounded
 directory refresh preview, an explicit add-members operation, and an applied
 operation limited to existing active same-member changed files. Add-members
-persists only unmatched accepted files as append-only new members; rename/removal
-decisions, directory-root rebind, automatic retirement/deletion, background
+persists only unmatched accepted files as append-only new members; complete
+removal reconciliation, directory-root rebind, automatic retirement/deletion, background
 refresh, time-based freshness policy, moved-origin
 discovery, automatic duplicate resolution, normalized facts, or retrieval
 indexes. A read-only, one-CKB-scoped duplicate projection compares only latest

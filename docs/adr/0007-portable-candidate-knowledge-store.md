@@ -50,8 +50,8 @@ add-members operation can append unmatched accepted files from an existing
 binding as new managed file sources and immutable members in deterministic path
 order; existing member states remain report-only and a later candidate failure
 returns a path-free partial result. Applied refresh is limited to existing
-active same-member changed files; directory removals, root rebind, rename, and
-member-retirement policy remain deferred. The membership is a stable historical
+active same-member changed files; complete removal reconciliation, root rebind,
+rename, and broader member-retirement policy remain deferred. The membership is a stable historical
 mapping captured at binding or explicit append time: later source version
 appends, explicit origin rebinding, or source retirement do not rewrite its
 rows, and actual incremental scan reconciliation remains deferred.
@@ -192,7 +192,15 @@ source. Each source, version, canonical origin binding, managed blob, journal
 commit, and immutable directory member is committed atomically per candidate;
 the operation stops on the first later failure and returns only path-free
 partial IDs. It does not create observations for new members or infer renames,
-removals, rebinding, or retirement.
+removals, rebinding, or retirement. An explicit approved directory-member
+retirement operation performs one fresh bounded scan and accepts only an active
+same-member `missing` member. It atomically records the existing
+`user-requested` retirement marker with latest-version, origin-revision, and
+chronology guards. Its path-free `removed` result means logical retirement, not
+physical deletion; an already retired member returns `already-removed` without
+a write. Bytes, versions, origin bindings, observations, journal state, and
+immutable membership remain, while complete reconciliation, cleanup, and broader
+lifecycle policy remain deferred.
 SQLite migration v13 stores the opaque directory binding and immutable hashed
 members in separate local-only tables with same-CKB foreign-key scope; there is
 no backfill of earlier runtime-only imports.
@@ -392,9 +400,11 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- directory removals, directory rebind, rename/removal, and member retirement
-  policy (the explicit add-members operation handles only unmatched additions,
-  while applied refresh handles only existing active same-member changed files);
+- complete directory removal reconciliation, directory rebind, rename/removal,
+  and broader member-retirement policy (the explicit operation handles only one
+  approved missing same-member member; add-members handles only unmatched
+  additions, while applied refresh handles only existing active same-member
+  changed files);
 - redirect-observation history, conditional URL requests, and URL-specific
   failure or time-based readiness policy;
 - background refresh, time-based freshness policy, moved-origin discovery, and

@@ -143,6 +143,14 @@ export interface AddKnowledgeSourceDirectoryMembersCommand {
   readonly options?: DirectoryIngestionOptions;
 }
 
+export interface RetireKnowledgeSourceDirectoryMemberCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly sourceId: string;
+  readonly approved: boolean;
+}
+
 export interface ImportKnowledgeSourceUrlCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -398,6 +406,15 @@ export type AddKnowledgeSourceDirectoryMembersResult =
   | AddKnowledgeSourceDirectoryMembersCompleteResult
   | AddKnowledgeSourceDirectoryMembersPartialResult;
 
+export interface RetireKnowledgeSourceDirectoryMemberResult {
+  readonly directoryId: string;
+  readonly sourceId: string;
+  readonly status: "removed" | "already-removed";
+  readonly checkedAt: string;
+  readonly retiredAt: string;
+  readonly reason: "user-requested";
+}
+
 export interface CandidateKnowledgeStoreService {
   readonly initializeStore: (
     command: InitializeStoreCommand,
@@ -439,6 +456,9 @@ export interface CandidateKnowledgeStoreService {
   readonly addKnowledgeSourceDirectoryMembers: (
     command: AddKnowledgeSourceDirectoryMembersCommand,
   ) => Promise<AddKnowledgeSourceDirectoryMembersResult>;
+  readonly retireKnowledgeSourceDirectoryMember: (
+    command: RetireKnowledgeSourceDirectoryMemberCommand,
+  ) => Promise<RetireKnowledgeSourceDirectoryMemberResult>;
   readonly importKnowledgeSourceUrl: (
     command: ImportKnowledgeSourceUrlCommand,
   ) => Promise<CandidateKnowledgeSourceWriteResult>;
@@ -567,6 +587,12 @@ function applyDirectoryRefreshFailure(): Error {
 
 function addDirectoryMembersFailure(): Error {
   return new Error("The selected candidate knowledge source directory members could not be added.");
+}
+
+function retireDirectoryMemberFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge source directory member could not be removed.",
+  );
 }
 
 function importUrlFailure(): Error {
@@ -835,6 +861,7 @@ interface CollectedDirectoryRefreshMember {
   readonly latestVersion: CandidateKnowledgeSourceVersionRecord;
   readonly expectedOriginBoundAt?: string;
   readonly originRelation: CandidateKnowledgeDirectoryMemberOriginRelationRecord["relation"];
+  readonly retirement?: CandidateKnowledgeSourceRetirementRecord;
 }
 
 interface CollectedDirectoryRefresh {
@@ -1060,6 +1087,7 @@ async function collectDirectoryRefresh(
         ? {}
         : { expectedOriginBoundAt: relation.originBoundAt }),
       originRelation: relation.relation,
+      ...(retirement === undefined ? {} : { retirement }),
     });
   }
 
@@ -1154,6 +1182,23 @@ function addDirectoryMembersResult(
     addedSourceIds: Object.freeze([...addedSourceIds]),
     addedSourceCount: addedSourceIds.length,
     status,
+  });
+}
+
+function retireDirectoryMemberResult(
+  directoryId: string,
+  sourceId: string,
+  status: RetireKnowledgeSourceDirectoryMemberResult["status"],
+  checkedAt: string,
+  retirement: CandidateKnowledgeSourceRetirementRecord,
+): RetireKnowledgeSourceDirectoryMemberResult {
+  return Object.freeze({
+    directoryId,
+    sourceId,
+    status,
+    checkedAt,
+    retiredAt: retirement.retiredAt,
+    reason: retirement.reason,
   });
 }
 
@@ -2852,6 +2897,83 @@ export function createCandidateKnowledgeStoreService(
         throw addDirectoryMembersFailure();
       }
     },
+    retireKnowledgeSourceDirectoryMember: async (command) => {
+      if (command.approved !== true) {
+        throw retireDirectoryMemberFailure();
+      }
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let directoryId: string;
+      let sourceId: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
+        sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      } catch {
+        throw retireDirectoryMemberFailure();
+      }
+
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const collected = await collectDirectoryRefresh(
+              handle,
+              resolved,
+              storeRoot,
+              knowledgeBaseId,
+              directoryId,
+              undefined,
+            );
+            const member = collected.members.find((candidate) => candidate.sourceId === sourceId);
+            if (member === undefined) {
+              throw retireDirectoryMemberFailure();
+            }
+            if (member.status === "retired") {
+              if (member.retirement === undefined) {
+                throw retireDirectoryMemberFailure();
+              }
+              validateRetirementRecord(member.retirement, sourceId);
+              return retireDirectoryMemberResult(
+                directoryId,
+                sourceId,
+                "already-removed",
+                collected.checkedAt,
+                member.retirement,
+              );
+            }
+            if (
+              member.status !== "missing" ||
+              member.originRelation !== "same-member" ||
+              member.expectedOriginBoundAt === undefined
+            ) {
+              throw retireDirectoryMemberFailure();
+            }
+            const retirement = await handle.retireCandidateKnowledgeDirectoryMember(
+              knowledgeBaseId,
+              directoryId,
+              sourceId,
+              {
+                retiredAt: collected.checkedAt,
+                expectedVersionId: member.observedVersionId,
+                expectedOriginBoundAt: member.expectedOriginBoundAt,
+              },
+            );
+            validateRetirementRecord(retirement, sourceId);
+            return retireDirectoryMemberResult(
+              directoryId,
+              sourceId,
+              retirement.retiredAt === collected.checkedAt ? "removed" : "already-removed",
+              collected.checkedAt,
+              retirement,
+            );
+          },
+        );
+      } catch {
+        throw retireDirectoryMemberFailure();
+      }
+    },
     importKnowledgeSourceUrl: async (command) => {
       if (command.approved !== true) throw importUrlFailure();
       const storeRoot = requireStoreRoot(command.storeRoot);
@@ -3376,6 +3498,8 @@ export const recordKnowledgeSourceDirectoryRefresh =
 export const applyKnowledgeSourceDirectoryRefresh =
   defaultService.applyKnowledgeSourceDirectoryRefresh;
 export const addKnowledgeSourceDirectoryMembers = defaultService.addKnowledgeSourceDirectoryMembers;
+export const retireKnowledgeSourceDirectoryMember =
+  defaultService.retireKnowledgeSourceDirectoryMember;
 export const checkKnowledgeSourceOriginStatus = defaultService.checkKnowledgeSourceOriginStatus;
 export const refreshKnowledgeSourceFromOrigin = defaultService.refreshKnowledgeSourceFromOrigin;
 export const refreshKnowledgeSourceUrl = defaultService.refreshKnowledgeSourceUrl;

@@ -26,6 +26,7 @@ import {
   type CandidateKnowledgeDirectoryBindingRecord,
   type CandidateKnowledgeDirectoryMemberOriginRelationRecord,
   type CandidateKnowledgeDirectoryMemberRecord,
+  type CandidateKnowledgeDirectoryMemberRetirementInput,
   type CandidateKnowledgeDirectoryRefreshObservationBatchInput,
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceOriginBindingRecord,
@@ -234,6 +235,12 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     sourceId: string,
     input: CandidateKnowledgeSourceRetirementInput,
+  ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
+  readonly retireCandidateKnowledgeDirectoryMember: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+    input: CandidateKnowledgeDirectoryMemberRetirementInput,
   ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
   readonly getManagedCandidateKnowledgeFilePath: (
     knowledgeBaseId: string,
@@ -1771,6 +1778,20 @@ function createHandle(
     retireCandidateKnowledgeSource: async (knowledgeBaseId, sourceId, input) =>
       Object.freeze({
         ...(await storage.retireCandidateKnowledgeSource(knowledgeBaseId, sourceId, input)),
+      }),
+    retireCandidateKnowledgeDirectoryMember: async (
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+      input,
+    ) =>
+      Object.freeze({
+        ...(await storage.retireCandidateKnowledgeDirectoryMember(
+          knowledgeBaseId,
+          directoryId,
+          sourceId,
+          input,
+        )),
       }),
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
       writeManagedCandidateKnowledgeFile(storage, root, {
