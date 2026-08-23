@@ -23,6 +23,7 @@ export const bridgeCapabilities = [
   "knowledge.open",
   "knowledge.list",
   "knowledge.readiness",
+  "knowledge.select",
   "run.status",
   "run.start",
   "run.pause",
@@ -191,6 +192,28 @@ export interface KnowledgeReadinessInput extends KnowledgeStoreListInput {
 }
 
 const knowledgeReadinessKeys = inputKeys<KnowledgeReadinessInput>()(["storeId", "knowledgeBaseId"]);
+
+export interface KnowledgeSelectionEntry {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+}
+
+export interface KnowledgeSelectionInput {
+  readonly workspaceId: string;
+  readonly entries: readonly KnowledgeSelectionEntry[];
+  /** Explicit approval required when more than one CKB is selected. */
+  readonly combinationApproved?: boolean;
+}
+
+const knowledgeSelectionEntryKeys = inputKeys<KnowledgeSelectionEntry>()([
+  "storeId",
+  "knowledgeBaseId",
+]);
+const knowledgeSelectionInputKeys = inputKeys<KnowledgeSelectionInput>()([
+  "workspaceId",
+  "entries",
+  "combinationApproved",
+]);
 
 /**
  * Everything a new workspace can be told about its models.
@@ -477,6 +500,11 @@ export interface KnowledgeReadinessResult {
   readonly blockerReasons: readonly string[];
 }
 
+export interface KnowledgeSelectionResult {
+  readonly workspaceId: string;
+  readonly entries: readonly KnowledgeSelectionEntry[];
+}
+
 const knowledgeBaseSummaryKeys = resultKeys<KnowledgeBaseSummary>()([
   "id",
   "displayName",
@@ -493,6 +521,10 @@ const knowledgeReadinessResultKeys = resultKeys<KnowledgeReadinessResult>()([
   "readyCount",
   "blockedCount",
   "blockerReasons",
+]);
+const knowledgeSelectionResultKeys = resultKeys<KnowledgeSelectionResult>()([
+  "workspaceId",
+  "entries",
 ]);
 
 /**
@@ -718,6 +750,7 @@ export interface BridgeCommandInputMap {
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
   "knowledge.readiness": KnowledgeReadinessInput;
+  "knowledge.select": KnowledgeSelectionInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -743,6 +776,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
   "knowledge.readiness": KnowledgeReadinessResult;
+  "knowledge.select": KnowledgeSelectionResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -1194,6 +1228,38 @@ function validateKnowledgeReadinessInput(value: unknown): KnowledgeReadinessInpu
   };
 }
 
+const maximumKnowledgeSelections = 32;
+
+function validateKnowledgeSelectionEntry(value: unknown): KnowledgeSelectionEntry {
+  const entry = requireRecord(value);
+  if (!hasOnlyKeys(entry, knowledgeSelectionEntryKeys)) return invalidInput();
+  return {
+    storeId: identifier(entry.storeId),
+    knowledgeBaseId: identifier(entry.knowledgeBaseId),
+  };
+}
+
+function validateKnowledgeSelectionInput(value: unknown): KnowledgeSelectionInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeSelectionInputKeys) || !Array.isArray(input.entries)) {
+    return invalidInput();
+  }
+  if (input.entries.length === 0 || input.entries.length > maximumKnowledgeSelections) {
+    return invalidInput();
+  }
+  const entries = input.entries.map(validateKnowledgeSelectionEntry);
+  const logicalSelections = entries.map(
+    (entry) => `${entry.storeId}\u0000${entry.knowledgeBaseId}`,
+  );
+  if (new Set(logicalSelections).size !== entries.length) return invalidInput();
+  const combinationApproved = optionalBooleanValue(input.combinationApproved);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    entries,
+    ...(combinationApproved === undefined ? {} : { combinationApproved }),
+  };
+}
+
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
@@ -1481,6 +1547,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "knowledge.list", input: validateKnowledgeStoreListInput(command.input) };
     case "knowledge.readiness":
       return { type: "knowledge.readiness", input: validateKnowledgeReadinessInput(command.input) };
+    case "knowledge.select":
+      return { type: "knowledge.select", input: validateKnowledgeSelectionInput(command.input) };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
     case "run.start":
@@ -1693,6 +1761,22 @@ function normalizeKnowledgeReadinessResult(value: unknown): KnowledgeReadinessRe
     blockedCount,
     blockerReasons,
   };
+}
+
+function normalizeKnowledgeSelectionResult(value: unknown): KnowledgeSelectionResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeSelectionResultKeys) || !Array.isArray(result.entries)) {
+    return invalidInput();
+  }
+  if (result.entries.length === 0 || result.entries.length > maximumKnowledgeSelections) {
+    return invalidInput();
+  }
+  const entries = result.entries.map(validateKnowledgeSelectionEntry);
+  const logicalSelections = entries.map(
+    (entry) => `${entry.storeId}\u0000${entry.knowledgeBaseId}`,
+  );
+  if (new Set(logicalSelections).size !== entries.length) return invalidInput();
+  return { workspaceId: identifier(result.workspaceId), entries };
 }
 
 function normalizeWorkspaceModelsResult(value: unknown): WorkspaceModelsResult {
@@ -1951,6 +2035,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeStoreResult(value);
     case "knowledge.readiness":
       return normalizeKnowledgeReadinessResult(value);
+    case "knowledge.select":
+      return normalizeKnowledgeSelectionResult(value);
     case "run.status":
     case "run.start":
     case "run.pause":

@@ -100,16 +100,21 @@ pnpm --filter @draft-loop/cli start --help
 
 The CLI now exposes the first shared CKB controls through `knowledge`: initialize
 a portable store with its default CKB, open or list a store, and inspect
-path-free lifecycle readiness. For example:
+path-free lifecycle readiness. It can also bind one or more ready CKBs to a
+workspace; combining CKBs requires `--approve-combination`. For example:
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge store init ./candidate-knowledge
 pnpm --filter @draft-loop/cli start knowledge store list ./candidate-knowledge
+pnpm --filter @draft-loop/cli start knowledge select ./workspace \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
 ```
 
 The desktop native boundary exposes the same operations without accepting or
-returning filesystem paths in renderer messages. Store selection, source
-mutation, and destructive lifecycle controls remain staged work.
+returning filesystem paths in renderer messages. Desktop selection accepts only
+stores explicitly opened in the current session and requires the same visible
+approval for combinations. Source mutation and destructive lifecycle controls
+remain staged work.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

@@ -8,6 +8,7 @@ import type {
   ApplicationService,
   CandidateKnowledgeStoreService,
   CandidateKnowledgeStoreView,
+  ConfigureKnowledgeSelectionCommand,
   IndependentReviewRecord,
   InitializeWorkspaceCommand,
   KnowledgeBaseLifecycleReadinessResult,
@@ -315,5 +316,131 @@ describe("candidate knowledge CLI controls", () => {
     expect(output).not.toContain(storeRoot);
     expect(output).not.toContain("Private display name");
     expect(output).not.toContain("Private description");
+  });
+});
+
+describe("candidate knowledge selection CLI control", () => {
+  function selectionHarness(): {
+    readonly service: ApplicationService;
+    readonly configureKnowledgeSelection: ReturnType<typeof vi.fn>;
+    readonly lines: string[];
+  } {
+    const dependencies = harness();
+    const configureKnowledgeSelection = vi.fn(
+      async (command: ConfigureKnowledgeSelectionCommand): Promise<WorkspaceDescriptor> => ({
+        ...descriptor(command.root),
+        candidateKnowledgeSelection: command.entries.map(({ storeId, knowledgeBaseId }) => ({
+          storeId,
+          knowledgeBaseId,
+        })),
+      }),
+    );
+    return {
+      service: { ...dependencies.service, configureKnowledgeSelection },
+      configureKnowledgeSelection,
+      lines: dependencies.lines,
+    };
+  }
+
+  it("opens one store, persists one selection, and prints only opaque ids", async () => {
+    const storeRoot = resolve("private-selection-store");
+    const workspace = resolve("private-workspace");
+    const openStore = vi.fn(async () => knowledgeStoreView());
+    const knowledgeService = { openStore } as unknown as CandidateKnowledgeStoreService;
+    const dependencies = selectionHarness();
+
+    await createCli({
+      service: dependencies.service,
+      io: { write: (line) => dependencies.lines.push(line) },
+      knowledgeService,
+    }).parseAsync(["node", "draft-loop", "knowledge", "select", workspace, storeRoot, "base-one"]);
+
+    expect(openStore).toHaveBeenCalledWith({ storeRoot });
+    expect(dependencies.configureKnowledgeSelection).toHaveBeenCalledWith({
+      root: workspace,
+      entries: [{ storeRoot, storeId: "store-opaque", knowledgeBaseId: "base-one" }],
+    });
+    const output = dependencies.lines.join("\n");
+    expect(output).toContain("store store-opaque knowledge-base base-one");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain("Private display name");
+    expect(output).not.toContain("Private description");
+  });
+
+  it("maps multiple alternating pairs and explicit combination approval", async () => {
+    const firstRoot = resolve("first-private-store");
+    const secondRoot = resolve("second-private-store");
+    const workspace = resolve("private-workspace");
+    const baseView = knowledgeStoreView();
+    const firstView: CandidateKnowledgeStoreView = {
+      ...baseView,
+      store: { ...baseView.store, id: "store-a" as CandidateKnowledgeStoreView["store"]["id"] },
+    };
+    const secondView: CandidateKnowledgeStoreView = {
+      ...baseView,
+      store: { ...baseView.store, id: "store-b" as CandidateKnowledgeStoreView["store"]["id"] },
+    };
+    const openStore = vi.fn().mockResolvedValueOnce(firstView).mockResolvedValueOnce(secondView);
+    const knowledgeService = { openStore } as unknown as CandidateKnowledgeStoreService;
+    const dependencies = selectionHarness();
+
+    await createCli({
+      service: dependencies.service,
+      io: { write: (line) => dependencies.lines.push(line) },
+      knowledgeService,
+    }).parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "select",
+      workspace,
+      firstRoot,
+      "base-one",
+      secondRoot,
+      "base-two",
+      "--approve-combination",
+    ]);
+
+    expect(dependencies.configureKnowledgeSelection).toHaveBeenCalledWith({
+      root: workspace,
+      entries: [
+        { storeRoot: firstRoot, storeId: "store-a", knowledgeBaseId: "base-one" },
+        { storeRoot: secondRoot, storeId: "store-b", knowledgeBaseId: "base-two" },
+      ],
+      combinationApproved: true,
+    });
+    const output = dependencies.lines.join("\n");
+    expect(output).toContain("store store-a knowledge-base base-one");
+    expect(output).toContain("store store-b knowledge-base base-two");
+    expect(output).not.toContain(firstRoot);
+    expect(output).not.toContain(secondRoot);
+  });
+
+  it("rejects empty or odd pair sequences before opening stores or writing configuration", async () => {
+    const openStore = vi.fn(async () => knowledgeStoreView());
+    const knowledgeService = { openStore } as unknown as CandidateKnowledgeStoreService;
+    const dependencies = selectionHarness();
+    const cli = createCli({
+      service: dependencies.service,
+      io: { write: (line) => dependencies.lines.push(line) },
+      knowledgeService,
+    });
+
+    await expect(
+      cli.parseAsync(["node", "draft-loop", "knowledge", "select", resolve("workspace")]),
+    ).rejects.toThrow("knowledge select requires one or more");
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "select",
+        resolve("workspace"),
+        resolve("store-only"),
+      ]),
+    ).rejects.toThrow("knowledge select requires one or more");
+    expect(openStore).not.toHaveBeenCalled();
+    expect(dependencies.configureKnowledgeSelection).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
   });
 });

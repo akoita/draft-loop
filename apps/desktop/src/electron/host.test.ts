@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   type ApplicationService,
   CliUserError,
+  createCandidateKnowledgeStoreService,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
   type IndependentReviewRecord,
@@ -2714,16 +2715,25 @@ describe("native host", () => {
 });
 
 describe("candidate knowledge native controls", () => {
-  it("creates, reopens, lists, and inspects a store without returning its path", async () => {
+  it("creates, reopens, lists, inspects, and selects stores without returning paths", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-host-"));
+    const workspaceRoot = join(parent, "workspace");
     const storeRoot = join(parent, "candidate-knowledge");
     try {
+      const knowledgeService = createCandidateKnowledgeStoreService();
       const createHost = createNativeHost({
+        knowledgeService,
         dialogs: {
           chooseDirectory: async () => parent,
           chooseFiles: async () => [],
         },
       });
+      const workspace = await createHost.invoke({
+        type: "workspace.create",
+        input: { name: "workspace", mode: "real" },
+      });
+      if (!workspace.ok) throw new Error("Expected workspace creation to succeed.");
+      const workspaceId = (workspace.value as { workspace: { id: string } }).workspace.id;
       const created = await createHost.invoke({
         type: "knowledge.create",
         input: { name: "candidate-knowledge", displayName: "My evidence" },
@@ -2741,6 +2751,13 @@ describe("candidate knowledge native controls", () => {
       const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
         .knowledgeBases[0]?.id;
       if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      const sourcePath = join(parent, "resume.md");
+      await writeFile(sourcePath, "Local candidate evidence.\n", "utf8");
+      await knowledgeService.importKnowledgeSourceFile({
+        storeRoot,
+        knowledgeBaseId,
+        sourcePath,
+      });
 
       await expect(
         createHost.invoke({ type: "knowledge.list", input: { storeId } }),
@@ -2752,17 +2769,46 @@ describe("candidate knowledge native controls", () => {
         }),
       ).resolves.toMatchObject({
         ok: true,
-        value: { storeId, sourceCount: 0, readyCount: 0, blockedCount: 0 },
+        value: { storeId, sourceCount: 1, readyCount: 1, blockedCount: 0 },
+      });
+      await expect(
+        createHost.invoke({
+          type: "knowledge.select",
+          input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
+        }),
+      ).resolves.toEqual({
+        ok: true,
+        value: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
       });
 
-      const reopened = await createNativeHost({
+      const reopenRoots = [workspaceRoot, storeRoot];
+      const restartedHost = createNativeHost({
         dialogs: {
-          chooseDirectory: async () => storeRoot,
+          chooseDirectory: async () => reopenRoots.shift(),
           chooseFiles: async () => [],
         },
-      }).invoke({ type: "knowledge.open", input: { selection: "native-dialog" } });
+      });
+      await expect(
+        restartedHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } }),
+      ).resolves.toMatchObject({ ok: true, value: { workspace: { id: workspaceId } } });
+      await expect(
+        restartedHost.invoke({
+          type: "knowledge.select",
+          input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      const reopened = await restartedHost.invoke({
+        type: "knowledge.open",
+        input: { selection: "native-dialog" },
+      });
       expect(reopened).toMatchObject({ ok: true, value: { storeId } });
       expect(JSON.stringify(reopened)).not.toContain(storeRoot);
+      await expect(
+        restartedHost.invoke({
+          type: "knowledge.select",
+          input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
+        }),
+      ).resolves.toMatchObject({ ok: true, value: { workspaceId } });
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
@@ -2782,5 +2828,77 @@ describe("candidate knowledge native controls", () => {
       host.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } }),
     ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
     expect(knowledgeService.openStore).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit approval before forwarding a multi-CKB selection", async () => {
+    const root = "/local/workspace";
+    const storeRoots = ["/local/store-a", "/local/store-b"];
+    const fixture = service(root);
+    const configureKnowledgeSelection = vi.fn<ApplicationService["configureKnowledgeSelection"]>(
+      async (command) => {
+        if (command.entries.length > 1 && command.combinationApproved !== true) {
+          throw new Error("Combination approval is required.");
+        }
+        return {
+          ...descriptor(root),
+          candidateKnowledgeSelection: command.entries.map(({ storeId, knowledgeBaseId }) => ({
+            storeId,
+            knowledgeBaseId,
+          })),
+        };
+      },
+    );
+    const applicationService = { ...fixture.service, configureKnowledgeSelection };
+    const openedRoots = [root, ...storeRoots];
+    const knowledgeService = {
+      openStore: vi.fn(async ({ storeRoot }: { storeRoot: string }) => ({
+        store: {
+          schemaVersion: 1,
+          id: storeRoot.endsWith("a") ? "store-a" : "store-b",
+          createdAt: "2026-08-23T10:00:00.000Z",
+        },
+        knowledgeBases: [],
+      })),
+    };
+    const host = createNativeHost({
+      applicationService,
+      knowledgeService: knowledgeService as never,
+      dialogs: {
+        chooseDirectory: async () => openedRoots.shift(),
+        chooseFiles: async () => [],
+      },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+    await host.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } });
+    await host.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } });
+    const input = {
+      workspaceId: "workspace-native",
+      entries: [
+        { storeId: "store-a", knowledgeBaseId: "kb-a" },
+        { storeId: "store-b", knowledgeBaseId: "kb-b" },
+      ],
+    } as const;
+
+    await expect(host.invoke({ type: "knowledge.select", input })).resolves.toMatchObject({
+      ok: false,
+      error: { code: "operation-failed" },
+    });
+    const approved = await host.invoke({
+      type: "knowledge.select",
+      input: { ...input, combinationApproved: true },
+    });
+    expect(approved).toEqual({
+      ok: true,
+      value: { workspaceId: "workspace-native", entries: input.entries },
+    });
+    expect(configureKnowledgeSelection).toHaveBeenLastCalledWith({
+      root,
+      entries: [
+        { storeRoot: storeRoots[0], storeId: "store-a", knowledgeBaseId: "kb-a" },
+        { storeRoot: storeRoots[1], storeId: "store-b", knowledgeBaseId: "kb-b" },
+      ],
+      combinationApproved: true,
+    });
+    expect(JSON.stringify(approved)).not.toContain("/local/");
   });
 });

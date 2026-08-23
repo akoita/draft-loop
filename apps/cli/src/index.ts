@@ -15,6 +15,7 @@ import {
   runPilot,
   type StatusCommand,
   safeErrorMessage,
+  type WorkspaceDescriptor,
   workspaceRoot,
 } from "./workflow.js";
 
@@ -81,6 +82,22 @@ function writeKnowledgeBaseReadiness(
     io.write(
       `source ${source.sourceId} version=${source.latestVersionId} status=${source.status} reasons=${reasons}`,
     );
+  }
+}
+
+function writeKnowledgeSelection(io: ApplicationIo, descriptor: WorkspaceDescriptor): void {
+  const selections = descriptor.candidateKnowledgeSelection;
+  if (!Array.isArray(selections) || selections.length === 0) {
+    throw new Error("The candidate knowledge selection was not persisted.");
+  }
+  io.write("knowledge selection configured:");
+  for (const selection of [...selections].sort((left, right) => {
+    const storeOrder = left.storeId.localeCompare(right.storeId);
+    return storeOrder !== 0
+      ? storeOrder
+      : left.knowledgeBaseId.localeCompare(right.knowledgeBaseId);
+  })) {
+    io.write(`store ${selection.storeId} knowledge-base ${selection.knowledgeBaseId}`);
   }
 }
 
@@ -354,6 +371,47 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         knowledgeBaseId,
       });
       writeKnowledgeBaseReadiness(io, readiness);
+    });
+
+  knowledge
+    .command("select")
+    .description("Persist an explicit local candidate-knowledge selection for a workspace")
+    .argument("<workspace>", "workspace directory")
+    .argument("[selection...]", "repeated <store-root> <knowledge-base-id> pairs")
+    .option("--approve-combination", "approve combining more than one store/knowledge base")
+    .action(async (workspace: string, selection: string[], options: Record<string, unknown>) => {
+      if (selection.length === 0 || selection.length % 2 !== 0) {
+        throw new Error(
+          "knowledge select requires one or more <store-root> <knowledge-base-id> pairs.",
+        );
+      }
+
+      const entries: {
+        readonly storeRoot: string;
+        readonly storeId: string;
+        readonly knowledgeBaseId: string;
+      }[] = [];
+      for (let index = 0; index < selection.length; index += 2) {
+        const storeRoot = selection[index];
+        const knowledgeBaseId = selection[index + 1];
+        if (storeRoot === undefined || knowledgeBaseId === undefined) {
+          throw new Error(
+            "knowledge select requires one or more <store-root> <knowledge-base-id> pairs.",
+          );
+        }
+        const view = await candidateKnowledge.openStore({ storeRoot });
+        if (typeof view.store.id !== "string" || view.store.id.trim() === "") {
+          throw new Error("The candidate knowledge store identity could not be verified.");
+        }
+        entries.push({ storeRoot, storeId: view.store.id, knowledgeBaseId });
+      }
+
+      const descriptor = await service.configureKnowledgeSelection({
+        root: workspaceRoot(workspace),
+        entries,
+        ...(options.approveCombination === true ? { combinationApproved: true } : {}),
+      });
+      writeKnowledgeSelection(io, descriptor);
     });
 
   return command;
