@@ -244,9 +244,13 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   source may return to one of its own earlier hashes. A verified storage/handle
   move can atomically update one sensitive origin and append one member revision
   or return a guarded no-op without changing source, version, observation,
-  retirement, blob, or journal evidence. The application move command remains
-  deferred with #135/#136, automatic inference, physical deletion, adapters,
-  indexing, and background refresh.
+  retirement, blob, or journal evidence. The application command reuses one
+  bounded refresh scan for one explicitly selected source, accepts no target
+  path, and applies only a unique exact-integrity missing-member match or a
+  guarded already-current no-op. Its public result is frozen and path-free.
+  Complete reconciliation under #135, lifecycle readiness under #136,
+  automatic inference, physical deletion, adapters, indexing, and background
+  refresh remain deferred.
   A separate moved-candidate projection reuses that complete scan exactly once
   and emits only deterministic source IDs for unique one-to-one exact
   media-type/checksum/size matches between same-member missing sources and

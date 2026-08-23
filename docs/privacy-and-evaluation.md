@@ -204,7 +204,12 @@ A separate moved-candidate preview returns only source IDs for unique one-to-one
 exact media-type/checksum/size matches between same-member missing sources and
 unmatched accepted files. It omits ambiguous matches, does not use names,
 ordering, text, or path similarity, preserves the aggregate new-file count, and
-does not apply a rename or revise membership.
+does not apply a rename or revise membership. A separate explicit application
+command can approve one selected source from that evidence. The selected target
+path exists only in runtime memory and is passed to the local verified handle;
+the store persists only the sensitive origin binding and append-only member
+revision, while the public result exposes no path, filename, checksum, content,
+integrity tuple, or version identity.
 A separate explicit logical-retirement operation persists only source identity,
 the bounded reason `user-requested`, and retirement time. It blocks subsequent
 source mutations but preserves the managed bytes, immutable versions, origin

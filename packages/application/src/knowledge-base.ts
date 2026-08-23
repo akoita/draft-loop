@@ -145,6 +145,14 @@ export interface PreviewKnowledgeSourceDirectoryMovedCandidatesCommand {
   readonly options?: DirectoryIngestionOptions;
 }
 
+export interface ApplyKnowledgeSourceDirectoryMemberMoveCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly sourceId: string;
+  readonly options?: DirectoryIngestionOptions;
+}
+
 export interface RecordKnowledgeSourceDirectoryRefreshCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -419,6 +427,13 @@ export interface PreviewKnowledgeSourceDirectoryMovedCandidatesResult {
   readonly skippedEntryCount: number;
 }
 
+export interface ApplyKnowledgeSourceDirectoryMemberMoveResult {
+  readonly directoryId: string;
+  readonly sourceId: string;
+  readonly checkedAt: string;
+  readonly status: "moved" | "current";
+}
+
 export interface RecordKnowledgeSourceDirectoryRefreshResult
   extends PreviewKnowledgeSourceDirectoryRefreshResult {
   readonly recordedObservationCount: number;
@@ -515,6 +530,9 @@ export interface CandidateKnowledgeStoreService {
   readonly previewKnowledgeSourceDirectoryMovedCandidates: (
     command: PreviewKnowledgeSourceDirectoryMovedCandidatesCommand,
   ) => Promise<PreviewKnowledgeSourceDirectoryMovedCandidatesResult>;
+  readonly applyKnowledgeSourceDirectoryMemberMove: (
+    command: ApplyKnowledgeSourceDirectoryMemberMoveCommand,
+  ) => Promise<ApplyKnowledgeSourceDirectoryMemberMoveResult>;
   readonly recordKnowledgeSourceDirectoryRefresh: (
     command: RecordKnowledgeSourceDirectoryRefreshCommand,
   ) => Promise<RecordKnowledgeSourceDirectoryRefreshResult>;
@@ -656,6 +674,12 @@ function applyDirectoryRootRebindFailure(): Error {
 function previewDirectoryMovedCandidatesFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory moved-candidate preview could not be completed.",
+  );
+}
+
+function applyDirectoryMemberMoveFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge source directory member move could not be applied.",
   );
 }
 
@@ -974,6 +998,7 @@ function previewDirectoryRefreshResult(
 
 interface CollectedDirectoryRefreshMember {
   readonly sourceId: string;
+  readonly relativePathHash: string;
   readonly status: PreviewKnowledgeSourceDirectoryRefreshMemberStatus;
   readonly observedVersionId: string;
   readonly latestVersion: CandidateKnowledgeSourceVersionRecord;
@@ -984,6 +1009,9 @@ interface CollectedDirectoryRefreshMember {
 
 interface CollectedDirectoryRefresh {
   readonly directoryId: string;
+  readonly knowledgeBaseId: string;
+  readonly rootPath: string;
+  readonly rootBoundAt: string;
   readonly checkedAt: string;
   readonly preflight: DirectoryIngestionResult;
   readonly members: readonly CollectedDirectoryRefreshMember[];
@@ -1198,6 +1226,7 @@ async function collectDirectoryRefresh(
     }
     collectedMembers.push({
       sourceId: member.sourceId,
+      relativePathHash: member.relativePathHash,
       status,
       observedVersionId: latestVersion.id,
       latestVersion,
@@ -1215,6 +1244,9 @@ async function collectDirectoryRefresh(
   }
   return {
     directoryId,
+    knowledgeBaseId,
+    rootPath: canonicalRoot,
+    rootBoundAt: binding.boundAt,
     checkedAt,
     preflight,
     members: collectedMembers,
@@ -1224,6 +1256,219 @@ async function collectDirectoryRefresh(
       lexicalCompare(left.source.path, right.source.path),
     ),
   };
+}
+
+interface CollectedDirectoryMemberMoveSelection {
+  readonly member: CollectedDirectoryRefreshMember;
+  readonly target: NonNullable<DirectoryIngestionResult["sources"][number]>;
+}
+
+type CandidateKnowledgeDirectoryCurrentMemberRevision = NonNullable<
+  Awaited<
+    ReturnType<CandidateKnowledgeStoreHandle["getCandidateKnowledgeDirectoryMemberCurrentRevision"]>
+  >
+>;
+
+async function selectDirectoryMemberMoveTarget(
+  handle: CandidateKnowledgeStoreHandle,
+  knowledgeBaseId: string,
+  collected: CollectedDirectoryRefresh,
+  sourceId: string,
+): Promise<CollectedDirectoryMemberMoveSelection> {
+  const member = collected.members.find((candidate) => candidate.sourceId === sourceId);
+  if (
+    member === undefined ||
+    (member.status !== "current" && member.status !== "missing") ||
+    member.originRelation !== "same-member" ||
+    member.retirement !== undefined ||
+    member.expectedOriginBoundAt === undefined ||
+    !isValidRefreshTimestamp(member.expectedOriginBoundAt)
+  ) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+
+  let target: NonNullable<DirectoryIngestionResult["sources"][number]> | undefined;
+  if (member.status === "current") {
+    target = collected.matchedSources.get(sourceId);
+  } else {
+    const eligibleMissingByTuple = new Map<string, CollectedDirectoryRefreshMember[]>();
+    for (const candidate of collected.members) {
+      if (
+        candidate.status !== "missing" ||
+        candidate.originRelation !== "same-member" ||
+        candidate.retirement !== undefined ||
+        candidate.expectedOriginBoundAt === undefined ||
+        !isValidRefreshTimestamp(candidate.expectedOriginBoundAt)
+      ) {
+        continue;
+      }
+      const tuple = directoryMovedCandidateTuple(
+        candidate.latestVersion.mediaType,
+        candidate.latestVersion.checksum,
+        candidate.latestVersion.sizeBytes,
+      );
+      const entries = eligibleMissingByTuple.get(tuple);
+      if (entries === undefined) {
+        eligibleMissingByTuple.set(tuple, [candidate]);
+      } else {
+        entries.push(candidate);
+      }
+    }
+    const tuple = directoryMovedCandidateTuple(
+      member.latestVersion.mediaType,
+      member.latestVersion.checksum,
+      member.latestVersion.sizeBytes,
+    );
+    const missingMembers = eligibleMissingByTuple.get(tuple);
+    const unmatchedSources = collected.unmatchedSources.filter(
+      (candidate) =>
+        directoryMovedCandidateTuple(
+          candidate.mediaType,
+          candidate.checksum,
+          candidate.sizeBytes,
+        ) === tuple,
+    );
+    if (missingMembers?.length === 1 && unmatchedSources.length === 1) {
+      target = unmatchedSources[0];
+    }
+  }
+
+  if (target === undefined) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  const managedPath = await handle.getManagedCandidateKnowledgeFilePath(
+    knowledgeBaseId,
+    sourceId,
+    member.latestVersion.id,
+  );
+  if (typeof managedPath !== "string" || managedPath.trim() === "") {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  return { member, target };
+}
+
+function validateDirectoryMemberMoveRootRevision(
+  revision: CandidateKnowledgeDirectoryCurrentRootRevision | undefined,
+  collected: CollectedDirectoryRefresh,
+): CandidateKnowledgeDirectoryCurrentRootRevision {
+  if (
+    revision === undefined ||
+    typeof revision !== "object" ||
+    revision === null ||
+    revision.directoryId !== collected.directoryId ||
+    revision.knowledgeBaseId !== collected.knowledgeBaseId ||
+    !Number.isSafeInteger(revision.revision) ||
+    revision.revision < 1 ||
+    typeof revision.rootPath !== "string" ||
+    !isAbsolute(revision.rootPath) ||
+    resolve(revision.rootPath) !== revision.rootPath ||
+    revision.rootPath !== collected.rootPath ||
+    !isValidRefreshTimestamp(revision.boundAt) ||
+    revision.boundAt !== collected.rootBoundAt
+  ) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  return revision;
+}
+
+function validateDirectoryMemberMoveCurrentRevision(
+  revision: CandidateKnowledgeDirectoryCurrentMemberRevision | undefined,
+  collected: CollectedDirectoryRefresh,
+  member: CollectedDirectoryRefreshMember,
+): CandidateKnowledgeDirectoryCurrentMemberRevision {
+  if (
+    revision === undefined ||
+    typeof revision !== "object" ||
+    revision === null ||
+    revision.directoryId !== collected.directoryId ||
+    revision.knowledgeBaseId !== collected.knowledgeBaseId ||
+    revision.sourceId !== member.sourceId ||
+    !Number.isSafeInteger(revision.revision) ||
+    revision.revision < 1 ||
+    !/^[0-9a-f]{64}$/u.test(revision.relativePathHash) ||
+    revision.relativePathHash !== member.relativePathHash ||
+    !isValidRefreshTimestamp(revision.boundAt)
+  ) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  return revision;
+}
+
+function validateAppliedDirectoryMemberMoveResult(
+  result: Awaited<
+    ReturnType<CandidateKnowledgeStoreHandle["moveManagedCandidateKnowledgeDirectoryMember"]>
+  >,
+  collected: CollectedDirectoryRefresh,
+  selection: CollectedDirectoryMemberMoveSelection,
+  currentRevision: CandidateKnowledgeDirectoryCurrentMemberRevision,
+): "moved" | "current" {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    typeof result.moved !== "boolean" ||
+    typeof result.member !== "object" ||
+    result.member === null ||
+    typeof result.revision !== "object" ||
+    result.revision === null ||
+    typeof result.binding !== "object" ||
+    result.binding === null ||
+    result.member.directoryId !== collected.directoryId ||
+    result.member.knowledgeBaseId !== collected.knowledgeBaseId ||
+    result.member.sourceId !== selection.member.sourceId ||
+    typeof result.member.relativePathHash !== "string" ||
+    !/^[0-9a-f]{64}$/u.test(result.member.relativePathHash) ||
+    result.revision.directoryId !== collected.directoryId ||
+    result.revision.knowledgeBaseId !== collected.knowledgeBaseId ||
+    result.revision.sourceId !== selection.member.sourceId ||
+    !Number.isSafeInteger(result.revision.revision) ||
+    result.revision.revision < 1 ||
+    !/^[0-9a-f]{64}$/u.test(result.revision.relativePathHash) ||
+    !isValidRefreshTimestamp(result.revision.boundAt) ||
+    result.binding.sourceId !== selection.member.sourceId ||
+    typeof result.binding.originPath !== "string" ||
+    result.binding.originPath !== selection.target.source.path ||
+    !isValidRefreshTimestamp(result.binding.boundAt)
+  ) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  if (result.member.relativePathHash !== result.revision.relativePathHash) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  if (
+    (selection.member.status === "missing" && !result.moved) ||
+    (selection.member.status === "current" && result.moved)
+  ) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  if (result.moved) {
+    if (
+      result.revision.revision !== currentRevision.revision + 1 ||
+      result.revision.relativePathHash === currentRevision.relativePathHash ||
+      result.revision.boundAt !== collected.checkedAt ||
+      result.binding.boundAt !== collected.checkedAt
+    ) {
+      throw applyDirectoryMemberMoveFailure();
+    }
+    return "moved";
+  }
+  if (
+    result.revision.revision !== currentRevision.revision ||
+    result.revision.relativePathHash !== currentRevision.relativePathHash ||
+    result.revision.boundAt !== currentRevision.boundAt ||
+    result.binding.boundAt !== selection.member.expectedOriginBoundAt
+  ) {
+    throw applyDirectoryMemberMoveFailure();
+  }
+  return "current";
+}
+
+function directoryMemberMoveApplyResult(
+  directoryId: string,
+  sourceId: string,
+  checkedAt: string,
+  status: "moved" | "current",
+): ApplyKnowledgeSourceDirectoryMemberMoveResult {
+  return Object.freeze({ directoryId, sourceId, checkedAt, status });
 }
 
 interface CollectedDirectoryRootRebindPreview {
@@ -3294,6 +3539,88 @@ export function createCandidateKnowledgeStoreService(
         throw previewDirectoryMovedCandidatesFailure();
       }
     },
+    applyKnowledgeSourceDirectoryMemberMove: async (command) => {
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let directoryId: string;
+      let sourceId: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
+        sourceId = requireText(command.sourceId, "Candidate knowledge source id");
+      } catch {
+        throw applyDirectoryMemberMoveFailure();
+      }
+
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const collected = await collectDirectoryRefresh(
+              handle,
+              resolved,
+              storeRoot,
+              knowledgeBaseId,
+              directoryId,
+              command.options,
+            );
+            const selection = await selectDirectoryMemberMoveTarget(
+              handle,
+              knowledgeBaseId,
+              collected,
+              sourceId,
+            );
+            const currentRootRevision = validateDirectoryMemberMoveRootRevision(
+              await handle.getCandidateKnowledgeDirectoryCurrentRootRevision(
+                knowledgeBaseId,
+                directoryId,
+              ),
+              collected,
+            );
+            const currentMemberRevision = validateDirectoryMemberMoveCurrentRevision(
+              await handle.getCandidateKnowledgeDirectoryMemberCurrentRevision(
+                knowledgeBaseId,
+                directoryId,
+                sourceId,
+              ),
+              collected,
+              selection.member,
+            );
+            const moved = await handle.moveManagedCandidateKnowledgeDirectoryMember({
+              knowledgeBaseId,
+              directoryId,
+              sourceId,
+              sourcePath: selection.target.source.path,
+              mediaType: selection.target.mediaType,
+              checksum: selection.target.checksum,
+              sizeBytes: selection.target.sizeBytes,
+              expectedRootPath: collected.rootPath,
+              expectedRootRevision: currentRootRevision.revision,
+              expectedMemberRevision: currentMemberRevision.revision,
+              expectedRelativePathHash: currentMemberRevision.relativePathHash,
+              expectedVersionId: selection.member.observedVersionId,
+              expectedOriginBoundAt: selection.member.expectedOriginBoundAt as string,
+              movedAt: collected.checkedAt,
+            });
+            const status = validateAppliedDirectoryMemberMoveResult(
+              moved,
+              collected,
+              selection,
+              currentMemberRevision,
+            );
+            return directoryMemberMoveApplyResult(
+              directoryId,
+              sourceId,
+              collected.checkedAt,
+              status,
+            );
+          },
+        );
+      } catch {
+        throw applyDirectoryMemberMoveFailure();
+      }
+    },
     recordKnowledgeSourceDirectoryRefresh: async (command) => {
       let storeRoot: string;
       let knowledgeBaseId: string;
@@ -4165,6 +4492,8 @@ export const applyKnowledgeSourceDirectoryRootRebind =
   defaultService.applyKnowledgeSourceDirectoryRootRebind;
 export const previewKnowledgeSourceDirectoryMovedCandidates =
   defaultService.previewKnowledgeSourceDirectoryMovedCandidates;
+export const applyKnowledgeSourceDirectoryMemberMove =
+  defaultService.applyKnowledgeSourceDirectoryMemberMove;
 export const recordKnowledgeSourceDirectoryRefresh =
   defaultService.recordKnowledgeSourceDirectoryRefresh;
 export const applyKnowledgeSourceDirectoryRefresh =
