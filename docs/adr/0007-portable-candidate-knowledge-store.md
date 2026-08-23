@@ -306,7 +306,11 @@ and URL provenance remain sensitive store state. Bounded directory intake is
 also exposed through both adapters. The CLI accepts the selected root as
 runtime-only input, while the desktop host owns a dedicated native picker;
 complete and partial results expose only counts and capped opaque
-source/version identities. Rebind remains a separate exact-byte decision.
+source/version identities. Exact-byte one-file origin rebind is exposed as a
+separate native selection, returning only `current` or `rebound` plus the
+binding timestamp. Path-free retirement state and explicitly confirmed,
+idempotent logical retirement are also exposed; retirement preserves all
+evidence and has no reactivation control.
 
 ## Deferred integration
 
@@ -315,8 +319,7 @@ This decision deliberately leaves the following outside the product workflow:
 - normalized facts and lexical, vector, or hybrid CKB indexes;
 - retrieval/index versions and provider transmission approval for the bound CKB
   selection;
-- CLI and desktop source refresh/rebind, physical deletion, and destructive
-  store lifecycle controls;
+- physical deletion and destructive store lifecycle controls;
 - automatic directory removal/rename reconciliation and move inference,
   broader member-retirement policy, background refresh, and time-based
   readiness;

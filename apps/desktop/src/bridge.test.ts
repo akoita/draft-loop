@@ -1559,6 +1559,96 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("validates native source rebind and confirmed retirement controls", async () => {
+    const input = { storeId: "store-1", knowledgeBaseId: "kb-1", sourceId: "source-1" } as const;
+    const rebindInput = { ...input, selection: "native-dialog" } as const;
+    expect(validateBridgeCommand({ type: "knowledge.rebind-file", input: rebindInput })).toEqual({
+      type: "knowledge.rebind-file",
+      input: rebindInput,
+    });
+    expect(() =>
+      validateBridgeCommand({
+        type: "knowledge.rebind-file",
+        input: { ...rebindInput, sourcePath: "/private/resume.md" },
+      }),
+    ).toThrow("invalid");
+    expect(validateBridgeCommand({ type: "knowledge.source-retirement-state", input })).toEqual({
+      type: "knowledge.source-retirement-state",
+      input,
+    });
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.retire-source",
+        input: { ...input, confirmed: false },
+      }),
+    ).toEqual({ type: "knowledge.retire-source", input: { ...input, confirmed: false } });
+
+    const boundAt = "2026-08-24T10:00:00.000Z";
+    const rebindPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { ...input, status: "rebound", boundAt } }),
+        ["knowledge.rebind-file"],
+      ),
+    );
+    await expect(
+      rebindPort.execute({ type: "knowledge.rebind-file", input: rebindInput }),
+    ).resolves.toEqual({ ok: true, value: { ...input, status: "rebound", boundAt } });
+
+    const activePort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { ...input, status: "active" } }),
+        ["knowledge.source-retirement-state"],
+      ),
+    );
+    await expect(
+      activePort.execute({ type: "knowledge.source-retirement-state", input }),
+    ).resolves.toEqual({ ok: true, value: { ...input, status: "active" } });
+
+    const retired = { ...input, status: "retired", retiredAt: boundAt, reason: "user-requested" };
+    const retiredPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: retired }), ["knowledge.retire-source"]),
+    );
+    await expect(
+      retiredPort.execute({
+        type: "knowledge.retire-source",
+        input: { ...input, confirmed: true },
+      }),
+    ).resolves.toEqual({ ok: true, value: retired });
+
+    for (const { capability, value } of [
+      {
+        capability: "knowledge.rebind-file" as const,
+        value: { ...input, status: "rebound", boundAt, sourcePath: "/private/resume.md" },
+      },
+      {
+        capability: "knowledge.source-retirement-state" as const,
+        value: { ...input, status: "active", retiredAt: boundAt },
+      },
+      {
+        capability: "knowledge.retire-source" as const,
+        value: { ...input, status: "retired", retiredAt: boundAt },
+      },
+      {
+        capability: "knowledge.retire-source" as const,
+        value: { ...input, status: "retired", retiredAt: "not-a-time", reason: "user-requested" },
+      },
+    ]) {
+      const invalidPort = createCapabilityPort(
+        bridge(async () => ({ ok: true, value }), [capability]),
+      );
+      const command =
+        capability === "knowledge.rebind-file"
+          ? { type: capability, input: rebindInput }
+          : capability === "knowledge.retire-source"
+            ? { type: capability, input: { ...input, confirmed: true } }
+            : { type: capability, input };
+      await expect(invalidPort.execute(command)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("requires approval and redacts candidate-knowledge URL intake results", async () => {
     const input = {
       storeId: "store-1",

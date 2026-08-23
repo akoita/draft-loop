@@ -3302,12 +3302,13 @@ describe("candidate knowledge native controls", () => {
     }
   });
 
-  it("checks and refreshes a remembered file origin without exposing its path", async () => {
+  it("refreshes, rebinds, and retires a file source without exposing its path", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-refresh-host-"));
     const storeRoot = join(parent, "candidate-knowledge");
     const sourcePath = join(parent, "private-resume.md");
+    const replacementPath = join(parent, "replacement-private-resume.md");
     await writeFile(sourcePath, "Initial private evidence.\n", "utf8");
-    const selectedKnowledgeFiles = [sourcePath];
+    const selectedKnowledgeFiles = [sourcePath, replacementPath, replacementPath];
     try {
       const host = createNativeHost({
         dialogs: {
@@ -3374,22 +3375,86 @@ describe("candidate knowledge native controls", () => {
         value: { ...input, status: "missing" },
       });
 
+      await expect(
+        host.invoke({ type: "knowledge.source-retirement-state", input }),
+      ).resolves.toEqual({ ok: true, value: { ...input, status: "active" } });
+      await writeFile(replacementPath, "Changed private evidence.\n", "utf8");
+      const rebound = await host.invoke({
+        type: "knowledge.rebind-file",
+        input: { ...input, selection: "native-dialog" },
+      });
+      expect(rebound).toMatchObject({
+        ok: true,
+        value: { ...input, status: "rebound", boundAt: expect.any(String) },
+      });
+      expect(JSON.stringify(rebound)).not.toContain(parent);
+      expect(JSON.stringify(rebound)).not.toContain("replacement-private-resume.md");
+      await expect(
+        host.invoke({ type: "knowledge.source-origin-status", input }),
+      ).resolves.toMatchObject({ ok: true, value: { ...input, status: "current" } });
+
+      await expect(
+        host.invoke({
+          type: "knowledge.retire-source",
+          input: { ...input, confirmed: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      const retired = await host.invoke({
+        type: "knowledge.retire-source",
+        input: { ...input, confirmed: true },
+      });
+      expect(retired).toMatchObject({
+        ok: true,
+        value: {
+          ...input,
+          status: "retired",
+          retiredAt: expect.any(String),
+          reason: "user-requested",
+        },
+      });
+      expect(JSON.stringify(retired)).not.toContain(parent);
+      expect(JSON.stringify(retired)).not.toContain("Changed private evidence");
+      await expect(
+        host.invoke({ type: "knowledge.source-retirement-state", input }),
+      ).resolves.toEqual(retired);
+      await expect(
+        host.invoke({
+          type: "knowledge.rebind-file",
+          input: { ...input, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
       const reopenedRoots = [storeRoot];
+      const reopenedRebindPicker = vi.fn(async () => replacementPath);
       const restarted = createNativeHost({
         dialogs: {
           chooseDirectory: async () => reopenedRoots.shift(),
           chooseFiles: async () => [],
+          chooseKnowledgeSourceFile: reopenedRebindPicker,
         },
       });
       await expect(
         restarted.invoke({ type: "knowledge.source-origin-status", input }),
       ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
       await expect(
+        restarted.invoke({
+          type: "knowledge.rebind-file",
+          input: { ...input, selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      expect(reopenedRebindPicker).not.toHaveBeenCalled();
+      await expect(
         restarted.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } }),
       ).resolves.toMatchObject({ ok: true, value: { storeId } });
       await expect(
         restarted.invoke({ type: "knowledge.source-origin-status", input }),
-      ).resolves.toMatchObject({ ok: true, value: { ...input, status: "missing" } });
+      ).resolves.toMatchObject({ ok: true, value: { ...input, status: "current" } });
+      await expect(
+        restarted.invoke({ type: "knowledge.source-retirement-state", input }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { ...input, status: "retired", reason: "user-requested" },
+      });
     } finally {
       await rm(parent, { recursive: true, force: true });
     }

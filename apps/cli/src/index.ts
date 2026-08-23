@@ -15,9 +15,11 @@ import {
   type ImportKnowledgeSourceDirectoryResult,
   type KnowledgeBaseLifecycleReadinessResult,
   type KnowledgeSourceDuplicateGroup,
+  type KnowledgeSourceOriginRebindResult,
   type KnowledgeSourceOriginRefreshResult,
   type KnowledgeSourceOriginStatusResult,
   type KnowledgeSourceRefreshStateResult,
+  type KnowledgeSourceRetirementResult,
   knowledgeService,
   runPilot,
   type StatusCommand,
@@ -433,6 +435,82 @@ function writeKnowledgeSourceOriginRefresh(
       checkedAt: result.checkedAt,
       status: result.status,
       ...(result.versionId === undefined ? {} : { versionId: result.versionId }),
+    }),
+  );
+}
+
+function writeKnowledgeSourceOriginRebind(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  result: KnowledgeSourceOriginRebindResult,
+  expectedSourceId: string,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.sourceId !== expectedSourceId ||
+    !["current", "rebound"].includes(result.status) ||
+    !isValidIsoTimestamp(result.boundAt)
+  ) {
+    throw new Error("The candidate knowledge source rebind result was invalid.");
+  }
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      sourceId: expectedSourceId,
+      status: result.status,
+      boundAt: result.boundAt,
+    }),
+  );
+}
+
+function writeKnowledgeSourceRetirement(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  result: KnowledgeSourceRetirementResult,
+  expectedSourceId: string,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.sourceId !== expectedSourceId ||
+    !["active", "retired"].includes(result.status)
+  ) {
+    throw new Error("The candidate knowledge source retirement result was invalid.");
+  }
+  const hasRetiredAt = Object.hasOwn(result, "retiredAt");
+  const hasReason = Object.hasOwn(result, "reason");
+  if (result.status === "active") {
+    if (hasRetiredAt || hasReason) {
+      throw new Error("The candidate knowledge source retirement result was invalid.");
+    }
+    writeJson(
+      io,
+      Object.freeze({
+        knowledgeBaseId,
+        sourceId: expectedSourceId,
+        status: result.status,
+      }),
+    );
+    return;
+  }
+  if (
+    !hasRetiredAt ||
+    !hasReason ||
+    !isValidIsoTimestamp(result.retiredAt) ||
+    result.reason !== "user-requested"
+  ) {
+    throw new Error("The candidate knowledge source retirement result was invalid.");
+  }
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      sourceId: expectedSourceId,
+      status: result.status,
+      retiredAt: result.retiredAt,
+      reason: result.reason,
     }),
   );
 }
@@ -960,6 +1038,69 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           approved: true,
         });
         writeKnowledgeSourceOriginRefresh(io, knowledgeBaseId, result, sourceId);
+      },
+    );
+
+  knowledgeSource
+    .command("rebind-file")
+    .description("Rebind one file source to an explicitly selected local path")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque file source id")
+    .argument("<source-path>", "local source file path")
+    .action(
+      async (storeRoot: string, knowledgeBaseId: string, sourceId: string, sourcePath: string) => {
+        const result = await candidateKnowledge.rebindKnowledgeSourceOrigin({
+          storeRoot,
+          knowledgeBaseId,
+          sourceId,
+          sourcePath,
+        });
+        writeKnowledgeSourceOriginRebind(io, knowledgeBaseId, result, sourceId);
+      },
+    );
+
+  knowledgeSource
+    .command("retirement-state")
+    .description("Read one path-free source retirement state")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque source id")
+    .action(async (storeRoot: string, knowledgeBaseId: string, sourceId: string) => {
+      const result = await candidateKnowledge.getKnowledgeSourceRetirement({
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+      });
+      writeKnowledgeSourceRetirement(io, knowledgeBaseId, result, sourceId);
+    });
+
+  knowledgeSource
+    .command("retire")
+    .description("Retire one source after explicit confirmation")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<source-id>", "opaque source id")
+    .option("--confirm", "confirm logical source retirement")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        sourceId: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.confirm !== true) {
+          throw new Error("knowledge source retire requires --confirm.");
+        }
+        const result = await candidateKnowledge.retireKnowledgeSource({
+          storeRoot,
+          knowledgeBaseId,
+          sourceId,
+        });
+        if (result.status !== "retired") {
+          throw new Error("The candidate knowledge source retirement result was invalid.");
+        }
+        writeKnowledgeSourceRetirement(io, knowledgeBaseId, result, sourceId);
       },
     );
 

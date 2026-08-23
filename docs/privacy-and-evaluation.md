@@ -62,6 +62,14 @@ results expose scan counts and capped opaque source/version identities only.
 Directory roots, filenames, membership hashes, labels, checksums, and content
 remain sensitive local state.
 
+File-origin rebind is local-only. The CLI accepts the replacement path for one
+invocation, while the desktop host owns the native picker. The application
+requires stable bytes exactly matching the current managed version before it
+updates the sensitive binding; generic results expose only opaque identity,
+status, and a timestamp. Retirement state is likewise path-free. Explicitly
+confirmed retirement is logical and idempotent: it blocks later mutation but
+does not delete bytes or metadata, and no reactivation control exists.
+
 Origin status and refresh-state results are content-free. They expose only
 opaque source/version identity, lifecycle status, and timestamps. Explicit file
 refresh reads the sensitive remembered local origin without returning it. URL
