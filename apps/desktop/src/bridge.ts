@@ -34,6 +34,9 @@ export const bridgeCapabilities = [
   "knowledge.source-refresh-state",
   "knowledge.refresh-file",
   "knowledge.refresh-url",
+  "knowledge.rebind-file",
+  "knowledge.source-retirement-state",
+  "knowledge.retire-source",
   "knowledge.select",
   "knowledge.create-base",
   "knowledge.rename-base",
@@ -281,6 +284,31 @@ const knowledgeSourceKeys = inputKeys<KnowledgeSourceInput>()([
 export type KnowledgeSourceOriginStatusInput = KnowledgeSourceInput;
 export type KnowledgeSourceRefreshStateInput = KnowledgeSourceInput;
 export type KnowledgeSourceFileRefreshInput = KnowledgeSourceInput;
+export type KnowledgeSourceRetirementStateInput = KnowledgeSourceInput;
+
+export interface KnowledgeSourceFileRebindInput extends KnowledgeSourceInput {
+  /** The native host owns the file picker; no filesystem path crosses this API. */
+  readonly selection: "native-dialog";
+}
+
+const knowledgeSourceFileRebindKeys = inputKeys<KnowledgeSourceFileRebindInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "selection",
+]);
+
+export interface KnowledgeSourceRetireInput extends KnowledgeSourceInput {
+  /** Logical retirement blocks later mutation and therefore requires confirmation. */
+  readonly confirmed: boolean;
+}
+
+const knowledgeSourceRetireKeys = inputKeys<KnowledgeSourceRetireInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "confirmed",
+]);
 
 export interface KnowledgeSourceUrlRefreshInput extends KnowledgeSourceInput {
   /** The renderer can only request a network refresh after the user confirms it. */
@@ -783,6 +811,23 @@ export interface KnowledgeSourceRefreshStateResult {
   readonly lastRefreshedVersionId?: string;
 }
 
+export interface KnowledgeSourceOriginRebindResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly status: "current" | "rebound";
+  readonly boundAt: string;
+}
+
+export interface KnowledgeSourceRetirementResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly status: "active" | "retired";
+  readonly retiredAt?: string;
+  readonly reason?: "user-requested";
+}
+
 export interface KnowledgeSelectionResult {
   readonly workspaceId: string;
   readonly entries: readonly KnowledgeSelectionEntry[];
@@ -907,6 +952,21 @@ const knowledgeSourceRefreshStateResultKeys = resultKeys<KnowledgeSourceRefreshS
   "observedVersionId",
   "lastRefreshedAt",
   "lastRefreshedVersionId",
+]);
+const knowledgeSourceOriginRebindResultKeys = resultKeys<KnowledgeSourceOriginRebindResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "status",
+  "boundAt",
+]);
+const knowledgeSourceRetirementResultKeys = resultKeys<KnowledgeSourceRetirementResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "status",
+  "retiredAt",
+  "reason",
 ]);
 const knowledgeSelectionResultKeys = resultKeys<KnowledgeSelectionResult>()([
   "workspaceId",
@@ -1147,6 +1207,9 @@ export interface BridgeCommandInputMap {
   "knowledge.source-refresh-state": KnowledgeSourceRefreshStateInput;
   "knowledge.refresh-file": KnowledgeSourceFileRefreshInput;
   "knowledge.refresh-url": KnowledgeSourceUrlRefreshInput;
+  "knowledge.rebind-file": KnowledgeSourceFileRebindInput;
+  "knowledge.source-retirement-state": KnowledgeSourceRetirementStateInput;
+  "knowledge.retire-source": KnowledgeSourceRetireInput;
   "knowledge.select": KnowledgeSelectionInput;
   "knowledge.create-base": KnowledgeBaseCreateInput;
   "knowledge.rename-base": KnowledgeBaseRenameInput;
@@ -1187,6 +1250,9 @@ export interface BridgeCommandOutputMap {
   "knowledge.source-refresh-state": KnowledgeSourceRefreshStateResult;
   "knowledge.refresh-file": KnowledgeSourceRefreshResult;
   "knowledge.refresh-url": KnowledgeSourceRefreshResult;
+  "knowledge.rebind-file": KnowledgeSourceOriginRebindResult;
+  "knowledge.source-retirement-state": KnowledgeSourceRetirementResult;
+  "knowledge.retire-source": KnowledgeSourceRetirementResult;
   "knowledge.select": KnowledgeSelectionResult;
   "knowledge.create-base": KnowledgeStoreResult;
   "knowledge.rename-base": KnowledgeStoreResult;
@@ -1740,6 +1806,30 @@ function validateKnowledgeSourceInput(value: unknown): KnowledgeSourceInput {
   };
 }
 
+function validateKnowledgeSourceFileRebindInput(value: unknown): KnowledgeSourceFileRebindInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeSourceFileRebindKeys) || input.selection !== "native-dialog") {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    sourceId: identifier(input.sourceId),
+    selection: "native-dialog",
+  };
+}
+
+function validateKnowledgeSourceRetireInput(value: unknown): KnowledgeSourceRetireInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeSourceRetireKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    sourceId: identifier(input.sourceId),
+    confirmed: booleanValue(input.confirmed),
+  };
+}
+
 function validateKnowledgeSourceUrlRefreshInput(value: unknown): KnowledgeSourceUrlRefreshInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeSourceUrlRefreshKeys) || input.approved !== true) {
@@ -2154,6 +2244,21 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.refresh-url",
         input: validateKnowledgeSourceUrlRefreshInput(command.input),
+      };
+    case "knowledge.rebind-file":
+      return {
+        type: "knowledge.rebind-file",
+        input: validateKnowledgeSourceFileRebindInput(command.input),
+      };
+    case "knowledge.source-retirement-state":
+      return {
+        type: "knowledge.source-retirement-state",
+        input: validateKnowledgeSourceInput(command.input),
+      };
+    case "knowledge.retire-source":
+      return {
+        type: "knowledge.retire-source",
+        input: validateKnowledgeSourceRetireInput(command.input),
       };
     case "knowledge.select":
       return { type: "knowledge.select", input: validateKnowledgeSelectionInput(command.input) };
@@ -2660,6 +2765,44 @@ function normalizeKnowledgeSourceRefreshStateResult(
   };
 }
 
+function normalizeKnowledgeSourceOriginRebindResult(
+  value: unknown,
+): KnowledgeSourceOriginRebindResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeSourceOriginRebindResultKeys)) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    sourceId: identifier(result.sourceId),
+    status: enumValue(result.status, ["current", "rebound"] as const),
+    boundAt: timestampValue(result.boundAt),
+  };
+}
+
+function normalizeKnowledgeSourceRetirementResult(value: unknown): KnowledgeSourceRetirementResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeSourceRetirementResultKeys)) return invalidInput();
+  const status = enumValue(result.status, ["active", "retired"] as const);
+  const retiredAt = result.retiredAt === undefined ? undefined : timestampValue(result.retiredAt);
+  const reason =
+    result.reason === undefined ? undefined : enumValue(result.reason, ["user-requested"] as const);
+  if (
+    (status === "retired") !== (retiredAt !== undefined) ||
+    (status === "retired") !== (reason !== undefined) ||
+    (status === "active" && (Object.hasOwn(result, "retiredAt") || Object.hasOwn(result, "reason")))
+  ) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    sourceId: identifier(result.sourceId),
+    status,
+    ...(retiredAt === undefined ? {} : { retiredAt }),
+    ...(reason === undefined ? {} : { reason }),
+  };
+}
+
 function normalizeKnowledgeSelectionResult(value: unknown): KnowledgeSelectionResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeSelectionResultKeys) || !Array.isArray(result.entries)) {
@@ -2955,6 +3098,11 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "knowledge.refresh-file":
     case "knowledge.refresh-url":
       return normalizeKnowledgeSourceRefreshResult(value);
+    case "knowledge.rebind-file":
+      return normalizeKnowledgeSourceOriginRebindResult(value);
+    case "knowledge.source-retirement-state":
+    case "knowledge.retire-source":
+      return normalizeKnowledgeSourceRetirementResult(value);
     case "knowledge.select":
       return normalizeKnowledgeSelectionResult(value);
     case "run.status":

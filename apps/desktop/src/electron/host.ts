@@ -60,9 +60,11 @@ import {
   type KnowledgeInventoryResult,
   type KnowledgeReadinessResult,
   type KnowledgeSelectionResult,
+  type KnowledgeSourceOriginRebindResult,
   type KnowledgeSourceOriginStatusResult,
   type KnowledgeSourceRefreshResult,
   type KnowledgeSourceRefreshStateResult,
+  type KnowledgeSourceRetirementResult,
   type KnowledgeSourcesResult,
   type KnowledgeStoreResult,
   type KnowledgeUrlImportResult,
@@ -2477,6 +2479,112 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             checkedAt: refreshed.checkedAt,
             status: refreshed.status,
             ...(refreshed.versionId === undefined ? {} : { versionId: refreshed.versionId }),
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.rebind-file": {
+          const chooseKnowledgeSourceFile = options.dialogs.chooseKnowledgeSourceFile;
+          if (chooseKnowledgeSourceFile === undefined) {
+            return fail(
+              "capability-unavailable",
+              "Candidate knowledge source rebind is unavailable in this host.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const sourcePath = await chooseKnowledgeSourceFile();
+          if (sourcePath === undefined) {
+            return fail("permission-denied", "Candidate knowledge source rebind was cancelled.");
+          }
+          const rebound = await knowledgeService.rebindKnowledgeSourceOrigin({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+            sourcePath: resolve(sourcePath),
+          });
+          if (
+            rebound.sourceId !== command.input.sourceId ||
+            (rebound.status !== "current" && rebound.status !== "rebound")
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge source rebind returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeSourceOriginRebindResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: rebound.sourceId,
+            status: rebound.status,
+            boundAt: rebound.boundAt,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.source-retirement-state": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const retirement = await knowledgeService.getKnowledgeSourceRetirement({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+          });
+          if (
+            retirement.sourceId !== command.input.sourceId ||
+            (retirement.status !== "active" && retirement.status !== "retired")
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge source retirement state returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeSourceRetirementResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: retirement.sourceId,
+            status: retirement.status,
+            ...(retirement.status === "retired"
+              ? { retiredAt: retirement.retiredAt, reason: retirement.reason }
+              : {}),
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.retire-source": {
+          if (!command.input.confirmed) {
+            return fail(
+              "permission-denied",
+              "Candidate knowledge source retirement requires confirmation.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const retirement = await knowledgeService.retireKnowledgeSource({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+          });
+          if (
+            retirement.sourceId !== command.input.sourceId ||
+            retirement.status !== "retired" ||
+            retirement.reason !== "user-requested"
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge source retirement returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeSourceRetirementResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: retirement.sourceId,
+            status: "retired",
+            retiredAt: retirement.retiredAt,
+            reason: "user-requested",
           };
           return { ok: true, value: result };
         }

@@ -16,9 +16,11 @@ import type {
   InitializeWorkspaceCommand,
   KnowledgeBaseLifecycleReadinessResult,
   KnowledgeSourceDuplicateGroup,
+  KnowledgeSourceOriginRebindResult,
   KnowledgeSourceOriginRefreshResult,
   KnowledgeSourceOriginStatusResult,
   KnowledgeSourceRefreshStateResult,
+  KnowledgeSourceRetirementResult,
   StatusCommand,
   WorkspaceDescriptor,
 } from "./workflow.js";
@@ -268,6 +270,31 @@ function knowledgeSourceOriginRefreshResult(
     status,
     ...(versionId === undefined ? {} : { versionId }),
   };
+}
+
+function knowledgeSourceOriginRebindResult(
+  status: KnowledgeSourceOriginRebindResult["status"] = "rebound",
+  sourceId = "source-refresh",
+): KnowledgeSourceOriginRebindResult {
+  return {
+    sourceId,
+    status,
+    boundAt: "2026-08-23T10:03:00.000Z",
+  };
+}
+
+function knowledgeSourceRetirementResult(
+  status: KnowledgeSourceRetirementResult["status"] = "retired",
+  sourceId = "source-refresh",
+): KnowledgeSourceRetirementResult {
+  return status === "active"
+    ? { sourceId, status }
+    : {
+        sourceId,
+        status,
+        retiredAt: "2026-08-23T10:04:00.000Z",
+        reason: "user-requested",
+      };
 }
 
 function knowledgeSourceRefreshStateResult(
@@ -1203,6 +1230,192 @@ describe("candidate knowledge source inspection CLI controls", () => {
     expect(dependencies.lines).toEqual([]);
   });
 
+  it("maps rebind and retirement controls with strict path-free status projections", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-lifecycle-store");
+    const knowledgeBaseId = "base-one";
+    const sourceId = "source-refresh";
+    const sourcePath = resolve("private-origin.md");
+    const rebindKnowledgeSourceOrigin = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceOriginRebindResult("current"))
+      .mockResolvedValueOnce({
+        ...knowledgeSourceOriginRebindResult("rebound"),
+        originPath: sourcePath,
+        displayName: "Private origin label",
+        checksum: "f".repeat(64),
+      } as unknown as KnowledgeSourceOriginRebindResult);
+    const getKnowledgeSourceRetirement = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceRetirementResult("active"))
+      .mockResolvedValueOnce({
+        ...knowledgeSourceRetirementResult("retired"),
+        originPath: sourcePath,
+        content: "private content",
+      } as unknown as KnowledgeSourceRetirementResult);
+    const retireKnowledgeSource = vi.fn(async () => knowledgeSourceRetirementResult("retired"));
+    const knowledgeService = {
+      rebindKnowledgeSourceOrigin,
+      getKnowledgeSourceRetirement,
+      retireKnowledgeSource,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    for (let index = 0; index < 2; index += 1) {
+      await cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "rebind-file",
+        storeRoot,
+        knowledgeBaseId,
+        sourceId,
+        sourcePath,
+      ]);
+    }
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "retirement-state",
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "retirement-state",
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "retire",
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      "--confirm",
+    ]);
+
+    expect(rebindKnowledgeSourceOrigin).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      sourcePath,
+    });
+    expect(rebindKnowledgeSourceOrigin).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+      sourcePath,
+    });
+    expect(getKnowledgeSourceRetirement).toHaveBeenCalledTimes(2);
+    expect(retireKnowledgeSource).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId,
+      sourceId,
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "current",
+        boundAt: "2026-08-23T10:03:00.000Z",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "rebound",
+        boundAt: "2026-08-23T10:03:00.000Z",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "active",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "retired",
+        retiredAt: "2026-08-23T10:04:00.000Z",
+        reason: "user-requested",
+      },
+      {
+        knowledgeBaseId,
+        sourceId,
+        status: "retired",
+        retiredAt: "2026-08-23T10:04:00.000Z",
+        reason: "user-requested",
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(sourcePath);
+    expect(output).not.toContain("Private origin label");
+    expect(output).not.toContain("private content");
+    expect(output).not.toContain("f".repeat(64));
+  });
+
+  it("requires retirement confirmation before invoking the retirement service", async () => {
+    const dependencies = harness();
+    const retireKnowledgeSource = vi.fn(async () => knowledgeSourceRetirementResult("active"));
+    const knowledgeService = {
+      retireKnowledgeSource,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "retire",
+        resolve("private-lifecycle-store"),
+        "base-one",
+        "source-refresh",
+      ]),
+    ).rejects.toThrow("knowledge source retire requires --confirm");
+    expect(retireKnowledgeSource).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "retire",
+        resolve("private-lifecycle-store"),
+        "base-one",
+        "source-refresh",
+        "--confirm",
+      ]),
+    ).rejects.toThrow("The candidate knowledge source retirement result was invalid.");
+    expect(retireKnowledgeSource).toHaveBeenCalledOnce();
+    expect(dependencies.lines).toEqual([]);
+  });
+
   it("maps origin status and every refresh-state status without exposing local details", async () => {
     const dependencies = harness();
     const storeRoot = resolve("private-refresh-store");
@@ -1708,6 +1921,108 @@ describe("candidate knowledge source inspection CLI controls", () => {
     await expect(cli.parseAsync(fileRefreshCommand)).rejects.toThrow(
       "The candidate knowledge source refresh result was invalid.",
     );
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("rejects malformed rebind and retirement results without emitting output", async () => {
+    const dependencies = harness();
+    const sourceId = "source-refresh";
+    const rebindKnowledgeSourceOrigin = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceOriginRebindResult("rebound", "other-source"))
+      .mockResolvedValueOnce({
+        ...knowledgeSourceOriginRebindResult("current"),
+        boundAt: "not-a-timestamp",
+      } as unknown as KnowledgeSourceOriginRebindResult)
+      .mockResolvedValueOnce({
+        ...knowledgeSourceOriginRebindResult("rebound"),
+        status: "invalid",
+      } as unknown as KnowledgeSourceOriginRebindResult);
+    const getKnowledgeSourceRetirement = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...knowledgeSourceRetirementResult("active"),
+        retiredAt: "2026-08-23T10:04:00.000Z",
+      } as unknown as KnowledgeSourceRetirementResult)
+      .mockResolvedValueOnce({
+        ...knowledgeSourceRetirementResult("retired"),
+        retiredAt: "not-a-timestamp",
+      } as unknown as KnowledgeSourceRetirementResult)
+      .mockResolvedValueOnce({
+        ...knowledgeSourceRetirementResult("retired"),
+        reason: "automatic",
+      } as unknown as KnowledgeSourceRetirementResult);
+    const knowledgeService = {
+      rebindKnowledgeSourceOrigin,
+      getKnowledgeSourceRetirement,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const rebindCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "rebind-file",
+      resolve("private-lifecycle-store"),
+      "base-one",
+      sourceId,
+      resolve("private-origin.md"),
+    ] as const;
+    const retirementCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "retirement-state",
+      resolve("private-lifecycle-store"),
+      "base-one",
+      sourceId,
+    ] as const;
+
+    for (let index = 0; index < 3; index += 1) {
+      await expect(cli.parseAsync(rebindCommand)).rejects.toThrow(
+        "The candidate knowledge source rebind result was invalid.",
+      );
+    }
+    for (let index = 0; index < 3; index += 1) {
+      await expect(cli.parseAsync(retirementCommand)).rejects.toThrow(
+        "The candidate knowledge source retirement result was invalid.",
+      );
+    }
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("propagates lifecycle service failures without adding CLI output", async () => {
+    const dependencies = harness();
+    const failure = new Error("source lifecycle failed");
+    const rebindKnowledgeSourceOrigin = vi.fn(async () => {
+      throw failure;
+    });
+    const knowledgeService = {
+      rebindKnowledgeSourceOrigin,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "rebind-file",
+        resolve("private-lifecycle-store"),
+        "base-one",
+        "source-refresh",
+        resolve("private-origin.md"),
+      ]),
+    ).rejects.toBe(failure);
     expect(dependencies.lines).toEqual([]);
   });
 

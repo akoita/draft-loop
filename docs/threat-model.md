@@ -56,13 +56,21 @@ exposed through the same bounded application contract: the CLI root is
 runtime-only, the desktop host owns the picker, and generic complete or partial
 results carry only scan counts and capped opaque source/version identities.
 Directory roots, filenames, membership hashes, and content remain local.
-Path-free status and refresh-state results omit origins and provenance. Explicit file refresh uses
-only the remembered origin; URL refresh requires fresh approval and preserves
+Path-free status and refresh-state results omit origins and provenance.
+Explicit file refresh uses only the remembered origin; URL refresh requires
+fresh approval and preserves
 the existing SSRF, redirect, time, size, and content limits. No application run
 retrieves CKB content yet, so the existing workspace evidence boundary remains
 authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
 [privacy policy](privacy-and-evaluation.md), and [architecture](architecture.md)
 for ownership and exact contracts.
+
+One-file origin rebind keeps the replacement path in runtime CLI input or the
+native desktop host and succeeds only for stable bytes exactly matching the
+current managed version. Generic results expose no origin or checksum.
+Path-free retirement inspection and explicitly confirmed retirement expose
+only logical state and time. Retirement is idempotent and preserves evidence;
+it is neither physical deletion nor reversible through a current adapter.
 
 Lifecycle actions are explicit and bounded. A root rebind performs one complete
 bounded scan, stable per-member verification, and a guarded all-member origin
@@ -124,7 +132,7 @@ tools, or job submission require a new threat-model review.
 | Workspace → model provider                    | Candidate context, prompts, drafts, and provider identity                         | Fingerprinted transmission preflight, fresh host-side checks, `DataExposurePolicy`, bounded scope, provider/model/endpoint visibility, budgets               | Provider retention and training behavior are external; cross-platform acceptance is incomplete                                |
 | Workspace → approved URL                      | URL, local network reachability, fetched bytes, and provenance                    | Explicit approval, HTTPS, literal/resolved-address checks, redirect/time/size/content limits, extraction, URL-free errors                                    | DNS rebinding, resolver/fetch races, tracking, malicious markup, and sensitive query strings remain risks                     |
 | Approved directory → CKB intake               | Files, paths, traversal reachability, and aggregate size                          | Real non-symlink root outside the store, canonical containment, deterministic bounded traversal, no child-symlink or special-entry opens, complete preflight | Same-user mutation races remain possible; counts disclose limited shape; later changes do not reconcile automatically         |
-| Local file/directory → portable CKB           | Plaintext bytes, source identity, origins, labels, checksums, and lifecycle state | Opaque no-replace managed copies, immutable versions, sensitive local bindings, path-free results, guarded root rebind and one-source move                   | Same-user processes and backups can read plaintext; move, retirement, deletion, backup, and retrieval lifecycle is incomplete |
+| Local file/directory → portable CKB           | Plaintext bytes, source identity, origins, labels, checksums, and lifecycle state | Opaque no-replace managed copies, immutable versions, sensitive local bindings, path-free results, guarded rebind, confirmed logical retirement             | Same-user processes and backups can read plaintext; directory reconciliation, reactivation, deletion, backup, and retrieval remain incomplete |
 | CKB filesystem → inventory/journal            | Unknown entries and ownership evidence                                            | Count-only inventory after normal validation; opaque append-only events; no cleanup token; no shape-based adoption                                           | Unjournaled or legacy entries remain unknown; inventory cannot authorize cleanup or repair                                    |
 | Application → local model endpoint            | Candidate data, credentials, and output                                           | Explicit adapter configuration and structured provider boundary; loopback policy for the `local` company                                                     | “Local” does not by itself prove identity, same-machine operation, or trustworthy retention                                   |
 | Application → installed user-session runtime  | Context, local files, provider session, and process environment                   | Empty temporary directory, tools/customizations/MCP/web disabled where supported, bounded IO, structured output, no OAuth extraction                         | Vendor runtime and subscription behavior can change; output ceilings are not fully enforceable                                |

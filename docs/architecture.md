@@ -249,8 +249,9 @@ version, observation, retirement, blob, journal, or baseline membership
 evidence. Root rebind and member move are implemented component/application
 contracts; they do not infer renames or reconcile all removals.
 
-Automatic move inference, physical deletion, adapter controls, indexing, and
-background refresh remain deferred under their owning roadmap issues.
+Automatic move inference, physical deletion, directory reconciliation adapters,
+indexing, and background refresh remain deferred under their owning roadmap
+issues.
 Historical membership is not rewritten by later source versions, explicit
 origin rebinds, retirement, or readiness projection.
 
@@ -415,6 +416,13 @@ picker. Both call the shared application contract and return complete or
 partial progress as scan counts plus capped opaque source/version identities;
 no root, filename, membership hash, label, checksum, or content crosses the
 generic result boundary.
+Single-file origin rebind accepts a runtime-only CLI path or a desktop-native
+file selection. The application requires stable bytes identical to the current
+managed version before replacing the sensitive origin binding; adapters return
+only opaque identity, `current` or `rebound`, and the binding timestamp.
+Path-free retirement inspection reports `active` or `retired`. Logical
+retirement requires explicit confirmation, is idempotent, preserves managed
+evidence, and has no reactivation operation.
 Live provider execution is opt-in and the provider boundary enforces the
 request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain

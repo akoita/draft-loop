@@ -127,6 +127,12 @@ pnpm --filter @draft-loop/cli start knowledge source refresh-file \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
 pnpm --filter @draft-loop/cli start knowledge source refresh-url \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID --approve
+pnpm --filter @draft-loop/cli start knowledge source rebind-file \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID ./relocated-career-history.md
+pnpm --filter @draft-loop/cli start knowledge source retirement-state \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
+pnpm --filter @draft-loop/cli start knowledge source retire \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID --confirm
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -155,7 +161,11 @@ as intake. Directory intake uses the same bounded application contract: CLI
 users choose a local directory path, while the desktop host owns a dedicated
 native directory picker. Complete and partial results report only scan counts
 and opaque source/version identities; roots, filenames, labels, hashes, and
-content remain local. Rebind, deletion, backup, and restore remain staged.
+content remain local. Exact-byte file-origin rebind uses runtime-only CLI input
+or the native desktop picker and returns only status plus the binding timestamp.
+Logical source retirement is idempotent, preserves evidence, and requires
+explicit confirmation; there is no reactivation control. Directory lifecycle,
+deletion, backup, and restore remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
