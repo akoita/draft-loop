@@ -32,7 +32,7 @@ while the question worth asking — "did the same weights write and review this?
 — is exactly as meaningful locally as it is for hosted models.
 
 `docs/roadmap.md` already states the principle and names cross-company as the
-*default mechanism*, not the property itself:
+_default mechanism_, not the property itself:
 
 > **Independent review**: provider and model identities are visible, and
 > cross-company diversity is the default.
@@ -99,10 +99,8 @@ The gate's strength now depends on labels the user controls. A user who wants to
 defeat it can, which is why the claim is recorded at the approval boundary rather
 than treated as proof.
 
-Override-rationale plumbing did not previously exist in the codebase. The README
-mentions "persisted override rationales"; nothing was implemented under that
-name, so this decision introduces it rather than wiring up something already
-built.
+Override-rationale plumbing did not previously exist in the codebase. This
+decision introduces it rather than wiring up an earlier implementation.
 
 ## Follow-up
 

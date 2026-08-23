@@ -1,25 +1,26 @@
 # Privacy and evaluation policy
 
 DraftLoop treats candidate material and confidential employer information as
-sensitive by default. The policy is intentionally conservative for the local
-MVP: source material, evidence, drafts, and run history stay on the user's
-machine unless the user explicitly approves a provider transmission.
+sensitive by default. The current roadmap stage is **Evidence-backed CV
+drafting**. This alpha is local-first: source material, evidence, drafts, and
+run history stay on the user's machine unless the user explicitly approves a
+provider transmission.
 
-## Data policy
+## Data classes and defaults
 
-| Data class                                                                                                             | Default location                                                                                                           | Provider transmission                                                                                                     | Retention default                                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Public                                                                                                                 | Local workspace                                                                                                            | Allowed only through an explicit request policy                                                                           | Until the user deletes it                                                                           |
-| Personal                                                                                                               | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                                                         | Until the user deletes it                                                                           |
-| Confidential employer                                                                                                  | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended                              | Until the user deletes it                                                                           |
-| Portable CKB metadata, local origin/directory bindings, hashed membership, managed-write journal, and raw source bytes | User-selected local plaintext store, separate from application workspaces and run history                                  | Not provider data; raw bytes, exact paths, directory hashes, journal, URLs, labels, and checksums must not be transmitted | Until the user removes the local store; complete deletion and secure erasure are not implemented    |
-| Secret embedded in candidate material                                                                                  | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                                                        | Do not retain                                                                                       |
-| Provider credential                                                                                                    | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                                                         | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
+| Data class                              | Default location                                                                                                      | Provider boundary                                                                                     | Retention default                                                                     |
+| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Public material                         | Local application workspace                                                                                           | Only through an explicit request policy                                                               | Until the user deletes it                                                             |
+| Personal material                       | Local application workspace                                                                                           | Explicit approval and provider allowlist required                                                     | Until the user deletes it                                                             |
+| Confidential employer material          | Local application workspace                                                                                           | Explicit approval, acknowledgement, and provider allowlist required; user redaction rules recommended | Until the user deletes it                                                             |
+| Portable CKB metadata and managed bytes | User-selected, separate local plaintext store                                                                         | Not provider data; paths, URLs, labels, checksums, membership, and journal data stay local            | Until the user removes the store; complete deletion is not implemented                |
+| Secrets embedded in candidate material  | Never place in application content or fixtures                                                                        | Prohibited                                                                                            | Do not retain                                                                         |
+| Provider credentials                    | OS credential store, desktop user-data store, SDK environment, or provider-managed local session; never the workspace | Used only to authenticate an explicitly approved request                                              | Until the user removes it, changes environment, ends the session, or deletes app data |
 
 The provider contract requires `allowTransmission`, an allowlisted provider
-company, and an acknowledgement when a request is sensitive. Provider identity,
-model identity, and requested retention are part of the visible run context. A
-requested ephemeral policy is a user preference, not independent proof of a
+company, and an acknowledgement for sensitive requests. Provider identity,
+model identity, endpoint, scope, budgets, and requested retention are visible in
+the run context. An ephemeral preference is a user choice, not proof of a
 provider's retention behavior.
 
 The default retention object exported by `@draft-loop/security` is:
@@ -30,355 +31,187 @@ run history: until deleted
 provider retention: not allowed unless explicitly configured
 ```
 
-The portable CKB store component persists its schema version, logical UUID,
-creation time, CKB lifecycle metadata, stable CKB-scoped source identities, and
-immutable ordered source-version metadata. A source records file/URL kind and a
-local user-visible label; a version records SHA-256, media type, byte size, and
-timestamp. For explicitly approved local regular files, it can also retain the
-exact raw bytes under opaque names derived only from generated IDs. An explicit
-application operation may approve one local file as a manual new version of an
-existing file source. Initial intake and every append enforce the 20 MiB limit,
-the five supported media types—plain text, Markdown, HTML, PDF, and DOCX—plus
-successful extraction, stable-file checks, and verified managed copy. Changed
-bytes create ordered parent-linked version N+1. Bytes identical to the current
-version return a no-op, persist no new timestamp, and provide no freshness or
-last-refresh evidence.
+## Local Candidate Knowledge Base handling
 
-An explicitly approved local directory can be used as a bounded recursive
-intake convenience selector. The complete traversal and extraction preflight
-finishes before managed writes begin; depth, scanned entries, accepted files,
-aggregate accepted bytes, and the existing 20 MiB per-file limit are enforced.
-The root must be a real non-symlink directory outside the CKB store. Traversal
-uses canonical containment and deterministic lexical relative-path order; child
-symlinks, special entries, dot-prefixed entries/subtrees, and unsupported files
-are skipped and counted. Each accepted file becomes an independent ordinary
-`file` source with its own origin binding. A complete import also records the
-canonical directory root and immutable membership hashes only in sensitive
-local SQLite state; partial and legacy runtime-only imports have no membership
-evidence. There is no directory source kind; complete directory reconciliation
-and membership lifecycle are not implemented. Membership is a stable historical
-mapping captured at binding or explicit append time: later source version
-appends, explicit origin rebinding, or source retirement do not rewrite it.
-Actual incremental directory scan reconciliation remains deferred.
-A local explicit bounded refresh preview can report only path-free `current`,
-`changed`, `missing`, `retired`, and `origin-conflict` states plus an aggregate
-count of unmatched accepted files. It writes no source, version, membership,
-observation, or lifecycle state; scan-level unreadable, unstable, limit, and
-extraction failures fail closed rather than becoming per-member statuses.
-A separate explicit bounded observation scan reuses that complete traversal and
-atomically persists only eligible active `current`, `changed`, and same-member
-`missing` observations. Its result remains path-free and includes the aggregate
-new-file count plus the number recorded; conflicted, retired, and new files are
-reported but skipped. This is evidence of one user-invoked scan, not an applied
-changed-byte refresh. A separate explicit bounded add-members operation can
-append each unmatched accepted file as a new managed source and immutable
-member in lexical path order, committing one candidate at a time and returning
-only path-free added source IDs. It creates no refresh observation for new
-members. The explicit bounded applied operation appends
-changed bytes only for active same-member files in source-ID order and records
-current observations for successful changed, current, and same-member-missing
-entries. Complete removal reconciliation, automatic retirement/deletion,
-adapters, indexing, and background refresh remain deferred; explicit root rebind
-has its own bounded application command and does not revise membership;
-a later member failure returns a path-free partial result after earlier member
-commits. An explicit approved directory-member retirement operation can mark one
-fresh-scan `missing` same-member source as logically removed with the existing
-`user-requested` marker; it does not delete bytes, versions, bindings,
-observations, journal state, or immutable membership. Already retired members
-return an `already-removed` result without a write.
+The portable Candidate Knowledge Base (CKB) is a separate local component. It
+stores a logical CKB identity, source identity, immutable source versions, and
+approved managed bytes. The current CLI and desktop application-run flow does
+not select CKB content for provider requests; the existing workspace evidence
+boundary remains authoritative. [ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
+defines the storage contract. The [threat model](threat-model.md) records the
+security risks and residual limitations.
 
-The v14 storage foundation adds append-only sensitive directory-root revisions.
-Existing v13 bindings are backfilled as revision 1, every historical root is
-reserved within its CKB, and current-root reads use the max-revision projection.
-The verified storage/handle rebind transaction updates only sensitive origin
-bindings and the next root revision after checking every member; it preserves
-source, version, blob, observation, retirement, journal, and hashed-membership
-evidence. The application rebind command performs one complete bounded scan,
-stable per-member final verification, and one guarded all-member commit (or a
-same-root no-op), returning only path-free status and counts. Rename, removal,
-reconciliation, and broader membership lifecycle decisions remain deferred.
+### Managed bytes and immutable versions
 
-The v15 storage/handle foundation adds append-only sensitive directory-member
-revisions and a current-member projection without changing immutable v13 rows.
-Existing members backfill as revision 1 using the later of immutable binding time
-and source creation time. Historical relative-path hashes remain owned by their
-original source; a source may later return to one of its own historical hashes,
-but another source cannot claim it. A verified handle move updates one origin
-and appends one revision atomically, or returns a guarded no-op, while preserving
-all source, version, observation, retirement, blob, and journal evidence. The
-application move command remains deferred with #135/#136, automatic inference,
-physical deletion, adapters, indexing, and background refresh.
+Intake and manual append require explicit approval for one local regular file,
+successful extraction, stable-file checks, supported media type, a 20 MiB
+per-file limit, and verified managed copying. Supported types are plain text,
+Markdown, HTML, PDF, and DOCX. Managed raw bytes use opaque names derived from
+generated IDs. Changed bytes create an ordered parent-linked immutable version;
+bytes equal to the current version are a no-op and do not establish freshness.
 
-One explicitly approved HTTPS URL can also become an initial managed CKB
-source. The existing controlled URL ingestion boundary validates public address
-resolution and every redirect, bounds time and response/text size, restricts
-content types, and requires usable extracted text before persistence. The store
-retains the exact fetched response bytes under opaque ID-derived names so its
-version checksum and byte size remain truthful. Approved original/final URLs,
-fetch time, and bounded URL kind are sensitive immutable local provenance for
-that version; they are excluded from generic manifests, journals, inventory,
-diagnostics, errors, and provider requests. Query strings may contain secrets or
-personal identifiers, so no URL is copied into a failure message.
+Publication is file-first and database-second, with no-replace targets. A crash
+or concurrent writer can still leave an unreferenced opaque entry. Structural
+inventory is count-only and never treats a filename, byte match, or staging
+shape as ownership evidence. The prospective managed-write journal does not
+retroactively claim legacy entries and is not a cleanup token. Unknown entries
+remain unknown until a future, explicitly approved reconciliation design.
 
-Each explicit URL refresh requires a new approval and re-fetches only the
-sensitive stored original URL after active-CKB, source-kind, provenance, and
-retirement preflight checks. Changed exact bytes create a parent-linked version
-with immutable provenance for that fetch. Identical bytes are current and create
-no version or provenance row even if the final redirect changed. A fetch or
-extraction failure after valid preflight persists only a URL-free
-`inaccessible` observation; rejected approval or preflight writes nothing.
-These observations are local evidence of an explicit attempt, not a freshness
-TTL. Redirect history, conditional requests, adapter controls, indexing, and
-transmission remain unimplemented.
+### Sensitive origins, URLs, labels, and paths
 
-An explicit local application query can perform a bounded structural inventory
-of `sources/` after normal validation of every referenced managed blob. It
-returns only counts for verified managed files, scanned entries, staging-shaped
-root files, other opaque root files/directories, extra entries inside expected
-managed-source directories, symlinks, and special/other entries, together with
-complete/scan-limit status. It returns no names, paths, IDs, labels, checksums,
-or content. It does not follow unknown symlinks, recurse into unknown
-directories, read unknown file bytes, mutate storage, or run automatically.
-This is a local state query, not provider data or content-diagnostic automation.
+Host paths are not logical identity. Exact file origins, selected directory
+roots, URL provenance, and normalized relative-path hashes are sensitive local
+state excluded from generic manifests, provider requests, content-free
+diagnostics, inventory results, errors, and generic audit records. Source labels
+and checksums are local CKB metadata, but they are also excluded from provider
+and content-free surfaces because labels can reveal candidate information and
+checksums can correlate known content. URL failures never echo query strings.
 
-SQLite migration version 7 adds an internal, append-only ownership journal for
-new managed creates and appends. It records opaque intent before staging,
-resolved-target selection before publication, publication and atomic
-managed-marker/database-commit events, and completion only after staging cleanup. New staging names are opaque
-operation-derived hashes. The journal contains no origin path, filename, label,
-checksum, source content, provider data, diagnostic projection, cleanup token,
-or approval. Journal identifiers remain internal and are excluded from the
-application result and count-only inventory.
+The CKB SQLite file and managed raw blobs are plaintext. Restrictive local
+permissions are applied where supported, but they are best-effort and do not
+protect against another process running as the same user. Files named like
+`AGENTS.md`, `.env`, or other configuration-like files remain inert,
+untrusted candidate data. Their names and contents cannot become application
+instructions, executable configuration, provider policy, or permissions.
 
-The initial managed import remembers the canonical physical origin path in
-sensitive local-only SQLite state; a later selected append path never replaces
-it, including for an identical no-op. This binding is copied with the SQLite
-database but is not portable continuity, becomes stale when the store moves
-machines or the origin moves/disappears, is not automatically updated, and is
-never provider-facing. An explicit local application operation can classify one
-source as unbound, current, changed, missing, or inaccessible. Its immutable
-result contains source identity and observation time but no path, checksum,
-media type, size, label, or content; the observation is not persisted and
-current is not a freshness claim. Exact host paths remain excluded from
-the manifest, descriptor, journal, inventory, diagnostics, application
-serialization, provider requests, filename provenance, filename-derived
-physical names, and URLs. A separate explicit local operation may refresh from
-the remembered binding after the same no-follow, size, extraction, and
-latest-version checks. Only changed bytes are passed through stable capture and
-managed copy as a new immutable version; other statuses create no version. The
-result contains no path or observed metadata/content, the binding is unchanged,
-and a path-free last observation is persisted against the exact source version
-examined. A changed-byte success also records the new version and refresh time;
-the state exposes only bounded status, source/version identities, and
-timestamps. It is not transmitted to providers and is not proof that an origin
-remains unchanged. A later version advance derives `stale` until the next
-explicit refresh. A separate explicit rebind
-accepts one user-selected file, repeats ingestion and stable no-follow capture,
-and replaces the sensitive local binding only when media type, checksum, and
-size exactly match the latest managed version. It creates no version, blob, or
-journal event, returns no path or integrity metadata, and deletes the superseded
-path from current local state rather than retaining path history or mutating
-refresh-observation state. Changed moved
-content must first be appended explicitly. A complete bounded directory intake
-now persists its canonical selected root and immutable membership only in
-sensitive local SQLite state: each member stores a SHA-256 hash of its
-normalized relative path, while each accepted file retains its existing
-canonical origin binding. Partial and legacy runtime-only imports have no
-directory membership evidence. The store has a read-only explicit bounded
-directory refresh preview, an explicit add-members operation, and an applied
-operation limited to existing active same-member changed files. A separate
-read-only directory-root-rebind eligibility preview rescans one candidate root,
-requires exact historical membership and latest-byte matches, and returns only
-path-free readiness and scan counts without changing the binding. The explicit
-application operation reuses that scan and atomically applies the guarded root
-revision/origin update or current-root no-op. Add-members
-persists only unmatched accepted files as append-only new members; complete
-removal reconciliation, automatic retirement/deletion, background
-refresh, time-based freshness policy, moved-origin
-discovery, automatic duplicate resolution, normalized facts, or retrieval
-indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
-version integrity metadata and returns source/version IDs without checksums,
-labels, paths, URLs, content, or a derived group identifier. It is a current
-possible-duplicate signal, not ownership proof or merge/deletion authority.
-A separate moved-candidate preview returns only source IDs for unique one-to-one
-exact media-type/checksum/size matches between same-member missing sources and
-unmatched accepted files. It omits ambiguous matches, does not use names,
-ordering, text, or path similarity, preserves the aggregate new-file count, and
-does not apply a rename or revise membership.
-A separate explicit logical-retirement operation persists only source identity,
-the bounded reason `user-requested`, and retirement time. It blocks subsequent
-source mutations but preserves the managed bytes, immutable versions, origin
-binding, refresh observation, and journal evidence. Retirement is therefore
-not deletion or secure erasure, does not remove derived indexes or backups, and
-must not be presented as such. No reactivation operation is currently exposed.
-Source identity and label do not change when a later selected path or
-basename differs.
-Application workspaces continue to own their current evidence and run history,
-and no CKB data is provider data.
+### Explicit directory and source lifecycle actions
 
-The store path and selected intake paths are host configuration. A complete
-directory import retains the selected canonical root and accepted files' exact
-origin bindings only in sensitive local SQLite tables; plaintext relative
-paths are not persisted as membership, and none of these paths enter portable
-records, provider requests, content-free audit data, or diagnostics. Source
-labels may themselves reveal candidate information, and a
-checksum can correlate a record with known content. They are appropriate for a
-local user-facing CKB view, not a content-free diagnostic projection. Files with
-names such as `AGENTS.md`, `.env`, or other configuration-like names remain
-inert, untrusted candidate data during initial intake and version append; their
-names or contents cannot become application instructions, executable
-configuration, provider policy, or permissions. This remains true for files
-selected through bounded directory intake.
+An approved directory is only a bounded convenience selector, not a live
+directory source. The selected root must be a real non-symlink directory outside
+the CKB store. Traversal uses canonical containment and deterministic lexical
+order, with limits on depth, scanned entries, accepted files, aggregate bytes,
+and per-file size. Child symlinks, special entries, dot-prefixed entries and
+subtrees, and unsupported files are skipped without opening them. Extraction
+preflight completes before managed writes begin.
 
-The CKB SQLite file and managed raw blobs are plaintext. DraftLoop applies
-restrictive permissions where supported, but permissions are best-effort and
-are not encryption or a defense against another process running as the same
-user. Users remain responsible for the privacy properties of the selected
-directory, filesystem, device or cloud backups, and copies made outside
-DraftLoop.
+A complete import stores the canonical root and immutable membership hashes in
+sensitive local tables; partial and legacy runtime-only imports have no
+directory binding. Membership is historical evidence captured at binding or
+explicit add time. Later version append, origin rebind, or retirement does not
+rewrite it. A path-free preview can report bounded member states and unmatched
+files without writing. Explicit add-members appends unmatched accepted files;
+applied directory refresh handles only existing active same-member changed
+files. Automatic rename inference, full reconciliation, background refresh,
+and automatic deletion remain deferred.
 
-Managed publication is no-replace, file first, and database second. Storage
-migration version 6 marks source versions that require verified managed bytes.
-Ordinary failures clean up their files, while a crash or concurrent loser can
-leave unreferenced opaque entries. Their names and layout provide no
-authenticated evidence that DraftLoop owns or abandoned them. Inventory must
-therefore not delete, adopt, quarantine, repair, or assign ownership. Safe
-cleanup requires prospective journal evidence, coordination with active
-writers, and explicit approval; unjournaled entries remain unknown. Version 7
-supplies that prospective evidence for new writes, but it does not retroactively
-claim legacy version-6 writes or authorize cleanup. Inventory also does not
-repair missing or corrupt referenced blobs, which continue to fail normal store
-validation.
+Root rebind is a separate explicit operation. It performs one complete bounded
+scan, stable per-member final verification, and one guarded all-member origin
+commit or same-root no-op; it does not revise membership.
 
-The journal is not a cleanup token, approval record, provider-facing field, or
-diagnostic projection. It does not delete, adopt, quarantine, repair,
-reconcile, automatically scan, or coordinate concurrent writers through locks
-or leases. Safe future cleanup still requires writer coordination and explicit
-visible approval. Same-current-byte managed appends record a terminal,
-non-owning no-op.
-Metadata-only versions may be explicitly materialized under the managed-copy
-checks, but matching bytes or shape never authorize adoption of a pre-existing
-unowned target.
+The bounded moved-candidate evidence compares exact media type, checksum, and
+size for eligible same-member missing sources and unmatched accepted files.
+It omits ambiguous matches and does not infer ownership from names, ordering,
+text, or path similarity. The implemented one-source application command
+accepts only the selected source identity, derives a unique target from one
+bounded local scan, and retains that target path only in runtime memory. It
+uses the same guarded local handle for the move and an already-current no-op,
+and maps failures to a path-free error. The store persists only the sensitive
+origin binding and append-only member revision; its public result exposes no
+path, filename, checksum, content, integrity tuple, or version identity. Full
+automatic inference and reconciliation remain deferred.
 
-The application must show the data class, provider, model, and retention choice
-before the first request containing source or draft material. A denied policy
-must fail before the SDK call.
+An explicit retirement action can logically retire one approved fresh-scan
+missing member with the bounded reason `user-requested`. It does not delete
+bytes, versions, bindings, observations, journal state, indexes, backups, or
+membership. Retirement is not secure erasure, and no reactivation operation is
+currently exposed.
 
-The desktop host computes a canonical provider-transmission preflight from the
-current workspace configuration. It shows the Anthropic and OpenAI company,
-model, and API endpoint identities; the requested ephemeral retention policy;
-round, cost, and duration limits; and the exact allowed categories: job
-description and requirements, a candidate source manifest, selected
-candidate-source excerpts, and the current draft and structured findings. The
-complete candidate corpus is explicitly excluded. A SHA-256 fingerprint binds acknowledgement to
-that projection, so a provider, model, endpoint, retention, scope, or budget
-change requires acknowledgement again.
+An approved HTTPS URL is subject to public-address and redirect validation,
+time, response, text-size, content-type, and extraction limits. Exact fetched
+bytes and original/final URL provenance remain sensitive local state. A new
+approval is required for refresh; changed bytes append a version, identical
+bytes are current, and an approved fetch or extraction failure records only a
+URL-free `inaccessible` observation. Redirect history, conditional requests,
+automatic refresh, and provider transmission remain out of scope.
 
-For live workspaces, the main process stores only the fingerprint, timestamp,
-and policy projection in
-`.draft-loop/provider-transmission-acknowledgement.json`. It reloads the
-workspace descriptor and this metadata before every provider-transmitting
-start, resume, or revision and fails closed when either is invalid or stale.
-The metadata contains no candidate content or credentials, and the
-acknowledgement is visible in review event history. Demo workspaces remain
-local-only and require no acknowledgement.
+## Credentials and provider approval
 
-In the packaged desktop, a key entered in the renderer crosses the allowlisted
-native bridge once and is persisted by the main process. The host prefers
-Electron `safeStorage`; when unavailable it uses local AES-256-GCM ciphertext
-and a separate local key protected by user file permissions. That fallback is
-not equivalent to an operating-system secret store. Credentials must not enter
-workspace history, backups, diagnostic exports, or provider request content.
-See [ADR 0004](adr/0004-desktop-credential-boundary.md).
+Before the first request containing source or draft material, the application
+must show the data class, provider, model, endpoint, allowed context, and
+retention choice. A denied or stale policy fails before the SDK call. The
+desktop host fingerprints this projection, stores only the fingerprint,
+timestamp, and safe policy metadata, and reloads current workspace
+configuration before every provider-transmitting start, resume, or revision.
+The complete candidate corpus is excluded from the approved context.
 
-Experimental local user-session mode delegates a complete structured request
-to an installed Codex or Claude runtime. DraftLoop does not extract or persist
-those runtimes' OAuth credentials. The runtime and authentication mode are part
-of the approved endpoint identity, and their retention preference is shown as
-provider-default rather than API-style ephemeral retention. Tools, repository
-instructions, extensions, MCP servers, web search, and local session
-persistence are disabled where supported; an observed tool event fails the
-request. See [ADR 0006](adr/0006-provider-authentication-modes.md).
+In the packaged desktop, a key crosses the allowlisted native bridge once and
+is persisted by the Electron main process. The host prefers `safeStorage`; when
+unavailable it uses local AES-256-GCM ciphertext and a separate local key
+protected by file permissions. The fallback is not equivalent to an OS-backed
+secret store. Credentials never enter workspace history, backups, diagnostics,
+or provider content. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
+
+Experimental local user-session mode delegates a structured request to an
+installed Codex or Claude runtime without extracting or persisting its OAuth
+credentials. The runtime, authentication mode, and provider-default retention
+are visible in the approved endpoint identity. Tools, repository instructions,
+extensions, MCP servers, web search, and local session persistence are disabled
+where supported; an observed tool event fails the request. See
+[ADR 0006](adr/0006-provider-authentication-modes.md).
+
+## Retention, deletion, and backups
 
 Workspace backup, restore, retention purge, and diagnostic export are explicit
-local operations. Purging the primary history does not prove deletion of copies
-the user made through backups or exports; the product must disclose that scope
-and keep diagnostic output content-free. Those existing operations apply to
-application workspaces; they do not yet export, restore, or delete the separate
-portable CKB store. Deleting the selected original or an application workspace
-does not delete the managed CKB copy. A SQLite-only backup is not a complete CKB
-backup because it omits managed raw blobs. Complete deletion across raw,
-unknown, derived, backed-up, and exported data and CKB backup/export/restore
-remain future privacy boundaries and must not be implied by managed-file intake,
-bounded directory intake, or manual version append. Repair, lock/lease writer coordination, cleanup and
-approval UI, app/run CKB selection, indexing and retrieval, CLI or desktop
-controls, and origin lifecycle reporting are likewise not integrated.
+local operations. Purging primary history does not prove deletion of copies in
+backups or exports, and diagnostics remain content-free. These operations do
+not yet export, restore, or delete the separate portable CKB store. Deleting an
+original file or application workspace does not delete its managed CKB copy; a
+SQLite-only backup is incomplete because it omits managed raw blobs.
+
+Complete deletion across raw, unknown, derived, backed-up, and exported data is
+not implemented. CKB backup/export/restore, retrieval-index cleanup, app/run
+CKB selection, and repair or reconciliation of missing blobs remain future
+privacy boundaries. Users remain responsible for selected directories,
+filesystems, devices, cloud backups, and copies made outside DraftLoop.
 
 ## Redaction and logging
 
 Credential-shaped values are redacted by the deterministic rules in
-`packages/security/src/index.ts`. The rules cover common private keys, bearer
-tokens, provider key prefixes, and credential assignments. Confidential
-employer names and project terms are not reliably detectable; a user or
-deployment must supply explicit rules for those terms.
+`packages/security/src/index.ts`, including common private keys, bearer tokens,
+provider key prefixes, and credential assignments. Confidential employer terms
+are not reliably detectable; users or deployments must provide explicit rules
+for those terms.
 
-Operational events are an allowlist, not a general-purpose message logger.
-Events may contain bounded identifiers, provider/model identity, status,
-durations, usage, cost, and error codes. They always include
-`contentRedacted: true`. Unknown fields such as `prompt`, `response`, `source`,
-`document`, and arbitrary messages are dropped. Raw source, prompts, model
-responses, credentials, and hidden chain-of-thought must not be written to
-logs, audit records, test fixtures, or error messages.
+Operational events are allowlisted and always carry `contentRedacted: true`.
+They may contain bounded identifiers, provider/model identity, status, duration,
+usage, cost, safe error codes, retry classification, and a separately supplied
+provider request identifier. Prompts, responses, source content, credentials,
+confidential terms, and hidden chain-of-thought must not enter logs, audit
+records, fixtures, or error messages. Provider failures persist only generic
+safe explanations.
 
-Provider failures persist only a generic explanation plus safe code, provider,
-model, workflow step, bounded attempt count, retry classification, and a provider
-request identifier when supplied separately by the SDK. Provider response bodies
-and exception messages are never copied into run history or the desktop view.
-
-Packaged credential acceptance uses random, process-only synthetic canaries.
-Sanitized evidence records platform metadata, the non-secret protection label,
-boolean lifecycle results, and named leak checks; it does not contain canaries,
-credentials, provider traffic, workspace data, or raw process output.
-
-Structured evidence excerpts and user-visible rationale are product data, not
-operational logs. They remain subject to local retention and the explicit
-provider policy.
+Packaged credential checks use random process-only synthetic canaries. Sanitized
+evidence records platform metadata, a non-secret protection label, booleans, and
+named leak checks; it contains no canaries, credentials, provider traffic,
+workspace data, or raw process output. Evidence excerpts and user-visible
+rationale are product data and remain subject to local retention and provider
+policy.
 
 ## Evaluation harness
 
-The evaluation harness in `packages/evaluations` runs the same deterministic
-readiness rubric over three variants:
+`packages/evaluations` applies the same deterministic readiness rubric to three
+variants: `first-draft`, `revised-draft` after the author–critic loop, and
+`manual-baseline`. It reports each dimension, readiness status, user-effort
+deltas, and revised-versus-baseline comparisons. The CI gate is first-to-
+revised: configured tolerances must not allow a revised draft to regress a
+dimension. The manual baseline is a comparison reference, not automatic truth.
 
-1. `first-draft`, the initial generated artifact;
-2. `revised-draft`, the artifact after the author–critic loop;
-3. `manual-baseline`, the human-produced reference artifact.
+For a consented real-application outcome, the harness may record only a private,
+content-free result: approval/export completion, round count, provider cost,
+user confidence, misleading-evidence observations, prompt-injection
+observations, critical-requirement coverage, and unsupported-claim counts. A
+synthetic fixture or incomplete outcome is indeterminate evidence; follow the
+[consented outcome pilot protocol](pilot-protocol.md).
 
-The harness reports every readiness dimension, readiness status, structured
-user-effort deltas, and revised-versus-baseline comparisons. The CI gate is
-first-to-revised: a revised draft must not regress a dimension or readiness
-under the configured tolerance. The manual baseline is a comparison reference,
-not an automatically declared ground truth.
-
-For the real-application gate, the harness can require a private reporting
-scope and a content-free outcome record containing approval/export completion,
-rounds, provider cost, user confidence, and bounded misleading-evidence and
-prompt-injection observations. It also reports deterministic critical-
-requirement coverage and unsupported-claim counts without copying source text.
-Follow the [consented outcome pilot protocol](pilot-protocol.md); a synthetic
-fixture or an incomplete outcome remains indeterminate evidence.
-
-Fixtures must be synthetic and must not contain real candidate documents,
-provider responses, credentials, employer secrets, or hidden reasoning. A
-quality regression raises `EvaluationRegressionError`; security and quality
-regressions are therefore deterministic test failures rather than review-only
-warnings.
-
-Evaluation scores are signals, not truth proofs. Evidence references,
-deterministic validation, explicit disagreements, and human approval remain
-required even when the revised artifact passes the rubric.
+Fixtures must be synthetic and contain no real candidate documents, provider
+responses, credentials, employer secrets, or hidden reasoning. A quality
+regression raises `EvaluationRegressionError`, making security and quality
+regressions deterministic test failures. Evaluation scores are signals, not
+fact verification; source references, deterministic validation, explicit
+disagreements, and human approval remain required.
 
 ## Approval boundary
 
-DraftLoop can prepare a local artifact, but it must not submit an application,
-send a message, publish a document, or perform uncontrolled web research without
-an explicit user action and a visible approval boundary.
+DraftLoop prepares local artifacts. It must not submit an application, send a
+message, publish a document, or perform uncontrolled web research without an
+explicit user action and a visible approval boundary.

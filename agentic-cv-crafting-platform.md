@@ -1,6 +1,11 @@
 # Agentic CV Crafting Platform
 
-*Product concept — starting wedge: job-specific CV creation*
+_Product concept — starting wedge: job-specific CV creation_
+
+> **Historical concept:** This document records the project's initial product
+> thesis. It is not a description of current behavior. See the
+> [README](README.md), [roadmap](docs/roadmap.md), and
+> [architecture](docs/architecture.md) for the current product and its limits.
 
 ## The idea in one sentence
 
@@ -96,7 +101,9 @@ The first version should focus on one excellent workflow: producing a trustworth
 - Configure model providers, agent roles, instructions, language, and output constraints, with Anthropic and OpenAI as the default cross-company pair.
 - Run an author–critic loop with two model adapters.
 - Require structured critique categories and explicit severity levels.
-- Track every round, prompt context, response, decision, and revision.
+- Track each round through bounded model identities, findings, decisions,
+  evidence links, and revisions. Do not retain raw prompts, responses, or hidden
+  reasoning as audit data.
 - Link important CV claims back to source evidence.
 - Show a side-by-side diff between revisions.
 - Highlight unresolved disagreements and unsupported claims.
@@ -116,15 +123,15 @@ The first version should focus on one excellent workflow: producing a trustworth
 
 The product needs an explicit definition of “ready.” A possible rubric is:
 
-| Dimension | Key question |
-| --- | --- |
-| Relevance | Does the CV clearly match the role's most important requirements? |
-| Evidence | Can each important claim be supported by the candidate's source material? |
-| Accuracy | Are dates, titles, technologies, outcomes, and responsibilities correct? |
+| Dimension       | Key question                                                                       |
+| --------------- | ---------------------------------------------------------------------------------- |
+| Relevance       | Does the CV clearly match the role's most important requirements?                  |
+| Evidence        | Can each important claim be supported by the candidate's source material?          |
+| Accuracy        | Are dates, titles, technologies, outcomes, and responsibilities correct?           |
 | Differentiation | Does the CV communicate the candidate's strongest and most distinctive advantages? |
-| Clarity | Can a recruiter understand the candidate's value quickly? |
-| Format | Does the document satisfy length, language, layout, and ATS constraints? |
-| Credibility | Does it avoid inflated, generic, or suspiciously keyword-stuffed claims? |
+| Clarity         | Can a recruiter understand the candidate's value quickly?                          |
+| Format          | Does the document satisfy length, language, layout, and ATS constraints?           |
+| Credibility     | Does it avoid inflated, generic, or suspiciously keyword-stuffed claims?           |
 
 The system should stop on more than a vague “the agents agree.” It should consider:
 
@@ -161,7 +168,9 @@ The reusable abstraction is:
 3. **Critique before rewrite.** Review findings must be explicit and actionable before a new draft is generated.
 4. **Disagreement is a feature.** The product should surface disagreement instead of hiding it behind a single blended answer.
 5. **Human approval is mandatory.** The system prepares and explains; the user decides.
-6. **Every change is auditable.** Drafts, critiques, evidence, prompts, and decisions should be recoverable.
+6. **Every change is auditable.** Drafts, structured critiques, evidence links,
+   decisions, and revisions should be recoverable without storing raw prompts,
+   responses, or hidden reasoning as audit data.
 7. **Budgets are first-class.** Users should control model cost, latency, number of rounds, and context exposure.
 
 ## Main risks and mitigations

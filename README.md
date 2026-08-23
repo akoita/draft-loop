@@ -109,18 +109,19 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm validate
 ```
 
 ## Technology and architecture
 
-| Area | Technology or boundary |
-| --- | --- |
-| Runtime | TypeScript, Node.js 24.5.0, pnpm 10.18.3 |
-| User interfaces | React 19, Vite, Electron 43; source-only Commander CLI |
-| Product core | Framework-free domain contracts, Zod schemas, orchestrator ports |
-| Providers | Explicit Anthropic and OpenAI SDK adapters |
-| Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports |
-| Quality | Biome, ESLint, Markdownlint, Vitest, GitHub Actions |
+| Area                  | Technology or boundary                                           |
+| --------------------- | ---------------------------------------------------------------- |
+| Runtime               | TypeScript, Node.js 24.5.0, pnpm 10.18.3                         |
+| User interfaces       | React 19, Vite, Electron 43; source-only Commander CLI           |
+| Product core          | Framework-free domain contracts, Zod schemas, orchestrator ports |
+| Providers             | Explicit Anthropic and OpenAI SDK adapters                       |
+| Local data and output | SQLite via Drizzle ORM; Markdown, PDF, and DOCX exports          |
+| Quality               | Biome, ESLint, Markdownlint, Vitest, GitHub Actions              |
 
 ```mermaid
 flowchart LR
