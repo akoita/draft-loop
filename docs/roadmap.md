@@ -75,7 +75,7 @@ The product status is easiest to read by outcome:
 | Workspace retrieval and policy     | Partial integration                   | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. The initial workspace writing-policy slice is integrated behind explicit local selection. Neither establishes reusable CKB selection or application-grade drafting.                                                                                                                                                                                              |
 | Portable CKB                       | Implemented component; not integrated | The separate local store has logical identity, source/version provenance, managed bytes, local-only origins, URL provenance, retirement markers, and a prospective write journal. Explicit file/URL operations and bounded directory operations are available behind application contracts.                                                                                                                                                  |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
-| Product CKB workflow               | Not integrated                        | Application/run CKB selection, normalized facts, CKB-scoped retrieval, lifecycle readiness, adapter controls, indexing, repair, deletion, backup/export/restore, and provider use remain outside the product path. Automatic discovery, background refresh, and lifecycle readiness under #136 are deferred.                                                                                                                               |
+| Product CKB workflow               | Not integrated                        | The path-free lifecycle-readiness projection is implemented as a component for #80. Application/run CKB selection, normalized facts, CKB-scoped retrieval, adapter controls, indexing, repair, deletion, backup/export/restore, and provider use remain outside the product path. Automatic discovery and background refresh remain deferred.                                                                                                    |
 
 The portable store is therefore component progress, not a v0.7 stage exit. See
 [the architecture](architecture.md) for stable boundaries and
@@ -171,9 +171,9 @@ storage components:
   policy (#68–#70).
 
 Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
-outside this critical path. The explicit root rebind, one-source member move,
-and missing-member reconciliation remain component-level support for issues #110, #134,
-and #135; lifecycle readiness under #136 does not satisfy the stage alone.
+outside this critical path. Source lifecycle work through #136 is implemented
+at component/application-contract level for #110, but it does not satisfy the
+stage without selection, retrieval, and drafting integration.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -257,10 +257,10 @@ decision.
 
 - CKB selection and retrieval integration, normalized facts, index lifecycle,
   source repair, deletion, backup/export/restore, and adapter controls.
-- Automatic move inference, lifecycle readiness under #136, reconciliation of
-  unknown entries, background refresh, time-based freshness, and automatic
-  retirement or deletion. Explicit bounded root rebind, one-source member move,
-  and selected missing-member reconciliation do not change this boundary.
+- Automatic move inference, reconciliation of unknown entries, background
+  refresh, time-based freshness, and automatic retirement or deletion. The
+  path-free lifecycle projection does not perform those actions or establish
+  index freshness.
 - Remote embeddings or a vector database before the local lexical baseline
   proves value and receives a separate architecture/privacy decision.
 - Cloud sync, accounts, multi-tenancy, uncontrolled web research, job
@@ -300,6 +300,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Added the deterministic path-free lifecycle-readiness projection for #136 without claiming indexing or product integration.                                                                                               | One consistent CKB snapshot blocks ineligible latest source versions and exposes a structured non-sensitive revision for #80. Live checks, TTLs, index construction/freshness, application selection, adapters, deletion, and repair remain separately owned.                         |
 | 2026-08-23 | Added complete explicit missing-member reconciliation for #135 without advancing the v0.7 stage beyond component implementation.                                                                                          | One bounded scan partitions every member and unmatched file path-free; explicit retirement selections run in lexical source-ID order with guarded atomic markers and an explicit partial result after a later failure. Physical deletion, automatic decisions, adapters, indexing, and #136 remain deferred. |
 | 2026-08-23 | Completed the bounded #110/#134 directory-member component slices, including append-only member revisions, guarded root rebind, and the explicit one-source member move.                                                   | Root rebind and one-source move are implemented at component/application-contract level. The move is one-scan, exact-integrity, selected-source only, path-free, and returns `moved`/`current`; automatic inference and complete reconciliation under #135/#136 remain deferred. |
 | 2026-08-22 | Split the oversized application-grade milestone into v0.7 evidence-backed drafting, v0.8 independent review/readiness, and v0.9 workflow parity/release; decomposed #78 into #110–#113 and moved hybrid retrieval to #114. | The current stage has one coherent drafting outcome; optional research (#79) and vector/hybrid optimization (#114) are outside its critical path.                                                                                                                                |

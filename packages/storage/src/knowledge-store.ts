@@ -1841,6 +1841,10 @@ function createHandle(
       storage.listCandidateKnowledgeSources(knowledgeBaseId),
     listCandidateKnowledgeSourceVersions: (knowledgeBaseId, sourceId) =>
       storage.listCandidateKnowledgeSourceVersions(knowledgeBaseId, sourceId),
+    getCandidateKnowledgeBaseLifecycleReadiness: async (knowledgeBaseId) => {
+      const readiness = await storage.getCandidateKnowledgeBaseLifecycleReadiness(knowledgeBaseId);
+      return readiness === undefined ? undefined : readiness;
+    },
     getCandidateKnowledgeSourceOriginBinding: async (knowledgeBaseId, sourceId) => {
       const binding = await storage.getCandidateKnowledgeSourceOriginBinding(
         knowledgeBaseId,

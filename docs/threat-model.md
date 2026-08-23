@@ -64,6 +64,14 @@ Automatic move inference, automatic retirement or deletion,
 backup/export/restore, retrieval integration, and background refresh remain
 deferred.
 
+Indexing consumers receive a frozen CKB-scoped lifecycle-readiness projection
+instead of reading sensitive tables. It blocks retired, archived, unmanaged,
+unbound, directory-conflicted, adverse-observation, and stale-observation state.
+Its structured revision uses only safe identities, timestamps, booleans, and
+numeric directory revisions, so newer persisted lifecycle evidence invalidates
+an older selection without exposing paths, URLs, labels, hashes, checksums, or
+content. It is not an index-freshness or live-origin assertion.
+
 The count-only structural inventory does not adopt or delete unknown entries.
 The prospective managed-write journal does not retroactively claim legacy
 entries and is not cleanup authority. A crash or concurrent writer can leave
@@ -118,7 +126,7 @@ expanded.
 | T-016 | Medium / high         | A crash or concurrent writer leaves an unreferenced blob or metadata without verified bytes.                                           | File-first/database-second publication, no-replace targets, managed markers, ordinary cleanup, count-only inventory, prospective journal.                                              | Legacy and unjournaled entries remain unknown; writer coordination and explicit approval are prerequisites for cleanup.          |
 | T-017 | Medium / medium       | Inventory leaks entry identity or is mistaken for cleanup authority.                                                                   | Bounded counts only; no names, IDs, paths, checksums, content, unknown-byte reads, recursion, symlink following, mutation, or provider exposure.                                       | Counts still reveal limited shape; scan limits can be incomplete and require separate diagnostics policy.                        |
 | T-018 | Medium / medium       | A journal entry, matching bytes, or staging-shaped name is mistaken for ownership.                                                     | Journal has opaque operation events but no cleanup/approval field; no retroactive legacy claims or adoption by bytes/shape.                                                            | Add writer locks/leases and visible approval before any reconciliation or cleanup.                                               |
-| T-019 | High / medium         | A retired source remains selectable/retrievable, or logical retirement is presented as deletion.                                       | Immutable CKB-scoped retirement marker blocks append, rebind, and observation writes while preserving evidence.                                                                        | Index removal, backup/restore, reactivation, physical deletion, and atomic lifecycle consumption remain future work.             |
+| T-019 | High / medium         | A retired or otherwise ineligible source remains selectable/retrievable, or logical retirement is presented as deletion.                | Immutable retirement plus a consistent path-free readiness projection blocks retired, archived, stale/adverse, unmanaged, unbound, and directory-conflicted state while preserving evidence. | #80 must bind index state and queries to the projected revision; backup/restore, reactivation, and physical deletion remain future work. |
 | T-020 | High / medium         | Directory traversal follows a symlink, escapes its root, opens special/hidden files, exceeds limits, or writes after failed preflight. | Real non-symlink root, canonical containment, deterministic limits, skipped unsafe entries, complete extraction preflight, path-free results, guarded root rebind and one-source move. | Same-user races remain; additions/removals, automatic reconciliation, automatic deletion, and membership lifecycle are deferred. |
 
 ## Runtime and build-time controls
@@ -162,9 +170,9 @@ The following remain open during the **Evidence-backed CV drafting** stage:
   review whenever supported sources or formats expand.
 - Retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector or hybrid retrieval is enabled by default.
-- Automatic moved-origin inference, automatic retirement, lifecycle readiness,
-  physical deletion, backup/export/restore, retrieval integration,
-  application/run CKB selection, and background refresh remain deferred.
+- Automatic moved-origin inference, automatic retirement, physical deletion,
+  backup/export/restore, retrieval integration, application/run CKB selection,
+  and background refresh remain deferred.
 - Plaintext permissions, copied stores, missing/corrupt blobs, writer
   coordination, cleanup approval, migration rollback, and backup destinations
   require explicit policy and platform evidence.

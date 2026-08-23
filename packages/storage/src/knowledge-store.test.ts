@@ -259,6 +259,442 @@ describe("portable candidate knowledge store", () => {
     await reopened.close();
   });
 
+  it("projects a frozen, path-free lifecycle readiness view and keeps it stable across reopen", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "private-evidence.md");
+    const content = "Local evidence only.";
+    await writeFile(inputPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "lifecycle-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Private evidence",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, content, {
+        id: "lifecycle-version",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      }),
+    );
+
+    const readiness = await store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default");
+    expect(readiness).toMatchObject({
+      knowledgeBaseId: "ckb-default",
+      state: "active",
+      archivedAt: null,
+      sources: [
+        {
+          sourceId: "lifecycle-source",
+          latestVersionId: "lifecycle-version",
+          status: "ready",
+          reasons: [],
+          lifecycleRevision: {
+            versionId: "lifecycle-version",
+            version: 1,
+            managed: true,
+            originBoundAt: "2026-08-21T14:01:00.000Z",
+            observation: null,
+            retirement: null,
+            provenanceFetchedAt: null,
+            directory: null,
+          },
+        },
+      ],
+    });
+    expect(readiness).not.toBeUndefined();
+    expect(Object.isFrozen(readiness)).toBe(true);
+    expect(Object.isFrozen(readiness?.sources)).toBe(true);
+    expect(Object.isFrozen(readiness?.sources[0])).toBe(true);
+    expect(Object.isFrozen(readiness?.sources[0]?.lifecycleRevision)).toBe(true);
+    expect(JSON.stringify(readiness)).not.toContain(inputPath);
+    expect(JSON.stringify(readiness)).not.toContain(content);
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default"),
+    ).resolves.toEqual(readiness);
+    await reopened.close();
+  });
+
+  it("accepts stale observations and preserves an earlier successful refresh", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "stale-observation.md");
+    await writeFile(inputPath, "first", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "stale-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Stale observation",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, "first", {
+        id: "stale-version-1",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      }),
+    );
+    await store.upsertCandidateKnowledgeSourceRefreshObservation("ckb-default", "stale-source", {
+      observedVersionId: "stale-version-1",
+      status: "current",
+      checkedAt: "2026-08-21T14:01:00.000Z",
+      lastRefreshedVersionId: "stale-version-1",
+      lastRefreshedAt: "2026-08-21T14:01:00.000Z",
+    });
+    await writeFile(inputPath, "second", "utf8");
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "stale-source",
+      managedVersion(inputPath, "second", {
+        id: "stale-version-2",
+        createdAt: "2026-08-21T14:02:00.000Z",
+      }),
+    );
+    await store.upsertCandidateKnowledgeSourceRefreshObservation("ckb-default", "stale-source", {
+      observedVersionId: "stale-version-1",
+      status: "changed",
+      checkedAt: "2026-08-21T14:03:00.000Z",
+    });
+
+    await expect(
+      store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default"),
+    ).resolves.toMatchObject({
+      sources: [
+        {
+          sourceId: "stale-source",
+          status: "blocked",
+          reasons: ["refresh-stale", "refresh-changed"],
+          lifecycleRevision: {
+            versionId: "stale-version-2",
+            observation: {
+              observedVersionId: "stale-version-1",
+              status: "changed",
+              stale: true,
+              lastRefreshedVersionId: "stale-version-1",
+              lastRefreshedAt: "2026-08-21T14:01:00.000Z",
+            },
+          },
+        },
+      ],
+    });
+    await store.upsertCandidateKnowledgeSourceRefreshObservation("ckb-default", "stale-source", {
+      observedVersionId: "stale-version-2",
+      status: "current",
+      checkedAt: "2026-08-21T14:04:00.000Z",
+    });
+    await expect(
+      store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default"),
+    ).resolves.toMatchObject({
+      sources: [
+        {
+          sourceId: "stale-source",
+          status: "ready",
+          reasons: [],
+          lifecycleRevision: {
+            versionId: "stale-version-2",
+            observation: {
+              observedVersionId: "stale-version-2",
+              status: "current",
+              stale: false,
+              lastRefreshedVersionId: "stale-version-1",
+              lastRefreshedAt: "2026-08-21T14:01:00.000Z",
+            },
+          },
+        },
+      ],
+    });
+    await store.close();
+  });
+
+  it("projects managed URL readiness without URL, checksum, or response data", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const responseBytes = new Uint8Array([65, 66, 67, 194, 162]);
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "url-lifecycle-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Remote private label",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedUrlVersion(responseBytes, {
+        id: "url-lifecycle-version",
+        createdAt: "2026-08-21T14:01:00.000Z",
+        provenance: {
+          originalUrl: "https://example.com/private?token=secret",
+          finalUrl: "https://cdn.example.com/private",
+          fetchedAt: "2026-08-21T14:01:00.000Z",
+          kind: "generic",
+        },
+      }),
+    );
+
+    await expect(
+      store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default"),
+    ).resolves.toMatchObject({
+      sources: [
+        {
+          sourceId: "url-lifecycle-source",
+          latestVersionId: "url-lifecycle-version",
+          status: "ready",
+          reasons: [],
+          lifecycleRevision: {
+            managed: true,
+            originBoundAt: null,
+            provenanceFetchedAt: "2026-08-21T14:01:00.000Z",
+          },
+        },
+      ],
+    });
+    const readiness = await store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default");
+    expect(JSON.stringify(readiness)).not.toContain("example.com");
+    expect(JSON.stringify(readiness)).not.toContain("private");
+    expect(JSON.stringify(readiness)).not.toContain(sha256(responseBytes));
+    expect(JSON.stringify(readiness)).not.toContain("65,66,67");
+    await store.close();
+  });
+
+  it("projects each refresh blocker and archived state without exposing source details", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const statuses = ["current", "changed", "missing", "inaccessible", "unbound"] as const;
+    for (const status of statuses) {
+      const sourcePath = join(parent, `${status}.md`);
+      await writeFile(sourcePath, `${status} private bytes`, "utf8");
+      const sourceId = `${status}-source`;
+      const versionId = `${status}-version`;
+      await store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: sourceId,
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: `${status} private label`,
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(sourcePath, `${status} private bytes`, {
+          id: versionId,
+          createdAt: "2026-08-21T14:01:00.000Z",
+        }),
+      );
+      await store.upsertCandidateKnowledgeSourceRefreshObservation(
+        "ckb-default",
+        sourceId,
+        status === "current"
+          ? {
+              observedVersionId: versionId,
+              status,
+              checkedAt: "2026-08-21T14:02:00.000Z",
+              lastRefreshedVersionId: versionId,
+              lastRefreshedAt: "2026-08-21T14:02:00.000Z",
+            }
+          : {
+              observedVersionId: versionId,
+              status,
+              checkedAt: "2026-08-21T14:02:00.000Z",
+            },
+      );
+    }
+
+    const archivedPath = join(parent, "archived.md");
+    await writeFile(archivedPath, "archived private bytes", "utf8");
+    await store.createCandidateKnowledgeBase({
+      id: "archived-ckb",
+      displayName: "Archived private label",
+      isDefault: false,
+      createdAt: "2026-08-21T14:01:00.000Z",
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "archived-source",
+        knowledgeBaseId: "archived-ckb",
+        kind: "file",
+        displayName: "Archived private source",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(archivedPath, "archived private bytes", {
+        id: "archived-version",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      }),
+    );
+    await store.archiveCandidateKnowledgeBase("archived-ckb", "2026-08-21T14:02:00.000Z");
+
+    const readiness = await store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default");
+    expect(
+      readiness?.sources.map((source) => [source.sourceId, source.status, source.reasons]),
+    ).toEqual([
+      ["changed-source", "blocked", ["refresh-changed"]],
+      ["current-source", "ready", []],
+      ["inaccessible-source", "blocked", ["refresh-inaccessible"]],
+      ["missing-source", "blocked", ["refresh-missing"]],
+      ["unbound-source", "blocked", ["refresh-unbound"]],
+    ]);
+    await expect(
+      store.getCandidateKnowledgeBaseLifecycleReadiness("archived-ckb"),
+    ).resolves.toMatchObject({
+      state: "archived",
+      archivedAt: "2026-08-21T14:02:00.000Z",
+      sources: [
+        {
+          sourceId: "archived-source",
+          status: "blocked",
+          reasons: ["knowledge-base-archived"],
+        },
+      ],
+    });
+    expect(JSON.stringify(readiness)).not.toContain(parent);
+    expect(JSON.stringify(readiness)).not.toContain("private bytes");
+    expect(JSON.stringify(readiness)).not.toContain("private label");
+    await store.close();
+  });
+
+  it("projects current directory revisions and detects a rebound origin conflict", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const directoryPath = join(parent, "evidence-directory");
+    const originalPath = join(directoryPath, "evidence.md");
+    const movedPath = join(directoryPath, "moved.md");
+    const reboundDirectoryPath = join(parent, "rebound-evidence-directory");
+    const reboundPath = join(reboundDirectoryPath, "moved.md");
+    const replacementPath = join(parent, "replacement.md");
+    const content = "Directory private bytes";
+    await mkdir(directoryPath, { recursive: true });
+    await mkdir(reboundDirectoryPath, { recursive: true });
+    await writeFile(originalPath, content, "utf8");
+    await writeFile(movedPath, content, "utf8");
+    await writeFile(reboundPath, content, "utf8");
+    await writeFile(replacementPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "directory-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Directory private label",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(originalPath, content, {
+        id: "directory-version",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "directory-binding",
+      knowledgeBaseId: "ckb-default",
+      rootPath: directoryPath,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["directory-source"],
+    });
+    const current = await store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default");
+    expect(current?.sources[0]).toMatchObject({
+      status: "ready",
+      reasons: [],
+      lifecycleRevision: {
+        directory: {
+          directoryId: "directory-binding",
+          rootRevision: 1,
+          memberRevision: 1,
+          rootBoundAt: "2026-08-21T14:02:00.000Z",
+          memberBoundAt: "2026-08-21T14:02:00.000Z",
+        },
+      },
+    });
+    await store.moveManagedCandidateKnowledgeDirectoryMember({
+      knowledgeBaseId: "ckb-default",
+      directoryId: "directory-binding",
+      sourceId: "directory-source",
+      sourcePath: movedPath,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      expectedRootPath: await realpath(directoryPath),
+      expectedRootRevision: 1,
+      expectedMemberRevision: 1,
+      expectedRelativePathHash: sha256("evidence.md"),
+      expectedVersionId: "directory-version",
+      expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
+      movedAt: "2026-08-21T14:03:00.000Z",
+    });
+    await expect(
+      store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default"),
+    ).resolves.toMatchObject({
+      sources: [
+        {
+          status: "ready",
+          lifecycleRevision: {
+            originBoundAt: "2026-08-21T14:03:00.000Z",
+            directory: { rootRevision: 1, memberRevision: 2 },
+          },
+        },
+      ],
+    });
+    await store.rebindManagedCandidateKnowledgeDirectoryRoot({
+      knowledgeBaseId: "ckb-default",
+      directoryId: "directory-binding",
+      candidateRootPath: reboundDirectoryPath,
+      expectedRootPath: await realpath(directoryPath),
+      expectedRevision: 1,
+      reboundAt: "2026-08-21T14:04:00.000Z",
+      members: [
+        {
+          sourceId: "directory-source",
+          sourcePath: reboundPath,
+          mediaType: "text/markdown",
+          checksum: sha256(content),
+          sizeBytes: Buffer.byteLength(content),
+          expectedVersionId: "directory-version",
+          expectedOriginBoundAt: "2026-08-21T14:03:00.000Z",
+        },
+      ],
+    });
+    await expect(
+      store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default"),
+    ).resolves.toMatchObject({
+      sources: [
+        {
+          status: "ready",
+          lifecycleRevision: {
+            originBoundAt: "2026-08-21T14:04:00.000Z",
+            directory: { rootRevision: 2, memberRevision: 2 },
+          },
+        },
+      ],
+    });
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "directory-source", {
+      sourcePath: replacementPath,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      boundAt: "2026-08-21T14:05:00.000Z",
+    });
+    await expect(
+      store.getCandidateKnowledgeBaseLifecycleReadiness("ckb-default"),
+    ).resolves.toMatchObject({
+      sources: [
+        {
+          sourceId: "directory-source",
+          status: "blocked",
+          reasons: ["directory-origin-conflict"],
+          lifecycleRevision: {
+            directory: {
+              directoryId: "directory-binding",
+              rootRevision: 2,
+              memberRevision: 2,
+            },
+          },
+        },
+      ],
+    });
+    await store.close();
+  });
+
   it("copies managed bytes into ID-derived private paths and validates them across reopen", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");

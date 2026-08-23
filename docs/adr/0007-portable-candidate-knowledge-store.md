@@ -62,6 +62,16 @@ preserves metadata, bytes, bindings, observations, and journal evidence. It is
 not physical deletion, index cleanup, or reactivation; no reactivation operation
 is defined by this decision.
 
+A read-only lifecycle-readiness projection evaluates one CKB from one
+consistent persisted snapshot. It returns only CKB, source, and latest-version
+identities; bounded `ready`/`blocked` state and reasons; safe lifecycle
+timestamps; and structured version, observation, retirement, and current
+directory revision evidence. Fresh explicitly imported sources need no later
+observation to be ready. Retired sources, archived CKBs, unmanaged latest
+versions, unbound managed files, conflicted directory origins, and stale,
+changed, missing, inaccessible, or unbound observations are blocked. This is
+not a live origin check, index-freshness claim, or time-based freshness policy.
+
 ### Approved local file and URL intake
 
 Adding one local file is the approval boundary for that file. Intake accepts a
@@ -157,6 +167,7 @@ The explicit operations are intentionally separate:
 | Moved-candidate preview | The scan compares exact media type, checksum, and size between eligible same-member missing sources and unmatched files. Only unique one-to-one source IDs are returned; ambiguous matches are omitted and no state changes.                                                                                                     |
 | One-source member move  | The explicit #134 command reuses exactly one bounded scan for one selected source, accepts no target path, and forwards either the scanned current member for idempotency or one unique exact-integrity missing-member match through the verified member handle.                                                                 |
 | Reconciliation          | One bounded scan partitions every member as current, changed, moved-candidate, missing, already-retired, or conflicted and counts all unmatched accepted files. Apply accepts only explicit source-ID retirement selections, refuses incomplete scans, and processes guarded markers in lexical source-ID order. A later failure returns frozen path-free partial progress; earlier per-source commits remain. |
+| Lifecycle readiness     | One consistent read transaction projects each latest source version in source-ID order. A structured non-sensitive revision tuple changes with every eligibility-relevant persisted fact; blocked reasons remain visible without reading sensitive tables or defining index freshness.                                                |
 
 The one-source move returns a frozen, path-free result containing directory/source
 identity, the shared check time, and `moved` or `current` status. It appends one
@@ -166,10 +177,11 @@ evidence. The match is runtime-only; paths and integrity tuples are not
 returned. Append-only root and member revisions preserve historical roots and
 membership hashes while current views expose the latest verified state.
 
-Applied rename inference, broader lifecycle readiness, automatic move
-inference, physical deletion, adapter controls, indexing, and background
-refresh remain deferred under #136 and the owning roadmap issues. Explicit
-reconciliation does not imply automatic discovery, retirement, or cleanup.
+Applied rename inference, automatic move inference, physical deletion, adapter
+controls, indexing, and background refresh remain deferred under their owning
+roadmap issues. Explicit reconciliation and lifecycle projection do not imply
+automatic discovery, retirement, cleanup, or retrieval eligibility outside the
+returned snapshot.
 
 ### Managed publication and journal
 
