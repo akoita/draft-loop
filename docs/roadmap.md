@@ -228,11 +228,21 @@ and member rows remain unchanged. The application command now owns the explicit
 scan-and-commit boundary and returns only path-free `current`/`rebound` status
 and counts; rename/removal reconciliation, membership lifecycle, adapters,
 indexing, and background refresh remain deferred.
+A v15 storage/handle foundation now adds append-only directory-member revisions
+and a current-member view without changing immutable v13 rows. Existing members
+backfill as revision 1 at the later of immutable binding time or source
+creation; future members receive the same baseline trigger. Historical hashes
+remain owned by their original source, while that source may return to its own
+earlier hash. A verified handle move atomically updates one sensitive origin and
+appends one member revision, or returns a guarded no-op, preserving source,
+version, observation, retirement, blob, journal, and baseline evidence. The
+application move command remains deferred with #135/#136, automatic inference,
+physical deletion, adapters, indexing, and background refresh.
 A separate moved-candidate preview now reuses that scan exactly once and emits
 only path-free source IDs for unique one-to-one exact media-type/checksum/size
 matches between same-member missing sources and unmatched files. Ambiguous
 tuples emit nothing, and `newSourceCount` remains the total unmatched-file count
-used by add-members; applied rename, membership revision, and root rebind remain
+used by add-members; applied rename and membership-revision decisions remain
 deferred.
 An explicit bounded observation-only directory refresh now reuses one complete
 scan and atomically records path-free `current`, `changed`, and same-member
@@ -292,8 +302,8 @@ normalized relative member paths, derives them from existing canonical file
 origin bindings, and records no plaintext relative paths in membership. There
 is no backfill or directory source kind. Membership is stable historical state
 captured at binding or explicit append time and is not rewritten by later source
-versioning, explicit origin rebinding, or retirement. Applied directory rebind,
-rename/removal lifecycle,
+versioning, explicit origin rebinding, or retirement. Applied rename/removal
+lifecycle, member-revision application,
 and incremental scan reconciliation remain deferred. The read-only preview,
   bounded existing-member applied refresh, explicit add-members operation, and
   explicit missing-member retirement are
@@ -609,6 +619,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                                       | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Added append-only directory-member revisions and verified storage/handle member moves as the eighteenth bounded #110 / first #134 slice without advancing the v0.7 stage beyond component implementation | Migration v15 backfills v13 members as revision-one history and drives current-member reads from a max-revision view; a verified move can atomically update one sensitive origin plus its member revision or return a guarded no-op. The application move command, #135/#136, automatic inference, physical deletion, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added the explicit application directory-root rebind command as the seventeenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                   | One complete bounded scan now feeds stable per-member final verification and one guarded all-member origin/revision transaction; same-root requests are no-ops, results are path-free `current`/`rebound` counts, and generic failures expose no partial state. Rename/removal reconciliation, membership lifecycle, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added append-only directory-root revisions and the verified storage/handle rebind foundation as the sixteenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                 | Migration v14 backfills existing bindings as revision 1, reserves historical roots, and drives current-root reads from a max-revision view; a guarded transaction can atomically update verified member origins plus the next revision or return a same-root no-op. The application apply command, rename/removal reconciliation, membership lifecycle, adapters, indexing, and background refresh remain pending. |
 | 2026-08-23 | Added a read-only exact-integrity moved-candidate projection as the fifteenth #110 slice without advancing the v0.7 stage beyond component implementation                                                                                  | One bounded directory refresh scan can now emit only deterministic source IDs for unique one-to-one media-type/checksum/size matches between same-member missing sources and unmatched files; ambiguous tuples are omitted, `newSourceCount` is unchanged for add-members, and applied rename, membership revision, root rebind, adapters, indexing, and background refresh remain pending. |

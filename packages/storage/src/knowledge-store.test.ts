@@ -22,11 +22,12 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { StorageConflictError, StorageValidationError } from "./index.js";
+import { openSqliteStorage, StorageConflictError, StorageValidationError } from "./index.js";
 import {
   initializeCandidateKnowledgeStore,
   type ManagedCandidateKnowledgeFileVersionInput,
   type ManagedCandidateKnowledgeUrlVersionInput,
+  type MoveManagedCandidateKnowledgeDirectoryMemberInput,
   maximumManagedCandidateKnowledgeFileBytes,
   maximumManagedCandidateKnowledgeInventoryEntries,
   openCandidateKnowledgeStore,
@@ -854,6 +855,118 @@ describe("portable candidate knowledge store", () => {
     );
   });
 
+  it("backfills member revisions for an archived v14 candidate knowledge base", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const sourcePath = join(selectedDirectory, "archived.md");
+    await mkdir(selectedDirectory);
+    await writeFile(sourcePath, "archived evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "archived-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "archived.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(sourcePath, "archived evidence", {
+        id: "archived-version",
+      }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "archived-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["archived-source"],
+    });
+    await store.close();
+
+    mutateDatabase(
+      root,
+      `DROP VIEW candidate_knowledge_directory_current_members;
+       DROP TRIGGER candidate_knowledge_directory_members_create_revision;
+       DROP TRIGGER candidate_knowledge_directory_member_revisions_require_valid_insert;
+       DROP TRIGGER candidate_knowledge_directory_member_revisions_immutable_update;
+       DROP TRIGGER candidate_knowledge_directory_member_revisions_immutable_delete;
+       DROP TABLE candidate_knowledge_directory_member_revisions;
+       DELETE FROM schema_migrations WHERE version = 15;
+       UPDATE candidate_knowledge_bases
+       SET is_default = 0, state = 'archived', archived_at = '2026-08-21T15:00:00.000Z'
+       WHERE id = 'ckb-default';`,
+    );
+    const database = openSqliteStorage(join(root, ".draft-loop", "knowledge.sqlite"));
+    expect(database.appliedMigrationVersions()).toContain(15);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, revision,
+                relative_path_hash, bound_at
+         FROM candidate_knowledge_directory_member_revisions`,
+      ),
+    ).toEqual([
+      {
+        directory_id: "archived-directory",
+        candidate_knowledge_base_id: "ckb-default",
+        source_id: "archived-source",
+        revision: 1,
+        relative_path_hash: sha256("archived.md"),
+        bound_at: "2026-08-21T14:02:00.000Z",
+      },
+    ]);
+    database.close();
+  });
+
+  it.each([
+    {
+      field: "bound_at",
+      value: "2026-08-21T14:03:00.000Z",
+    },
+    {
+      field: "relative_path_hash",
+      value: sha256("tampered-renamed.md"),
+    },
+  ])("rejects a tampered v15 revision-one $field on reopen", async ({ field, value }) => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const sourcePath = join(selectedDirectory, "tampered.md");
+    await mkdir(selectedDirectory);
+    await writeFile(sourcePath, "tampered evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "tampered-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "tampered.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(sourcePath, "tampered evidence", { id: "tampered-version" }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "tampered-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["tampered-source"],
+    });
+    await store.close();
+    mutateDatabase(
+      root,
+      `PRAGMA ignore_check_constraints = ON;
+       DROP TRIGGER candidate_knowledge_directory_member_revisions_immutable_update;
+       UPDATE candidate_knowledge_directory_member_revisions
+       SET ${field} = '${value}'
+       WHERE directory_id = 'tampered-directory' AND source_id = 'tampered-source' AND revision = 1;`,
+    );
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(
+      /revision-one baseline mismatch/i,
+    );
+  });
+
   it("adds managed files to an existing directory atomically and keeps their membership historical", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
@@ -1350,6 +1463,381 @@ describe("portable candidate knowledge store", () => {
       reopened.listCandidateKnowledgeDirectoryMembers("ckb-default", "revision-directory"),
     ).resolves.toEqual(membersBefore);
     await reopened.close();
+  });
+
+  it("moves a directory member through immutable revisions and preserves its baseline evidence", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const initialPath = join(selectedDirectory, "first.md");
+    const movedPath = join(selectedDirectory, "nested", "first.md");
+    const otherPath = join(selectedDirectory, "other.md");
+    const content = "stable member evidence";
+    await mkdir(selectedDirectory, { recursive: true });
+    await mkdir(dirname(movedPath), { recursive: true });
+    await writeFile(initialPath, content, "utf8");
+    await writeFile(movedPath, content, "utf8");
+    await writeFile(otherPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "move-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "first.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(initialPath, content, { id: "move-version" }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "move-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["move-source"],
+    });
+    const baselineMember = (
+      await store.listCandidateKnowledgeDirectoryMembers("ckb-default", "move-directory")
+    )[0];
+    const baselineRevision = await store.getCandidateKnowledgeDirectoryMemberCurrentRevision(
+      "ckb-default",
+      "move-directory",
+      "move-source",
+    );
+    if (baselineMember === undefined || baselineRevision === undefined) {
+      throw new Error("expected directory member revision baseline");
+    }
+    expect(baselineRevision).toEqual({
+      directoryId: "move-directory",
+      knowledgeBaseId: "ckb-default",
+      sourceId: "move-source",
+      revision: 1,
+      relativePathHash: sha256("first.md"),
+      boundAt: "2026-08-21T14:02:00.000Z",
+    });
+    expect(() =>
+      mutateDatabase(
+        root,
+        `UPDATE candidate_knowledge_directory_member_revisions
+         SET relative_path_hash = '${sha256("tampered.md")}'
+         WHERE directory_id = 'move-directory' AND source_id = 'move-source' AND revision = 1`,
+      ),
+    ).toThrow(/immutable/i);
+    expect(() =>
+      mutateDatabase(
+        root,
+        `DELETE FROM candidate_knowledge_directory_member_revisions
+         WHERE directory_id = 'move-directory' AND source_id = 'move-source' AND revision = 1`,
+      ),
+    ).toThrow(/immutable/i);
+    await store.upsertCandidateKnowledgeSourceRefreshObservation("ckb-default", "move-source", {
+      observedVersionId: "move-version",
+      status: "current",
+      checkedAt: "2026-08-21T14:03:00.000Z",
+    });
+    const before = {
+      source: await store.getCandidateKnowledgeSource("ckb-default", "move-source"),
+      versions: await store.listCandidateKnowledgeSourceVersions("ckb-default", "move-source"),
+      observation: await store.getCandidateKnowledgeSourceRefreshObservation(
+        "ckb-default",
+        "move-source",
+      ),
+      retirement: await store.getCandidateKnowledgeSourceRetirement("ckb-default", "move-source"),
+      inventory: await store.inspectManagedCandidateKnowledgeFiles(),
+      journal: queryDatabase(
+        root,
+        "SELECT COUNT(*) AS count FROM candidate_knowledge_managed_write_events",
+      ),
+      baseline: queryDatabase(
+        root,
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members`,
+      ),
+    };
+    const moveInput: MoveManagedCandidateKnowledgeDirectoryMemberInput = {
+      knowledgeBaseId: "ckb-default",
+      directoryId: "move-directory",
+      sourceId: "move-source",
+      sourcePath: movedPath,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      expectedRootPath: await realpath(selectedDirectory),
+      expectedRootRevision: 1,
+      expectedMemberRevision: 1,
+      expectedRelativePathHash: sha256("first.md"),
+      expectedVersionId: "move-version",
+      expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
+      movedAt: "2026-08-21T14:04:00.000Z",
+    };
+    const expectUnchanged = async (): Promise<void> => {
+      await expect(
+        store.getCandidateKnowledgeDirectoryMemberCurrentRevision(
+          "ckb-default",
+          "move-directory",
+          "move-source",
+        ),
+      ).resolves.toEqual(baselineRevision);
+      await expect(
+        store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "move-source"),
+      ).resolves.toEqual({
+        sourceId: "move-source",
+        originPath: await realpath(initialPath),
+        boundAt: "2026-08-21T14:01:00.000Z",
+      });
+    };
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        expectedMemberRevision: 2,
+      }),
+    ).rejects.toThrow(/member changed/i);
+    await expectUnchanged();
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        expectedRootRevision: 2,
+      }),
+    ).rejects.toThrow(/root changed/i);
+    await expectUnchanged();
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        expectedVersionId: "stale-version",
+      }),
+    ).rejects.toThrow(/latest version changed/i);
+    await expectUnchanged();
+    const outsidePath = join(parent, "outside.md");
+    await writeFile(outsidePath, content, "utf8");
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        sourcePath: outsidePath,
+      }),
+    ).rejects.toThrow(/strictly inside its current root/i);
+    await expectUnchanged();
+    if (process.platform !== "win32") {
+      const symlinkPath = join(selectedDirectory, "symlink.md");
+      await symlink(initialPath, symlinkPath);
+      await expect(
+        store.moveManagedCandidateKnowledgeDirectoryMember({
+          ...moveInput,
+          sourcePath: symlinkPath,
+        }),
+      ).rejects.toThrow(/symbolic link/i);
+      await expectUnchanged();
+      await rm(symlinkPath, { force: true });
+    }
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        movedAt: "2026-08-21T14:01:30.000Z",
+      }),
+    ).rejects.toThrow(/must not precede member state/i);
+    await expectUnchanged();
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        mediaType: "text/plain",
+      }),
+    ).rejects.toThrow(/latest version changed/i);
+    await expectUnchanged();
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        expectedOriginBoundAt: "2026-08-21T14:01:01.000Z",
+      }),
+    ).rejects.toThrow(/origin changed/i);
+    await expectUnchanged();
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        beforeSourceRecheck: async () => {
+          await writeFile(movedPath, "changed during verification", "utf8");
+        },
+      }),
+    ).rejects.toThrow(/changed while it was being verified/i);
+    await writeFile(movedPath, content, "utf8");
+    await expectUnchanged();
+
+    mutateDatabase(
+      root,
+      `CREATE TRIGGER move_source_origin_update_abort
+       BEFORE UPDATE ON candidate_knowledge_source_origin_bindings
+       WHEN OLD.source_id = 'move-source'
+       BEGIN SELECT RAISE(ABORT, 'move source origin update blocked'); END;`,
+    );
+    await expect(store.moveManagedCandidateKnowledgeDirectoryMember(moveInput)).rejects.toThrow(
+      /origin update blocked/i,
+    );
+    await expectUnchanged();
+    expect(
+      queryDatabase(
+        root,
+        `SELECT revision, relative_path_hash
+         FROM candidate_knowledge_directory_member_revisions
+         WHERE directory_id = 'move-directory' AND source_id = 'move-source'
+         ORDER BY revision`,
+      ),
+    ).toEqual([{ revision: 1, relative_path_hash: sha256("first.md") }]);
+    mutateDatabase(root, "DROP TRIGGER move_source_origin_update_abort;");
+
+    const moved = await store.moveManagedCandidateKnowledgeDirectoryMember(moveInput);
+    expect(moved).toEqual({
+      member: {
+        directoryId: "move-directory",
+        knowledgeBaseId: "ckb-default",
+        sourceId: "move-source",
+        relativePathHash: sha256("nested/first.md"),
+      },
+      revision: {
+        directoryId: "move-directory",
+        knowledgeBaseId: "ckb-default",
+        sourceId: "move-source",
+        revision: 2,
+        relativePathHash: sha256("nested/first.md"),
+        boundAt: "2026-08-21T14:04:00.000Z",
+      },
+      binding: {
+        sourceId: "move-source",
+        originPath: await realpath(movedPath),
+        boundAt: "2026-08-21T14:04:00.000Z",
+      },
+      moved: true,
+    });
+    expect(Object.isFrozen(moved)).toBe(true);
+    expect(Object.isFrozen(moved.member)).toBe(true);
+    expect(Object.isFrozen(moved.revision)).toBe(true);
+    expect(Object.isFrozen(moved.binding)).toBe(true);
+    await expect(
+      store.getCandidateKnowledgeDirectoryMemberCurrentRevision(
+        "ckb-default",
+        "move-directory",
+        "move-source",
+      ),
+    ).resolves.toEqual(moved.revision);
+    await expect(
+      store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "move-source"),
+    ).resolves.toEqual(moved.binding);
+    expect(await store.getCandidateKnowledgeSource("ckb-default", "move-source")).toEqual(
+      before.source,
+    );
+    expect(await store.listCandidateKnowledgeSourceVersions("ckb-default", "move-source")).toEqual(
+      before.versions,
+    );
+    await expect(
+      store.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "move-source"),
+    ).resolves.toEqual(before.observation);
+    await expect(
+      store.getCandidateKnowledgeSourceRetirement("ckb-default", "move-source"),
+    ).resolves.toEqual(before.retirement);
+    await expect(store.inspectManagedCandidateKnowledgeFiles()).resolves.toEqual(before.inventory);
+    expect(
+      queryDatabase(root, "SELECT COUNT(*) AS count FROM candidate_knowledge_managed_write_events"),
+    ).toEqual(before.journal);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members`,
+      ),
+    ).toEqual(before.baseline);
+
+    const noop = await store.moveManagedCandidateKnowledgeDirectoryMember({
+      ...moveInput,
+      sourcePath: movedPath,
+      expectedMemberRevision: 2,
+      expectedRelativePathHash: sha256("nested/first.md"),
+      expectedOriginBoundAt: "2026-08-21T14:04:00.000Z",
+      movedAt: "2026-08-21T14:05:00.000Z",
+    });
+    expect(noop.moved).toBe(false);
+    expect(noop.revision).toEqual(moved.revision);
+
+    await writeFile(initialPath, content, "utf8");
+    const returned = await store.moveManagedCandidateKnowledgeDirectoryMember({
+      ...moveInput,
+      sourcePath: initialPath,
+      expectedMemberRevision: 2,
+      expectedRelativePathHash: sha256("nested/first.md"),
+      expectedOriginBoundAt: "2026-08-21T14:04:00.000Z",
+      movedAt: "2026-08-21T14:06:00.000Z",
+    });
+    expect(returned.moved).toBe(true);
+    expect(returned.revision.revision).toBe(3);
+    expect(returned.revision.relativePathHash).toBe(sha256("first.md"));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "other-move-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "other.md",
+        createdAt: "2026-08-21T14:07:00.000Z",
+      },
+      managedVersion(otherPath, content, {
+        id: "other-move-version",
+        createdAt: "2026-08-21T14:07:00.000Z",
+        directoryId: "move-directory",
+      }),
+    );
+    await expect(
+      store.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        sourcePath: otherPath,
+        expectedMemberRevision: 3,
+        expectedRelativePathHash: sha256("first.md"),
+        expectedOriginBoundAt: "2026-08-21T14:06:00.000Z",
+        movedAt: "2026-08-21T14:08:00.000Z",
+      }),
+    ).rejects.toThrow(/belongs to another source/i);
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.getCandidateKnowledgeDirectoryMemberCurrentRevision(
+        "ckb-default",
+        "move-directory",
+        "move-source",
+      ),
+    ).resolves.toEqual(returned.revision);
+    await expect(
+      reopened.listCandidateKnowledgeDirectoryMembers("ckb-default", "move-directory"),
+    ).resolves.toEqual([
+      {
+        directoryId: "move-directory",
+        knowledgeBaseId: "ckb-default",
+        sourceId: "move-source",
+        relativePathHash: sha256("first.md"),
+      },
+      {
+        directoryId: "move-directory",
+        knowledgeBaseId: "ckb-default",
+        sourceId: "other-move-source",
+        relativePathHash: sha256("other.md"),
+      },
+    ]);
+    await reopened.retireCandidateKnowledgeSource("ckb-default", "move-source", {
+      retiredAt: "2026-08-21T14:09:00.000Z",
+      reason: "user-requested",
+    });
+    await expect(
+      reopened.moveManagedCandidateKnowledgeDirectoryMember({
+        ...moveInput,
+        expectedMemberRevision: 3,
+        expectedRelativePathHash: sha256("first.md"),
+        expectedOriginBoundAt: "2026-08-21T14:06:00.000Z",
+        movedAt: "2026-08-21T14:10:00.000Z",
+      }),
+    ).rejects.toThrow(/retired/i);
+    await reopened.close();
+    mutateDatabase(
+      root,
+      `DROP TRIGGER candidate_knowledge_directory_member_revisions_immutable_update;
+       UPDATE candidate_knowledge_directory_member_revisions
+       SET revision = 4
+       WHERE directory_id = 'move-directory' AND source_id = 'move-source' AND revision = 3;`,
+    );
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(/non-contiguous/i);
   });
 
   it("fails closed and rolls back every guarded multi-member root rebind failure", async () => {
