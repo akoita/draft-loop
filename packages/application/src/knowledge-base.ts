@@ -130,6 +130,13 @@ export interface PreviewKnowledgeSourceDirectoryRootRebindCommand {
   readonly options?: DirectoryIngestionOptions;
 }
 
+export interface PreviewKnowledgeSourceDirectoryMovedCandidatesCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly options?: DirectoryIngestionOptions;
+}
+
 export interface RecordKnowledgeSourceDirectoryRefreshCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
@@ -378,6 +385,22 @@ export interface PreviewKnowledgeSourceDirectoryRootRebindResult {
   readonly skippedEntryCount: number;
 }
 
+export interface PreviewKnowledgeSourceDirectoryMovedCandidate {
+  readonly sourceId: string;
+  readonly status: "moved-candidate";
+}
+
+export interface PreviewKnowledgeSourceDirectoryMovedCandidatesResult {
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly candidates: readonly PreviewKnowledgeSourceDirectoryMovedCandidate[];
+  readonly candidateCount: number;
+  readonly newSourceCount: number;
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
 export interface RecordKnowledgeSourceDirectoryRefreshResult
   extends PreviewKnowledgeSourceDirectoryRefreshResult {
   readonly recordedObservationCount: number;
@@ -468,6 +491,9 @@ export interface CandidateKnowledgeStoreService {
   readonly previewKnowledgeSourceDirectoryRootRebind: (
     command: PreviewKnowledgeSourceDirectoryRootRebindCommand,
   ) => Promise<PreviewKnowledgeSourceDirectoryRootRebindResult>;
+  readonly previewKnowledgeSourceDirectoryMovedCandidates: (
+    command: PreviewKnowledgeSourceDirectoryMovedCandidatesCommand,
+  ) => Promise<PreviewKnowledgeSourceDirectoryMovedCandidatesResult>;
   readonly recordKnowledgeSourceDirectoryRefresh: (
     command: RecordKnowledgeSourceDirectoryRefreshCommand,
   ) => Promise<RecordKnowledgeSourceDirectoryRefreshResult>;
@@ -597,6 +623,12 @@ function previewDirectoryRefreshFailure(): Error {
 function previewDirectoryRootRebindFailure(): Error {
   return new Error(
     "The selected candidate knowledge source directory root rebind preview could not be completed.",
+  );
+}
+
+function previewDirectoryMovedCandidatesFailure(): Error {
+  return new Error(
+    "The selected candidate knowledge source directory moved-candidate preview could not be completed.",
   );
 }
 
@@ -1370,6 +1402,102 @@ function directoryRootRebindPreviewResult(
     checkedAt: collected.checkedAt,
     status: collected.status,
     memberCount: collected.memberCount,
+    scannedEntryCount: collected.preflight.scannedEntryCount,
+    discoveredFileCount: collected.preflight.discoveredFileCount,
+    skippedEntryCount: collected.preflight.skippedEntryCount,
+  });
+}
+
+function directoryMovedCandidateTuple(
+  mediaType: string,
+  checksum: string,
+  sizeBytes: number,
+): string {
+  return JSON.stringify([mediaType, checksum, sizeBytes]);
+}
+
+async function collectDirectoryMovedCandidateSourceIds(
+  handle: CandidateKnowledgeStoreHandle,
+  knowledgeBaseId: string,
+  collected: CollectedDirectoryRefresh,
+): Promise<readonly string[]> {
+  const eligibleByTuple = new Map<string, CollectedDirectoryRefreshMember[]>();
+  for (const member of collected.members) {
+    if (
+      member.status !== "missing" ||
+      member.originRelation !== "same-member" ||
+      member.retirement !== undefined ||
+      member.expectedOriginBoundAt === undefined ||
+      !isValidRefreshTimestamp(member.expectedOriginBoundAt)
+    ) {
+      continue;
+    }
+    const managedPath = await handle.getManagedCandidateKnowledgeFilePath(
+      knowledgeBaseId,
+      member.sourceId,
+      member.latestVersion.id,
+    );
+    if (typeof managedPath !== "string" || managedPath.trim() === "") {
+      throw previewDirectoryMovedCandidatesFailure();
+    }
+    const tuple = directoryMovedCandidateTuple(
+      member.latestVersion.mediaType,
+      member.latestVersion.checksum,
+      member.latestVersion.sizeBytes,
+    );
+    const entries = eligibleByTuple.get(tuple);
+    if (entries === undefined) {
+      eligibleByTuple.set(tuple, [member]);
+    } else {
+      entries.push(member);
+    }
+  }
+
+  const unmatchedByTuple = new Map<
+    string,
+    NonNullable<DirectoryIngestionResult["sources"][number]>[]
+  >();
+  for (const source of collected.unmatchedSources) {
+    const tuple = directoryMovedCandidateTuple(source.mediaType, source.checksum, source.sizeBytes);
+    const entries = unmatchedByTuple.get(tuple);
+    if (entries === undefined) {
+      unmatchedByTuple.set(tuple, [source]);
+    } else {
+      entries.push(source);
+    }
+  }
+
+  const candidateSourceIds: string[] = [];
+  for (const [tuple, members] of eligibleByTuple) {
+    const unmatched = unmatchedByTuple.get(tuple);
+    if (members.length === 1 && unmatched?.length === 1) {
+      const member = members[0];
+      if (member !== undefined) candidateSourceIds.push(member.sourceId);
+    }
+  }
+  return candidateSourceIds.sort(lexicalCompare);
+}
+
+async function directoryMovedCandidatesPreviewResult(
+  handle: CandidateKnowledgeStoreHandle,
+  knowledgeBaseId: string,
+  collected: CollectedDirectoryRefresh,
+): Promise<PreviewKnowledgeSourceDirectoryMovedCandidatesResult> {
+  const candidateSourceIds = await collectDirectoryMovedCandidateSourceIds(
+    handle,
+    knowledgeBaseId,
+    collected,
+  );
+  return Object.freeze({
+    directoryId: collected.directoryId,
+    checkedAt: collected.checkedAt,
+    candidates: Object.freeze(
+      candidateSourceIds.map((sourceId) =>
+        Object.freeze({ sourceId, status: "moved-candidate" as const }),
+      ),
+    ),
+    candidateCount: candidateSourceIds.length,
+    newSourceCount: collected.newSourceCount,
     scannedEntryCount: collected.preflight.scannedEntryCount,
     discoveredFileCount: collected.preflight.discoveredFileCount,
     skippedEntryCount: collected.preflight.skippedEntryCount,
@@ -2933,6 +3061,37 @@ export function createCandidateKnowledgeStoreService(
         throw previewDirectoryRootRebindFailure();
       }
     },
+    previewKnowledgeSourceDirectoryMovedCandidates: async (command) => {
+      let storeRoot: string;
+      let knowledgeBaseId: string;
+      let directoryId: string;
+      try {
+        storeRoot = requireStoreRoot(command.storeRoot);
+        knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+        directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
+      } catch {
+        throw previewDirectoryMovedCandidatesFailure();
+      }
+
+      try {
+        return await useHandle(
+          () => resolved.open(storeRoot),
+          async (handle) => {
+            const collected = await collectDirectoryRefresh(
+              handle,
+              resolved,
+              storeRoot,
+              knowledgeBaseId,
+              directoryId,
+              command.options,
+            );
+            return directoryMovedCandidatesPreviewResult(handle, knowledgeBaseId, collected);
+          },
+        );
+      } catch {
+        throw previewDirectoryMovedCandidatesFailure();
+      }
+    },
     recordKnowledgeSourceDirectoryRefresh: async (command) => {
       let storeRoot: string;
       let knowledgeBaseId: string;
@@ -3800,6 +3959,8 @@ export const previewKnowledgeSourceDirectoryRefresh =
   defaultService.previewKnowledgeSourceDirectoryRefresh;
 export const previewKnowledgeSourceDirectoryRootRebind =
   defaultService.previewKnowledgeSourceDirectoryRootRebind;
+export const previewKnowledgeSourceDirectoryMovedCandidates =
+  defaultService.previewKnowledgeSourceDirectoryMovedCandidates;
 export const recordKnowledgeSourceDirectoryRefresh =
   defaultService.recordKnowledgeSourceDirectoryRefresh;
 export const applyKnowledgeSourceDirectoryRefresh =

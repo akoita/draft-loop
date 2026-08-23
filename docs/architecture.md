@@ -227,6 +227,12 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   membership and latest-byte agreement for every historical member, and
   returns only path-free readiness and scan counts. It does not mutate the
   persisted binding or membership; applying the root rebind remains deferred.
+  A separate moved-candidate projection reuses that complete scan exactly once
+  and emits only deterministic source IDs for unique one-to-one exact
+  media-type/checksum/size matches between same-member missing sources and
+  unmatched files. Ambiguous tuples emit nothing; the unchanged aggregate
+  `newSourceCount` still counts every unmatched accepted file. The signal is
+  advisory only and does not apply renames or revise membership.
   A separate explicit bounded observation operation reuses exactly one complete
   scan, selects only active `current`, `changed`, or same-member `missing`
   entries, and atomically records their path-free observations with one shared

@@ -731,6 +731,302 @@ describe("candidate knowledge store application service", () => {
     expect(close).toHaveBeenCalledTimes(2);
   });
 
+  it("previews exact-integrity moved candidates with ambiguity and lifecycle guards", async () => {
+    const directoryPath = join(temporaryParent, "moved-candidate-directory");
+    await mkdir(directoryPath);
+    const paths = {
+      uniqueA: join(directoryPath, "a-unique.txt"),
+      oneToMany: join(directoryPath, "b-one.txt"),
+      manyFirst: join(directoryPath, "c-many-first.txt"),
+      manySecond: join(directoryPath, "d-many-second.txt"),
+      changed: join(directoryPath, "e-changed.txt"),
+      uniqueF: join(directoryPath, "f-unique.txt"),
+      retired: join(directoryPath, "g-retired.txt"),
+      conflict: join(directoryPath, "h-conflict.txt"),
+    };
+    await writeFile(paths.uniqueA, "unique-a", "utf8");
+    await writeFile(paths.oneToMany, "shared-one", "utf8");
+    await writeFile(paths.manyFirst, "shared-many", "utf8");
+    await writeFile(paths.manySecond, "shared-many", "utf8");
+    await writeFile(paths.changed, "before", "utf8");
+    await writeFile(paths.uniqueF, "unique-f", "utf8");
+    await writeFile(paths.retired, "retired", "utf8");
+    await writeFile(paths.conflict, "conflict", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "a-source",
+      "a-version",
+      "b-source",
+      "b-version",
+      "c-source",
+      "c-version",
+      "d-source",
+      "d-version",
+      "e-source",
+      "e-version",
+      "f-source",
+      "f-version",
+      "g-source",
+      "g-version",
+      "h-source",
+      "h-version",
+      "directory-binding",
+    ];
+    const generateId = vi.fn(() => ids.shift() ?? "unexpected-id");
+    const ingestDirectory = vi.fn<typeof ingestDirectoryImplementation>();
+    ingestDirectory.mockImplementation(ingestDirectoryImplementation);
+    let now = createdAt;
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      ingestDirectory: ingestDirectory as never,
+      now: () => now,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+    ingestDirectory.mockClear();
+
+    await rm(paths.uniqueA);
+    await rm(paths.oneToMany);
+    await rm(paths.manyFirst);
+    await rm(paths.manySecond);
+    await rm(paths.uniqueF);
+    await rm(paths.retired);
+    await rm(paths.conflict);
+    await writeFile(paths.changed, "after", "utf8");
+    const conflictReplacement = join(temporaryParent, "moved-conflict.txt");
+    await writeFile(conflictReplacement, "conflict", "utf8");
+    now = changedAt;
+    await service.rebindKnowledgeSourceOrigin({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "h-source",
+      sourcePath: conflictReplacement,
+    });
+    await service.retireKnowledgeSourceDirectoryMember({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: "directory-binding",
+      sourceId: "g-source",
+      approved: true,
+    });
+    await writeFile(join(directoryPath, "m-a.txt"), "unique-a", "utf8");
+    await writeFile(join(directoryPath, "m-b-one.txt"), "shared-one", "utf8");
+    await writeFile(join(directoryPath, "m-b-two.txt"), "shared-one", "utf8");
+    await writeFile(join(directoryPath, "m-f.txt"), "unique-f", "utf8");
+    await writeFile(join(directoryPath, "m-many.txt"), "shared-many", "utf8");
+    await writeFile(join(directoryPath, "m-g-retired.txt"), "retired", "utf8");
+    await writeFile(join(directoryPath, "m-h-conflict.txt"), "conflict", "utf8");
+
+    const sourceIds = [
+      "a-source",
+      "b-source",
+      "c-source",
+      "d-source",
+      "e-source",
+      "f-source",
+      "g-source",
+      "h-source",
+    ];
+    const snapshot = async () => {
+      const store = await openCandidateKnowledgeStore(storeRoot);
+      try {
+        return {
+          binding: await store.getCandidateKnowledgeDirectoryBinding(
+            "default-ckb-uuid",
+            "directory-binding",
+          ),
+          members: await store.listCandidateKnowledgeDirectoryMembers(
+            "default-ckb-uuid",
+            "directory-binding",
+          ),
+          sources: await store.listCandidateKnowledgeSources("default-ckb-uuid"),
+          versions: await Promise.all(
+            sourceIds.map((sourceId) =>
+              store.listCandidateKnowledgeSourceVersions("default-ckb-uuid", sourceId),
+            ),
+          ),
+          origins: await Promise.all(
+            sourceIds.map((sourceId) =>
+              store.getCandidateKnowledgeSourceOriginBinding("default-ckb-uuid", sourceId),
+            ),
+          ),
+          observations: await Promise.all(
+            sourceIds.map((sourceId) =>
+              store.getCandidateKnowledgeSourceRefreshObservation("default-ckb-uuid", sourceId),
+            ),
+          ),
+          retirements: await Promise.all(
+            sourceIds.map((sourceId) =>
+              store.getCandidateKnowledgeSourceRetirement("default-ckb-uuid", sourceId),
+            ),
+          ),
+          inventory: await store.inspectManagedCandidateKnowledgeFiles(),
+        };
+      } finally {
+        await store.close();
+      }
+    };
+    const before = await snapshot();
+    ingestDirectory.mockClear();
+
+    const result = await service.previewKnowledgeSourceDirectoryMovedCandidates({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: "directory-binding",
+    });
+    expect(result).toEqual({
+      directoryId: "directory-binding",
+      checkedAt: changedAt,
+      candidates: [
+        { sourceId: "a-source", status: "moved-candidate" },
+        { sourceId: "f-source", status: "moved-candidate" },
+      ],
+      candidateCount: 2,
+      newSourceCount: 7,
+      scannedEntryCount: 8,
+      discoveredFileCount: 8,
+      skippedEntryCount: 0,
+    });
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.candidates)).toBe(true);
+    expect(result.candidates.every((candidate) => Object.isFrozen(candidate))).toBe(true);
+    expect(JSON.stringify(result)).not.toContain(temporaryParent);
+    expect(JSON.stringify(result)).not.toContain(sha256("unique-a"));
+    expect(JSON.stringify(result)).not.toContain("unique-a");
+    expect(JSON.stringify(result)).not.toContain("a-version");
+    expect(ingestDirectory).toHaveBeenCalledOnce();
+    expect(generateId).toHaveBeenCalledTimes(19);
+    expect(await snapshot()).toEqual(before);
+
+    await expect(
+      service.previewKnowledgeSourceDirectoryMovedCandidates({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+        options: { maxScannedEntries: 1 },
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory moved-candidate preview could not be completed.",
+    );
+    expect(ingestDirectory).toHaveBeenCalledTimes(2);
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it("fails closed when a moved candidate latest managed backing is unavailable", async () => {
+    const sourcePath = "/selected/moved.txt";
+    const normalized = successfulIngestion(sourcePath, {
+      checksum: sha256("managed"),
+      sizeBytes: 7,
+      text: "managed",
+    }).source;
+    if (normalized === null) throw new Error("expected normalized source");
+    const member = {
+      directoryId: "directory-binding",
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      relativePathHash: "a".repeat(64),
+    };
+    const source = {
+      id: "source-uuid",
+      knowledgeBaseId: "default-ckb-uuid",
+      kind: "file" as const,
+      displayName: "moved.txt",
+      createdAt,
+    };
+    const version: CandidateKnowledgeSourceVersionRecord = {
+      id: "version-uuid",
+      sourceId: source.id,
+      version: 1,
+      parentVersionId: null,
+      mediaType: normalized.mediaType,
+      checksum: normalized.checksum,
+      sizeBytes: normalized.sizeBytes,
+      createdAt,
+    };
+    const close = vi.fn(async () => undefined);
+    const getManagedCandidateKnowledgeFilePath = vi.fn(async () => undefined);
+    const createManagedCandidateKnowledgeFileSource = vi.fn();
+    const upsertCandidateKnowledgeDirectoryRefreshObservations = vi.fn();
+    const handle = {
+      getCandidateKnowledgeBase: vi.fn(async () => ({
+        id: "default-ckb-uuid",
+        displayName: "Evidence",
+        description: "",
+        state: "active" as const,
+        isDefault: true,
+        createdAt,
+        updatedAt: createdAt,
+        archivedAt: null,
+      })),
+      getCandidateKnowledgeDirectoryBinding: vi.fn(async () => ({
+        id: "directory-binding",
+        knowledgeBaseId: "default-ckb-uuid",
+        rootPath: "/selected",
+        boundAt: createdAt,
+      })),
+      listCandidateKnowledgeDirectoryMembers: vi.fn(async () => [member]),
+      findCandidateKnowledgeDirectoryMemberByPath: vi.fn(async () => undefined),
+      getCandidateKnowledgeDirectoryMemberOriginRelation: vi.fn(async () => ({
+        directoryId: member.directoryId,
+        knowledgeBaseId: member.knowledgeBaseId,
+        sourceId: member.sourceId,
+        relation: "same-member" as const,
+        originBoundAt: createdAt,
+      })),
+      getCandidateKnowledgeSource: vi.fn(async () => source),
+      listCandidateKnowledgeSourceVersions: vi.fn(async () => [version]),
+      getCandidateKnowledgeSourceRetirement: vi.fn(async () => undefined),
+      getManagedCandidateKnowledgeFilePath,
+      createManagedCandidateKnowledgeFileSource,
+      upsertCandidateKnowledgeDirectoryRefreshObservations,
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const ingestDirectory = vi.fn(async () => ({
+      sources: [normalized],
+      scannedEntryCount: 1,
+      discoveredFileCount: 1,
+      skippedEntryCount: 0,
+    }));
+    const generateId = vi.fn(() => "unexpected-id");
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      ingestDirectory: ingestDirectory as never,
+      lstat: vi.fn(async () => ({
+        isSymbolicLink: () => false,
+        isDirectory: () => true,
+      })) as never,
+      realpath: vi.fn(async (path: string) => path) as never,
+      now: () => createdAt,
+      open: vi.fn(async () => handle),
+    });
+
+    await expect(
+      service.previewKnowledgeSourceDirectoryMovedCandidates({
+        storeRoot: "/store",
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory moved-candidate preview could not be completed.",
+    );
+    expect(ingestDirectory).toHaveBeenCalledOnce();
+    expect(getManagedCandidateKnowledgeFilePath).toHaveBeenCalledWith(
+      "default-ckb-uuid",
+      "source-uuid",
+      "version-uuid",
+    );
+    expect(generateId).not.toHaveBeenCalled();
+    expect(createManagedCandidateKnowledgeFileSource).not.toHaveBeenCalled();
+    expect(upsertCandidateKnowledgeDirectoryRefreshObservations).not.toHaveBeenCalled();
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("previews directory refresh states without changing persisted membership or source state", async () => {
     const directoryPath = join(temporaryParent, "candidate-directory");
     const outsidePath = join(temporaryParent, "rebound-conflict.txt");
