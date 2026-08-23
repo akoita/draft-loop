@@ -294,9 +294,13 @@ returns that path through renderer IPC. Both adapters return only CKB, source,
 and initial-version identity plus creation status. They also expose approved URL
 intake as a separate command over the existing application contract. Approval
 is mandatory before any fetch, the centralized HTTPS/network-safety boundary is
-preserved, and generic results omit the URL, label, and content. Later-version
-append and directory intake remain separate adapter operations because their
-lineage and partial-progress semantics differ.
+preserved, and generic results omit the URL, label, and content. One-source file
+version append is a separate adapter command: CLI users supply a runtime-only
+path, the desktop host owns the picker, and both return only source/version
+identity plus creation status. Identical bytes are a no-op, changed bytes extend
+immutable lineage, and neither outcome changes the remembered origin binding.
+Directory intake remains separate because of its bounded partial-progress
+semantics.
 
 ## Deferred integration
 

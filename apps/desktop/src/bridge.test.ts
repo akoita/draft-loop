@@ -1295,6 +1295,81 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("validates path-free candidate-knowledge file-version append", async () => {
+    const input = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      sourceId: "source-1",
+      selection: "native-dialog",
+    } as const;
+    expect(validateBridgeCommand({ type: "knowledge.append-file-version", input })).toEqual({
+      type: "knowledge.append-file-version",
+      input,
+    });
+    for (const invalid of [
+      { ...input, selection: "path" },
+      { ...input, sourcePath: "/private/resume.md" },
+      { storeId: "store-1", knowledgeBaseId: "kb-1", selection: "native-dialog" },
+      { ...input, sourceId: " " },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.append-file-version", input: invalid }),
+      ).toThrow("invalid");
+    }
+
+    const port = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceId: "source-1",
+            kind: "file",
+            versionId: "version-2",
+            version: 2,
+            created: false,
+          },
+        }),
+        ["knowledge.append-file-version"],
+      ),
+    );
+    await expect(port.execute({ type: "knowledge.append-file-version", input })).resolves.toEqual({
+      ok: true,
+      value: {
+        storeId: "store-1",
+        knowledgeBaseId: "kb-1",
+        sourceId: "source-1",
+        kind: "file",
+        versionId: "version-2",
+        version: 2,
+        created: false,
+      },
+    });
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceId: "source-1",
+            kind: "file",
+            versionId: "version-2",
+            version: 2,
+            created: true,
+            sourcePath: "/private/resume.md",
+          },
+        }),
+        ["knowledge.append-file-version"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({ type: "knowledge.append-file-version", input }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("requires approval and redacts candidate-knowledge URL intake results", async () => {
     const input = {
       storeId: "store-1",

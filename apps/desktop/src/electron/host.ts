@@ -54,6 +54,7 @@ import {
   type FileSelectResult,
   type KnowledgeDuplicatesResult,
   type KnowledgeFileImportResult,
+  type KnowledgeFileVersionAppendResult,
   type KnowledgeInventoryResult,
   type KnowledgeReadinessResult,
   type KnowledgeSelectionResult,
@@ -2194,6 +2195,55 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             versionId: version.id,
             version: version.version,
             created: imported.created,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.append-file-version": {
+          const chooseKnowledgeSourceFile = options.dialogs.chooseKnowledgeSourceFile;
+          if (chooseKnowledgeSourceFile === undefined) {
+            return fail(
+              "capability-unavailable",
+              "Candidate knowledge file-version append is unavailable in this host.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const sourcePath = await chooseKnowledgeSourceFile();
+          if (sourcePath === undefined) {
+            return fail(
+              "permission-denied",
+              "Candidate knowledge file-version append was cancelled.",
+            );
+          }
+          const appended = await knowledgeService.appendKnowledgeSourceFileVersion({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+            sourcePath: resolve(sourcePath),
+          });
+          const version = appended.versions.at(-1);
+          if (
+            appended.source.knowledgeBaseId !== command.input.knowledgeBaseId ||
+            appended.source.id !== command.input.sourceId ||
+            appended.source.kind !== "file" ||
+            version === undefined ||
+            version.sourceId !== command.input.sourceId
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge file-version append returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeFileVersionAppendResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+            kind: "file",
+            versionId: version.id,
+            version: version.version,
+            created: appended.created,
           };
           return { ok: true, value: result };
         }
