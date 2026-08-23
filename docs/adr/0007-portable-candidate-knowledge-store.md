@@ -50,8 +50,8 @@ add-members operation can append unmatched accepted files from an existing
 binding as new managed file sources and immutable members in deterministic path
 order; existing member states remain report-only and a later candidate failure
 returns a path-free partial result. Applied refresh is limited to existing
-active same-member changed files; complete removal reconciliation, applied root rebind,
-rename, and broader member-retirement policy remain deferred. The membership is a stable historical
+active same-member changed files; complete removal reconciliation, rename, and
+broader member-retirement policy remain deferred. The membership is a stable historical
 mapping captured at binding or explicit append time: later source version
 appends, explicit origin rebinding, or source retirement do not rewrite its
 rows, and actual incremental scan reconciliation remains deferred.
@@ -59,13 +59,15 @@ A bounded explicit refresh preview now revalidates that persisted root, repeats
 the directory preflight, and reports only path-free member states plus an
 aggregate count of unmatched accepted files. It is read-only; the separate
 explicit add-members operation owns append-only persistence for those unmatched
-files. Rename/removal decisions, applying a directory-root rebind, automatic
-retirement/deletion, and background refresh remain deferred. A separate
+files. Rename/removal decisions, automatic retirement/deletion, and background
+refresh remain deferred. A separate
 read-only directory-root-rebind eligibility preview accepts a candidate real
 non-symlink root, rescans it once, and requires exact historical relative-path
 membership plus latest-byte agreement. It returns only a path-free
-readiness/count result and performs no writes; applying a root rebind remains
-deferred.
+readiness/count result and performs no writes. An explicit application command
+now reuses that single scan and performs stable per-member final verification
+before the guarded storage transaction; it returns only frozen path-free
+`current` or `rebound` status and counts, with no partial result.
 A separate read-only moved-candidate preview reuses one complete refresh scan
 and compares only exact media-type, checksum, and size tuples between eligible
 same-member missing sources and unmatched accepted files. It emits only unique
@@ -170,7 +172,7 @@ The selected root and exact file origins remain sensitive local state; generic
 manifests, diagnostics, journals, inventory, and provider projections expose
 neither. Repeating a bound root is rejected; explicit add-members provides
 stable source reuse for approved directory additions one candidate at a time,
-while removals, applied root rebind, rename, and complete incremental reconciliation remain
+while removals, rename, and complete incremental reconciliation remain
 deferred. The persisted membership remains a
 historical mapping captured at binding or explicit append time even when an
 existing member later gains a version, has its origin explicitly rebound, or is
@@ -183,8 +185,9 @@ or change lifecycle state.
 A separate read-only directory-root-rebind eligibility preview rescans one
 candidate root, requires an exact path-hash/member and latest-byte match for
 every historical member, and returns only path-free readiness and scan counts.
-It does not mutate the immutable binding or membership; applying the rebind and
-complete reconciliation remain deferred.
+The explicit application command reuses that scan and atomically commits a
+guarded all-member origin/revision update, or returns a guarded current-root
+no-op; complete reconciliation remains deferred.
 A separate moved-candidate projection reuses that scan exactly once and returns
 only path-free, deeply frozen advisory source IDs for unique exact-integrity
 one-to-one matches among same-member missing sources and unmatched files.
@@ -238,9 +241,11 @@ member and atomically updates current origin bindings plus revision N+1, while
 same-root requests are guarded no-ops. v13 binding/member rows remain
 immutable. A mutable v13 root or a no-backfill overlay was rejected because it
 would erase historical roots, make moved-root conflicts ambiguous, or leave
-legacy bindings without a trustworthy revision baseline. Application rebind
-command, rename/removal reconciliation, and lifecycle policy remain
-deferred; this is a component implementation only and does not advance v0.7.
+legacy bindings without a trustworthy revision baseline. The application rebind
+command now performs the explicit scan-and-commit boundary with generic
+no-partial failures; rename/removal reconciliation and broader lifecycle policy
+remain deferred. This is a component implementation only and does not advance
+v0.7.
 
 An explicit application operation can approve one local regular file as a
 manual new version of an existing file source. Every append repeats the same

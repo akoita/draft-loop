@@ -215,9 +215,9 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   partial IDs after a later failure. That membership is a stable historical
   mapping captured at binding or explicit append time:
   later source version appends, explicit origin rebinding, or source retirement
-  do not rewrite it. Incremental directory scan reconciliation, applied
-  directory rebind, rename, complete removal reconciliation, and broader member-retirement
-  policy remain unimplemented.
+  do not rewrite it. Incremental directory scan reconciliation, rename,
+  complete removal reconciliation, and broader member-retirement policy remain
+  unimplemented.
   A local explicit bounded refresh preview can classify historical members as
   `current`, `changed`, `missing`, `retired`, or `origin-conflict` and count
   unmatched accepted files. It exposes no paths or integrity metadata and makes
@@ -225,16 +225,18 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   A separate read-only directory-root-rebind eligibility preview rescans one
   candidate real non-symlink root, requires exact normalized-relative-path
   membership and latest-byte agreement for every historical member, and
-  returns only path-free readiness and scan counts. It does not mutate the
-  persisted binding or membership; applying the root rebind remains deferred.
+  returns only path-free readiness and scan counts. An explicit application
+  operation reuses that single scan, performs stable per-member final
+  verification, and atomically commits all origin updates plus the next root
+  revision; same-root requests are guarded no-ops and failures are generic with
+  no partial result.
   Storage now also provides the v14 append-only root-revision foundation: v13
   bindings backfill as revision 1, fresh bindings receive revision 1, and a
   current-root view drives path-sensitive reads. A verified storage/handle
   transaction can validate every member and atomically update current origin
   bindings plus the next revision, or return a guarded same-root no-op. The
-  immutable v13 binding/member rows remain historical evidence; an application
-  rebind command, rename/removal reconciliation, and broader lifecycle policy
-  remain deferred.
+  immutable v13 binding/member rows remain historical evidence; rename/removal
+  reconciliation and broader lifecycle policy remain deferred.
   A separate moved-candidate projection reuses that complete scan exactly once
   and emits only deterministic source IDs for unique one-to-one exact
   media-type/checksum/size matches between same-member missing sources and
@@ -246,9 +248,13 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   entries, and atomically records their path-free observations with one shared
   timestamp. Retired, origin-conflict, and new files remain report-only; the
   operation allocates no IDs and writes no bytes, versions, membership, origin
-  bindings, retirements, or journal events. Rename/removal decisions, applying
-  a root rebind, automatic retirement or deletion, adapters, indexing, and background
-  refresh remain deferred.
+  bindings, retirements, or journal events. Rename/removal decisions, automatic
+  retirement or deletion, adapters, indexing, and background refresh remain
+  deferred.
+- An explicit bounded directory-root rebind reuses one complete scan, performs
+  stable per-member final verification, and commits all sensitive origin updates
+  plus the next append-only root revision atomically. A current-root request is
+  a guarded no-op; failures are generic and do not return partial results.
 - An explicit bounded applied directory refresh reuses that same complete scan.
   It processes active same-member files in source-ID order, appends only changed
   bytes through the stable managed-file path with current-version/origin-revision
@@ -256,15 +262,15 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   same-member-missing entries. Retired, origin-conflict, and new files remain
   report-only. A later member failure returns a path-free partial result after
   earlier member commits; rename/removal decisions, member-retirement
-  lifecycle, applied root rebind, automatic retirement/deletion, adapters, indexing, and
-  background refresh remain deferred.
+  lifecycle, automatic retirement/deletion, adapters, indexing, and background
+  refresh remain deferred.
 - An explicit bounded add-members operation reuses one complete scan of an
   existing binding, allocates IDs only for unmatched accepted files, and creates
   each file source, initial version, sensitive origin binding, managed blob,
   journal event, and immutable membership atomically per candidate. Existing
   member states are report-only, new members receive no refresh observation, and
-  complete removal reconciliation, renames, applied root rebind, automatic retirement/deletion, and writer
-  coordination remain deferred.
+  complete removal reconciliation, renames, automatic retirement/deletion, and
+  writer coordination remain deferred.
 - An explicit approved directory-member retirement operation reuses one complete
   bounded scan and accepts only an active same-member `missing` member. It
   atomically records the existing `user-requested` retirement marker with
@@ -469,7 +475,6 @@ exact latest-managed-version match and exposes no path or integrity metadata.
 New-member persistence is available only through the explicit bounded add-members
 operation, and explicit missing-member retirement is available only through the
 approved directory-member operation; complete removal reconciliation,
-applied directory-root rebind,
 automatic retirement/deletion, background refresh, time-based freshness policy,
 automatic moved-origin
 discovery, adapter-level refresh/rebind/duplicate controls, incremental
