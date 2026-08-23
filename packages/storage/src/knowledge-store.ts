@@ -24,9 +24,11 @@ import {
   type CandidateKnowledgeBaseStoragePort,
   type CandidateKnowledgeDirectoryBindingInput,
   type CandidateKnowledgeDirectoryBindingRecord,
+  type CandidateKnowledgeDirectoryMemberMoveInput,
   type CandidateKnowledgeDirectoryMemberOriginRelationRecord,
   type CandidateKnowledgeDirectoryMemberRecord,
   type CandidateKnowledgeDirectoryMemberRetirementInput,
+  type CandidateKnowledgeDirectoryMemberRevisionRecord,
   type CandidateKnowledgeDirectoryRefreshObservationBatchInput,
   type CandidateKnowledgeDirectoryRootRebindInput,
   type CandidateKnowledgeDirectoryRootRebindResult,
@@ -179,6 +181,33 @@ export interface RebindManagedCandidateKnowledgeDirectoryRootInput {
 export type RebindManagedCandidateKnowledgeDirectoryRootResult =
   CandidateKnowledgeDirectoryRootRebindResult;
 
+export interface MoveManagedCandidateKnowledgeDirectoryMemberInput {
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly sourceId: string;
+  /** Explicit runtime source selection; it is never persisted in a product projection. */
+  readonly sourcePath: string;
+  readonly mediaType: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly expectedRootPath: string;
+  readonly expectedRootRevision: number;
+  readonly expectedMemberRevision: number;
+  readonly expectedRelativePathHash: string;
+  readonly expectedVersionId: string;
+  readonly expectedOriginBoundAt: string;
+  readonly movedAt: string;
+  /** @internal Test seam for mutating the selected source before its final stability check. */
+  readonly beforeSourceRecheck?: () => Promise<void>;
+}
+
+export interface MoveManagedCandidateKnowledgeDirectoryMemberResult {
+  readonly member: CandidateKnowledgeDirectoryMemberRecord;
+  readonly revision: CandidateKnowledgeDirectoryMemberRevisionRecord;
+  readonly binding: CandidateKnowledgeSourceOriginBindingRecord;
+  readonly moved: boolean;
+}
+
 export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseStoragePort {
   readonly descriptor: CandidateKnowledgeStoreDescriptor;
   /** Canonical physical root. It is runtime state and is never persisted in the manifest. */
@@ -223,9 +252,17 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     directoryId: string,
   ) => Promise<CandidateKnowledgeDirectoryRootRevisionRecord | undefined>;
+  readonly getCandidateKnowledgeDirectoryMemberCurrentRevision: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeDirectoryMemberRevisionRecord | undefined>;
   readonly rebindManagedCandidateKnowledgeDirectoryRoot: (
     input: RebindManagedCandidateKnowledgeDirectoryRootInput,
   ) => Promise<RebindManagedCandidateKnowledgeDirectoryRootResult>;
+  readonly moveManagedCandidateKnowledgeDirectoryMember: (
+    input: MoveManagedCandidateKnowledgeDirectoryMemberInput,
+  ) => Promise<MoveManagedCandidateKnowledgeDirectoryMemberResult>;
   readonly findCandidateKnowledgeDirectoryBinding: (
     knowledgeBaseId: string,
     rootPath: string,
@@ -1720,6 +1757,63 @@ async function rebindManagedCandidateKnowledgeFileOrigin(
   });
 }
 
+async function moveManagedCandidateKnowledgeDirectoryMember(
+  storage: SqliteStorage,
+  root: string,
+  input: MoveManagedCandidateKnowledgeDirectoryMemberInput,
+): Promise<MoveManagedCandidateKnowledgeDirectoryMemberResult> {
+  const knowledgeBaseId = requiredManagedText(
+    input.knowledgeBaseId,
+    "Managed candidate knowledge base id",
+  );
+  const directoryId = requiredManagedText(
+    input.directoryId,
+    "Managed candidate knowledge directory id",
+  );
+  const sourceId = requiredManagedText(input.sourceId, "Managed candidate knowledge source id");
+  const candidateRootPath = await verifyCandidateDirectoryRoot(root, input.expectedRootPath);
+  const verified = await verifyManagedFileOrigin(root, {
+    sourcePath: input.sourcePath,
+    mediaType: input.mediaType,
+    checksum: input.checksum,
+    sizeBytes: input.sizeBytes,
+    boundAt: input.movedAt,
+    ...(input.beforeSourceRecheck === undefined
+      ? {}
+      : { beforeSourceRecheck: input.beforeSourceRecheck }),
+  });
+  if (
+    verified.originPath === candidateRootPath ||
+    !isWithin(candidateRootPath, verified.originPath)
+  ) {
+    throw new StorageValidationError(
+      "Managed candidate knowledge directory member must be strictly inside its current root.",
+    );
+  }
+  const moved = await storage.moveCandidateKnowledgeDirectoryMember({
+    knowledgeBaseId,
+    directoryId,
+    sourceId,
+    targetOriginPath: verified.originPath,
+    mediaType: input.mediaType,
+    checksum: verified.checksum,
+    sizeBytes: verified.sizeBytes,
+    expectedRootPath: candidateRootPath,
+    expectedRootRevision: input.expectedRootRevision,
+    expectedMemberRevision: input.expectedMemberRevision,
+    expectedRelativePathHash: input.expectedRelativePathHash,
+    expectedVersionId: input.expectedVersionId,
+    expectedOriginBoundAt: input.expectedOriginBoundAt,
+    movedAt: input.movedAt,
+  } satisfies CandidateKnowledgeDirectoryMemberMoveInput);
+  return Object.freeze({
+    member: Object.freeze({ ...moved.member }),
+    revision: Object.freeze({ ...moved.revision }),
+    binding: Object.freeze({ ...moved.binding }),
+    moved: moved.moved,
+  });
+}
+
 function createHandle(
   descriptor: CandidateKnowledgeStoreDescriptor,
   root: string,
@@ -1767,6 +1861,18 @@ function createHandle(
       const revision = await storage.getCandidateKnowledgeDirectoryCurrentRootRevision(
         knowledgeBaseId,
         directoryId,
+      );
+      return revision === undefined ? undefined : Object.freeze({ ...revision });
+    },
+    getCandidateKnowledgeDirectoryMemberCurrentRevision: async (
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+    ) => {
+      const revision = await storage.getCandidateKnowledgeDirectoryMemberCurrentRevision(
+        knowledgeBaseId,
+        directoryId,
+        sourceId,
       );
       return revision === undefined ? undefined : Object.freeze({ ...revision });
     },
@@ -1835,6 +1941,8 @@ function createHandle(
         rebound: rebound.rebound,
       });
     },
+    moveManagedCandidateKnowledgeDirectoryMember: (input) =>
+      moveManagedCandidateKnowledgeDirectoryMember(storage, root, input),
     findCandidateKnowledgeDirectoryBinding: async (knowledgeBaseId, rootPath) => {
       const binding = await storage.findCandidateKnowledgeDirectoryBinding(
         knowledgeBaseId,

@@ -237,6 +237,16 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   bindings plus the next revision, or return a guarded same-root no-op. The
   immutable v13 binding/member rows remain historical evidence; rename/removal
   reconciliation and broader lifecycle policy remain deferred.
+  Storage v15 adds append-only per-member revision rows and a current-member
+  view. Existing v13 members backfill as revision 1 at the later of immutable
+  binding time or source creation; future members receive the same baseline
+  trigger. Historical hashes remain owned by their original source, while that
+  source may return to one of its own earlier hashes. A verified storage/handle
+  move can atomically update one sensitive origin and append one member revision
+  or return a guarded no-op without changing source, version, observation,
+  retirement, blob, or journal evidence. The application move command remains
+  deferred with #135/#136, automatic inference, physical deletion, adapters,
+  indexing, and background refresh.
   A separate moved-candidate projection reuses that complete scan exactly once
   and emits only deterministic source IDs for unique one-to-one exact
   media-type/checksum/size matches between same-member missing sources and

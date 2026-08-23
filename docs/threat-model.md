@@ -288,6 +288,17 @@ scan-and-commit boundary with stable per-member final verification and generic
 no-partial failures; rename/removal reconciliation and broader membership
 lifecycle remain deferred.
 
+Migration v15 adds append-only directory-member revisions and a current-member
+projection while preserving immutable v13 binding/member baselines. Existing
+members backfill as revision 1 at the later of immutable binding time and source
+creation time. Historical hashes remain owned by their original source, so a
+different source cannot silently claim an old relative path while the original
+source may return to its own history. The verified storage/handle move checks
+stable bytes and all scope/version/origin guards before atomically updating one
+sensitive origin and appending one revision, or returning a no-op. The
+application move command remains deferred with #135/#136, automatic inference,
+physical deletion, adapters, indexing, and background refresh.
+
 The structural inventory is a local application query, not a provider-facing
 projection or content-diagnostic workflow. Missing or corrupt referenced blobs
 still fail normal validation; inventory is not repair mode. Unknown entries are

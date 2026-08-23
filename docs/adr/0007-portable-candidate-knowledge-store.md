@@ -73,8 +73,8 @@ and compares only exact media-type, checksum, and size tuples between eligible
 same-member missing sources and unmatched accepted files. It emits only unique
 one-to-one advisory source IDs in deterministic order; ambiguous tuples emit
 nothing, and its unchanged aggregate `newSourceCount` still includes every
-unmatched accepted file. It is not proof or approval of a move; applied rename,
-membership revision, root rebind, and complete reconciliation remain deferred.
+unmatched accepted file. It is not proof or approval of a move; applied rename
+and membership-revision decisions, plus complete reconciliation, remain deferred.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -246,6 +246,23 @@ command now performs the explicit scan-and-commit boundary with generic
 no-partial failures; rename/removal reconciliation and broader lifecycle policy
 remain deferred. This is a component implementation only and does not advance
 v0.7.
+
+The eighteenth #110 / first #134 storage slice adds migration v15 as an
+append-only directory-member revision foundation. Existing v13 member rows are
+backfilled as revision 1 with a baseline timestamp equal to the later of the
+immutable binding timestamp and source creation time; future members receive
+the same revision-one trigger. A current-member view drives all current
+membership reads while historical hashes remain owned by their original source:
+another source cannot claim any historical hash, but a source may return to one
+of its own earlier hashes. Per-member revisions were chosen over whole-directory
+snapshots because moves are independently verifiable and preserve stable source
+identity; mutating v13 rows or adding a no-backfill overlay would erase baseline
+evidence or leave legacy members without a trustworthy history. The verified
+storage/handle move transaction updates one sensitive origin and appends its
+member revision atomically, with a guarded no-op when the current hash is
+unchanged. The application move command remains deferred, along with #135/#136,
+automatic move inference, physical deletion, adapters, indexing, and background
+refresh. This is a component implementation only and does not advance v0.7.
 
 An explicit application operation can approve one local regular file as a
 manual new version of an existing file source. Every append repeats the same
@@ -442,7 +459,7 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- complete directory removal reconciliation, applied directory rebind, rename/removal,
+- complete directory removal reconciliation, applied member moves, rename/removal,
   and broader member-retirement policy (the explicit operation handles only one
   approved missing same-member member; add-members handles only unmatched
   additions, while applied refresh handles only existing active same-member

@@ -98,6 +98,17 @@ stable per-member final verification, and one guarded all-member commit (or a
 same-root no-op), returning only path-free status and counts. Rename, removal,
 reconciliation, and broader membership lifecycle decisions remain deferred.
 
+The v15 storage/handle foundation adds append-only sensitive directory-member
+revisions and a current-member projection without changing immutable v13 rows.
+Existing members backfill as revision 1 using the later of immutable binding time
+and source creation time. Historical relative-path hashes remain owned by their
+original source; a source may later return to one of its own historical hashes,
+but another source cannot claim it. A verified handle move updates one origin
+and appends one revision atomically, or returns a guarded no-op, while preserving
+all source, version, observation, retirement, blob, and journal evidence. The
+application move command remains deferred with #135/#136, automatic inference,
+physical deletion, adapters, indexing, and background refresh.
+
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address
 resolution and every redirect, bounds time and response/text size, restricts
