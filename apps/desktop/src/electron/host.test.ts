@@ -3000,6 +3000,106 @@ describe("candidate knowledge native controls", () => {
     expect(knowledgeService.openStore).not.toHaveBeenCalled();
   });
 
+  it("imports approved URL sources without exposing their URL or content", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-url-host-"));
+    const storeRoot = join(parent, "candidate-knowledge");
+    const resolveHostname = vi.fn(async () => ["93.184.216.34"]);
+    const fetchUrl = vi.fn(
+      async () =>
+        new Response("Private candidate evidence", {
+          headers: { "content-type": "text/plain" },
+        }),
+    );
+    try {
+      const host = createNativeHost({
+        dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+        urlHostnameResolver: resolveHostname,
+        urlFetcher: fetchUrl,
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      const sensitiveUrl = "https://example.com/private-profile?token=sensitive";
+
+      await expect(
+        host.invoke({
+          type: "knowledge.import-url",
+          input: { storeId, knowledgeBaseId, url: sensitiveUrl, approved: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "invalid-input" } });
+      expect(resolveHostname).not.toHaveBeenCalled();
+      expect(fetchUrl).not.toHaveBeenCalled();
+
+      const imported = await host.invoke({
+        type: "knowledge.import-url",
+        input: {
+          storeId,
+          knowledgeBaseId,
+          url: sensitiveUrl,
+          approved: true,
+          displayName: "Private profile",
+        },
+      });
+      expect(imported).toMatchObject({
+        ok: true,
+        value: { storeId, knowledgeBaseId, kind: "url", version: 1, created: true },
+      });
+      expect(JSON.stringify(imported)).not.toContain(sensitiveUrl);
+      expect(JSON.stringify(imported)).not.toContain("sensitive");
+      expect(JSON.stringify(imported)).not.toContain("Private profile");
+      expect(JSON.stringify(imported)).not.toContain("Private candidate evidence");
+      expect(resolveHostname).toHaveBeenCalledOnce();
+      expect(fetchUrl).toHaveBeenCalledOnce();
+      await expect(
+        host.invoke({ type: "knowledge.sources", input: { storeId, knowledgeBaseId } }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { sourceCount: 1, sources: [{ kind: "url", versionCount: 1 }] },
+      });
+
+      const reopenedRoots = [storeRoot];
+      const restartedFetch = vi.fn(async () => new Response("Restarted evidence"));
+      const restarted = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => reopenedRoots.shift(),
+          chooseFiles: async () => [],
+        },
+        urlHostnameResolver: async () => ["93.184.216.34"],
+        urlFetcher: restartedFetch,
+      });
+      await expect(
+        restarted.invoke({
+          type: "knowledge.import-url",
+          input: { storeId, knowledgeBaseId, url: sensitiveUrl, approved: true },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      expect(restartedFetch).not.toHaveBeenCalled();
+      await expect(
+        restarted.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId } });
+      await expect(
+        restarted.invoke({
+          type: "knowledge.import-url",
+          input: {
+            storeId,
+            knowledgeBaseId,
+            url: "https://example.com/restarted",
+            approved: true,
+          },
+        }),
+      ).resolves.toMatchObject({ ok: true, value: { kind: "url", version: 1 } });
+      expect(restartedFetch).toHaveBeenCalledOnce();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("requires explicit approval before forwarding a multi-CKB selection", async () => {
     const root = "/local/workspace";
     const storeRoots = ["/local/store-a", "/local/store-b"];

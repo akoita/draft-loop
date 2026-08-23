@@ -27,6 +27,7 @@ export const bridgeCapabilities = [
   "knowledge.duplicates",
   "knowledge.inventory",
   "knowledge.import-file",
+  "knowledge.import-url",
   "knowledge.select",
   "knowledge.create-base",
   "knowledge.rename-base",
@@ -219,6 +220,21 @@ const knowledgeFileImportKeys = inputKeys<KnowledgeFileImportInput>()([
   "storeId",
   "knowledgeBaseId",
   "selection",
+  "displayName",
+]);
+
+export interface KnowledgeUrlImportInput extends KnowledgeReadinessInput {
+  readonly url: string;
+  /** The renderer can only request a network fetch after the user confirms it. */
+  readonly approved: boolean;
+  readonly displayName?: string;
+}
+
+const knowledgeUrlImportKeys = inputKeys<KnowledgeUrlImportInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "url",
+  "approved",
   "displayName",
 ]);
 
@@ -621,6 +637,16 @@ export interface KnowledgeFileImportResult {
   readonly created: boolean;
 }
 
+export interface KnowledgeUrlImportResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly kind: "url";
+  readonly versionId: string;
+  readonly version: number;
+  readonly created: boolean;
+}
+
 export interface KnowledgeSelectionResult {
   readonly workspaceId: string;
   readonly entries: readonly KnowledgeSelectionEntry[];
@@ -689,6 +715,15 @@ const knowledgeInventoryResultKeys = resultKeys<KnowledgeInventoryResult>()([
   "scanLimitReached",
 ]);
 const knowledgeFileImportResultKeys = resultKeys<KnowledgeFileImportResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "kind",
+  "versionId",
+  "version",
+  "created",
+]);
+const knowledgeUrlImportResultKeys = resultKeys<KnowledgeUrlImportResult>()([
   "storeId",
   "knowledgeBaseId",
   "sourceId",
@@ -929,6 +964,7 @@ export interface BridgeCommandInputMap {
   "knowledge.duplicates": KnowledgeDuplicatesInput;
   "knowledge.inventory": KnowledgeInventoryInput;
   "knowledge.import-file": KnowledgeFileImportInput;
+  "knowledge.import-url": KnowledgeUrlImportInput;
   "knowledge.select": KnowledgeSelectionInput;
   "knowledge.create-base": KnowledgeBaseCreateInput;
   "knowledge.rename-base": KnowledgeBaseRenameInput;
@@ -962,6 +998,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.duplicates": KnowledgeDuplicatesResult;
   "knowledge.inventory": KnowledgeInventoryResult;
   "knowledge.import-file": KnowledgeFileImportResult;
+  "knowledge.import-url": KnowledgeUrlImportResult;
   "knowledge.select": KnowledgeSelectionResult;
   "knowledge.create-base": KnowledgeStoreResult;
   "knowledge.rename-base": KnowledgeStoreResult;
@@ -1455,6 +1492,21 @@ function validateKnowledgeFileImportInput(value: unknown): KnowledgeFileImportIn
   };
 }
 
+function validateKnowledgeUrlImportInput(value: unknown): KnowledgeUrlImportInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeUrlImportKeys) || input.approved !== true) {
+    return invalidInput();
+  }
+  const selectedDisplayName = optionalDisplayName(input.displayName);
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    url: urlValue(input.url),
+    approved: true,
+    ...(selectedDisplayName === undefined ? {} : { displayName: selectedDisplayName }),
+  };
+}
+
 const maximumKnowledgeSelections = 32;
 
 function validateKnowledgeSelectionEntry(value: unknown): KnowledgeSelectionEntry {
@@ -1821,6 +1873,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.import-file",
         input: validateKnowledgeFileImportInput(command.input),
+      };
+    case "knowledge.import-url":
+      return {
+        type: "knowledge.import-url",
+        input: validateKnowledgeUrlImportInput(command.input),
       };
     case "knowledge.select":
       return { type: "knowledge.select", input: validateKnowledgeSelectionInput(command.input) };
@@ -2191,6 +2248,22 @@ function normalizeKnowledgeFileImportResult(value: unknown): KnowledgeFileImport
   };
 }
 
+function normalizeKnowledgeUrlImportResult(value: unknown): KnowledgeUrlImportResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeUrlImportResultKeys)) return invalidInput();
+  const version = finiteInteger(result.version, 1_000_000);
+  if (version === 0) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    sourceId: identifier(result.sourceId),
+    kind: enumValue(result.kind, ["url"] as const),
+    versionId: identifier(result.versionId),
+    version,
+    created: booleanValue(result.created),
+  };
+}
+
 function normalizeKnowledgeSelectionResult(value: unknown): KnowledgeSelectionResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeSelectionResultKeys) || !Array.isArray(result.entries)) {
@@ -2474,6 +2547,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeInventoryResult(value);
     case "knowledge.import-file":
       return normalizeKnowledgeFileImportResult(value);
+    case "knowledge.import-url":
+      return normalizeKnowledgeUrlImportResult(value);
     case "knowledge.select":
       return normalizeKnowledgeSelectionResult(value);
     case "run.status":

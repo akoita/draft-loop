@@ -59,6 +59,7 @@ import {
   type KnowledgeSelectionResult,
   type KnowledgeSourcesResult,
   type KnowledgeStoreResult,
+  type KnowledgeUrlImportResult,
   type ModelsListInput,
   type ModelsListResult,
   type ModelsPreviewIndependenceInput,
@@ -1143,7 +1144,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           : { userSessionRunners: options.userSessionRunners }),
       }),
     );
-  const knowledgeService = options.knowledgeService ?? createCandidateKnowledgeStoreService();
+  const knowledgeService =
+    options.knowledgeService ??
+    createCandidateKnowledgeStoreService({
+      ingestUrl: (url, ingestionOptions) =>
+        ingestUrl(url, {
+          ...ingestionOptions,
+          ...(options.urlFetcher === undefined ? {} : { fetcher: options.urlFetcher }),
+          ...(options.urlHostnameResolver === undefined
+            ? {}
+            : { resolveHostname: options.urlHostnameResolver }),
+        }),
+    });
   let active: ActiveWorkspace | undefined;
   const knowledgeStoreRoots = new Map<string, string>();
   const backgroundRuns = new Map<string, BackgroundRun>();
@@ -2142,6 +2154,43 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             knowledgeBaseId: command.input.knowledgeBaseId,
             sourceId: imported.source.id,
             kind: "file",
+            versionId: version.id,
+            version: version.version,
+            created: imported.created,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.import-url": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const imported = await knowledgeService.importKnowledgeSourceUrl({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            url: command.input.url,
+            approved: true,
+            ...(command.input.displayName === undefined
+              ? {}
+              : { displayName: command.input.displayName }),
+          });
+          const version = imported.versions.at(-1);
+          if (
+            imported.source.knowledgeBaseId !== command.input.knowledgeBaseId ||
+            imported.source.kind !== "url" ||
+            version === undefined ||
+            version.sourceId !== imported.source.id
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge URL intake returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeUrlImportResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: imported.source.id,
+            kind: "url",
             versionId: version.id,
             version: version.version,
             created: imported.created,

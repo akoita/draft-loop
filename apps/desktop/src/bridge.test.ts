@@ -1295,6 +1295,85 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("requires approval and redacts candidate-knowledge URL intake results", async () => {
+    const input = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      url: "https://example.com/private-profile?token=sensitive",
+      approved: true,
+      displayName: "Remote career history",
+    } as const;
+    expect(validateBridgeCommand({ type: "knowledge.import-url", input })).toEqual({
+      type: "knowledge.import-url",
+      input,
+    });
+    for (const invalid of [
+      { ...input, approved: false },
+      { ...input, approved: undefined },
+      { ...input, url: "http://example.com/profile" },
+      { ...input, displayName: " " },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "knowledge.import-url", input: invalid })).toThrow(
+        "invalid",
+      );
+    }
+
+    const port = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceId: "source-url-1",
+            kind: "url",
+            versionId: "version-url-1",
+            version: 1,
+            created: true,
+          },
+        }),
+        ["knowledge.import-url"],
+      ),
+    );
+    const imported = await port.execute({ type: "knowledge.import-url", input });
+    expect(imported).toEqual({
+      ok: true,
+      value: {
+        storeId: "store-1",
+        knowledgeBaseId: "kb-1",
+        sourceId: "source-url-1",
+        kind: "url",
+        versionId: "version-url-1",
+        version: 1,
+        created: true,
+      },
+    });
+    expect(JSON.stringify(imported)).not.toContain("example.com");
+    expect(JSON.stringify(imported)).not.toContain("sensitive");
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceId: "source-url-1",
+            kind: "url",
+            versionId: "version-url-1",
+            version: 1,
+            created: true,
+            url: input.url,
+          },
+        }),
+        ["knowledge.import-url"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({ type: "knowledge.import-url", input }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("carries an explicit path-free knowledge selection and combination approval", async () => {
     const input = {
       workspaceId: "workspace-1",
