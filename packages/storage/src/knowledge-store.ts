@@ -24,7 +24,9 @@ import {
   type CandidateKnowledgeBaseStoragePort,
   type CandidateKnowledgeDirectoryBindingInput,
   type CandidateKnowledgeDirectoryBindingRecord,
+  type CandidateKnowledgeDirectoryMemberOriginRelationRecord,
   type CandidateKnowledgeDirectoryMemberRecord,
+  type CandidateKnowledgeDirectoryRefreshObservationBatchInput,
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceOriginBindingRecord,
   type CandidateKnowledgeSourceRefreshObservationInput,
@@ -194,6 +196,16 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     directoryId: string,
     sourcePath: string,
   ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
+  readonly getCandidateKnowledgeDirectoryMemberOriginRelation: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeDirectoryMemberOriginRelationRecord>;
+  readonly upsertCandidateKnowledgeDirectoryRefreshObservations: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    input: CandidateKnowledgeDirectoryRefreshObservationBatchInput,
+  ) => Promise<readonly CandidateKnowledgeSourceRefreshObservationRecord[]>;
   readonly getCandidateKnowledgeSourceRefreshObservation: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1665,6 +1677,32 @@ function createHandle(
       );
       return member === undefined ? undefined : Object.freeze({ ...member });
     },
+    getCandidateKnowledgeDirectoryMemberOriginRelation: async (
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+    ) =>
+      Object.freeze({
+        ...(await storage.getCandidateKnowledgeDirectoryMemberOriginRelation(
+          knowledgeBaseId,
+          directoryId,
+          sourceId,
+        )),
+      }),
+    upsertCandidateKnowledgeDirectoryRefreshObservations: async (
+      knowledgeBaseId,
+      directoryId,
+      input,
+    ) =>
+      Object.freeze(
+        (
+          await storage.upsertCandidateKnowledgeDirectoryRefreshObservations(
+            knowledgeBaseId,
+            directoryId,
+            input,
+          )
+        ).map((observation) => Object.freeze({ ...observation })),
+      ),
     getCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId) => {
       const observation = await storage.getCandidateKnowledgeSourceRefreshObservation(
         knowledgeBaseId,

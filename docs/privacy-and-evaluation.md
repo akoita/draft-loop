@@ -65,6 +65,14 @@ A local explicit bounded refresh preview can report only path-free `current`,
 count of unmatched accepted files. It writes no source, version, membership,
 observation, or lifecycle state; scan-level unreadable, unstable, limit, and
 extraction failures fail closed rather than becoming per-member statuses.
+A separate explicit bounded observation scan reuses that complete traversal and
+atomically persists only eligible active `current`, `changed`, and same-member
+`missing` observations. Its result remains path-free and includes the aggregate
+new-file count plus the number recorded; conflicted, retired, and new files are
+reported but skipped. This is evidence of one user-invoked scan, not an applied
+changed-byte refresh: new-member persistence, rename/removal decisions, root or
+origin rebind, automatic retirement/deletion, adapters, indexing, and
+background refresh remain deferred.
 
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address

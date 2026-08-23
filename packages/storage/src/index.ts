@@ -109,6 +109,39 @@ export interface CandidateKnowledgeDirectoryMemberRecord {
   readonly relativePathHash: string;
 }
 
+export type CandidateKnowledgeDirectoryMemberOriginRelation =
+  | "same-member"
+  | "other-member"
+  | "unmatched"
+  | "outside-root"
+  | "unbound";
+
+export interface CandidateKnowledgeDirectoryMemberOriginRelationRecord {
+  readonly directoryId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly relation: CandidateKnowledgeDirectoryMemberOriginRelation;
+  /** Present only when the source currently has an origin binding. */
+  readonly originBoundAt?: string;
+}
+
+export type CandidateKnowledgeDirectoryRefreshObservationStatus = Extract<
+  CandidateKnowledgeSourceRefreshObservationStatus,
+  "current" | "changed" | "missing"
+>;
+
+export interface CandidateKnowledgeDirectoryRefreshObservationInput {
+  readonly sourceId: string;
+  readonly observedVersionId: string;
+  readonly status: CandidateKnowledgeDirectoryRefreshObservationStatus;
+  readonly expectedOriginBoundAt: string;
+}
+
+export interface CandidateKnowledgeDirectoryRefreshObservationBatchInput {
+  readonly checkedAt: string;
+  readonly entries: readonly CandidateKnowledgeDirectoryRefreshObservationInput[];
+}
+
 export interface CandidateKnowledgeSourceVersionInput {
   readonly id: string;
   readonly mediaType: string;
@@ -297,6 +330,16 @@ export interface CandidateKnowledgeBaseStoragePort {
     directoryId: string,
     sourcePath: string,
   ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
+  readonly getCandidateKnowledgeDirectoryMemberOriginRelation: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+  ) => Promise<CandidateKnowledgeDirectoryMemberOriginRelationRecord>;
+  readonly upsertCandidateKnowledgeDirectoryRefreshObservations: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    input: CandidateKnowledgeDirectoryRefreshObservationBatchInput,
+  ) => Promise<readonly CandidateKnowledgeSourceRefreshObservationRecord[]>;
   readonly getCandidateKnowledgeSourceUrlProvenance: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1794,7 +1837,10 @@ function requireCanonicalAbsolutePath(value: string, field: string): string {
   return canonicalPath;
 }
 
-function directoryMemberRelativePathHash(rootPath: string, originPath: string): string {
+function directoryMemberRelativePathSegments(
+  rootPath: string,
+  originPath: string,
+): readonly string[] | undefined {
   const canonicalRoot = requireCanonicalAbsolutePath(
     rootPath,
     "candidate knowledge directory root path",
@@ -1804,18 +1850,35 @@ function directoryMemberRelativePathHash(rootPath: string, originPath: string): 
     "candidate knowledge source origin path",
   );
   const memberRelativePath = relative(canonicalRoot, canonicalOrigin);
-  if (memberRelativePath === "" || isAbsolute(memberRelativePath)) {
-    throw new StorageValidationError(
-      "candidate knowledge directory member origin must be strictly inside its root",
-    );
-  }
+  if (memberRelativePath === "" || isAbsolute(memberRelativePath)) return undefined;
   const segments = memberRelativePath.split(sep);
   if (segments[0] === ".." || segments.some((segment) => segment === "" || segment === ".")) {
+    return undefined;
+  }
+  return segments;
+}
+
+function directoryMemberRelativePathHash(rootPath: string, originPath: string): string {
+  const segments = directoryMemberRelativePathSegments(rootPath, originPath);
+  if (segments === undefined) {
     throw new StorageValidationError(
       "candidate knowledge directory member origin must be strictly inside its root",
     );
   }
   return checksum(segments.join("/"));
+}
+
+function directoryMemberOriginRelation(
+  rootPath: string,
+  originPath: string,
+  memberRelativePathHash: string,
+  memberRelativePathHashes: ReadonlySet<string>,
+): CandidateKnowledgeDirectoryMemberOriginRelation {
+  const segments = directoryMemberRelativePathSegments(rootPath, originPath);
+  if (segments === undefined) return "outside-root";
+  const originRelativePathHash = checksum(segments.join("/"));
+  if (originRelativePathHash === memberRelativePathHash) return "same-member";
+  return memberRelativePathHashes.has(originRelativePathHash) ? "other-member" : "unmatched";
 }
 
 function requireTimestamp(value: string, field: string): string {
@@ -3051,6 +3114,316 @@ export class SqliteStorage
       )
       .get(normalizedKnowledgeBaseId, normalizedDirectoryId, relativePathHash);
     return row === undefined ? undefined : candidateKnowledgeDirectoryMemberFromRow(row);
+  }
+
+  public async getCandidateKnowledgeDirectoryMemberOriginRelation(
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+  ): Promise<CandidateKnowledgeDirectoryMemberOriginRelationRecord> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedDirectoryId = requireNonEmpty(
+      directoryId,
+      "candidate knowledge directory id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    return this.readCandidateKnowledgeDirectoryMemberOriginRelation(
+      normalizedKnowledgeBaseId,
+      normalizedDirectoryId,
+      normalizedSourceId,
+    );
+  }
+
+  public async upsertCandidateKnowledgeDirectoryRefreshObservations(
+    knowledgeBaseId: string,
+    directoryId: string,
+    input: CandidateKnowledgeDirectoryRefreshObservationBatchInput,
+  ): Promise<readonly CandidateKnowledgeSourceRefreshObservationRecord[]> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedDirectoryId = requireNonEmpty(
+      directoryId,
+      "candidate knowledge directory id",
+    ).trim();
+    const normalized = normalizeCandidateKnowledgeDirectoryRefreshObservationBatchInput(input);
+    let result: readonly CandidateKnowledgeSourceRefreshObservationRecord[] | undefined;
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      const binding = this.database
+        .prepare(
+          `SELECT id, candidate_knowledge_base_id, root_path, bound_at
+           FROM candidate_knowledge_directory_bindings
+           WHERE candidate_knowledge_base_id = ? AND id = ?`,
+        )
+        .get(normalizedKnowledgeBaseId, normalizedDirectoryId);
+      if (binding === undefined) {
+        throw new StorageValidationError("candidate knowledge directory binding was not found");
+      }
+      if (rowString(binding, "candidate_knowledge_base_id") !== normalizedKnowledgeBaseId) {
+        throw new StorageValidationError("candidate knowledge directory binding is malformed");
+      }
+      requireCanonicalAbsolutePath(
+        rowString(binding, "root_path"),
+        "candidate knowledge directory root path",
+      );
+      if (rowString(binding, "id") !== normalizedDirectoryId) {
+        throw new StorageValidationError("candidate knowledge directory binding is malformed");
+      }
+      const directoryBoundAt = requireTimestamp(
+        rowString(binding, "bound_at"),
+        `candidate knowledge directory ${normalizedDirectoryId} boundAt`,
+      );
+      if (Date.parse(normalized.checkedAt) < Date.parse(directoryBoundAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge directory refresh checkedAt must not precede directory binding",
+        );
+      }
+
+      const pending = [...normalized.entries]
+        .sort((left, right) => left.sourceId.localeCompare(right.sourceId))
+        .map((entry) => {
+          const member = this.database
+            .prepare(
+              `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+               FROM candidate_knowledge_directory_members
+               WHERE candidate_knowledge_base_id = ?
+                 AND directory_id = ?
+                 AND source_id = ?`,
+            )
+            .get(normalizedKnowledgeBaseId, normalizedDirectoryId, entry.sourceId);
+          if (member === undefined) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh observation source is not a member",
+            );
+          }
+          const memberRecord = candidateKnowledgeDirectoryMemberFromRow(member);
+          if (
+            memberRecord.directoryId !== normalizedDirectoryId ||
+            memberRecord.knowledgeBaseId !== normalizedKnowledgeBaseId ||
+            !/^[0-9a-f]{64}$/.test(memberRecord.relativePathHash)
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh membership is malformed",
+            );
+          }
+          const source = this.requireCandidateKnowledgeSource(
+            normalizedKnowledgeBaseId,
+            entry.sourceId,
+          );
+          if (source.kind !== "file") {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh observations require file sources",
+            );
+          }
+          this.requireCandidateKnowledgeSourceActive(entry.sourceId);
+          const managed = this.database
+            .prepare(
+              `SELECT version.id
+               FROM candidate_knowledge_source_versions AS version
+               JOIN candidate_knowledge_managed_source_versions AS managed
+                 ON managed.version_id = version.id
+               WHERE version.source_id = ?
+               LIMIT 1`,
+            )
+            .get(entry.sourceId);
+          if (managed === undefined) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh observations require managed files",
+            );
+          }
+          const latestRow = this.database
+            .prepare(
+              `SELECT id, version, created_at
+               FROM candidate_knowledge_source_versions
+               WHERE source_id = ?
+               ORDER BY version DESC, id DESC
+               LIMIT 1`,
+            )
+            .get(entry.sourceId);
+          if (latestRow === undefined || rowString(latestRow, "id") !== entry.observedVersionId) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh observed version is not latest",
+            );
+          }
+          const sourceCreatedAt = requireTimestamp(
+            source.createdAt,
+            `candidate knowledge source ${entry.sourceId} createdAt`,
+          );
+          const latestVersionCreatedAt = requireTimestamp(
+            rowString(latestRow, "created_at"),
+            `candidate knowledge source ${entry.sourceId} latest version createdAt`,
+          );
+          if (Date.parse(normalized.checkedAt) < Date.parse(sourceCreatedAt)) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh checkedAt must not precede source creation",
+            );
+          }
+          if (Date.parse(normalized.checkedAt) < Date.parse(latestVersionCreatedAt)) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh checkedAt must not precede latest version",
+            );
+          }
+          const observedVersion = this.database
+            .prepare(
+              "SELECT id FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+            )
+            .get(entry.observedVersionId, entry.sourceId);
+          if (observedVersion === undefined) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh observed version does not belong to its source",
+            );
+          }
+          const relation = this.readCandidateKnowledgeDirectoryMemberOriginRelation(
+            normalizedKnowledgeBaseId,
+            normalizedDirectoryId,
+            entry.sourceId,
+          );
+          if (
+            relation.relation !== "same-member" ||
+            relation.originBoundAt !== entry.expectedOriginBoundAt
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh origin revision is no longer current",
+            );
+          }
+          if (
+            relation.originBoundAt !== undefined &&
+            Date.parse(normalized.checkedAt) < Date.parse(relation.originBoundAt)
+          ) {
+            throw new StorageValidationError(
+              "candidate knowledge directory refresh checkedAt must not precede origin binding",
+            );
+          }
+
+          const currentRow = this.database
+            .prepare(
+              `SELECT source_id, observed_version_id, status, checked_at,
+                      last_refreshed_version_id, last_refreshed_at
+               FROM candidate_knowledge_source_refresh_observations
+               WHERE source_id = ?`,
+            )
+            .get(entry.sourceId);
+          const current =
+            currentRow === undefined
+              ? undefined
+              : candidateKnowledgeSourceRefreshObservationFromRow(
+                  currentRow,
+                  rowString(latestRow, "id"),
+                );
+          if (current !== undefined) {
+            requireCandidateKnowledgeSourceRefreshObservationStatus(current.status);
+            requireTimestamp(
+              current.checkedAt,
+              `candidate knowledge source ${entry.sourceId} refresh checkedAt`,
+            );
+            if (current.sourceId !== entry.sourceId) {
+              throw new StorageValidationError(
+                "candidate knowledge source refresh observation is malformed",
+              );
+            }
+            if (Date.parse(normalized.checkedAt) < Date.parse(current.checkedAt)) {
+              throw new StorageValidationError(
+                "candidate knowledge directory refresh checkedAt must not precede current observation",
+              );
+            }
+            const currentObserved = this.database
+              .prepare(
+                "SELECT id FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+              )
+              .get(current.observedVersionId, entry.sourceId);
+            if (currentObserved === undefined) {
+              throw new StorageValidationError(
+                "candidate knowledge source refresh observed version is malformed",
+              );
+            }
+            if (current.lastRefreshedVersionId !== null) {
+              const refreshed = this.database
+                .prepare(
+                  "SELECT id FROM candidate_knowledge_source_versions WHERE id = ? AND source_id = ?",
+                )
+                .get(current.lastRefreshedVersionId, entry.sourceId);
+              if (refreshed === undefined || current.lastRefreshedAt === null) {
+                throw new StorageValidationError(
+                  "candidate knowledge source refresh last-refreshed state is malformed",
+                );
+              }
+              requireTimestamp(
+                current.lastRefreshedAt,
+                `candidate knowledge source ${entry.sourceId} lastRefreshedAt`,
+              );
+              if (Date.parse(current.lastRefreshedAt) > Date.parse(current.checkedAt)) {
+                throw new StorageValidationError(
+                  "candidate knowledge source refresh lastRefreshedAt must not follow checkedAt",
+                );
+              }
+            } else if (current.lastRefreshedAt !== null) {
+              throw new StorageValidationError(
+                "candidate knowledge source refresh last-refreshed state is malformed",
+              );
+            }
+          }
+          return {
+            sourceId: entry.sourceId,
+            observedVersionId: entry.observedVersionId,
+            status: entry.status,
+            checkedAt: normalized.checkedAt,
+            lastRefreshedVersionId: current?.lastRefreshedVersionId ?? null,
+            lastRefreshedAt: current?.lastRefreshedAt ?? null,
+            hasExisting: current !== undefined,
+          } satisfies Omit<CandidateKnowledgeSourceRefreshObservationRecord, "stale"> & {
+            readonly hasExisting: boolean;
+          };
+        });
+
+      const insert = this.database.prepare(
+        `INSERT INTO candidate_knowledge_source_refresh_observations
+           (source_id, observed_version_id, status, checked_at,
+            last_refreshed_version_id, last_refreshed_at)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+      );
+      const update = this.database.prepare(
+        `UPDATE candidate_knowledge_source_refresh_observations
+         SET observed_version_id = ?, status = ?, checked_at = ?,
+             last_refreshed_version_id = ?, last_refreshed_at = ?
+         WHERE source_id = ?`,
+      );
+      for (const entry of pending) {
+        const values = [
+          entry.observedVersionId,
+          entry.status,
+          entry.checkedAt,
+          entry.lastRefreshedVersionId,
+          entry.lastRefreshedAt,
+        ];
+        if (entry.hasExisting) {
+          update.run(...values, entry.sourceId);
+        } else {
+          insert.run(entry.sourceId, ...values);
+        }
+      }
+      result = pending.map((entry) =>
+        candidateKnowledgeSourceRefreshObservationFromRow(
+          {
+            source_id: entry.sourceId,
+            observed_version_id: entry.observedVersionId,
+            status: entry.status,
+            checked_at: entry.checkedAt,
+            last_refreshed_version_id: entry.lastRefreshedVersionId,
+            last_refreshed_at: entry.lastRefreshedAt,
+          },
+          entry.observedVersionId,
+        ),
+      );
+    })();
+    return result as readonly CandidateKnowledgeSourceRefreshObservationRecord[];
   }
 
   public async getCandidateKnowledgeSourceRetirement(
@@ -5418,6 +5791,126 @@ export class SqliteStorage
       .run(record.sourceId, record.originPath, record.boundAt);
   }
 
+  private readCandidateKnowledgeDirectoryMemberOriginRelation(
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+  ): CandidateKnowledgeDirectoryMemberOriginRelationRecord {
+    const binding = this.database
+      .prepare(
+        `SELECT id, candidate_knowledge_base_id, root_path, bound_at
+         FROM candidate_knowledge_directory_bindings
+         WHERE candidate_knowledge_base_id = ? AND id = ?`,
+      )
+      .get(knowledgeBaseId, directoryId);
+    if (binding === undefined) {
+      throw new StorageValidationError("candidate knowledge directory binding was not found");
+    }
+    const rootPath = requireCanonicalAbsolutePath(
+      rowString(binding, "root_path"),
+      "candidate knowledge directory root path",
+    );
+    requireTimestamp(
+      rowString(binding, "bound_at"),
+      `candidate knowledge directory ${directoryId} boundAt`,
+    );
+    const member = this.database
+      .prepare(
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members
+         WHERE candidate_knowledge_base_id = ? AND directory_id = ? AND source_id = ?`,
+      )
+      .get(knowledgeBaseId, directoryId, sourceId);
+    if (member === undefined) {
+      throw new StorageValidationError("candidate knowledge directory member was not found");
+    }
+    const memberRecord = candidateKnowledgeDirectoryMemberFromRow(member);
+    if (
+      memberRecord.directoryId !== directoryId ||
+      memberRecord.knowledgeBaseId !== knowledgeBaseId ||
+      memberRecord.sourceId !== sourceId ||
+      !/^[0-9a-f]{64}$/.test(memberRecord.relativePathHash)
+    ) {
+      throw new StorageValidationError("candidate knowledge directory member is malformed");
+    }
+    const source = this.requireCandidateKnowledgeSource(knowledgeBaseId, sourceId);
+    if (source.kind !== "file") {
+      throw new StorageValidationError("candidate knowledge directory member is not a file source");
+    }
+    const managed = this.database
+      .prepare(
+        `SELECT version.id
+         FROM candidate_knowledge_source_versions AS version
+         JOIN candidate_knowledge_managed_source_versions AS managed
+           ON managed.version_id = version.id
+         WHERE version.source_id = ?
+         LIMIT 1`,
+      )
+      .get(sourceId);
+    if (managed === undefined) {
+      throw new StorageValidationError("candidate knowledge directory member is not managed");
+    }
+    const originRow = this.database
+      .prepare(
+        `SELECT source_id, origin_path, bound_at
+         FROM candidate_knowledge_source_origin_bindings
+         WHERE source_id = ?`,
+      )
+      .get(sourceId);
+    if (originRow === undefined) {
+      return {
+        directoryId,
+        knowledgeBaseId,
+        sourceId,
+        relation: "unbound",
+      };
+    }
+    const origin = candidateKnowledgeSourceOriginBindingFromRow(originRow);
+    if (origin.sourceId !== sourceId) {
+      throw new StorageValidationError("candidate knowledge source origin binding is malformed");
+    }
+    const originBoundAt = requireTimestamp(
+      origin.boundAt,
+      `candidate knowledge source ${sourceId} origin boundAt`,
+    );
+    const originPath = requireCanonicalAbsolutePath(
+      origin.originPath,
+      `candidate knowledge source ${sourceId} origin path`,
+    );
+    const memberHashes = new Set<string>();
+    const members = this.database
+      .prepare(
+        `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+         FROM candidate_knowledge_directory_members
+         WHERE candidate_knowledge_base_id = ? AND directory_id = ?`,
+      )
+      .all(knowledgeBaseId, directoryId);
+    for (const row of members) {
+      const current = candidateKnowledgeDirectoryMemberFromRow(row);
+      if (
+        current.directoryId !== directoryId ||
+        current.knowledgeBaseId !== knowledgeBaseId ||
+        !/^[0-9a-f]{64}$/.test(current.relativePathHash) ||
+        memberHashes.has(current.relativePathHash)
+      ) {
+        throw new StorageValidationError("candidate knowledge directory membership is malformed");
+      }
+      memberHashes.add(current.relativePathHash);
+    }
+    return {
+      directoryId,
+      knowledgeBaseId,
+      sourceId,
+      relation: directoryMemberOriginRelation(
+        rootPath,
+        originPath,
+        memberRecord.relativePathHash,
+        memberHashes,
+      ),
+      originBoundAt,
+    };
+  }
+
   private requireCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {
     const row = this.database
       .prepare(
@@ -5576,6 +6069,54 @@ function requireCandidateKnowledgeSourceRefreshObservationStatus(
     );
   }
   return value;
+}
+
+function normalizeCandidateKnowledgeDirectoryRefreshObservationBatchInput(
+  input: CandidateKnowledgeDirectoryRefreshObservationBatchInput,
+): CandidateKnowledgeDirectoryRefreshObservationBatchInput {
+  if (typeof input !== "object" || input === null || !Array.isArray(input.entries)) {
+    throw new StorageValidationError(
+      "Candidate knowledge directory refresh observation entries are required",
+    );
+  }
+  const checkedAt = requireTimestamp(
+    input.checkedAt,
+    "candidate knowledge directory refresh checkedAt",
+  );
+  const sourceIds = new Set<string>();
+  const entries = input.entries.map((entry) => {
+    if (typeof entry !== "object" || entry === null) {
+      throw new StorageValidationError(
+        "Candidate knowledge directory refresh observation entry is invalid",
+      );
+    }
+    const sourceId = requireNonEmpty(
+      entry.sourceId,
+      "candidate knowledge directory refresh observation source id",
+    ).trim();
+    if (sourceIds.has(sourceId)) {
+      throw new StorageValidationError(
+        "Candidate knowledge directory refresh observation sources must be unique",
+      );
+    }
+    sourceIds.add(sourceId);
+    const observedVersionId = requireNonEmpty(
+      entry.observedVersionId,
+      "candidate knowledge directory refresh observation version id",
+    ).trim();
+    const status = entry.status;
+    if (status !== "current" && status !== "changed" && status !== "missing") {
+      throw new StorageValidationError(
+        "Candidate knowledge directory refresh observation status is invalid",
+      );
+    }
+    const expectedOriginBoundAt = requireTimestamp(
+      entry.expectedOriginBoundAt,
+      "candidate knowledge directory refresh expected origin boundAt",
+    );
+    return { sourceId, observedVersionId, status, expectedOriginBoundAt };
+  });
+  return { checkedAt, entries };
 }
 
 function requireCandidateKnowledgeSourceRetirementReason(

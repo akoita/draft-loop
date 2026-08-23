@@ -1019,6 +1019,151 @@ describe("portable candidate knowledge store", () => {
     await store.close();
   });
 
+  it("reports path-free origin relations without rewriting historical membership", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const outsideDirectory = join(parent, "outside");
+    const content = "shared directory evidence";
+    await mkdir(selectedDirectory);
+    await mkdir(outsideDirectory);
+    const paths = {
+      same: join(selectedDirectory, "same.md"),
+      other: join(selectedDirectory, "other.md"),
+      unmatched: join(selectedDirectory, "unmatched.md"),
+      outsideMember: join(selectedDirectory, "outside-member.md"),
+      unbound: join(selectedDirectory, "unbound.md"),
+      unmatchedReplacement: join(selectedDirectory, "new-unmatched.md"),
+      outsideReplacement: join(outsideDirectory, "outside.md"),
+    };
+    await Promise.all(
+      [paths.same, paths.other, paths.unmatched, paths.outsideMember, paths.unbound].map((path) =>
+        writeFile(path, content, "utf8"),
+      ),
+    );
+    await writeFile(paths.unmatchedReplacement, content, "utf8");
+    await writeFile(paths.outsideReplacement, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const sourceIds = [
+      "same-source",
+      "other-source",
+      "unmatched-source",
+      "outside-source",
+      "unbound-source",
+    ];
+    for (const [index, sourceId] of sourceIds.entries()) {
+      await store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: sourceId,
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: `${sourceId}.md`,
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(paths[Object.keys(paths)[index] as keyof typeof paths], content, {
+          id: `${sourceId}-version`,
+        }),
+      );
+    }
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "relations-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds,
+    });
+
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "other-source", {
+      sourcePath: paths.same,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      boundAt: "2026-08-21T14:03:00.000Z",
+    });
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "unmatched-source", {
+      sourcePath: paths.unmatchedReplacement,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      boundAt: "2026-08-21T14:03:00.000Z",
+    });
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "outside-source", {
+      sourcePath: paths.outsideReplacement,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      boundAt: "2026-08-21T14:03:00.000Z",
+    });
+
+    await expect(
+      store.getCandidateKnowledgeDirectoryMemberOriginRelation(
+        "ckb-default",
+        "relations-directory",
+        "same-source",
+      ),
+    ).resolves.toEqual({
+      directoryId: "relations-directory",
+      knowledgeBaseId: "ckb-default",
+      sourceId: "same-source",
+      relation: "same-member",
+      originBoundAt: "2026-08-21T14:01:00.000Z",
+    });
+    await expect(
+      store.getCandidateKnowledgeDirectoryMemberOriginRelation(
+        "ckb-default",
+        "relations-directory",
+        "other-source",
+      ),
+    ).resolves.toMatchObject({ relation: "other-member", sourceId: "other-source" });
+    await expect(
+      store.getCandidateKnowledgeDirectoryMemberOriginRelation(
+        "ckb-default",
+        "relations-directory",
+        "unmatched-source",
+      ),
+    ).resolves.toMatchObject({ relation: "unmatched", sourceId: "unmatched-source" });
+    await expect(
+      store.getCandidateKnowledgeDirectoryMemberOriginRelation(
+        "ckb-default",
+        "relations-directory",
+        "outside-source",
+      ),
+    ).resolves.toMatchObject({ relation: "outside-root", sourceId: "outside-source" });
+
+    mutateDatabase(
+      root,
+      `DROP TRIGGER candidate_knowledge_source_origin_bindings_immutable_delete;
+       DELETE FROM candidate_knowledge_source_origin_bindings WHERE source_id = 'unbound-source'`,
+    );
+    const unbound = await store.getCandidateKnowledgeDirectoryMemberOriginRelation(
+      "ckb-default",
+      "relations-directory",
+      "unbound-source",
+    );
+    expect(unbound).toEqual({
+      directoryId: "relations-directory",
+      knowledgeBaseId: "ckb-default",
+      sourceId: "unbound-source",
+      relation: "unbound",
+    });
+    expect(Object.isFrozen(unbound)).toBe(true);
+    await expect(
+      store.getCandidateKnowledgeDirectoryMemberOriginRelation(
+        "ckb-default",
+        "missing-directory",
+        "same-source",
+      ),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      store.getCandidateKnowledgeDirectoryMemberOriginRelation(
+        "ckb-default",
+        "relations-directory",
+        "missing-source",
+      ),
+    ).rejects.toThrow(StorageValidationError);
+    await store.close();
+  });
+
   it("rejects invalid directory members before creating a binding", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
@@ -1455,6 +1600,303 @@ describe("portable candidate knowledge store", () => {
     } finally {
       await reopened.close();
     }
+  });
+
+  it("records a deterministic directory observation batch and preserves prior refresh evidence", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const paths = {
+      current: join(selectedDirectory, "current.md"),
+      changed: join(selectedDirectory, "changed.md"),
+      missing: join(selectedDirectory, "missing.md"),
+    };
+    await mkdir(selectedDirectory);
+    await Promise.all(Object.values(paths).map((path) => writeFile(path, "evidence", "utf8")));
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const sourceIds = ["current-source", "changed-source", "missing-source"];
+    for (const [index, sourceId] of sourceIds.entries()) {
+      await store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: sourceId,
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: `${sourceId}.md`,
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(Object.values(paths)[index] as string, "evidence", {
+          id: `${sourceId}-version-1`,
+        }),
+      );
+    }
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "observations-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds,
+    });
+    const origins = await Promise.all(
+      sourceIds.map((sourceId) =>
+        store.getCandidateKnowledgeSourceOriginBinding("ckb-default", sourceId),
+      ),
+    );
+    const expectedOriginBoundAt = origins.map((origin) => origin?.boundAt);
+    expect(expectedOriginBoundAt.every((boundAt) => boundAt !== undefined)).toBe(true);
+
+    await expect(
+      store.upsertCandidateKnowledgeDirectoryRefreshObservations(
+        "ckb-default",
+        "observations-directory",
+        {
+          checkedAt: "2026-08-21T14:00:00.000Z",
+          entries: [
+            {
+              sourceId: "changed-source",
+              observedVersionId: "changed-source-version-1",
+              status: "changed",
+              expectedOriginBoundAt: expectedOriginBoundAt[1] as string,
+            },
+          ],
+        },
+      ),
+    ).rejects.toThrow(/must not precede directory binding/i);
+    await expect(
+      store.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "changed-source"),
+    ).resolves.toBeUndefined();
+
+    await store.upsertCandidateKnowledgeSourceRefreshObservation("ckb-default", "current-source", {
+      observedVersionId: "current-source-version-1",
+      status: "current",
+      checkedAt: "2026-08-21T14:03:00.000Z",
+      lastRefreshedVersionId: "current-source-version-1",
+      lastRefreshedAt: "2026-08-21T14:03:00.000Z",
+    });
+
+    const observations = await store.upsertCandidateKnowledgeDirectoryRefreshObservations(
+      "ckb-default",
+      "observations-directory",
+      {
+        checkedAt: "2026-08-21T14:04:00.000Z",
+        entries: [
+          {
+            sourceId: "missing-source",
+            observedVersionId: "missing-source-version-1",
+            status: "missing",
+            expectedOriginBoundAt: expectedOriginBoundAt[2] as string,
+          },
+          {
+            sourceId: "current-source",
+            observedVersionId: "current-source-version-1",
+            status: "current",
+            expectedOriginBoundAt: expectedOriginBoundAt[0] as string,
+          },
+          {
+            sourceId: "changed-source",
+            observedVersionId: "changed-source-version-1",
+            status: "changed",
+            expectedOriginBoundAt: expectedOriginBoundAt[1] as string,
+          },
+        ],
+      },
+    );
+    expect(observations).toEqual([
+      {
+        sourceId: "changed-source",
+        observedVersionId: "changed-source-version-1",
+        status: "changed",
+        checkedAt: "2026-08-21T14:04:00.000Z",
+        lastRefreshedVersionId: null,
+        lastRefreshedAt: null,
+        stale: false,
+      },
+      {
+        sourceId: "current-source",
+        observedVersionId: "current-source-version-1",
+        status: "current",
+        checkedAt: "2026-08-21T14:04:00.000Z",
+        lastRefreshedVersionId: "current-source-version-1",
+        lastRefreshedAt: "2026-08-21T14:03:00.000Z",
+        stale: false,
+      },
+      {
+        sourceId: "missing-source",
+        observedVersionId: "missing-source-version-1",
+        status: "missing",
+        checkedAt: "2026-08-21T14:04:00.000Z",
+        lastRefreshedVersionId: null,
+        lastRefreshedAt: null,
+        stale: false,
+      },
+    ]);
+    expect(Object.isFrozen(observations)).toBe(true);
+    expect(observations.every((observation) => Object.isFrozen(observation))).toBe(true);
+    await expect(
+      store.upsertCandidateKnowledgeSourceRefreshObservation("ckb-default", "current-source", {
+        observedVersionId: "current-source-version-1",
+        status: "current",
+        checkedAt: "2026-08-21T14:05:00.000Z",
+      }),
+    ).resolves.toMatchObject({
+      lastRefreshedVersionId: "current-source-version-1",
+      lastRefreshedAt: "2026-08-21T14:03:00.000Z",
+    });
+    await expect(
+      store.upsertCandidateKnowledgeDirectoryRefreshObservations(
+        "ckb-default",
+        "observations-directory",
+        { checkedAt: "2026-08-21T14:05:00.000Z", entries: [] },
+      ),
+    ).resolves.toEqual([]);
+    await store.close();
+  });
+
+  it("rolls back a directory observation batch when a later entry is stale or rebinding changed", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const sourcePath = join(selectedDirectory, "source.md");
+    const laterSourcePath = join(selectedDirectory, "later.md");
+    const replacementPath = join(selectedDirectory, "replacement.md");
+    await mkdir(selectedDirectory);
+    await writeFile(sourcePath, "evidence", "utf8");
+    await writeFile(laterSourcePath, "later evidence", "utf8");
+    await writeFile(replacementPath, "evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "atomic-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "atomic.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(sourcePath, "evidence", { id: "atomic-version-1" }),
+    );
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "later-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "later.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(laterSourcePath, "later evidence", { id: "later-version-1" }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "atomic-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["atomic-source", "later-source"],
+    });
+    const origin = await store.getCandidateKnowledgeSourceOriginBinding(
+      "ckb-default",
+      "atomic-source",
+    );
+    if (origin === undefined) throw new Error("expected origin binding");
+    const laterOrigin = await store.getCandidateKnowledgeSourceOriginBinding(
+      "ckb-default",
+      "later-source",
+    );
+    if (laterOrigin === undefined) throw new Error("expected later origin binding");
+    await writeFile(laterSourcePath, "later evidence v2", "utf8");
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "later-source",
+      managedVersion(laterSourcePath, "later evidence v2", {
+        id: "later-version-2",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    );
+
+    await expect(
+      store.upsertCandidateKnowledgeDirectoryRefreshObservations(
+        "ckb-default",
+        "atomic-directory",
+        {
+          checkedAt: "2026-08-21T14:04:00.000Z",
+          entries: [
+            {
+              sourceId: "atomic-source",
+              observedVersionId: "atomic-version-1",
+              status: "current",
+              expectedOriginBoundAt: origin.boundAt,
+            },
+            {
+              sourceId: "later-source",
+              observedVersionId: "later-version-1",
+              status: "current",
+              expectedOriginBoundAt: laterOrigin.boundAt,
+            },
+          ],
+        },
+      ),
+    ).rejects.toThrow(/not latest/i);
+    await expect(
+      store.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "atomic-source"),
+    ).resolves.toBeUndefined();
+    await expect(
+      store.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "later-source"),
+    ).resolves.toBeUndefined();
+
+    await store.retireCandidateKnowledgeSource("ckb-default", "later-source", {
+      retiredAt: "2026-08-21T14:04:00.000Z",
+      reason: "user-requested",
+    });
+    await expect(
+      store.upsertCandidateKnowledgeDirectoryRefreshObservations(
+        "ckb-default",
+        "atomic-directory",
+        {
+          checkedAt: "2026-08-21T14:05:00.000Z",
+          entries: [
+            {
+              sourceId: "later-source",
+              observedVersionId: "later-version-2",
+              status: "current",
+              expectedOriginBoundAt: laterOrigin.boundAt,
+            },
+          ],
+        },
+      ),
+    ).rejects.toThrow(/retired/i);
+    await expect(
+      store.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "later-source"),
+    ).resolves.toBeUndefined();
+
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "atomic-source", {
+      sourcePath: replacementPath,
+      mediaType: "text/markdown",
+      checksum: sha256("evidence"),
+      sizeBytes: Buffer.byteLength("evidence"),
+      boundAt: "2026-08-21T14:03:00.000Z",
+    });
+    const before = await store.getCandidateKnowledgeSourceRefreshObservation(
+      "ckb-default",
+      "atomic-source",
+    );
+    await expect(
+      store.upsertCandidateKnowledgeDirectoryRefreshObservations(
+        "ckb-default",
+        "atomic-directory",
+        {
+          checkedAt: "2026-08-21T14:04:00.000Z",
+          entries: [
+            {
+              sourceId: "atomic-source",
+              observedVersionId: "atomic-version-1",
+              status: "current",
+              expectedOriginBoundAt: origin.boundAt,
+            },
+          ],
+        },
+      ),
+    ).rejects.toThrow(/origin revision/i);
+    await expect(
+      store.getCandidateKnowledgeSourceRefreshObservation("ckb-default", "atomic-source"),
+    ).resolves.toBe(before);
+    await store.close();
   });
 
   it("keeps the binding and graph unchanged for unsafe or unstable rebind selections", async () => {

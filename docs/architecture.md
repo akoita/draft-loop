@@ -214,6 +214,14 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   `current`, `changed`, `missing`, `retired`, or `origin-conflict` and count
   unmatched accepted files. It exposes no paths or integrity metadata and makes
   no source, version, membership, observation, or lifecycle writes.
+  A separate explicit bounded observation operation reuses exactly one complete
+  scan, selects only active `current`, `changed`, or same-member `missing`
+  entries, and atomically records their path-free observations with one shared
+  timestamp. Retired, origin-conflict, and new files remain report-only; the
+  operation allocates no IDs and writes no bytes, versions, membership, origin
+  bindings, retirements, or journal events. Changed-byte application, new-member
+  persistence, rename/removal decisions, root rebind, automatic retirement or
+  deletion, adapters, indexing, and background refresh remain deferred.
 - Managed source add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
   matching opaque bytes; file sources retain their additional regular-file and
