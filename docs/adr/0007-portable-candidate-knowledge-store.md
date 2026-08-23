@@ -66,6 +66,13 @@ non-symlink root, rescans it once, and requires exact historical relative-path
 membership plus latest-byte agreement. It returns only a path-free
 readiness/count result and performs no writes; applying a root rebind remains
 deferred.
+A separate read-only moved-candidate preview reuses one complete refresh scan
+and compares only exact media-type, checksum, and size tuples between eligible
+same-member missing sources and unmatched accepted files. It emits only unique
+one-to-one advisory source IDs in deterministic order; ambiguous tuples emit
+nothing, and its unchanged aggregate `newSourceCount` still includes every
+unmatched accepted file. It is not proof or approval of a move; applied rename,
+membership revision, root rebind, and complete reconciliation remain deferred.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -178,6 +185,12 @@ candidate root, requires an exact path-hash/member and latest-byte match for
 every historical member, and returns only path-free readiness and scan counts.
 It does not mutate the immutable binding or membership; applying the rebind and
 complete reconciliation remain deferred.
+A separate moved-candidate projection reuses that scan exactly once and returns
+only path-free, deeply frozen advisory source IDs for unique exact-integrity
+one-to-one matches among same-member missing sources and unmatched files.
+Basename, ordering, text, and path similarity are never identity evidence;
+ambiguous matches are omitted, while `newSourceCount` remains the total scan
+count used by add-members. It does not change any lifecycle or membership state.
 A separate explicit bounded directory observation operation reuses that one
 complete scan and records only path-free `current`, `changed`, or `missing`
 observations whose source origin still has the same historical membership and

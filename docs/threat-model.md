@@ -104,6 +104,13 @@ conditional requests; automatic duplicate resolution; indexes/retrieval;
 app/run CKB selection; CLI/desktop controls; deletion; cleanup/reconciliation;
 and complete backup/export/restore remain outside that boundary.
 
+A separate moved-candidate projection reuses one complete bounded scan exactly
+once. It compares only exact media-type/checksum/size tuples for eligible
+same-member missing sources and unmatched accepted files, emits unique
+one-to-one source IDs as an advisory signal, omits ambiguous matches, and keeps
+the aggregate new-source count unchanged. It does not prove or apply a rename,
+revise membership, rebind a root, or write lifecycle state.
+
 An explicit approved directory-member retirement operation accepts only one
 active same-member `missing` source from a fresh bounded scan and records the
 existing `user-requested` retirement marker under latest-version,

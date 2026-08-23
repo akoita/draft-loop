@@ -175,6 +175,11 @@ indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
 version integrity metadata and returns source/version IDs without checksums,
 labels, paths, URLs, content, or a derived group identifier. It is a current
 possible-duplicate signal, not ownership proof or merge/deletion authority.
+A separate moved-candidate preview returns only source IDs for unique one-to-one
+exact media-type/checksum/size matches between same-member missing sources and
+unmatched accepted files. It omits ambiguous matches, does not use names,
+ordering, text, or path similarity, preserves the aggregate new-file count, and
+does not apply a rename or revise membership.
 A separate explicit logical-retirement operation persists only source identity,
 the bounded reason `user-requested`, and retirement time. It blocks subsequent
 source mutations but preserves the managed bytes, immutable versions, origin
