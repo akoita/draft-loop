@@ -204,13 +204,16 @@ function knowledgeSourceManifests(): readonly CandidateKnowledgeSourceManifest[]
   ] as unknown as readonly CandidateKnowledgeSourceManifest[];
 }
 
-function knowledgeSourceWriteResult(created = true): CandidateKnowledgeSourceWriteResult {
+function knowledgeSourceWriteResult(
+  created = true,
+  kind: "file" | "url" = "file",
+): CandidateKnowledgeSourceWriteResult {
   return {
     source: {
       id: "source-imported",
       knowledgeBaseId: "base-one",
-      kind: "file",
-      displayName: "private-source.md",
+      kind,
+      displayName: kind === "url" ? "https://private.example/source" : "private-source.md",
       createdAt: "2026-08-23T10:00:00.000Z",
     },
     versions: [
@@ -585,6 +588,118 @@ describe("candidate knowledge base maintenance CLI controls", () => {
 });
 
 describe("candidate knowledge source inspection CLI controls", () => {
+  it("requires explicit URL approval before invoking the URL import service", async () => {
+    const dependencies = harness();
+    const importKnowledgeSourceUrl = vi.fn(async () => knowledgeSourceWriteResult(true, "url"));
+    const knowledgeService = {
+      importKnowledgeSourceUrl,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "import-url",
+        resolve("private-url-store"),
+        "base-one",
+        "https://private.example/cv?token=secret#fragment",
+      ]),
+    ).rejects.toThrow("knowledge source import-url requires --approve");
+    expect(importKnowledgeSourceUrl).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("maps an approved URL import and never prints URL or sensitive manifest data", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-url-store");
+    const url = "https://private.example/cv?token=secret#fragment";
+    const importKnowledgeSourceUrl = vi.fn(async () => knowledgeSourceWriteResult(true, "url"));
+    const knowledgeService = {
+      importKnowledgeSourceUrl,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    }).parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import-url",
+      storeRoot,
+      "base-one",
+      url,
+      "--approve",
+      "--display-name",
+      "Private URL display name",
+    ]);
+
+    expect(importKnowledgeSourceUrl).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId: "base-one",
+      url,
+      approved: true,
+      displayName: "Private URL display name",
+    });
+    expect(JSON.parse(dependencies.lines[0] ?? "{}")).toEqual({
+      knowledgeBaseId: "base-one",
+      sourceId: "source-imported",
+      kind: "url",
+      versionId: "version-two",
+      version: 2,
+      created: true,
+    });
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(url);
+    expect(output).not.toContain("token=secret");
+    expect(output).not.toContain("Private URL display name");
+    expect(output).not.toContain("text/markdown");
+    expect(output).not.toContain("d".repeat(64));
+  });
+
+  it("propagates URL service failures and rejects a file-shaped result", async () => {
+    const dependencies = harness();
+    const failure = new Error("URL import failed");
+    const importKnowledgeSourceUrl = vi
+      .fn()
+      .mockRejectedValueOnce(failure)
+      .mockResolvedValueOnce(knowledgeSourceWriteResult(true, "file"));
+    const knowledgeService = {
+      importKnowledgeSourceUrl,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const command = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "import-url",
+      resolve("private-url-store"),
+      "base-one",
+      "https://private.example/cv",
+      "--approve",
+    ] as const;
+
+    await expect(cli.parseAsync(command)).rejects.toBe(failure);
+    await expect(cli.parseAsync(command)).rejects.toThrow(
+      "The imported candidate knowledge source result was invalid.",
+    );
+    expect(dependencies.lines).toEqual([]);
+  });
+
   it("maps file import with an optional display name to a safe latest-version JSON result", async () => {
     const dependencies = harness();
     const storeRoot = resolve("private-intake-store");

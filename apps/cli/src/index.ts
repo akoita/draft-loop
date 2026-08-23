@@ -166,6 +166,7 @@ function writeKnowledgeSourceImport(
   io: ApplicationIo,
   knowledgeBaseId: string,
   result: CandidateKnowledgeSourceWriteResult,
+  expectedKind: "file" | "url",
 ): void {
   if (
     typeof result !== "object" ||
@@ -176,7 +177,7 @@ function writeKnowledgeSourceImport(
     result.source.knowledgeBaseId !== knowledgeBaseId ||
     typeof result.source.id !== "string" ||
     result.source.id.trim() === "" ||
-    result.source.kind !== "file" ||
+    result.source.kind !== expectedKind ||
     !Array.isArray(result.versions) ||
     result.versions.length === 0
   ) {
@@ -591,7 +592,38 @@ export function createCli(dependencies: CliDependencies = {}): Command {
             ? {}
             : { displayName: options.displayName as string }),
         });
-        writeKnowledgeSourceImport(io, knowledgeBaseId, result);
+        writeKnowledgeSourceImport(io, knowledgeBaseId, result, "file");
+      },
+    );
+
+  knowledgeSource
+    .command("import-url")
+    .description("Import one explicitly approved URL into a local candidate-knowledge store")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<url>", "source URL")
+    .option("--approve", "approve retrieving and storing this URL")
+    .option("--display-name <name>", "optional source display name")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        url: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.approve !== true) {
+          throw new Error("knowledge source import-url requires --approve.");
+        }
+        const result = await candidateKnowledge.importKnowledgeSourceUrl({
+          storeRoot,
+          knowledgeBaseId,
+          url,
+          approved: true,
+          ...(options.displayName === undefined
+            ? {}
+            : { displayName: options.displayName as string }),
+        });
+        writeKnowledgeSourceImport(io, knowledgeBaseId, result, "url");
       },
     );
 

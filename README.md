@@ -102,8 +102,9 @@ The CLI exposes shared CKB controls through `knowledge`: initialize a portable
 store with its default CKB, open or list a store, inspect path-free lifecycle
 readiness, list path-free source/version identities, report duplicate groups,
 inspect the count-only managed-file inventory, and import one explicitly chosen
-local file. It can also bind one or more ready CKBs to a workspace; combining
-CKBs requires `--approve-combination`. For example:
+local file or explicitly approved HTTPS URL. It can also bind one or more ready
+CKBs to a workspace; combining CKBs requires `--approve-combination`. For
+example:
 
 ```sh
 pnpm --filter @draft-loop/cli start knowledge store init ./candidate-knowledge
@@ -112,6 +113,8 @@ pnpm --filter @draft-loop/cli start knowledge store inventory ./candidate-knowle
 pnpm --filter @draft-loop/cli start knowledge base create ./candidate-knowledge "Public projects"
 pnpm --filter @draft-loop/cli start knowledge source import \
   ./candidate-knowledge KNOWLEDGE_BASE_ID ./career-history.md
+pnpm --filter @draft-loop/cli start knowledge source import-url \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID https://example.com/profile --approve
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -129,8 +132,10 @@ inventory inspection contracts. These generic diagnostics omit roots, source
 labels, filenames, URLs, checksums, and content. Archival requires explicit
 confirmation and cannot target the default CKB. Single-file intake uses a
 dedicated native picker, keeps the selected path in the host, and returns only
-opaque source/version identity. Directory/URL intake, later-version mutation,
-deletion, backup, and restore remain staged.
+opaque source/version identity. URL intake requires explicit approval, applies
+the shared HTTPS and network-safety checks, and likewise returns no URL or
+content. Directory intake, later-version mutation, deletion, backup, and restore
+remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

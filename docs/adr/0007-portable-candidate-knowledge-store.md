@@ -291,9 +291,12 @@ The shared CLI and desktop adapters also expose explicit single-file intake
 through the existing application contract. CLI users supply a local path; the
 desktop host owns a dedicated one-file native picker and never accepts or
 returns that path through renderer IPC. Both adapters return only CKB, source,
-and initial-version identity plus creation status. Later-version append,
-directory intake, and approved URL intake remain separate adapter operations
-because their lineage, partial-progress, and network-approval semantics differ.
+and initial-version identity plus creation status. They also expose approved URL
+intake as a separate command over the existing application contract. Approval
+is mandatory before any fetch, the centralized HTTPS/network-safety boundary is
+preserved, and generic results omit the URL, label, and content. Later-version
+append and directory intake remain separate adapter operations because their
+lineage and partial-progress semantics differ.
 
 ## Deferred integration
 

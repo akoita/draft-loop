@@ -278,11 +278,11 @@ motivated each boundary.
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
-retrieval-index drift enforcement, provider transmission scope, CLI/desktop CKB
-controls, missing-blob repair, writer locks, deletion, cleanup, or complete
-portable backup/export/restore. Until those contracts are integrated and
-validated, the workspace-scoped evidence and retrieval path remains
-authoritative for application runs.
+retrieval-index drift enforcement, provider transmission scope, complete
+CLI/desktop lifecycle controls, missing-blob repair, writer locks, deletion,
+cleanup, or complete portable backup/export/restore. Until those contracts are
+integrated and validated, the workspace-scoped evidence and retrieval path
+remains authoritative for application runs.
 
 ## Evidence-grounded evaluator–optimizer
 
@@ -393,11 +393,15 @@ than one cross-command snapshot. Explicit single-file CKB intake uses the same
 application import contract in both adapters: the CLI accepts a local path,
 while the desktop host owns a dedicated native picker and projects only opaque
 source/version identity to the renderer. Archival requires explicit
-confirmation and does not rewrite workspace selection. Live provider execution
-is opt-in and the provider boundary enforces the request data policy before the
-SDK call. Approved artifacts render locally to Markdown, controlled DOCX, or
-controlled PDF; immutable export records retain artifact/template versions,
-timestamp, format, MIME type, and checksum.
+confirmation and does not rewrite workspace selection. Approved CKB URL intake
+also uses the shared application contract and centralized ingestion boundary:
+the renderer must provide explicit approval, while the host enforces HTTPS,
+public-address resolution, redirect, time, size, and content limits. Its result
+contains only opaque source/version identity, never the URL or fetched content.
+Live provider execution is opt-in and the provider boundary enforces the
+request data policy before the SDK call. Approved artifacts render locally to
+Markdown, controlled DOCX, or controlled PDF; immutable export records retain
+artifact/template versions, timestamp, format, MIME type, and checksum.
 
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not

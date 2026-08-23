@@ -45,7 +45,10 @@ metadata maintenance without carrying roots through the desktop renderer
 boundary; archival requires explicit confirmation. Single-file desktop intake
 uses a dedicated native picker, keeps the selected path in the host, and
 returns only opaque source/version identity. Cancellation performs no import,
-and ingestion failures use path-free diagnostics. No application run retrieves
+and ingestion failures use path-free diagnostics. CKB URL intake requires an
+explicit approval on each adapter request, uses the centralized HTTPS and
+network-safety boundary, and returns no URL, query string, label, or fetched
+content through generic CLI or renderer results. No application run retrieves
 CKB content yet, so the existing workspace evidence boundary remains
 authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
 [privacy policy](privacy-and-evaluation.md), and [architecture](architecture.md)

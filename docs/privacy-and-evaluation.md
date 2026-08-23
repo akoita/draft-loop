@@ -43,6 +43,13 @@ authoritative. [ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
 defines the storage contract. The [threat model](threat-model.md) records the
 security risks and residual limitations.
 
+Explicit CKB URL intake is a local acquisition action, not provider
+transmission. The user must approve each adapter request before retrieval. The
+shared HTTPS and network-safety boundary validates and fetches the URL, while
+CLI output and desktop renderer results expose only opaque source/version
+identity and creation status. URL provenance and fetched bytes remain inside
+the sensitive local CKB store.
+
 ### Managed bytes and immutable versions
 
 Intake and manual append require explicit approval for one local regular file,
