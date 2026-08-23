@@ -215,7 +215,8 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   mapping captured at binding or explicit append time:
   later source version appends, explicit origin rebinding, or source retirement
   do not rewrite it. Incremental directory scan reconciliation, directory
-  rebind, rename, removal, and member-retirement policy remain unimplemented.
+  rebind, rename, complete removal reconciliation, and broader member-retirement
+  policy remain unimplemented.
   A local explicit bounded refresh preview can classify historical members as
   `current`, `changed`, `missing`, `retired`, or `origin-conflict` and count
   unmatched accepted files. It exposes no paths or integrity metadata and makes
@@ -242,8 +243,16 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   each file source, initial version, sensitive origin binding, managed blob,
   journal event, and immutable membership atomically per candidate. Existing
   member states are report-only, new members receive no refresh observation, and
-  removals, renames, root rebind, automatic retirement/deletion, and writer
+  complete removal reconciliation, renames, root rebind, automatic retirement/deletion, and writer
   coordination remain deferred.
+- An explicit approved directory-member retirement operation reuses one complete
+  bounded scan and accepts only an active same-member `missing` member. It
+  atomically records the existing `user-requested` retirement marker with
+  latest-version, origin-revision, and chronology guards. `removed` means
+  logical retirement only: bytes, versions, origin bindings, observations,
+  journal state, and immutable membership remain; an already retired member
+  returns `already-removed` without a write. Complete directory reconciliation,
+  physical cleanup, and broader lifecycle policy remain deferred.
 - Managed source add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
   matching opaque bytes; file sources retain their additional regular-file and
@@ -438,7 +447,9 @@ last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
 New-member persistence is available only through the explicit bounded add-members
-operation; rename/removal decisions, directory-root rebind,
+operation, and explicit missing-member retirement is available only through the
+approved directory-member operation; complete removal reconciliation,
+directory-root rebind,
 automatic retirement/deletion, background refresh, time-based freshness policy,
 automatic moved-origin
 discovery, adapter-level refresh/rebind/duplicate controls, incremental

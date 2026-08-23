@@ -218,6 +218,14 @@ export interface CandidateKnowledgeSourceRetirementRecord
   readonly sourceId: string;
 }
 
+export interface CandidateKnowledgeDirectoryMemberRetirementInput {
+  readonly retiredAt: string;
+  /** The latest managed version observed during the directory scan. */
+  readonly expectedVersionId: string;
+  /** The origin-binding revision observed during the directory scan. */
+  readonly expectedOriginBoundAt: string;
+}
+
 export interface CandidateKnowledgeSourceVersionWriteResult {
   readonly source: CandidateKnowledgeSourceRecord;
   readonly version: CandidateKnowledgeSourceVersionRecord;
@@ -368,6 +376,12 @@ export interface CandidateKnowledgeBaseStoragePort {
     knowledgeBaseId: string,
     sourceId: string,
     input: CandidateKnowledgeSourceRetirementInput,
+  ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
+  readonly retireCandidateKnowledgeDirectoryMember: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+    input: CandidateKnowledgeDirectoryMemberRetirementInput,
   ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
 }
 
@@ -3530,6 +3544,230 @@ export class SqliteStorage
         )
         .run(normalizedSourceId, retiredAt, reason);
       result = { sourceId: normalizedSourceId, retiredAt, reason };
+    })();
+    return result as CandidateKnowledgeSourceRetirementRecord;
+  }
+
+  public async retireCandidateKnowledgeDirectoryMember(
+    knowledgeBaseId: string,
+    directoryId: string,
+    sourceId: string,
+    input: CandidateKnowledgeDirectoryMemberRetirementInput,
+  ): Promise<CandidateKnowledgeSourceRetirementRecord> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedDirectoryId = requireNonEmpty(
+      directoryId,
+      "candidate knowledge directory id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const retiredAt = requireTimestamp(
+      input.retiredAt,
+      "candidate knowledge directory member retirement retiredAt",
+    );
+    const expectedVersionId = requireNonEmpty(
+      input.expectedVersionId,
+      "candidate knowledge directory member expected version id",
+    ).trim();
+    const expectedOriginBoundAt = requireTimestamp(
+      input.expectedOriginBoundAt,
+      "candidate knowledge directory member expected origin boundAt",
+    );
+    let result: CandidateKnowledgeSourceRetirementRecord | undefined;
+    this.database.transaction(() => {
+      this.requireActiveCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+      const binding = this.database
+        .prepare(
+          `SELECT id, candidate_knowledge_base_id, root_path, bound_at
+           FROM candidate_knowledge_directory_bindings
+           WHERE candidate_knowledge_base_id = ? AND id = ?`,
+        )
+        .get(normalizedKnowledgeBaseId, normalizedDirectoryId);
+      if (binding === undefined) {
+        throw new StorageValidationError("candidate knowledge directory binding was not found");
+      }
+      if (
+        rowString(binding, "id") !== normalizedDirectoryId ||
+        rowString(binding, "candidate_knowledge_base_id") !== normalizedKnowledgeBaseId
+      ) {
+        throw new StorageValidationError("candidate knowledge directory binding is malformed");
+      }
+      requireCanonicalAbsolutePath(
+        rowString(binding, "root_path"),
+        `candidate knowledge directory ${normalizedDirectoryId} root path`,
+      );
+      const directoryBoundAt = requireTimestamp(
+        rowString(binding, "bound_at"),
+        `candidate knowledge directory ${normalizedDirectoryId} boundAt`,
+      );
+      if (Date.parse(retiredAt) < Date.parse(directoryBoundAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge directory member retirement must not precede directory binding",
+        );
+      }
+
+      const member = this.database
+        .prepare(
+          `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+           FROM candidate_knowledge_directory_members
+           WHERE candidate_knowledge_base_id = ?
+             AND directory_id = ?
+             AND source_id = ?`,
+        )
+        .get(normalizedKnowledgeBaseId, normalizedDirectoryId, normalizedSourceId);
+      if (member === undefined) {
+        throw new StorageValidationError("candidate knowledge directory member was not found");
+      }
+      const memberRecord = candidateKnowledgeDirectoryMemberFromRow(member);
+      if (
+        memberRecord.directoryId !== normalizedDirectoryId ||
+        memberRecord.knowledgeBaseId !== normalizedKnowledgeBaseId ||
+        memberRecord.sourceId !== normalizedSourceId ||
+        !/^[0-9a-f]{64}$/.test(memberRecord.relativePathHash)
+      ) {
+        throw new StorageValidationError("candidate knowledge directory member is malformed");
+      }
+
+      const source = this.requireCandidateKnowledgeSource(
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+      );
+      if (source.kind !== "file") {
+        throw new StorageValidationError(
+          "candidate knowledge directory member is not a file source",
+        );
+      }
+      const managed = this.database
+        .prepare(
+          `SELECT version.id
+           FROM candidate_knowledge_source_versions AS version
+           JOIN candidate_knowledge_managed_source_versions AS managed
+             ON managed.version_id = version.id
+           WHERE version.source_id = ?
+           LIMIT 1`,
+        )
+        .get(normalizedSourceId);
+      if (managed === undefined) {
+        throw new StorageValidationError("candidate knowledge directory member is not managed");
+      }
+
+      const currentRow = this.database
+        .prepare(
+          "SELECT source_id, retired_at, reason FROM candidate_knowledge_source_retirements WHERE source_id = ?",
+        )
+        .get(normalizedSourceId);
+      if (currentRow !== undefined) {
+        const current = candidateKnowledgeSourceRetirementFromRow(currentRow);
+        if (current.sourceId !== normalizedSourceId || current.reason !== "user-requested") {
+          throw new StorageValidationError(
+            "candidate knowledge source retirement marker is malformed",
+          );
+        }
+        requireTimestamp(
+          current.retiredAt,
+          `candidate knowledge source ${normalizedSourceId} retirement retiredAt`,
+        );
+        result = current;
+        return;
+      }
+
+      this.requireCandidateKnowledgeSourceActive(normalizedSourceId);
+      const sourceCreatedAt = requireTimestamp(
+        source.createdAt,
+        `candidate knowledge source ${normalizedSourceId} createdAt`,
+      );
+      if (Date.parse(retiredAt) < Date.parse(sourceCreatedAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge directory member retirement must not precede source creation",
+        );
+      }
+      const latestRow = this.database
+        .prepare(
+          `SELECT version.id, version.source_id, version.version,
+                  version.parent_version_id, version.media_type, version.checksum,
+                  version.size_bytes, version.created_at
+           FROM candidate_knowledge_source_versions AS version
+           JOIN candidate_knowledge_managed_source_versions AS managed
+             ON managed.version_id = version.id
+           WHERE version.source_id = ?
+           ORDER BY version.version DESC, version.id DESC
+           LIMIT 1`,
+        )
+        .get(normalizedSourceId);
+      if (latestRow === undefined) {
+        throw new StorageValidationError(
+          "candidate knowledge directory member latest managed version was not found",
+        );
+      }
+      const latestVersion = candidateKnowledgeSourceVersionFromRow(latestRow);
+      if (latestVersion.id !== expectedVersionId) {
+        throw new StorageConflictError(
+          "candidate knowledge directory member latest version changed",
+        );
+      }
+      const latestVersionCreatedAt = requireTimestamp(
+        latestVersion.createdAt,
+        `candidate knowledge source ${normalizedSourceId} latest version createdAt`,
+      );
+      if (Date.parse(retiredAt) < Date.parse(latestVersionCreatedAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge directory member retirement must not precede latest version",
+        );
+      }
+
+      const relation = this.readCandidateKnowledgeDirectoryMemberOriginRelation(
+        normalizedKnowledgeBaseId,
+        normalizedDirectoryId,
+        normalizedSourceId,
+      );
+      if (relation.relation !== "same-member" || relation.originBoundAt !== expectedOriginBoundAt) {
+        throw new StorageConflictError(
+          "candidate knowledge directory member origin revision changed",
+        );
+      }
+      if (Date.parse(retiredAt) < Date.parse(expectedOriginBoundAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge directory member retirement must not precede origin binding",
+        );
+      }
+
+      const observationRow = this.database
+        .prepare(
+          `SELECT source_id, checked_at
+           FROM candidate_knowledge_source_refresh_observations
+           WHERE source_id = ?`,
+        )
+        .get(normalizedSourceId);
+      if (observationRow !== undefined) {
+        if (rowString(observationRow, "source_id") !== normalizedSourceId) {
+          throw new StorageValidationError(
+            "candidate knowledge source refresh observation is malformed",
+          );
+        }
+        const observationCheckedAt = requireTimestamp(
+          rowString(observationRow, "checked_at"),
+          `candidate knowledge source ${normalizedSourceId} refresh checkedAt`,
+        );
+        if (Date.parse(retiredAt) < Date.parse(observationCheckedAt)) {
+          throw new StorageValidationError(
+            "candidate knowledge directory member retirement must not precede refresh observation",
+          );
+        }
+      }
+
+      this.database
+        .prepare(
+          "INSERT INTO candidate_knowledge_source_retirements (source_id, retired_at, reason) VALUES (?, ?, ?)",
+        )
+        .run(normalizedSourceId, retiredAt, "user-requested");
+      result = {
+        sourceId: normalizedSourceId,
+        retiredAt,
+        reason: "user-requested",
+      };
     })();
     return result as CandidateKnowledgeSourceRetirementRecord;
   }

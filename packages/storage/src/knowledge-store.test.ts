@@ -1129,6 +1129,199 @@ describe("portable candidate knowledge store", () => {
     await reopened.close();
   });
 
+  it("guards directory-member retirement and preserves immutable evidence", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const sourcePath = join(selectedDirectory, "first.md");
+    const replacementPath = join(parent, "moved-first.md");
+    const initialContent = "initial evidence";
+    const updatedContent = "updated evidence";
+    await mkdir(selectedDirectory);
+    await writeFile(sourcePath, initialContent, "utf8");
+    await writeFile(replacementPath, updatedContent, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "retire-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "first.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(sourcePath, initialContent, {
+        id: "retire-version-first",
+      }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "retire-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["retire-source"],
+    });
+
+    await expect(
+      store.retireCandidateKnowledgeDirectoryMember(
+        "ckb-default",
+        "retire-directory",
+        "retire-source",
+        {
+          retiredAt: "2026-08-21T14:01:30.000Z",
+          expectedVersionId: "retire-version-first",
+          expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
+        },
+      ),
+    ).rejects.toThrow(/must not precede directory binding/i);
+    await expect(
+      store.getCandidateKnowledgeSourceRetirement("ckb-default", "retire-source"),
+    ).resolves.toBeUndefined();
+
+    await writeFile(sourcePath, updatedContent, "utf8");
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "retire-source",
+      managedVersion(sourcePath, updatedContent, {
+        id: "retire-version-second",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    );
+    await expect(
+      store.retireCandidateKnowledgeDirectoryMember(
+        "ckb-default",
+        "retire-directory",
+        "retire-source",
+        {
+          retiredAt: "2026-08-21T14:04:00.000Z",
+          expectedVersionId: "retire-version-first",
+          expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
+        },
+      ),
+    ).rejects.toThrow(/latest version changed/i);
+
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "retire-source", {
+      sourcePath: replacementPath,
+      mediaType: "text/markdown",
+      checksum: sha256(updatedContent),
+      sizeBytes: Buffer.byteLength(updatedContent),
+      boundAt: "2026-08-21T14:04:30.000Z",
+    });
+    await expect(
+      store.retireCandidateKnowledgeDirectoryMember(
+        "ckb-default",
+        "retire-directory",
+        "retire-source",
+        {
+          retiredAt: "2026-08-21T14:05:00.000Z",
+          expectedVersionId: "retire-version-second",
+          expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
+        },
+      ),
+    ).rejects.toThrow(/origin revision changed/i);
+
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "retire-source", {
+      sourcePath,
+      mediaType: "text/markdown",
+      checksum: sha256(updatedContent),
+      sizeBytes: Buffer.byteLength(updatedContent),
+      boundAt: "2026-08-21T14:05:30.000Z",
+    });
+    await store.upsertCandidateKnowledgeDirectoryRefreshObservations(
+      "ckb-default",
+      "retire-directory",
+      {
+        checkedAt: "2026-08-21T14:07:00.000Z",
+        entries: [
+          {
+            sourceId: "retire-source",
+            observedVersionId: "retire-version-second",
+            status: "missing",
+            expectedOriginBoundAt: "2026-08-21T14:05:30.000Z",
+          },
+        ],
+      },
+    );
+    const beforeRetirement = {
+      source: await store.getCandidateKnowledgeSource("ckb-default", "retire-source"),
+      versions: await store.listCandidateKnowledgeSourceVersions("ckb-default", "retire-source"),
+      origin: await store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "retire-source"),
+      members: await store.listCandidateKnowledgeDirectoryMembers(
+        "ckb-default",
+        "retire-directory",
+      ),
+      observation: await store.getCandidateKnowledgeSourceRefreshObservation(
+        "ckb-default",
+        "retire-source",
+      ),
+      inventory: await store.inspectManagedCandidateKnowledgeFiles(),
+    };
+
+    await expect(
+      store.retireCandidateKnowledgeDirectoryMember(
+        "ckb-default",
+        "retire-directory",
+        "retire-source",
+        {
+          retiredAt: "2026-08-21T14:06:00.000Z",
+          expectedVersionId: "retire-version-second",
+          expectedOriginBoundAt: "2026-08-21T14:05:30.000Z",
+        },
+      ),
+    ).rejects.toThrow(/refresh observation/i);
+    const retirement = await store.retireCandidateKnowledgeDirectoryMember(
+      "ckb-default",
+      "retire-directory",
+      "retire-source",
+      {
+        retiredAt: "2026-08-21T14:08:00.000Z",
+        expectedVersionId: "retire-version-second",
+        expectedOriginBoundAt: "2026-08-21T14:05:30.000Z",
+      },
+    );
+    expect(retirement).toEqual({
+      sourceId: "retire-source",
+      retiredAt: "2026-08-21T14:08:00.000Z",
+      reason: "user-requested",
+    });
+    await expect(
+      store.retireCandidateKnowledgeDirectoryMember(
+        "ckb-default",
+        "retire-directory",
+        "retire-source",
+        {
+          retiredAt: "2026-08-21T14:09:00.000Z",
+          expectedVersionId: "stale-version",
+          expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
+        },
+      ),
+    ).resolves.toEqual(retirement);
+
+    expect({
+      source: await store.getCandidateKnowledgeSource("ckb-default", "retire-source"),
+      versions: await store.listCandidateKnowledgeSourceVersions("ckb-default", "retire-source"),
+      origin: await store.getCandidateKnowledgeSourceOriginBinding("ckb-default", "retire-source"),
+      members: await store.listCandidateKnowledgeDirectoryMembers(
+        "ckb-default",
+        "retire-directory",
+      ),
+      observation: await store.getCandidateKnowledgeSourceRefreshObservation(
+        "ckb-default",
+        "retire-source",
+      ),
+      inventory: await store.inspectManagedCandidateKnowledgeFiles(),
+    }).toEqual(beforeRetirement);
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.getCandidateKnowledgeSourceRetirement("ckb-default", "retire-source"),
+    ).resolves.toEqual(retirement);
+    await expect(
+      reopened.listCandidateKnowledgeDirectoryMembers("ckb-default", "retire-directory"),
+    ).resolves.toEqual(beforeRetirement.members);
+    await reopened.close();
+  });
+
   it("finds directory members by historical path hash after an origin rebind", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
