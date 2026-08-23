@@ -380,6 +380,7 @@ describe("candidate knowledge store application service", () => {
       "first-version-uuid",
       "second-source-uuid",
       "second-version-uuid",
+      "directory-binding-uuid",
     ];
     const service = createCandidateKnowledgeStoreService({
       generateId: () => ids.shift() ?? "unexpected-id",
@@ -394,6 +395,8 @@ describe("candidate knowledge store application service", () => {
     });
 
     expect(imported.status).toBe("complete");
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+    expect(imported.directoryId).toBe("directory-binding-uuid");
     expect(imported.scannedEntryCount).toBe(3);
     expect(imported.discoveredFileCount).toBe(2);
     expect(imported.skippedEntryCount).toBe(0);
@@ -418,6 +421,12 @@ describe("candidate knowledge store application service", () => {
       await expect(
         store.getCandidateKnowledgeSourceOriginBinding("default-ckb-uuid", "second-source-uuid"),
       ).resolves.toMatchObject({ originPath: secondPath });
+      await expect(
+        store.getCandidateKnowledgeDirectoryBinding("default-ckb-uuid", "directory-binding-uuid"),
+      ).resolves.toMatchObject({ rootPath: directoryPath });
+      await expect(
+        store.listCandidateKnowledgeDirectoryMembers("default-ckb-uuid", "directory-binding-uuid"),
+      ).resolves.toHaveLength(2);
     } finally {
       await store.close();
     }
@@ -511,6 +520,85 @@ describe("candidate knowledge store application service", () => {
     ).rejects.toThrow(directoryImportFailureMessage);
   });
 
+  it("binds an empty directory with an opaque identity", async () => {
+    const directoryPath = join(temporaryParent, "empty-candidate-directory");
+    await mkdir(directoryPath);
+    const ids = ["store-uuid", "default-ckb-uuid", "directory-binding-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const result = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+
+    expect(result).toEqual({
+      sources: [],
+      status: "complete",
+      directoryId: "directory-binding-uuid",
+      scannedEntryCount: 0,
+      discoveredFileCount: 0,
+      skippedEntryCount: 0,
+    });
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(
+        store.getCandidateKnowledgeDirectoryBinding("default-ckb-uuid", "directory-binding-uuid"),
+      ).resolves.toMatchObject({ rootPath: directoryPath });
+      await expect(
+        store.listCandidateKnowledgeDirectoryMembers("default-ckb-uuid", "directory-binding-uuid"),
+      ).resolves.toEqual([]);
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("rejects a previously bound directory before allocating new source identities", async () => {
+    const directoryPath = join(temporaryParent, "bound-candidate-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "first.txt"), "first", "utf8");
+    const generateId = vi
+      .fn<() => string>()
+      .mockReturnValueOnce("store-uuid")
+      .mockReturnValueOnce("default-ckb-uuid")
+      .mockReturnValueOnce("source-uuid")
+      .mockReturnValueOnce("version-uuid")
+      .mockReturnValueOnce("directory-binding-uuid")
+      .mockReturnValue("unexpected-id");
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath,
+      }),
+    ).resolves.toMatchObject({ status: "complete", directoryId: "directory-binding-uuid" });
+    const idsAfterFirstImport = generateId.mock.calls.length;
+
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath,
+      }),
+    ).rejects.toThrow(directoryImportFailureMessage);
+    expect(generateId).toHaveBeenCalledTimes(idsAfterFirstImport);
+    await expect(
+      service.listKnowledgeSourceManifests({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+      }),
+    ).resolves.toHaveLength(1);
+  });
+
   it("hides a first managed write failure and leaves zero sources", async () => {
     const directoryPath = join(temporaryParent, "candidate-directory");
     await mkdir(directoryPath);
@@ -593,6 +681,61 @@ describe("candidate knowledge store application service", () => {
       await expect(store.listCandidateKnowledgeSources("default-ckb-uuid")).resolves.toHaveLength(
         1,
       );
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("returns a path-free partial result when the final directory binding fails", async () => {
+    const directoryPath = join(temporaryParent, "candidate-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "first.txt"), "first", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "source-uuid",
+      "version-uuid",
+      "directory-binding-uuid",
+    ];
+    const close = vi.fn(async () => undefined);
+    const open = vi.fn(async (root: string) => {
+      const handle = await openCandidateKnowledgeStore(root);
+      return {
+        ...handle,
+        close,
+        createCandidateKnowledgeDirectoryBinding: async () => {
+          throw new Error("private binding detail");
+        },
+      } as CandidateKnowledgeStoreHandle;
+    });
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+      open,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const result = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath,
+    });
+
+    expect(result).toMatchObject({
+      status: "partial",
+      sources: [{ source: { id: "source-uuid" } }],
+    });
+    expect(result).not.toHaveProperty("directoryId");
+    expect(JSON.stringify(result)).not.toContain("private binding detail");
+    expect(close).toHaveBeenCalledOnce();
+    const store = await openCandidateKnowledgeStore(storeRoot);
+    try {
+      await expect(store.listCandidateKnowledgeSources("default-ckb-uuid")).resolves.toHaveLength(
+        1,
+      );
+      await expect(
+        store.findCandidateKnowledgeDirectoryBinding("default-ckb-uuid", directoryPath),
+      ).resolves.toBeUndefined();
     } finally {
       await store.close();
     }

@@ -97,7 +97,8 @@ solid CKB edge covers explicit managed-file add, bounded recursive directory
 intake, approved URL intake and refresh, manual file-version append, and the local
 structural-inventory query. Each file write approval covers one local regular
 file; a directory approval preflights one bounded real directory and still
-creates independent file sources; each URL approval covers one bounded validated
+creates independent file sources before atomically recording its local binding
+and immutable membership; each URL approval covers one bounded validated
 HTTPS fetch. Extraction succeeds before persistence, and the application copies
 verified exact bytes into the portable store. Inventory is an explicit bounded,
 count-only read after normal referenced-blob validation. The dotted CKB edge
@@ -187,20 +188,28 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   unimplemented.
   Exact paths remain absent from the portable
   descriptor, source/version metadata, manifests, journal rows, inventory,
-  diagnostics, and application projections. Source identity and its sensitive
-  label stay stable even if a
+  diagnostics, and application projections. A complete directory import keeps
+  its canonical root and each file's existing origin binding only in sensitive
+  local SQLite state; membership stores SHA-256 hashes of normalized relative
+  paths, never plaintext paths. Source identity and its sensitive label stay
+  stable even if a
   later selected path or basename differs. It does not drive retrieval or
   appear in CLI or desktop workflows. See
   [ADR 0007](adr/0007-portable-candidate-knowledge-store.md).
-- A bounded recursive directory-intake helper is a runtime-only convenience
-  selector over ordinary managed file sources. It requires a real non-symlink
+- A bounded recursive directory-intake helper is a bounded selector over
+  ordinary managed file sources. It requires a real non-symlink
   root outside the CKB store, checks canonical containment, traverses in lexical
   relative-path order, and preflights all extraction before any managed write.
   Depth, scanned entries, accepted files, aggregate bytes, and the existing
   20 MiB per-file limit are bounded. Dot-prefixed entries/subtrees, unsupported
   files, special entries, and child symlinks are skipped and counted. The
-  component creates no directory source kind, membership relation, directory
-  binding, or incremental refresh state.
+  component creates no directory source kind. A complete import records one
+  opaque directory binding and immutable hashed membership in sensitive local
+  SQLite state; partial and legacy runtime-only imports have no membership.
+  That membership is a stable historical mapping captured at binding time:
+  later source version appends, explicit origin rebinding, or source retirement
+  do not rewrite it. Incremental directory scan reconciliation, directory
+  rebind, rename, removal, and member-retirement policy remain unimplemented.
 - Managed source add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
   matching opaque bytes; file sources retain their additional regular-file and
@@ -395,8 +404,8 @@ last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
 Background refresh, time-based freshness policy, automatic moved-origin
-discovery, adapter-level refresh/rebind/duplicate controls, directory
-membership/refresh,
+discovery, adapter-level refresh/rebind/duplicate controls, incremental
+directory refresh and membership lifecycle,
 URL redirect history and conditional requests, automatic duplicate resolution,
 indexing and retrieval,
 application/run CKB selection, deletion, repair of missing/corrupt referenced blobs, durable

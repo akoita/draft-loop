@@ -174,12 +174,18 @@ taxonomy.
 A bounded recursive local-directory intake component now preflights supported
 files in deterministic relative-path order before creating independent managed
 file sources. It limits depth, scanned entries, accepted files, aggregate bytes,
-and each file's existing 20 MiB bound; a selected root symlink is rejected,
-while child symlinks, special entries, dot-prefixed entries/subtrees, and
-unsupported files are never followed or opened and skipped entries are counted.
-Directory roots are runtime-only, and
-the component does not persist a directory binding or membership relation or
-provide incremental add/remove refresh.
+and each file's existing 20 MiB bound. A selected root symlink is rejected;
+child symlinks are skipped rather than followed, while special entries,
+dot-prefixed entries/subtrees, and unsupported files are never opened and
+skipped entries are counted. A complete import now persists an opaque local
+directory-root binding plus immutable SHA-256 membership hashes for accepted
+files, while partial and legacy runtime-only imports have no directory
+membership evidence. The selected root and exact origins remain sensitive local
+state outside generic projections. Incremental add/remove refresh, rebind,
+rename, and member-retirement policy remain unimplemented. Membership is a
+stable historical mapping captured at binding time; later source version
+appends, explicit origin rebinding, or source retirement do not rewrite it.
+Actual incremental directory scan reconciliation remains deferred.
 The store retains no
 exact host paths or URLs in manifests, descriptors, journals, inventory,
 diagnostics, or application/provider projections, and retains no filename
@@ -187,7 +193,7 @@ provenance or filename-derived physical names. Exact URLs exist only in the
 sensitive local provenance table. It remains independent of application workspaces and run
 history. It does not yet refresh in the background, apply a time-based freshness
 policy, automatically discover moved origins, expose refresh/rebind/duplicate
-controls through product adapters, or maintain directory membership;
+controls through product adapters, or maintain directory membership lifecycle;
 automatically resolve duplicates; index or retrieve; select a CKB for an
 application or run; expose CLI/desktop controls; repair missing/corrupt
 referenced blobs; coordinate writers through locks/leases; delete, clean up, or
@@ -216,8 +222,17 @@ requested active CKB, the timestamp cannot precede source creation, the only
 reason is `user-requested`, and marker update or deletion is forbidden.
 SQLite migration v12 generalizes managed opaque-byte provenance to file or URL
 versions while keeping file origin bindings file-only, and adds guarded
-immutable URL provenance committed with the first URL version. Journal
-records exclude origin paths, filenames, labels, checksums, source content,
+immutable URL provenance committed with the first URL version. SQLite migration
+v13 adds the sensitive local-only directory-root binding and
+immutable member tables for complete imports. It stores only SHA-256 hashes of
+normalized relative member paths, derives them from existing canonical file
+origin bindings, and records no plaintext relative paths in membership. There
+is no backfill or directory source kind. Membership is stable historical
+binding-time state and is not rewritten by later source versioning, explicit
+origin rebinding, or retirement. Directory rebind, rename/removal lifecycle,
+and incremental scan reconciliation remain deferred; the v0.7 stage remains at
+component implementation.
+Journal records exclude origin paths, filenames, labels, checksums, source content,
 provider data, diagnostic projections, cleanup tokens, and approvals, and
 journal IDs are not exposed. Legacy v6 writes and entries without prospective
 journal proof remain unknown. The journal supplies evidence for future policy
@@ -527,6 +542,7 @@ model above controls current stage claims.
 
 | Date       | Change                                                                                                                                                                                                                                       | Reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Persisted approved complete-directory root bindings and immutable hashed membership as the eighth bounded #110 slice without advancing the v0.7 stage beyond component implementation                                                        | Complete imports now atomically bind a canonical local root and ordered managed file sources through SHA-256 normalized-relative-path hashes; membership is stable historical binding-time state and later source versioning, origin rebinding, or retirement does not rewrite it; partial and legacy runtime-only imports remain without directory-root/membership binding, and incremental scan reconciliation, adapters, selection, indexing, and deletion remain pending.                              |
 | 2026-08-23 | Added bounded recursive directory intake as the seventh #110 slice without advancing the v0.7 stage beyond component implementation                                                                                                          | A selected real directory is preflighted in deterministic lexical order with depth, entry, file, aggregate-byte, and per-file limits; hidden, unsupported, special, and child-symlink entries are skipped and counted, while each accepted file becomes an independent managed source. Directory membership, binding, incremental refresh, adapters, selection, indexing, and deletion remain pending.                                                                                                     |
 | 2026-08-22 | Added explicitly approved URL refresh as the sixth bounded #110 slice without advancing the v0.7 stage beyond component implementation                                                                                                       | A managed URL source can now re-fetch only its immutable original URL after lifecycle preflight, append changed exact bytes with per-version redirect provenance, treat identical bytes as current, and record URL-free inaccessible attempts. Directory traversal, redirect history, conditional requests, adapters, indexing, selection, and deletion remain pending.                                                                                                                                    |
 | 2026-08-22 | Added exact-byte approved URL intake as the fifth bounded #110 slice without advancing the v0.7 stage beyond component implementation                                                                                                        | One explicitly approved URL can now cross the established HTTPS/DNS/redirect/size/extraction boundary into an opaque immutable CKB snapshot with local per-version original/final URL provenance. Generic results and operational records remain URL-free; URL refresh/readiness, directory traversal, indexing, selection, adapters, and deletion remain pending.                                                                                                                                         |

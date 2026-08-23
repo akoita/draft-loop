@@ -711,6 +711,379 @@ describe("portable candidate knowledge store", () => {
     await reopened.close();
   });
 
+  it("persists immutable directory bindings and hashed members across reopen", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const nestedDirectory = join(selectedDirectory, "nested");
+    const firstPath = join(selectedDirectory, "first.md");
+    const secondPath = join(nestedDirectory, "second.md");
+    await mkdir(nestedDirectory, { recursive: true });
+    await writeFile(firstPath, "first evidence", "utf8");
+    await writeFile(secondPath, "second evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "directory-source-first",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "first.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(firstPath, "first evidence", {
+        id: "directory-version-first",
+      }),
+    );
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "directory-source-second",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "second.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(secondPath, "second evidence", {
+        id: "directory-version-second",
+      }),
+    );
+
+    const binding = await store.createCandidateKnowledgeDirectoryBinding({
+      id: "directory-binding-1",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["directory-source-first", "directory-source-second"],
+    });
+    expect(binding).toEqual({
+      id: "directory-binding-1",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+    });
+    expect(Object.isFrozen(binding)).toBe(true);
+    const members = await store.listCandidateKnowledgeDirectoryMembers(
+      "ckb-default",
+      "directory-binding-1",
+    );
+    expect(members.map((member) => member.sourceId).sort()).toEqual([
+      "directory-source-first",
+      "directory-source-second",
+    ]);
+    expect(members.map((member) => member.relativePathHash).sort()).toEqual(
+      [sha256("first.md"), sha256("nested/second.md")].sort(),
+    );
+    expect(Object.isFrozen(members)).toBe(true);
+    expect(Object.isFrozen(members[0])).toBe(true);
+    await expect(
+      store.findCandidateKnowledgeDirectoryBinding(
+        "ckb-default",
+        await realpath(selectedDirectory),
+      ),
+    ).resolves.toEqual(binding);
+    await expect(
+      store.getCandidateKnowledgeDirectoryBinding("ckb-default", "directory-binding-1"),
+    ).resolves.toEqual(binding);
+    await expect(
+      store.createCandidateKnowledgeDirectoryBinding({
+        id: "directory-binding-2",
+        knowledgeBaseId: "ckb-default",
+        rootPath: await realpath(selectedDirectory),
+        boundAt: "2026-08-21T14:02:00.000Z",
+        sourceIds: [],
+      }),
+    ).rejects.toThrow(StorageConflictError);
+    await store.createCandidateKnowledgeBase({
+      id: "directory-other-ckb",
+      displayName: "Other directory CKB",
+      isDefault: false,
+      createdAt: "2026-08-21T14:01:00.000Z",
+    });
+    const otherDirectory = join(parent, "other-selected");
+    await mkdir(otherDirectory);
+    await expect(
+      store.createCandidateKnowledgeDirectoryBinding({
+        id: "directory-binding-1",
+        knowledgeBaseId: "directory-other-ckb",
+        rootPath: await realpath(otherDirectory),
+        boundAt: "2026-08-21T14:02:00.000Z",
+        sourceIds: [],
+      }),
+    ).rejects.toThrow(StorageConflictError);
+    expect(() =>
+      mutateDatabase(
+        root,
+        "UPDATE candidate_knowledge_directory_bindings SET bound_at = '2026-08-21T14:03:00.000Z' WHERE id = 'directory-binding-1'",
+      ),
+    ).toThrow();
+    expect(() =>
+      mutateDatabase(
+        root,
+        "DELETE FROM candidate_knowledge_directory_members WHERE directory_id = 'directory-binding-1'",
+      ),
+    ).toThrow();
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.listCandidateKnowledgeDirectoryMembers("ckb-default", "directory-binding-1"),
+    ).resolves.toEqual(members);
+    await reopened.close();
+    mutateDatabase(
+      root,
+      `PRAGMA ignore_check_constraints = ON;
+       DROP TRIGGER candidate_knowledge_directory_members_immutable_update;
+       UPDATE candidate_knowledge_directory_members
+       SET relative_path_hash = 'malformed'
+       WHERE directory_id = 'directory-binding-1' AND source_id = 'directory-source-first'`,
+    );
+    await expect(openCandidateKnowledgeStore(root)).rejects.toThrow(
+      /invalid directory membership/i,
+    );
+  });
+
+  it("keeps directory membership stable across append, rebind, retirement, and reopen", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const sourcePath = join(selectedDirectory, "first.md");
+    const replacementPath = join(parent, "moved-first.md");
+    const initialContent = "initial evidence";
+    const updatedContent = "updated evidence";
+    await mkdir(selectedDirectory);
+    await writeFile(sourcePath, initialContent, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "lifecycle-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "first.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(sourcePath, initialContent, {
+        id: "lifecycle-version-first",
+      }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "lifecycle-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["lifecycle-source"],
+    });
+    const membersBefore = await store.listCandidateKnowledgeDirectoryMembers(
+      "ckb-default",
+      "lifecycle-directory",
+    );
+    expect(membersBefore).toEqual([
+      {
+        directoryId: "lifecycle-directory",
+        knowledgeBaseId: "ckb-default",
+        sourceId: "lifecycle-source",
+        relativePathHash: sha256("first.md"),
+      },
+    ]);
+
+    await writeFile(sourcePath, updatedContent, "utf8");
+    await store.appendManagedCandidateKnowledgeFileVersion(
+      "ckb-default",
+      "lifecycle-source",
+      managedVersion(sourcePath, updatedContent, {
+        id: "lifecycle-version-second",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      }),
+    );
+    await writeFile(replacementPath, updatedContent, "utf8");
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "lifecycle-source", {
+      sourcePath: replacementPath,
+      mediaType: "text/markdown",
+      checksum: sha256(updatedContent),
+      sizeBytes: Buffer.byteLength(updatedContent),
+      boundAt: "2026-08-21T14:04:00.000Z",
+    });
+    await store.retireCandidateKnowledgeSource("ckb-default", "lifecycle-source", {
+      retiredAt: "2026-08-21T14:05:00.000Z",
+      reason: "user-requested",
+    });
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(
+      reopened.listCandidateKnowledgeDirectoryMembers("ckb-default", "lifecycle-directory"),
+    ).resolves.toEqual(membersBefore);
+    await reopened.close();
+  });
+
+  it("rejects invalid directory members before creating a binding", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const outsideDirectory = join(parent, "outside");
+    const selectedPath = join(selectedDirectory, "selected.md");
+    const duplicatePath = join(selectedDirectory, "duplicate.md");
+    const outsidePath = join(outsideDirectory, "outside.md");
+    await mkdir(selectedDirectory);
+    await mkdir(outsideDirectory);
+    await writeFile(selectedPath, "selected", "utf8");
+    await writeFile(duplicatePath, "duplicate", "utf8");
+    await writeFile(outsidePath, "outside", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-other",
+      displayName: "Other",
+      isDefault: false,
+      createdAt: "2026-08-21T14:01:00.000Z",
+    });
+    const managedSource = async (id: string, sourcePath: string, knowledgeBaseId = "ckb-default") =>
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id,
+          knowledgeBaseId,
+          kind: "file",
+          displayName: `${id}.md`,
+          createdAt: "2026-08-21T14:01:00.000Z",
+        },
+        managedVersion(sourcePath, await readFile(sourcePath, "utf8"), {
+          id: `${id}-version`,
+        }),
+      );
+    await managedSource("selected-source", selectedPath);
+    await managedSource("duplicate-source", selectedPath);
+    await managedSource("outside-source", outsidePath);
+    await managedSource("other-source", selectedPath, "ckb-other");
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "unmanaged-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Unmanaged",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      {
+        id: "unmanaged-version",
+        mediaType: "text/markdown",
+        checksum: sha256("unmanaged"),
+        sizeBytes: 9,
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "URL",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      {
+        id: "url-version",
+        mediaType: "text/plain",
+        checksum: sha256("url"),
+        sizeBytes: 3,
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+    await managedSource("retired-source", duplicatePath);
+    await store.retireCandidateKnowledgeSource("ckb-default", "retired-source", {
+      retiredAt: "2026-08-21T14:02:00.000Z",
+      reason: "user-requested",
+    });
+    const selectedRoot = await realpath(selectedDirectory);
+    const selectedOrigin = await realpath(selectedPath);
+    const expectRejected = (
+      input: Parameters<typeof store.createCandidateKnowledgeDirectoryBinding>[0],
+    ) => expect(store.createCandidateKnowledgeDirectoryBinding(input)).rejects.toThrow();
+
+    await expectRejected({
+      id: "directory-missing",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["missing-source"],
+    });
+    await expectRejected({
+      id: "directory-url",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["url-source"],
+    });
+    await expectRejected({
+      id: "directory-unmanaged",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["unmanaged-source"],
+    });
+    await expectRejected({
+      id: "directory-retired",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["retired-source"],
+    });
+    await expectRejected({
+      id: "directory-outside",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["outside-source"],
+    });
+    await expectRejected({
+      id: "directory-equal",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedOrigin,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["selected-source"],
+    });
+    await expectRejected({
+      id: "directory-cross-ckb",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["other-source"],
+    });
+    await expectRejected({
+      id: "directory-duplicate-source",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["selected-source", "selected-source"],
+    });
+    await expectRejected({
+      id: "directory-duplicate-member",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["selected-source", "duplicate-source"],
+    });
+    await expectRejected({
+      id: "directory-invalid-time",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "not-a-time",
+      sourceIds: ["selected-source"],
+    });
+    await expectRejected({
+      id: "directory-before-source",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:00:00.000Z",
+      sourceIds: ["selected-source"],
+    });
+    await expectRejected({
+      id: " ",
+      knowledgeBaseId: "ckb-default",
+      rootPath: selectedRoot,
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: [],
+    });
+    expect(
+      queryDatabase(root, "SELECT COUNT(*) AS count FROM candidate_knowledge_directory_bindings"),
+    ).toEqual([{ count: 0 }]);
+    await store.close();
+  });
+
   it("rebinds exact bytes without creating a version, blob, or journal entry", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");

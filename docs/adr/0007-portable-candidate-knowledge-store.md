@@ -39,11 +39,17 @@ An approved URL intake operation uses the existing bounded HTTPS fetch boundary,
 then publishes the exact fetched response bytes under the same opaque layout and
 atomically records immutable per-version URL provenance.
 The first bounded recursive directory-intake component now reuses the local-file
-boundary as a runtime-only convenience selector: it preflights a real directory
-in deterministic lexical order, skips and counts dot-prefixed, unsupported,
-special, and child-symlink entries, and creates each accepted file as an
-independent managed file source. It does not create a directory source kind,
-membership relation, binding, or incremental refresh state.
+boundary. It preflights a real directory in deterministic lexical order, skips
+and counts dot-prefixed, unsupported, special, and child-symlink entries, and
+creates each accepted file as an independent managed file source. A complete
+import also persists a sensitive local-only canonical root binding and immutable
+membership rows containing only SHA-256 hashes of normalized relative paths; it
+does not create a directory source kind. Partial imports and legacy runtime-only
+imports have no directory binding or membership evidence. Incremental refresh,
+rebind, rename, removal, and member-retirement policy remain deferred. The
+membership is a stable historical mapping captured at binding time: later source
+version appends, explicit origin rebinding, or source retirement do not rewrite
+its rows, and actual incremental scan reconciliation remains deferred.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -134,9 +140,19 @@ limit. Traversal is deterministic by lexical relative path, containment is
 checked against the canonical root, and child symlinks, special entries,
 dot-prefixed entries/subtrees, and unsupported files are skipped and counted.
 Every accepted file then becomes a new independent `file` source with its
-existing origin binding and managed journal guarantees. Repeating the command
-does not imply membership reconciliation or stable source mapping; directory
-additions, removals, bindings, and incremental refresh remain deferred.
+existing origin binding and managed journal guarantees. After all file writes
+succeed, the application atomically records one opaque directory binding and
+one immutable hashed member per source in the same local SQLite transaction.
+The selected root and exact file origins remain sensitive local state; generic
+manifests, diagnostics, journals, inventory, and provider projections expose
+neither. Repeating a bound root is rejected until a future refresh policy
+provides stable source reuse; directory additions, removals, rebind, rename,
+and incremental refresh remain deferred. The persisted membership remains a
+historical binding-time mapping even when an existing member later gains a
+version, has its origin explicitly rebound, or is retired.
+SQLite migration v13 stores the opaque directory binding and immutable hashed
+members in separate local-only tables with same-CKB foreign-key scope; there is
+no backfill of earlier runtime-only imports.
 
 An explicit application operation can approve one local regular file as a
 manual new version of an existing file source. Every append repeats the same
@@ -333,7 +349,8 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- directory membership/bindings and incremental directory refresh;
+- incremental directory refresh, directory rebind/rename/removal, and member
+  retirement policy;
 - redirect-observation history, conditional URL requests, and URL-specific
   failure or time-based readiness policy;
 - background refresh, time-based freshness policy, moved-origin discovery, and
@@ -387,9 +404,12 @@ a portable-store record must not make a workspace run read from it implicitly.
 - The application can explicitly inspect bounded structural counts without
   disclosing entry identifiers or turning unknown entries into owned residue.
 - The application can explicitly preflight a bounded recursive directory and
-  import accepted files as independent managed sources. Directory paths remain
-  runtime-only; skips and limits are counted, and no directory membership or
-  refresh claim follows from a successful import.
+  import accepted files as independent managed sources. A complete import
+  persists a sensitive local-only canonical root binding plus immutable
+  SHA-256 relative-path membership; selected roots and exact origins remain
+  runtime/local state outside product projections. Skips and limits are
+  counted, while incremental refresh and membership lifecycle decisions remain
+  unimplemented.
 - Prospective v7 journal events provide internal provenance evidence for new
   managed writes without claiming legacy or otherwise unjournaled entries.
 - Deleting an application workspace does not delete a separate CKB store, and
@@ -399,9 +419,9 @@ a portable-store record must not make a workspace run read from it implicitly.
 - A SQLite-only CKB copy is not a complete CKB backup because it
   does not include managed raw bytes. CKB deletion, backup, export, restore, and
   secure-erasure semantics remain unimplemented.
-- The architecture and threat model must be revisited before directory
-  membership/refresh, retrieval cutover, export/restore, or provider use is
-  enabled.
+- The architecture and threat model must be revisited before incremental
+  directory refresh, membership lifecycle actions, retrieval cutover,
+  export/restore, or provider use is enabled.
 
 ## Follow-up
 
