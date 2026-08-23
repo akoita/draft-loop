@@ -1084,6 +1084,142 @@ describe("desktop capability bridge", () => {
     });
   });
 
+  it("validates bounded path-free candidate-knowledge inspection results", async () => {
+    const baseInput = { storeId: "store-1", knowledgeBaseId: "kb-1" } as const;
+    for (const type of ["knowledge.sources", "knowledge.duplicates"] as const) {
+      expect(validateBridgeCommand({ type, input: baseInput })).toEqual({ type, input: baseInput });
+      expect(() =>
+        validateBridgeCommand({
+          type,
+          input: { ...baseInput, storeRoot: "/private/candidate-data" },
+        }),
+      ).toThrow("invalid");
+    }
+    expect(
+      validateBridgeCommand({ type: "knowledge.inventory", input: { storeId: "store-1" } }),
+    ).toEqual({ type: "knowledge.inventory", input: { storeId: "store-1" } });
+
+    const sourcePort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceCount: 1,
+            sources: [
+              {
+                sourceId: "source-1",
+                kind: "file",
+                latestVersionId: "version-2",
+                versionCount: 2,
+              },
+            ],
+            truncated: false,
+          },
+        }),
+        ["knowledge.sources"],
+      ),
+    );
+    await expect(
+      sourcePort.execute({ type: "knowledge.sources", input: baseInput }),
+    ).resolves.toMatchObject({ ok: true, value: { sources: [{ versionCount: 2 }] } });
+
+    const duplicatePort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            groupCount: 1,
+            groups: [
+              {
+                memberCount: 2,
+                members: [
+                  { sourceId: "source-1", versionId: "version-1" },
+                  { sourceId: "source-2", versionId: "version-2" },
+                ],
+                truncated: false,
+              },
+            ],
+            truncated: false,
+          },
+        }),
+        ["knowledge.duplicates"],
+      ),
+    );
+    await expect(
+      duplicatePort.execute({ type: "knowledge.duplicates", input: baseInput }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: {
+        groups: [
+          {
+            members: [
+              { sourceId: "source-1", versionId: "version-1" },
+              { sourceId: "source-2", versionId: "version-2" },
+            ],
+          },
+        ],
+      },
+    });
+
+    const inventoryPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            schemaVersion: 1,
+            verifiedManagedFileCount: 2,
+            scannedEntryCount: 3,
+            unknownEntries: {
+              intakeShapedFilesAtSourcesRoot: 0,
+              opaqueEntriesAtSourcesRoot: 1,
+              entriesInsideManagedSourceDirectories: 0,
+              symbolicLinks: 0,
+              otherEntries: 0,
+            },
+            complete: false,
+            scanLimitReached: true,
+          },
+        }),
+        ["knowledge.inventory"],
+      ),
+    );
+    await expect(
+      inventoryPort.execute({ type: "knowledge.inventory", input: { storeId: "store-1" } }),
+    ).resolves.toMatchObject({ ok: true, value: { complete: false, scanLimitReached: true } });
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            sourceCount: 1,
+            sources: [
+              {
+                sourceId: "source-1",
+                kind: "file",
+                latestVersionId: null,
+                versionCount: 0,
+                sourcePath: "/private/resume.md",
+              },
+            ],
+            truncated: false,
+          },
+        }),
+        ["knowledge.sources"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({ type: "knowledge.sources", input: baseInput }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("carries an explicit path-free knowledge selection and combination approval", async () => {
     const input = {
       workspaceId: "workspace-1",

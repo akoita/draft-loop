@@ -52,8 +52,11 @@ import {
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
+  type KnowledgeDuplicatesResult,
+  type KnowledgeInventoryResult,
   type KnowledgeReadinessResult,
   type KnowledgeSelectionResult,
+  type KnowledgeSourcesResult,
   type KnowledgeStoreResult,
   type ModelsListInput,
   type ModelsListResult,
@@ -88,6 +91,7 @@ import type {
 import { isUnresolvedFinding } from "../model.js";
 
 const configDirectory = ".draft-loop";
+const maximumKnowledgeInspectionEntries = 256;
 const sourceProvenanceFilename = "source-provenance.json";
 const providerTransmissionAcknowledgementFilename = "provider-transmission-acknowledgement.json";
 const maxImportedFileBytes = 20 * 1024 * 1024;
@@ -1314,6 +1318,29 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return knowledgeStoreResult(view);
   }
 
+  async function verifiedKnowledgeStoreRoot(storeId: string): Promise<{
+    readonly root: string;
+    readonly view: CandidateKnowledgeStoreView;
+  }> {
+    const root = knowledgeStoreRoot(storeId);
+    const view = await knowledgeService.listKnowledgeBases({ storeRoot: root });
+    if (view.store.id !== storeId) {
+      return fail("operation-failed", "The open candidate knowledge store changed unexpectedly.");
+    }
+    return { root, view };
+  }
+
+  async function verifiedKnowledgeBaseRoot(
+    storeId: string,
+    knowledgeBaseId: string,
+  ): Promise<string> {
+    const { root, view } = await verifiedKnowledgeStoreRoot(storeId);
+    if (!view.knowledgeBases.some((base) => base.id === knowledgeBaseId)) {
+      return fail("not-found", "The requested candidate knowledge base was not found.");
+    }
+    return root;
+  }
+
   async function chooseKnowledgeStore(
     mode: "open" | "create",
     input: {
@@ -1980,6 +2007,91 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             readyCount,
             blockedCount: readiness.sources.length - readyCount,
             blockerReasons,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.sources": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const manifests = await knowledgeService.listKnowledgeSourceManifests({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+          });
+          const ordered = [...manifests].sort((left, right) =>
+            left.source.id.localeCompare(right.source.id),
+          );
+          const result: KnowledgeSourcesResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceCount: ordered.length,
+            sources: ordered.slice(0, maximumKnowledgeInspectionEntries).map((manifest) => ({
+              sourceId: manifest.source.id,
+              kind: manifest.source.kind,
+              latestVersionId: manifest.versions.at(-1)?.id ?? null,
+              versionCount: manifest.versions.length,
+            })),
+            truncated: ordered.length > maximumKnowledgeInspectionEntries,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.duplicates": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const duplicateGroups = await knowledgeService.listKnowledgeSourceDuplicateGroups({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+          });
+          let membersTruncated = false;
+          const groups = duplicateGroups
+            .slice(0, maximumKnowledgeInspectionEntries)
+            .map((group) => {
+              membersTruncated ||= group.members.length > maximumKnowledgeInspectionEntries;
+              return {
+                memberCount: group.members.length,
+                members: group.members
+                  .slice(0, maximumKnowledgeInspectionEntries)
+                  .map((member) => ({
+                    sourceId: member.sourceId,
+                    versionId: member.versionId,
+                  })),
+                truncated: group.members.length > maximumKnowledgeInspectionEntries,
+              };
+            });
+          const result: KnowledgeDuplicatesResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            groupCount: duplicateGroups.length,
+            groups,
+            truncated:
+              duplicateGroups.length > maximumKnowledgeInspectionEntries || membersTruncated,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.inventory": {
+          const { root } = await verifiedKnowledgeStoreRoot(command.input.storeId);
+          const inventory = await knowledgeService.inspectManagedCandidateKnowledgeFiles({
+            storeRoot: root,
+          });
+          const result: KnowledgeInventoryResult = {
+            storeId: command.input.storeId,
+            schemaVersion: inventory.schemaVersion,
+            verifiedManagedFileCount: inventory.verifiedManagedFileCount,
+            scannedEntryCount: inventory.scannedEntryCount,
+            unknownEntries: {
+              intakeShapedFilesAtSourcesRoot:
+                inventory.unknownEntries.intakeShapedFilesAtSourcesRoot,
+              opaqueEntriesAtSourcesRoot: inventory.unknownEntries.opaqueEntriesAtSourcesRoot,
+              entriesInsideManagedSourceDirectories:
+                inventory.unknownEntries.entriesInsideManagedSourceDirectories,
+              symbolicLinks: inventory.unknownEntries.symbolicLinks,
+              otherEntries: inventory.unknownEntries.otherEntries,
+            },
+            complete: inventory.complete,
+            scanLimitReached: inventory.scanLimitReached,
           };
           return { ok: true, value: result };
         }

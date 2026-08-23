@@ -23,6 +23,9 @@ export const bridgeCapabilities = [
   "knowledge.open",
   "knowledge.list",
   "knowledge.readiness",
+  "knowledge.sources",
+  "knowledge.duplicates",
+  "knowledge.inventory",
   "knowledge.select",
   "knowledge.create-base",
   "knowledge.rename-base",
@@ -195,6 +198,15 @@ export interface KnowledgeReadinessInput extends KnowledgeStoreListInput {
 }
 
 const knowledgeReadinessKeys = inputKeys<KnowledgeReadinessInput>()(["storeId", "knowledgeBaseId"]);
+
+export type KnowledgeSourcesInput = KnowledgeReadinessInput;
+const knowledgeSourcesKeys = knowledgeReadinessKeys;
+
+export type KnowledgeDuplicatesInput = KnowledgeReadinessInput;
+const knowledgeDuplicatesKeys = knowledgeReadinessKeys;
+
+export type KnowledgeInventoryInput = KnowledgeStoreListInput;
+const knowledgeInventoryKeys = knowledgeStoreListKeys;
 
 export interface KnowledgeSelectionEntry {
   readonly storeId: string;
@@ -533,6 +545,58 @@ export interface KnowledgeReadinessResult {
   readonly blockerReasons: readonly string[];
 }
 
+export interface KnowledgeSourceSummary {
+  readonly sourceId: string;
+  readonly kind: "file" | "url";
+  readonly latestVersionId: string | null;
+  readonly versionCount: number;
+}
+
+export interface KnowledgeSourcesResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceCount: number;
+  readonly sources: readonly KnowledgeSourceSummary[];
+  readonly truncated: boolean;
+}
+
+export interface KnowledgeDuplicateMember {
+  readonly sourceId: string;
+  readonly versionId: string;
+}
+
+export interface KnowledgeDuplicateGroupSummary {
+  readonly memberCount: number;
+  readonly members: readonly KnowledgeDuplicateMember[];
+  readonly truncated: boolean;
+}
+
+export interface KnowledgeDuplicatesResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly groupCount: number;
+  readonly groups: readonly KnowledgeDuplicateGroupSummary[];
+  readonly truncated: boolean;
+}
+
+export interface KnowledgeInventoryUnknownEntries {
+  readonly intakeShapedFilesAtSourcesRoot: number;
+  readonly opaqueEntriesAtSourcesRoot: number;
+  readonly entriesInsideManagedSourceDirectories: number;
+  readonly symbolicLinks: number;
+  readonly otherEntries: number;
+}
+
+export interface KnowledgeInventoryResult {
+  readonly storeId: string;
+  readonly schemaVersion: 1;
+  readonly verifiedManagedFileCount: number;
+  readonly scannedEntryCount: number;
+  readonly unknownEntries: KnowledgeInventoryUnknownEntries;
+  readonly complete: boolean;
+  readonly scanLimitReached: boolean;
+}
+
 export interface KnowledgeSelectionResult {
   readonly workspaceId: string;
   readonly entries: readonly KnowledgeSelectionEntry[];
@@ -554,6 +618,51 @@ const knowledgeReadinessResultKeys = resultKeys<KnowledgeReadinessResult>()([
   "readyCount",
   "blockedCount",
   "blockerReasons",
+]);
+const knowledgeSourceSummaryKeys = resultKeys<KnowledgeSourceSummary>()([
+  "sourceId",
+  "kind",
+  "latestVersionId",
+  "versionCount",
+]);
+const knowledgeSourcesResultKeys = resultKeys<KnowledgeSourcesResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceCount",
+  "sources",
+  "truncated",
+]);
+const knowledgeDuplicateMemberKeys = resultKeys<KnowledgeDuplicateMember>()([
+  "sourceId",
+  "versionId",
+]);
+const knowledgeDuplicateGroupSummaryKeys = resultKeys<KnowledgeDuplicateGroupSummary>()([
+  "memberCount",
+  "members",
+  "truncated",
+]);
+const knowledgeDuplicatesResultKeys = resultKeys<KnowledgeDuplicatesResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "groupCount",
+  "groups",
+  "truncated",
+]);
+const knowledgeInventoryUnknownEntriesKeys = resultKeys<KnowledgeInventoryUnknownEntries>()([
+  "intakeShapedFilesAtSourcesRoot",
+  "opaqueEntriesAtSourcesRoot",
+  "entriesInsideManagedSourceDirectories",
+  "symbolicLinks",
+  "otherEntries",
+]);
+const knowledgeInventoryResultKeys = resultKeys<KnowledgeInventoryResult>()([
+  "storeId",
+  "schemaVersion",
+  "verifiedManagedFileCount",
+  "scannedEntryCount",
+  "unknownEntries",
+  "complete",
+  "scanLimitReached",
 ]);
 const knowledgeSelectionResultKeys = resultKeys<KnowledgeSelectionResult>()([
   "workspaceId",
@@ -783,6 +892,9 @@ export interface BridgeCommandInputMap {
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
   "knowledge.readiness": KnowledgeReadinessInput;
+  "knowledge.sources": KnowledgeSourcesInput;
+  "knowledge.duplicates": KnowledgeDuplicatesInput;
+  "knowledge.inventory": KnowledgeInventoryInput;
   "knowledge.select": KnowledgeSelectionInput;
   "knowledge.create-base": KnowledgeBaseCreateInput;
   "knowledge.rename-base": KnowledgeBaseRenameInput;
@@ -812,6 +924,9 @@ export interface BridgeCommandOutputMap {
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
   "knowledge.readiness": KnowledgeReadinessResult;
+  "knowledge.sources": KnowledgeSourcesResult;
+  "knowledge.duplicates": KnowledgeDuplicatesResult;
+  "knowledge.inventory": KnowledgeInventoryResult;
   "knowledge.select": KnowledgeSelectionResult;
   "knowledge.create-base": KnowledgeStoreResult;
   "knowledge.rename-base": KnowledgeStoreResult;
@@ -1267,6 +1382,30 @@ function validateKnowledgeReadinessInput(value: unknown): KnowledgeReadinessInpu
   };
 }
 
+function validateKnowledgeSourcesInput(value: unknown): KnowledgeSourcesInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeSourcesKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+  };
+}
+
+function validateKnowledgeDuplicatesInput(value: unknown): KnowledgeDuplicatesInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDuplicatesKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+  };
+}
+
+function validateKnowledgeInventoryInput(value: unknown): KnowledgeInventoryInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeInventoryKeys)) return invalidInput();
+  return { storeId: identifier(input.storeId) };
+}
+
 const maximumKnowledgeSelections = 32;
 
 function validateKnowledgeSelectionEntry(value: unknown): KnowledgeSelectionEntry {
@@ -1617,6 +1756,18 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "knowledge.list", input: validateKnowledgeStoreListInput(command.input) };
     case "knowledge.readiness":
       return { type: "knowledge.readiness", input: validateKnowledgeReadinessInput(command.input) };
+    case "knowledge.sources":
+      return { type: "knowledge.sources", input: validateKnowledgeSourcesInput(command.input) };
+    case "knowledge.duplicates":
+      return {
+        type: "knowledge.duplicates",
+        input: validateKnowledgeDuplicatesInput(command.input),
+      };
+    case "knowledge.inventory":
+      return {
+        type: "knowledge.inventory",
+        input: validateKnowledgeInventoryInput(command.input),
+      };
     case "knowledge.select":
       return { type: "knowledge.select", input: validateKnowledgeSelectionInput(command.input) };
     case "knowledge.create-base":
@@ -1799,6 +1950,7 @@ const knowledgeBlockerReasons = [
   "refresh-inaccessible",
   "refresh-unbound",
 ] as const;
+const maximumKnowledgeInspectionEntries = 256;
 
 function normalizeKnowledgeStoreResult(value: unknown): KnowledgeStoreResult {
   const result = requireRecord(value);
@@ -1845,6 +1997,127 @@ function normalizeKnowledgeReadinessResult(value: unknown): KnowledgeReadinessRe
     readyCount,
     blockedCount,
     blockerReasons,
+  };
+}
+
+function normalizeKnowledgeSourcesResult(value: unknown): KnowledgeSourcesResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeSourcesResultKeys) || !Array.isArray(result.sources)) {
+    return invalidInput();
+  }
+  if (result.sources.length > maximumKnowledgeInspectionEntries) return invalidInput();
+  const sourceCount = finiteInteger(result.sourceCount, 1_000_000);
+  const sources = result.sources.map((value) => {
+    const source = requireRecord(value);
+    if (!hasOnlyKeys(source, knowledgeSourceSummaryKeys)) return invalidInput();
+    return {
+      sourceId: identifier(source.sourceId),
+      kind: enumValue(source.kind, ["file", "url"] as const),
+      latestVersionId: source.latestVersionId === null ? null : identifier(source.latestVersionId),
+      versionCount: finiteInteger(source.versionCount, 1_000_000),
+    } satisfies KnowledgeSourceSummary;
+  });
+  if (
+    sourceCount < sources.length ||
+    booleanValue(result.truncated) !== sourceCount > sources.length ||
+    sources.some((source) => (source.versionCount === 0) !== (source.latestVersionId === null)) ||
+    new Set(sources.map((source) => source.sourceId)).size !== sources.length
+  ) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    sourceCount,
+    sources,
+    truncated: booleanValue(result.truncated),
+  };
+}
+
+function normalizeKnowledgeDuplicatesResult(value: unknown): KnowledgeDuplicatesResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeDuplicatesResultKeys) || !Array.isArray(result.groups)) {
+    return invalidInput();
+  }
+  if (result.groups.length > maximumKnowledgeInspectionEntries) return invalidInput();
+  const groupCount = finiteInteger(result.groupCount, 1_000_000);
+  const groups = result.groups.map((value) => {
+    const group = requireRecord(value);
+    if (!hasOnlyKeys(group, knowledgeDuplicateGroupSummaryKeys) || !Array.isArray(group.members)) {
+      return invalidInput();
+    }
+    if (group.members.length < 2 || group.members.length > maximumKnowledgeInspectionEntries) {
+      return invalidInput();
+    }
+    const memberCount = finiteInteger(group.memberCount, 1_000_000);
+    const members = group.members.map((value) => {
+      const member = requireRecord(value);
+      if (!hasOnlyKeys(member, knowledgeDuplicateMemberKeys)) return invalidInput();
+      return {
+        sourceId: identifier(member.sourceId),
+        versionId: identifier(member.versionId),
+      } satisfies KnowledgeDuplicateMember;
+    });
+    const truncated = booleanValue(group.truncated);
+    if (
+      memberCount < members.length ||
+      truncated !== memberCount > members.length ||
+      new Set(members.map((member) => member.sourceId)).size !== members.length
+    ) {
+      return invalidInput();
+    }
+    return {
+      memberCount,
+      members,
+      truncated,
+    } satisfies KnowledgeDuplicateGroupSummary;
+  });
+  const sourceIds = groups.flatMap((group) => group.members.map((member) => member.sourceId));
+  const truncated = booleanValue(result.truncated);
+  if (
+    groupCount < groups.length ||
+    truncated !== (groupCount > groups.length || groups.some((group) => group.truncated)) ||
+    new Set(sourceIds).size !== sourceIds.length
+  ) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    groupCount,
+    groups,
+    truncated,
+  };
+}
+
+function normalizeKnowledgeInventoryResult(value: unknown): KnowledgeInventoryResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeInventoryResultKeys)) return invalidInput();
+  const unknown = requireRecord(result.unknownEntries);
+  if (!hasOnlyKeys(unknown, knowledgeInventoryUnknownEntriesKeys)) return invalidInput();
+  const complete = booleanValue(result.complete);
+  const scanLimitReached = booleanValue(result.scanLimitReached);
+  if (complete === scanLimitReached || result.schemaVersion !== 1) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    schemaVersion: 1,
+    verifiedManagedFileCount: finiteInteger(result.verifiedManagedFileCount, 1_000_000),
+    scannedEntryCount: finiteInteger(result.scannedEntryCount, 1_000_000),
+    unknownEntries: {
+      intakeShapedFilesAtSourcesRoot: finiteInteger(
+        unknown.intakeShapedFilesAtSourcesRoot,
+        1_000_000,
+      ),
+      opaqueEntriesAtSourcesRoot: finiteInteger(unknown.opaqueEntriesAtSourcesRoot, 1_000_000),
+      entriesInsideManagedSourceDirectories: finiteInteger(
+        unknown.entriesInsideManagedSourceDirectories,
+        1_000_000,
+      ),
+      symbolicLinks: finiteInteger(unknown.symbolicLinks, 1_000_000),
+      otherEntries: finiteInteger(unknown.otherEntries, 1_000_000),
+    },
+    complete,
+    scanLimitReached,
   };
 }
 
@@ -2123,6 +2396,12 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeStoreResult(value);
     case "knowledge.readiness":
       return normalizeKnowledgeReadinessResult(value);
+    case "knowledge.sources":
+      return normalizeKnowledgeSourcesResult(value);
+    case "knowledge.duplicates":
+      return normalizeKnowledgeDuplicatesResult(value);
+    case "knowledge.inventory":
+      return normalizeKnowledgeInventoryResult(value);
     case "knowledge.select":
       return normalizeKnowledgeSelectionResult(value);
     case "run.status":
