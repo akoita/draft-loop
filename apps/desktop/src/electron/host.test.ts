@@ -3101,18 +3101,123 @@ describe("candidate knowledge native controls", () => {
     }
   });
 
+  it("checks and refreshes a remembered file origin without exposing its path", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-refresh-host-"));
+    const storeRoot = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "private-resume.md");
+    await writeFile(sourcePath, "Initial private evidence.\n", "utf8");
+    const selectedKnowledgeFiles = [sourcePath];
+    try {
+      const host = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceFile: async () => selectedKnowledgeFiles.shift(),
+        },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      const imported = await host.invoke({
+        type: "knowledge.import-file",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      if (!imported.ok) throw new Error("Expected candidate knowledge file intake to succeed.");
+      const sourceId = (imported.value as { sourceId: string }).sourceId;
+      const input = { storeId, knowledgeBaseId, sourceId };
+
+      await expect(
+        host.invoke({ type: "knowledge.source-origin-status", input }),
+      ).resolves.toMatchObject({ ok: true, value: { ...input, status: "current" } });
+      await expect(host.invoke({ type: "knowledge.source-refresh-state", input })).resolves.toEqual(
+        { ok: true, value: { ...input, status: "unobserved" } },
+      );
+
+      await writeFile(sourcePath, "Changed private evidence.\n", "utf8");
+      const changed = await host.invoke({ type: "knowledge.source-origin-status", input });
+      expect(changed).toMatchObject({ ok: true, value: { ...input, status: "changed" } });
+      expect(JSON.stringify(changed)).not.toContain(parent);
+      expect(JSON.stringify(changed)).not.toContain("private-resume.md");
+
+      const refreshed = await host.invoke({ type: "knowledge.refresh-file", input });
+      expect(refreshed).toMatchObject({
+        ok: true,
+        value: { ...input, status: "refreshed", versionId: expect.any(String) },
+      });
+      expect(JSON.stringify(refreshed)).not.toContain(parent);
+      expect(JSON.stringify(refreshed)).not.toContain("Changed private evidence");
+      await expect(
+        host.invoke({ type: "knowledge.source-refresh-state", input }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: {
+          ...input,
+          status: "current",
+          observedVersionId: expect.any(String),
+          lastRefreshedVersionId: expect.any(String),
+        },
+      });
+
+      await rm(sourcePath);
+      await expect(
+        host.invoke({ type: "knowledge.source-origin-status", input }),
+      ).resolves.toMatchObject({ ok: true, value: { ...input, status: "missing" } });
+      await expect(host.invoke({ type: "knowledge.refresh-file", input })).resolves.toMatchObject({
+        ok: true,
+        value: { ...input, status: "missing" },
+      });
+
+      const reopenedRoots = [storeRoot];
+      const restarted = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => reopenedRoots.shift(),
+          chooseFiles: async () => [],
+        },
+      });
+      await expect(
+        restarted.invoke({ type: "knowledge.source-origin-status", input }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      await expect(
+        restarted.invoke({ type: "knowledge.open", input: { selection: "native-dialog" } }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId } });
+      await expect(
+        restarted.invoke({ type: "knowledge.source-origin-status", input }),
+      ).resolves.toMatchObject({ ok: true, value: { ...input, status: "missing" } });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("imports approved URL sources without exposing their URL or content", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-url-host-"));
     const storeRoot = join(parent, "candidate-knowledge");
     const wrongKindPath = join(parent, "wrong-kind-private-source.md");
     await writeFile(wrongKindPath, "Must not append to a URL source.\n", "utf8");
     const resolveHostname = vi.fn(async () => ["93.184.216.34"]);
-    const fetchUrl = vi.fn(
-      async () =>
+    const fetchUrl = vi
+      .fn()
+      .mockResolvedValueOnce(
         new Response("Private candidate evidence", {
           headers: { "content-type": "text/plain" },
         }),
-    );
+      )
+      .mockResolvedValueOnce(
+        new Response("Updated candidate evidence", {
+          headers: { "content-type": "text/plain" },
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response("Updated candidate evidence", {
+          headers: { "content-type": "text/plain" },
+        }),
+      )
+      .mockRejectedValueOnce(new Error("Sensitive URL refresh failure"));
     try {
       const host = createNativeHost({
         dialogs: {
@@ -3165,6 +3270,42 @@ describe("candidate knowledge native controls", () => {
       expect(fetchUrl).toHaveBeenCalledOnce();
       if (!imported.ok) throw new Error("Expected candidate knowledge URL intake to succeed.");
       const sourceId = (imported.value as { sourceId: string }).sourceId;
+      const refreshInput = { storeId, knowledgeBaseId, sourceId };
+      await expect(
+        host.invoke({
+          type: "knowledge.refresh-url",
+          input: { ...refreshInput, approved: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "invalid-input" } });
+      expect(fetchUrl).toHaveBeenCalledOnce();
+      const refreshed = await host.invoke({
+        type: "knowledge.refresh-url",
+        input: { ...refreshInput, approved: true },
+      });
+      expect(refreshed).toMatchObject({
+        ok: true,
+        value: { ...refreshInput, status: "refreshed", versionId: expect.any(String) },
+      });
+      expect(JSON.stringify(refreshed)).not.toContain(sensitiveUrl);
+      expect(JSON.stringify(refreshed)).not.toContain("Updated candidate evidence");
+      await expect(
+        host.invoke({
+          type: "knowledge.refresh-url",
+          input: { ...refreshInput, approved: true },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { ...refreshInput, status: "current" },
+      });
+      const inaccessible = await host.invoke({
+        type: "knowledge.refresh-url",
+        input: { ...refreshInput, approved: true },
+      });
+      expect(inaccessible).toMatchObject({
+        ok: true,
+        value: { ...refreshInput, status: "inaccessible" },
+      });
+      expect(JSON.stringify(inaccessible)).not.toContain("Sensitive URL refresh failure");
       const wrongKindAppend = await host.invoke({
         type: "knowledge.append-file-version",
         input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
@@ -3179,7 +3320,7 @@ describe("candidate knowledge native controls", () => {
         host.invoke({ type: "knowledge.sources", input: { storeId, knowledgeBaseId } }),
       ).resolves.toMatchObject({
         ok: true,
-        value: { sourceCount: 1, sources: [{ kind: "url", versionCount: 1 }] },
+        value: { sourceCount: 1, sources: [{ kind: "url", versionCount: 2 }] },
       });
 
       const reopenedRoots = [storeRoot];

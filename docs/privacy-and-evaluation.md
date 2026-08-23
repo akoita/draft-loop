@@ -55,6 +55,12 @@ and the desktop path remains inside the native picker/host boundary. Neither is
 persisted as a replacement origin or included in generic output. Changed bytes
 become an immutable managed version; identical current bytes create nothing.
 
+Origin status and refresh-state results are content-free. They expose only
+opaque source/version identity, lifecycle status, and timestamps. Explicit file
+refresh reads the sensitive remembered local origin without returning it. URL
+refresh requires approval for each request; its URL provenance, redirects, and
+fetched bytes remain local even when the result is `inaccessible`.
+
 ### Managed bytes and immutable versions
 
 Intake and manual append require explicit approval for one local regular file,

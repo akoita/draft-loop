@@ -58,6 +58,9 @@ import {
   type KnowledgeInventoryResult,
   type KnowledgeReadinessResult,
   type KnowledgeSelectionResult,
+  type KnowledgeSourceOriginStatusResult,
+  type KnowledgeSourceRefreshResult,
+  type KnowledgeSourceRefreshStateResult,
   type KnowledgeSourcesResult,
   type KnowledgeStoreResult,
   type KnowledgeUrlImportResult,
@@ -2244,6 +2247,118 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             versionId: version.id,
             version: version.version,
             created: appended.created,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.source-origin-status": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const status = await knowledgeService.checkKnowledgeSourceOriginStatus({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+          });
+          if (status.sourceId !== command.input.sourceId) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge source origin status returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeSourceOriginStatusResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: status.sourceId,
+            checkedAt: status.checkedAt,
+            status: status.status,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.source-refresh-state": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const state = await knowledgeService.getKnowledgeSourceRefreshState({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+          });
+          if (state.sourceId !== command.input.sourceId) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge source refresh state returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeSourceRefreshStateResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: state.sourceId,
+            status: state.status,
+            ...(state.checkedAt === undefined ? {} : { checkedAt: state.checkedAt }),
+            ...(state.observedVersionId === undefined
+              ? {}
+              : { observedVersionId: state.observedVersionId }),
+            ...(state.lastRefreshedAt === undefined
+              ? {}
+              : { lastRefreshedAt: state.lastRefreshedAt }),
+            ...(state.lastRefreshedVersionId === undefined
+              ? {}
+              : { lastRefreshedVersionId: state.lastRefreshedVersionId }),
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.refresh-file": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const refreshed = await knowledgeService.refreshKnowledgeSourceFromOrigin({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+          });
+          if (refreshed.sourceId !== command.input.sourceId) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge file source refresh returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeSourceRefreshResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: refreshed.sourceId,
+            checkedAt: refreshed.checkedAt,
+            status: refreshed.status,
+            ...(refreshed.versionId === undefined ? {} : { versionId: refreshed.versionId }),
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.refresh-url": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const refreshed = await knowledgeService.refreshKnowledgeSourceUrl({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: command.input.sourceId,
+            approved: true,
+          });
+          if (refreshed.sourceId !== command.input.sourceId) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge URL source refresh returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeSourceRefreshResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            sourceId: refreshed.sourceId,
+            checkedAt: refreshed.checkedAt,
+            status: refreshed.status,
+            ...(refreshed.versionId === undefined ? {} : { versionId: refreshed.versionId }),
           };
           return { ok: true, value: result };
         }

@@ -29,6 +29,10 @@ export const bridgeCapabilities = [
   "knowledge.import-file",
   "knowledge.import-url",
   "knowledge.append-file-version",
+  "knowledge.source-origin-status",
+  "knowledge.source-refresh-state",
+  "knowledge.refresh-file",
+  "knowledge.refresh-url",
   "knowledge.select",
   "knowledge.create-base",
   "knowledge.rename-base",
@@ -250,6 +254,32 @@ const knowledgeFileVersionAppendKeys = inputKeys<KnowledgeFileVersionAppendInput
   "knowledgeBaseId",
   "sourceId",
   "selection",
+]);
+
+export interface KnowledgeSourceInput extends KnowledgeReadinessInput {
+  readonly sourceId: string;
+}
+
+const knowledgeSourceKeys = inputKeys<KnowledgeSourceInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+]);
+
+export type KnowledgeSourceOriginStatusInput = KnowledgeSourceInput;
+export type KnowledgeSourceRefreshStateInput = KnowledgeSourceInput;
+export type KnowledgeSourceFileRefreshInput = KnowledgeSourceInput;
+
+export interface KnowledgeSourceUrlRefreshInput extends KnowledgeSourceInput {
+  /** The renderer can only request a network refresh after the user confirms it. */
+  readonly approved: boolean;
+}
+
+const knowledgeSourceUrlRefreshKeys = inputKeys<KnowledgeSourceUrlRefreshInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "approved",
 ]);
 
 export interface KnowledgeSelectionEntry {
@@ -663,6 +693,64 @@ export interface KnowledgeUrlImportResult {
 
 export type KnowledgeFileVersionAppendResult = KnowledgeFileImportResult;
 
+export const knowledgeSourceOriginStatuses = [
+  "unbound",
+  "current",
+  "changed",
+  "missing",
+  "inaccessible",
+] as const;
+export type KnowledgeSourceOriginStatus = (typeof knowledgeSourceOriginStatuses)[number];
+
+export interface KnowledgeSourceOriginStatusResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly checkedAt: string;
+  readonly status: KnowledgeSourceOriginStatus;
+}
+
+export const knowledgeSourceRefreshStatuses = [
+  "unbound",
+  "current",
+  "refreshed",
+  "missing",
+  "inaccessible",
+] as const;
+export type KnowledgeSourceRefreshStatus = (typeof knowledgeSourceRefreshStatuses)[number];
+
+export interface KnowledgeSourceRefreshResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly checkedAt: string;
+  readonly status: KnowledgeSourceRefreshStatus;
+  readonly versionId?: string;
+}
+
+export const knowledgeSourceRefreshStateStatuses = [
+  "unobserved",
+  "stale",
+  "current",
+  "changed",
+  "missing",
+  "inaccessible",
+  "unbound",
+] as const;
+export type KnowledgeSourceRefreshStateStatus =
+  (typeof knowledgeSourceRefreshStateStatuses)[number];
+
+export interface KnowledgeSourceRefreshStateResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly status: KnowledgeSourceRefreshStateStatus;
+  readonly checkedAt?: string;
+  readonly observedVersionId?: string;
+  readonly lastRefreshedAt?: string;
+  readonly lastRefreshedVersionId?: string;
+}
+
 export interface KnowledgeSelectionResult {
   readonly workspaceId: string;
   readonly entries: readonly KnowledgeSelectionEntry[];
@@ -747,6 +835,31 @@ const knowledgeUrlImportResultKeys = resultKeys<KnowledgeUrlImportResult>()([
   "versionId",
   "version",
   "created",
+]);
+const knowledgeSourceOriginStatusResultKeys = resultKeys<KnowledgeSourceOriginStatusResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "checkedAt",
+  "status",
+]);
+const knowledgeSourceRefreshResultKeys = resultKeys<KnowledgeSourceRefreshResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "checkedAt",
+  "status",
+  "versionId",
+]);
+const knowledgeSourceRefreshStateResultKeys = resultKeys<KnowledgeSourceRefreshStateResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "status",
+  "checkedAt",
+  "observedVersionId",
+  "lastRefreshedAt",
+  "lastRefreshedVersionId",
 ]);
 const knowledgeSelectionResultKeys = resultKeys<KnowledgeSelectionResult>()([
   "workspaceId",
@@ -982,6 +1095,10 @@ export interface BridgeCommandInputMap {
   "knowledge.import-file": KnowledgeFileImportInput;
   "knowledge.import-url": KnowledgeUrlImportInput;
   "knowledge.append-file-version": KnowledgeFileVersionAppendInput;
+  "knowledge.source-origin-status": KnowledgeSourceOriginStatusInput;
+  "knowledge.source-refresh-state": KnowledgeSourceRefreshStateInput;
+  "knowledge.refresh-file": KnowledgeSourceFileRefreshInput;
+  "knowledge.refresh-url": KnowledgeSourceUrlRefreshInput;
   "knowledge.select": KnowledgeSelectionInput;
   "knowledge.create-base": KnowledgeBaseCreateInput;
   "knowledge.rename-base": KnowledgeBaseRenameInput;
@@ -1017,6 +1134,10 @@ export interface BridgeCommandOutputMap {
   "knowledge.import-file": KnowledgeFileImportResult;
   "knowledge.import-url": KnowledgeUrlImportResult;
   "knowledge.append-file-version": KnowledgeFileVersionAppendResult;
+  "knowledge.source-origin-status": KnowledgeSourceOriginStatusResult;
+  "knowledge.source-refresh-state": KnowledgeSourceRefreshStateResult;
+  "knowledge.refresh-file": KnowledgeSourceRefreshResult;
+  "knowledge.refresh-url": KnowledgeSourceRefreshResult;
   "knowledge.select": KnowledgeSelectionResult;
   "knowledge.create-base": KnowledgeStoreResult;
   "knowledge.rename-base": KnowledgeStoreResult;
@@ -1321,6 +1442,16 @@ function optionalIdentifier(value: unknown): string | undefined {
   return value === undefined ? undefined : identifier(value);
 }
 
+function timestampValue(value: unknown): string {
+  const timestamp = stringValue(value, 64);
+  if (!Number.isFinite(Date.parse(timestamp))) return invalidInput();
+  return timestamp;
+}
+
+function optionalTimestampValue(value: unknown): string | undefined {
+  return value === undefined ? undefined : timestampValue(value);
+}
+
 function optionalModelId(value: unknown): string | undefined {
   return value === undefined ? undefined : modelId(value);
 }
@@ -1535,6 +1666,29 @@ function validateKnowledgeFileVersionAppendInput(value: unknown): KnowledgeFileV
     knowledgeBaseId: identifier(input.knowledgeBaseId),
     sourceId: identifier(input.sourceId),
     selection: "native-dialog",
+  };
+}
+
+function validateKnowledgeSourceInput(value: unknown): KnowledgeSourceInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeSourceKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    sourceId: identifier(input.sourceId),
+  };
+}
+
+function validateKnowledgeSourceUrlRefreshInput(value: unknown): KnowledgeSourceUrlRefreshInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeSourceUrlRefreshKeys) || input.approved !== true) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    sourceId: identifier(input.sourceId),
+    approved: true,
   };
 }
 
@@ -1914,6 +2068,26 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.append-file-version",
         input: validateKnowledgeFileVersionAppendInput(command.input),
+      };
+    case "knowledge.source-origin-status":
+      return {
+        type: "knowledge.source-origin-status",
+        input: validateKnowledgeSourceInput(command.input),
+      };
+    case "knowledge.source-refresh-state":
+      return {
+        type: "knowledge.source-refresh-state",
+        input: validateKnowledgeSourceInput(command.input),
+      };
+    case "knowledge.refresh-file":
+      return {
+        type: "knowledge.refresh-file",
+        input: validateKnowledgeSourceInput(command.input),
+      };
+    case "knowledge.refresh-url":
+      return {
+        type: "knowledge.refresh-url",
+        input: validateKnowledgeSourceUrlRefreshInput(command.input),
       };
     case "knowledge.select":
       return { type: "knowledge.select", input: validateKnowledgeSelectionInput(command.input) };
@@ -2300,6 +2474,69 @@ function normalizeKnowledgeUrlImportResult(value: unknown): KnowledgeUrlImportRe
   };
 }
 
+function normalizeKnowledgeSourceOriginStatusResult(
+  value: unknown,
+): KnowledgeSourceOriginStatusResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeSourceOriginStatusResultKeys)) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    sourceId: identifier(result.sourceId),
+    checkedAt: timestampValue(result.checkedAt),
+    status: enumValue(result.status, knowledgeSourceOriginStatuses),
+  };
+}
+
+function normalizeKnowledgeSourceRefreshResult(value: unknown): KnowledgeSourceRefreshResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeSourceRefreshResultKeys)) return invalidInput();
+  const status = enumValue(result.status, knowledgeSourceRefreshStatuses);
+  const versionId = optionalIdentifier(result.versionId);
+  if ((status === "refreshed") !== (versionId !== undefined)) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    sourceId: identifier(result.sourceId),
+    checkedAt: timestampValue(result.checkedAt),
+    status,
+    ...(versionId === undefined ? {} : { versionId }),
+  };
+}
+
+function normalizeKnowledgeSourceRefreshStateResult(
+  value: unknown,
+): KnowledgeSourceRefreshStateResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeSourceRefreshStateResultKeys)) return invalidInput();
+  const status = enumValue(result.status, knowledgeSourceRefreshStateStatuses);
+  const checkedAt = optionalTimestampValue(result.checkedAt);
+  const observedVersionId = optionalIdentifier(result.observedVersionId);
+  const lastRefreshedAt = optionalTimestampValue(result.lastRefreshedAt);
+  const lastRefreshedVersionId = optionalIdentifier(result.lastRefreshedVersionId);
+  if (
+    (checkedAt === undefined) !== (observedVersionId === undefined) ||
+    (status === "unobserved") !== (checkedAt === undefined) ||
+    (lastRefreshedAt === undefined) !== (lastRefreshedVersionId === undefined) ||
+    (status === "unobserved" && lastRefreshedAt !== undefined) ||
+    (checkedAt !== undefined &&
+      lastRefreshedAt !== undefined &&
+      Date.parse(lastRefreshedAt) > Date.parse(checkedAt))
+  ) {
+    return invalidInput();
+  }
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    sourceId: identifier(result.sourceId),
+    status,
+    ...(checkedAt === undefined ? {} : { checkedAt }),
+    ...(observedVersionId === undefined ? {} : { observedVersionId }),
+    ...(lastRefreshedAt === undefined ? {} : { lastRefreshedAt }),
+    ...(lastRefreshedVersionId === undefined ? {} : { lastRefreshedVersionId }),
+  };
+}
+
 function normalizeKnowledgeSelectionResult(value: unknown): KnowledgeSelectionResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeSelectionResultKeys) || !Array.isArray(result.entries)) {
@@ -2586,6 +2823,13 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeFileWriteResult(value);
     case "knowledge.import-url":
       return normalizeKnowledgeUrlImportResult(value);
+    case "knowledge.source-origin-status":
+      return normalizeKnowledgeSourceOriginStatusResult(value);
+    case "knowledge.source-refresh-state":
+      return normalizeKnowledgeSourceRefreshStateResult(value);
+    case "knowledge.refresh-file":
+    case "knowledge.refresh-url":
+      return normalizeKnowledgeSourceRefreshResult(value);
     case "knowledge.select":
       return normalizeKnowledgeSelectionResult(value);
     case "run.status":
