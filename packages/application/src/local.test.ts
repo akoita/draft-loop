@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -8,7 +9,9 @@ import {
   type UserSessionProcessRunner,
 } from "@draft-loop/providers";
 import { openSqliteStorage } from "@draft-loop/storage";
+import { openCandidateKnowledgeStore } from "@draft-loop/storage/knowledge-store";
 import { describe, expect, it, vi } from "vitest";
+import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import {
   CliUserError,
   createLocalApplicationDriver,
@@ -189,6 +192,37 @@ async function recordedModelConfiguration(
   } finally {
     await storage.close();
   }
+}
+
+async function recordedCandidateKnowledgeSelection(
+  root: string,
+  contextSnapshotId: string,
+): Promise<unknown> {
+  const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+  try {
+    const record = await storage.getContextSnapshot(contextSnapshotId);
+    return (record?.payload as JsonRecord | undefined)?.candidateKnowledgeSelection;
+  } finally {
+    await storage.close();
+  }
+}
+
+async function initializeReadyCandidateKnowledgeStore(
+  storeRoot: string,
+  sourcePath: string,
+  ids: readonly string[],
+): Promise<void> {
+  const remaining = [...ids];
+  const service = createCandidateKnowledgeStoreService({
+    generateId: () => remaining.shift() ?? "unexpected-id",
+    now: () => "2026-08-23T10:00:00.000Z",
+  });
+  await service.initializeStore({ storeRoot });
+  await service.importKnowledgeSourceFile({
+    storeRoot,
+    knowledgeBaseId: ids[1] ?? "ckb-selection",
+    sourcePath,
+  });
 }
 
 /** A workspace whose author and critic are two distinct local models. */
@@ -420,6 +454,75 @@ describe("local application driver", () => {
       expect(fetchCalls).toEqual(["http://127.0.0.1:8080/v1/chat/completions"]);
       // A local server has no account, so the local author asked for no key.
       expect(credentialCalls).toEqual(["anthropic"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("strips candidate-knowledge selection evidence from provider requests", async () => {
+    const root = await providerWorkspace("draft-loop-selection-provider-privacy-");
+    const silent = { write: () => undefined };
+    const storeRoot = join(root, "selection-store");
+    const candidatePath = join(root, "selection-source.md");
+    await writeFile(candidatePath, "Private selection bytes.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "provider-selection-store",
+      "provider-selection-ckb",
+      "provider-selection-source",
+      "provider-selection-version",
+    ]);
+    const authorInputs: string[] = [];
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly messages: readonly { readonly content: string }[];
+      };
+      authorInputs.push(body.messages[1]?.content ?? "");
+      return localCompletion(
+        authorProposal(evidenceChunkId(body.messages[1]?.content ?? "")),
+        "provider-privacy-author",
+      );
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: localFetch as unknown as typeof fetch }),
+        anthropic: () => anthropicCritiqueClient([]),
+      },
+      resolveCredential: async () => "fake-anthropic-key",
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "provider-privacy-author-model",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        silent,
+      );
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [
+            {
+              storeRoot,
+              storeId: "provider-selection-store",
+              knowledgeBaseId: "provider-selection-ckb",
+            },
+          ],
+        },
+        silent,
+      );
+      await driver.start({ root, allowProviderData: true }, silent);
+
+      expect(authorInputs).toHaveLength(1);
+      expect(authorInputs[0]).not.toContain("candidateKnowledgeSelection");
+      expect(authorInputs[0]).not.toContain(storeRoot);
+      expect(authorInputs[0]).not.toContain("provider-selection-store");
+      expect(authorInputs[0]).not.toContain("provider-selection-ckb");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -1142,6 +1245,406 @@ describe("local application driver", () => {
   });
 });
 
+describe("workspace candidate knowledge selection binding", () => {
+  const silent = { write: () => undefined };
+
+  it("validates, pins, and records a path-free selection on each new run", async () => {
+    const root = await providerWorkspace("draft-loop-selection-binding-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-resume.md");
+    await writeFile(candidatePath, "Candidate evidence in a separate local store.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "selection-store",
+      "selection-ckb",
+      "selection-source",
+      "selection-version",
+    ]);
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      const configured = await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [
+            {
+              storeRoot,
+              storeId: "selection-store",
+              knowledgeBaseId: "selection-ckb",
+            },
+          ],
+        },
+        silent,
+      );
+
+      expect(configured.candidateKnowledgeSelection).toEqual([
+        { storeId: "selection-store", knowledgeBaseId: "selection-ckb" },
+      ]);
+      expect(JSON.stringify(configured)).not.toContain(storeRoot);
+      const persistedConfig = await workspaceConfig(root);
+      expect(persistedConfig).toMatchObject({
+        candidateKnowledgeSelection: {
+          entries: [{ storeRoot, storeId: "selection-store", knowledgeBaseId: "selection-ckb" }],
+        },
+      });
+
+      const restartedDriver = createLocalApplicationDriver();
+      expect(await restartedDriver.readWorkspace(root)).toMatchObject({
+        candidateKnowledgeSelection: [
+          { storeId: "selection-store", knowledgeBaseId: "selection-ckb" },
+        ],
+      });
+      const first = await restartedDriver.begin({ root, allowProviderData: false }, silent);
+      const firstSelection = await recordedCandidateKnowledgeSelection(
+        root,
+        first.contextSnapshotId,
+      );
+      expect(firstSelection).toMatchObject({
+        schemaVersion: 1,
+        entries: [{ storeId: "selection-store", knowledgeBaseId: "selection-ckb" }],
+      });
+      expect(JSON.stringify(firstSelection)).not.toContain(storeRoot);
+      expect(JSON.stringify(firstSelection)).not.toContain(candidatePath);
+      expect(JSON.stringify(firstSelection)).not.toContain("Candidate evidence");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("captures a newer selected version on a later run without changing the local binding", async () => {
+    const root = await providerWorkspace("draft-loop-selection-version-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-resume.md");
+    await writeFile(candidatePath, "Initial candidate evidence.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "version-store",
+      "version-ckb",
+      "version-source",
+      "version-one",
+    ]);
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "version-store", knowledgeBaseId: "version-ckb" }],
+        },
+        silent,
+      );
+      const first = await driver.begin({ root, allowProviderData: false }, silent);
+      const firstSelection = (await recordedCandidateKnowledgeSelection(
+        root,
+        first.contextSnapshotId,
+      )) as JsonRecord;
+      const firstEntry = (firstSelection.entries as readonly JsonRecord[])[0];
+      const firstVersion = (firstEntry?.sources as readonly JsonRecord[] | undefined)?.[0]
+        ?.versionId;
+
+      await writeFile(candidatePath, "Updated candidate evidence.\n", "utf8");
+      const selectedStore = await openCandidateKnowledgeStore(storeRoot);
+      try {
+        await selectedStore.appendManagedCandidateKnowledgeFileVersion(
+          "version-ckb",
+          "version-source",
+          {
+            id: "version-two",
+            sourcePath: candidatePath,
+            mediaType: "text/plain",
+            checksum: createHash("sha256")
+              .update("Updated candidate evidence.\n", "utf8")
+              .digest("hex"),
+            sizeBytes: Buffer.byteLength("Updated candidate evidence.\n", "utf8"),
+            createdAt: "2026-08-23T11:00:00.000Z",
+          },
+        );
+      } finally {
+        await selectedStore.close();
+      }
+
+      const second = await driver.begin({ root, allowProviderData: false }, silent);
+      const secondSelection = (await recordedCandidateKnowledgeSelection(
+        root,
+        second.contextSnapshotId,
+      )) as JsonRecord;
+      const secondEntry = (secondSelection.entries as readonly JsonRecord[])[0];
+      const secondVersion = (secondEntry?.sources as readonly JsonRecord[] | undefined)?.[0]
+        ?.versionId;
+      expect(firstVersion).toBe("version-one");
+      expect(secondVersion).toBe("version-two");
+      const retainedFirstSelection = (await recordedCandidateKnowledgeSelection(
+        root,
+        first.contextSnapshotId,
+      )) as JsonRecord;
+      const retainedFirstEntry = (retainedFirstSelection.entries as readonly JsonRecord[])[0];
+      expect(
+        (retainedFirstEntry?.sources as readonly JsonRecord[] | undefined)?.[0]?.versionId,
+      ).toBe("version-one");
+      expect(await workspaceConfig(root)).toMatchObject({
+        candidateKnowledgeSelection: {
+          entries: [{ storeRoot, storeId: "version-store", knowledgeBaseId: "version-ckb" }],
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("requires and preserves explicit approval for a deterministic multi-store binding", async () => {
+    const root = await providerWorkspace("draft-loop-selection-multi-");
+    const firstStoreRoot = join(root, "z-store");
+    const secondStoreRoot = join(root, "a-store");
+    const firstSourcePath = join(root, "z-selection.md");
+    const secondSourcePath = join(root, "a-selection.md");
+    await writeFile(firstSourcePath, "Z selection evidence.\n", "utf8");
+    await writeFile(secondSourcePath, "A selection evidence.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(firstStoreRoot, firstSourcePath, [
+      "z-selection-store",
+      "z-selection-ckb",
+      "z-selection-source",
+      "z-selection-version",
+    ]);
+    await initializeReadyCandidateKnowledgeStore(secondStoreRoot, secondSourcePath, [
+      "a-selection-store",
+      "a-selection-ckb",
+      "a-selection-source",
+      "a-selection-version",
+    ]);
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      const configured = await driver.configureKnowledgeSelection(
+        {
+          root,
+          combinationApproved: true,
+          entries: [
+            {
+              storeRoot: firstStoreRoot,
+              storeId: "z-selection-store",
+              knowledgeBaseId: "z-selection-ckb",
+            },
+            {
+              storeRoot: secondStoreRoot,
+              storeId: "a-selection-store",
+              knowledgeBaseId: "a-selection-ckb",
+            },
+          ],
+        },
+        silent,
+      );
+      expect(configured.candidateKnowledgeSelection).toEqual([
+        { storeId: "a-selection-store", knowledgeBaseId: "a-selection-ckb" },
+        { storeId: "z-selection-store", knowledgeBaseId: "z-selection-ckb" },
+      ]);
+      expect(await workspaceConfig(root)).toMatchObject({
+        candidateKnowledgeSelection: {
+          combinationApproved: true,
+          entries: [
+            {
+              storeRoot: secondStoreRoot,
+              storeId: "a-selection-store",
+              knowledgeBaseId: "a-selection-ckb",
+            },
+            {
+              storeRoot: firstStoreRoot,
+              storeId: "z-selection-store",
+              knowledgeBaseId: "z-selection-ckb",
+            },
+          ],
+        },
+      });
+      const run = await driver.begin({ root, allowProviderData: false }, silent);
+      const selection = (await recordedCandidateKnowledgeSelection(
+        root,
+        run.contextSnapshotId,
+      )) as JsonRecord;
+      expect(
+        (selection.entries as readonly JsonRecord[]).map(
+          (entry) => `${entry.storeId}:${entry.knowledgeBaseId}`,
+        ),
+      ).toEqual(["a-selection-store:a-selection-ckb", "z-selection-store:z-selection-ckb"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects unapproved or replaced stores without changing the binding", async () => {
+    const root = await providerWorkspace("draft-loop-selection-validation-");
+    const storeRoot = join(root, "candidate-store");
+    const replacementRoot = join(root, "replacement-store");
+    const candidatePath = join(root, "candidate-resume.md");
+    await writeFile(candidatePath, "Candidate evidence.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "bound-store",
+      "bound-ckb",
+      "bound-source",
+      "bound-version",
+    ]);
+    await initializeReadyCandidateKnowledgeStore(replacementRoot, candidatePath, [
+      "replacement-store",
+      "replacement-ckb",
+      "replacement-source",
+      "replacement-version",
+    ]);
+    const driver = createLocalApplicationDriver();
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      await expect(
+        driver.configureKnowledgeSelection(
+          {
+            root,
+            entries: [
+              { storeRoot, storeId: "bound-store", knowledgeBaseId: "bound-ckb" },
+              {
+                storeRoot: replacementRoot,
+                storeId: "replacement-store",
+                knowledgeBaseId: "replacement-ckb",
+              },
+            ],
+          },
+          silent,
+        ),
+      ).rejects.toThrow("candidate knowledge selection could not be configured");
+      expect(await workspaceConfig(root)).not.toHaveProperty("candidateKnowledgeSelection");
+
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "bound-store", knowledgeBaseId: "bound-ckb" }],
+        },
+        silent,
+      );
+      await expect(
+        driver.configureKnowledgeSelection(
+          {
+            root,
+            entries: [
+              {
+                storeRoot: replacementRoot,
+                storeId: "bound-store",
+                knowledgeBaseId: "replacement-ckb",
+              },
+            ],
+          },
+          silent,
+        ),
+      ).rejects.toThrow("candidate knowledge selection could not be configured");
+      expect(await workspaceConfig(root)).toMatchObject({
+        candidateKnowledgeSelection: {
+          entries: [{ storeRoot, storeId: "bound-store", knowledgeBaseId: "bound-ckb" }],
+        },
+      });
+      const tamperedConfig = await workspaceConfig(root);
+      await writeFile(
+        join(root, ".draft-loop", "workspace.json"),
+        JSON.stringify(
+          {
+            ...tamperedConfig,
+            candidateKnowledgeSelection: {
+              entries: [
+                {
+                  storeRoot: replacementRoot,
+                  storeId: "bound-store",
+                  knowledgeBaseId: "replacement-ckb",
+                },
+              ],
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      await expect(driver.begin({ root, allowProviderData: false }, silent)).rejects.toThrow(
+        "configured candidate knowledge selection is no longer valid",
+      );
+      await expect(stat(join(root, ".draft-loop", "history.sqlite"))).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects hand-edited relative roots and multi-selection bindings without approval", async () => {
+    const root = await providerWorkspace("draft-loop-selection-config-parse-");
+    const driver = createLocalApplicationDriver();
+    const silent = { write: () => undefined };
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      const configPath = join(root, ".draft-loop", "workspace.json");
+      const config = await workspaceConfig(root);
+      await writeFile(
+        configPath,
+        JSON.stringify(
+          {
+            ...config,
+            candidateKnowledgeSelection: {
+              entries: [
+                { storeRoot: "relative-store", storeId: "store-a", knowledgeBaseId: "ckb-a" },
+              ],
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      await expect(driver.readWorkspace(root)).rejects.toThrow(
+        "candidate knowledge selection could not be configured",
+      );
+
+      await writeFile(
+        configPath,
+        JSON.stringify(
+          {
+            ...config,
+            candidateKnowledgeSelection: {
+              entries: [
+                {
+                  storeRoot: join(root, "one"),
+                  storeId: "store-a",
+                  knowledgeBaseId: "ckb-a",
+                },
+                {
+                  storeRoot: join(root, "two"),
+                  storeId: "store-b",
+                  knowledgeBaseId: "ckb-b",
+                },
+              ],
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+      await expect(driver.readWorkspace(root)).rejects.toThrow(
+        "candidate knowledge selection could not be configured",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("workspace model reconfiguration", () => {
   const silent = { write: () => undefined };
 
@@ -1439,6 +1942,30 @@ describe("workspace model reconfiguration", () => {
       );
       await expect(refused).rejects.toBeInstanceOf(CliUserError);
       await expect(refused).rejects.toThrow(/executing/u);
+
+      const selectionStoreRoot = join(root, "selection-store");
+      const selectionSourcePath = join(root, "selection-source.md");
+      await writeFile(selectionSourcePath, "Selection evidence.\n", "utf8");
+      await initializeReadyCandidateKnowledgeStore(selectionStoreRoot, selectionSourcePath, [
+        "executing-selection-store",
+        "executing-selection-ckb",
+        "executing-selection-source",
+        "executing-selection-version",
+      ]);
+      const refusedSelection = driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [
+            {
+              storeRoot: selectionStoreRoot,
+              storeId: "executing-selection-store",
+              knowledgeBaseId: "executing-selection-ckb",
+            },
+          ],
+        },
+        silent,
+      );
+      await expect(refusedSelection).rejects.toThrow(/executing/u);
 
       releaseAuthor();
       const snapshot = await running;

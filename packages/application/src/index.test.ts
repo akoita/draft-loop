@@ -58,6 +58,21 @@ function driver(): ApplicationDriver {
       critic: { company: "openai", model: "critic" },
       fixtureMode: true,
     })),
+    configureKnowledgeSelection: vi.fn<ApplicationDriver["configureKnowledgeSelection"]>(
+      async (command) => ({
+        id: "workspace-1",
+        root: command.root,
+        jobDescriptionPath: "job.md",
+        sourceDirectory: "evidence",
+        language: "en",
+        outputFormat: "markdown" as const,
+        requiredSections: ["Summary"],
+        maxRounds: 3,
+        author: { company: "anthropic", model: "author" },
+        critic: { company: "openai", model: "critic" },
+        fixtureMode: true,
+      }),
+    ),
     begin: vi.fn(async () => snapshot),
     start: vi.fn(async () => snapshot),
     resume: vi.fn(async () => snapshot),
@@ -168,6 +183,21 @@ describe("application service contract", () => {
 
     expect(underlying.recordReviewDecision).toHaveBeenCalledWith(
       expect.objectContaining({ root: "workspace", targetId: "finding-1" }),
+    );
+  });
+
+  it("forwards candidate-knowledge selection configuration with a normalized root", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.configureKnowledgeSelection({
+      root: "workspace",
+      entries: [{ storeRoot: "/tmp/store", storeId: "store-1", knowledgeBaseId: "ckb-1" }],
+    });
+
+    expect(underlying.configureKnowledgeSelection).toHaveBeenCalledWith(
+      expect.objectContaining({ root: "workspace", entries: expect.any(Array) }),
+      expect.objectContaining({ write: expect.any(Function) }),
     );
   });
 

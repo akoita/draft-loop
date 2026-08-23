@@ -39,9 +39,10 @@ local state. Partial and legacy runtime-only imports have no directory binding.
 Host paths, URL provenance, and membership hashes are not portable identity and
 are excluded from generic manifests, providers, and content-free diagnostics.
 Labels and checksums are local CKB metadata but remain excluded from provider
-and content-free surfaces. CKB data is not currently selected by the CLI or
-desktop application-run flow; the existing workspace boundary remains
-authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
+and content-free surfaces. The shared application contract can bind path-free
+selection evidence to new runs, but CLI and desktop expose no selection controls
+and no application run retrieves CKB content. The existing workspace evidence
+boundary remains authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
 [privacy policy](privacy-and-evaluation.md), and [architecture](architecture.md)
 for ownership and exact contracts.
 
@@ -74,9 +75,10 @@ content. It is not an index-freshness or live-origin assertion.
 
 The selection boundary records only portable store, CKB, source, and version
 IDs plus those safe revisions. It requires explicit approval before combining
-CKBs and excludes runtime store roots. This prevents the selection record from
-becoming a host-path manifest, but workspace binding, provider enforcement, and
-retrieval-index drift checks remain separate controls.
+CKBs and excludes runtime store roots. A workspace retains roots only in its
+sensitive local manifest, pins logical store/CKB identities, and revalidates
+readiness before each new run records a path-free snapshot. Provider enforcement
+and retrieval-index drift checks remain separate controls.
 
 The count-only structural inventory does not adopt or delete unknown entries.
 The prospective managed-write journal does not retroactively claim legacy
@@ -134,7 +136,7 @@ expanded.
 | T-018 | Medium / medium       | A journal entry, matching bytes, or staging-shaped name is mistaken for ownership.                                                     | Journal has opaque operation events but no cleanup/approval field; no retroactive legacy claims or adoption by bytes/shape.                                                            | Add writer locks/leases and visible approval before any reconciliation or cleanup.                                               |
 | T-019 | High / medium         | A retired or otherwise ineligible source remains selectable/retrievable, or logical retirement is presented as deletion.                | Immutable retirement plus a consistent path-free readiness projection blocks retired, archived, stale/adverse, unmanaged, unbound, and directory-conflicted state while preserving evidence. | #80 must bind index state and queries to the projected revision; backup/restore, reactivation, and physical deletion remain future work. |
 | T-020 | High / medium         | Directory traversal follows a symlink, escapes its root, opens special/hidden files, exceeds limits, or writes after failed preflight. | Real non-symlink root, canonical containment, deterministic limits, skipped unsafe entries, complete extraction preflight, path-free results, guarded root rebind and one-source move. | Same-user races remain; additions/removals, automatic reconciliation, automatic deletion, and membership lifecycle are deferred. |
-| T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous source scope, or leaks a local store root through selection history.                | Canonical path-free selection snapshots require explicit combination approval and record exact store/CKB/source/version IDs with safe lifecycle revisions.                           | Workspace/run binding, pre-provider drift enforcement, and retrieval-index version checks remain to be integrated under #111/#80. |
+| T-021 | High / medium         | A run combines an unapproved CKB, records ambiguous source scope, accepts a replaced store, or leaks a local store root through selection history. | Workspace bindings pin logical identities; each new run reopens and validates them before recording a canonical path-free snapshot with explicit combination approval. | Cross-store validation is not atomic; pre-provider lifecycle drift enforcement and retrieval-index version checks remain under #111/#80. |
 
 ## Runtime and build-time controls
 
@@ -178,8 +180,8 @@ The following remain open during the **Evidence-backed CV drafting** stage:
 - Retrieval deletion, rebuild, provenance, and workspace isolation need
   integrated proof before vector or hybrid retrieval is enabled by default.
 - Automatic moved-origin inference, automatic retirement, physical deletion,
-  backup/export/restore, retrieval integration, workspace/run binding of CKB
-  selections, and background refresh remain deferred.
+  backup/export/restore, retrieval integration, pre-provider enforcement of
+  bound CKB selections, and background refresh remain deferred.
 - Plaintext permissions, copied stores, missing/corrupt blobs, writer
   coordination, cleanup approval, migration rollback, and backup destinations
   require explicit policy and platform evidence.
