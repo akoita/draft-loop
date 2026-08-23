@@ -914,6 +914,111 @@ describe("portable candidate knowledge store", () => {
     await reopened.close();
   });
 
+  it("finds directory members by historical path hash after an origin rebind", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const selectedDirectory = join(parent, "selected");
+    const sourcePath = join(selectedDirectory, "first.md");
+    const movedPath = join(selectedDirectory, "moved.md");
+    const content = "directory evidence";
+    await mkdir(selectedDirectory);
+    await writeFile(sourcePath, content, "utf8");
+    await writeFile(movedPath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-other",
+      displayName: "Other evidence",
+      isDefault: false,
+      createdAt: "2026-08-21T14:01:00.000Z",
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "lookup-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "first.md",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(sourcePath, content, { id: "lookup-version" }),
+    );
+    await store.createCandidateKnowledgeDirectoryBinding({
+      id: "lookup-directory",
+      knowledgeBaseId: "ckb-default",
+      rootPath: await realpath(selectedDirectory),
+      boundAt: "2026-08-21T14:02:00.000Z",
+      sourceIds: ["lookup-source"],
+    });
+
+    const originalMember = await store.findCandidateKnowledgeDirectoryMemberByPath(
+      "ckb-default",
+      "lookup-directory",
+      await realpath(sourcePath),
+    );
+    expect(originalMember).toMatchObject({
+      sourceId: "lookup-source",
+      relativePathHash: sha256("first.md"),
+    });
+    expect(originalMember && Object.isFrozen(originalMember)).toBe(true);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByPath(
+        "ckb-default",
+        "missing-directory",
+        await realpath(sourcePath),
+      ),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByPath(
+        "ckb-other",
+        "lookup-directory",
+        await realpath(sourcePath),
+      ),
+    ).rejects.toBeInstanceOf(StorageValidationError);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(movedPath),
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(selectedDirectory),
+      ),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(root),
+      ),
+    ).rejects.toThrow();
+
+    await store.rebindManagedCandidateKnowledgeFileOrigin("ckb-default", "lookup-source", {
+      sourcePath: movedPath,
+      mediaType: "text/markdown",
+      checksum: sha256(content),
+      sizeBytes: Buffer.byteLength(content),
+      boundAt: "2026-08-21T14:03:00.000Z",
+    });
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(sourcePath),
+      ),
+    ).resolves.toEqual(originalMember);
+    await expect(
+      store.findCandidateKnowledgeDirectoryMemberByPath(
+        "ckb-default",
+        "lookup-directory",
+        await realpath(movedPath),
+      ),
+    ).resolves.toBeUndefined();
+    await store.close();
+  });
+
   it("rejects invalid directory members before creating a binding", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");

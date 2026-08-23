@@ -50,6 +50,11 @@ rebind, rename, removal, and member-retirement policy remain deferred. The
 membership is a stable historical mapping captured at binding time: later source
 version appends, explicit origin rebinding, or source retirement do not rewrite
 its rows, and actual incremental scan reconciliation remains deferred.
+A bounded explicit refresh preview now revalidates that persisted root, repeats
+the directory preflight, and reports only path-free member states plus an
+aggregate count of unmatched accepted files. It is read-only: applied refresh,
+new-member persistence, rename/removal decisions, directory-root rebind,
+automatic retirement/deletion, and background refresh remain deferred.
 These operations do not connect CKB selection or retrieval to an application
 workflow.
 
@@ -150,6 +155,11 @@ provides stable source reuse; directory additions, removals, rebind, rename,
 and incremental refresh remain deferred. The persisted membership remains a
 historical binding-time mapping even when an existing member later gains a
 version, has its origin explicitly rebound, or is retired.
+A separate explicit bounded refresh preview can classify these historical
+members as `current`, `changed`, `missing`, `retired`, or `origin-conflict` and
+count unmatched accepted files without exposing paths or writing state. It does
+not apply any refresh, persist new members, infer renames, or change lifecycle
+state.
 SQLite migration v13 stores the opaque directory binding and immutable hashed
 members in separate local-only tables with same-CKB foreign-key scope; there is
 no backfill of earlier runtime-only imports.
@@ -349,8 +359,8 @@ configuration. Its original filename is not used in the managed layout.
 
 This decision deliberately leaves the following work unintegrated:
 
-- incremental directory refresh, directory rebind/rename/removal, and member
-  retirement policy;
+- applied incremental directory refresh, directory rebind/rename/removal, and
+  member retirement policy (the read-only preview does not apply any of them);
 - redirect-observation history, conditional URL requests, and URL-specific
   failure or time-based readiness policy;
 - background refresh, time-based freshness policy, moved-origin discovery, and

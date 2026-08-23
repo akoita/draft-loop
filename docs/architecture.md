@@ -94,7 +94,7 @@ Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected back into the renderer. External
 network and export edges require the visible approvals described below. The
 solid CKB edge covers explicit managed-file add, bounded recursive directory
-intake, approved URL intake and refresh, manual file-version append, and the local
+intake, read-only bounded directory refresh preview, approved URL intake and refresh, manual file-version append, and the local
 structural-inventory query. Each file write approval covers one local regular
 file; a directory approval preflights one bounded real directory and still
 creates independent file sources before atomically recording its local binding
@@ -210,6 +210,10 @@ fallback. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
   later source version appends, explicit origin rebinding, or source retirement
   do not rewrite it. Incremental directory scan reconciliation, directory
   rebind, rename, removal, and member-retirement policy remain unimplemented.
+  A local explicit bounded refresh preview can classify historical members as
+  `current`, `changed`, `missing`, `retired`, or `origin-conflict` and count
+  unmatched accepted files. It exposes no paths or integrity metadata and makes
+  no source, version, membership, observation, or lifecycle writes.
 - Managed source add and append publish verified bytes without replacement before
   committing their version-6 database marker. Committed markers always require
   matching opaque bytes; file sources retain their additional regular-file and
@@ -403,9 +407,11 @@ immutable managed-copy contract, does not rebind, and records a path-free
 last-observation state tied to the exact source version. An
 explicit rebind changes only sensitive local origin configuration after an
 exact latest-managed-version match and exposes no path or integrity metadata.
-Background refresh, time-based freshness policy, automatic moved-origin
+Applied directory refresh, new-member persistence, rename/removal decisions,
+directory-root rebind, automatic retirement/deletion, background refresh,
+time-based freshness policy, automatic moved-origin
 discovery, adapter-level refresh/rebind/duplicate controls, incremental
-directory refresh and membership lifecycle,
+directory reconciliation and membership lifecycle,
 URL redirect history and conditional requests, automatic duplicate resolution,
 indexing and retrieval,
 application/run CKB selection, deletion, repair of missing/corrupt referenced blobs, durable

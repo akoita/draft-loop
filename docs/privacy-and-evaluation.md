@@ -60,6 +60,11 @@ membership lifecycle is not implemented. Membership is a stable historical
 mapping captured at binding time: later source version appends, explicit origin
 rebinding, or source retirement do not rewrite it. Actual incremental directory
 scan reconciliation remains deferred.
+A local explicit bounded refresh preview can report only path-free `current`,
+`changed`, `missing`, `retired`, and `origin-conflict` states plus an aggregate
+count of unmatched accepted files. It writes no source, version, membership,
+observation, or lifecycle state; scan-level unreadable, unstable, limit, and
+extraction failures fail closed rather than becoming per-member statuses.
 
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address
@@ -136,7 +141,10 @@ now persists its canonical selected root and immutable membership only in
 sensitive local SQLite state: each member stores a SHA-256 hash of its
 normalized relative path, while each accepted file retains its existing
 canonical origin binding. Partial and legacy runtime-only imports have no
-directory membership evidence. The store has no background refresh,
+directory membership evidence. The store has a read-only explicit bounded
+directory refresh preview, but no applied refresh, new-member persistence,
+rename/removal decisions, directory-root rebind, automatic retirement/deletion,
+or background refresh,
 time-based freshness policy, moved-origin
 discovery, automatic duplicate resolution, normalized facts, or retrieval
 indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
