@@ -92,7 +92,10 @@ can append unmatched accepted files as new managed sources and immutable members
 in lexical path order, one candidate at a time, with path-free added IDs.
 Applied directory refresh is limited to
 existing active same-member changed files; add-members does not create refresh
-observations for new members. Rename/removal decisions, directory-root rebind,
+observations for new members. A separate read-only directory-root-rebind
+eligibility preview rescans one candidate root, requires exact historical
+membership and latest-byte matches, and returns only path-free readiness/counts;
+it does not mutate the binding. Rename/removal decisions, applied directory-root rebind,
 automatic retirement/deletion,
 background refresh, time-based freshness policy,
 moved-origin discovery, adapter-level refresh/rebind/duplicate controls,
@@ -259,8 +262,9 @@ and retirement do not rewrite them. The explicit bounded preview is read-only
 and path-free; the separate add-members operation appends only unmatched
 accepted files as new members, while the applied operation handles only
 existing active same-member changed files. The explicit retirement operation
-handles only one approved missing member; none of these operations infers
-renames, complete removal reconciliation, or root rebind, and no operation
+handles only one approved missing member; the root-rebind eligibility preview
+is read-only and does not apply a rebind. None of these operations infers
+renames, complete removal reconciliation, or root rebind application, and no operation
 physically deletes sources automatically.
 
 The structural inventory is a local application query, not a provider-facing
@@ -308,7 +312,8 @@ The following remain open during the application-grade CV stage:
 - portable continuity for the local CKB origin binding, background refresh,
   time-based freshness policy, automatic moved-origin discovery and
   adapter-level refresh/rebind controls,
-  complete directory reconciliation/removal policy and membership lifecycle,
+  complete directory reconciliation/removal policy, applied directory-root
+  rebind, and membership lifecycle,
   URL redirect-history/conditional-request readiness,
   automatic duplicate resolution, indexing and retrieval, application/run
   selection, CLI/desktop controls, repair of

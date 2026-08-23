@@ -447,6 +447,290 @@ describe("candidate knowledge store application service", () => {
     ]);
   });
 
+  it("previews a directory-root rebind as a read-only exact membership check", async () => {
+    const boundDirectory = join(temporaryParent, "bound-directory");
+    const candidateDirectory = join(temporaryParent, "candidate-directory");
+    const relativePath = join("nested", "evidence.txt");
+    const boundPath = join(boundDirectory, relativePath);
+    const candidatePath = join(candidateDirectory, relativePath);
+    await mkdir(dirname(boundPath), { recursive: true });
+    await mkdir(dirname(candidatePath), { recursive: true });
+    await writeFile(boundPath, "same evidence", "utf8");
+    await writeFile(candidatePath, "same evidence", "utf8");
+    const generatedIds = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "source-uuid",
+      "version-uuid",
+      "directory-binding",
+    ];
+    const generateId = vi.fn(() => generatedIds.shift() ?? "unexpected-id");
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    const imported = await service.importKnowledgeSourceDirectory({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryPath: boundDirectory,
+    });
+    if (imported.status !== "complete") throw new Error("expected complete directory import");
+
+    const snapshot = async () => {
+      const store = await openCandidateKnowledgeStore(storeRoot);
+      try {
+        return {
+          binding: await store.getCandidateKnowledgeDirectoryBinding(
+            "default-ckb-uuid",
+            "directory-binding",
+          ),
+          members: await store.listCandidateKnowledgeDirectoryMembers(
+            "default-ckb-uuid",
+            "directory-binding",
+          ),
+          sources: await store.listCandidateKnowledgeSources("default-ckb-uuid"),
+          versions: await store.listCandidateKnowledgeSourceVersions(
+            "default-ckb-uuid",
+            "source-uuid",
+          ),
+          origin: await store.getCandidateKnowledgeSourceOriginBinding(
+            "default-ckb-uuid",
+            "source-uuid",
+          ),
+          observations: await store.getCandidateKnowledgeSourceRefreshObservation(
+            "default-ckb-uuid",
+            "source-uuid",
+          ),
+          retirement: await store.getCandidateKnowledgeSourceRetirement(
+            "default-ckb-uuid",
+            "source-uuid",
+          ),
+          inventory: await store.inspectManagedCandidateKnowledgeFiles(),
+        };
+      } finally {
+        await store.close();
+      }
+    };
+    const before = await snapshot();
+
+    const current = await service.previewKnowledgeSourceDirectoryRootRebind({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: "directory-binding",
+      directoryPath: boundDirectory,
+    });
+    expect(current).toEqual({
+      directoryId: "directory-binding",
+      checkedAt: createdAt,
+      status: "current",
+      memberCount: 1,
+      scannedEntryCount: 2,
+      discoveredFileCount: 1,
+      skippedEntryCount: 0,
+    });
+    expect(Object.isFrozen(current)).toBe(true);
+    await rm(boundDirectory, { recursive: true, force: true });
+
+    const ready = await service.previewKnowledgeSourceDirectoryRootRebind({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      directoryId: "directory-binding",
+      directoryPath: candidateDirectory,
+    });
+    expect(ready).toEqual({
+      directoryId: "directory-binding",
+      checkedAt: createdAt,
+      status: "ready",
+      memberCount: 1,
+      scannedEntryCount: 2,
+      discoveredFileCount: 1,
+      skippedEntryCount: 0,
+    });
+    expect(Object.isFrozen(ready)).toBe(true);
+    expect(JSON.stringify(ready)).not.toContain(temporaryParent);
+    expect(JSON.stringify(ready)).not.toContain(sha256("same evidence"));
+    expect(generateId).toHaveBeenCalledTimes(5);
+    expect(await snapshot()).toEqual(before);
+  });
+
+  it("rejects root-rebind candidates with missing, extra, changed, or duplicate membership", async () => {
+    const boundDirectory = join(temporaryParent, "bound-directory");
+    const otherBoundDirectory = join(temporaryParent, "other-bound-directory");
+    const missingDirectory = join(temporaryParent, "missing-candidate");
+    const extraDirectory = join(temporaryParent, "extra-candidate");
+    const changedDirectory = join(temporaryParent, "changed-candidate");
+    const relativePath = join("nested", "evidence.txt");
+    const boundPath = join(boundDirectory, relativePath);
+    const otherBoundPath = join(otherBoundDirectory, relativePath);
+    await mkdir(dirname(boundPath), { recursive: true });
+    await mkdir(dirname(otherBoundPath), { recursive: true });
+    await writeFile(boundPath, "same evidence", "utf8");
+    await writeFile(otherBoundPath, "other evidence", "utf8");
+    await mkdir(missingDirectory);
+    const extraPath = join(extraDirectory, relativePath);
+    await mkdir(dirname(extraPath), { recursive: true });
+    await writeFile(extraPath, "same evidence", "utf8");
+    await writeFile(join(extraDirectory, "extra.txt"), "new evidence", "utf8");
+    const changedPath = join(changedDirectory, relativePath);
+    await mkdir(dirname(changedPath), { recursive: true });
+    await writeFile(changedPath, "changed evidence", "utf8");
+    const ids = [
+      "store-uuid",
+      "default-ckb-uuid",
+      "source-uuid",
+      "version-uuid",
+      "directory-binding",
+      "other-source",
+      "other-version",
+      "other-directory",
+    ];
+    const generateId = vi.fn(() => ids.shift() ?? "unexpected-id");
+    const service = createCandidateKnowledgeStoreService({
+      generateId,
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath: boundDirectory,
+      }),
+    ).resolves.toMatchObject({ status: "complete", directoryId: "directory-binding" });
+    await expect(
+      service.importKnowledgeSourceDirectory({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryPath: otherBoundDirectory,
+      }),
+    ).resolves.toMatchObject({ status: "complete", directoryId: "other-directory" });
+    const callCountBeforePreviews = generateId.mock.calls.length;
+    const failureMessage =
+      "The selected candidate knowledge source directory root rebind preview could not be completed.";
+    for (const directoryPath of [
+      missingDirectory,
+      extraDirectory,
+      changedDirectory,
+      otherBoundDirectory,
+      storeRoot,
+    ]) {
+      await expect(
+        service.previewKnowledgeSourceDirectoryRootRebind({
+          storeRoot,
+          knowledgeBaseId: "default-ckb-uuid",
+          directoryId: "directory-binding",
+          directoryPath,
+        }),
+      ).rejects.toThrow(failureMessage);
+    }
+    expect(generateId).toHaveBeenCalledTimes(callCountBeforePreviews);
+  });
+
+  it("fails closed when a root-rebind scan returns duplicate accepted paths", async () => {
+    const sourcePath = "/candidate/current.txt";
+    const normalized = successfulIngestion(sourcePath, {
+      checksum: sha256("current"),
+      sizeBytes: 7,
+      text: "current",
+    }).source;
+    if (normalized === null) throw new Error("expected normalized source");
+    const member = {
+      directoryId: "directory-binding",
+      knowledgeBaseId: "default-ckb-uuid",
+      sourceId: "source-uuid",
+      relativePathHash: "a".repeat(64),
+    };
+    const source = {
+      id: "source-uuid",
+      knowledgeBaseId: "default-ckb-uuid",
+      kind: "file" as const,
+      displayName: "current.txt",
+      createdAt,
+    };
+    const version: CandidateKnowledgeSourceVersionRecord = {
+      id: "version-uuid",
+      sourceId: source.id,
+      version: 1,
+      parentVersionId: null,
+      mediaType: normalized.mediaType,
+      checksum: normalized.checksum,
+      sizeBytes: normalized.sizeBytes,
+      createdAt,
+    };
+    const close = vi.fn(async () => undefined);
+    const handle = {
+      getCandidateKnowledgeBase: vi.fn(async () => ({
+        id: "default-ckb-uuid",
+        displayName: "Evidence",
+        description: "",
+        state: "active" as const,
+        isDefault: true,
+        createdAt,
+        updatedAt: createdAt,
+        archivedAt: null,
+      })),
+      getCandidateKnowledgeDirectoryBinding: vi.fn(async () => ({
+        id: "directory-binding",
+        knowledgeBaseId: "default-ckb-uuid",
+        rootPath: "/selected",
+        boundAt: createdAt,
+      })),
+      findCandidateKnowledgeDirectoryBinding: vi.fn(async () => undefined),
+      listCandidateKnowledgeDirectoryMembers: vi.fn(async () => [member]),
+      findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath: vi.fn(async () => member),
+      getCandidateKnowledgeDirectoryMemberOriginRelation: vi.fn(async () => ({
+        directoryId: member.directoryId,
+        knowledgeBaseId: member.knowledgeBaseId,
+        sourceId: member.sourceId,
+        relation: "same-member" as const,
+        originBoundAt: createdAt,
+      })),
+      getCandidateKnowledgeSource: vi.fn(async () => source),
+      listCandidateKnowledgeSourceVersions: vi.fn(async () => [version]),
+      getManagedCandidateKnowledgeFilePath: vi.fn(async () => "/store/managed-file"),
+      getCandidateKnowledgeSourceRetirement: vi.fn(async () => undefined),
+      close,
+    } as unknown as CandidateKnowledgeStoreHandle;
+    const service = createCandidateKnowledgeStoreService({
+      open: vi.fn(async () => handle),
+      ingestDirectory: vi.fn(async () => ({
+        sources: [normalized, normalized],
+        scannedEntryCount: 2,
+        discoveredFileCount: 2,
+        skippedEntryCount: 0,
+      })) as never,
+      lstat: vi.fn(async () => ({
+        isSymbolicLink: () => false,
+        isDirectory: () => true,
+      })) as never,
+      realpath: vi.fn(async (path: string) => path) as never,
+      now: () => createdAt,
+    });
+    await expect(
+      service.previewKnowledgeSourceDirectoryRootRebind({
+        storeRoot: "/store",
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+        directoryPath: "/candidate",
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory root rebind preview could not be completed.",
+    );
+    vi.mocked(handle.getManagedCandidateKnowledgeFilePath).mockResolvedValueOnce(undefined);
+    await expect(
+      service.previewKnowledgeSourceDirectoryRootRebind({
+        storeRoot: "/store",
+        knowledgeBaseId: "default-ckb-uuid",
+        directoryId: "directory-binding",
+        directoryPath: "/candidate",
+      }),
+    ).rejects.toThrow(
+      "The selected candidate knowledge source directory root rebind preview could not be completed.",
+    );
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
   it("previews directory refresh states without changing persisted membership or source state", async () => {
     const directoryPath = join(temporaryParent, "candidate-directory");
     const outsidePath = join(temporaryParent, "rebound-conflict.txt");

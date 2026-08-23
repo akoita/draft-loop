@@ -203,6 +203,12 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     directoryId: string,
     sourcePath: string,
   ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
+  readonly findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath: (
+    knowledgeBaseId: string,
+    directoryId: string,
+    candidateRootPath: string,
+    sourcePath: string,
+  ) => Promise<CandidateKnowledgeDirectoryMemberRecord | undefined>;
   readonly getCandidateKnowledgeDirectoryMemberOriginRelation: (
     knowledgeBaseId: string,
     directoryId: string,
@@ -1715,6 +1721,20 @@ function createHandle(
       const member = await storage.findCandidateKnowledgeDirectoryMemberByPath(
         knowledgeBaseId,
         directoryId,
+        sourcePath,
+      );
+      return member === undefined ? undefined : Object.freeze({ ...member });
+    },
+    findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath: async (
+      knowledgeBaseId,
+      directoryId,
+      candidateRootPath,
+      sourcePath,
+    ) => {
+      const member = await storage.findCandidateKnowledgeDirectoryMemberByCandidateRootAndPath(
+        knowledgeBaseId,
+        directoryId,
+        candidateRootPath,
         sourcePath,
       );
       return member === undefined ? undefined : Object.freeze({ ...member });

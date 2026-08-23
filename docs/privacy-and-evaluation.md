@@ -163,9 +163,12 @@ normalized relative path, while each accepted file retains its existing
 canonical origin binding. Partial and legacy runtime-only imports have no
 directory membership evidence. The store has a read-only explicit bounded
 directory refresh preview, an explicit add-members operation, and an applied
-operation limited to existing active same-member changed files. Add-members
+operation limited to existing active same-member changed files. A separate
+read-only directory-root-rebind eligibility preview rescans one candidate root,
+requires exact historical membership and latest-byte matches, and returns only
+path-free readiness and scan counts without changing the binding. Add-members
 persists only unmatched accepted files as append-only new members; complete
-removal reconciliation, directory-root rebind, automatic retirement/deletion, background
+removal reconciliation, applied directory-root rebind, automatic retirement/deletion, background
 refresh, time-based freshness policy, moved-origin
 discovery, automatic duplicate resolution, normalized facts, or retrieval
 indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
