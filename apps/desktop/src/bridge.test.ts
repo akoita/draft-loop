@@ -990,4 +990,97 @@ describe("desktop capability bridge", () => {
       expect(() => validateBridgeCommand({ type: "models.list", input })).toThrow("invalid");
     }
   });
+
+  it("keeps candidate-knowledge paths behind the native bridge", async () => {
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.create",
+        input: {
+          selection: "native-dialog",
+          name: "candidate-knowledge",
+          displayName: "Career evidence",
+        },
+      }),
+    ).toEqual({
+      type: "knowledge.create",
+      input: {
+        selection: "native-dialog",
+        name: "candidate-knowledge",
+        displayName: "Career evidence",
+      },
+    });
+    expect(() =>
+      validateBridgeCommand({
+        type: "knowledge.open",
+        input: { path: "/private/candidate-data" },
+      }),
+    ).toThrow("invalid");
+
+    const port = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBases: [
+              {
+                id: "kb-1",
+                displayName: "Career evidence",
+                description: "",
+                state: "active",
+                isDefault: true,
+              },
+            ],
+          },
+        }),
+        ["knowledge.open"],
+      ),
+    );
+    await expect(
+      port.execute({ type: "knowledge.open", input: { selection: "native-dialog" } }),
+    ).resolves.toEqual({
+      ok: true,
+      value: {
+        storeId: "store-1",
+        knowledgeBases: [
+          {
+            id: "kb-1",
+            displayName: "Career evidence",
+            description: "",
+            state: "active",
+            isDefault: true,
+          },
+        ],
+      },
+    });
+  });
+
+  it("validates bounded candidate-knowledge readiness summaries", async () => {
+    const port = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            storeId: "store-1",
+            knowledgeBaseId: "kb-1",
+            state: "active",
+            sourceCount: 2,
+            readyCount: 1,
+            blockedCount: 1,
+            blockerReasons: ["refresh-changed"],
+          },
+        }),
+        ["knowledge.readiness"],
+      ),
+    );
+    await expect(
+      port.execute({
+        type: "knowledge.readiness",
+        input: { storeId: "store-1", knowledgeBaseId: "kb-1" },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { sourceCount: 2, readyCount: 1, blockedCount: 1 },
+    });
+  });
 });

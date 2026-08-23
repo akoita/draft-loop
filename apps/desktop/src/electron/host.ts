@@ -5,7 +5,10 @@ import { basename, dirname, extname, isAbsolute, join, relative, resolve } from 
 import {
   type ApplicationIo,
   type ApplicationService,
+  type CandidateKnowledgeStoreService,
+  type CandidateKnowledgeStoreView,
   createApplicationService,
+  createCandidateKnowledgeStoreService,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
   type IndependentReviewRecord,
@@ -49,6 +52,8 @@ import {
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
+  type KnowledgeReadinessResult,
+  type KnowledgeStoreResult,
   type ModelsListInput,
   type ModelsListResult,
   type ModelsPreviewIndependenceInput,
@@ -134,6 +139,7 @@ export interface NativeModelDiscoveryOptions {
 
 export interface NativeHostOptions {
   readonly applicationService?: ApplicationService;
+  readonly knowledgeService?: CandidateKnowledgeStoreService;
   readonly dialogs: NativeHostDialogs;
   readonly credentials?: NativeCredentialStore;
   readonly urlFetcher?: UrlFetcher;
@@ -1126,7 +1132,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           : { userSessionRunners: options.userSessionRunners }),
       }),
     );
+  const knowledgeService = options.knowledgeService ?? createCandidateKnowledgeStoreService();
   let active: ActiveWorkspace | undefined;
+  const knowledgeStoreRoots = new Map<string, string>();
   const backgroundRuns = new Map<string, BackgroundRun>();
 
   function backgroundKey(workspace: ActiveWorkspace, runId: string): string {
@@ -1274,6 +1282,52 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       return fail("not-found", "The requested workspace is not open.");
     }
     return active;
+  }
+
+  function knowledgeStoreRoot(storeId: string): string {
+    const root = knowledgeStoreRoots.get(storeId);
+    if (root === undefined) return fail("not-found", "Open the candidate knowledge store first.");
+    return root;
+  }
+
+  function knowledgeStoreResult(view: CandidateKnowledgeStoreView): KnowledgeStoreResult {
+    return {
+      storeId: view.store.id,
+      knowledgeBases: view.knowledgeBases.map((base) => ({
+        id: base.id,
+        displayName: base.displayName,
+        description: base.description,
+        state: base.state,
+        isDefault: base.isDefault,
+      })),
+    };
+  }
+
+  async function chooseKnowledgeStore(
+    mode: "open" | "create",
+    input: {
+      readonly name?: string;
+      readonly displayName?: string;
+      readonly description?: string;
+    } = {},
+  ): Promise<KnowledgeStoreResult> {
+    const selected = await options.dialogs.chooseDirectory(mode);
+    if (selected === undefined) {
+      return fail(
+        "permission-denied",
+        mode === "create"
+          ? "Candidate knowledge store creation was cancelled."
+          : "Candidate knowledge store opening was cancelled.",
+      );
+    }
+    const root = mode === "create" ? resolve(selected, input.name ?? "") : resolve(selected);
+    const { name: _name, ...storeInput } = input;
+    const view =
+      mode === "create"
+        ? await knowledgeService.initializeStore({ storeRoot: root, ...storeInput })
+        : await knowledgeService.openStore({ storeRoot: root });
+    knowledgeStoreRoots.set(view.store.id, root);
+    return knowledgeStoreResult(view);
   }
 
   async function refreshWorkspaceDescriptor(workspace: ActiveWorkspace): Promise<ActiveWorkspace> {
@@ -1866,6 +1920,53 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               localEndpoint: descriptor.localEndpoint ?? null,
             },
           };
+        }
+        case "knowledge.create":
+          return {
+            ok: true,
+            value: await chooseKnowledgeStore("create", {
+              name: command.input.name,
+              ...(command.input.displayName === undefined
+                ? {}
+                : { displayName: command.input.displayName }),
+              ...(command.input.description === undefined
+                ? {}
+                : { description: command.input.description }),
+            }),
+          };
+        case "knowledge.open":
+          return { ok: true, value: await chooseKnowledgeStore("open") };
+        case "knowledge.list": {
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const view = await knowledgeService.listKnowledgeBases({ storeRoot: root });
+          if (view.store.id !== command.input.storeId) {
+            return fail(
+              "operation-failed",
+              "The open candidate knowledge store changed unexpectedly.",
+            );
+          }
+          return { ok: true, value: knowledgeStoreResult(view) };
+        }
+        case "knowledge.readiness": {
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const readiness = await knowledgeService.getKnowledgeBaseLifecycleReadiness({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+          });
+          const readyCount = readiness.sources.filter((source) => source.status === "ready").length;
+          const blockerReasons = [
+            ...new Set(readiness.sources.flatMap((source) => source.reasons)),
+          ].sort();
+          const result: KnowledgeReadinessResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: readiness.knowledgeBaseId,
+            state: readiness.state,
+            sourceCount: readiness.sources.length,
+            readyCount,
+            blockedCount: readiness.sources.length - readyCount,
+            blockerReasons,
+          };
+          return { ok: true, value: result };
         }
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);

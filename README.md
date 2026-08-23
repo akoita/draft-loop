@@ -98,6 +98,19 @@ CLI:
 pnpm --filter @draft-loop/cli start --help
 ```
 
+The CLI now exposes the first shared CKB controls through `knowledge`: initialize
+a portable store with its default CKB, open or list a store, and inspect
+path-free lifecycle readiness. For example:
+
+```sh
+pnpm --filter @draft-loop/cli start knowledge store init ./candidate-knowledge
+pnpm --filter @draft-loop/cli start knowledge store list ./candidate-knowledge
+```
+
+The desktop native boundary exposes the same operations without accepting or
+returning filesystem paths in renderer messages. Store selection, source
+mutation, and destructive lifecycle controls remain staged work.
+
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
 candidate material out of the repository.
@@ -130,13 +143,14 @@ flowchart LR
     Core --> Adapters["Provider adapters"]
     Adapters --> Anthropic["Approved Anthropic<br/>author route"]
     Adapters --> OpenAI["Approved OpenAI<br/>critic route"]
-    CKB["Portable CKB component<br/>(selection/retrieval pending)"] -.-> Core
+    CKB["Portable CKB component<br/>(basic controls + binding)"] --> Core
 ```
 
 The portable Candidate Knowledge Base (CKB) component can store approved local
-source versions, but CKB selection and retrieval are not yet integrated into the
-user workflow. The existing workspace evidence path remains authoritative for
-application runs; the CKB should not be assumed to supply an application run.
+source versions. CLI and desktop adapters can create, open, list, and inspect
+stores; workspaces can also bind explicit store/base snapshots with drift
+checks. Retrieval does not yet consume those snapshots, so the existing
+workspace evidence path remains authoritative for application runs.
 
 ## Trust boundary
 
