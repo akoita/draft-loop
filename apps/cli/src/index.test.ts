@@ -319,6 +319,149 @@ describe("candidate knowledge CLI controls", () => {
   });
 });
 
+describe("candidate knowledge base maintenance CLI controls", () => {
+  it("maps create, rename, and confirmed archive to safe store-view output", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-maintenance-store");
+    const view = knowledgeStoreView();
+    const archivedView: CandidateKnowledgeStoreView = {
+      ...view,
+      knowledgeBases: view.knowledgeBases.map((knowledgeBase) =>
+        knowledgeBase.id === "base-two"
+          ? {
+              ...knowledgeBase,
+              state: "archived" as const,
+              archivedAt: "2026-08-23T11:00:00.000Z",
+            }
+          : knowledgeBase,
+      ),
+    };
+    const createKnowledgeBase = vi.fn(async () => view);
+    const renameKnowledgeBase = vi.fn(async () => view);
+    const archiveKnowledgeBase = vi.fn(async () => archivedView);
+    const knowledgeService = {
+      createKnowledgeBase,
+      renameKnowledgeBase,
+      archiveKnowledgeBase,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "base",
+      "create",
+      storeRoot,
+      "Private display name",
+      "--description",
+      "Private description",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "base",
+      "rename",
+      storeRoot,
+      "base-two",
+      "Renamed private base",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "base",
+      "archive",
+      storeRoot,
+      "base-two",
+      "--confirm",
+    ]);
+
+    expect(createKnowledgeBase).toHaveBeenCalledWith({
+      storeRoot,
+      displayName: "Private display name",
+      description: "Private description",
+    });
+    expect(renameKnowledgeBase).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId: "base-two",
+      displayName: "Renamed private base",
+    });
+    expect(archiveKnowledgeBase).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId: "base-two",
+    });
+    const output = dependencies.lines.join("\n");
+    expect(output).toContain("knowledge store base-created: store-opaque");
+    expect(output).toContain("knowledge store base-renamed: store-opaque");
+    expect(output).toContain("knowledge store base-archived: store-opaque");
+    expect(output).toContain("knowledge base base-two state=archived default=false");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain("Private display name");
+    expect(output).not.toContain("Private description");
+    expect(output).not.toContain("Renamed private base");
+  });
+
+  it("requires archive confirmation before calling the service", async () => {
+    const dependencies = harness();
+    const archiveKnowledgeBase = vi.fn(async () => knowledgeStoreView());
+    const knowledgeService = {
+      archiveKnowledgeBase,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "base",
+        "archive",
+        resolve("private-maintenance-store"),
+        "base-two",
+      ]),
+    ).rejects.toThrow("knowledge base archive requires --confirm");
+    expect(archiveKnowledgeBase).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("propagates an application maintenance failure without adding CLI output", async () => {
+    const dependencies = harness();
+    const failure = new Error("application maintenance failure");
+    const createKnowledgeBase = vi.fn(async () => {
+      throw failure;
+    });
+    const knowledgeService = {
+      createKnowledgeBase,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "base",
+        "create",
+        resolve("private-maintenance-store"),
+        "Base",
+      ]),
+    ).rejects.toBe(failure);
+    expect(dependencies.lines).toEqual([]);
+  });
+});
+
 describe("candidate knowledge selection CLI control", () => {
   function selectionHarness(): {
     readonly service: ApplicationService;

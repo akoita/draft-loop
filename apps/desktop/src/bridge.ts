@@ -24,6 +24,9 @@ export const bridgeCapabilities = [
   "knowledge.list",
   "knowledge.readiness",
   "knowledge.select",
+  "knowledge.create-base",
+  "knowledge.rename-base",
+  "knowledge.archive-base",
   "run.status",
   "run.start",
   "run.pause",
@@ -213,6 +216,36 @@ const knowledgeSelectionInputKeys = inputKeys<KnowledgeSelectionInput>()([
   "workspaceId",
   "entries",
   "combinationApproved",
+]);
+
+export interface KnowledgeBaseCreateInput extends KnowledgeStoreListInput {
+  readonly displayName: string;
+  readonly description?: string;
+}
+
+export interface KnowledgeBaseRenameInput extends KnowledgeReadinessInput {
+  readonly displayName: string;
+}
+
+export interface KnowledgeBaseArchiveInput extends KnowledgeReadinessInput {
+  /** Archival has no inverse in the current contract and must be visibly confirmed. */
+  readonly confirmed: boolean;
+}
+
+const knowledgeBaseCreateKeys = inputKeys<KnowledgeBaseCreateInput>()([
+  "storeId",
+  "displayName",
+  "description",
+]);
+const knowledgeBaseRenameKeys = inputKeys<KnowledgeBaseRenameInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "displayName",
+]);
+const knowledgeBaseArchiveKeys = inputKeys<KnowledgeBaseArchiveInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "confirmed",
 ]);
 
 /**
@@ -751,6 +784,9 @@ export interface BridgeCommandInputMap {
   "knowledge.list": KnowledgeStoreListInput;
   "knowledge.readiness": KnowledgeReadinessInput;
   "knowledge.select": KnowledgeSelectionInput;
+  "knowledge.create-base": KnowledgeBaseCreateInput;
+  "knowledge.rename-base": KnowledgeBaseRenameInput;
+  "knowledge.archive-base": KnowledgeBaseArchiveInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -777,6 +813,9 @@ export interface BridgeCommandOutputMap {
   "knowledge.list": KnowledgeStoreResult;
   "knowledge.readiness": KnowledgeReadinessResult;
   "knowledge.select": KnowledgeSelectionResult;
+  "knowledge.create-base": KnowledgeStoreResult;
+  "knowledge.rename-base": KnowledgeStoreResult;
+  "knowledge.archive-base": KnowledgeStoreResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -1260,6 +1299,37 @@ function validateKnowledgeSelectionInput(value: unknown): KnowledgeSelectionInpu
   };
 }
 
+function validateKnowledgeBaseCreateInput(value: unknown): KnowledgeBaseCreateInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeBaseCreateKeys)) return invalidInput();
+  const description = optionalDescription(input.description);
+  return {
+    storeId: identifier(input.storeId),
+    displayName: displayName(input.displayName),
+    ...(description === undefined ? {} : { description }),
+  };
+}
+
+function validateKnowledgeBaseRenameInput(value: unknown): KnowledgeBaseRenameInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeBaseRenameKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    displayName: displayName(input.displayName),
+  };
+}
+
+function validateKnowledgeBaseArchiveInput(value: unknown): KnowledgeBaseArchiveInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeBaseArchiveKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    confirmed: booleanValue(input.confirmed),
+  };
+}
+
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
@@ -1549,6 +1619,21 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "knowledge.readiness", input: validateKnowledgeReadinessInput(command.input) };
     case "knowledge.select":
       return { type: "knowledge.select", input: validateKnowledgeSelectionInput(command.input) };
+    case "knowledge.create-base":
+      return {
+        type: "knowledge.create-base",
+        input: validateKnowledgeBaseCreateInput(command.input),
+      };
+    case "knowledge.rename-base":
+      return {
+        type: "knowledge.rename-base",
+        input: validateKnowledgeBaseRenameInput(command.input),
+      };
+    case "knowledge.archive-base":
+      return {
+        type: "knowledge.archive-base",
+        input: validateKnowledgeBaseArchiveInput(command.input),
+      };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
     case "run.start":
@@ -2032,6 +2117,9 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "knowledge.create":
     case "knowledge.open":
     case "knowledge.list":
+    case "knowledge.create-base":
+    case "knowledge.rename-base":
+    case "knowledge.archive-base":
       return normalizeKnowledgeStoreResult(value);
     case "knowledge.readiness":
       return normalizeKnowledgeReadinessResult(value);

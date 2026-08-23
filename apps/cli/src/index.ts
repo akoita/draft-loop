@@ -357,6 +357,60 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       });
   }
 
+  const knowledgeBase = knowledge
+    .command("base")
+    .description("Create and maintain knowledge bases in a local store");
+  knowledgeBase
+    .command("create")
+    .description("Create a knowledge base in a local store")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<display-name>", "knowledge-base display name")
+    .option("--description <text>", "knowledge-base description")
+    .action(async (storeRoot: string, displayName: string, options: Record<string, unknown>) => {
+      const view = await candidateKnowledge.createKnowledgeBase({
+        storeRoot,
+        displayName,
+        ...(options.description === undefined
+          ? {}
+          : { description: options.description as string }),
+      });
+      writeKnowledgeStoreView(io, "base-created", view);
+    });
+
+  knowledgeBase
+    .command("rename")
+    .description("Rename a knowledge base in a local store")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<display-name>", "new knowledge-base display name")
+    .action(async (storeRoot: string, knowledgeBaseId: string, displayName: string) => {
+      const view = await candidateKnowledge.renameKnowledgeBase({
+        storeRoot,
+        knowledgeBaseId,
+        displayName,
+      });
+      writeKnowledgeStoreView(io, "base-renamed", view);
+    });
+
+  knowledgeBase
+    .command("archive")
+    .description("Archive a knowledge base in a local store")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .option("--confirm", "confirm archival, which may invalidate configured workspace selections")
+    .action(
+      async (storeRoot: string, knowledgeBaseId: string, options: Record<string, unknown>) => {
+        if (options.confirm !== true) {
+          throw new Error("knowledge base archive requires --confirm.");
+        }
+        const view = await candidateKnowledge.archiveKnowledgeBase({
+          storeRoot,
+          knowledgeBaseId,
+        });
+        writeKnowledgeStoreView(io, "base-archived", view);
+      },
+    );
+
   const lifecycle = knowledge
     .command("lifecycle")
     .description("Inspect candidate-knowledge lifecycle state");

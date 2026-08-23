@@ -288,7 +288,8 @@ This decision deliberately leaves the following outside the product workflow:
 - normalized facts and lexical, vector, or hybrid CKB indexes;
 - retrieval/index versions and provider transmission approval for the bound CKB
   selection;
-- CLI and desktop CKB mutation and destructive lifecycle controls;
+- CLI and desktop source refresh/rebind, physical deletion, and destructive
+  store lifecycle controls;
 - automatic directory removal/rename reconciliation and move inference,
   broader member-retirement policy, background refresh, and time-based
   readiness;

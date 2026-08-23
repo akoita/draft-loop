@@ -40,9 +40,11 @@ Host paths, URL provenance, and membership hashes are not portable identity and
 are excluded from generic manifests, providers, and content-free diagnostics.
 Labels and checksums are local CKB metadata but remain excluded from provider
 and content-free surfaces. The shared application contract can bind path-free
-selection evidence to new runs, but CLI and desktop expose no selection controls
-and no application run retrieves CKB content. The existing workspace evidence
-boundary remains authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
+selection evidence to new runs. CLI and desktop expose selection and bounded CKB
+metadata maintenance without carrying roots through the desktop renderer
+boundary; archival requires explicit confirmation. No application run retrieves
+CKB content yet, so the existing workspace evidence boundary remains
+authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
 [privacy policy](privacy-and-evaluation.md), and [architecture](architecture.md)
 for ownership and exact contracts.
 

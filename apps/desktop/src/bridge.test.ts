@@ -1126,4 +1126,49 @@ describe("desktop capability bridge", () => {
       ).toThrow("invalid");
     }
   });
+
+  it("validates path-free CKB maintenance commands and explicit archive confirmation", () => {
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.create-base",
+        input: {
+          storeId: "store-1",
+          displayName: "Public projects",
+          description: "Selected public work",
+        },
+      }),
+    ).toMatchObject({ type: "knowledge.create-base", input: { storeId: "store-1" } });
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.rename-base",
+        input: { storeId: "store-1", knowledgeBaseId: "kb-2", displayName: "Open source" },
+      }),
+    ).toMatchObject({ type: "knowledge.rename-base", input: { knowledgeBaseId: "kb-2" } });
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.archive-base",
+        input: { storeId: "store-1", knowledgeBaseId: "kb-2", confirmed: true },
+      }),
+    ).toEqual({
+      type: "knowledge.archive-base",
+      input: { storeId: "store-1", knowledgeBaseId: "kb-2", confirmed: true },
+    });
+
+    for (const command of [
+      {
+        type: "knowledge.create-base",
+        input: { storeId: "store-1", displayName: "", storeRoot: "/private/store" },
+      },
+      {
+        type: "knowledge.rename-base",
+        input: { storeId: "store-1", knowledgeBaseId: "kb-2", displayName: " " },
+      },
+      {
+        type: "knowledge.archive-base",
+        input: { storeId: "store-1", knowledgeBaseId: "kb-2" },
+      },
+    ]) {
+      expect(() => validateBridgeCommand(command)).toThrow("invalid");
+    }
+  });
 });

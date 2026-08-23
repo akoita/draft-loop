@@ -1304,6 +1304,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
   }
 
+  function verifiedKnowledgeStoreResult(
+    expectedStoreId: string,
+    view: CandidateKnowledgeStoreView,
+  ): KnowledgeStoreResult {
+    if (view.store.id !== expectedStoreId) {
+      return fail("operation-failed", "The open candidate knowledge store changed unexpectedly.");
+    }
+    return knowledgeStoreResult(view);
+  }
+
   async function chooseKnowledgeStore(
     mode: "open" | "create",
     input: {
@@ -1940,13 +1950,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         case "knowledge.list": {
           const root = knowledgeStoreRoot(command.input.storeId);
           const view = await knowledgeService.listKnowledgeBases({ storeRoot: root });
-          if (view.store.id !== command.input.storeId) {
-            return fail(
-              "operation-failed",
-              "The open candidate knowledge store changed unexpectedly.",
-            );
-          }
-          return { ok: true, value: knowledgeStoreResult(view) };
+          return {
+            ok: true,
+            value: verifiedKnowledgeStoreResult(command.input.storeId, view),
+          };
         }
         case "knowledge.readiness": {
           const root = knowledgeStoreRoot(command.input.storeId);
@@ -2005,6 +2012,49 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             entries,
           };
           return { ok: true, value: result };
+        }
+        case "knowledge.create-base": {
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const view = await knowledgeService.createKnowledgeBase({
+            storeRoot: root,
+            displayName: command.input.displayName,
+            ...(command.input.description === undefined
+              ? {}
+              : { description: command.input.description }),
+          });
+          return {
+            ok: true,
+            value: verifiedKnowledgeStoreResult(command.input.storeId, view),
+          };
+        }
+        case "knowledge.rename-base": {
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const view = await knowledgeService.renameKnowledgeBase({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            displayName: command.input.displayName,
+          });
+          return {
+            ok: true,
+            value: verifiedKnowledgeStoreResult(command.input.storeId, view),
+          };
+        }
+        case "knowledge.archive-base": {
+          if (!command.input.confirmed) {
+            return fail(
+              "permission-denied",
+              "Confirm archival; it may invalidate configured workspace selections.",
+            );
+          }
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const view = await knowledgeService.archiveKnowledgeBase({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+          });
+          return {
+            ok: true,
+            value: verifiedKnowledgeStoreResult(command.input.storeId, view),
+          };
         }
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);
