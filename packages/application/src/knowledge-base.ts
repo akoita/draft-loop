@@ -278,15 +278,26 @@ export interface CandidateKnowledgeSourceWriteResult extends CandidateKnowledgeS
   readonly created: boolean;
 }
 
-export type KnowledgeSourceDirectoryImportStatus = "complete" | "partial";
-
-export interface ImportKnowledgeSourceDirectoryResult {
+export interface ImportKnowledgeSourceDirectoryCompleteResult {
   readonly sources: readonly CandidateKnowledgeSourceWriteResult[];
-  readonly status: KnowledgeSourceDirectoryImportStatus;
+  readonly status: "complete";
+  readonly directoryId: string;
   readonly scannedEntryCount: number;
   readonly discoveredFileCount: number;
   readonly skippedEntryCount: number;
 }
+
+export interface ImportKnowledgeSourceDirectoryPartialResult {
+  readonly sources: readonly CandidateKnowledgeSourceWriteResult[];
+  readonly status: "partial";
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
+export type ImportKnowledgeSourceDirectoryResult =
+  | ImportKnowledgeSourceDirectoryCompleteResult
+  | ImportKnowledgeSourceDirectoryPartialResult;
 
 export interface CandidateKnowledgeStoreService {
   readonly initializeStore: (
@@ -456,7 +467,7 @@ async function validateDirectoryImportScope(
   resolveRealpath: typeof realpath,
   directoryPath: string,
   storeRoot: string,
-): Promise<void> {
+): Promise<string> {
   try {
     const directoryDetails = await inspect(directoryPath, { bigint: true });
     if (directoryDetails.isSymbolicLink() || !directoryDetails.isDirectory()) {
@@ -469,6 +480,7 @@ async function validateDirectoryImportScope(
     if (pathsOverlap(canonicalDirectory, canonicalStore)) {
       throw importDirectoryFailure();
     }
+    return canonicalDirectory;
   } catch (error) {
     if (error instanceof Error && error.message === importDirectoryFailure().message) {
       throw error;
@@ -541,15 +553,19 @@ function validateDirectoryIngestionResult(
 function directoryImportResult(
   preflight: DirectoryIngestionResult,
   sources: readonly CandidateKnowledgeSourceWriteResult[],
-  status: KnowledgeSourceDirectoryImportStatus,
+  directoryId?: string,
 ): ImportKnowledgeSourceDirectoryResult {
-  return Object.freeze({
+  const common = {
     sources: Object.freeze([...sources]),
-    status,
     scannedEntryCount: preflight.scannedEntryCount,
     discoveredFileCount: preflight.discoveredFileCount,
     skippedEntryCount: preflight.skippedEntryCount,
-  });
+  };
+  return Object.freeze(
+    directoryId === undefined
+      ? { ...common, status: "partial" as const }
+      : { ...common, status: "complete" as const, directoryId },
+  );
 }
 
 async function ingestManagedCandidateKnowledgeFile(
@@ -1687,8 +1703,9 @@ export function createCandidateKnowledgeStoreService(
         "Candidate knowledge source directory path",
       );
 
+      let canonicalDirectory: string;
       try {
-        await validateDirectoryImportScope(
+        canonicalDirectory = await validateDirectoryImportScope(
           resolved.lstat,
           resolved.realpath,
           directoryPath,
@@ -1725,7 +1742,15 @@ export function createCandidateKnowledgeStoreService(
             ) {
               throw importDirectoryFailure();
             }
+            const existingBinding = await handle.findCandidateKnowledgeDirectoryBinding(
+              knowledgeBaseId,
+              canonicalDirectory,
+            );
+            if (existingBinding !== undefined) {
+              throw importDirectoryFailure();
+            }
             const projected: CandidateKnowledgeSourceWriteResult[] = [];
+            const committedSourceIds: string[] = [];
             let committedCount = 0;
             for (const normalized of orderedSources) {
               try {
@@ -1764,12 +1789,40 @@ export function createCandidateKnowledgeStoreService(
                     result.created,
                   ),
                 );
+                committedSourceIds.push(result.source.id);
               } catch {
                 if (committedCount === 0) throw importDirectoryFailure();
-                return directoryImportResult(orderedPreflight, projected, "partial");
+                return directoryImportResult(orderedPreflight, projected);
               }
             }
-            return directoryImportResult(orderedPreflight, projected, "complete");
+            try {
+              const directoryId = requireText(
+                resolved.generateId(),
+                "Candidate knowledge directory id",
+              );
+              const boundAt = resolved.now();
+              const binding = await handle.createCandidateKnowledgeDirectoryBinding({
+                id: directoryId,
+                knowledgeBaseId,
+                rootPath: canonicalDirectory,
+                boundAt,
+                sourceIds: committedSourceIds,
+              });
+              if (
+                typeof binding !== "object" ||
+                binding === null ||
+                binding.id !== directoryId ||
+                binding.knowledgeBaseId !== knowledgeBaseId ||
+                binding.rootPath !== canonicalDirectory ||
+                binding.boundAt !== boundAt
+              ) {
+                throw importDirectoryFailure();
+              }
+              return directoryImportResult(orderedPreflight, projected, directoryId);
+            } catch {
+              if (committedCount === 0) throw importDirectoryFailure();
+              return directoryImportResult(orderedPreflight, projected);
+            }
           },
         );
       } catch {

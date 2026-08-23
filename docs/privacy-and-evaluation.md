@@ -7,14 +7,14 @@ machine unless the user explicitly approves a provider transmission.
 
 ## Data policy
 
-| Data class                                                                                | Default location                                                                                                           | Provider transmission                                                                                    | Retention default                                                                                   |
-| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Public                                                                                    | Local workspace                                                                                                            | Allowed only through an explicit request policy                                                          | Until the user deletes it                                                                           |
-| Personal                                                                                  | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                                        | Until the user deletes it                                                                           |
-| Confidential employer                                                                     | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended             | Until the user deletes it                                                                           |
-| Portable CKB metadata, local origin bindings, managed-write journal, and raw source bytes | User-selected local plaintext store, separate from application workspaces and run history                                  | Not provider data; raw bytes, origin paths, journal, URLs, labels, and checksums must not be transmitted | Until the user removes the local store; complete deletion and secure erasure are not implemented    |
-| Secret embedded in candidate material                                                     | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                                       | Do not retain                                                                                       |
-| Provider credential                                                                       | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                                        | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
+| Data class                                                                                                             | Default location                                                                                                           | Provider transmission                                                                                                     | Retention default                                                                                   |
+| ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Public                                                                                                                 | Local workspace                                                                                                            | Allowed only through an explicit request policy                                                                           | Until the user deletes it                                                                           |
+| Personal                                                                                                               | Local workspace                                                                                                            | Explicit approval and provider allowlist required                                                                         | Until the user deletes it                                                                           |
+| Confidential employer                                                                                                  | Local workspace                                                                                                            | Explicit approval, acknowledgement, and allowlist required; user redaction rules recommended                              | Until the user deletes it                                                                           |
+| Portable CKB metadata, local origin/directory bindings, hashed membership, managed-write journal, and raw source bytes | User-selected local plaintext store, separate from application workspaces and run history                                  | Not provider data; raw bytes, exact paths, directory hashes, journal, URLs, labels, and checksums must not be transmitted | Until the user removes the local store; complete deletion and secure erasure are not implemented    |
+| Secret embedded in candidate material                                                                                  | Never place in source/evaluation fixtures                                                                                  | Not allowed as application content                                                                                        | Do not retain                                                                                       |
+| Provider credential                                                                                                    | Electron user-data credential store, provider SDK environment, or provider-managed local user session; never the workspace | Used only to authenticate an explicitly approved provider request                                                         | Until the user removes it, the environment changes, the provider login ends, or app data is deleted |
 
 The provider contract requires `allowTransmission`, an allowlisted provider
 company, and an acknowledgement when a request is sensitive. Provider identity,
@@ -52,9 +52,14 @@ The root must be a real non-symlink directory outside the CKB store. Traversal
 uses canonical containment and deterministic lexical relative-path order; child
 symlinks, special entries, dot-prefixed entries/subtrees, and unsupported files
 are skipped and counted. Each accepted file becomes an independent ordinary
-`file` source with its own origin binding. The directory path is runtime-only:
-there is no directory source kind, membership relation, binding, or incremental
-refresh.
+`file` source with its own origin binding. A complete import also records the
+canonical directory root and immutable membership hashes only in sensitive
+local SQLite state; partial and legacy runtime-only imports have no membership
+evidence. There is no directory source kind, and incremental refresh or
+membership lifecycle is not implemented. Membership is a stable historical
+mapping captured at binding time: later source version appends, explicit origin
+rebinding, or source retirement do not rewrite it. Actual incremental directory
+scan reconciliation remains deferred.
 
 One explicitly approved HTTPS URL can also become an initial managed CKB
 source. The existing controlled URL ingestion boundary validates public address
@@ -126,8 +131,12 @@ size exactly match the latest managed version. It creates no version, blob, or
 journal event, returns no path or integrity metadata, and deletes the superseded
 path from current local state rather than retaining path history or mutating
 refresh-observation state. Changed moved
-content must first be appended explicitly. Directory intake does not create a
-directory binding or membership relation. The store has no background refresh,
+content must first be appended explicitly. A complete bounded directory intake
+now persists its canonical selected root and immutable membership only in
+sensitive local SQLite state: each member stores a SHA-256 hash of its
+normalized relative path, while each accepted file retains its existing
+canonical origin binding. Partial and legacy runtime-only imports have no
+directory membership evidence. The store has no background refresh,
 time-based freshness policy, moved-origin
 discovery, automatic duplicate resolution, normalized facts, or retrieval
 indexes. A read-only, one-CKB-scoped duplicate projection compares only latest
@@ -145,9 +154,12 @@ basename differs.
 Application workspaces continue to own their current evidence and run history,
 and no CKB data is provider data.
 
-The store path and each selected file or directory import path are host configuration and are excluded
-from portable records, provider requests, content-free audit data, and
-diagnostics. Source labels may themselves reveal candidate information, and a
+The store path and selected intake paths are host configuration. A complete
+directory import retains the selected canonical root and accepted files' exact
+origin bindings only in sensitive local SQLite tables; plaintext relative
+paths are not persisted as membership, and none of these paths enter portable
+records, provider requests, content-free audit data, or diagnostics. Source
+labels may themselves reveal candidate information, and a
 checksum can correlate a record with known content. They are appropriate for a
 local user-facing CKB view, not a content-free diagnostic projection. Files with
 names such as `AGENTS.md`, `.env`, or other configuration-like names remain

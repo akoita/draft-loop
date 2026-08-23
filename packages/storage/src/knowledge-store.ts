@@ -22,6 +22,9 @@ import {
   type CandidateKnowledgeBaseInput,
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeBaseStoragePort,
+  type CandidateKnowledgeDirectoryBindingInput,
+  type CandidateKnowledgeDirectoryBindingRecord,
+  type CandidateKnowledgeDirectoryMemberRecord,
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceOriginBindingRecord,
   type CandidateKnowledgeSourceRefreshObservationInput,
@@ -170,6 +173,22 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     sourceId: string,
   ) => Promise<CandidateKnowledgeSourceOriginBindingRecord | undefined>;
+  /** Sensitive local-only directory root and membership state. */
+  readonly createCandidateKnowledgeDirectoryBinding: (
+    input: CandidateKnowledgeDirectoryBindingInput,
+  ) => Promise<CandidateKnowledgeDirectoryBindingRecord>;
+  readonly getCandidateKnowledgeDirectoryBinding: (
+    knowledgeBaseId: string,
+    directoryId: string,
+  ) => Promise<CandidateKnowledgeDirectoryBindingRecord | undefined>;
+  readonly findCandidateKnowledgeDirectoryBinding: (
+    knowledgeBaseId: string,
+    rootPath: string,
+  ) => Promise<CandidateKnowledgeDirectoryBindingRecord | undefined>;
+  readonly listCandidateKnowledgeDirectoryMembers: (
+    knowledgeBaseId: string,
+    directoryId: string,
+  ) => Promise<readonly CandidateKnowledgeDirectoryMemberRecord[]>;
   readonly getCandidateKnowledgeSourceRefreshObservation: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1607,6 +1626,28 @@ function createHandle(
       );
       return binding === undefined ? undefined : Object.freeze({ ...binding });
     },
+    createCandidateKnowledgeDirectoryBinding: async (input) =>
+      Object.freeze({ ...(await storage.createCandidateKnowledgeDirectoryBinding(input)) }),
+    getCandidateKnowledgeDirectoryBinding: async (knowledgeBaseId, directoryId) => {
+      const binding = await storage.getCandidateKnowledgeDirectoryBinding(
+        knowledgeBaseId,
+        directoryId,
+      );
+      return binding === undefined ? undefined : Object.freeze({ ...binding });
+    },
+    findCandidateKnowledgeDirectoryBinding: async (knowledgeBaseId, rootPath) => {
+      const binding = await storage.findCandidateKnowledgeDirectoryBinding(
+        knowledgeBaseId,
+        rootPath,
+      );
+      return binding === undefined ? undefined : Object.freeze({ ...binding });
+    },
+    listCandidateKnowledgeDirectoryMembers: async (knowledgeBaseId, directoryId) =>
+      Object.freeze(
+        (await storage.listCandidateKnowledgeDirectoryMembers(knowledgeBaseId, directoryId)).map(
+          (member) => Object.freeze({ ...member }),
+        ),
+      ),
     getCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId) => {
       const observation = await storage.getCandidateKnowledgeSourceRefreshObservation(
         knowledgeBaseId,
