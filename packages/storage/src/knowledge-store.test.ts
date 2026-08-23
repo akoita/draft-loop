@@ -2137,6 +2137,41 @@ describe("portable candidate knowledge store", () => {
       boundAt: "2026-08-21T14:02:00.000Z",
       sourceIds: ["retire-source"],
     });
+    const expectedRootPath = await realpath(selectedDirectory);
+    const expectedRelativePathHash = sha256("first.md");
+
+    const guards: readonly {
+      readonly expectedRootPath?: string;
+      readonly expectedRootRevision?: number;
+      readonly expectedMemberRevision?: number;
+      readonly expectedRelativePathHash?: string;
+    }[] = [
+      { expectedRootPath: join(parent, "different-root") },
+      { expectedRootRevision: 2 },
+      { expectedMemberRevision: 2 },
+      { expectedRelativePathHash: sha256("other.md") },
+    ];
+    for (const guard of guards) {
+      await expect(
+        store.retireCandidateKnowledgeDirectoryMember(
+          "ckb-default",
+          "retire-directory",
+          "retire-source",
+          {
+            retiredAt: "2026-08-21T14:02:30.000Z",
+            expectedRootPath: guard.expectedRootPath ?? expectedRootPath,
+            expectedRootRevision: guard.expectedRootRevision ?? 1,
+            expectedMemberRevision: guard.expectedMemberRevision ?? 1,
+            expectedRelativePathHash: guard.expectedRelativePathHash ?? expectedRelativePathHash,
+            expectedVersionId: "retire-version-first",
+            expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
+          },
+        ),
+      ).rejects.toThrow(/changed during retirement/i);
+    }
+    await expect(
+      store.getCandidateKnowledgeSourceRetirement("ckb-default", "retire-source"),
+    ).resolves.toBeUndefined();
 
     await expect(
       store.retireCandidateKnowledgeDirectoryMember(
@@ -2145,6 +2180,10 @@ describe("portable candidate knowledge store", () => {
         "retire-source",
         {
           retiredAt: "2026-08-21T14:01:30.000Z",
+          expectedRootPath,
+          expectedRootRevision: 1,
+          expectedMemberRevision: 1,
+          expectedRelativePathHash,
           expectedVersionId: "retire-version-first",
           expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
         },
@@ -2170,6 +2209,10 @@ describe("portable candidate knowledge store", () => {
         "retire-source",
         {
           retiredAt: "2026-08-21T14:04:00.000Z",
+          expectedRootPath,
+          expectedRootRevision: 1,
+          expectedMemberRevision: 1,
+          expectedRelativePathHash,
           expectedVersionId: "retire-version-first",
           expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
         },
@@ -2190,6 +2233,10 @@ describe("portable candidate knowledge store", () => {
         "retire-source",
         {
           retiredAt: "2026-08-21T14:05:00.000Z",
+          expectedRootPath,
+          expectedRootRevision: 1,
+          expectedMemberRevision: 1,
+          expectedRelativePathHash,
           expectedVersionId: "retire-version-second",
           expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
         },
@@ -2240,6 +2287,10 @@ describe("portable candidate knowledge store", () => {
         "retire-source",
         {
           retiredAt: "2026-08-21T14:06:00.000Z",
+          expectedRootPath,
+          expectedRootRevision: 1,
+          expectedMemberRevision: 1,
+          expectedRelativePathHash,
           expectedVersionId: "retire-version-second",
           expectedOriginBoundAt: "2026-08-21T14:05:30.000Z",
         },
@@ -2251,6 +2302,10 @@ describe("portable candidate knowledge store", () => {
       "retire-source",
       {
         retiredAt: "2026-08-21T14:08:00.000Z",
+        expectedRootPath,
+        expectedRootRevision: 1,
+        expectedMemberRevision: 1,
+        expectedRelativePathHash,
         expectedVersionId: "retire-version-second",
         expectedOriginBoundAt: "2026-08-21T14:05:30.000Z",
       },
@@ -2267,6 +2322,10 @@ describe("portable candidate knowledge store", () => {
         "retire-source",
         {
           retiredAt: "2026-08-21T14:09:00.000Z",
+          expectedRootPath,
+          expectedRootRevision: 1,
+          expectedMemberRevision: 1,
+          expectedRelativePathHash,
           expectedVersionId: "stale-version",
           expectedOriginBoundAt: "2026-08-21T14:01:00.000Z",
         },

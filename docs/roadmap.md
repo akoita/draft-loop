@@ -74,8 +74,8 @@ The product status is easiest to read by outcome:
 | Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
 | Workspace retrieval and policy     | Partial integration                   | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. The initial workspace writing-policy slice is integrated behind explicit local selection. Neither establishes reusable CKB selection or application-grade drafting.                                                                                                                                                                                              |
 | Portable CKB                       | Implemented component; not integrated | The separate local store has logical identity, source/version provenance, managed bytes, local-only origins, URL provenance, retirement markers, and a prospective write journal. Explicit file/URL operations and bounded directory operations are available behind application contracts.                                                                                                                                                  |
-| CKB directory recovery             | Implemented bounded components        | Root rebind is an explicit one-scan, guarded all-member operation with path-free `rebound`/`current` counts. The second #134 slice provides an explicit one-source member move: one bounded scan selects the requested current member or one unique exact-integrity missing-member match, then the verified member handle applies `moved` or guarded `current`. The command accepts no target path and returns only frozen path-free status. |
-| Product CKB workflow               | Not integrated                        | Application/run CKB selection, normalized facts, CKB-scoped retrieval, lifecycle reconciliation, adapter controls, indexing, repair, deletion, backup/export/restore, and provider use remain outside the product path. Automatic discovery, background refresh, and complete directory reconciliation under #135/#136 are deferred.                                                                                                         |
+| CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
+| Product CKB workflow               | Not integrated                        | Application/run CKB selection, normalized facts, CKB-scoped retrieval, lifecycle readiness, adapter controls, indexing, repair, deletion, backup/export/restore, and provider use remain outside the product path. Automatic discovery, background refresh, and lifecycle readiness under #136 are deferred.                                                                                                                               |
 
 The portable store is therefore component progress, not a v0.7 stage exit. See
 [the architecture](architecture.md) for stable boundaries and
@@ -115,10 +115,11 @@ directory operations never imply background monitoring or provider exposure.
 Directory intake is bounded and deterministic. A complete import records a
 sensitive local root binding and immutable hashes of normalized relative
 membership; add-members, observation, existing-member refresh, missing-member
-retirement, root rebind, and the one-source member move each have explicit
-contracts. These are component/application-contract capabilities. They do not
-infer renames, reconcile all removals, or authorize cleanup. The exact
-constraints and privacy invariants live in [ADR 0007][adr-0007].
+retirement, root rebind, one-source member move, and complete explicit
+missing-member reconciliation each have bounded contracts. These are
+component/application-contract capabilities. They do not automatically infer
+renames, retire sources, or authorize cleanup. The exact constraints and
+privacy invariants live in [ADR 0007][adr-0007].
 
 RAG for an application is scoped to the CKB and source versions recorded by
 that application. SQLite FTS/BM25 remains the current local baseline; vector or
@@ -170,9 +171,9 @@ storage components:
   policy (#68–#70).
 
 Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
-outside this critical path. The explicit root rebind and one-source member move
-remain component-level support for #110/#134; complete reconciliation and
-lifecycle readiness under #135/#136 do not satisfy the stage alone.
+outside this critical path. The explicit root rebind, one-source member move,
+and missing-member reconciliation remain component-level support for issues #110, #134,
+and #135; lifecycle readiness under #136 does not satisfy the stage alone.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -256,10 +257,10 @@ decision.
 
 - CKB selection and retrieval integration, normalized facts, index lifecycle,
   source repair, deletion, backup/export/restore, and adapter controls.
-- Complete directory reconciliation, automatic move inference, lifecycle
-  readiness under #135/#136, background refresh, time-based freshness, and
-  automatic retirement or deletion. Explicit bounded root rebind and one-source
-  member move do not change this boundary.
+- Automatic move inference, lifecycle readiness under #136, reconciliation of
+  unknown entries, background refresh, time-based freshness, and automatic
+  retirement or deletion. Explicit bounded root rebind, one-source member move,
+  and selected missing-member reconciliation do not change this boundary.
 - Remote embeddings or a vector database before the local lexical baseline
   proves value and receives a separate architecture/privacy decision.
 - Cloud sync, accounts, multi-tenancy, uncontrolled web research, job
@@ -299,6 +300,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-23 | Added complete explicit missing-member reconciliation for #135 without advancing the v0.7 stage beyond component implementation.                                                                                          | One bounded scan partitions every member and unmatched file path-free; explicit retirement selections run in lexical source-ID order with guarded atomic markers and an explicit partial result after a later failure. Physical deletion, automatic decisions, adapters, indexing, and #136 remain deferred. |
 | 2026-08-23 | Completed the bounded #110/#134 directory-member component slices, including append-only member revisions, guarded root rebind, and the explicit one-source member move.                                                   | Root rebind and one-source move are implemented at component/application-contract level. The move is one-scan, exact-integrity, selected-source only, path-free, and returns `moved`/`current`; automatic inference and complete reconciliation under #135/#136 remain deferred. |
 | 2026-08-22 | Split the oversized application-grade milestone into v0.7 evidence-backed drafting, v0.8 independent review/readiness, and v0.9 workflow parity/release; decomposed #78 into #110–#113 and moved hybrid retrieval to #114. | The current stage has one coherent drafting outcome; optional research (#79) and vector/hybrid optimization (#114) are outside its critical path.                                                                                                                                |
 | 2026-08-15 | Reset stage claims to Designed/Implemented/Integrated/Validated/Released evidence levels and published v0.6.0 as a non-validated alpha after the representative quality failure.                                           | Integration, packaging, and synthetic evidence remain useful, but application readiness must be demonstrated again in v0.7.                                                                                                                                                      |
