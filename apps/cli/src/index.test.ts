@@ -6,6 +6,7 @@ import { createCli } from "./index.js";
 import type {
   ApplicationIo,
   ApplicationService,
+  ApplyKnowledgeSourceDirectoryRootRebindResult,
   CandidateKnowledgeSourceManifest,
   CandidateKnowledgeSourceWriteResult,
   CandidateKnowledgeStoreService,
@@ -21,6 +22,7 @@ import type {
   KnowledgeSourceOriginStatusResult,
   KnowledgeSourceRefreshStateResult,
   KnowledgeSourceRetirementResult,
+  PreviewKnowledgeSourceDirectoryRootRebindResult,
   StatusCommand,
   WorkspaceDescriptor,
 } from "./workflow.js";
@@ -323,6 +325,23 @@ function knowledgeSourceDirectoryImportResult(
     discoveredFileCount: sources.length,
     skippedEntryCount: 1,
   } as ImportKnowledgeSourceDirectoryResult;
+}
+
+function knowledgeSourceDirectoryRootRebindResult(
+  status: "current" | "ready" | "rebound" = "ready",
+  directoryId = "directory-opaque",
+): PreviewKnowledgeSourceDirectoryRootRebindResult | ApplyKnowledgeSourceDirectoryRootRebindResult {
+  return {
+    directoryId,
+    checkedAt: "2026-08-23T10:05:00.000Z",
+    status,
+    memberCount: 2,
+    scannedEntryCount: 4,
+    discoveredFileCount: 2,
+    skippedEntryCount: 1,
+  } as
+    | PreviewKnowledgeSourceDirectoryRootRebindResult
+    | ApplyKnowledgeSourceDirectoryRootRebindResult;
 }
 
 function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
@@ -1106,6 +1125,255 @@ describe("candidate knowledge source inspection CLI controls", () => {
         resolve("private-source-directory"),
       ]),
     ).rejects.toBe(failure);
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("maps preview and apply directory-root rebind controls without exposing paths", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-directory-store");
+    const knowledgeBaseId = "base-one";
+    const directoryId = "directory-opaque";
+    const oldDirectoryPath = resolve("private-old-directory");
+    const newDirectoryPath = resolve("private-new-directory");
+    const previewKnowledgeSourceDirectoryRootRebind = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...knowledgeSourceDirectoryRootRebindResult("current"),
+        oldRootPath: oldDirectoryPath,
+        candidateRootPath: newDirectoryPath,
+        relativePathHash: "a".repeat(64),
+        content: "private directory content",
+      } as unknown as PreviewKnowledgeSourceDirectoryRootRebindResult)
+      .mockResolvedValueOnce(knowledgeSourceDirectoryRootRebindResult("ready"));
+    const applyKnowledgeSourceDirectoryRootRebind = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceDirectoryRootRebindResult("current"))
+      .mockResolvedValueOnce(knowledgeSourceDirectoryRootRebindResult("rebound"));
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryRootRebind,
+      applyKnowledgeSourceDirectoryRootRebind,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-rebind-preview",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      oldDirectoryPath,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-rebind-preview",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      newDirectoryPath,
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-rebind-apply",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      oldDirectoryPath,
+      "--confirm",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-rebind-apply",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      newDirectoryPath,
+      "--confirm",
+    ]);
+
+    expect(previewKnowledgeSourceDirectoryRootRebind).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      directoryPath: oldDirectoryPath,
+    });
+    expect(previewKnowledgeSourceDirectoryRootRebind).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      directoryPath: newDirectoryPath,
+    });
+    expect(applyKnowledgeSourceDirectoryRootRebind).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      directoryPath: oldDirectoryPath,
+    });
+    expect(applyKnowledgeSourceDirectoryRootRebind).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      directoryPath: newDirectoryPath,
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:05:00.000Z",
+        status: "current",
+        memberCount: 2,
+        scannedEntryCount: 4,
+        discoveredFileCount: 2,
+        skippedEntryCount: 1,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:05:00.000Z",
+        status: "ready",
+        memberCount: 2,
+        scannedEntryCount: 4,
+        discoveredFileCount: 2,
+        skippedEntryCount: 1,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:05:00.000Z",
+        status: "current",
+        memberCount: 2,
+        scannedEntryCount: 4,
+        discoveredFileCount: 2,
+        skippedEntryCount: 1,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:05:00.000Z",
+        status: "rebound",
+        memberCount: 2,
+        scannedEntryCount: 4,
+        discoveredFileCount: 2,
+        skippedEntryCount: 1,
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(oldDirectoryPath);
+    expect(output).not.toContain(newDirectoryPath);
+    expect(output).not.toContain("a".repeat(64));
+    expect(output).not.toContain("private directory content");
+  });
+
+  it("requires explicit confirmation before applying a directory-root rebind", async () => {
+    const dependencies = harness();
+    const applyKnowledgeSourceDirectoryRootRebind = vi.fn(async () =>
+      knowledgeSourceDirectoryRootRebindResult("rebound"),
+    );
+    const knowledgeService = {
+      applyKnowledgeSourceDirectoryRootRebind,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "directory-rebind-apply",
+        resolve("private-directory-store"),
+        "base-one",
+        "directory-opaque",
+        resolve("private-new-directory"),
+      ]),
+    ).rejects.toThrow("knowledge source directory-rebind-apply requires --confirm");
+    expect(applyKnowledgeSourceDirectoryRootRebind).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("rejects wrong-phase and malformed directory-root rebind results", async () => {
+    const dependencies = harness();
+    const valid = knowledgeSourceDirectoryRootRebindResult("ready");
+    const previewResults = [
+      { ...valid, status: "rebound" },
+      { ...valid, directoryId: "other-directory" },
+      { ...valid, checkedAt: "not-a-timestamp" },
+      { ...valid, memberCount: 1 },
+      { ...valid, scannedEntryCount: 2, discoveredFileCount: 2, skippedEntryCount: 1 },
+    ];
+    const applyResults = [{ ...valid, status: "ready" }];
+    const previewKnowledgeSourceDirectoryRootRebind = vi.fn();
+    for (const result of previewResults) {
+      previewKnowledgeSourceDirectoryRootRebind.mockResolvedValueOnce(
+        result as unknown as PreviewKnowledgeSourceDirectoryRootRebindResult,
+      );
+    }
+    const applyKnowledgeSourceDirectoryRootRebind = vi.fn();
+    for (const result of applyResults) {
+      applyKnowledgeSourceDirectoryRootRebind.mockResolvedValueOnce(
+        result as unknown as ApplyKnowledgeSourceDirectoryRootRebindResult,
+      );
+    }
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryRootRebind,
+      applyKnowledgeSourceDirectoryRootRebind,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const previewCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-rebind-preview",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      resolve("private-new-directory"),
+    ] as const;
+    const applyCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-rebind-apply",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      resolve("private-new-directory"),
+      "--confirm",
+    ] as const;
+
+    for (let index = 0; index < previewResults.length; index += 1) {
+      await expect(cli.parseAsync(previewCommand)).rejects.toThrow(
+        "The candidate knowledge source directory root rebind result was invalid.",
+      );
+    }
+    await expect(cli.parseAsync(applyCommand)).rejects.toThrow(
+      "The candidate knowledge source directory root rebind result was invalid.",
+    );
     expect(dependencies.lines).toEqual([]);
   });
 

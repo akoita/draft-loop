@@ -54,6 +54,7 @@ import {
   type FileSelectResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeDirectoryImportSourceResult,
+  type KnowledgeDirectoryRootRebindResult,
   type KnowledgeDuplicatesResult,
   type KnowledgeFileImportResult,
   type KnowledgeFileVersionAppendResult,
@@ -105,6 +106,15 @@ const maximumKnowledgeInspectionEntries = 256;
 const sourceProvenanceFilename = "source-provenance.json";
 const providerTransmissionAcknowledgementFilename = "provider-transmission-acknowledgement.json";
 const maxImportedFileBytes = 20 * 1024 * 1024;
+
+function isValidTimestamp(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 64 &&
+    Number.isFinite(Date.parse(value))
+  );
+}
 
 const transmissionScope = [
   "job description and requirements",
@@ -2281,6 +2291,128 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             sourceCount: sources.length,
             sources: projectedSources,
             sourcesTruncated: sources.length > projectedSources.length,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-rebind-preview": {
+          const chooseKnowledgeSourceDirectory = options.dialogs.chooseKnowledgeSourceDirectory;
+          if (chooseKnowledgeSourceDirectory === undefined) {
+            return fail(
+              "capability-unavailable",
+              "Candidate knowledge directory root rebind preview is unavailable in this host.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const directoryPath = await chooseKnowledgeSourceDirectory();
+          if (directoryPath === undefined) {
+            return fail(
+              "permission-denied",
+              "Candidate knowledge directory root rebind preview was cancelled.",
+            );
+          }
+          const preview = await knowledgeService.previewKnowledgeSourceDirectoryRootRebind({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+            directoryPath: resolve(directoryPath),
+          });
+          if (
+            preview.directoryId !== command.input.directoryId ||
+            (preview.status !== "current" && preview.status !== "ready") ||
+            !isValidTimestamp(preview.checkedAt) ||
+            !Number.isSafeInteger(preview.memberCount) ||
+            preview.memberCount < 0 ||
+            preview.memberCount !== preview.discoveredFileCount ||
+            !Number.isSafeInteger(preview.scannedEntryCount) ||
+            preview.scannedEntryCount < 0 ||
+            !Number.isSafeInteger(preview.discoveredFileCount) ||
+            preview.discoveredFileCount < 0 ||
+            !Number.isSafeInteger(preview.skippedEntryCount) ||
+            preview.skippedEntryCount < 0 ||
+            preview.discoveredFileCount + preview.skippedEntryCount > preview.scannedEntryCount
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory root rebind preview returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeDirectoryRootRebindResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: preview.directoryId,
+            checkedAt: preview.checkedAt,
+            status: preview.status,
+            memberCount: preview.memberCount,
+            scannedEntryCount: preview.scannedEntryCount,
+            discoveredFileCount: preview.discoveredFileCount,
+            skippedEntryCount: preview.skippedEntryCount,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-rebind-apply": {
+          if (!command.input.confirmed) {
+            return fail(
+              "permission-denied",
+              "Candidate knowledge directory root rebind requires confirmation.",
+            );
+          }
+          const chooseKnowledgeSourceDirectory = options.dialogs.chooseKnowledgeSourceDirectory;
+          if (chooseKnowledgeSourceDirectory === undefined) {
+            return fail(
+              "capability-unavailable",
+              "Candidate knowledge directory root rebind is unavailable in this host.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const directoryPath = await chooseKnowledgeSourceDirectory();
+          if (directoryPath === undefined) {
+            return fail(
+              "permission-denied",
+              "Candidate knowledge directory root rebind was cancelled.",
+            );
+          }
+          const applied = await knowledgeService.applyKnowledgeSourceDirectoryRootRebind({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+            directoryPath: resolve(directoryPath),
+          });
+          if (
+            applied.directoryId !== command.input.directoryId ||
+            (applied.status !== "current" && applied.status !== "rebound") ||
+            !isValidTimestamp(applied.checkedAt) ||
+            !Number.isSafeInteger(applied.memberCount) ||
+            applied.memberCount < 0 ||
+            applied.memberCount !== applied.discoveredFileCount ||
+            !Number.isSafeInteger(applied.scannedEntryCount) ||
+            applied.scannedEntryCount < 0 ||
+            !Number.isSafeInteger(applied.discoveredFileCount) ||
+            applied.discoveredFileCount < 0 ||
+            !Number.isSafeInteger(applied.skippedEntryCount) ||
+            applied.skippedEntryCount < 0 ||
+            applied.discoveredFileCount + applied.skippedEntryCount > applied.scannedEntryCount
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory root rebind returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeDirectoryRootRebindResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: applied.directoryId,
+            checkedAt: applied.checkedAt,
+            status: applied.status,
+            memberCount: applied.memberCount,
+            scannedEntryCount: applied.scannedEntryCount,
+            discoveredFileCount: applied.discoveredFileCount,
+            skippedEntryCount: applied.skippedEntryCount,
           };
           return { ok: true, value: result };
         }

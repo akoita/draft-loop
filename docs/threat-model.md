@@ -72,6 +72,12 @@ Path-free retirement inspection and explicitly confirmed retirement expose
 only logical state and time. Retirement is idempotent and preserves evidence;
 it is neither physical deletion nor reversible through a current adapter.
 
+Directory-root rebind has distinct preview and confirmed apply controls. Both
+keep the candidate root in runtime CLI input or the native host and expose only
+opaque identity, status, time, and counts. Apply does not trust preview state:
+it repeats the bounded exact-membership scan, then storage atomically guards
+the root revision and every member origin against races.
+
 Lifecycle actions are explicit and bounded. A root rebind performs one complete
 bounded scan, stable per-member verification, and a guarded all-member origin
 commit or same-root no-op. The implemented one-source member-move command

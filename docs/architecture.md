@@ -246,8 +246,9 @@ privacy invariants are canonical in [ADR 0007][adr-0007].
 The explicit move command accepts no target path. It forwards a runtime-only
 match through the verified member handle and does not change source identity,
 version, observation, retirement, blob, journal, or baseline membership
-evidence. Root rebind and member move are implemented component/application
-contracts; they do not infer renames or reconcile all removals.
+evidence. Root rebind is also exposed through shared adapters; member move
+remains at the component/application-contract boundary. Neither infers renames
+or reconciles all removals.
 
 Automatic move inference, physical deletion, directory reconciliation adapters,
 indexing, and background refresh remain deferred under their owning roadmap
@@ -423,6 +424,12 @@ only opaque identity, `current` or `rebound`, and the binding timestamp.
 Path-free retirement inspection reports `active` or `retired`. Logical
 retirement requires explicit confirmation, is idempotent, preserves managed
 evidence, and has no reactivation operation.
+Directory-root rebind uses separate shared preview and apply contracts. CLI
+paths are runtime-only and desktop selections remain in the native host.
+Preview performs no write; confirmed apply repeats the bounded exact-membership
+scan and atomically advances the root revision plus every member origin, or
+fails on drift. Results contain only opaque directory identity, status,
+timestamp, and counts.
 Live provider execution is opt-in and the provider boundary enforces the
 request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain

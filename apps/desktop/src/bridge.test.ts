@@ -1371,6 +1371,92 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: true, value: { status: "partial", sourceCount: 1 } });
   });
 
+  it("validates guarded path-free directory-root rebind controls", async () => {
+    const previewInput = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      directoryId: "directory-1",
+      selection: "native-dialog",
+    } as const;
+    const applyInput = { ...previewInput, confirmed: true } as const;
+    expect(
+      validateBridgeCommand({ type: "knowledge.directory-rebind-preview", input: previewInput }),
+    ).toEqual({ type: "knowledge.directory-rebind-preview", input: previewInput });
+    expect(
+      validateBridgeCommand({ type: "knowledge.directory-rebind-apply", input: applyInput }),
+    ).toEqual({ type: "knowledge.directory-rebind-apply", input: applyInput });
+    for (const invalid of [
+      { ...previewInput, directoryPath: "/private/moved-career" },
+      { ...previewInput, selection: "path" },
+      { ...previewInput, directoryId: " " },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.directory-rebind-preview", input: invalid }),
+      ).toThrow("invalid");
+    }
+
+    const checkedAt = "2026-08-24T10:00:00.000Z";
+    const previewValue = {
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      directoryId: "directory-1",
+      checkedAt,
+      status: "ready",
+      memberCount: 2,
+      scannedEntryCount: 3,
+      discoveredFileCount: 2,
+      skippedEntryCount: 1,
+    } as const;
+    const previewPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: previewValue }),
+        ["knowledge.directory-rebind-preview"],
+      ),
+    );
+    await expect(
+      previewPort.execute({ type: "knowledge.directory-rebind-preview", input: previewInput }),
+    ).resolves.toEqual({ ok: true, value: previewValue });
+
+    const applyValue = { ...previewValue, status: "rebound" as const };
+    const applyPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: applyValue }), ["knowledge.directory-rebind-apply"]),
+    );
+    await expect(
+      applyPort.execute({ type: "knowledge.directory-rebind-apply", input: applyInput }),
+    ).resolves.toEqual({ ok: true, value: applyValue });
+
+    for (const { capability, value } of [
+      {
+        capability: "knowledge.directory-rebind-preview" as const,
+        value: { ...previewValue, status: "rebound" },
+      },
+      {
+        capability: "knowledge.directory-rebind-apply" as const,
+        value: { ...applyValue, status: "ready" },
+      },
+      {
+        capability: "knowledge.directory-rebind-preview" as const,
+        value: { ...previewValue, discoveredFileCount: 1 },
+      },
+      {
+        capability: "knowledge.directory-rebind-preview" as const,
+        value: { ...previewValue, directoryPath: "/private/moved-career" },
+      },
+    ]) {
+      const invalidPort = createCapabilityPort(
+        bridge(async () => ({ ok: true, value }), [capability]),
+      );
+      const command =
+        capability === "knowledge.directory-rebind-apply"
+          ? { type: capability, input: applyInput }
+          : { type: capability, input: previewInput };
+      await expect(invalidPort.execute(command)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+  });
+
   it("validates path-free candidate-knowledge file-version append", async () => {
     const input = {
       storeId: "store-1",

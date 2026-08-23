@@ -133,6 +133,10 @@ pnpm --filter @draft-loop/cli start knowledge source retirement-state \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID
 pnpm --filter @draft-loop/cli start knowledge source retire \
   ./candidate-knowledge KNOWLEDGE_BASE_ID SOURCE_ID --confirm
+pnpm --filter @draft-loop/cli start knowledge source directory-rebind-preview \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID ./relocated-career-material
+pnpm --filter @draft-loop/cli start knowledge source directory-rebind-apply \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID ./relocated-career-material --confirm
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -164,7 +168,10 @@ and opaque source/version identities; roots, filenames, labels, hashes, and
 content remain local. Exact-byte file-origin rebind uses runtime-only CLI input
 or the native desktop picker and returns only status plus the binding timestamp.
 Logical source retirement is idempotent, preserves evidence, and requires
-explicit confirmation; there is no reactivation control. Directory lifecycle,
+explicit confirmation; there is no reactivation control. Directory-root
+rebind uses separate bounded preview and confirmed apply commands. Apply
+rescans the selected root and atomically updates member origins only when every
+historical member still matches exactly. Directory refresh/reconciliation,
 deletion, backup, and restore remain staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
