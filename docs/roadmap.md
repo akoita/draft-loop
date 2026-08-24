@@ -78,9 +78,9 @@ The product status is easiest to read by outcome:
 | Integrated author–critic workspace | Integrated foundation                 | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
 | Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
 | Workspace retrieval and policy     | Partial integration                   | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. The initial workspace writing-policy slice is integrated behind explicit local selection. Neither establishes reusable CKB selection or application-grade drafting.                                                                                                                                                                                              |
-| Portable CKB                       | [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md); v0.7 incomplete/unvalidated | The separate local store has logical identity, source/version provenance, managed bytes, local-only origins, URL provenance, retirement markers, recoverable owned-write records, explicit six-class retention planning, and a destination-approved portable backup package with pre-restore integrity inspection. Shared CLI/desktop application contracts keep sensitive origins private.                                                     |
+| Portable CKB                       | Sprint 2 checkpoint candidate; v0.7 incomplete/unvalidated | The separate local store has coordinated writers, recoverable owned writes, explicit six-class retention planning, and portable backup/restore with integrity and collision checks. Shared CLI/desktop application contracts keep sensitive origins private. Confirmed deletion remains an unmilestoned backlog outcome. |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
-| Product CKB workflow               | Integrated control foundation         | Shared CLI/desktop controls create, open, select, rename, archive, and export/inspect CKB stores without projecting roots through the renderer; archive and backup destinations have explicit confirmation boundaries. Read-only adapters expose bounded path-free lifecycle and inventory state. File/URL/directory maintenance covers refresh, rebind, member add/move/reconciliation, and logical retirement while sensitive origins stay local. Workspace bindings pin store/CKB identities and selected versions. Retrieval, reactivation, restore, deletion, and provider use remain outside the product path. |
+| Product CKB workflow               | Integrated storage-safety checkpoint candidate | Shared CLI/desktop controls create, open, select, rename, archive, export, inspect, and restore CKB stores without projecting roots through the renderer. File/URL/directory maintenance and workspace bindings remain path-safe. Retrieval, reactivation, confirmed deletion, and provider use remain outside the product path. |
 
 The CKB foundation is therefore a [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md),
 not a v0.7 stage exit. The v0.7 stage remains incomplete and unvalidated. See [the
@@ -140,7 +140,7 @@ contact employers, or submit applications.
 | Horizon  | Stage                                                                                                             | Evidence status                                      | Outcome                                                                               | Remaining gate                                                                                                          |
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
-| Now      | Evidence-backed CV drafting (v0.7 program; [completed Sprint 1](https://github.com/akoita/draft-loop/milestone/2)) | [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md); Sprint 2 active; v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | #161–#164 deliver coordination, recovery, retention, and backup export; restore, deletion, reviewed profile and opportunity, lexical RAG, plan, complete CV, and policy checks remain |
+| Now      | Evidence-backed CV drafting (v0.7 program) | Sprint 2 checkpoint candidate; v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | Confirmed deletion, reviewed profile and opportunity, lexical RAG, planning, complete CV, and policy checks remain |
 | Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Designed; foundation components partially integrated | Turn the factual draft into a reviewed, revised, human-approvable artifact            | Structured critique, adjudication, calibrated readiness gates, and professional rendering                               |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
@@ -170,15 +170,15 @@ larger outcome issues remain open as roadmap epics:
 
 - Sprint 1 is complete: the single legacy selection-migration slice #160 closed
   [Sprint 1](https://github.com/akoita/draft-loop/milestone/2).
-- Sprint 2 is active. Store-wide writer leases in #161 prevent current CKB
+- Sprint 2 is complete. Store-wide writer leases in #161 prevent current CKB
   commands from interleaving, and #162 deterministically reconciles interrupted
   owned writes after lease takeover without claiming legacy or unknown data.
   #163 defines six-class retention, expiry eligibility, and preservation
   overrides without deleting data. #164 exports strict integrity-checkable
   packages without machine-local state, and #165 restores them into approved
-  new directories without overwriting identities. Deletion follows through #166 in
-  [Sprint 2](https://github.com/akoita/draft-loop/milestone/5), with #113
-  retaining the aggregate outcome.
+  new directories without overwriting identities. The completed
+  [Sprint 2](https://github.com/akoita/draft-loop/milestone/5) deliberately
+  defers confirmed deletion #166; #113 retains the aggregate storage outcome.
 - Derive a candidate-reviewed canonical profile (#66), assemble a reviewed
   opportunity brief (#67), and use the CKB-scoped SQLite FTS/BM25 baseline
   (#80).
@@ -192,11 +192,12 @@ binding slices under #111, and the shared path-safe CLI/desktop controls rolled
 up by #112 are implemented. Sprint 1 is complete, #160 is closed, and the CKB
 foundation is a [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md).
 
-Sprint 2 is active with issues #161–#162's writer-coordination and
-interrupted-write-recovery slices. The broad profile, opportunity, retrieval,
-planning, artifact, and writing-policy epics (#66–#70 and #80) stay outside a
-sprint milestone until each next bounded batch is planned. They still define
-the v0.7 stage exit and are not treated as completed work.
+Sprint 2 is complete with writer coordination, interrupted-write recovery,
+retention, backup export, and collision-safe restore. Its five feature PRs
+added 10,365 lines across 71 file-changes, so #166 was removed instead of
+extending an already oversized sprint. Future sprint admission requires
+measured, independently closable units; broad epics #66–#70, #80, #113, and
+issue #166 remain outside milestones until that sizing work is complete.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -324,6 +325,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-25 | Ended Sprint 2 after #161–#165 and returned confirmed deletion #166 to the unmilestoned backlog following a capacity audit. | Five storage feature PRs added 10,365 lines across 71 file-changes. Future sprint work must be admitted from measured, independently closable units rather than broad feature narratives. |
 | 2026-08-25 | Bounded portable CKB restore to new destinations with an explicit fail-if-existing collision policy. | Restore re-inspects and migrates a package transactionally, preserves logical IDs and safe provenance, publishes only a validated store, and deliberately recreates no machine origin or active ownership; merge and rename modes remain out of scope. |
 | 2026-08-24 | Defined portable CKB backup as a strict directory package with a logical manifest and checksum-addressed managed objects. | Export requires destination approval, complete ownership evidence, self-inspection, and no-replace manifest-last publication; machine-local origins, locks, journals, credentials, and workspace data stay out, while #165 owns restore. |
 | 2026-08-24 | Defined append-only CKB retention policy and deterministic effective-revision planning across six explicit data classes. | Legacy data remains retained by default; holds override expiry, only proven managed raw versions can become eligible, and #166 retains the separate confirmation and physical-deletion boundary. |
