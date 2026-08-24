@@ -53,6 +53,7 @@ import {
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
+  type KnowledgeDirectoryAddMembersResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeDirectoryImportSourceResult,
   type KnowledgeDirectoryMemberMoveResult,
@@ -2507,6 +2508,63 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ...(failedSourceId === undefined || failedStatus === undefined
               ? {}
               : { failedSourceId, failedStatus }),
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-add-members": {
+          if (!command.input.confirmed) {
+            return fail(
+              "permission-denied",
+              "Adding candidate knowledge directory members requires confirmation.",
+            );
+          }
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const added = await knowledgeService.addKnowledgeSourceDirectoryMembers({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+          });
+          const preview = projectKnowledgeDirectoryRefresh(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+            command.input.directoryId,
+            added,
+          );
+          const addedSourceIds = [...added.addedSourceIds].sort((left, right) =>
+            left.localeCompare(right),
+          );
+          const addedSourceCount = added.addedSourceCount;
+          const fullMemberIds = new Set(added.members.map((member) => member.sourceId));
+          if (
+            (added.status !== "complete" && added.status !== "partial") ||
+            !addedSourceIds.every(
+              (sourceId) =>
+                typeof sourceId === "string" && sourceId.trim() !== "" && sourceId.length <= 128,
+            ) ||
+            new Set(addedSourceIds).size !== addedSourceIds.length ||
+            !Number.isSafeInteger(addedSourceCount) ||
+            addedSourceCount < 0 ||
+            addedSourceCount !== addedSourceIds.length ||
+            addedSourceCount > preview.newSourceCount ||
+            addedSourceIds.some((sourceId) => fullMemberIds.has(sourceId)) ||
+            (added.status === "complete" && addedSourceCount !== preview.newSourceCount) ||
+            (added.status === "partial" && addedSourceCount >= preview.newSourceCount)
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory member addition returned inconsistent state.",
+            );
+          }
+          const projectedSourceIds = addedSourceIds.slice(0, maximumKnowledgeInspectionEntries);
+          const result: KnowledgeDirectoryAddMembersResult = {
+            ...preview,
+            status: added.status,
+            addedSourceIds: projectedSourceIds,
+            addedSourceCount,
+            addedSourceIdsTruncated: projectedSourceIds.length < addedSourceCount,
           };
           return { ok: true, value: result };
         }
