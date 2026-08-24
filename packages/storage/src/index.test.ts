@@ -447,6 +447,7 @@ describe("SQLite storage", () => {
     const filename = join(directory, "workspace.sqlite");
     const initial = openSqliteStorage(filename);
     await initial.saveWorkspace(workspace);
+    const legacyContext = await initial.saveContextSnapshot(contextSnapshot({ job: "fixture" }));
     await initial.close();
 
     removeMigrationTwo(filename);
@@ -455,6 +456,9 @@ describe("SQLite storage", () => {
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
+    const migratedContext = await upgraded.getContextSnapshot(legacyContext.id);
+    expect(migratedContext).toEqual(legacyContext);
+    expect(migratedContext?.payload).not.toHaveProperty("candidateKnowledgeSelection");
     upgraded.migrate();
     expect(upgraded.appliedMigrationVersions()).toEqual([
       1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,

@@ -1622,6 +1622,16 @@ describe("workspace candidate knowledge selection binding", () => {
     ]);
 
     try {
+      const initializedStore = await openCandidateKnowledgeStore(storeRoot);
+      const defaultKnowledgeBase = (await initializedStore.listCandidateKnowledgeBases()).find(
+        (knowledgeBase) => knowledgeBase.isDefault,
+      );
+      const storeId = initializedStore.descriptor.id;
+      await initializedStore.close();
+      if (defaultKnowledgeBase === undefined) {
+        throw new Error("The initialized candidate knowledge store has no default CKB.");
+      }
+
       await driver.initialize(
         { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
         silent,
@@ -1631,15 +1641,17 @@ describe("workspace candidate knowledge selection binding", () => {
         await recordedCandidateKnowledgeSelection(root, begun.contextSnapshotId),
       ).toBeUndefined();
       await driver.lifecycle({ root, action: "pause", runId: begun.runId }, silent);
-      await driver.configureKnowledgeSelection(
+
+      const restartedDriver = createLocalApplicationDriver();
+      await restartedDriver.configureKnowledgeSelection(
         {
           root,
-          entries: [{ storeRoot, storeId: "legacy-store", knowledgeBaseId: "legacy-ckb" }],
+          entries: [{ storeRoot, storeId, knowledgeBaseId: defaultKnowledgeBase.id }],
         },
         silent,
       );
 
-      const resumed = await driver.resume(
+      const resumed = await restartedDriver.resume(
         { root, runId: begun.runId, allowProviderData: false },
         silent,
       );
@@ -1647,6 +1659,33 @@ describe("workspace candidate knowledge selection binding", () => {
       expect(
         await recordedCandidateKnowledgeSelection(root, resumed.contextSnapshotId),
       ).toBeUndefined();
+
+      const selected = await restartedDriver.begin({ root, allowProviderData: false }, silent);
+      const selectedSelection = await recordedCandidateKnowledgeSelection(
+        root,
+        selected.contextSnapshotId,
+      );
+      expect(selectedSelection).toMatchObject({
+        schemaVersion: 1,
+        entries: [
+          {
+            storeId: "legacy-store",
+            knowledgeBaseId: "legacy-ckb",
+            sources: [{ sourceId: "legacy-source", versionId: "legacy-version" }],
+          },
+        ],
+      });
+
+      const restartedAgain = createLocalApplicationDriver();
+      expect(await restartedAgain.readWorkspace(root)).toMatchObject({
+        candidateKnowledgeSelection: [{ storeId: "legacy-store", knowledgeBaseId: "legacy-ckb" }],
+      });
+      expect(
+        await recordedCandidateKnowledgeSelection(root, begun.contextSnapshotId),
+      ).toBeUndefined();
+      await expect(
+        recordedCandidateKnowledgeSelection(root, selected.contextSnapshotId),
+      ).resolves.toEqual(selectedSelection);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
