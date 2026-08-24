@@ -45,6 +45,11 @@ import {
   type CandidateKnowledgeSourceVersionInput,
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
+  type ManagedCandidateKnowledgeWriteJournalPhase,
+  type ManagedCandidateKnowledgeWriteOperationRecord,
+  type ManagedCandidateKnowledgeWriteRecoveryReport,
+  managedCandidateKnowledgeWriteOwnerKind,
+  managedCandidateKnowledgeWriteOwnerSchemaVersion,
   openSqliteStorage,
   type SqliteStorage,
   StorageConflictError,
@@ -53,6 +58,7 @@ import {
 } from "./index.js";
 import {
   type StorageWriterLease,
+  StorageWriterLeaseError,
   type StorageWriterLeaseOptions,
   withStorageWriterLease,
 } from "./writer-lease.js";
@@ -69,6 +75,16 @@ const descriptorKeyPrefix = "candidateKnowledgeStore";
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
+
+export type ManagedCandidateKnowledgeWriteInterruptionBoundary =
+  | "intent"
+  | "staging"
+  | "target-intent"
+  | "target-publication"
+  | "published-event"
+  | "commit"
+  | "staging-cleanup"
+  | "after-staging-cleanup";
 
 export interface ManagedCandidateKnowledgeFileInventory {
   readonly schemaVersion: 1;
@@ -117,12 +133,16 @@ export interface ManagedCandidateKnowledgeFileVersionInput
   readonly beforeSourceRecheck?: () => Promise<void>;
   /** @internal Test seam for simulating a failure after file publication but before SQLite. */
   readonly beforeDatabaseWrite?: () => Promise<void>;
+  /** @internal Test seam after lease renewal and before an owned SQLite transition. */
+  readonly afterLeaseRenewBeforeDatabaseWrite?: () => Promise<void>;
   /** @internal Test seam after the no-replace link and before its published event. */
   readonly afterTargetPublication?: () => Promise<void>;
   /** @internal Test seam for simulating a failure after the atomic SQLite commit. */
   readonly beforeCommittedFileRecheck?: () => Promise<void>;
   /** @internal Test seam for simulating a staging cleanup failure after commit. */
   readonly beforeStagingCleanup?: () => Promise<void>;
+  /** @internal Restart-recovery seam; bypasses in-process rollback at this boundary. */
+  readonly interruptAt?: ManagedCandidateKnowledgeWriteInterruptionBoundary;
 }
 
 export interface ManagedCandidateKnowledgeUrlVersionInput
@@ -134,12 +154,16 @@ export interface ManagedCandidateKnowledgeUrlVersionInput
   readonly expectedCurrentVersionId?: string;
   /** @internal Test seam for simulating a failure after file publication but before SQLite. */
   readonly beforeDatabaseWrite?: () => Promise<void>;
+  /** @internal Test seam after lease renewal and before an owned SQLite transition. */
+  readonly afterLeaseRenewBeforeDatabaseWrite?: () => Promise<void>;
   /** @internal Test seam after the no-replace link and before its published event. */
   readonly afterTargetPublication?: () => Promise<void>;
   /** @internal Test seam for simulating an integrity recheck failure after SQLite. */
   readonly beforeCommittedFileRecheck?: () => Promise<void>;
   /** @internal Test seam for simulating a staging cleanup failure after commit. */
   readonly beforeStagingCleanup?: () => Promise<void>;
+  /** @internal Restart-recovery seam; bypasses in-process rollback at this boundary. */
+  readonly interruptAt?: ManagedCandidateKnowledgeWriteInterruptionBoundary;
 }
 
 export interface RebindManagedCandidateKnowledgeFileInput {
@@ -219,6 +243,8 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
   readonly descriptor: CandidateKnowledgeStoreDescriptor;
   /** Canonical physical root. It is runtime state and is never persisted in the manifest. */
   readonly root: string;
+  /** Safe summary of any managed writes reconciled while opening the store. */
+  readonly recoveryReport: ManagedCandidateKnowledgeWriteRecoveryReport;
   /** Hold one store-wide writer lease across a complete multi-step operation. */
   readonly withWriterLease: <T>(
     operation: string,
@@ -354,6 +380,33 @@ interface CandidateKnowledgeWriterContext {
 }
 
 const candidateKnowledgeWriterContext = new AsyncLocalStorage<CandidateKnowledgeWriterContext>();
+
+class SimulatedManagedWriteInterruption extends Error {
+  public constructor(boundary: ManagedCandidateKnowledgeWriteInterruptionBoundary) {
+    super(`Simulated managed candidate knowledge write interruption at ${boundary}.`);
+    this.name = "SimulatedManagedWriteInterruption";
+  }
+}
+
+async function interruptManagedWriteAt(
+  input: {
+    readonly interruptAt?: ManagedCandidateKnowledgeWriteInterruptionBoundary;
+  },
+  boundary: ManagedCandidateKnowledgeWriteInterruptionBoundary,
+): Promise<void> {
+  if (input.interruptAt === boundary) {
+    throw new SimulatedManagedWriteInterruption(boundary);
+  }
+}
+
+function currentCandidateKnowledgeWriterLease(root: string): StorageWriterLease {
+  const context = candidateKnowledgeWriterContext.getStore();
+  if (context === undefined || context.root !== root) {
+    throw new StorageConflictError("Candidate knowledge store writer lease is not held.");
+  }
+  context.lease.assertCurrent();
+  return context.lease;
+}
 
 export async function withCandidateKnowledgeStoreWriterLease<T>(
   rootInput: string,
@@ -1016,6 +1069,289 @@ async function validateManagedCandidateKnowledgeFiles(
   );
 }
 
+type ManagedWriteRecoveryArtifact =
+  | { readonly status: "missing" }
+  | { readonly status: "preserved" }
+  | { readonly status: "verified"; readonly identity: FileIdentity };
+
+function isManagedWriteJournalPhase(
+  value: string,
+): value is ManagedCandidateKnowledgeWriteJournalPhase {
+  return (
+    value === "prepared" ||
+    value === "targeted" ||
+    value === "published" ||
+    value === "committed" ||
+    value === "completed" ||
+    value === "aborted" ||
+    value === "noop"
+  );
+}
+
+async function inspectManagedWriteRecoveryArtifact(
+  path: string,
+  integrity: Pick<CandidateKnowledgeSourceVersionRecord, "checksum" | "sizeBytes">,
+): Promise<ManagedWriteRecoveryArtifact> {
+  let details: Awaited<ReturnType<typeof lstat>>;
+  try {
+    details = await lstat(path);
+  } catch (error) {
+    return isMissing(error) ? { status: "missing" } : { status: "preserved" };
+  }
+  if (details.isSymbolicLink() || !details.isFile()) {
+    return { status: "preserved" };
+  }
+  try {
+    await verifyManagedFile(path, integrity);
+    const after = await lstat(path);
+    if (
+      after.isSymbolicLink() ||
+      !after.isFile() ||
+      after.dev !== details.dev ||
+      after.ino !== details.ino
+    ) {
+      return { status: "preserved" };
+    }
+    return { status: "verified", identity: { dev: after.dev, ino: after.ino } };
+  } catch {
+    return { status: "preserved" };
+  }
+}
+
+function requireManagedWriteRecoveryIdentity(
+  artifact: ManagedWriteRecoveryArtifact,
+  expected: ManagedCandidateKnowledgeWriteOperationRecord["stagingIdentity"],
+): ManagedWriteRecoveryArtifact {
+  if (
+    expected !== null &&
+    artifact.status === "verified" &&
+    (artifact.identity.dev !== expected.device || artifact.identity.ino !== expected.inode)
+  ) {
+    return { status: "preserved" };
+  }
+  return artifact;
+}
+
+async function removeManagedWriteRecoveryArtifact(
+  lease: StorageWriterLease,
+  path: string,
+  artifact: ManagedWriteRecoveryArtifact,
+): Promise<boolean> {
+  if (artifact.status === "missing") return true;
+  if (artifact.status !== "verified") return false;
+  lease.renew();
+  const removed = await removeRegularFileIfIdentityMatches(path, artifact.identity);
+  lease.assertCurrent();
+  return removed;
+}
+
+async function removeEmptyManagedWriteSourceDirectory(
+  root: string,
+  lease: StorageWriterLease,
+  operation: ManagedCandidateKnowledgeWriteOperationRecord,
+): Promise<boolean> {
+  if (operation.kind !== "create") return true;
+  const path = join(root, sourcesDirectory, managedPathSegment(operation.sourceId));
+  lease.renew();
+  try {
+    await rmdir(path);
+    lease.assertCurrent();
+    return true;
+  } catch (error) {
+    lease.assertCurrent();
+    if (isMissing(error)) return true;
+    if (errorCode(error) === "ENOTEMPTY") return false;
+    return false;
+  }
+}
+
+function recoveryReport(
+  entries: readonly {
+    readonly kind: ManagedCandidateKnowledgeWriteOperationRecord["kind"];
+    readonly phase: ManagedCandidateKnowledgeWriteJournalPhase;
+    readonly outcome: "aborted" | "completed" | "preserved";
+  }[],
+): ManagedCandidateKnowledgeWriteRecoveryReport {
+  return Object.freeze({
+    schemaVersion: 1,
+    entries: Object.freeze(entries.map((entry) => Object.freeze({ ...entry }))),
+  });
+}
+
+function managedWriteRecoveryTimestamp(
+  operationCreatedAt: string,
+  latestEventCreatedAt: string | null,
+): string {
+  return new Date(
+    Math.max(
+      Date.now(),
+      Date.parse(operationCreatedAt),
+      latestEventCreatedAt === null ? Number.NEGATIVE_INFINITY : Date.parse(latestEventCreatedAt),
+    ),
+  ).toISOString();
+}
+
+async function recoverIncompleteManagedCandidateKnowledgeWrites(
+  storage: SqliteStorage,
+  root: string,
+): Promise<ManagedCandidateKnowledgeWriteRecoveryReport> {
+  const lease = currentCandidateKnowledgeWriterLease(root);
+  const generation = lease.generation;
+  const operations = await storage.listManagedCandidateKnowledgeWriteOperations();
+  const entries: {
+    readonly kind: ManagedCandidateKnowledgeWriteOperationRecord["kind"];
+    readonly phase: ManagedCandidateKnowledgeWriteJournalPhase;
+    readonly outcome: "aborted" | "completed" | "preserved";
+  }[] = [];
+
+  for (const operation of operations) {
+    lease.assertCurrent();
+    if (
+      operation.latestPhase === "completed" ||
+      operation.latestPhase === "aborted" ||
+      operation.latestPhase === "noop"
+    ) {
+      continue;
+    }
+    const phase = operation.recoveryClaim?.phase ?? operation.latestPhase;
+    if (!isManagedWriteJournalPhase(phase)) {
+      entries.push({ kind: operation.kind, phase: "prepared", outcome: "preserved" });
+      continue;
+    }
+    const owned =
+      operation.ownerKind === managedCandidateKnowledgeWriteOwnerKind &&
+      operation.ownerSchemaVersion === managedCandidateKnowledgeWriteOwnerSchemaVersion &&
+      operation.ownerGeneration !== null &&
+      operation.ownerGeneration !== undefined &&
+      operation.requestedMediaType !== undefined &&
+      operation.requestedChecksum !== undefined &&
+      operation.requestedSizeBytes !== undefined;
+    if (!owned || operation.ownerGeneration >= generation) {
+      entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+      continue;
+    }
+
+    const targetVersionId = operation.targetVersionId ?? operation.requestedVersionId;
+    const stagingPath = join(
+      root,
+      sourcesDirectory,
+      `.intake-${managedPathSegment(operation.operationId)}`,
+    );
+    const targetPath = managedVersionPath(root, operation.sourceId, targetVersionId);
+    const claimRecovery = async (): Promise<void> => {
+      if (
+        phase !== "prepared" &&
+        phase !== "targeted" &&
+        phase !== "published" &&
+        phase !== "committed"
+      ) {
+        throw new StorageConflictError("Managed candidate knowledge recovery phase is invalid.");
+      }
+      lease.renew();
+      await storage.claimManagedCandidateKnowledgeWriteRecovery(
+        operation.operationId,
+        phase,
+        generation,
+        managedWriteRecoveryTimestamp(operation.createdAt, operation.latestEventCreatedAt),
+      );
+      lease.assertCurrent();
+    };
+    await claimRecovery();
+    const integrity = {
+      checksum: operation.requestedChecksum,
+      sizeBytes: operation.requestedSizeBytes,
+    };
+    const stagingObserved = await inspectManagedWriteRecoveryArtifact(stagingPath, integrity);
+    const targetObserved = await inspectManagedWriteRecoveryArtifact(targetPath, integrity);
+    if (operation.stagingIdentity === null) {
+      if (
+        phase !== "prepared" ||
+        stagingObserved.status !== "missing" ||
+        targetObserved.status !== "missing"
+      ) {
+        entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+        continue;
+      }
+      lease.renew();
+      await storage.terminalizePreparedManagedCandidateKnowledgeWrite(
+        operation.operationId,
+        "aborted",
+        targetVersionId,
+        managedWriteRecoveryTimestamp(operation.createdAt, operation.latestEventCreatedAt),
+        operation.ownerGeneration,
+        generation,
+      );
+      lease.assertCurrent();
+      entries.push({ kind: operation.kind, phase, outcome: "aborted" });
+      continue;
+    }
+    const staging = requireManagedWriteRecoveryIdentity(stagingObserved, operation.stagingIdentity);
+    const target = requireManagedWriteRecoveryIdentity(targetObserved, operation.stagingIdentity);
+
+    if (phase === "committed") {
+      if (staging.status === "preserved") {
+        entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+        continue;
+      }
+      if (target.status !== "verified") {
+        entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+        continue;
+      }
+      if (staging.status === "verified") {
+        const removed = await removeManagedWriteRecoveryArtifact(lease, stagingPath, staging);
+        if (!removed) {
+          entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+          continue;
+        }
+      }
+      lease.renew();
+      await storage.terminalizePreparedManagedCandidateKnowledgeWrite(
+        operation.operationId,
+        "completed",
+        targetVersionId,
+        managedWriteRecoveryTimestamp(operation.createdAt, operation.latestEventCreatedAt),
+        operation.ownerGeneration,
+        generation,
+      );
+      lease.assertCurrent();
+      entries.push({ kind: operation.kind, phase, outcome: "completed" });
+      continue;
+    }
+
+    if (staging.status === "preserved" || target.status === "preserved") {
+      entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+      continue;
+    }
+    if (
+      target.status === "verified" &&
+      !(await removeManagedWriteRecoveryArtifact(lease, targetPath, target))
+    ) {
+      entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+      continue;
+    }
+    if (!(await removeManagedWriteRecoveryArtifact(lease, stagingPath, staging))) {
+      entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+      continue;
+    }
+    if (!(await removeEmptyManagedWriteSourceDirectory(root, lease, operation))) {
+      entries.push({ kind: operation.kind, phase, outcome: "preserved" });
+      continue;
+    }
+    lease.renew();
+    await storage.terminalizePreparedManagedCandidateKnowledgeWrite(
+      operation.operationId,
+      "aborted",
+      targetVersionId,
+      managedWriteRecoveryTimestamp(operation.createdAt, operation.latestEventCreatedAt),
+      operation.ownerGeneration,
+      generation,
+    );
+    lease.assertCurrent();
+    entries.push({ kind: operation.kind, phase, outcome: "aborted" });
+  }
+  return recoveryReport(entries);
+}
+
 type ManagedCandidateKnowledgeSourceVersion = ReturnType<
   SqliteStorage["listManagedCandidateKnowledgeSourceVersions"]
 >[number];
@@ -1326,6 +1662,9 @@ async function writeManagedCandidateKnowledgeFile(
   }
   const requestedVersion = managedVersionMetadata(operation.version);
   const operationId = randomUUID();
+  const writerLease = currentCandidateKnowledgeWriterLease(root);
+  const ownerGeneration = writerLease.generation;
+  writerLease.renew();
   await storage.prepareManagedCandidateKnowledgeWrite({
     operationId,
     knowledgeBaseId,
@@ -1333,7 +1672,13 @@ async function writeManagedCandidateKnowledgeFile(
     requestedVersionId: requestedVersion.id,
     kind: operation.kind,
     createdAt: requestedVersion.createdAt,
+    ownerGeneration,
+    requestedMediaType: requestedVersion.mediaType,
+    requestedChecksum: requestedVersion.checksum,
+    requestedSizeBytes: requestedVersion.sizeBytes,
   });
+  writerLease.assertCurrent();
+  await interruptManagedWriteAt(operation.version, "intent");
   let captured: CapturedManagedFile | undefined;
   let sourceDirectoryCreated = false;
   let targetPath: string | undefined;
@@ -1344,6 +1689,20 @@ async function writeManagedCandidateKnowledgeFile(
   let noopCandidate = false;
   try {
     captured = await captureManagedFile(root, operation.version, operationId);
+    writerLease.renew();
+    await storage.recordManagedCandidateKnowledgeWriteStagingIdentity(
+      operationId,
+      {
+        device: captured.temporaryIdentity.dev,
+        inode: captured.temporaryIdentity.ino,
+        createdAt: new Date(
+          Math.max(Date.now(), Date.parse(requestedVersion.createdAt)),
+        ).toISOString(),
+      },
+      ownerGeneration,
+    );
+    writerLease.assertCurrent();
+    await interruptManagedWriteAt(operation.version, "staging");
     const integrity = {
       checksum: captured.checksum,
       sizeBytes: captured.sizeBytes,
@@ -1383,6 +1742,8 @@ async function writeManagedCandidateKnowledgeFile(
     if (noopCandidate) {
       await operation.version.beforeDatabaseWrite?.();
       await operation.version.beforeStagingCleanup?.();
+      await interruptManagedWriteAt(operation.version, "staging-cleanup");
+      writerLease.renew();
       if (
         !(await removeRegularFileIfIdentityMatches(
           captured.temporaryPath,
@@ -1393,28 +1754,37 @@ async function writeManagedCandidateKnowledgeFile(
           "Managed candidate knowledge source staging cleanup could not be verified.",
         );
       }
+      writerLease.assertCurrent();
+      await interruptManagedWriteAt(operation.version, "after-staging-cleanup");
       await operation.version.beforeCommittedFileRecheck?.();
       await verifyManagedFile(targetPath as string, integrity);
       const expectedOriginPath =
         operation.version.expectedOriginBoundAt === undefined ? undefined : captured.originPath;
+      writerLease.renew();
       return storage.recordManagedCandidateKnowledgeWriteNoop(
         operationId,
         requestedVersion,
         operation.version.expectedCurrentVersionId,
         operation.version.expectedOriginBoundAt,
         expectedOriginPath,
+        ownerGeneration,
       );
     }
 
     if (publicationRequired) {
       targetPath = managedVersionPath(root, sourceId, targetVersionId);
+      writerLease.renew();
+      await operation.version.afterLeaseRenewBeforeDatabaseWrite?.();
       await storage.recordManagedCandidateKnowledgeWriteEvent(
         operationId,
         "targeted",
         targetVersionId,
         requestedVersion.createdAt,
+        ownerGeneration,
       );
       targeted = true;
+      await interruptManagedWriteAt(operation.version, "target-intent");
+      writerLease.renew();
       const sourceDirectory = await ensureManagedSourceDirectory(root, sourceId);
       sourceDirectoryCreated = sourceDirectory.created;
       await publishManagedFile(
@@ -1424,16 +1794,22 @@ async function writeManagedCandidateKnowledgeFile(
         integrity,
       );
       published = true;
+      writerLease.assertCurrent();
+      await interruptManagedWriteAt(operation.version, "target-publication");
       await operation.version.afterTargetPublication?.();
+      writerLease.renew();
       await storage.recordManagedCandidateKnowledgeWriteEvent(
         operationId,
         "published",
         targetVersionId,
         requestedVersion.createdAt,
+        ownerGeneration,
       );
+      await interruptManagedWriteAt(operation.version, "published-event");
     }
 
     await operation.version.beforeDatabaseWrite?.();
+    writerLease.renew();
     const result = await storage.commitManagedCandidateKnowledgeWrite(
       operation.kind === "create"
         ? {
@@ -1445,6 +1821,7 @@ async function writeManagedCandidateKnowledgeFile(
             ...(operation.version.directoryId === undefined
               ? {}
               : { directoryId: operation.version.directoryId }),
+            expectedOwnerGeneration: ownerGeneration,
           }
         : {
             kind: "append",
@@ -1459,13 +1836,17 @@ async function writeManagedCandidateKnowledgeFile(
             ...(operation.version.expectedOriginBoundAt === undefined
               ? {}
               : { expectedOriginPath: captured.originPath }),
+            expectedOwnerGeneration: ownerGeneration,
           },
     );
+    await interruptManagedWriteAt(operation.version, "commit");
     committed = true;
     const committedPath = managedVersionPath(root, sourceId, result.version.id);
     await operation.version.beforeCommittedFileRecheck?.();
     await verifyManagedFile(committedPath, result.version);
     await operation.version.beforeStagingCleanup?.();
+    await interruptManagedWriteAt(operation.version, "staging-cleanup");
+    writerLease.renew();
     if (
       !(await removeRegularFileIfIdentityMatches(
         captured.temporaryPath,
@@ -1476,14 +1857,25 @@ async function writeManagedCandidateKnowledgeFile(
         "Managed candidate knowledge source staging cleanup could not be verified.",
       );
     }
+    writerLease.assertCurrent();
+    await interruptManagedWriteAt(operation.version, "after-staging-cleanup");
+    writerLease.renew();
     await storage.recordManagedCandidateKnowledgeWriteEvent(
       operationId,
       "completed",
       result.version.id,
       requestedVersion.createdAt,
+      ownerGeneration,
     );
     return result;
   } catch (error) {
+    if (
+      error instanceof SimulatedManagedWriteInterruption ||
+      error instanceof StorageWriterLeaseError
+    ) {
+      throw error;
+    }
+    writerLease.renew();
     if (!committed && captured !== undefined) {
       const cleaned = await cleanUncommittedManagedWrite(
         captured,
@@ -1498,6 +1890,7 @@ async function writeManagedCandidateKnowledgeFile(
             "aborted",
             targetVersionId,
             requestedVersion.createdAt,
+            ownerGeneration,
           );
         } catch {
           // The durable prepared/published journal remains safely inspectable.
@@ -1554,6 +1947,9 @@ async function writeManagedCandidateKnowledgeUrlVersion(
   const requestedVersion = managedVersionMetadata(operation.version);
   validateManagedUrlResponseBytes(operation.version);
   const operationId = randomUUID();
+  const writerLease = currentCandidateKnowledgeWriterLease(root);
+  const ownerGeneration = writerLease.generation;
+  writerLease.renew();
   await storage.prepareManagedCandidateKnowledgeWrite({
     operationId,
     knowledgeBaseId,
@@ -1561,7 +1957,13 @@ async function writeManagedCandidateKnowledgeUrlVersion(
     requestedVersionId: requestedVersion.id,
     kind: operation.kind,
     createdAt: requestedVersion.createdAt,
+    ownerGeneration,
+    requestedMediaType: requestedVersion.mediaType,
+    requestedChecksum: requestedVersion.checksum,
+    requestedSizeBytes: requestedVersion.sizeBytes,
   });
+  writerLease.assertCurrent();
+  await interruptManagedWriteAt(operation.version, "intent");
   let captured: CapturedManagedBytes | undefined;
   let sourceDirectoryCreated = false;
   let targetPath: string | undefined;
@@ -1573,6 +1975,20 @@ async function writeManagedCandidateKnowledgeUrlVersion(
   let expectedCurrentVersionId: string | undefined;
   try {
     captured = await captureManagedBytes(root, operation.version, operationId);
+    writerLease.renew();
+    await storage.recordManagedCandidateKnowledgeWriteStagingIdentity(
+      operationId,
+      {
+        device: captured.temporaryIdentity.dev,
+        inode: captured.temporaryIdentity.ino,
+        createdAt: new Date(
+          Math.max(Date.now(), Date.parse(requestedVersion.createdAt)),
+        ).toISOString(),
+      },
+      ownerGeneration,
+    );
+    writerLease.assertCurrent();
+    await interruptManagedWriteAt(operation.version, "staging");
     if (operation.kind === "append") {
       const versions = await storage.listCandidateKnowledgeSourceVersions(
         knowledgeBaseId,
@@ -1612,6 +2028,8 @@ async function writeManagedCandidateKnowledgeUrlVersion(
     if (noopCandidate) {
       await operation.version.beforeDatabaseWrite?.();
       await operation.version.beforeStagingCleanup?.();
+      await interruptManagedWriteAt(operation.version, "staging-cleanup");
+      writerLease.renew();
       if (
         !(await removeRegularFileIfIdentityMatches(
           captured.temporaryPath,
@@ -1622,26 +2040,37 @@ async function writeManagedCandidateKnowledgeUrlVersion(
           "Managed candidate knowledge source staging cleanup could not be verified.",
         );
       }
+      writerLease.assertCurrent();
+      await interruptManagedWriteAt(operation.version, "after-staging-cleanup");
       await operation.version.beforeCommittedFileRecheck?.();
       await verifyManagedFile(targetPath as string, {
         checksum: captured.checksum,
         sizeBytes: captured.sizeBytes,
       });
+      writerLease.renew();
       return storage.recordManagedCandidateKnowledgeWriteNoop(
         operationId,
         requestedVersion,
         expectedCurrentVersionId,
+        undefined,
+        undefined,
+        ownerGeneration,
       );
     }
 
     targetPath = managedVersionPath(root, sourceId, targetVersionId);
+    writerLease.renew();
+    await operation.version.afterLeaseRenewBeforeDatabaseWrite?.();
     await storage.recordManagedCandidateKnowledgeWriteEvent(
       operationId,
       "targeted",
       targetVersionId,
       requestedVersion.createdAt,
+      ownerGeneration,
     );
     targeted = true;
+    await interruptManagedWriteAt(operation.version, "target-intent");
+    writerLease.renew();
     const sourceDirectory = await ensureManagedSourceDirectory(root, sourceId);
     sourceDirectoryCreated = sourceDirectory.created;
     await publishManagedFile(
@@ -1651,14 +2080,20 @@ async function writeManagedCandidateKnowledgeUrlVersion(
       captured,
     );
     published = true;
+    writerLease.assertCurrent();
+    await interruptManagedWriteAt(operation.version, "target-publication");
     await operation.version.afterTargetPublication?.();
+    writerLease.renew();
     await storage.recordManagedCandidateKnowledgeWriteEvent(
       operationId,
       "published",
       targetVersionId,
       requestedVersion.createdAt,
+      ownerGeneration,
     );
+    await interruptManagedWriteAt(operation.version, "published-event");
     await operation.version.beforeDatabaseWrite?.();
+    writerLease.renew();
     const result = await storage.commitManagedCandidateKnowledgeWrite(
       operation.kind === "create"
         ? {
@@ -1667,6 +2102,7 @@ async function writeManagedCandidateKnowledgeUrlVersion(
             source: { ...operation.source, id: sourceId, knowledgeBaseId },
             version: requestedVersion,
             urlProvenance: operation.version.provenance,
+            expectedOwnerGeneration: ownerGeneration,
           }
         : {
             kind: "append",
@@ -1674,13 +2110,17 @@ async function writeManagedCandidateKnowledgeUrlVersion(
             version: requestedVersion,
             urlProvenance: operation.version.provenance,
             ...(expectedCurrentVersionId === undefined ? {} : { expectedCurrentVersionId }),
+            expectedOwnerGeneration: ownerGeneration,
           },
     );
+    await interruptManagedWriteAt(operation.version, "commit");
     committed = true;
     const committedPath = managedVersionPath(root, sourceId, result.version.id);
     await operation.version.beforeCommittedFileRecheck?.();
     await verifyManagedFile(committedPath, result.version);
     await operation.version.beforeStagingCleanup?.();
+    await interruptManagedWriteAt(operation.version, "staging-cleanup");
+    writerLease.renew();
     if (
       !(await removeRegularFileIfIdentityMatches(
         captured.temporaryPath,
@@ -1691,14 +2131,25 @@ async function writeManagedCandidateKnowledgeUrlVersion(
         "Managed candidate knowledge source staging cleanup could not be verified.",
       );
     }
+    writerLease.assertCurrent();
+    await interruptManagedWriteAt(operation.version, "after-staging-cleanup");
+    writerLease.renew();
     await storage.recordManagedCandidateKnowledgeWriteEvent(
       operationId,
       "completed",
       result.version.id,
       requestedVersion.createdAt,
+      ownerGeneration,
     );
     return result;
   } catch (error) {
+    if (
+      error instanceof SimulatedManagedWriteInterruption ||
+      error instanceof StorageWriterLeaseError
+    ) {
+      throw error;
+    }
+    writerLease.renew();
     if (!committed && captured !== undefined) {
       const cleaned = await cleanUncommittedManagedWrite(
         captured,
@@ -1713,6 +2164,7 @@ async function writeManagedCandidateKnowledgeUrlVersion(
             "aborted",
             targetVersionId,
             requestedVersion.createdAt,
+            ownerGeneration,
           );
         } catch {
           // The durable prepared/published journal remains safely inspectable.
@@ -1878,12 +2330,14 @@ function createHandle(
   descriptor: CandidateKnowledgeStoreDescriptor,
   root: string,
   storage: SqliteStorage,
+  recovery: ManagedCandidateKnowledgeWriteRecoveryReport,
 ): CandidateKnowledgeStoreHandle {
   const coordinateWrite = <T>(operation: string, callback: () => Promise<T>): Promise<T> =>
     withCandidateKnowledgeStoreWriterLease(root, operation, callback);
   const handle: CandidateKnowledgeStoreHandle = {
     descriptor: Object.freeze({ ...descriptor }),
     root,
+    recoveryReport: recovery,
     withWriterLease: (operation, callback, options) =>
       withCandidateKnowledgeStoreWriterLease(root, operation, callback, options),
     ensureDefaultCandidateKnowledgeBase: (input) =>
@@ -2222,13 +2676,26 @@ export async function openCandidateKnowledgeStore(
     "Candidate knowledge store database",
     maximumDatabaseBytes,
   );
-  const storage = openSqliteStorage(databasePath);
+  let storage: SqliteStorage | undefined;
   try {
-    await validateOpenedStore(storage, descriptor);
-    await validateManagedCandidateKnowledgeFiles(storage, root);
-    return createHandle(descriptor, root, storage);
+    const recovery = await withCandidateKnowledgeStoreWriterLease(
+      root,
+      "ckb-recovery",
+      async () => {
+        storage = openSqliteStorage(databasePath);
+        await validateOpenedStore(storage, descriptor);
+        const report = await recoverIncompleteManagedCandidateKnowledgeWrites(storage, root);
+        await validateOpenedStore(storage, descriptor);
+        await validateManagedCandidateKnowledgeFiles(storage, root);
+        return report;
+      },
+    );
+    if (storage === undefined) {
+      throw new StorageValidationError("Candidate knowledge store database could not be opened.");
+    }
+    return createHandle(descriptor, root, storage, recovery);
   } catch (error) {
-    await closePreservingFailure(storage);
+    if (storage !== undefined) await closePreservingFailure(storage);
     throw error;
   }
 }

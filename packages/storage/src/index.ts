@@ -388,6 +388,15 @@ export type ManagedCandidateKnowledgeWriteEventState =
   | "aborted"
   | "noop";
 
+export const managedCandidateKnowledgeWriteOwnerKind = "draft-loop" as const;
+export const managedCandidateKnowledgeWriteOwnerSchemaVersion = 1 as const;
+
+export type ManagedCandidateKnowledgeWriteJournalPhase =
+  | "prepared"
+  | ManagedCandidateKnowledgeWriteEventState;
+
+export type ManagedCandidateKnowledgeWriteRecoveryOutcome = "aborted" | "completed" | "preserved";
+
 export interface ManagedCandidateKnowledgeWriteOperationInput {
   readonly operationId: string;
   readonly knowledgeBaseId: string;
@@ -395,9 +404,53 @@ export interface ManagedCandidateKnowledgeWriteOperationInput {
   readonly requestedVersionId: string;
   readonly kind: ManagedCandidateKnowledgeWriteKind;
   readonly createdAt: string;
+  /** Current candidate-store writer fencing generation; omitted rows are legacy. */
+  readonly ownerGeneration?: number;
+  /** Requested version integrity metadata for owned recovery. */
+  readonly requestedMediaType?: string;
+  readonly requestedChecksum?: string;
+  readonly requestedSizeBytes?: number;
 }
 
-type ManagedCandidateKnowledgeWriteOperationRecord = ManagedCandidateKnowledgeWriteOperationInput;
+export interface ManagedCandidateKnowledgeWriteStagingIdentity {
+  readonly device: number;
+  readonly inode: number;
+  readonly createdAt: string;
+}
+
+export type ManagedCandidateKnowledgeWriteRecoveryClaimPhase =
+  | "prepared"
+  | "targeted"
+  | "published"
+  | "committed";
+
+export interface ManagedCandidateKnowledgeWriteRecoveryClaim {
+  readonly phase: ManagedCandidateKnowledgeWriteRecoveryClaimPhase;
+  readonly generation: number;
+  readonly claimedAt: string;
+}
+
+export interface ManagedCandidateKnowledgeWriteOperationRecord
+  extends ManagedCandidateKnowledgeWriteOperationInput {
+  readonly ownerKind: string | null;
+  readonly ownerSchemaVersion: number | null;
+  readonly latestPhase: ManagedCandidateKnowledgeWriteJournalPhase;
+  readonly latestEventCreatedAt: string | null;
+  readonly targetVersionId: string | null;
+  readonly stagingIdentity: ManagedCandidateKnowledgeWriteStagingIdentity | null;
+  readonly recoveryClaim: ManagedCandidateKnowledgeWriteRecoveryClaim | null;
+}
+
+export interface ManagedCandidateKnowledgeWriteRecoveryEntry {
+  readonly kind: ManagedCandidateKnowledgeWriteKind;
+  readonly phase: ManagedCandidateKnowledgeWriteJournalPhase;
+  readonly outcome: ManagedCandidateKnowledgeWriteRecoveryOutcome;
+}
+
+export interface ManagedCandidateKnowledgeWriteRecoveryReport {
+  readonly schemaVersion: 1;
+  readonly entries: readonly ManagedCandidateKnowledgeWriteRecoveryEntry[];
+}
 
 export type ManagedCandidateKnowledgeWriteCommitInput =
   | {
@@ -410,6 +463,8 @@ export type ManagedCandidateKnowledgeWriteCommitInput =
       /** Runtime-only directory membership context for a new managed file source. */
       readonly directoryId?: string;
       readonly urlProvenance?: CandidateKnowledgeSourceUrlProvenanceInput;
+      /** Current candidate-store writer fencing generation; runtime-only. */
+      readonly expectedOwnerGeneration?: number;
     }
   | {
       readonly kind: "append";
@@ -423,6 +478,8 @@ export type ManagedCandidateKnowledgeWriteCommitInput =
       readonly expectedOriginBoundAt?: string;
       /** Runtime canonical origin-path guard used by guarded file refresh; never persisted. */
       readonly expectedOriginPath?: string;
+      /** Current candidate-store writer fencing generation; runtime-only. */
+      readonly expectedOwnerGeneration?: number;
     };
 
 export interface CandidateKnowledgeBaseStoragePort {
@@ -923,7 +980,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 15 as const;
+export const storageSchemaVersion = 17 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -2213,6 +2270,151 @@ const migrationFifteen: Migration = {
   `.trim(),
 };
 
+const migrationSixteen: Migration = {
+  version: 16,
+  sql: `
+    ALTER TABLE candidate_knowledge_managed_write_operations
+      ADD COLUMN owner_kind TEXT;
+    ALTER TABLE candidate_knowledge_managed_write_operations
+      ADD COLUMN owner_schema_version INTEGER;
+    ALTER TABLE candidate_knowledge_managed_write_operations
+      ADD COLUMN owner_generation INTEGER;
+    ALTER TABLE candidate_knowledge_managed_write_operations
+      ADD COLUMN requested_media_type TEXT;
+    ALTER TABLE candidate_knowledge_managed_write_operations
+      ADD COLUMN requested_checksum TEXT;
+    ALTER TABLE candidate_knowledge_managed_write_operations
+      ADD COLUMN requested_size_bytes INTEGER;
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_managed_write_staging_identities (
+      operation_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_managed_write_operations(operation_id),
+      device INTEGER NOT NULL CHECK (typeof(device) = 'integer' AND device >= 0),
+      inode INTEGER NOT NULL CHECK (typeof(inode) = 'integer' AND inode >= 0),
+      created_at TEXT NOT NULL CHECK (julianday(created_at) IS NOT NULL)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_staging_identities_require_prepared_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_staging_identities
+      WHEN NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_managed_write_operations AS operation
+        WHERE operation.operation_id = NEW.operation_id
+          AND operation.owner_kind = 'draft-loop'
+          AND operation.owner_schema_version = 1
+          AND typeof(operation.owner_generation) = 'integer'
+          AND operation.owner_generation >= 1
+          AND julianday(NEW.created_at) >= julianday(operation.created_at)
+          AND NOT EXISTS (
+            SELECT 1
+            FROM candidate_knowledge_managed_write_events AS event
+            WHERE event.operation_id = operation.operation_id
+          )
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge staging identity requires a prepared owned operation'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_staging_identities_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_managed_write_staging_identities
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge staging identities are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_staging_identities_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_managed_write_staging_identities
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge staging identities are immutable'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_operations_ownership_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_operations
+      WHEN NOT (
+        (
+          NEW.owner_kind IS NULL AND
+          NEW.owner_schema_version IS NULL AND
+          NEW.owner_generation IS NULL AND
+          NEW.requested_media_type IS NULL AND
+          NEW.requested_checksum IS NULL AND
+          NEW.requested_size_bytes IS NULL
+        ) OR (
+          NEW.owner_kind IS NOT NULL AND
+          NEW.owner_schema_version IS NOT NULL AND
+          NEW.owner_generation IS NOT NULL AND
+          NEW.requested_media_type IS NOT NULL AND
+          NEW.requested_checksum IS NOT NULL AND
+          NEW.requested_size_bytes IS NOT NULL AND
+          NEW.owner_kind = 'draft-loop' AND
+          NEW.owner_schema_version = 1 AND
+          typeof(NEW.owner_generation) = 'integer' AND
+          NEW.owner_generation >= 1 AND
+          length(trim(NEW.requested_media_type)) > 0 AND
+          length(NEW.requested_checksum) = 64 AND
+          NEW.requested_checksum NOT GLOB '*[^0-9a-f]*' AND
+          typeof(NEW.requested_size_bytes) = 'integer' AND
+          NEW.requested_size_bytes >= 0
+        )
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write ownership metadata is invalid'); END;
+
+    DROP TRIGGER IF EXISTS candidate_knowledge_managed_write_events_transition_insert;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_events_transition_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_events
+      WHEN NOT (
+        (NEW.sequence = 1 AND NEW.state IN ('targeted', 'noop', 'aborted')) OR
+        (
+          NEW.sequence > 1 AND EXISTS (
+            SELECT 1
+            FROM candidate_knowledge_managed_write_events AS previous
+            WHERE previous.operation_id = NEW.operation_id
+              AND previous.sequence = NEW.sequence - 1
+              AND (
+                (previous.state = 'targeted' AND NEW.state IN ('published', 'aborted')) OR
+                (previous.state = 'published' AND NEW.state IN ('committed', 'aborted')) OR
+                (previous.state = 'committed' AND NEW.state = 'completed')
+              )
+          )
+        )
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge write event transition is invalid'); END;
+  `.trim(),
+};
+
+const migrationSeventeen: Migration = {
+  version: 17,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_managed_write_recovery_claims (
+      operation_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_managed_write_operations(operation_id),
+      phase TEXT NOT NULL CHECK (phase IN ('prepared', 'targeted', 'published', 'committed')),
+      claim_generation INTEGER NOT NULL
+        CHECK (typeof(claim_generation) = 'integer' AND claim_generation >= 1),
+      claimed_at TEXT NOT NULL CHECK (julianday(claimed_at) IS NOT NULL)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_recovery_claims_insert
+      BEFORE INSERT ON candidate_knowledge_managed_write_recovery_claims
+      WHEN NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_managed_write_operations AS operation
+        WHERE operation.operation_id = NEW.operation_id
+          AND operation.owner_kind = 'draft-loop'
+          AND operation.owner_schema_version = 1
+          AND typeof(operation.owner_generation) = 'integer'
+          AND operation.owner_generation >= 1
+          AND NEW.claim_generation > operation.owner_generation
+          AND julianday(NEW.claimed_at) >= julianday(operation.created_at)
+      )
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge recovery claim is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_recovery_claims_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_managed_write_recovery_claims
+      WHEN NEW.operation_id <> OLD.operation_id
+        OR NEW.phase <> OLD.phase
+        OR typeof(NEW.claim_generation) <> 'integer'
+        OR NEW.claim_generation < OLD.claim_generation
+        OR NEW.claim_generation < 1
+        OR julianday(NEW.claimed_at) IS NULL
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge recovery claims are append-only by phase'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_managed_write_recovery_claims_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_managed_write_recovery_claims
+      BEGIN SELECT RAISE(ABORT, 'managed candidate knowledge recovery claims are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -2229,6 +2431,8 @@ const migrations: readonly Migration[] = [
   migrationThirteen,
   migrationFourteen,
   migrationFifteen,
+  migrationSixteen,
+  migrationSeventeen,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -2841,6 +3045,47 @@ export class SqliteStorage
       input.createdAt,
       "managed candidate knowledge write createdAt",
     );
+    const integrityValues = [
+      input.requestedMediaType,
+      input.requestedChecksum,
+      input.requestedSizeBytes,
+    ];
+    const hasIntegrityMetadata = integrityValues.some((value) => value !== undefined);
+    const ownerGeneration =
+      input.ownerGeneration === undefined
+        ? undefined
+        : requirePositive(input.ownerGeneration, "managed candidate knowledge owner generation");
+    if (ownerGeneration !== undefined && !integrityValues.every((value) => value !== undefined)) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge write ownership requires requested integrity metadata.",
+      );
+    }
+    if (ownerGeneration === undefined && hasIntegrityMetadata) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge write integrity metadata requires ownership.",
+      );
+    }
+    const requestedMediaType =
+      ownerGeneration === undefined
+        ? undefined
+        : requireNonEmpty(
+            input.requestedMediaType as string,
+            "managed candidate knowledge requested media type",
+          ).trim();
+    const requestedChecksum =
+      ownerGeneration === undefined ? undefined : (input.requestedChecksum as string);
+    if (requestedChecksum !== undefined && !/^[0-9a-f]{64}$/.test(requestedChecksum)) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge requested checksum must be a lowercase SHA-256 checksum.",
+      );
+    }
+    const requestedSizeBytes =
+      ownerGeneration === undefined
+        ? undefined
+        : requireNonNegativeInteger(
+            input.requestedSizeBytes as number,
+            "managed candidate knowledge requested size",
+          );
     this.database.transaction(() => {
       this.requireActiveCandidateKnowledgeBase(knowledgeBaseId);
       const existingOperation = this.database
@@ -2873,9 +3118,326 @@ export class SqliteStorage
       }
       this.database
         .prepare(
-          "INSERT INTO candidate_knowledge_managed_write_operations (operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT INTO candidate_knowledge_managed_write_operations (operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at, owner_kind, owner_schema_version, owner_generation, requested_media_type, requested_checksum, requested_size_bytes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
-        .run(operationId, knowledgeBaseId, sourceId, requestedVersionId, input.kind, createdAt);
+        .run(
+          operationId,
+          knowledgeBaseId,
+          sourceId,
+          requestedVersionId,
+          input.kind,
+          createdAt,
+          ownerGeneration === undefined ? null : managedCandidateKnowledgeWriteOwnerKind,
+          ownerGeneration === undefined ? null : managedCandidateKnowledgeWriteOwnerSchemaVersion,
+          ownerGeneration ?? null,
+          requestedMediaType ?? null,
+          requestedChecksum ?? null,
+          requestedSizeBytes ?? null,
+        );
+    })();
+  }
+
+  public async recordManagedCandidateKnowledgeWriteStagingIdentity(
+    operationIdInput: string,
+    identityInput: ManagedCandidateKnowledgeWriteStagingIdentity,
+    expectedOwnerGenerationInput: number,
+  ): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireNonEmpty(
+      operationIdInput,
+      "managed candidate knowledge write operation id",
+    ).trim();
+    if (
+      typeof identityInput !== "object" ||
+      identityInput === null ||
+      !Number.isInteger(identityInput.device) ||
+      !Number.isInteger(identityInput.inode)
+    ) {
+      throw new StorageValidationError("Managed candidate knowledge staging identity is invalid.");
+    }
+    const device = requireNonNegativeInteger(
+      identityInput.device,
+      "managed candidate knowledge staging device",
+    );
+    const inode = requireNonNegativeInteger(
+      identityInput.inode,
+      "managed candidate knowledge staging inode",
+    );
+    const createdAt = requireTimestamp(
+      identityInput.createdAt,
+      "managed candidate knowledge staging identity createdAt",
+    );
+    const expectedOwnerGeneration = requirePositive(
+      expectedOwnerGenerationInput,
+      "managed candidate knowledge expected owner generation",
+    );
+    this.database.transaction(() => {
+      const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      this.requireManagedCandidateKnowledgeWriteMutationOwner(operation, expectedOwnerGeneration);
+      if (Date.parse(createdAt) < Date.parse(operation.createdAt)) {
+        throw new StorageValidationError(
+          "Managed candidate knowledge staging identity createdAt cannot precede its operation.",
+        );
+      }
+      if (
+        operation.ownerKind !== managedCandidateKnowledgeWriteOwnerKind ||
+        operation.ownerSchemaVersion !== managedCandidateKnowledgeWriteOwnerSchemaVersion ||
+        operation.ownerGeneration !== expectedOwnerGeneration
+      ) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write ownership generation changed while recording staging",
+        );
+      }
+      this.requireManagedCandidateKnowledgeWriteState(operationId, undefined, undefined);
+      const existing = this.database
+        .prepare(
+          "SELECT device, inode, created_at FROM candidate_knowledge_managed_write_staging_identities WHERE operation_id = ?",
+        )
+        .get<{
+          readonly device: number;
+          readonly inode: number;
+          readonly created_at: string;
+        }>(operationId);
+      if (existing !== undefined) {
+        throw new StorageConflictError(
+          "managed candidate knowledge staging identity is already recorded",
+        );
+      }
+      this.database
+        .prepare(
+          "INSERT INTO candidate_knowledge_managed_write_staging_identities (operation_id, device, inode, created_at) VALUES (?, ?, ?, ?)",
+        )
+        .run(operationId, device, inode, createdAt);
+    })();
+  }
+
+  public async claimManagedCandidateKnowledgeWriteRecovery(
+    operationIdInput: string,
+    phaseInput: ManagedCandidateKnowledgeWriteRecoveryClaimPhase,
+    claimGenerationInput: number,
+    claimedAtInput: string,
+  ): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireNonEmpty(
+      operationIdInput,
+      "managed candidate knowledge write operation id",
+    ).trim();
+    if (
+      phaseInput !== "prepared" &&
+      phaseInput !== "targeted" &&
+      phaseInput !== "published" &&
+      phaseInput !== "committed"
+    ) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge recovery claim phase is invalid.",
+      );
+    }
+    const claimGeneration = requirePositive(
+      claimGenerationInput,
+      "managed candidate knowledge recovery claim generation",
+    );
+    const claimedAt = requireTimestamp(
+      claimedAtInput,
+      "managed candidate knowledge recovery claim claimedAt",
+    );
+    this.database.transaction(() => {
+      const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      if (
+        operation.ownerKind !== managedCandidateKnowledgeWriteOwnerKind ||
+        operation.ownerSchemaVersion !== managedCandidateKnowledgeWriteOwnerSchemaVersion ||
+        operation.ownerGeneration === undefined ||
+        operation.ownerGeneration >= claimGeneration
+      ) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write recovery claim generation is stale",
+        );
+      }
+      const latest = this.database
+        .prepare(
+          "SELECT state FROM candidate_knowledge_managed_write_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
+        )
+        .get<{ readonly state: string }>(operationId);
+      const phase = latest?.state ?? "prepared";
+      if (phase !== phaseInput) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write recovery claim phase changed",
+        );
+      }
+      const existing = this.database
+        .prepare(
+          "SELECT phase, claim_generation FROM candidate_knowledge_managed_write_recovery_claims WHERE operation_id = ?",
+        )
+        .get<{
+          readonly phase: ManagedCandidateKnowledgeWriteRecoveryClaimPhase;
+          readonly claim_generation: number;
+        }>(operationId);
+      if (existing !== undefined) {
+        if (existing.phase !== phaseInput || existing.claim_generation > claimGeneration) {
+          throw new StorageConflictError(
+            "managed candidate knowledge write recovery claim is held by a newer generation",
+          );
+        }
+        if (existing.claim_generation === claimGeneration) return;
+        this.database
+          .prepare(
+            "UPDATE candidate_knowledge_managed_write_recovery_claims SET claim_generation = ?, claimed_at = ? WHERE operation_id = ?",
+          )
+          .run(claimGeneration, claimedAt, operationId);
+        return;
+      }
+      this.database
+        .prepare(
+          "INSERT INTO candidate_knowledge_managed_write_recovery_claims (operation_id, phase, claim_generation, claimed_at) VALUES (?, ?, ?, ?)",
+        )
+        .run(operationId, phaseInput, claimGeneration, claimedAt);
+    })();
+  }
+
+  public async listManagedCandidateKnowledgeWriteOperations(): Promise<
+    readonly ManagedCandidateKnowledgeWriteOperationRecord[]
+  > {
+    this.ensureOpen();
+    const rows = this.database
+      .prepare(
+        `SELECT operation.operation_id,
+                operation.candidate_knowledge_base_id,
+                operation.source_id,
+                operation.requested_version_id,
+                operation.kind,
+                operation.created_at,
+                operation.owner_kind,
+                operation.owner_schema_version,
+                operation.owner_generation,
+                operation.requested_media_type,
+                operation.requested_checksum,
+                operation.requested_size_bytes,
+                latest.state AS latest_phase,
+                latest.target_version_id,
+                latest.created_at AS latest_event_created_at,
+                staging.device AS staging_device,
+                staging.inode AS staging_inode,
+                staging.created_at AS staging_created_at,
+                claim.phase AS recovery_claim_phase,
+                claim.claim_generation AS recovery_claim_generation,
+                claim.claimed_at AS recovery_claimed_at
+         FROM candidate_knowledge_managed_write_operations AS operation
+         LEFT JOIN candidate_knowledge_managed_write_events AS latest
+           ON latest.operation_id = operation.operation_id
+          AND latest.sequence = (
+            SELECT MAX(event.sequence)
+            FROM candidate_knowledge_managed_write_events AS event
+            WHERE event.operation_id = operation.operation_id
+          )
+         LEFT JOIN candidate_knowledge_managed_write_staging_identities AS staging
+           ON staging.operation_id = operation.operation_id
+         LEFT JOIN candidate_knowledge_managed_write_recovery_claims AS claim
+           ON claim.operation_id = operation.operation_id
+         ORDER BY operation.operation_id`,
+      )
+      .all();
+    return rows.map(managedCandidateKnowledgeWriteOperationFromRow);
+  }
+
+  public async terminalizePreparedManagedCandidateKnowledgeWrite(
+    operationIdInput: string,
+    state: "aborted" | "completed",
+    targetVersionIdInput: string,
+    createdAtInput: string,
+    expectedOwnerGeneration?: number,
+    expectedRecoveryClaimGeneration?: number,
+  ): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireNonEmpty(
+      operationIdInput,
+      "managed candidate knowledge write operation id",
+    ).trim();
+    const targetVersionId = requireNonEmpty(
+      targetVersionIdInput,
+      "managed candidate knowledge write target version id",
+    ).trim();
+    const createdAt = requireTimestamp(
+      createdAtInput,
+      "managed candidate knowledge write event createdAt",
+    );
+    if (state !== "aborted" && state !== "completed") {
+      throw new StorageValidationError("Managed candidate knowledge terminal state is invalid.");
+    }
+    if (expectedOwnerGeneration !== undefined) {
+      requirePositive(
+        expectedOwnerGeneration,
+        "managed candidate knowledge expected owner generation",
+      );
+    }
+    if (expectedRecoveryClaimGeneration !== undefined) {
+      requirePositive(
+        expectedRecoveryClaimGeneration,
+        "managed candidate knowledge expected recovery claim generation",
+      );
+    }
+    this.database.transaction(() => {
+      const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      const latest = this.database
+        .prepare(
+          "SELECT state, target_version_id FROM candidate_knowledge_managed_write_events WHERE operation_id = ? ORDER BY sequence DESC LIMIT 1",
+        )
+        .get<{ readonly state: string; readonly target_version_id: string }>(operationId);
+      if (latest?.state === state && latest.target_version_id === targetVersionId) return;
+      if (
+        expectedOwnerGeneration !== undefined &&
+        operation.ownerGeneration !== expectedOwnerGeneration
+      ) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write ownership generation changed during recovery",
+        );
+      }
+      const currentPhase = latest?.state ?? "prepared";
+      if (expectedRecoveryClaimGeneration !== undefined) {
+        if (
+          currentPhase !== "prepared" &&
+          currentPhase !== "targeted" &&
+          currentPhase !== "published" &&
+          currentPhase !== "committed"
+        ) {
+          throw new StorageConflictError(
+            "managed candidate knowledge write recovery claim phase is no longer active",
+          );
+        }
+        this.requireManagedCandidateKnowledgeWriteRecoveryClaim(
+          operationId,
+          currentPhase,
+          expectedRecoveryClaimGeneration,
+        );
+      } else if (
+        this.database
+          .prepare(
+            "SELECT operation_id FROM candidate_knowledge_managed_write_recovery_claims WHERE operation_id = ?",
+          )
+          .get(operationId) !== undefined
+      ) {
+        throw new StorageConflictError("managed candidate knowledge write is claimed for recovery");
+      }
+      if (state === "aborted") {
+        if (latest !== undefined && latest.state !== "targeted" && latest.state !== "published") {
+          throw new StorageConflictError(
+            "managed candidate knowledge write is not abortable from its current phase",
+          );
+        }
+        if (latest !== undefined && latest.target_version_id !== targetVersionId) {
+          throw new StorageConflictError(
+            "managed candidate knowledge write abort target does not match its journal",
+          );
+        }
+      } else if (latest?.state !== "committed" || latest.target_version_id !== targetVersionId) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write is not committed for completion",
+        );
+      }
+      this.insertManagedCandidateKnowledgeWriteEvent(
+        operationId,
+        state,
+        targetVersionId,
+        createdAt,
+      );
     })();
   }
 
@@ -2884,6 +3446,7 @@ export class SqliteStorage
     state: Exclude<ManagedCandidateKnowledgeWriteEventState, "committed" | "noop">,
     targetVersionIdInput: string,
     createdAtInput: string,
+    expectedOwnerGeneration?: number,
   ): Promise<void> {
     this.ensureOpen();
     const operationId = requireNonEmpty(
@@ -2908,7 +3471,15 @@ export class SqliteStorage
       createdAtInput,
       "managed candidate knowledge write event createdAt",
     );
+    if (expectedOwnerGeneration !== undefined) {
+      requirePositive(
+        expectedOwnerGeneration,
+        "managed candidate knowledge expected owner generation",
+      );
+    }
     this.database.transaction(() => {
+      const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      this.requireManagedCandidateKnowledgeWriteMutationOwner(operation, expectedOwnerGeneration);
       this.insertManagedCandidateKnowledgeWriteEvent(
         operationId,
         state,
@@ -2924,6 +3495,7 @@ export class SqliteStorage
     expectedCurrentVersionId?: string,
     expectedOriginBoundAt?: string,
     expectedOriginPath?: string,
+    expectedOwnerGeneration?: number,
   ): Promise<CandidateKnowledgeSourceVersionWriteResult> {
     this.ensureOpen();
     const operationId = requireNonEmpty(
@@ -2931,9 +3503,16 @@ export class SqliteStorage
       "managed candidate knowledge write operation id",
     ).trim();
     const requestedVersion = normalizeCandidateKnowledgeSourceVersionInput(versionInput);
+    if (expectedOwnerGeneration !== undefined) {
+      requirePositive(
+        expectedOwnerGeneration,
+        "managed candidate knowledge expected owner generation",
+      );
+    }
     let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
     this.database.transaction(() => {
       const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      this.requireManagedCandidateKnowledgeWriteMutationOwner(operation, expectedOwnerGeneration);
       if (operation.kind !== "append" || requestedVersion.id !== operation.requestedVersionId) {
         throw new StorageConflictError(
           "managed candidate knowledge write noop does not match its intent",
@@ -3028,9 +3607,19 @@ export class SqliteStorage
       input.urlProvenance === undefined
         ? undefined
         : normalizeCandidateKnowledgeSourceUrlProvenance(input.urlProvenance);
+    if (input.expectedOwnerGeneration !== undefined) {
+      requirePositive(
+        input.expectedOwnerGeneration,
+        "managed candidate knowledge expected owner generation",
+      );
+    }
     let result: CandidateKnowledgeSourceVersionWriteResult | undefined;
     this.database.transaction(() => {
       const operation = this.requireManagedCandidateKnowledgeWriteOperation(operationId);
+      this.requireManagedCandidateKnowledgeWriteMutationOwner(
+        operation,
+        input.expectedOwnerGeneration,
+      );
       if (operation.kind !== input.kind) {
         throw new StorageConflictError(
           "managed candidate knowledge write operation kind does not match its commit",
@@ -6508,7 +7097,30 @@ export class SqliteStorage
   private validateManagedCandidateKnowledgeWriteJournal(): void {
     const operations = this.database
       .prepare(
-        "SELECT operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at FROM candidate_knowledge_managed_write_operations ORDER BY operation_id",
+        `SELECT operation.operation_id,
+                operation.candidate_knowledge_base_id,
+                operation.source_id,
+                operation.requested_version_id,
+                operation.kind,
+                operation.created_at,
+                operation.owner_kind,
+                operation.owner_schema_version,
+                operation.owner_generation,
+                operation.requested_media_type,
+                operation.requested_checksum,
+                operation.requested_size_bytes,
+                staging.device AS staging_device,
+                staging.inode AS staging_inode,
+                staging.created_at AS staging_created_at,
+                claim.phase AS recovery_claim_phase,
+                claim.claim_generation AS recovery_claim_generation,
+                claim.claimed_at AS recovery_claimed_at
+         FROM candidate_knowledge_managed_write_operations AS operation
+         LEFT JOIN candidate_knowledge_managed_write_staging_identities AS staging
+           ON staging.operation_id = operation.operation_id
+         LEFT JOIN candidate_knowledge_managed_write_recovery_claims AS claim
+           ON claim.operation_id = operation.operation_id
+         ORDER BY operation.operation_id`,
       )
       .all();
     const selectEvents = this.database.prepare(
@@ -6542,10 +7154,118 @@ export class SqliteStorage
           "Candidate knowledge store contains an invalid managed write operation kind.",
         );
       }
+      const ownershipValues = [
+        operation.ownerKind,
+        operation.ownerSchemaVersion,
+        operation.ownerGeneration,
+        operation.requestedMediaType,
+        operation.requestedChecksum,
+        operation.requestedSizeBytes,
+      ];
+      const hasOwnership = ownershipValues.some((value) => value !== null && value !== undefined);
+      if (hasOwnership) {
+        if (
+          operation.ownerKind !== managedCandidateKnowledgeWriteOwnerKind ||
+          operation.ownerSchemaVersion !== managedCandidateKnowledgeWriteOwnerSchemaVersion ||
+          operation.ownerGeneration === undefined ||
+          !Number.isInteger(operation.ownerGeneration) ||
+          operation.ownerGeneration < 1 ||
+          operation.requestedMediaType === undefined ||
+          operation.requestedMediaType.trim() === "" ||
+          operation.requestedChecksum === undefined ||
+          !/^[0-9a-f]{64}$/.test(operation.requestedChecksum) ||
+          operation.requestedSizeBytes === undefined ||
+          !Number.isInteger(operation.requestedSizeBytes) ||
+          operation.requestedSizeBytes < 0
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains invalid managed write ownership metadata.",
+          );
+        }
+      } else if (
+        operation.ownerKind !== null ||
+        operation.ownerSchemaVersion !== null ||
+        operation.ownerGeneration !== undefined ||
+        operation.requestedMediaType !== undefined ||
+        operation.requestedChecksum !== undefined ||
+        operation.requestedSizeBytes !== undefined
+      ) {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains invalid legacy managed write metadata.",
+        );
+      }
       const operationCreatedAt = requireTimestamp(
         operation.createdAt,
         `managed candidate knowledge write operation ${operation.operationId} createdAt`,
       );
+      const stagingDevice = rowNullableNumber(row, "staging_device");
+      const stagingInode = rowNullableNumber(row, "staging_inode");
+      const stagingCreatedAt = rowNullableString(row, "staging_created_at");
+      const recoveryClaimPhase = rowNullableString(row, "recovery_claim_phase");
+      const recoveryClaimGeneration = rowNullableNumber(row, "recovery_claim_generation");
+      const recoveryClaimedAt = rowNullableString(row, "recovery_claimed_at");
+      const hasStagingIdentity =
+        stagingDevice !== null || stagingInode !== null || stagingCreatedAt !== null;
+      if (hasStagingIdentity) {
+        if (
+          stagingDevice === null ||
+          !Number.isInteger(stagingDevice) ||
+          stagingDevice < 0 ||
+          stagingInode === null ||
+          !Number.isInteger(stagingInode) ||
+          stagingInode < 0 ||
+          stagingCreatedAt === null
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains an invalid managed write staging identity.",
+          );
+        }
+        if (!hasOwnership) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains staging identity for a legacy managed write.",
+          );
+        }
+        const normalizedStagingCreatedAt = requireTimestamp(
+          stagingCreatedAt,
+          `managed candidate knowledge write operation ${operation.operationId} staging identity createdAt`,
+        );
+        if (Date.parse(normalizedStagingCreatedAt) < Date.parse(operationCreatedAt)) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains a staging identity timestamp before its operation.",
+          );
+        }
+      }
+      const hasRecoveryClaim =
+        recoveryClaimPhase !== null ||
+        recoveryClaimGeneration !== null ||
+        recoveryClaimedAt !== null;
+      if (hasRecoveryClaim) {
+        if (
+          recoveryClaimPhase === null ||
+          !["prepared", "targeted", "published", "committed"].includes(recoveryClaimPhase) ||
+          recoveryClaimGeneration === null ||
+          !Number.isInteger(recoveryClaimGeneration) ||
+          recoveryClaimGeneration < 1 ||
+          recoveryClaimedAt === null
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains an invalid managed write recovery claim.",
+          );
+        }
+        if (
+          !hasOwnership ||
+          operation.ownerGeneration === undefined ||
+          recoveryClaimGeneration <= operation.ownerGeneration
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains a stale managed write recovery claim.",
+          );
+        }
+        requireTimestamp(
+          recoveryClaimedAt,
+          `managed candidate knowledge write operation ${operation.operationId} recovery claim claimedAt`,
+        );
+      }
       this.requireCandidateKnowledgeBase(operation.knowledgeBaseId);
       const source = selectSource.get<{
         readonly candidate_knowledge_base_id: string;
@@ -6577,6 +7297,30 @@ export class SqliteStorage
         readonly target_version_id: string;
         readonly created_at: string;
       }>(operation.operationId);
+      if (hasRecoveryClaim) {
+        const claimPhase = recoveryClaimPhase as ManagedCandidateKnowledgeWriteRecoveryClaimPhase;
+        const claimMatchesJournal =
+          claimPhase === "prepared"
+            ? events.length === 0 || (events.length === 1 && events[0]?.state === "aborted")
+            : events.some((event) => event.state === claimPhase);
+        if (!claimMatchesJournal) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains a recovery claim for an absent journal phase.",
+          );
+        }
+        const latestState = events.at(-1)?.state;
+        if (
+          latestState !== undefined &&
+          latestState !== "completed" &&
+          latestState !== "aborted" &&
+          latestState !== "noop" &&
+          latestState !== claimPhase
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains a recovery claim for a stale journal phase.",
+          );
+        }
+      }
       let previousState: ManagedCandidateKnowledgeWriteEventState | undefined;
       let previousCreatedAt = operationCreatedAt;
       let targetVersionId: string | undefined;
@@ -6599,7 +7343,8 @@ export class SqliteStorage
           );
         }
         const transitionAllowed =
-          (previousState === undefined && (event.state === "targeted" || event.state === "noop")) ||
+          (previousState === undefined &&
+            (event.state === "targeted" || event.state === "noop" || event.state === "aborted")) ||
           (previousState === "targeted" &&
             (event.state === "published" || event.state === "aborted")) ||
           (previousState === "published" &&
@@ -7988,7 +8733,7 @@ export class SqliteStorage
   ): ManagedCandidateKnowledgeWriteOperationRecord {
     const row = this.database
       .prepare(
-        "SELECT operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at FROM candidate_knowledge_managed_write_operations WHERE operation_id = ?",
+        "SELECT operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at, owner_kind, owner_schema_version, owner_generation, requested_media_type, requested_checksum, requested_size_bytes FROM candidate_knowledge_managed_write_operations WHERE operation_id = ?",
       )
       .get(operationId);
     if (row === undefined) {
@@ -7997,6 +8742,79 @@ export class SqliteStorage
       );
     }
     return managedCandidateKnowledgeWriteOperationFromRow(row);
+  }
+
+  private requireManagedCandidateKnowledgeWriteMutationOwner(
+    operation: ManagedCandidateKnowledgeWriteOperationRecord,
+    expectedOwnerGeneration: number | undefined,
+  ): void {
+    const ownershipValues = [
+      operation.ownerKind,
+      operation.ownerSchemaVersion,
+      operation.ownerGeneration,
+      operation.requestedMediaType,
+      operation.requestedChecksum,
+      operation.requestedSizeBytes,
+    ];
+    const hasOwnership = ownershipValues.some((value) => value !== null && value !== undefined);
+    if (!hasOwnership) {
+      if (expectedOwnerGeneration !== undefined) {
+        throw new StorageConflictError(
+          "managed candidate knowledge write does not have owned mutation metadata",
+        );
+      }
+      return;
+    }
+    if (
+      operation.ownerKind !== managedCandidateKnowledgeWriteOwnerKind ||
+      operation.ownerSchemaVersion !== managedCandidateKnowledgeWriteOwnerSchemaVersion ||
+      operation.ownerGeneration === undefined ||
+      expectedOwnerGeneration === undefined ||
+      operation.ownerGeneration !== expectedOwnerGeneration ||
+      operation.requestedMediaType === undefined ||
+      operation.requestedMediaType.trim() === "" ||
+      operation.requestedChecksum === undefined ||
+      !/^[0-9a-f]{64}$/.test(operation.requestedChecksum) ||
+      operation.requestedSizeBytes === undefined ||
+      !Number.isInteger(operation.requestedSizeBytes) ||
+      operation.requestedSizeBytes < 0
+    ) {
+      throw new StorageConflictError(
+        "managed candidate knowledge write ownership generation changed",
+      );
+    }
+    const recoveryClaim = this.database
+      .prepare(
+        "SELECT operation_id FROM candidate_knowledge_managed_write_recovery_claims WHERE operation_id = ?",
+      )
+      .get(operation.operationId);
+    if (recoveryClaim !== undefined) {
+      throw new StorageConflictError("managed candidate knowledge write is claimed for recovery");
+    }
+  }
+
+  private requireManagedCandidateKnowledgeWriteRecoveryClaim(
+    operationId: string,
+    phase: ManagedCandidateKnowledgeWriteRecoveryClaimPhase,
+    expectedGeneration: number,
+  ): void {
+    const claim = this.database
+      .prepare(
+        "SELECT phase, claim_generation FROM candidate_knowledge_managed_write_recovery_claims WHERE operation_id = ?",
+      )
+      .get<{
+        readonly phase: ManagedCandidateKnowledgeWriteRecoveryClaimPhase;
+        readonly claim_generation: number;
+      }>(operationId);
+    if (
+      claim === undefined ||
+      claim.phase !== phase ||
+      claim.claim_generation !== expectedGeneration
+    ) {
+      throw new StorageConflictError(
+        "managed candidate knowledge write recovery claim is no longer current",
+      );
+    }
   }
 
   private requireManagedCandidateKnowledgeWriteState(
@@ -9013,6 +9831,16 @@ function candidateKnowledgeSourceRefreshObservationFromRow(
 function managedCandidateKnowledgeWriteOperationFromRow(
   row: Record<string, unknown>,
 ): ManagedCandidateKnowledgeWriteOperationRecord {
+  const ownerGeneration = rowNullableNumber(row, "owner_generation");
+  const requestedSizeBytes = rowNullableNumber(row, "requested_size_bytes");
+  const latestPhase = rowNullableString(row, "latest_phase");
+  const latestEventCreatedAt = rowNullableString(row, "latest_event_created_at");
+  const stagingDevice = rowNullableNumber(row, "staging_device");
+  const stagingInode = rowNullableNumber(row, "staging_inode");
+  const stagingCreatedAt = rowNullableString(row, "staging_created_at");
+  const recoveryClaimPhase = rowNullableString(row, "recovery_claim_phase");
+  const recoveryClaimGeneration = rowNullableNumber(row, "recovery_claim_generation");
+  const recoveryClaimedAt = rowNullableString(row, "recovery_claimed_at");
   return {
     operationId: rowString(row, "operation_id"),
     knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
@@ -9020,6 +9848,34 @@ function managedCandidateKnowledgeWriteOperationFromRow(
     requestedVersionId: rowString(row, "requested_version_id"),
     kind: rowString(row, "kind") as ManagedCandidateKnowledgeWriteKind,
     createdAt: rowString(row, "created_at"),
+    ...(ownerGeneration === null ? {} : { ownerGeneration }),
+    ...(rowNullableString(row, "requested_media_type") === null
+      ? {}
+      : { requestedMediaType: rowNullableString(row, "requested_media_type") as string }),
+    ...(rowNullableString(row, "requested_checksum") === null
+      ? {}
+      : { requestedChecksum: rowNullableString(row, "requested_checksum") as string }),
+    ...(requestedSizeBytes === null ? {} : { requestedSizeBytes }),
+    ownerKind: rowNullableString(row, "owner_kind"),
+    ownerSchemaVersion: rowNullableNumber(row, "owner_schema_version"),
+    latestPhase:
+      latestPhase === null
+        ? "prepared"
+        : (latestPhase as ManagedCandidateKnowledgeWriteJournalPhase),
+    latestEventCreatedAt,
+    targetVersionId: rowNullableString(row, "target_version_id"),
+    stagingIdentity:
+      stagingDevice === null || stagingInode === null || stagingCreatedAt === null
+        ? null
+        : { device: stagingDevice, inode: stagingInode, createdAt: stagingCreatedAt },
+    recoveryClaim:
+      recoveryClaimPhase === null || recoveryClaimGeneration === null || recoveryClaimedAt === null
+        ? null
+        : {
+            phase: recoveryClaimPhase as ManagedCandidateKnowledgeWriteRecoveryClaimPhase,
+            generation: recoveryClaimGeneration,
+            claimedAt: recoveryClaimedAt,
+          },
   };
 }
 

@@ -265,13 +265,15 @@ no-replace, file first, database second. Crashes or concurrent losers may leave
 unreferenced opaque entries, but shape or matching bytes do not authenticate
 DraftLoop ownership.
 
-The prospective append-only journal records opaque intent, target resolution,
-publication, managed-marker/database commit, and completion for new managed
-writes. It excludes paths, filenames, labels, checksums, content, provider
-data, diagnostics, cleanup tokens, approvals, and externally visible IDs.
-Legacy or unjournaled entries remain unknown. The journal is evidence for a
-future cleanup policy, not authority to adopt, delete, quarantine, repair, or
-reconcile; visible approval is still required.
+The append-only journal records opaque intent, target resolution, publication,
+managed-marker/database commit, and completion for new managed writes. Versioned
+ownership, expected integrity, immutable staging-file identity, and
+writer-generation fields remain sensitive local state. Recovery first records a
+durable claim with its newer generation, which fences stale journal and commit
+transactions before artifact inspection and remains retryable after cleanup
+failure. These fields authorize only deterministic restart recovery of that exact
+operation and never cross application or provider boundaries. Legacy,
+unjournaled, mismatched, and unrecognized entries remain unknown and untouched.
 
 All current CKB mutation commands use one store-wide exclusive writer lease.
 Its private SQLite coordinator is separate from the replaceable CKB data
@@ -280,13 +282,14 @@ timestamps, and a monotonically increasing fencing generation. Heartbeat,
 atomic stale takeover, nested fencing checks, and owner-generation-guarded
 release prevent concurrent commands from interleaving. Conflict diagnostics
 identify only the active operation and scope; they never include roots, paths,
-source identity, or content. Reads remain unleased. Backup, restore, deletion,
-interrupted-write recovery, and cleanup will reuse this coordination boundary
-but remain owned by their later Sprint 2 slices.
+source identity, or content. Reads remain unleased. Store opening uses the same
+lease to roll back verified incomplete publication or finish verified committed
+cleanup, with idempotent path-free reports. Backup, restore, retention, and
+user-requested deletion remain owned by their later Sprint 2 slices.
 
 The schema currently preserves append-only source/version, origin, observation,
 retirement, URL, directory-root, and directory-member history. [ADR 0007][adr-0007]
-records the compact v6–v15 schema-evolution summary and the invariants that
+records the compact v6–v17 schema-evolution summary and the invariants that
 motivated each boundary.
 
 ### CKB integration gap
