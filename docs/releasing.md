@@ -1,10 +1,10 @@
 # Releasing DraftLoop
 
-DraftLoop intends to produce a versioned release at each roadmap stage exit. A
-release is created only from the approved `main` branch and becomes a
-reproducible baseline for the next stage. Publishing an artifact proves the
-Released evidence level; it does not by itself prove that the product outcome
-was Validated.
+DraftLoop intends to produce a versioned release at each roadmap stage exit. An
+explicitly approved alpha sprint checkpoint may also be released before a
+stage exit. Every release is created only from the approved `main` branch;
+publishing an artifact proves the Released evidence level for that artifact,
+but it does not by itself prove that the product outcome was Validated.
 
 ## Release policy
 
@@ -14,8 +14,12 @@ was Validated.
 - `release.json` defines the current roadmap stage, stage issue, release
   channel, release name, and supported desktop artifact targets. It must agree
   with the current stage in `docs/roadmap.md` before a release starts.
-- The current Integration hardening and outcome validation channel is `alpha`;
-  alpha and pilot releases are GitHub prereleases.
+- An explicitly approved alpha sprint checkpoint may cover a completed sprint
+  before a roadmap stage exit. It must use a prerelease version, must not
+  advance the roadmap stage status or claim outcome validation, and must state
+  its remaining limitations.
+- The current Evidence-backed CV drafting channel is `alpha`; alpha and pilot
+  releases are GitHub prereleases.
 - A stable channel is allowed only after the production-beta exit criteria are
   demonstrated. Implemented beta components or a higher package version do not
   justify a stable channel on their own.
@@ -177,12 +181,14 @@ maintainer runs the live gate locally with synthetic material and records the
 sanitized result in the release evidence. Provider API keys and local vendor
 sessions remain outside CI/CD.
 
-## Stage release procedure
+## Stage or checkpoint release procedure
 
 1. Update the root version and all workspace package versions in a focused PR.
-2. Update `release.json` to the stage being exited and verify that its stage and
-   channel match the roadmap. Review the stage acceptance criteria and evidence
-   links, plus the README maturity and installation/download wording.
+2. Update `release.json` to the stage being exited or checkpointed and verify
+   that its stage and channel match the roadmap. For a checkpoint, keep the
+   stage status and exit criteria unchanged. Review the stage acceptance
+   criteria and evidence links, plus the README maturity and
+   installation/download wording.
 3. Merge the PR into `main` and wait for CI to pass.
 4. In a clean local worktree at the exact approved `main` commit, run
    `pnpm release:preflight` and record its sanitized live-provider result in the
