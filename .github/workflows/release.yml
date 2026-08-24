@@ -243,12 +243,12 @@ jobs:
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             `Stage issue: https://github.com/${repository}/issues/${process.env.RELEASE_STAGE_ISSUE}`,
             "SBOM: CycloneDX JSON is attached to the release.",
-            "Outcome validation: failed on the representative v0.6 case; this release is an integrated alpha baseline, not an application-readiness claim.",
+            "Checkpoint status: this release integrates the CKB foundation but does not validate or complete the v0.7 drafting outcome.",
             ...(process.env.ATTEST_PROVENANCE === "true"
               ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]
               : ["Provenance: not requested for this run."]),
             "",
-            "Known limitations: representative CV output did not preserve factual completeness, chronology, or application readiness; CLI remains source-distributed; signing and automatic updates remain beta-stage work.",
+            "Known limitations: profile, opportunity, retrieval, planning, complete-CV, writing-policy, storage-safety, signing, and automatic-update work remains incomplete; CLI remains source-distributed.",
           ].join("\n");
           fs.writeFileSync("release-output/release-notes.md", `${notes}\n`, "utf8");
           NODE
