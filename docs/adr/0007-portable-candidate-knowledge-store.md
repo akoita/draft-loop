@@ -232,12 +232,14 @@ recovery durably claims the observed phase with its newer fencing generation;
 this blocks every stale journal event, no-op, and commit transaction. A verified
 pre-commit operation is rolled back and marked aborted; a verified committed
 operation keeps its managed target, removes only its matching staging file, and
-is marked complete. Claims survive cleanup failure and can be renewed by a later
-generation, so replay is idempotent. Reports contain only safe operation kind,
-phase, and outcome. Legacy records without the ownership version, unknown or
-unjournaled entries, and mismatched or unrecognized artifacts are preserved.
-This automatic rollback is limited to proven residue from an incomplete write;
-retention and user-requested deletion retain separate visible approval boundaries.
+is marked complete.
+
+Claims survive cleanup failure and can be renewed by a later generation, so
+replay is idempotent. Reports contain only safe operation kind, phase, and
+outcome. Legacy records without the ownership version, unknown or unjournaled
+entries, and mismatched or unrecognized artifacts are preserved. This automatic
+rollback is limited to proven residue from an incomplete write; retention and
+user-requested deletion retain separate visible approval boundaries.
 
 ### Store-wide writer coordination
 
@@ -263,19 +265,27 @@ successor. Cancellation is cooperative once a callback has started: the writer
 must settle before `finally` releases ownership. Interrupted-write recovery uses
 the same generation fence and only acts after acquiring the current lease.
 Retention-policy mutations and deterministic planning use the same lease.
-Portable backup export reuses this lease for a complete source-store snapshot.
-It writes a strict versioned directory package outside the store, containing
-only allowlisted logical metadata and checksum-addressed managed source bytes.
+
+### Portable backup and restore
+
+Portable backup export holds the store-wide lease for a complete source-store
+snapshot. It writes a strict versioned directory package outside the store,
+containing only allowlisted logical metadata and checksum-addressed managed
+source bytes.
+
 Export fails closed on unknown inventory or unverifiable managed versions,
 requires explicit destination approval, self-inspects the completed staging
 package, and publishes without replacing an existing destination. Origin and
 directory-root paths, writer coordination, write/recovery journals,
 application/provider credentials, and workspace/run data never enter the
 package. Checksums detect corruption or modification but do not authenticate
-package authorship. Restore repeats inspection, builds and validates a migrated
-store in private staging, and publishes only to an approved absent destination.
-Its explicit `fail-if-destination-exists` policy rejects collisions; it does not
-merge stores, overwrite data, or rename store, CKB, source, or version IDs.
+package authorship.
+
+Restore repeats inspection, builds and validates a migrated store in private
+staging, and publishes only to an approved absent destination. Its explicit
+`fail-if-destination-exists` policy rejects collisions; it does not merge stores,
+overwrite data, or rename store, CKB, source, or version IDs.
+
 Directory membership and host-binding history are omitted, so every restored
 source remains unbound. Restored URL provenance retains the path-free fetch time
 and classification without inventing original or final URLs. Any unmanaged
@@ -361,48 +371,42 @@ omits roots, labels, filenames, URLs, checksums, content, and relative-path
 hashes. Each operation is an independent read; callers refresh after concurrent
 changes rather than treating several responses as one snapshot.
 
-The shared CLI and desktop adapters also expose explicit single-file intake
-through the existing application contract. CLI users supply a local path; the
-desktop host owns a dedicated one-file native picker and never accepts or
-returns that path through renderer IPC. Both adapters return only CKB, source,
-and initial-version identity plus creation status. They also expose approved URL
-intake as a separate command over the existing application contract. Approval
-is mandatory before any fetch, the centralized HTTPS/network-safety boundary is
-preserved, and generic results omit the URL, label, and content. One-source file
-version append is a separate adapter command: CLI users supply a runtime-only
-path, the desktop host owns the picker, and both return only source/version
-identity plus creation status. Identical bytes are a no-op, changed bytes extend
-immutable lineage, and neither outcome changes the remembered origin binding.
-Shared path-free controls now expose current origin status, persisted refresh
-state, explicit remembered-file refresh, and separately approved URL refresh.
-They return only source/version identity, status, and timestamps; local origins
-and URL provenance remain sensitive store state. Bounded directory intake is
-also exposed through both adapters. The CLI accepts the selected root as
-runtime-only input, while the desktop host owns a dedicated native picker;
-complete and partial results expose only counts and capped opaque
-source/version identities. Exact-byte one-file origin rebind is exposed as a
-separate native selection, returning only `current` or `rebound` plus the
-binding timestamp. Path-free retirement state and explicitly confirmed,
-idempotent logical retirement are also exposed; retirement preserves all
-evidence and has no reactivation control.
-Directory-root rebind is exposed as separate preview and apply controls. The
-CLI root is runtime-only and desktop owns a native picker. Preview is advisory;
-confirmed apply performs its own fresh bounded scan and relies on the existing
-atomic root-revision and per-origin guards. Both results expose only directory
-identity, status, timestamp, and counts.
-Directory refresh is exposed through separate path-free preview and confirmed
-apply controls over the remembered local root. Preview performs no write.
-Apply rescans, records refresh observations, and appends changed active
-same-member bytes in source-ID order. Results cap opaque member and refreshed
-source identities and preserve explicit partial-failure semantics without
-exposing paths, filenames, hashes, checksums, labels, or content.
-Moved-candidate preview and confirmed one-source member move are also shared
-adapter controls. Neither accepts a target path: the application derives one
-unique exact-integrity match from a fresh bounded scan. Move returns only
-opaque directory/source identity, check time, and `moved` or `current` status.
-Directory reconciliation preview and confirmed apply are shared adapters too.
-Apply forwards only approved missing source IDs, refuses incomplete scans, and
-returns deterministic path-free complete, current, or partial progress.
+### Shared adapter controls
+
+The CLI and desktop expose the same application contracts while keeping host
+paths outside generic results and renderer IPC:
+
+- **File and URL intake.** CLI users supply local file paths as runtime-only
+  input; the desktop host owns a dedicated native picker. Both return only CKB,
+  source, and initial-version identity plus creation status. URL intake is a
+  separate approved command that preserves the centralized HTTPS and
+  network-safety boundary and omits the URL, label, and content from results.
+- **Versions and refresh.** File-version append uses runtime-only CLI input or
+  the desktop picker and returns only source/version identity and creation
+  status. Identical bytes are a no-op; changed bytes extend immutable lineage.
+  Path-free controls expose origin status, persisted refresh state, remembered-
+  file refresh, and separately approved URL refresh without revealing local
+  origins or URL provenance.
+- **Directory intake.** The CLI accepts the selected root as runtime-only input,
+  while the desktop host owns a dedicated native picker. Complete and partial
+  results expose only counts and capped opaque source/version identities.
+- **Rebind and retirement.** Exact-byte one-file origin rebind returns only
+  `current` or `rebound` plus the binding timestamp. Path-free retirement state
+  and explicitly confirmed, idempotent logical retirement are also available;
+  retirement preserves all evidence and has no reactivation control.
+- **Directory-root rebind.** Preview is advisory. Confirmed apply performs a
+  fresh bounded scan and relies on atomic root-revision and per-origin guards.
+  Both results expose only directory identity, status, timestamp, and counts.
+- **Directory refresh.** Preview is read-only. Confirmed apply rescans the
+  remembered root, records observations, and appends changed active same-member
+  bytes in source-ID order. Results cap opaque identities and preserve explicit
+  partial-failure semantics without exposing paths, filenames, hashes,
+  checksums, labels, or content.
+- **Moves and reconciliation.** Moved-candidate preview and confirmed one-source
+  move accept no target path; the application derives one unique exact-integrity
+  match from a fresh bounded scan. Reconciliation apply forwards only approved
+  missing source IDs, refuses incomplete scans, and returns deterministic,
+  path-free complete, current, or partial progress.
 
 ## Deferred integration
 
