@@ -7,6 +7,7 @@ import { generateSanitizedPilotReport } from "./pilot-report.js";
 import {
   type ApplicationIo,
   type ApplicationService,
+  type ApplyKnowledgeSourceDirectoryMemberMoveResult,
   type ApplyKnowledgeSourceDirectoryRefreshResult,
   type ApplyKnowledgeSourceDirectoryRootRebindResult,
   applicationService,
@@ -23,6 +24,7 @@ import {
   type KnowledgeSourceRefreshStateResult,
   type KnowledgeSourceRetirementResult,
   knowledgeService,
+  type PreviewKnowledgeSourceDirectoryMovedCandidatesResult,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
   type PreviewKnowledgeSourceDirectoryRootRebindResult,
   runPilot,
@@ -518,6 +520,104 @@ function writeKnowledgeSourceDirectoryRefresh(
     }
   }
   writeJson(io, Object.freeze(projection));
+}
+
+function writeKnowledgeSourceDirectoryMovedCandidates(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  directoryId: string,
+  result: PreviewKnowledgeSourceDirectoryMovedCandidatesResult,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.directoryId !== directoryId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !Array.isArray(result.candidates) ||
+    !Number.isSafeInteger(result.candidateCount) ||
+    result.candidateCount < 0 ||
+    result.candidateCount !== result.candidates.length ||
+    ![
+      result.newSourceCount,
+      result.scannedEntryCount,
+      result.discoveredFileCount,
+      result.skippedEntryCount,
+    ].every((count) => Number.isSafeInteger(count) && count >= 0) ||
+    result.newSourceCount > result.discoveredFileCount ||
+    result.discoveredFileCount + result.skippedEntryCount > result.scannedEntryCount
+  ) {
+    throw new Error("The candidate knowledge source directory moved-candidate result was invalid.");
+  }
+
+  const sourceIds = new Set<string>();
+  for (const candidate of result.candidates) {
+    if (
+      typeof candidate !== "object" ||
+      candidate === null ||
+      typeof candidate.sourceId !== "string" ||
+      candidate.sourceId.trim() === "" ||
+      sourceIds.has(candidate.sourceId) ||
+      candidate.status !== "moved-candidate"
+    ) {
+      throw new Error(
+        "The candidate knowledge source directory moved-candidate result was invalid.",
+      );
+    }
+    sourceIds.add(candidate.sourceId);
+  }
+
+  const ordered = [...result.candidates].sort((left, right) =>
+    lexicalCompare(left.sourceId, right.sourceId),
+  );
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      directoryId,
+      checkedAt: result.checkedAt,
+      candidates: ordered.slice(0, maximumKnowledgeInspectionItems).map(({ sourceId, status }) => ({
+        sourceId,
+        status,
+      })),
+      candidateCount: result.candidateCount,
+      candidatesTruncated: result.candidateCount > maximumKnowledgeInspectionItems,
+      newSourceCount: result.newSourceCount,
+      scannedEntryCount: result.scannedEntryCount,
+      discoveredFileCount: result.discoveredFileCount,
+      skippedEntryCount: result.skippedEntryCount,
+    }),
+  );
+}
+
+function writeKnowledgeSourceDirectoryMemberMove(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  directoryId: string,
+  sourceId: string,
+  result: ApplyKnowledgeSourceDirectoryMemberMoveResult,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.directoryId !== directoryId ||
+    result.sourceId !== sourceId ||
+    typeof result.sourceId !== "string" ||
+    result.sourceId.trim() === "" ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !["moved", "current"].includes(result.status)
+  ) {
+    throw new Error("The candidate knowledge source directory member move result was invalid.");
+  }
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+      checkedAt: result.checkedAt,
+      status: result.status,
+    }),
+  );
 }
 
 const isoTimestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
@@ -1190,6 +1290,73 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
         });
         writeKnowledgeSourceDirectoryRefresh(io, knowledgeBaseId, directoryId, result, "apply");
+      },
+    );
+
+  knowledgeSource
+    .command("directory-moved-candidates")
+    .description("Preview directory members whose origins appear to have moved")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .option("--max-depth <number>", "maximum directory depth", integerOption)
+    .option("--max-scanned-entries <number>", "maximum scanned directory entries", integerOption)
+    .option("--max-accepted-files <number>", "maximum accepted directory files", integerOption)
+    .option("--max-accepted-bytes <number>", "maximum accepted directory bytes", integerOption)
+    .option("--max-source-bytes <number>", "maximum bytes per source file", integerOption)
+    .option("--max-chunk-characters <number>", "maximum extracted chunk characters", integerOption)
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        options: Record<string, unknown>,
+      ) => {
+        const ingestionOptions = directoryIngestionOptions(options);
+        const result = await candidateKnowledge.previewKnowledgeSourceDirectoryMovedCandidates({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
+        });
+        writeKnowledgeSourceDirectoryMovedCandidates(io, knowledgeBaseId, directoryId, result);
+      },
+    );
+
+  knowledgeSource
+    .command("directory-member-move")
+    .description("Move one directory member after explicit confirmation")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .argument("<source-id>", "opaque file source id")
+    .option("--max-depth <number>", "maximum directory depth", integerOption)
+    .option("--max-scanned-entries <number>", "maximum scanned directory entries", integerOption)
+    .option("--max-accepted-files <number>", "maximum accepted directory files", integerOption)
+    .option("--max-accepted-bytes <number>", "maximum accepted directory bytes", integerOption)
+    .option("--max-source-bytes <number>", "maximum bytes per source file", integerOption)
+    .option("--max-chunk-characters <number>", "maximum extracted chunk characters", integerOption)
+    .option("--confirm", "confirm moving the directory member")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        sourceId: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.confirm !== true) {
+          throw new Error("knowledge source directory-member-move requires --confirm.");
+        }
+        const ingestionOptions = directoryIngestionOptions(options);
+        const result = await candidateKnowledge.applyKnowledgeSourceDirectoryMemberMove({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          sourceId,
+          ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
+        });
+        writeKnowledgeSourceDirectoryMemberMove(io, knowledgeBaseId, directoryId, sourceId, result);
       },
     );
 

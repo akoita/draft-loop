@@ -322,6 +322,10 @@ Apply rescans, records refresh observations, and appends changed active
 same-member bytes in source-ID order. Results cap opaque member and refreshed
 source identities and preserve explicit partial-failure semantics without
 exposing paths, filenames, hashes, checksums, labels, or content.
+Moved-candidate preview and confirmed one-source member move are also shared
+adapter controls. Neither accepts a target path: the application derives one
+unique exact-integrity match from a fresh bounded scan. Move returns only
+opaque directory/source identity, check time, and `moved` or `current` status.
 
 ## Deferred integration
 

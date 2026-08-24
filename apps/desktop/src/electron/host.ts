@@ -55,6 +55,8 @@ import {
   type FileSelectResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeDirectoryImportSourceResult,
+  type KnowledgeDirectoryMemberMoveResult,
+  type KnowledgeDirectoryMovedCandidatesResult,
   type KnowledgeDirectoryRefreshApplyResult,
   type KnowledgeDirectoryRefreshMemberResult,
   type KnowledgeDirectoryRefreshPreviewResult,
@@ -2503,6 +2505,105 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ...(failedSourceId === undefined || failedStatus === undefined
               ? {}
               : { failedSourceId, failedStatus }),
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-moved-candidates": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const preview = await knowledgeService.previewKnowledgeSourceDirectoryMovedCandidates({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+          });
+          const sourceIds = new Set<string>();
+          const candidates = preview.candidates
+            .map((candidate) => {
+              if (
+                typeof candidate.sourceId !== "string" ||
+                candidate.sourceId.trim() === "" ||
+                sourceIds.has(candidate.sourceId) ||
+                candidate.status !== "moved-candidate"
+              ) {
+                return fail(
+                  "operation-failed",
+                  "Candidate knowledge directory move preview returned inconsistent state.",
+                );
+              }
+              sourceIds.add(candidate.sourceId);
+              return { sourceId: candidate.sourceId, status: candidate.status };
+            })
+            .sort((left, right) => left.sourceId.localeCompare(right.sourceId));
+          if (
+            preview.directoryId !== command.input.directoryId ||
+            !isValidTimestamp(preview.checkedAt) ||
+            !Number.isSafeInteger(preview.candidateCount) ||
+            preview.candidateCount !== candidates.length ||
+            ![
+              preview.newSourceCount,
+              preview.scannedEntryCount,
+              preview.discoveredFileCount,
+              preview.skippedEntryCount,
+            ].every((count) => Number.isSafeInteger(count) && count >= 0) ||
+            preview.newSourceCount > preview.discoveredFileCount ||
+            preview.discoveredFileCount + preview.skippedEntryCount > preview.scannedEntryCount
+          )
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory move preview returned inconsistent state.",
+            );
+          const projected = candidates.slice(0, maximumKnowledgeInspectionEntries);
+          const result: KnowledgeDirectoryMovedCandidatesResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: preview.directoryId,
+            checkedAt: preview.checkedAt,
+            candidates: projected,
+            candidateCount: candidates.length,
+            candidatesTruncated: projected.length < candidates.length,
+            newSourceCount: preview.newSourceCount,
+            scannedEntryCount: preview.scannedEntryCount,
+            discoveredFileCount: preview.discoveredFileCount,
+            skippedEntryCount: preview.skippedEntryCount,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-member-move": {
+          if (!command.input.confirmed)
+            return fail(
+              "permission-denied",
+              "Candidate knowledge directory member move requires confirmation.",
+            );
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const moved = await knowledgeService.applyKnowledgeSourceDirectoryMemberMove({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+            sourceId: command.input.sourceId,
+          });
+          if (
+            moved.directoryId !== command.input.directoryId ||
+            moved.sourceId !== command.input.sourceId ||
+            !isValidTimestamp(moved.checkedAt) ||
+            (moved.status !== "moved" && moved.status !== "current")
+          ) {
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory member move returned inconsistent state.",
+            );
+          }
+          const result: KnowledgeDirectoryMemberMoveResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: moved.directoryId,
+            sourceId: moved.sourceId,
+            checkedAt: moved.checkedAt,
+            status: moved.status,
           };
           return { ok: true, value: result };
         }

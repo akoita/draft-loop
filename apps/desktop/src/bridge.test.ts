@@ -1559,6 +1559,68 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("validates guarded path-free directory member move controls", async () => {
+    const input = { storeId: "store-1", knowledgeBaseId: "kb-1", directoryId: "directory-1" };
+    expect(validateBridgeCommand({ type: "knowledge.directory-moved-candidates", input })).toEqual({
+      type: "knowledge.directory-moved-candidates",
+      input,
+    });
+    const moveInput = { ...input, sourceId: "source-1", confirmed: true };
+    expect(
+      validateBridgeCommand({ type: "knowledge.directory-member-move", input: moveInput }),
+    ).toEqual({ type: "knowledge.directory-member-move", input: moveInput });
+    expect(() =>
+      validateBridgeCommand({
+        type: "knowledge.directory-moved-candidates",
+        input: { ...input, directoryPath: "/private" },
+      }),
+    ).toThrow("invalid");
+    const preview = {
+      ...input,
+      checkedAt: "2026-08-24T10:00:00.000Z",
+      candidates: [{ sourceId: "source-1", status: "moved-candidate" }],
+      candidateCount: 1,
+      candidatesTruncated: false,
+      newSourceCount: 1,
+      scannedEntryCount: 2,
+      discoveredFileCount: 1,
+      skippedEntryCount: 1,
+    } as const;
+    const previewPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: preview }), ["knowledge.directory-moved-candidates"]),
+    );
+    await expect(
+      previewPort.execute({ type: "knowledge.directory-moved-candidates", input }),
+    ).resolves.toEqual({ ok: true, value: preview });
+    const moved = {
+      ...input,
+      sourceId: "source-1",
+      checkedAt: preview.checkedAt,
+      status: "moved" as const,
+    };
+    const movePort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: moved }), ["knowledge.directory-member-move"]),
+    );
+    await expect(
+      movePort.execute({ type: "knowledge.directory-member-move", input: moveInput }),
+    ).resolves.toEqual({ ok: true, value: moved });
+    for (const invalid of [
+      { ...preview, candidateCount: 2 },
+      { ...preview, candidates: [preview.candidates[0], preview.candidates[0]] },
+      { ...preview, rootPath: "/private" },
+    ]) {
+      const port = createCapabilityPort(
+        bridge(
+          async () => ({ ok: true, value: invalid }),
+          ["knowledge.directory-moved-candidates"],
+        ),
+      );
+      await expect(
+        port.execute({ type: "knowledge.directory-moved-candidates", input }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+  });
+
   it("validates path-free candidate-knowledge file-version append", async () => {
     const input = {
       storeId: "store-1",

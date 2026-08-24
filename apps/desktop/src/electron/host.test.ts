@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
@@ -3279,6 +3279,84 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify(applied)).not.toContain("career.md");
       expect(JSON.stringify(applied)).not.toContain("Updated private career evidence");
       expect(applyRefresh).toHaveBeenCalledOnce();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("previews and confirms a path-free directory member move", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-directory-member-move-host-"));
+    const directoryPath = join(parent, "private-career-directory");
+    await mkdir(directoryPath);
+    const originalPath = join(directoryPath, "career.md");
+    const movedPath = join(directoryPath, "renamed-career.md");
+    await writeFile(originalPath, "Private career evidence.\n", "utf8");
+    try {
+      const underlying = createCandidateKnowledgeStoreService();
+      const applyMove = vi.fn(underlying.applyKnowledgeSourceDirectoryMemberMove);
+      const host = createNativeHost({
+        knowledgeService: { ...underlying, applyKnowledgeSourceDirectoryMemberMove: applyMove },
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceDirectory: async () => directoryPath,
+        },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      const imported = await host.invoke({
+        type: "knowledge.import-directory",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
+      const importedValue = imported.value as {
+        directoryId: string;
+        sources: readonly { sourceId: string }[];
+      };
+      const directoryId = importedValue.directoryId;
+      const sourceId = importedValue.sources[0]?.sourceId;
+      if (sourceId === undefined) throw new Error("Expected one imported source.");
+      await rename(originalPath, movedPath);
+      const input = { storeId, knowledgeBaseId, directoryId };
+      const preview = await host.invoke({ type: "knowledge.directory-moved-candidates", input });
+      expect(preview).toMatchObject({
+        ok: true,
+        value: {
+          ...input,
+          candidates: [{ sourceId, status: "moved-candidate" }],
+          candidateCount: 1,
+          candidatesTruncated: false,
+        },
+      });
+      expect(JSON.stringify(preview)).not.toContain(parent);
+      expect(JSON.stringify(preview)).not.toContain("renamed-career.md");
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-member-move",
+          input: { ...input, sourceId, confirmed: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      expect(applyMove).not.toHaveBeenCalled();
+      const moved = await host.invoke({
+        type: "knowledge.directory-member-move",
+        input: { ...input, sourceId, confirmed: true },
+      });
+      expect(moved).toMatchObject({ ok: true, value: { ...input, sourceId, status: "moved" } });
+      expect(JSON.stringify(moved)).not.toContain(parent);
+      expect(JSON.stringify(moved)).not.toContain("renamed-career.md");
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-member-move",
+          input: { ...input, sourceId, confirmed: true },
+        }),
+      ).resolves.toMatchObject({ ok: true, value: { status: "current" } });
     } finally {
       await rm(parent, { recursive: true, force: true });
     }

@@ -6,6 +6,7 @@ import { createCli } from "./index.js";
 import type {
   ApplicationIo,
   ApplicationService,
+  ApplyKnowledgeSourceDirectoryMemberMoveResult,
   ApplyKnowledgeSourceDirectoryRefreshResult,
   ApplyKnowledgeSourceDirectoryRootRebindResult,
   CandidateKnowledgeSourceManifest,
@@ -23,6 +24,7 @@ import type {
   KnowledgeSourceOriginStatusResult,
   KnowledgeSourceRefreshStateResult,
   KnowledgeSourceRetirementResult,
+  PreviewKnowledgeSourceDirectoryMovedCandidatesResult,
   PreviewKnowledgeSourceDirectoryRefreshResult,
   PreviewKnowledgeSourceDirectoryRootRebindResult,
   StatusCommand,
@@ -377,6 +379,38 @@ function knowledgeSourceDirectoryRefreshApplyResult(
       : {}),
     ...overrides,
   } as ApplyKnowledgeSourceDirectoryRefreshResult;
+}
+
+function knowledgeSourceDirectoryMovedCandidatesResult(
+  overrides: Partial<PreviewKnowledgeSourceDirectoryMovedCandidatesResult> = {},
+): PreviewKnowledgeSourceDirectoryMovedCandidatesResult {
+  return {
+    directoryId: "directory-opaque",
+    checkedAt: "2026-08-23T10:07:00.000Z",
+    candidates: [
+      { sourceId: "source-b", status: "moved-candidate" },
+      { sourceId: "source-a", status: "moved-candidate" },
+    ],
+    candidateCount: 2,
+    newSourceCount: 1,
+    scannedEntryCount: 5,
+    discoveredFileCount: 3,
+    skippedEntryCount: 2,
+    ...overrides,
+  };
+}
+
+function knowledgeSourceDirectoryMemberMoveResult(
+  status: "moved" | "current" = "moved",
+  overrides: Partial<ApplyKnowledgeSourceDirectoryMemberMoveResult> = {},
+): ApplyKnowledgeSourceDirectoryMemberMoveResult {
+  return {
+    directoryId: "directory-opaque",
+    sourceId: "source-a",
+    checkedAt: "2026-08-23T10:07:00.000Z",
+    status,
+    ...overrides,
+  };
 }
 
 function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
@@ -1813,6 +1847,318 @@ describe("candidate knowledge source inspection CLI controls", () => {
         "directory-opaque",
       ]),
     ).rejects.toBe(failure);
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("maps moved-candidate preview and member moves with bounded path-free output", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-directory-store");
+    const knowledgeBaseId = "base-one";
+    const directoryId = "directory-opaque";
+    const sourceId = "source-a";
+    const privateDirectoryPath = resolve("private-moved-directory");
+    const previewKnowledgeSourceDirectoryMovedCandidates = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...knowledgeSourceDirectoryMovedCandidatesResult(),
+        privateDirectoryPath,
+        checksum: "a".repeat(64),
+        content: "private directory content",
+      } as unknown as PreviewKnowledgeSourceDirectoryMovedCandidatesResult)
+      .mockResolvedValueOnce(knowledgeSourceDirectoryMovedCandidatesResult());
+    const applyKnowledgeSourceDirectoryMemberMove = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceDirectoryMemberMoveResult("moved"))
+      .mockResolvedValueOnce(knowledgeSourceDirectoryMemberMoveResult("current"));
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryMovedCandidates,
+      applyKnowledgeSourceDirectoryMemberMove,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-moved-candidates",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--max-depth",
+      "4",
+      "--max-scanned-entries",
+      "8",
+      "--max-accepted-files",
+      "3",
+      "--max-accepted-bytes",
+      "32",
+      "--max-source-bytes",
+      "16",
+      "--max-chunk-characters",
+      "12",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-member-move",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+      "--confirm",
+      "--max-accepted-files",
+      "2",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-member-move",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+      "--confirm",
+    ]);
+
+    expect(previewKnowledgeSourceDirectoryMovedCandidates).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      options: {
+        maxDepth: 4,
+        maxScannedEntries: 8,
+        maxAcceptedFiles: 3,
+        maxAcceptedBytes: 32,
+        maxSourceBytes: 16,
+        maxChunkCharacters: 12,
+      },
+    });
+    expect(applyKnowledgeSourceDirectoryMemberMove).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+      options: { maxAcceptedFiles: 2 },
+    });
+    expect(applyKnowledgeSourceDirectoryMemberMove).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      sourceId,
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:07:00.000Z",
+        candidates: [
+          { sourceId: "source-a", status: "moved-candidate" },
+          { sourceId: "source-b", status: "moved-candidate" },
+        ],
+        candidateCount: 2,
+        candidatesTruncated: false,
+        newSourceCount: 1,
+        scannedEntryCount: 5,
+        discoveredFileCount: 3,
+        skippedEntryCount: 2,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        sourceId,
+        checkedAt: "2026-08-23T10:07:00.000Z",
+        status: "moved",
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        sourceId,
+        checkedAt: "2026-08-23T10:07:00.000Z",
+        status: "current",
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(privateDirectoryPath);
+    expect(output).not.toContain("private directory content");
+    expect(output).not.toContain("a".repeat(64));
+  });
+
+  it("requires explicit confirmation before applying a directory member move", async () => {
+    const dependencies = harness();
+    const applyKnowledgeSourceDirectoryMemberMove = vi.fn(async () =>
+      knowledgeSourceDirectoryMemberMoveResult(),
+    );
+    const knowledgeService = {
+      applyKnowledgeSourceDirectoryMemberMove,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "directory-member-move",
+        resolve("private-directory-store"),
+        "base-one",
+        "directory-opaque",
+        "source-a",
+      ]),
+    ).rejects.toThrow("knowledge source directory-member-move requires --confirm");
+    expect(applyKnowledgeSourceDirectoryMemberMove).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("validates complete moved-candidate results before truncating and projecting them", async () => {
+    const dependencies = harness();
+    const candidates = Array.from({ length: 300 }, (_, index) => ({
+      sourceId: `source-${String(index).padStart(3, "0")}`,
+      status: "moved-candidate" as const,
+    }));
+    const previewResult = knowledgeSourceDirectoryMovedCandidatesResult({
+      candidates,
+      candidateCount: candidates.length,
+      newSourceCount: 0,
+      scannedEntryCount: candidates.length,
+      discoveredFileCount: candidates.length,
+      skippedEntryCount: 0,
+    });
+    const previewKnowledgeSourceDirectoryMovedCandidates = vi.fn(async () => previewResult);
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryMovedCandidates,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    }).parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-moved-candidates",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+    ]);
+
+    const output = JSON.parse(dependencies.lines[0] ?? "{}");
+    expect(output.candidateCount).toBe(300);
+    expect(output.candidatesTruncated).toBe(true);
+    expect(output.candidates).toHaveLength(256);
+    expect(output.candidates[0]).toEqual({
+      sourceId: "source-000",
+      status: "moved-candidate",
+    });
+    expect(output.candidates[255]).toEqual({
+      sourceId: "source-255",
+      status: "moved-candidate",
+    });
+    expect(output.candidates.map((candidate: { sourceId: string }) => candidate.sourceId)).toEqual(
+      candidates.slice(0, 256).map(({ sourceId }) => sourceId),
+    );
+  });
+
+  it("rejects malformed moved-candidate and member-move results without output", async () => {
+    const dependencies = harness();
+    const validPreview = knowledgeSourceDirectoryMovedCandidatesResult();
+    const previewResults = [
+      { ...validPreview, directoryId: "other-directory" },
+      { ...validPreview, checkedAt: "not-a-timestamp" },
+      { ...validPreview, candidateCount: 1 },
+      { ...validPreview, candidates: [{ sourceId: "", status: "moved-candidate" }] },
+      {
+        ...validPreview,
+        candidates: [
+          { sourceId: "source-a", status: "moved-candidate" },
+          { sourceId: "source-a", status: "moved-candidate" },
+        ],
+        candidateCount: 2,
+      },
+      {
+        ...validPreview,
+        candidates: [{ sourceId: "source-a", status: "current" }],
+        candidateCount: 1,
+      },
+      { ...validPreview, newSourceCount: 4 },
+      { ...validPreview, scannedEntryCount: 4 },
+    ];
+    const previewKnowledgeSourceDirectoryMovedCandidates = vi.fn();
+    for (const result of previewResults) {
+      previewKnowledgeSourceDirectoryMovedCandidates.mockResolvedValueOnce(
+        result as unknown as PreviewKnowledgeSourceDirectoryMovedCandidatesResult,
+      );
+    }
+    const validMove = knowledgeSourceDirectoryMemberMoveResult();
+    const moveResults = [
+      { ...validMove, directoryId: "other-directory" },
+      { ...validMove, sourceId: "other-source" },
+      { ...validMove, checkedAt: "not-a-timestamp" },
+      { ...validMove, status: "invalid" },
+    ];
+    const applyKnowledgeSourceDirectoryMemberMove = vi.fn();
+    for (const result of moveResults) {
+      applyKnowledgeSourceDirectoryMemberMove.mockResolvedValueOnce(
+        result as unknown as ApplyKnowledgeSourceDirectoryMemberMoveResult,
+      );
+    }
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryMovedCandidates,
+      applyKnowledgeSourceDirectoryMemberMove,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const previewCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-moved-candidates",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+    ] as const;
+    const moveCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-member-move",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      "source-a",
+      "--confirm",
+    ] as const;
+
+    for (let index = 0; index < previewResults.length; index += 1) {
+      await expect(cli.parseAsync(previewCommand)).rejects.toThrow(
+        "The candidate knowledge source directory moved-candidate result was invalid.",
+      );
+    }
+    for (let index = 0; index < moveResults.length; index += 1) {
+      await expect(cli.parseAsync(moveCommand)).rejects.toThrow(
+        "The candidate knowledge source directory member move result was invalid.",
+      );
+    }
     expect(dependencies.lines).toEqual([]);
   });
 
