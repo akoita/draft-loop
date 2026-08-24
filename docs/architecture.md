@@ -135,6 +135,7 @@ portable CKB is a separate local SQLite store for reusable candidate material.
 The CKB has a logical UUID independent of its selected filesystem path. A
 workspace does not implicitly read CKB content. Its local manifest may bind
 explicitly named CKBs by runtime store root and pinned logical store/CKB IDs.
+
 Before each new run, the shared application boundary reopens those stores,
 checks their logical identities and lifecycle readiness, and embeds a freshly
 canonicalized, path-free selection snapshot in the immutable run context.
@@ -432,61 +433,36 @@ See [the threat model](threat-model.md) and [privacy and evaluation
 policy](privacy-and-evaluation.md) for current trust boundaries, redaction
 rules, retention defaults, and deterministic evaluation gates.
 
+### Application adapter boundary
+
 The CLI and packaged desktop host are adapters over the shared application
 driver. The driver stores a workspace manifest beside application SQLite
 history, ingests selected local sources, constructs context snapshots, and
-drives orchestration. CLI and desktop adapters expose path-safe CKB store setup,
-selection, and additional-CKB create/rename/archive controls over the same
-application contracts. Their read-only inspection surface projects bounded
-source/version identities, duplicate groups, lifecycle readiness, and a
-count-only structural inventory; it excludes roots, source labels, filenames,
-URLs, checksums, and content. Separate inspection calls are fresh reads rather
-than one cross-command snapshot. Explicit single-file CKB intake uses the same
-application import contract in both adapters: the CLI accepts a local path,
-while the desktop host owns a dedicated native picker and projects only opaque
-source/version identity to the renderer. Archival requires explicit
-confirmation and does not rewrite workspace selection. Approved CKB URL intake
-also uses the shared application contract and centralized ingestion boundary:
-the renderer must provide explicit approval, while the host enforces HTTPS,
-public-address resolution, redirect, time, size, and content limits. Its result
-contains only opaque source/version identity, never the URL or fetched content.
-One-source file-version append follows the same adapter split as file intake:
-the CLI accepts an intentional runtime-only path, while the desktop host owns
-the picker. The application/storage boundary atomically guards the current
-version; identical bytes return the current identity and changed bytes append
-immutable lineage without replacing the remembered origin binding. Generic
-results expose only opaque identity and creation status.
-Source maintenance uses separate path-free status, refresh-state, file-refresh,
-and URL-refresh commands over the same application service. Remembered-file
-refresh never accepts a new path; URL refresh requires explicit approval and
-reuses the centralized network boundary. Results contain only opaque identity,
-status, timestamps, and a newly created version ID when applicable.
-Bounded directory intake follows the same adapter split: the CLI accepts an
-intentional runtime-only root and the desktop host owns a native directory
-picker. Both call the shared application contract and return complete or
-partial progress as scan counts plus capped opaque source/version identities;
-no root, filename, membership hash, label, checksum, or content crosses the
-generic result boundary.
-Single-file origin rebind accepts a runtime-only CLI path or a desktop-native
-file selection. The application requires stable bytes identical to the current
-managed version before replacing the sensitive origin binding; adapters return
-only opaque identity, `current` or `rebound`, and the binding timestamp.
-Path-free retirement inspection reports `active` or `retired`. Logical
-retirement requires explicit confirmation, is idempotent, preserves managed
-evidence, and has no reactivation operation.
-Directory-root rebind uses separate shared preview and apply contracts. CLI
-paths are runtime-only and desktop selections remain in the native host.
-Preview performs no write; confirmed apply repeats the bounded exact-membership
-scan and atomically advances the root revision plus every member origin, or
-fails on drift. Results contain only opaque directory identity, status,
-timestamp, and counts.
-Directory refresh also uses separate shared preview and confirmed-apply
-contracts, but reads the sensitive remembered root rather than accepting a new
-one. Preview reports bounded path-free member states and scan counts. Apply
-rescans, records observations, and appends changed active same-member sources
-in deterministic source-ID order. If a later append fails, already completed
-source updates remain and the result reports capped opaque refreshed IDs plus
-the failed source and status.
+drives orchestration.
+
+Across CKB commands, the adapters differ only at the user-interaction edge:
+
+- **CLI:** accepts intentional runtime-only file and directory paths.
+- **Desktop:** owns native pickers in the host and projects only path-free,
+  bounded results to the renderer.
+- **Shared application boundary:** applies the same approvals, lifecycle guards,
+  network policy, deterministic ordering, and complete-or-partial result
+  contracts to both adapters.
+
+Store setup, selection, inspection, intake, refresh, rebind, retirement, and
+directory maintenance all follow this split. Read-only inspection calls are
+fresh reads rather than a cross-command snapshot. Mutation results expose only
+the opaque identities, statuses, timestamps, counts, and bounded partial
+progress required by the caller. The detailed CKB contracts are documented in
+[Portable Candidate Knowledge Base](#portable-candidate-knowledge-base) and are
+canonical in [ADR 0007][adr-0007].
+
+Archiving a CKB and other destructive or externally visible operations require
+explicit confirmation. Adapter commands do not silently rewrite workspace
+selection or broaden an approved source, URL, or provider scope.
+
+### Provider and export boundary
+
 Live provider execution is opt-in and the provider boundary enforces the
 request data policy before the SDK call. Approved artifacts render locally to
 Markdown, controlled DOCX, or controlled PDF; immutable export records retain

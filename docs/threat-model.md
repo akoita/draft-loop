@@ -36,32 +36,39 @@ checks, and the 20 MiB per-file limit. Approved directory intake is bounded;
 its root and immutable normalized-relative-path membership hashes are sensitive
 local state. Partial and legacy runtime-only imports have no directory binding.
 
-Host paths, URL provenance, and membership hashes are not portable identity and
-are excluded from generic manifests, providers, and content-free diagnostics.
-Labels and checksums are local CKB metadata but remain excluded from provider
-and content-free surfaces. The shared application contract can bind path-free
-selection evidence to new runs. CLI and desktop expose selection and bounded CKB
-metadata maintenance without carrying roots through the desktop renderer
-boundary; archival requires explicit confirmation. Single-file desktop intake
-uses a dedicated native picker, keeps the selected path in the host, and
-returns only opaque source/version identity. Cancellation performs no import,
-and ingestion failures use path-free diagnostics. CKB URL intake requires an
-explicit approval on each adapter request, uses the centralized HTTPS and
+Host paths, URL provenance, and membership hashes are not portable identity.
+Generic manifests, provider requests, and content-free diagnostics exclude
+them. Labels and checksums are local CKB metadata, but provider and content-free
+surfaces exclude them too.
+
+The shared application contract can bind path-free selection evidence to new
+runs. CLI and desktop expose selection and bounded CKB metadata maintenance
+without carrying roots through the desktop renderer boundary. Archival requires
+explicit confirmation.
+
+Single-file desktop intake uses a dedicated native picker, keeps the selected
+path in the host, and returns only opaque source/version identity. Cancellation
+performs no import, and ingestion failures use path-free diagnostics. URL intake
+requires approval for each adapter request, preserves the centralized HTTPS and
 network-safety boundary, and returns no URL, query string, label, or fetched
-content through generic CLI or renderer results. File-version append likewise
-keeps the selected path outside generic results and renderer IPC. Atomic
-latest-version checks reject stale concurrent mutation; a successful append
-does not replace the sensitive remembered origin binding. Directory intake is
-exposed through the same bounded application contract: the CLI root is
+content through generic CLI or renderer results.
+
+File-version append also keeps the selected path outside generic results and
+renderer IPC. Atomic latest-version checks reject stale concurrent mutation; a
+successful append does not replace the sensitive remembered origin binding.
+Explicit file refresh uses only that remembered origin. URL refresh requires
+fresh approval and preserves the existing SSRF, redirect, time, size, and
+content limits.
+
+Directory intake uses the same bounded application contract. The CLI root is
 runtime-only, the desktop host owns the picker, and generic complete or partial
-results carry only scan counts and capped opaque source/version identities.
-Directory roots, filenames, membership hashes, and content remain local.
-Path-free status and refresh-state results omit origins and provenance.
-Explicit file refresh uses only the remembered origin; URL refresh requires
-fresh approval and preserves
-the existing SSRF, redirect, time, size, and content limits. No application run
-retrieves CKB content yet, so the existing workspace evidence boundary remains
-authoritative. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
+results contain only scan counts and capped opaque source/version identities.
+Directory roots, filenames, membership hashes, and content remain local;
+path-free status and refresh-state results omit origins and provenance.
+
+No application run retrieves CKB content yet, so the existing workspace
+evidence boundary remains authoritative. See
+[ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
 [privacy policy](privacy-and-evaluation.md), and [architecture](architecture.md)
 for ownership and exact contracts.
 
