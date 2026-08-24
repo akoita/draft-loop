@@ -5,12 +5,32 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 import {
   type CandidateKnowledgeBaseState,
+  type CandidateKnowledgeRetentionClass,
+  type CandidateKnowledgeRetentionOverrideKind,
+  type CandidateKnowledgeRetentionRule,
+  candidateKnowledgeRetentionClasses,
+  candidateKnowledgeRetentionOverrideKinds,
   type EvidenceRetrievalInspection,
   type RetrievalOptions,
   type RetrievalPort,
   type ScoredEvidenceChunk,
   type WorkflowState,
   workflowStates,
+} from "@draft-loop/domain";
+import {
+  candidateKnowledgeRetentionOverrideInputSchema,
+  candidateKnowledgeRetentionPolicyUpdateSchema,
+} from "@draft-loop/schemas";
+
+export type {
+  CandidateKnowledgeRetentionClass,
+  CandidateKnowledgeRetentionOverrideKind,
+  CandidateKnowledgeRetentionRule,
+} from "@draft-loop/domain";
+export {
+  candidateKnowledgeRetentionClasses,
+  candidateKnowledgeRetentionOverrideKinds,
+  candidateKnowledgeRetentionRules,
 } from "@draft-loop/domain";
 
 export interface StoragePort {
@@ -339,6 +359,82 @@ export interface CandidateKnowledgeBaseLifecycleReadinessRecord {
   readonly sources: readonly CandidateKnowledgeSourceLifecycleReadinessRecord[];
 }
 
+export const maximumCandidateKnowledgeRetentionExpireAfterDays = 36_500;
+
+export interface CandidateKnowledgeRetentionClassPolicyInput {
+  readonly class: CandidateKnowledgeRetentionClass;
+  readonly rule: CandidateKnowledgeRetentionRule;
+  readonly expireAfterDays?: number | null;
+}
+
+export interface CandidateKnowledgeRetentionClassPolicy
+  extends CandidateKnowledgeRetentionClassPolicyInput {
+  readonly expireAfterDays: number | null;
+}
+
+export interface CandidateKnowledgeRetentionPolicyUpdateInput {
+  readonly expectedRevision: number;
+  readonly updatedAt: string;
+  readonly classes: readonly CandidateKnowledgeRetentionClassPolicyInput[];
+}
+
+export interface CandidateKnowledgeRetentionOverrideRecord {
+  readonly class: CandidateKnowledgeRetentionClass;
+  readonly kind: CandidateKnowledgeRetentionOverrideKind;
+  readonly state: "applied" | "released";
+  readonly sequence: number;
+  readonly overrideRevision: number;
+  readonly policyRevision: number;
+  readonly changedAt: string;
+}
+
+export interface CandidateKnowledgeRetentionOverrideInput {
+  readonly class: CandidateKnowledgeRetentionClass;
+  readonly kind: CandidateKnowledgeRetentionOverrideKind;
+  readonly expectedPolicyRevision: number;
+  readonly expectedState: "none" | "applied" | "released";
+  readonly changedAt: string;
+}
+
+export interface CandidateKnowledgeRetentionPolicyRecord {
+  readonly knowledgeBaseId: string;
+  readonly revision: number;
+  readonly overrideRevision: number;
+  readonly updatedAt: string;
+  readonly classes: readonly CandidateKnowledgeRetentionClassPolicy[];
+  readonly activeOverrides: readonly CandidateKnowledgeRetentionOverrideRecord[];
+}
+
+export type CandidateKnowledgeRetentionOwnershipStatus = "owned" | "preserved" | "not-materialized";
+
+export interface CandidateKnowledgeRetentionPlanClass {
+  readonly class: CandidateKnowledgeRetentionClass;
+  readonly rule: CandidateKnowledgeRetentionRule;
+  readonly expireAfterDays: number | null;
+  readonly ownershipStatus: CandidateKnowledgeRetentionOwnershipStatus;
+  readonly eligibleCount: number;
+  readonly preservedCount: number;
+  readonly unmanagedCount: number;
+  readonly unknownCount: number;
+  readonly countCapped: boolean;
+  readonly preservationReasons: readonly (
+    | "retention-rule"
+    | "override"
+    | "unmanaged"
+    | "unknown"
+    | "not-materialized"
+  )[];
+}
+
+export interface CandidateKnowledgeRetentionPlan {
+  readonly schemaVersion: 1;
+  readonly knowledgeBaseId: string;
+  readonly asOf: string;
+  readonly policyRevision: number;
+  readonly overrideRevision: number;
+  readonly classes: readonly CandidateKnowledgeRetentionPlanClass[];
+}
+
 export const candidateKnowledgeSourceRetirementReasons = ["user-requested"] as const;
 export type CandidateKnowledgeSourceRetirementReason =
   (typeof candidateKnowledgeSourceRetirementReasons)[number];
@@ -600,6 +696,21 @@ export interface CandidateKnowledgeBaseStoragePort {
     sourceId: string,
     input: CandidateKnowledgeDirectoryMemberRetirementInput,
   ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
+  readonly getCandidateKnowledgeRetentionPolicy: (
+    knowledgeBaseId: string,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
+  readonly setCandidateKnowledgeRetentionPolicy: (
+    knowledgeBaseId: string,
+    input: CandidateKnowledgeRetentionPolicyUpdateInput,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
+  readonly applyCandidateKnowledgeRetentionOverride: (
+    knowledgeBaseId: string,
+    input: CandidateKnowledgeRetentionOverrideInput,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
+  readonly releaseCandidateKnowledgeRetentionOverride: (
+    knowledgeBaseId: string,
+    input: CandidateKnowledgeRetentionOverrideInput,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
 }
 
 export interface ContextSnapshotInput {
@@ -980,7 +1091,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 17 as const;
+export const storageSchemaVersion = 18 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -2415,6 +2526,82 @@ const migrationSeventeen: Migration = {
   `.trim(),
 };
 
+const migrationEighteen: Migration = {
+  version: 18,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_retention_policy_events (
+      knowledge_base_id TEXT NOT NULL
+        REFERENCES candidate_knowledge_bases(id),
+      revision INTEGER NOT NULL
+        CHECK (typeof(revision) = 'integer' AND revision >= 1),
+      retention_class TEXT NOT NULL CHECK (
+        retention_class IN (
+          'raw-sources',
+          'normalized-facts',
+          'indexes',
+          'run-snapshots',
+          'exports',
+          'backups'
+        )
+      ),
+      rule TEXT NOT NULL CHECK (rule IN ('retain-until-deletion', 'expire-after-days')),
+      expire_after_days INTEGER,
+      updated_at TEXT NOT NULL CHECK (julianday(updated_at) IS NOT NULL),
+      PRIMARY KEY (knowledge_base_id, revision, retention_class),
+      CHECK (
+        (rule = 'retain-until-deletion' AND expire_after_days IS NULL)
+        OR
+        (
+          rule = 'expire-after-days' AND
+          typeof(expire_after_days) = 'integer' AND
+          expire_after_days >= 1 AND
+          expire_after_days <= 36500
+        )
+      )
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_retention_policy_events_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_retention_policy_events
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge retention policy events are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_retention_policy_events_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_retention_policy_events
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge retention policy events are immutable'); END;
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_retention_override_events (
+      knowledge_base_id TEXT NOT NULL
+        REFERENCES candidate_knowledge_bases(id),
+      retention_class TEXT NOT NULL CHECK (
+        retention_class IN (
+          'raw-sources',
+          'normalized-facts',
+          'indexes',
+          'run-snapshots',
+          'exports',
+          'backups'
+        )
+      ),
+      override_kind TEXT NOT NULL CHECK (override_kind IN ('legal-hold', 'manual-preservation')),
+      sequence INTEGER NOT NULL
+        CHECK (typeof(sequence) = 'integer' AND sequence >= 1),
+      state TEXT NOT NULL CHECK (state IN ('applied', 'released')),
+      override_revision INTEGER NOT NULL
+        CHECK (typeof(override_revision) = 'integer' AND override_revision >= 1),
+      policy_revision INTEGER NOT NULL
+        CHECK (typeof(policy_revision) = 'integer' AND policy_revision >= 0),
+      changed_at TEXT NOT NULL CHECK (julianday(changed_at) IS NOT NULL),
+      PRIMARY KEY (knowledge_base_id, retention_class, override_kind, sequence)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_retention_override_events_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_retention_override_events
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge retention override events are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_retention_override_events_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_retention_override_events
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge retention override events are immutable'); END;
+
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -2433,6 +2620,7 @@ const migrations: readonly Migration[] = [
   migrationFifteen,
   migrationSixteen,
   migrationSeventeen,
+  migrationEighteen,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -2568,6 +2756,14 @@ function requireTimestamp(value: string, field: string): string {
     Number.isNaN(Date.parse(normalized))
   ) {
     throw new StorageValidationError(`${field} must be a valid ISO timestamp`);
+  }
+  return normalized;
+}
+
+function requireRetentionTimestampNotFuture(value: string, field: string): string {
+  const normalized = requireTimestamp(value, field);
+  if (Date.parse(normalized) > Date.now()) {
+    throw new StorageValidationError(`${field} must not be in the future`);
   }
   return normalized;
 }
@@ -3876,6 +4072,97 @@ export class SqliteStorage
         knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
         kind: rowString(row, "kind") as CandidateKnowledgeSourceKind,
       }));
+  }
+
+  public async getCandidateKnowledgeRetentionPolicy(
+    knowledgeBaseIdInput: string,
+  ): Promise<CandidateKnowledgeRetentionPolicyRecord> {
+    this.ensureOpen();
+    const knowledgeBaseId = requireNonEmpty(
+      knowledgeBaseIdInput,
+      "candidate knowledge base id",
+    ).trim();
+    this.requireCandidateKnowledgeBase(knowledgeBaseId);
+    return this.readCandidateKnowledgeRetentionPolicy(knowledgeBaseId);
+  }
+
+  /** Effective policy state for a deterministic enforcement timestamp. */
+  public async getCandidateKnowledgeRetentionPolicyAtAsOf(
+    knowledgeBaseIdInput: string,
+    asOfInput: string,
+  ): Promise<CandidateKnowledgeRetentionPolicyRecord> {
+    this.ensureOpen();
+    const knowledgeBaseId = requireNonEmpty(
+      knowledgeBaseIdInput,
+      "candidate knowledge base id",
+    ).trim();
+    const asOf = requireRetentionTimestampNotFuture(
+      asOfInput,
+      "candidate knowledge retention asOf",
+    );
+    return this.readCandidateKnowledgeRetentionPolicyAtAsOf(knowledgeBaseId, asOf);
+  }
+
+  public async setCandidateKnowledgeRetentionPolicy(
+    knowledgeBaseIdInput: string,
+    input: CandidateKnowledgeRetentionPolicyUpdateInput,
+  ): Promise<CandidateKnowledgeRetentionPolicyRecord> {
+    this.ensureOpen();
+    const knowledgeBaseId = requireNonEmpty(
+      knowledgeBaseIdInput,
+      "candidate knowledge base id",
+    ).trim();
+    const normalized = normalizeCandidateKnowledgeRetentionPolicyUpdateInput(input);
+    this.database.transaction(() => {
+      const current = this.readCandidateKnowledgeRetentionPolicy(knowledgeBaseId);
+      if (current.revision !== normalized.expectedRevision) {
+        throw new StorageConflictError(
+          "candidate knowledge retention policy revision changed during update",
+        );
+      }
+      if (Date.parse(normalized.updatedAt) < Date.parse(current.updatedAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge retention policy updatedAt must not move backwards",
+        );
+      }
+      const revision = current.revision + 1;
+      const insert = this.database.prepare(
+        "INSERT INTO candidate_knowledge_retention_policy_events (knowledge_base_id, revision, retention_class, rule, expire_after_days, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+      );
+      for (const policy of normalized.classes) {
+        insert.run(
+          knowledgeBaseId,
+          revision,
+          policy.class,
+          policy.rule,
+          policy.expireAfterDays,
+          normalized.updatedAt,
+        );
+      }
+    })();
+    return this.readCandidateKnowledgeRetentionPolicy(knowledgeBaseId);
+  }
+
+  public async applyCandidateKnowledgeRetentionOverride(
+    knowledgeBaseIdInput: string,
+    input: CandidateKnowledgeRetentionOverrideInput,
+  ): Promise<CandidateKnowledgeRetentionPolicyRecord> {
+    return this.writeCandidateKnowledgeRetentionOverride(
+      knowledgeBaseIdInput,
+      normalizeCandidateKnowledgeRetentionOverrideInput(input),
+      "applied",
+    );
+  }
+
+  public async releaseCandidateKnowledgeRetentionOverride(
+    knowledgeBaseIdInput: string,
+    input: CandidateKnowledgeRetentionOverrideInput,
+  ): Promise<CandidateKnowledgeRetentionPolicyRecord> {
+    return this.writeCandidateKnowledgeRetentionOverride(
+      knowledgeBaseIdInput,
+      normalizeCandidateKnowledgeRetentionOverrideInput(input),
+      "released",
+    );
   }
 
   public async getCandidateKnowledgeSourceUrlProvenance(
@@ -7092,6 +7379,164 @@ export class SqliteStorage
       }
     }
     this.validateManagedCandidateKnowledgeWriteJournal();
+    this.validateCandidateKnowledgeRetentionContract();
+  }
+
+  public validateCandidateKnowledgeRetentionContract(): void {
+    this.ensureOpen();
+    const knowledgeBases = this.database
+      .prepare("SELECT id, created_at FROM candidate_knowledge_bases ORDER BY id")
+      .all<{ readonly id: string; readonly created_at: string }>();
+    const knownKnowledgeBaseIds = new Set(knowledgeBases.map((row) => row.id));
+    for (const knowledgeBase of knowledgeBases) {
+      requireTimestamp(
+        knowledgeBase.created_at,
+        `candidate knowledge base ${knowledgeBase.id} createdAt`,
+      );
+      const policyRows = this.database
+        .prepare(
+          `SELECT knowledge_base_id, revision, retention_class, rule,
+                  expire_after_days, updated_at
+           FROM candidate_knowledge_retention_policy_events
+           WHERE knowledge_base_id = ?
+           ORDER BY revision, retention_class`,
+        )
+        .all(knowledgeBase.id);
+      const revisions = new Map<number, Record<string, unknown>[]>();
+      for (const row of policyRows) {
+        if (rowString(row, "knowledge_base_id") !== knowledgeBase.id) {
+          throw new StorageValidationError("candidate knowledge retention policy scope is invalid");
+        }
+        const revision = requirePositive(
+          rowNumber(row, "revision"),
+          "candidate knowledge retention policy revision",
+        );
+        const bucket = revisions.get(revision) ?? [];
+        bucket.push(row);
+        revisions.set(revision, bucket);
+      }
+      let previousUpdatedAt = knowledgeBase.created_at;
+      let expectedRevision = 1;
+      for (const [revision, rows] of revisions) {
+        if (
+          revision !== expectedRevision ||
+          rows.length !== candidateKnowledgeRetentionClasses.length
+        ) {
+          throw new StorageValidationError(
+            "candidate knowledge retention policy revisions must be contiguous and complete",
+          );
+        }
+        const policy = this.readCandidateKnowledgeRetentionPolicyAtRevision(
+          knowledgeBase.id,
+          revision,
+          this.requireCandidateKnowledgeBase(knowledgeBase.id),
+        );
+        if (Date.parse(policy.updatedAt) < Date.parse(previousUpdatedAt)) {
+          throw new StorageValidationError(
+            "candidate knowledge retention policy updatedAt must be monotonic",
+          );
+        }
+        previousUpdatedAt = policy.updatedAt;
+        expectedRevision += 1;
+      }
+
+      const overrideRows = this.database
+        .prepare(
+          `SELECT knowledge_base_id, retention_class, override_kind, sequence,
+                  state, override_revision, policy_revision, changed_at
+           FROM candidate_knowledge_retention_override_events
+           WHERE knowledge_base_id = ?
+           ORDER BY retention_class, override_kind, sequence`,
+        )
+        .all(knowledgeBase.id);
+      const overrideGroups = new Map<string, CandidateKnowledgeRetentionOverrideRecord[]>();
+      for (const row of overrideRows) {
+        if (rowString(row, "knowledge_base_id") !== knowledgeBase.id) {
+          throw new StorageValidationError(
+            "candidate knowledge retention override scope is invalid",
+          );
+        }
+        const record = candidateKnowledgeRetentionOverrideFromRow(row);
+        const key = `${record.class}\u0000${record.kind}`;
+        const bucket = overrideGroups.get(key) ?? [];
+        bucket.push(record);
+        overrideGroups.set(key, bucket);
+      }
+      const currentPolicy = this.readCandidateKnowledgeRetentionPolicy(knowledgeBase.id);
+      for (const records of overrideGroups.values()) {
+        let previous: CandidateKnowledgeRetentionOverrideRecord | undefined;
+        for (const record of records) {
+          if (record.sequence !== (previous?.sequence ?? 0) + 1) {
+            throw new StorageValidationError(
+              "candidate knowledge retention override sequences must be contiguous",
+            );
+          }
+          if (previous === undefined && record.state !== "applied") {
+            throw new StorageValidationError(
+              "candidate knowledge retention override cannot be released before applying",
+            );
+          }
+          if (previous !== undefined) {
+            if (previous.state === record.state) {
+              throw new StorageValidationError(
+                "candidate knowledge retention override states must alternate",
+              );
+            }
+            if (Date.parse(record.changedAt) < Date.parse(previous.changedAt)) {
+              throw new StorageValidationError(
+                "candidate knowledge retention override changedAt must be monotonic",
+              );
+            }
+          }
+          const policyAtRevision = this.readCandidateKnowledgeRetentionPolicyAtRevision(
+            knowledgeBase.id,
+            record.policyRevision,
+          );
+          if (Date.parse(record.changedAt) < Date.parse(policyAtRevision.updatedAt)) {
+            throw new StorageValidationError(
+              "candidate knowledge retention override changedAt precedes its policy",
+            );
+          }
+          if (record.policyRevision > currentPolicy.revision) {
+            throw new StorageValidationError(
+              "candidate knowledge retention override references a future policy",
+            );
+          }
+          previous = record;
+        }
+      }
+      const globalOverrideRows = this.database
+        .prepare(
+          `SELECT override_revision
+           FROM candidate_knowledge_retention_override_events
+           WHERE knowledge_base_id = ?
+           ORDER BY override_revision`,
+        )
+        .all(knowledgeBase.id);
+      let expectedOverrideRevision = 1;
+      for (const row of globalOverrideRows) {
+        if (rowNumber(row, "override_revision") !== expectedOverrideRevision) {
+          throw new StorageValidationError(
+            "candidate knowledge retention override revisions must be contiguous",
+          );
+        }
+        expectedOverrideRevision += 1;
+      }
+    }
+    const retentionTables = [
+      ["candidate_knowledge_retention_policy_events", "candidate knowledge retention policy"],
+      ["candidate_knowledge_retention_override_events", "candidate knowledge retention override"],
+    ] as const;
+    for (const [table, label] of retentionTables) {
+      const foreignKeys = this.database
+        .prepare(`SELECT DISTINCT knowledge_base_id FROM ${table}`)
+        .all<{ readonly knowledge_base_id: string }>();
+      for (const row of foreignKeys) {
+        if (!knownKnowledgeBaseIds.has(row.knowledge_base_id)) {
+          throw new StorageValidationError(`${label} references an unknown knowledge base`);
+        }
+      }
+    }
   }
 
   private validateManagedCandidateKnowledgeWriteJournal(): void {
@@ -9256,6 +9701,270 @@ export class SqliteStorage
     }
   }
 
+  private readCandidateKnowledgeRetentionPolicy(
+    knowledgeBaseId: string,
+  ): CandidateKnowledgeRetentionPolicyRecord {
+    const knowledgeBase = this.requireCandidateKnowledgeBase(knowledgeBaseId);
+    const latest = this.database
+      .prepare(
+        "SELECT MAX(revision) AS revision FROM candidate_knowledge_retention_policy_events WHERE knowledge_base_id = ?",
+      )
+      .get(knowledgeBaseId);
+    const revision =
+      latest === undefined || latest.revision === null ? 0 : rowNumber(latest, "revision");
+    const policy = this.readCandidateKnowledgeRetentionPolicyAtRevision(
+      knowledgeBaseId,
+      revision,
+      knowledgeBase,
+    );
+    return freezeCandidateKnowledgeRetentionPolicy({
+      ...policy,
+      overrideRevision: this.readCandidateKnowledgeRetentionOverrideRevision(knowledgeBaseId),
+      activeOverrides: this.readCandidateKnowledgeRetentionOverrides(knowledgeBaseId),
+    });
+  }
+
+  private readCandidateKnowledgeRetentionPolicyAtAsOf(
+    knowledgeBaseId: string,
+    asOf: string,
+  ): CandidateKnowledgeRetentionPolicyRecord {
+    const normalizedAsOf = requireRetentionTimestampNotFuture(
+      asOf,
+      "candidate knowledge retention asOf",
+    );
+    const knowledgeBase = this.requireCandidateKnowledgeBase(knowledgeBaseId);
+    if (Date.parse(normalizedAsOf) < Date.parse(knowledgeBase.createdAt)) {
+      throw new StorageValidationError(
+        "candidate knowledge retention asOf must not precede the candidate knowledge base",
+      );
+    }
+    const latest = this.database
+      .prepare(
+        `SELECT MAX(revision) AS revision
+         FROM candidate_knowledge_retention_policy_events
+         WHERE knowledge_base_id = ? AND julianday(updated_at) <= julianday(?)`,
+      )
+      .get(knowledgeBaseId, normalizedAsOf);
+    const revision =
+      latest === undefined || latest.revision === null ? 0 : rowNumber(latest, "revision");
+    const policy = this.readCandidateKnowledgeRetentionPolicyAtRevision(
+      knowledgeBaseId,
+      revision,
+      knowledgeBase,
+    );
+    return freezeCandidateKnowledgeRetentionPolicy({
+      ...policy,
+      overrideRevision: this.readCandidateKnowledgeRetentionOverrideRevision(
+        knowledgeBaseId,
+        normalizedAsOf,
+      ),
+      activeOverrides: this.readCandidateKnowledgeRetentionOverrides(
+        knowledgeBaseId,
+        normalizedAsOf,
+      ).filter((override) => override.policyRevision <= revision),
+    });
+  }
+
+  private readCandidateKnowledgeRetentionPolicyAtRevision(
+    knowledgeBaseId: string,
+    revision: number,
+    knowledgeBaseInput?: CandidateKnowledgeBaseRecord,
+  ): CandidateKnowledgeRetentionPolicyRecord {
+    const knowledgeBase = knowledgeBaseInput ?? this.requireCandidateKnowledgeBase(knowledgeBaseId);
+    const normalizedRevision = requireNonNegativeInteger(
+      revision,
+      "candidate knowledge retention policy revision",
+    );
+    if (normalizedRevision === 0) {
+      return {
+        knowledgeBaseId,
+        revision: 0,
+        overrideRevision: 0,
+        updatedAt: knowledgeBase.createdAt,
+        classes: defaultCandidateKnowledgeRetentionClasses(),
+        activeOverrides: [],
+      };
+    }
+    const rows = this.database
+      .prepare(
+        `SELECT revision, retention_class, rule, expire_after_days, updated_at
+         FROM candidate_knowledge_retention_policy_events
+         WHERE knowledge_base_id = ? AND revision = ?
+         ORDER BY retention_class`,
+      )
+      .all(knowledgeBaseId, normalizedRevision);
+    if (rows.length !== candidateKnowledgeRetentionClasses.length) {
+      throw new StorageValidationError(
+        "candidate knowledge retention policy contains an incomplete revision",
+      );
+    }
+    const updatedAt = requireRetentionTimestampNotFuture(
+      rowString(rows[0] as Record<string, unknown>, "updated_at"),
+      "candidate knowledge retention policy updatedAt",
+    );
+    for (const row of rows) {
+      if (rowNumber(row, "revision") !== normalizedRevision) {
+        throw new StorageValidationError(
+          "candidate knowledge retention policy revision is malformed",
+        );
+      }
+      const rowUpdatedAt = requireRetentionTimestampNotFuture(
+        rowString(row, "updated_at"),
+        "candidate knowledge retention policy updatedAt",
+      );
+      if (rowUpdatedAt !== updatedAt) {
+        throw new StorageValidationError(
+          "candidate knowledge retention policy revision timestamps must match",
+        );
+      }
+    }
+    return {
+      knowledgeBaseId,
+      revision: normalizedRevision,
+      overrideRevision: 0,
+      updatedAt,
+      classes: normalizeCandidateKnowledgeRetentionClassPolicies(
+        rows.map((row) => ({
+          class: rowString(row, "retention_class"),
+          rule: rowString(row, "rule"),
+          expireAfterDays: rowNullableNumber(row, "expire_after_days"),
+        })),
+      ),
+      activeOverrides: [],
+    };
+  }
+
+  private readCandidateKnowledgeRetentionOverrides(
+    knowledgeBaseId: string,
+    asOf?: string,
+  ): readonly CandidateKnowledgeRetentionOverrideRecord[] {
+    const where = asOf === undefined ? "" : " AND julianday(changed_at) <= julianday(?)";
+    const rows = this.database
+      .prepare(
+        `SELECT retention_class, override_kind, sequence, state, override_revision,
+                policy_revision, changed_at
+         FROM candidate_knowledge_retention_override_events
+         WHERE knowledge_base_id = ?${where}
+         ORDER BY retention_class, override_kind, sequence`,
+      )
+      .all(...(asOf === undefined ? [knowledgeBaseId] : [knowledgeBaseId, asOf]));
+    const latest = new Map<string, CandidateKnowledgeRetentionOverrideRecord>();
+    for (const row of rows) {
+      const record = candidateKnowledgeRetentionOverrideFromRow(row);
+      latest.set(`${record.class}\u0000${record.kind}`, record);
+    }
+    return [...latest.values()]
+      .filter((record) => record.state === "applied")
+      .sort(
+        (left, right) =>
+          retentionClassIndex(left.class) - retentionClassIndex(right.class) ||
+          candidateKnowledgeRetentionOverrideKinds.indexOf(left.kind) -
+            candidateKnowledgeRetentionOverrideKinds.indexOf(right.kind),
+      );
+  }
+
+  private readCandidateKnowledgeRetentionOverrideRevision(
+    knowledgeBaseId: string,
+    asOf?: string,
+  ): number {
+    const where = asOf === undefined ? "" : " AND julianday(changed_at) <= julianday(?)";
+    const row = this.database
+      .prepare(
+        `SELECT MAX(override_revision) AS override_revision
+         FROM candidate_knowledge_retention_override_events
+         WHERE knowledge_base_id = ?${where}`,
+      )
+      .get(...(asOf === undefined ? [knowledgeBaseId] : [knowledgeBaseId, asOf]));
+    return row === undefined || row.override_revision === null
+      ? 0
+      : requireNonNegativeInteger(
+          rowNumber(row, "override_revision"),
+          "candidate knowledge retention override revision",
+        );
+  }
+
+  private readCandidateKnowledgeRetentionOverrideState(
+    knowledgeBaseId: string,
+    retentionClass: CandidateKnowledgeRetentionClass,
+    kind: CandidateKnowledgeRetentionOverrideKind,
+  ): CandidateKnowledgeRetentionOverrideRecord | undefined {
+    const row = this.database
+      .prepare(
+        `SELECT retention_class, override_kind, sequence, state, override_revision,
+                policy_revision, changed_at
+         FROM candidate_knowledge_retention_override_events
+         WHERE knowledge_base_id = ? AND retention_class = ? AND override_kind = ?
+         ORDER BY sequence DESC LIMIT 1`,
+      )
+      .get(knowledgeBaseId, retentionClass, kind);
+    return row === undefined ? undefined : candidateKnowledgeRetentionOverrideFromRow(row);
+  }
+
+  private async writeCandidateKnowledgeRetentionOverride(
+    knowledgeBaseIdInput: string,
+    input: CandidateKnowledgeRetentionOverrideInput,
+    state: "applied" | "released",
+  ): Promise<CandidateKnowledgeRetentionPolicyRecord> {
+    this.ensureOpen();
+    const knowledgeBaseId = requireNonEmpty(
+      knowledgeBaseIdInput,
+      "candidate knowledge base id",
+    ).trim();
+    this.database.transaction(() => {
+      const current = this.readCandidateKnowledgeRetentionPolicy(knowledgeBaseId);
+      if (current.revision !== input.expectedPolicyRevision) {
+        throw new StorageConflictError(
+          "candidate knowledge retention override policy revision changed",
+        );
+      }
+      const existing = this.readCandidateKnowledgeRetentionOverrideState(
+        knowledgeBaseId,
+        input.class,
+        input.kind,
+      );
+      const actualState = existing?.state ?? "none";
+      if (actualState !== input.expectedState) {
+        throw new StorageConflictError("candidate knowledge retention override state changed");
+      }
+      if (state === "applied" && actualState === "applied") {
+        throw new StorageConflictError("candidate knowledge retention override is already applied");
+      }
+      if (state === "released" && actualState !== "applied") {
+        throw new StorageConflictError("candidate knowledge retention override is not applied");
+      }
+      if (Date.parse(input.changedAt) < Date.parse(current.updatedAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge retention override changedAt must not precede the policy",
+        );
+      }
+      if (existing !== undefined && Date.parse(input.changedAt) < Date.parse(existing.changedAt)) {
+        throw new StorageValidationError(
+          "candidate knowledge retention override changedAt must not move backwards",
+        );
+      }
+      const sequence = (existing?.sequence ?? 0) + 1;
+      const overrideRevision = current.overrideRevision + 1;
+      this.database
+        .prepare(
+          `INSERT INTO candidate_knowledge_retention_override_events
+           (knowledge_base_id, retention_class, override_kind, sequence, state,
+            override_revision, policy_revision, changed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          knowledgeBaseId,
+          input.class,
+          input.kind,
+          sequence,
+          state,
+          overrideRevision,
+          current.revision,
+          input.changedAt,
+        );
+    })();
+    return this.readCandidateKnowledgeRetentionPolicy(knowledgeBaseId);
+  }
+
   private requireCandidateKnowledgeBase(id: string): CandidateKnowledgeBaseRecord {
     const row = this.database
       .prepare(
@@ -9657,6 +10366,178 @@ function requireCandidateKnowledgeSourceRetirementReason(
   return value;
 }
 
+function requireCandidateKnowledgeRetentionClass(value: unknown): CandidateKnowledgeRetentionClass {
+  if (
+    typeof value !== "string" ||
+    !candidateKnowledgeRetentionClasses.includes(value as CandidateKnowledgeRetentionClass)
+  ) {
+    throw new StorageValidationError("candidate knowledge retention class is invalid");
+  }
+  return value as CandidateKnowledgeRetentionClass;
+}
+
+function requireCandidateKnowledgeRetentionRule(value: unknown): CandidateKnowledgeRetentionRule {
+  if (value !== "retain-until-deletion" && value !== "expire-after-days") {
+    throw new StorageValidationError("candidate knowledge retention rule is invalid");
+  }
+  return value;
+}
+
+function requireCandidateKnowledgeRetentionOverrideKind(
+  value: unknown,
+): CandidateKnowledgeRetentionOverrideKind {
+  if (
+    typeof value !== "string" ||
+    !candidateKnowledgeRetentionOverrideKinds.includes(
+      value as CandidateKnowledgeRetentionOverrideKind,
+    )
+  ) {
+    throw new StorageValidationError("candidate knowledge retention override kind is invalid");
+  }
+  return value as CandidateKnowledgeRetentionOverrideKind;
+}
+
+function retentionClassIndex(value: CandidateKnowledgeRetentionClass): number {
+  return candidateKnowledgeRetentionClasses.indexOf(value);
+}
+
+function defaultCandidateKnowledgeRetentionClasses(): readonly CandidateKnowledgeRetentionClassPolicy[] {
+  return candidateKnowledgeRetentionClasses.map((retentionClass) => ({
+    class: retentionClass,
+    rule: "retain-until-deletion",
+    expireAfterDays: null,
+  }));
+}
+
+function normalizeCandidateKnowledgeRetentionClassPolicy(
+  value: unknown,
+): CandidateKnowledgeRetentionClassPolicy {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new StorageValidationError("candidate knowledge retention class policy is invalid");
+  }
+  const input = value as CandidateKnowledgeRetentionClassPolicyInput;
+  const retentionClass = requireCandidateKnowledgeRetentionClass(input.class);
+  const rule = requireCandidateKnowledgeRetentionRule(input.rule);
+  if (rule === "retain-until-deletion") {
+    if (input.expireAfterDays !== undefined && input.expireAfterDays !== null) {
+      throw new StorageValidationError("retain-until-deletion cannot include expireAfterDays");
+    }
+    return { class: retentionClass, rule, expireAfterDays: null };
+  }
+  if (input.expireAfterDays === undefined || input.expireAfterDays === null) {
+    throw new StorageValidationError("expire-after-days requires a positive expireAfterDays value");
+  }
+  const expireAfterDays = requirePositive(
+    input.expireAfterDays,
+    "candidate knowledge retention expireAfterDays",
+  );
+  if (expireAfterDays > maximumCandidateKnowledgeRetentionExpireAfterDays) {
+    throw new StorageValidationError(
+      `candidate knowledge retention expireAfterDays must be at most ${maximumCandidateKnowledgeRetentionExpireAfterDays}`,
+    );
+  }
+  return { class: retentionClass, rule, expireAfterDays };
+}
+
+function normalizeCandidateKnowledgeRetentionClassPolicies(
+  value: unknown,
+): readonly CandidateKnowledgeRetentionClassPolicy[] {
+  if (!Array.isArray(value) || value.length !== candidateKnowledgeRetentionClasses.length) {
+    throw new StorageValidationError(
+      "candidate knowledge retention policy must enumerate each retention class exactly once",
+    );
+  }
+  const seen = new Set<CandidateKnowledgeRetentionClass>();
+  const normalized = value.map((entry) => {
+    const policy = normalizeCandidateKnowledgeRetentionClassPolicy(entry);
+    const retentionClass = policy.class;
+    if (seen.has(retentionClass)) {
+      throw new StorageValidationError(
+        "candidate knowledge retention policy contains a duplicate class",
+      );
+    }
+    seen.add(retentionClass);
+    return policy;
+  });
+  if (seen.size !== candidateKnowledgeRetentionClasses.length) {
+    throw new StorageValidationError(
+      "candidate knowledge retention policy must enumerate each retention class exactly once",
+    );
+  }
+  return normalized.sort(
+    (left, right) => retentionClassIndex(left.class) - retentionClassIndex(right.class),
+  );
+}
+
+function normalizeCandidateKnowledgeRetentionPolicyUpdateInput(
+  input: CandidateKnowledgeRetentionPolicyUpdateInput,
+): CandidateKnowledgeRetentionPolicyUpdateInput {
+  const parsed = candidateKnowledgeRetentionPolicyUpdateSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new StorageValidationError("candidate knowledge retention policy update is invalid");
+  }
+  const expectedRevision = requireNonNegativeInteger(
+    parsed.data.expectedRevision,
+    "candidate knowledge retention expected revision",
+  );
+  const updatedAt = requireRetentionTimestampNotFuture(
+    parsed.data.updatedAt,
+    "candidate knowledge retention policy updatedAt",
+  );
+  return {
+    expectedRevision,
+    updatedAt,
+    classes: normalizeCandidateKnowledgeRetentionClassPolicies(parsed.data.classes),
+  };
+}
+
+function normalizeCandidateKnowledgeRetentionOverrideInput(
+  input: CandidateKnowledgeRetentionOverrideInput,
+): CandidateKnowledgeRetentionOverrideInput {
+  const parsed = candidateKnowledgeRetentionOverrideInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new StorageValidationError("candidate knowledge retention override is invalid");
+  }
+  const retentionClass = requireCandidateKnowledgeRetentionClass(parsed.data.class);
+  const kind = requireCandidateKnowledgeRetentionOverrideKind(parsed.data.kind);
+  const expectedPolicyRevision = requireNonNegativeInteger(
+    parsed.data.expectedPolicyRevision,
+    "candidate knowledge retention override expected policy revision",
+  );
+  if (
+    parsed.data.expectedState !== "none" &&
+    parsed.data.expectedState !== "applied" &&
+    parsed.data.expectedState !== "released"
+  ) {
+    throw new StorageValidationError(
+      "candidate knowledge retention override expected state is invalid",
+    );
+  }
+  const changedAt = requireRetentionTimestampNotFuture(
+    parsed.data.changedAt,
+    "candidate knowledge retention override changedAt",
+  );
+  return {
+    class: retentionClass,
+    kind,
+    expectedPolicyRevision,
+    expectedState: parsed.data.expectedState,
+    changedAt,
+  };
+}
+
+function freezeCandidateKnowledgeRetentionPolicy(
+  policy: CandidateKnowledgeRetentionPolicyRecord,
+): CandidateKnowledgeRetentionPolicyRecord {
+  return Object.freeze({
+    ...policy,
+    classes: Object.freeze(policy.classes.map((entry) => Object.freeze({ ...entry }))),
+    activeOverrides: Object.freeze(
+      policy.activeOverrides.map((entry) => Object.freeze({ ...entry })),
+    ),
+  });
+}
+
 function normalizeCandidateKnowledgeSourceUrlProvenance(
   input: CandidateKnowledgeSourceUrlProvenanceInput | undefined,
 ): CandidateKnowledgeSourceUrlProvenanceInput {
@@ -9809,6 +10690,42 @@ function candidateKnowledgeSourceRetirementFromRow(
     sourceId: rowString(row, "source_id"),
     retiredAt: rowString(row, "retired_at"),
     reason: rowString(row, "reason") as CandidateKnowledgeSourceRetirementReason,
+  };
+}
+
+function candidateKnowledgeRetentionOverrideFromRow(
+  row: Record<string, unknown>,
+): CandidateKnowledgeRetentionOverrideRecord {
+  const retentionClass = requireCandidateKnowledgeRetentionClass(rowString(row, "retention_class"));
+  const kind = requireCandidateKnowledgeRetentionOverrideKind(rowString(row, "override_kind"));
+  const sequence = requirePositive(
+    rowNumber(row, "sequence"),
+    "candidate knowledge retention override sequence",
+  );
+  const overrideRevision = requirePositive(
+    rowNumber(row, "override_revision"),
+    "candidate knowledge retention override revision",
+  );
+  const state = rowString(row, "state");
+  if (state !== "applied" && state !== "released") {
+    throw new StorageValidationError("candidate knowledge retention override state is invalid");
+  }
+  const policyRevision = requireNonNegativeInteger(
+    rowNumber(row, "policy_revision"),
+    "candidate knowledge retention override policy revision",
+  );
+  const changedAt = requireRetentionTimestampNotFuture(
+    rowString(row, "changed_at"),
+    "candidate knowledge retention override changedAt",
+  );
+  return {
+    class: retentionClass,
+    kind,
+    state,
+    sequence,
+    overrideRevision,
+    policyRevision,
+    changedAt,
   };
 }
 

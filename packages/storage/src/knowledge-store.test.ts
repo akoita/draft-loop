@@ -23,7 +23,12 @@ import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { openSqliteStorage, StorageConflictError, StorageValidationError } from "./index.js";
+import {
+  candidateKnowledgeRetentionClasses,
+  openSqliteStorage,
+  StorageConflictError,
+  StorageValidationError,
+} from "./index.js";
 import {
   initializeCandidateKnowledgeStore,
   type ManagedCandidateKnowledgeFileVersionInput,
@@ -6440,6 +6445,130 @@ describe("portable candidate knowledge store", () => {
         created_at: createdAt,
       },
     ]);
+    await reopened.close();
+  });
+
+  it("plans retention from owned raw versions while preserving unknown and unmaterialized classes", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "retention-plan");
+    const sourcePath = join(parent, "managed.md");
+    await writeFile(sourcePath, "managed source", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const policy = await store.setCandidateKnowledgeRetentionPolicy("ckb-default", {
+      expectedRevision: 0,
+      updatedAt: "2026-08-22T14:00:00.000Z",
+      classes: candidateKnowledgeRetentionClasses.map((retentionClass) => ({
+        class: retentionClass,
+        rule: retentionClass === "raw-sources" ? "expire-after-days" : "retain-until-deletion",
+        ...(retentionClass === "raw-sources" ? { expireAfterDays: 1 } : {}),
+      })),
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "managed-source-1",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Managed source",
+        createdAt: "2026-08-21T14:00:00.000Z",
+      },
+      managedVersion(sourcePath, "managed source", {
+        id: "managed-version-1",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      }),
+    );
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "legacy-source-1",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Legacy source",
+        createdAt: "2026-08-21T14:00:00.000Z",
+      },
+      {
+        id: "legacy-version-1",
+        mediaType: "text/plain",
+        checksum: "a".repeat(64),
+        sizeBytes: 1,
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+    );
+    await writeFile(join(root, "sources", "unknown-artifact.bin"), "unknown", "utf8");
+
+    const asOf = "2026-08-24T14:00:00.000Z";
+    await expect(
+      store.planCandidateKnowledgeRetention("ckb-default", "2099-01-01T00:00:00.000Z"),
+    ).rejects.toThrow(StorageValidationError);
+    const plan = await store.planCandidateKnowledgeRetention("ckb-default", asOf);
+    const raw = plan.classes.find((entry) => entry.class === "raw-sources");
+    expect(raw).toMatchObject({
+      rule: "expire-after-days",
+      ownershipStatus: "owned",
+      eligibleCount: 1,
+      preservedCount: 0,
+      unmanagedCount: 1,
+      unknownCount: 1,
+    });
+    expect(
+      plan.classes.filter((entry) => entry.ownershipStatus === "not-materialized"),
+    ).toHaveLength(5);
+    expect(JSON.stringify(plan)).not.toContain(root);
+    expect(JSON.stringify(plan)).not.toContain("managed-source-1");
+    expect(Object.isFrozen(plan)).toBe(true);
+    expect(Object.isFrozen(plan.classes)).toBe(true);
+    expect(Object.isFrozen(plan.classes[0]?.preservationReasons)).toBe(true);
+    await writeFile(join(root, "sources", "later-unknown-artifact.bin"), "unknown", "utf8");
+    const changedInventoryPlan = await store.planCandidateKnowledgeRetention("ckb-default", asOf);
+    expect(changedInventoryPlan).not.toEqual(plan);
+    expect(
+      changedInventoryPlan.classes.find((entry) => entry.class === "raw-sources"),
+    ).toMatchObject({
+      unknownCount: 2,
+    });
+
+    const held = await store.applyCandidateKnowledgeRetentionOverride("ckb-default", {
+      class: "raw-sources",
+      kind: "manual-preservation",
+      expectedPolicyRevision: policy.revision,
+      expectedState: "none",
+      changedAt: "2026-08-24T13:59:00.000Z",
+    });
+    expect(held.activeOverrides).toHaveLength(1);
+    const sameAsOfHeldPlan = await store.planCandidateKnowledgeRetention("ckb-default", asOf);
+    expect(sameAsOfHeldPlan).not.toEqual(plan);
+    expect(sameAsOfHeldPlan.classes.find((entry) => entry.class === "raw-sources")).toMatchObject({
+      eligibleCount: 0,
+      preservedCount: 1,
+    });
+    const heldPlan = await store.planCandidateKnowledgeRetention(
+      "ckb-default",
+      "2026-08-24T15:00:00.000Z",
+    );
+    expect(heldPlan.classes.find((entry) => entry.class === "raw-sources")).toMatchObject({
+      eligibleCount: 0,
+      preservedCount: 1,
+      preservationReasons: ["retention-rule", "override", "unmanaged", "unknown"],
+    });
+    await store.releaseCandidateKnowledgeRetentionOverride("ckb-default", {
+      class: "raw-sources",
+      kind: "manual-preservation",
+      expectedPolicyRevision: policy.revision,
+      expectedState: "applied",
+      changedAt: "2026-08-24T16:01:00.000Z",
+    });
+    const releasedPlan = await store.planCandidateKnowledgeRetention(
+      "ckb-default",
+      "2026-08-24T17:00:00.000Z",
+    );
+    expect(releasedPlan.classes.find((entry) => entry.class === "raw-sources")).toMatchObject({
+      eligibleCount: 1,
+      preservedCount: 0,
+    });
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(reopened.planCandidateKnowledgeRetention("ckb-default", asOf)).resolves.toEqual(
+      sameAsOfHeldPlan,
+    );
     await reopened.close();
   });
 });

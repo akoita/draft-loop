@@ -23,11 +23,19 @@ import {
   ingestUrl,
   supportedMediaTypes,
 } from "@draft-loop/ingestion";
+import {
+  candidateKnowledgeRetentionOverrideInputSchema,
+  candidateKnowledgeRetentionPolicyUpdateSchema,
+} from "@draft-loop/schemas";
 import type {
   CandidateKnowledgeBaseLifecycleReadinessRecord,
   CandidateKnowledgeDirectoryBindingRecord,
   CandidateKnowledgeDirectoryMemberOriginRelationRecord,
   CandidateKnowledgeDirectoryMemberRecord,
+  CandidateKnowledgeRetentionClassPolicyInput,
+  CandidateKnowledgeRetentionOverrideInput,
+  CandidateKnowledgeRetentionPlan,
+  CandidateKnowledgeRetentionPolicyRecord,
   CandidateKnowledgeSourceLifecycleBlockerReason,
   CandidateKnowledgeSourceRecord,
   CandidateKnowledgeSourceRefreshObservationRecord,
@@ -70,6 +78,25 @@ export interface OpenStoreCommand {
 export interface GetKnowledgeBaseLifecycleReadinessCommand {
   readonly storeRoot: string;
   readonly knowledgeBaseId: string;
+}
+
+export interface GetKnowledgeRetentionPolicyCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+}
+
+export interface SetKnowledgeRetentionPolicyCommand extends GetKnowledgeRetentionPolicyCommand {
+  readonly expectedRevision: number;
+  readonly updatedAt: string;
+  readonly classes: readonly CandidateKnowledgeRetentionClassPolicyInput[];
+}
+
+export interface ChangeKnowledgeRetentionOverrideCommand
+  extends GetKnowledgeRetentionPolicyCommand,
+    CandidateKnowledgeRetentionOverrideInput {}
+
+export interface PlanKnowledgeRetentionCommand extends GetKnowledgeRetentionPolicyCommand {
+  readonly asOf: string;
 }
 
 export interface CreateKnowledgeSelectionSnapshotSelection {
@@ -644,6 +671,21 @@ export interface CandidateKnowledgeStoreService {
   readonly getKnowledgeBaseLifecycleReadiness: (
     command: GetKnowledgeBaseLifecycleReadinessCommand,
   ) => Promise<KnowledgeBaseLifecycleReadinessResult>;
+  readonly getKnowledgeRetentionPolicy: (
+    command: GetKnowledgeRetentionPolicyCommand,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
+  readonly setKnowledgeRetentionPolicy: (
+    command: SetKnowledgeRetentionPolicyCommand,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
+  readonly applyKnowledgeRetentionOverride: (
+    command: ChangeKnowledgeRetentionOverrideCommand,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
+  readonly releaseKnowledgeRetentionOverride: (
+    command: ChangeKnowledgeRetentionOverrideCommand,
+  ) => Promise<CandidateKnowledgeRetentionPolicyRecord>;
+  readonly planKnowledgeRetention: (
+    command: PlanKnowledgeRetentionCommand,
+  ) => Promise<CandidateKnowledgeRetentionPlan>;
   readonly createKnowledgeSelectionSnapshot: (
     command: CreateKnowledgeSelectionSnapshotCommand,
   ) => Promise<KnowledgeSelectionSnapshot>;
@@ -3741,6 +3783,70 @@ export function createCandidateKnowledgeStoreService(
         throw lifecycleReadinessFailure();
       }
     },
+    getKnowledgeRetentionPolicy: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        (handle) => handle.getCandidateKnowledgeRetentionPolicy(knowledgeBaseId),
+      );
+    },
+    setKnowledgeRetentionPolicy: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      candidateKnowledgeRetentionPolicyUpdateSchema.parse({
+        expectedRevision: command.expectedRevision,
+        updatedAt: command.updatedAt,
+        classes: command.classes,
+      });
+      return useHandle(
+        () => resolved.open(storeRoot),
+        (handle) =>
+          handle.setCandidateKnowledgeRetentionPolicy(knowledgeBaseId, {
+            expectedRevision: command.expectedRevision,
+            updatedAt: command.updatedAt,
+            classes: command.classes,
+          }),
+      );
+    },
+    applyKnowledgeRetentionOverride: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const input = candidateKnowledgeRetentionOverrideInputSchema.parse({
+        class: command.class,
+        kind: command.kind,
+        expectedPolicyRevision: command.expectedPolicyRevision,
+        expectedState: command.expectedState,
+        changedAt: command.changedAt,
+      });
+      return useHandle(
+        () => resolved.open(storeRoot),
+        (handle) => handle.applyCandidateKnowledgeRetentionOverride(knowledgeBaseId, input),
+      );
+    },
+    releaseKnowledgeRetentionOverride: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const input = candidateKnowledgeRetentionOverrideInputSchema.parse({
+        class: command.class,
+        kind: command.kind,
+        expectedPolicyRevision: command.expectedPolicyRevision,
+        expectedState: command.expectedState,
+        changedAt: command.changedAt,
+      });
+      return useHandle(
+        () => resolved.open(storeRoot),
+        (handle) => handle.releaseCandidateKnowledgeRetentionOverride(knowledgeBaseId, input),
+      );
+    },
+    planKnowledgeRetention: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        (handle) => handle.planCandidateKnowledgeRetention(knowledgeBaseId, command.asOf),
+      );
+    },
     createKnowledgeSelectionSnapshot: async (command) => {
       try {
         if (
@@ -5374,6 +5480,11 @@ const defaultService = createCandidateKnowledgeStoreService();
 export const initializeStore = defaultService.initializeStore;
 export const openStore = defaultService.openStore;
 export const getKnowledgeBaseLifecycleReadiness = defaultService.getKnowledgeBaseLifecycleReadiness;
+export const getKnowledgeRetentionPolicy = defaultService.getKnowledgeRetentionPolicy;
+export const setKnowledgeRetentionPolicy = defaultService.setKnowledgeRetentionPolicy;
+export const applyKnowledgeRetentionOverride = defaultService.applyKnowledgeRetentionOverride;
+export const releaseKnowledgeRetentionOverride = defaultService.releaseKnowledgeRetentionOverride;
+export const planKnowledgeRetention = defaultService.planKnowledgeRetention;
 export const createKnowledgeSelectionSnapshot = defaultService.createKnowledgeSelectionSnapshot;
 export const listKnowledgeBases = defaultService.listKnowledgeBases;
 export const createKnowledgeBase = defaultService.createKnowledgeBase;

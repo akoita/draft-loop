@@ -13,7 +13,7 @@ provider transmission.
 | Public material                         | Local application workspace                                                                                           | Only through an explicit request policy                                                               | Until the user deletes it                                                             |
 | Personal material                       | Local application workspace                                                                                           | Explicit approval and provider allowlist required                                                     | Until the user deletes it                                                             |
 | Confidential employer material          | Local application workspace                                                                                           | Explicit approval, acknowledgement, and provider allowlist required; user redaction rules recommended | Until the user deletes it                                                             |
-| Portable CKB metadata and managed bytes | User-selected, separate local plaintext store                                                                         | Not provider data; paths, URLs, labels, checksums, membership, and journal data stay local            | Until the user removes the store; complete deletion is not implemented                |
+| Portable CKB metadata and managed bytes | User-selected, separate local plaintext store                                                                         | Not provider data; paths, URLs, labels, checksums, membership, and journal data stay local            | All six policy classes default to retention until explicit deletion                    |
 | Secrets embedded in candidate material  | Never place in application content or fixtures                                                                        | Prohibited                                                                                            | Do not retain                                                                         |
 | Provider credentials                    | OS credential store, desktop user-data store, SDK environment, or provider-managed local session; never the workspace | Used only to authenticate an explicitly approved request                                              | Until the user removes it, changes environment, ends the session, or deletes app data |
 
@@ -254,11 +254,22 @@ not yet export, restore, or delete the separate portable CKB store. Deleting an
 original file or application workspace does not delete its managed CKB copy; a
 SQLite-only backup is incomplete because it omits managed raw blobs.
 
+The portable CKB records an explicit local policy for raw sources, normalized
+facts, indexes, run snapshots, exports, and backups. Every class defaults to
+`retain-until-deletion`; bounded day-based expiry must be configured explicitly.
+Legal hold and manual preservation take precedence over expiry. Policy
+inspection and planning expose only effective rules and bounded counts. At
+present, only committed managed raw-source versions have enough CKB-local
+ownership evidence to be marked expiry-eligible. Unmanaged or unknown entries
+and the five not-yet-materialized classes are preserved. Planning does not
+delete files or records and is not a substitute for the confirmed deletion
+boundary planned in #166.
+
 Complete deletion across raw, unknown, derived, backed-up, and exported data is
 not implemented. CKB backup/export/restore, retrieval-index lifecycle and
-cleanup, cross-store writer coordination, and repair of missing blobs remain
-future privacy boundaries. Users remain responsible for selected directories,
-filesystems, devices, cloud backups, and copies made outside DraftLoop.
+cleanup, confirmed deletion, and repair of missing blobs remain future privacy
+boundaries. Users remain responsible for selected directories, filesystems,
+devices, cloud backups, and copies made outside DraftLoop.
 
 ## Redaction and logging
 

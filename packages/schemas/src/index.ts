@@ -1,6 +1,9 @@
 import type { CandidateKnowledgeSelectionSnapshotInput } from "@draft-loop/domain";
 import {
   candidateKnowledgeBaseStates,
+  candidateKnowledgeRetentionClasses,
+  candidateKnowledgeRetentionOverrideKinds,
+  candidateKnowledgeRetentionRules,
   candidateKnowledgeSelectionLifecycleObservationStatuses,
   candidateKnowledgeSelectionSnapshotSchemaVersion,
   candidateKnowledgeSourceKinds,
@@ -222,6 +225,73 @@ export const candidateKnowledgeSourceRetirementSchema = z.object({
 });
 export type CandidateKnowledgeSourceRetirement = z.infer<
   typeof candidateKnowledgeSourceRetirementSchema
+>;
+
+export const candidateKnowledgeRetentionClassSchema = z.enum(candidateKnowledgeRetentionClasses);
+export const candidateKnowledgeRetentionRuleSchema = z.enum(candidateKnowledgeRetentionRules);
+export const candidateKnowledgeRetentionOverrideKindSchema = z.enum(
+  candidateKnowledgeRetentionOverrideKinds,
+);
+
+export const candidateKnowledgeRetentionClassPolicySchema = z.discriminatedUnion("rule", [
+  z
+    .object({
+      class: candidateKnowledgeRetentionClassSchema,
+      rule: z.literal("retain-until-deletion"),
+      expireAfterDays: z.null().optional(),
+    })
+    .strict(),
+  z
+    .object({
+      class: candidateKnowledgeRetentionClassSchema,
+      rule: z.literal("expire-after-days"),
+      expireAfterDays: z.number().finite().int().positive().max(36_500),
+    })
+    .strict(),
+]);
+
+const exactRetentionClasses = z
+  .array(candidateKnowledgeRetentionClassPolicySchema)
+  .length(candidateKnowledgeRetentionClasses.length)
+  .superRefine((classes, context) => {
+    const values = classes.map((entry) => entry.class);
+    if (
+      new Set(values).size !== candidateKnowledgeRetentionClasses.length ||
+      candidateKnowledgeRetentionClasses.some((value) => !values.includes(value))
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "each candidate knowledge retention class must appear exactly once",
+      });
+    }
+  });
+
+export const candidateKnowledgeRetentionPolicyUpdateSchema = z
+  .object({
+    expectedRevision: z.number().finite().int().nonnegative(),
+    updatedAt: strictTimestampSchema,
+    classes: exactRetentionClasses,
+  })
+  .strict();
+
+export const candidateKnowledgeRetentionOverrideInputSchema = z
+  .object({
+    class: candidateKnowledgeRetentionClassSchema,
+    kind: candidateKnowledgeRetentionOverrideKindSchema,
+    expectedPolicyRevision: z.number().finite().int().nonnegative(),
+    expectedState: z.enum(["none", "applied", "released"]),
+    changedAt: strictTimestampSchema,
+  })
+  .strict();
+
+export type CandidateKnowledgeRetentionClassPolicy = z.infer<
+  typeof candidateKnowledgeRetentionClassPolicySchema
+>;
+export type CandidateKnowledgeRetentionPolicyUpdate = z.infer<
+  typeof candidateKnowledgeRetentionPolicyUpdateSchema
+>;
+export type CandidateKnowledgeRetentionOverrideInput = z.infer<
+  typeof candidateKnowledgeRetentionOverrideInputSchema
 >;
 
 export const candidateKnowledgeSourceVersionSchema = z

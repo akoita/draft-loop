@@ -34,6 +34,8 @@ import {
   type CandidateKnowledgeDirectoryRootRebindInput,
   type CandidateKnowledgeDirectoryRootRebindResult,
   type CandidateKnowledgeDirectoryRootRevisionRecord,
+  type CandidateKnowledgeRetentionPlan,
+  type CandidateKnowledgeRetentionPlanClass,
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceOriginBindingRecord,
   type CandidateKnowledgeSourceRefreshObservationInput,
@@ -45,6 +47,7 @@ import {
   type CandidateKnowledgeSourceVersionInput,
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
+  candidateKnowledgeRetentionClasses,
   type ManagedCandidateKnowledgeWriteJournalPhase,
   type ManagedCandidateKnowledgeWriteOperationRecord,
   type ManagedCandidateKnowledgeWriteRecoveryReport,
@@ -360,6 +363,10 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     sourceId: string,
     input: CandidateKnowledgeDirectoryMemberRetirementInput,
   ) => Promise<CandidateKnowledgeSourceRetirementRecord>;
+  readonly planCandidateKnowledgeRetention: (
+    knowledgeBaseId: string,
+    asOf: string,
+  ) => Promise<CandidateKnowledgeRetentionPlan>;
   readonly getManagedCandidateKnowledgeFilePath: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1495,6 +1502,161 @@ async function inspectManagedCandidateKnowledgeFiles(
   });
 }
 
+function requiredRetentionPlanTimestamp(value: string, label: string): string {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) ||
+    Number.isNaN(Date.parse(value))
+  ) {
+    throw new StorageValidationError(`${label} must be a valid ISO timestamp.`);
+  }
+  if (Date.parse(value) > Date.now()) {
+    throw new StorageValidationError(`${label} must not be in the future.`);
+  }
+  return value;
+}
+
+function freezeCandidateKnowledgeRetentionPlan(
+  plan: CandidateKnowledgeRetentionPlan,
+): CandidateKnowledgeRetentionPlan {
+  return Object.freeze({
+    ...plan,
+    classes: Object.freeze(
+      plan.classes.map((entry) =>
+        Object.freeze({
+          ...entry,
+          preservationReasons: Object.freeze([...entry.preservationReasons]),
+        }),
+      ),
+    ),
+  });
+}
+
+function boundedRetentionPlanCount(value: number): {
+  readonly count: number;
+  readonly capped: boolean;
+} {
+  if (value <= 1_024) return { count: value, capped: false };
+  return { count: 1_024, capped: true };
+}
+
+async function planCandidateKnowledgeRetention(
+  storage: SqliteStorage,
+  root: string,
+  knowledgeBaseIdInput: string,
+  asOfInput: string,
+): Promise<CandidateKnowledgeRetentionPlan> {
+  const knowledgeBaseId = requiredManagedText(
+    knowledgeBaseIdInput,
+    "Candidate knowledge retention knowledge base id",
+  );
+  const asOf = requiredRetentionPlanTimestamp(asOfInput, "Candidate knowledge retention plan asOf");
+  const policy = await storage.getCandidateKnowledgeRetentionPolicyAtAsOf(knowledgeBaseId, asOf);
+
+  const managedVersions = storage
+    .listManagedCandidateKnowledgeSourceVersions()
+    .filter(
+      (version) =>
+        version.knowledgeBaseId === knowledgeBaseId &&
+        Date.parse(version.createdAt) <= Date.parse(asOf),
+    );
+  const managedKeys = new Set(
+    managedVersions.map((version) => `${version.sourceId}\u0000${version.id}`),
+  );
+  const sources = await storage.listCandidateKnowledgeSources(knowledgeBaseId);
+  const unmanagedVersions: CandidateKnowledgeSourceVersionRecord[] = [];
+  for (const source of sources) {
+    const versions = await storage.listCandidateKnowledgeSourceVersions(knowledgeBaseId, source.id);
+    for (const version of versions) {
+      if (Date.parse(version.createdAt) > Date.parse(asOf)) continue;
+      if (!managedKeys.has(`${version.sourceId}\u0000${version.id}`)) {
+        unmanagedVersions.push(version);
+      }
+    }
+  }
+  const inventory = await inspectManagedCandidateKnowledgeFiles(storage, root);
+  const unknownTotal = Object.values(inventory.unknownEntries).reduce(
+    (total, count) => total + count,
+    0,
+  );
+  const boundedUnmanaged = boundedRetentionPlanCount(unmanagedVersions.length);
+  const boundedUnknown = boundedRetentionPlanCount(unknownTotal);
+  const commonCapped =
+    boundedUnmanaged.capped || boundedUnknown.capped || inventory.scanLimitReached;
+  const activeOverrides = new Set(
+    policy.activeOverrides
+      .filter((override) => override.class === "raw-sources")
+      .map((override) => override.kind),
+  );
+  const rawPolicy = policy.classes.find((entry) => entry.class === "raw-sources");
+  if (rawPolicy === undefined) {
+    throw new StorageValidationError("Candidate knowledge retention policy is incomplete.");
+  }
+  let eligible = 0;
+  let preserved = 0;
+  for (const version of managedVersions) {
+    const expiresAt =
+      rawPolicy.rule === "expire-after-days" && rawPolicy.expireAfterDays !== null
+        ? Date.parse(version.createdAt) + rawPolicy.expireAfterDays * 24 * 60 * 60 * 1000
+        : Number.POSITIVE_INFINITY;
+    if (activeOverrides.size === 0 && expiresAt <= Date.parse(asOf)) eligible += 1;
+    else preserved += 1;
+  }
+  const boundedEligible = boundedRetentionPlanCount(eligible);
+  const boundedPreserved = boundedRetentionPlanCount(preserved);
+  const reasons: CandidateKnowledgeRetentionPlanClass["preservationReasons"][number][] = [];
+  if (boundedPreserved.count > 0 || rawPolicy.rule === "retain-until-deletion") {
+    reasons.push("retention-rule");
+  }
+  if (activeOverrides.size > 0) reasons.push("override");
+  if (boundedUnmanaged.count > 0) reasons.push("unmanaged");
+  if (boundedUnknown.count > 0) reasons.push("unknown");
+  const rawClass: CandidateKnowledgeRetentionPlanClass = {
+    class: "raw-sources",
+    rule: rawPolicy.rule,
+    expireAfterDays: rawPolicy.expireAfterDays,
+    ownershipStatus: managedVersions.length > 0 ? "owned" : "preserved",
+    eligibleCount: boundedEligible.count,
+    preservedCount: boundedPreserved.count,
+    unmanagedCount: boundedUnmanaged.count,
+    unknownCount: boundedUnknown.count,
+    countCapped: commonCapped || boundedEligible.capped || boundedPreserved.capped,
+    preservationReasons: reasons,
+  };
+
+  const classes: CandidateKnowledgeRetentionPlanClass[] = [rawClass];
+  for (const retentionClass of candidateKnowledgeRetentionClasses) {
+    if (retentionClass === "raw-sources") continue;
+    const classPolicy = policy.classes.find((entry) => entry.class === retentionClass);
+    if (classPolicy === undefined) {
+      throw new StorageValidationError("Candidate knowledge retention policy is incomplete.");
+    }
+    const classOverrides = policy.activeOverrides.some(
+      (override) => override.class === retentionClass,
+    );
+    classes.push({
+      class: retentionClass,
+      rule: classPolicy.rule,
+      expireAfterDays: classPolicy.expireAfterDays,
+      ownershipStatus: "not-materialized",
+      eligibleCount: 0,
+      preservedCount: 0,
+      unmanagedCount: 0,
+      unknownCount: 0,
+      countCapped: false,
+      preservationReasons: classOverrides ? ["override", "not-materialized"] : ["not-materialized"],
+    });
+  }
+  return freezeCandidateKnowledgeRetentionPlan({
+    schemaVersion: 1,
+    knowledgeBaseId,
+    asOf,
+    policyRevision: policy.revision,
+    overrideRevision: policy.overrideRevision,
+    classes,
+  });
+}
+
 function parseDescriptor(value: unknown): CandidateKnowledgeStoreDescriptor {
   try {
     return candidateKnowledgeStoreSchema.parse(value) as CandidateKnowledgeStoreDescriptor;
@@ -2596,6 +2758,24 @@ function createHandle(
             input,
           )),
         }),
+      ),
+    getCandidateKnowledgeRetentionPolicy: async (knowledgeBaseId) =>
+      storage.getCandidateKnowledgeRetentionPolicy(knowledgeBaseId),
+    setCandidateKnowledgeRetentionPolicy: (knowledgeBaseId, input) =>
+      coordinateWrite("ckb-retention-policy", () =>
+        storage.setCandidateKnowledgeRetentionPolicy(knowledgeBaseId, input),
+      ),
+    applyCandidateKnowledgeRetentionOverride: (knowledgeBaseId, input) =>
+      coordinateWrite("ckb-retention-override-apply", () =>
+        storage.applyCandidateKnowledgeRetentionOverride(knowledgeBaseId, input),
+      ),
+    releaseCandidateKnowledgeRetentionOverride: (knowledgeBaseId, input) =>
+      coordinateWrite("ckb-retention-override-release", () =>
+        storage.releaseCandidateKnowledgeRetentionOverride(knowledgeBaseId, input),
+      ),
+    planCandidateKnowledgeRetention: (knowledgeBaseId, asOf) =>
+      coordinateWrite("ckb-retention-plan", () =>
+        planCandidateKnowledgeRetention(storage, root, knowledgeBaseId, asOf),
       ),
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
       coordinateWrite("ckb-managed-file-create", () =>

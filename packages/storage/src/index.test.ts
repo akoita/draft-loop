@@ -11,6 +11,7 @@ import {
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceVersionInput,
   type ContextSnapshotInput,
+  candidateKnowledgeRetentionClasses,
   type DecisionRecordInput,
   type EvidenceChunkRecord,
   type EvidenceSourceRecord,
@@ -310,11 +311,11 @@ describe("SQLite storage", () => {
     const storage = openSqliteStorage(":memory:");
 
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     storage.migrate();
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
 
     await storage.set("ui.language", "en");
@@ -345,7 +346,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     const raw = openRawDatabase(filename);
     expect(
@@ -385,7 +386,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     expect(
       queryRawDatabase(
@@ -403,7 +404,7 @@ describe("SQLite storage", () => {
       },
     ]);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -453,7 +454,7 @@ describe("SQLite storage", () => {
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     const migratedContext = await upgraded.getContextSnapshot(legacyContext.id);
@@ -461,7 +462,7 @@ describe("SQLite storage", () => {
     expect(migratedContext?.payload).not.toHaveProperty("candidateKnowledgeSelection");
     upgraded.migrate();
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -477,7 +478,7 @@ describe("SQLite storage", () => {
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
@@ -497,7 +498,7 @@ describe("SQLite storage", () => {
     removeMigrationFive(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
       savedKnowledgeBase,
@@ -523,7 +524,7 @@ describe("SQLite storage", () => {
     removeMigrationSix(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
@@ -591,7 +592,7 @@ describe("SQLite storage", () => {
     removeMigrationSeven(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged(
@@ -664,7 +665,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceOriginBinding("ckb-1", "ckb-source-1"),
@@ -737,7 +738,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRefreshObservation("ckb-1", "ckb-source-1"),
@@ -852,7 +853,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRetirement("ckb-1", "ckb-source-1"),
@@ -912,7 +913,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
     ]);
     const raw = openRawDatabase(filename);
     expect(() =>
@@ -2166,6 +2167,158 @@ describe("SQLite storage", () => {
     await expect(backup.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(backup.listAuditEvents(workspace.id)).resolves.toHaveLength(3);
     await backup.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("persists the per-candidate retention policy and overrides", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-retention-policy-"));
+    const filename = join(directory, "knowledge.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+
+    const initial = await storage.getCandidateKnowledgeRetentionPolicy("ckb-1");
+    expect(initial.revision).toBe(0);
+    expect(initial.classes.map((entry) => entry.class)).toEqual(candidateKnowledgeRetentionClasses);
+    expect(initial.classes.every((entry) => entry.rule === "retain-until-deletion")).toBe(true);
+    const invalidBase = initial.classes.map((entry) => ({ ...entry }));
+    await expect(
+      storage.setCandidateKnowledgeRetentionPolicy("ckb-1", {
+        expectedRevision: 0,
+        updatedAt: "2099-01-01T00:00:00.000Z",
+        classes: invalidBase,
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.applyCandidateKnowledgeRetentionOverride("ckb-1", {
+        class: "raw-sources",
+        kind: "legal-hold",
+        expectedPolicyRevision: 0,
+        expectedState: "none",
+        changedAt: "2099-01-01T00:00:00.000Z",
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.getCandidateKnowledgeRetentionPolicyAtAsOf("ckb-1", "2099-01-01T00:00:00.000Z"),
+    ).rejects.toThrow(StorageValidationError);
+    const firstPolicy = invalidBase[0];
+    if (firstPolicy === undefined) throw new Error("retention policy fixture is empty");
+    await expect(
+      storage.setCandidateKnowledgeRetentionPolicy("ckb-1", {
+        expectedRevision: 0,
+        updatedAt: "2026-08-12T10:00:00.000Z",
+        classes: invalidBase.slice(0, -1),
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.setCandidateKnowledgeRetentionPolicy("ckb-1", {
+        expectedRevision: 0,
+        updatedAt: "2026-08-12T10:00:00.000Z",
+        classes: [
+          ...invalidBase.slice(0, -1),
+          { ...firstPolicy, class: candidateKnowledgeRetentionClasses[1] },
+        ],
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.setCandidateKnowledgeRetentionPolicy("ckb-1", {
+        expectedRevision: 0,
+        updatedAt: "2026-08-12T10:00:00.000Z",
+        classes: invalidBase.map((entry, index) =>
+          index === 0 ? { ...entry, rule: "expire-after-days", expireAfterDays: null } : entry,
+        ),
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    expect((await storage.getCandidateKnowledgeRetentionPolicy("ckb-1")).revision).toBe(0);
+
+    const updated = await storage.setCandidateKnowledgeRetentionPolicy("ckb-1", {
+      expectedRevision: 0,
+      updatedAt: "2026-08-12T10:01:00.000Z",
+      classes: invalidBase.map((entry, index) =>
+        index === 0 ? { ...entry, rule: "expire-after-days", expireAfterDays: 30 } : entry,
+      ),
+    });
+    expect(updated.revision).toBe(1);
+    expect(updated.classes[0]).toMatchObject({
+      class: "raw-sources",
+      rule: "expire-after-days",
+      expireAfterDays: 30,
+    });
+    await expect(
+      storage.setCandidateKnowledgeRetentionPolicy("ckb-1", {
+        expectedRevision: 0,
+        updatedAt: "2026-08-12T10:02:00.000Z",
+        classes: invalidBase,
+      }),
+    ).rejects.toThrow(StorageConflictError);
+
+    const held = await storage.applyCandidateKnowledgeRetentionOverride("ckb-1", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: 1,
+      expectedState: "none",
+      changedAt: "2026-08-12T10:02:00.000Z",
+    });
+    expect(held.activeOverrides).toHaveLength(1);
+    await expect(
+      storage.applyCandidateKnowledgeRetentionOverride("ckb-1", {
+        class: "raw-sources",
+        kind: "legal-hold",
+        expectedPolicyRevision: 1,
+        expectedState: "none",
+        changedAt: "2026-08-12T10:03:00.000Z",
+      }),
+    ).rejects.toThrow(StorageConflictError);
+    const released = await storage.releaseCandidateKnowledgeRetentionOverride("ckb-1", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: 1,
+      expectedState: "applied",
+      changedAt: "2026-08-12T10:03:00.000Z",
+    });
+    expect(released.activeOverrides).toEqual([]);
+
+    storage.validateCandidateKnowledgeRetentionContract();
+    await storage.close();
+
+    const reopened = openSqliteStorage(filename);
+    expect(await reopened.getCandidateKnowledgeRetentionPolicy("ckb-1")).toEqual(released);
+    reopened.validateCandidateKnowledgeRetentionContract();
+    await reopened.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("migrates a populated v17 candidate store to the legacy-safe retention default", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-retention-v17-"));
+    const filename = join(directory, "knowledge.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.ensureDefaultCandidateKnowledgeBase(knowledgeBase());
+    await storage.createCandidateKnowledgeSource(knowledgeSource(), knowledgeSourceVersion());
+    await storage.close();
+
+    const legacy = openRawDatabase(filename);
+    legacy.exec(
+      "DROP TABLE candidate_knowledge_retention_override_events; DROP TABLE candidate_knowledge_retention_policy_events; DELETE FROM schema_migrations WHERE version = 18;",
+    );
+    legacy.close();
+
+    const migrated = openSqliteStorage(filename);
+    const policy = await migrated.getCandidateKnowledgeRetentionPolicy("ckb-1");
+    expect(policy.revision).toBe(0);
+    expect(policy.classes.every((entry) => entry.rule === "retain-until-deletion")).toBe(true);
+    expect(
+      queryRawDatabase(
+        filename,
+        "SELECT (SELECT COUNT(*) FROM candidate_knowledge_retention_policy_events) AS policies, (SELECT COUNT(*) FROM candidate_knowledge_retention_override_events) AS overrides",
+      ),
+    ).toEqual([{ policies: 0, overrides: 0 }]);
+    expect(
+      queryRawDatabase(
+        filename,
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'candidate_knowledge_retention_plan_events'",
+      ),
+    ).toEqual([]);
+    migrated.validateCandidateKnowledgeRetentionContract();
+    await migrated.close();
     await rm(directory, { recursive: true, force: true });
   });
 });
