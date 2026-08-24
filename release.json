@@ -2,7 +2,7 @@
   "project": "draft-loop",
   "stage": "evidence-backed-cv-drafting",
   "channel": "alpha",
-  "releaseName": "CKB foundation alpha",
-  "stageIssue": 112,
+  "releaseName": "CKB storage safety alpha",
+  "stageIssue": 113,
   "artifactTargets": ["linux-x64", "macos-arm64", "windows-x64"]
 }
