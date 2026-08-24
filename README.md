@@ -167,51 +167,64 @@ pnpm --filter @draft-loop/cli start knowledge select ./workspace \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 ```
 
-The desktop native boundary exposes the same operations without accepting or
-returning filesystem paths in renderer messages. Desktop selection accepts only
-stores explicitly opened in the current session and requires the same visible
-approval for combinations. Both adapters can create, rename, and archive
-additional CKBs and expose the same bounded source, duplicate, and structural
-inventory inspection contracts. These generic diagnostics omit roots, source
-labels, filenames, URLs, checksums, and content. Archival requires explicit
-confirmation and cannot target the default CKB. Single-file intake uses a
-dedicated native picker, keeps the selected path in the host, and returns only
-opaque source/version identity. URL intake requires explicit approval, applies
-the shared HTTPS and network-safety checks, and likewise returns no URL or
-content. File-version append uses the same native picker, preserves the existing
-origin binding, and reports whether immutable managed bytes created a new
-version or matched the current one. Path-free status and refresh-state controls
-inspect remembered lifecycle evidence. File refresh uses the remembered local
-origin; URL refresh requires fresh approval and the same network-safety checks
-as intake. Directory intake uses the same bounded application contract: CLI
-users choose a local directory path, while the desktop host owns a dedicated
-native directory picker. Complete and partial results report only scan counts
-and opaque source/version identities; roots, filenames, labels, hashes, and
-content remain local. Exact-byte file-origin rebind uses runtime-only CLI input
-or the native desktop picker and returns only status plus the binding timestamp.
-Logical source retirement is idempotent, preserves evidence, and requires
-explicit confirmation; there is no reactivation control. Directory-root
-rebind uses separate bounded preview and confirmed apply commands. Apply
-rescans the selected root and atomically updates member origins only when every
-historical member still matches exactly. Directory refresh likewise separates
-read-only preview from confirmed apply. Apply rescans the remembered root,
-records current and missing observations, and appends changed same-member bytes
-in source-ID order; a later failure reports bounded path-free partial progress.
-Adding directory members requires confirmation, rescans the remembered root,
-and reports deterministic complete or partial progress using opaque source IDs.
-Portable backup export requires an approved new destination and returns only
-path-free integrity counts. The strict directory package can be inspected and
-restored to an approved new store directory with an explicit
-`fail-if-destination-exists` collision policy. Restore verifies the package
-before writing, preserves logical store, CKB, source, and version identities,
-and leaves every source unbound from its original machine. The package excludes
-machine-local origins, active locks, recovery journals, application/provider
-credentials, and unrelated workspace data. Physical deletion remains staged.
-Moved-candidate preview reports only unique exact-integrity source matches.
-Confirmed one-source member move repeats the bounded scan, changes only the
-selected member's remembered origin, and returns `moved` or idempotent `current`.
-Directory reconciliation previews every member state and applies only explicitly
-approved missing-member retirements; incomplete scans never retire sources.
+### Desktop knowledge operations
+
+The desktop exposes the same CKB operations through a native boundary. Renderer
+messages never accept or return filesystem paths; the host owns native pickers
+and keeps paths local.
+
+- **Store access and inspection.** Desktop selection accepts only stores opened
+  in the current session. Combining CKBs requires visible approval. Both the CLI
+  and desktop can create, rename, and archive additional CKBs, while bounded
+  diagnostics omit roots, labels, filenames, URLs, checksums, and content.
+  Archival requires confirmation and cannot target the default CKB.
+
+- **File and URL intake.** Single-file intake uses a dedicated native picker and
+  returns only opaque source and version identities. URL intake requires
+  approval and applies the shared HTTPS and network-safety checks without
+  returning the URL or its content.
+
+- **Versions, status, and refresh.** Appending a file version preserves its
+  origin binding and reports whether the managed bytes created a version or
+  matched the current one. Path-free controls expose lifecycle and refresh
+  state. File refresh uses the remembered origin; URL refresh requires fresh
+  approval and repeats the intake safety checks.
+
+- **File rebinding and retirement.** Exact-byte origin rebinding uses
+  runtime-only CLI input or the native desktop picker and returns only status
+  and the binding timestamp. Logical retirement is idempotent, preserves
+  evidence, and requires confirmation. Retired sources cannot be reactivated.
+
+- **Directory intake.** CLI users choose a local path, while the desktop uses a
+  dedicated native directory picker. Complete and partial results contain only
+  scan counts and opaque source or version identities; roots, filenames, labels,
+  hashes, and content remain local.
+
+- **Directory rebinding.** Preview and confirmed apply are separate operations.
+  Apply rescans the selected root and updates member origins atomically only
+  when every historical member still matches exactly.
+
+- **Directory refresh and additions.** Refresh separates read-only preview from
+  confirmed apply. Apply records current and missing observations and appends
+  changed same-member bytes in source-ID order. Adding members also requires
+  confirmation. Both operations report deterministic, path-free complete or
+  partial progress.
+
+- **Moved members and reconciliation.** Moved-candidate preview returns only
+  unique exact-integrity matches. A confirmed member move rescans the directory,
+  changes only the selected origin, and returns `moved` or idempotent `current`.
+  Reconciliation retires only explicitly approved missing members, and never
+  retires sources after an incomplete scan.
+
+- **Portable backup and restore.** Export requires an approved new destination
+  and returns path-free integrity counts. Restore re-verifies the package and
+  publishes only to an approved new store with the explicit
+  `fail-if-destination-exists` policy. Logical identities are preserved, but all
+  sources remain unbound from their original machine.
+
+Portable packages exclude machine-local origins, active locks, recovery
+journals, application or provider credentials, and unrelated workspace data.
+Physical deletion remains staged.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
