@@ -33,6 +33,7 @@ import {
   openCandidateKnowledgeStore,
   type RebindManagedCandidateKnowledgeDirectoryRootInput,
 } from "./knowledge-store.js";
+import { StorageWriterLeaseConflictError } from "./writer-lease.js";
 
 const createdAt = "2026-08-21T14:00:00.000Z";
 const cleanupRoots: string[] = [];
@@ -1614,6 +1615,57 @@ describe("portable candidate knowledge store", () => {
       `${sha256(successfulSourceId)}/`,
       `${sha256(successfulSourceId)}/${sha256(successfulVersionId)}:${sha256("concurrent evidence")}`,
     ]);
+    await secondStore.close();
+    await firstStore.close();
+  });
+
+  it("coordinates direct store mutations under one recoverable store-wide writer lease", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const firstStore = await initializeCandidateKnowledgeStore(initialization(root));
+    const secondStore = await openCandidateKnowledgeStore(root);
+    let releaseWriter!: () => void;
+    let reportAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      reportAcquired = resolve;
+    });
+    const holdWriter = firstStore.withWriterLease(
+      "ckb-directory-refresh",
+      async () => {
+        reportAcquired();
+        await new Promise<void>((resolve) => {
+          releaseWriter = resolve;
+        });
+      },
+      {
+        coordinatorPath: join(parent, "untrusted-coordinator.sqlite"),
+        scope: "workspace",
+        operation: "untrusted-operation",
+      } as never,
+    );
+    await acquired;
+
+    const conflict = await secondStore
+      .renameCandidateKnowledgeBase("ckb-default", "Blocked rename", "2026-08-21T14:01:00.000Z")
+      .catch((error: unknown) => error);
+    expect(conflict).toBeInstanceOf(StorageWriterLeaseConflictError);
+    expect((conflict as StorageWriterLeaseConflictError).diagnostic).toEqual({
+      scope: "candidate-knowledge-store",
+      activeOperation: "ckb-directory-refresh",
+      retryable: true,
+      status: "active",
+    });
+    expect((conflict as Error).message).not.toContain(root);
+
+    releaseWriter();
+    await holdWriter;
+    await expect(
+      secondStore.renameCandidateKnowledgeBase(
+        "ckb-default",
+        "Renamed safely",
+        "2026-08-21T14:02:00.000Z",
+      ),
+    ).resolves.toMatchObject({ displayName: "Renamed safely" });
     await secondStore.close();
     await firstStore.close();
   });

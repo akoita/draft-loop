@@ -10,6 +10,10 @@
     "./knowledge-store": {
       "types": "./src/knowledge-store.ts",
       "import": "./src/knowledge-store.ts"
+    },
+    "./writer-lease": {
+      "types": "./src/writer-lease.ts",
+      "import": "./src/writer-lease.ts"
     }
   },
   "files": [
