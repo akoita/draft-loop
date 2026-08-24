@@ -140,7 +140,7 @@ contact employers, or submit applications.
 | Horizon  | Stage                                                                                                             | Evidence status                                      | Outcome                                                                               | Remaining gate                                                                                                          |
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
-| Now      | Evidence-backed CV drafting (v0.7 program; [completed Sprint 1](https://github.com/akoita/draft-loop/milestone/2)) | [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md); v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | #160 is complete; Sprint 2 (#161–#166) is planned but not started; reviewed profile and opportunity, lexical RAG, plan, complete CV, and policy checks remain |
+| Now      | Evidence-backed CV drafting (v0.7 program; [completed Sprint 1](https://github.com/akoita/draft-loop/milestone/2)) | [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md); Sprint 2 active; v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | #161 delivers store-wide writer coordination; interrupted-write recovery, retention, backup, restore, deletion, reviewed profile and opportunity, lexical RAG, plan, complete CV, and policy checks remain |
 | Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Designed; foundation components partially integrated | Turn the factual draft into a reviewed, revised, human-approvable artifact            | Structured critique, adjudication, calibrated readiness gates, and professional rendering                               |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
@@ -170,8 +170,10 @@ larger outcome issues remain open as roadmap epics:
 
 - Sprint 1 is complete: the single legacy selection-migration slice #160 closed
   [Sprint 1](https://github.com/akoita/draft-loop/milestone/2).
-- Sprint 2 is planned but not started. It will deliver concurrency, recovery,
-  retention, backup, restore, and deletion safety through #161–#166 in
+- Sprint 2 is active. Store-wide writer leases in #161 prevent current CKB
+  commands from interleaving and establish the shared fenced coordination
+  contract for workspace and future destructive operations. Recovery,
+  retention, backup, restore, and deletion follow through #162–#166 in
   [Sprint 2](https://github.com/akoita/draft-loop/milestone/5), with #113
   retaining the aggregate outcome.
 - Derive a candidate-reviewed canonical profile (#66), assemble a reviewed
@@ -185,8 +187,8 @@ Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
 outside this critical path. Source lifecycle work through #136, workspace/run
 binding slices under #111, and the shared path-safe CLI/desktop controls rolled
 up by #112 are implemented. Sprint 1 is complete, #160 is closed, and the CKB
-foundation is a [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md). Sprint 2 is planned but
-not started. The broad profile, opportunity, retrieval, planning, artifact,
+foundation is a [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md). Sprint 2 is active with
+issue #161's writer-coordination slice. The broad profile, opportunity, retrieval, planning, artifact,
 and writing-policy epics (#66–#70 and #80) stay outside a sprint milestone until
 each next bounded batch is planned. They still define the v0.7 stage exit and
 are not treated as completed work.
@@ -318,6 +320,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-24 | Started Sprint 2 with #161's recoverable store-wide writer lease and fenced, content-free conflict contract. | Current direct and multi-step CKB mutations share one exclusive command scope; a private coordinator remains separate from replaceable CKB data so #164–#166 can reuse it for backup, restore, and deletion. |
 | 2026-08-24 | Completed Sprint 1 by closing #160 and published [v0.7.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.1), with [checkpoint evidence](stage-evidence-v0.7.0-alpha.1.md). | The CKB foundation is a Released checkpoint; the v0.7 stage remains incomplete and unvalidated, with Sprint 2 planned but not started. |
 | 2026-08-24 | Reframed GitHub milestones as bounded delivery sprints: Sprint 1 closes the CKB foundation with #160, while Sprint 2 delivers storage safety through #161–#166; broad issues #66–#70, #80, #111, and #113 remain unmilestoned epics. | Milestone progress now measures independently closable outcomes instead of PR volume inside long-lived epics. Closing #112 records the delivered shared lifecycle surface while its storage, retrieval, and migration residuals remain explicit in their leaf issues. |
 | 2026-08-24 | Exposed confirmed directory add-members through shared CLI and desktop contracts.                                                                                                                                          | One bounded scan appends unmatched files in deterministic order; complete or partial results contain capped opaque source identities and counts while roots, paths, labels, hashes, checksums, and content remain local.                                                       |

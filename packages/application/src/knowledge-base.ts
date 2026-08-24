@@ -45,6 +45,7 @@ import {
   maximumManagedCandidateKnowledgeUrlResponseBytes,
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
+import { StorageWriterLeaseError } from "@draft-loop/storage/writer-lease";
 
 export type {
   CandidateKnowledgeBase,
@@ -779,6 +780,10 @@ function requireStoreRoot(storeRoot: string): string {
     throw new Error("Candidate knowledge store root is required.");
   }
   return storeRoot;
+}
+
+function preserveWriterLeaseError(error: unknown): void {
+  if (error instanceof StorageWriterLeaseError) throw error;
 }
 
 const maximumSourceDisplayNameCharacters = 200;
@@ -3630,6 +3635,21 @@ async function useHandle<T>(
   return result;
 }
 
+async function useWriterHandle<T>(
+  operation: string,
+  acquire: () => Promise<CandidateKnowledgeStoreHandle>,
+  callback: (handle: CandidateKnowledgeStoreHandle) => Promise<T>,
+): Promise<T> {
+  return useHandle(acquire, (handle) => {
+    if (typeof handle.withWriterLease !== "function") {
+      // Narrow compatibility seam for unit-test adapters. Production handles
+      // always expose the coordinated writer contract.
+      return callback(handle);
+    }
+    return handle.withWriterLease(operation, () => callback(handle));
+  });
+}
+
 function resolveDependencies(
   dependencies: CandidateKnowledgeStoreServiceDependencies,
 ): ResolvedDependencies {
@@ -3769,7 +3789,8 @@ export function createCandidateKnowledgeStoreService(
       const displayName = requireText(command.displayName, "Candidate knowledge base display name");
       const id = requireText(resolved.generateId(), "Candidate knowledge base id");
       const createdAt = resolved.now();
-      return useHandle(
+      return useWriterHandle(
+        "ckb-create",
         () => resolved.open(storeRoot),
         async (handle) => {
           await handle.createCandidateKnowledgeBase({
@@ -3790,7 +3811,8 @@ export function createCandidateKnowledgeStoreService(
       const id = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
       const displayName = requireText(command.displayName, "Candidate knowledge base display name");
       const updatedAt = resolved.now();
-      return useHandle(
+      return useWriterHandle(
+        "ckb-rename",
         () => resolved.open(storeRoot),
         async (handle) => {
           await handle.renameCandidateKnowledgeBase(id, displayName, updatedAt);
@@ -3802,7 +3824,8 @@ export function createCandidateKnowledgeStoreService(
       const storeRoot = requireStoreRoot(command.storeRoot);
       const id = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
       const archivedAt = resolved.now();
-      return useHandle(
+      return useWriterHandle(
+        "ckb-archive",
         () => resolved.open(storeRoot),
         async (handle) => {
           await handle.archiveCandidateKnowledgeBase(id, archivedAt);
@@ -3823,7 +3846,8 @@ export function createCandidateKnowledgeStoreService(
         resolved.now(),
       );
       const version = prepareVersion(source.id, command);
-      return useHandle(
+      return useWriterHandle(
+        "ckb-source-create",
         () => resolved.open(storeRoot),
         async (handle) => {
           const result = await handle.createCandidateKnowledgeSource(source, {
@@ -3842,7 +3866,8 @@ export function createCandidateKnowledgeStoreService(
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
       const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
       const version = prepareVersion(sourceId, command);
-      return useHandle(
+      return useWriterHandle(
+        "ckb-source-append",
         () => resolved.open(storeRoot),
         async (handle) => {
           const result = await handle.appendCandidateKnowledgeSourceVersion(
@@ -3879,7 +3904,8 @@ export function createCandidateKnowledgeStoreService(
         { knowledgeBaseId, kind: "file", displayName },
         createdAt,
       );
-      return useHandle(
+      return useWriterHandle(
+        "ckb-file-import",
         () => resolved.open(storeRoot),
         async (handle) => {
           const result = await handle.createManagedCandidateKnowledgeFileSource(source, {
@@ -3910,7 +3936,8 @@ export function createCandidateKnowledgeStoreService(
           directoryPath,
           storeRoot,
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw importDirectoryFailure();
       }
 
@@ -3930,7 +3957,8 @@ export function createCandidateKnowledgeStoreService(
         sources: orderedSources,
       };
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-import",
           () => resolved.open(storeRoot),
           async (handle) => {
             const knowledgeBase = await handle.getCandidateKnowledgeBase(knowledgeBaseId);
@@ -4024,7 +4052,8 @@ export function createCandidateKnowledgeStoreService(
             }
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw importDirectoryFailure();
       }
     },
@@ -4115,12 +4144,14 @@ export function createCandidateKnowledgeStoreService(
           command.directoryPath,
           "Candidate knowledge source directory path",
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryRootRebindFailure();
       }
 
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-root-rebind",
           () => resolved.open(storeRoot),
           async (handle) => {
             const collected = await collectDirectoryRootRebindPreview(
@@ -4145,7 +4176,8 @@ export function createCandidateKnowledgeStoreService(
             return directoryRootRebindApplyResult(collected);
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryRootRebindFailure();
       }
     },
@@ -4222,12 +4254,14 @@ export function createCandidateKnowledgeStoreService(
         knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
         directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
         sourceId = requireText(command.sourceId, "Candidate knowledge source id");
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryMemberMoveFailure();
       }
 
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-member-move",
           () => resolved.open(storeRoot),
           async (handle) => {
             const collected = await collectDirectoryRefresh(
@@ -4290,7 +4324,8 @@ export function createCandidateKnowledgeStoreService(
             );
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryMemberMoveFailure();
       }
     },
@@ -4306,12 +4341,14 @@ export function createCandidateKnowledgeStoreService(
         approvedRetirementSourceIds = normalizeDirectoryReconciliationApprovals(
           command.approvedRetirementSourceIds,
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryReconciliationFailure();
       }
 
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-reconcile",
           () => resolved.open(storeRoot),
           async (handle) => {
             const collected = await collectDirectoryRefresh(
@@ -4437,7 +4474,8 @@ export function createCandidateKnowledgeStoreService(
             );
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryReconciliationFailure();
       }
     },
@@ -4449,12 +4487,14 @@ export function createCandidateKnowledgeStoreService(
         storeRoot = requireStoreRoot(command.storeRoot);
         knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
         directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw recordDirectoryRefreshFailure();
       }
 
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-observe",
           () => resolved.open(storeRoot),
           async (handle) => {
             const collected = await collectDirectoryRefresh(
@@ -4502,7 +4542,8 @@ export function createCandidateKnowledgeStoreService(
             return recordDirectoryRefreshResult(collected, entries.length);
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw recordDirectoryRefreshFailure();
       }
     },
@@ -4514,12 +4555,14 @@ export function createCandidateKnowledgeStoreService(
         storeRoot = requireStoreRoot(command.storeRoot);
         knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
         directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryRefreshFailure();
       }
 
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-refresh",
           () => resolved.open(storeRoot),
           async (handle) => {
             const collected = await collectDirectoryRefresh(
@@ -4629,7 +4672,8 @@ export function createCandidateKnowledgeStoreService(
             return applyDirectoryRefreshResult(collected, refreshedSourceIds);
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw applyDirectoryRefreshFailure();
       }
     },
@@ -4641,12 +4685,14 @@ export function createCandidateKnowledgeStoreService(
         storeRoot = requireStoreRoot(command.storeRoot);
         knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
         directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw addDirectoryMembersFailure();
       }
 
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-add-members",
           () => resolved.open(storeRoot),
           async (handle) => {
             const collected = await collectDirectoryRefresh(
@@ -4706,7 +4752,8 @@ export function createCandidateKnowledgeStoreService(
             return addDirectoryMembersResult(collected, addedSourceIds, "complete");
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw addDirectoryMembersFailure();
       }
     },
@@ -4723,12 +4770,14 @@ export function createCandidateKnowledgeStoreService(
         knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
         directoryId = requireText(command.directoryId, "Candidate knowledge directory id");
         sourceId = requireText(command.sourceId, "Candidate knowledge source id");
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw retireDirectoryMemberFailure();
       }
 
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-directory-member-retire",
           () => resolved.open(storeRoot),
           async (handle) => {
             const collected = await collectDirectoryRefresh(
@@ -4806,7 +4855,8 @@ export function createCandidateKnowledgeStoreService(
             );
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw retireDirectoryMemberFailure();
       }
     },
@@ -4856,7 +4906,8 @@ export function createCandidateKnowledgeStoreService(
         responseBytes,
         provenance,
       };
-      return useHandle(
+      return useWriterHandle(
+        "ckb-url-import",
         () => resolved.open(storeRoot),
         async (handle) => {
           const result = await handle.createManagedCandidateKnowledgeUrlSource(
@@ -4879,7 +4930,8 @@ export function createCandidateKnowledgeStoreService(
       );
       const versionId = requireText(resolved.generateId(), "Candidate knowledge source version id");
       const createdAt = resolved.now();
-      return useHandle(
+      return useWriterHandle(
+        "ckb-file-append",
         () => resolved.open(storeRoot),
         async (handle) => {
           const result = await handle.appendManagedCandidateKnowledgeFileVersion(
@@ -4979,7 +5031,8 @@ export function createCandidateKnowledgeStoreService(
       const storeRoot = requireStoreRoot(command.storeRoot);
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
       const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
-      return useHandle(
+      return useWriterHandle(
+        "ckb-file-refresh",
         () => resolved.open(storeRoot),
         async (handle) => {
           const inspected = await inspectKnowledgeSourceOrigin(
@@ -5073,11 +5126,13 @@ export function createCandidateKnowledgeStoreService(
         storeRoot = requireStoreRoot(command.storeRoot);
         knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
         sourceId = requireText(command.sourceId, "Candidate knowledge source id");
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw refreshUrlFailure();
       }
       try {
-        return await useHandle(
+        return await useWriterHandle(
+          "ckb-url-refresh",
           () => resolved.open(storeRoot),
           async (handle) => {
             const preflight = await prepareUrlRefresh(handle, knowledgeBaseId, sourceId);
@@ -5165,7 +5220,8 @@ export function createCandidateKnowledgeStoreService(
               : originRefreshResult(sourceId, "current", provenance.fetchedAt);
           },
         );
-      } catch {
+      } catch (error) {
+        preserveWriterLeaseError(error);
         throw refreshUrlFailure();
       }
     },
@@ -5196,7 +5252,8 @@ export function createCandidateKnowledgeStoreService(
       const storeRoot = requireStoreRoot(command.storeRoot);
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
       const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
-      return useHandle(
+      return useWriterHandle(
+        "ckb-source-retire",
         () => resolved.open(storeRoot),
         async (handle) => {
           const source = await handle.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);
@@ -5253,7 +5310,8 @@ export function createCandidateKnowledgeStoreService(
       const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
       const sourceId = requireText(command.sourceId, "Candidate knowledge source id");
       const sourcePath = requireText(command.sourcePath, "Candidate knowledge source path");
-      return useHandle(
+      return useWriterHandle(
+        "ckb-file-rebind",
         () => resolved.open(storeRoot),
         async (handle) => {
           const source = await handle.getCandidateKnowledgeSource(knowledgeBaseId, sourceId);

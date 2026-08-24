@@ -271,7 +271,18 @@ writes. It excludes paths, filenames, labels, checksums, content, provider
 data, diagnostics, cleanup tokens, approvals, and externally visible IDs.
 Legacy or unjournaled entries remain unknown. The journal is evidence for a
 future cleanup policy, not authority to adopt, delete, quarantine, repair, or
-reconcile; writer coordination and visible approval are still required.
+reconcile; visible approval is still required.
+
+All current CKB mutation commands use one store-wide exclusive writer lease.
+Its private SQLite coordinator is separate from the replaceable CKB data
+database and records only scope, opaque ownership, a safe operation code,
+timestamps, and a monotonically increasing fencing generation. Heartbeat,
+atomic stale takeover, nested fencing checks, and owner-generation-guarded
+release prevent concurrent commands from interleaving. Conflict diagnostics
+identify only the active operation and scope; they never include roots, paths,
+source identity, or content. Reads remain unleased. Backup, restore, deletion,
+interrupted-write recovery, and cleanup will reuse this coordination boundary
+but remain owned by their later Sprint 2 slices.
 
 The schema currently preserves append-only source/version, origin, observation,
 retirement, URL, directory-root, and directory-member history. [ADR 0007][adr-0007]
@@ -282,8 +293,8 @@ motivated each boundary.
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
 retrieval-index drift enforcement, provider transmission scope, complete
-CLI/desktop lifecycle controls, missing-blob repair, writer locks, deletion,
-cleanup, or complete portable backup/export/restore. Until those contracts are
+CLI/desktop lifecycle controls, missing-blob repair, deletion, cleanup, or
+complete portable backup/export/restore. Until those contracts are
 integrated and validated, the workspace-scoped evidence and retrieval path
 remains authoritative for application runs.
 

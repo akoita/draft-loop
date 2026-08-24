@@ -226,8 +226,33 @@ checks, but an unowned file is never adopted because its bytes or shape match.
 
 The journal is evidence for a future cleanup policy, not cleanup authority. This
 decision does not delete, adopt, quarantine, repair, reconcile, or automatically
-scan entries, coordinate writers with locks/leases, or provide approval UI.
-Future cleanup requires writer coordination and explicit visible approval.
+scan entries or provide approval UI. Future cleanup requires the store-wide
+writer coordination described below plus explicit visible approval.
+
+### Store-wide writer coordination
+
+Every public CKB mutation and every multi-step application write command runs
+under one exclusive store-wide lease. The scope is the complete store rather
+than one logical CKB because the metadata database, manifest, managed-byte tree,
+and future backup/restore/delete operations share a physical lifecycle. Reads do
+not acquire this lease.
+
+The lease state lives in a private SQLite coordinator beside, but separate from,
+the replaceable CKB data database. Its durable row contains only the scope, an
+opaque owner token, a validated operation code, millisecond timestamps, and a
+monotonically increasing fencing generation. It contains no root, path, URL,
+label, source ID, checksum, content, or provider data. Conflict and lost-lease
+diagnostics expose only the scope, safe active-operation code, status, and
+retryability.
+
+Acquisition, renewal, stale takeover, and guarded release are atomic. A
+heartbeat renews a live command; expiry permits deterministic takeover with a
+larger fencing generation. Every nested mutation asserts the current lease
+before and after its work, and an expired owner cannot renew or release its
+successor. Cancellation is cooperative once a callback has started: the writer
+must settle before `finally` releases ownership. This slice establishes the
+coordination boundary but does not itself implement interrupted-write repair,
+retention, backup, restore, deletion, or cleanup approval.
 
 ### Compact schema-evolution summary
 
@@ -343,8 +368,8 @@ This decision deliberately leaves the following outside the product workflow:
   readiness;
 - automatic duplicate preference or merging, source reactivation, and physical
   deletion;
-- missing/corrupt blob repair, writer locks or leases, cleanup approval, and
-  reconciliation of unknown entries;
+- missing/corrupt blob repair, cleanup approval, and reconciliation of unknown
+  entries;
 - CKB deletion semantics and complete portable export, backup, restore,
   conflict handling, or migration rollback; and
 - URL redirect history, conditional requests, and URL-specific failure policy.
@@ -382,6 +407,9 @@ selection evidence but does not make a run read its content implicitly.
 - Prospective journal events provide evidence for new managed writes without
   claiming legacy or unjournaled entries. Unknown opaque files cannot be
   cleaned up safely yet.
+- Store-wide fenced writer leases prevent current CKB commands from
+  interleaving and reserve the same private coordination boundary for future
+  backup, restore, deletion, and cleanup work.
 - Deleting a workspace does not delete the CKB, and deleting an original host
   file does not delete its managed copy. A SQLite-only copy is not a complete
   CKB backup.
@@ -395,8 +423,8 @@ selection evidence but does not make a run read its content implicitly.
   data enters a provider request.
 - Define deletion coverage for raw, normalized, indexed, cached, historical,
   exported, and backed-up data.
-- Define writer coordination and visible approval before reconciliation can act
-  on prospective journal evidence; unjournaled entries remain unknown.
+- Require visible approval before coordinated reconciliation can act on
+  prospective journal evidence; unjournaled entries remain unknown.
 - Add CLI and desktop approval surfaces only after those contracts have focused
   tests and provider-preflight integration.
 - Revisit the architecture and threat model before enabling retrieval cutover,

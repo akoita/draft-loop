@@ -23,6 +23,7 @@ import {
   maximumManagedCandidateKnowledgeFileBytes,
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
+import { StorageWriterLeaseConflictError } from "@draft-loop/storage/writer-lease";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
@@ -148,6 +149,53 @@ describe("candidate knowledge store application service", () => {
     });
     await expect(service.openStore({ storeRoot })).resolves.toEqual(initialized);
     await expect(service.listKnowledgeBases({ storeRoot })).resolves.toEqual(initialized);
+  });
+
+  it("preserves path-free writer conflicts and recovers after the active command releases", async () => {
+    const ids = ["store-uuid", "default-ckb-uuid", "second-ckb-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    const active = await openCandidateKnowledgeStore(storeRoot);
+    let releaseWriter!: () => void;
+    let reportAcquired!: () => void;
+    const acquired = new Promise<void>((resolve) => {
+      reportAcquired = resolve;
+    });
+    const held = active.withWriterLease("ckb-directory-refresh", async () => {
+      reportAcquired();
+      await new Promise<void>((resolve) => {
+        releaseWriter = resolve;
+      });
+    });
+    await acquired;
+
+    const conflict = await service
+      .createKnowledgeBase({ storeRoot, displayName: "Blocked while refreshing" })
+      .catch((error: unknown) => error);
+    expect(conflict).toBeInstanceOf(StorageWriterLeaseConflictError);
+    expect((conflict as StorageWriterLeaseConflictError).diagnostic).toEqual({
+      scope: "candidate-knowledge-store",
+      activeOperation: "ckb-directory-refresh",
+      retryable: true,
+      status: "active",
+    });
+    expect(JSON.stringify((conflict as StorageWriterLeaseConflictError).diagnostic)).not.toContain(
+      storeRoot,
+    );
+
+    releaseWriter();
+    await held;
+    await expect(
+      service.createKnowledgeBase({ storeRoot, displayName: "Created after release" }),
+    ).resolves.toMatchObject({
+      knowledgeBases: expect.arrayContaining([
+        expect.objectContaining({ displayName: "Created after release" }),
+      ]),
+    });
+    await active.close();
   });
 
   it("creates a deterministic path-free selection snapshot from one lifecycle-ready CKB", async () => {

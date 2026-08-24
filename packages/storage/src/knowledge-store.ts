@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import { createHash, randomUUID } from "node:crypto";
 import { constants, type Dirent } from "node:fs";
 import {
@@ -50,10 +51,16 @@ import {
   StorageValidationError,
   storageSchemaVersion,
 } from "./index.js";
+import {
+  type StorageWriterLease,
+  type StorageWriterLeaseOptions,
+  withStorageWriterLease,
+} from "./writer-lease.js";
 
 const manifestFilename = "draft-loop-knowledge.json";
 const privateDirectory = ".draft-loop";
 const databaseFilename = "knowledge.sqlite";
+const writerCoordinatorFilename = "writer-coordination.sqlite";
 const sourcesDirectory = "sources";
 const maximumManifestBytes = 64 * 1024;
 const maximumDatabaseBytes = 16 * 1024 * 1024 * 1024;
@@ -212,6 +219,12 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
   readonly descriptor: CandidateKnowledgeStoreDescriptor;
   /** Canonical physical root. It is runtime state and is never persisted in the manifest. */
   readonly root: string;
+  /** Hold one store-wide writer lease across a complete multi-step operation. */
+  readonly withWriterLease: <T>(
+    operation: string,
+    callback: () => Promise<T>,
+    options?: CandidateKnowledgeWriterLeaseOptions,
+  ) => Promise<T>;
   readonly createManagedCandidateKnowledgeFileSource: (
     source: CandidateKnowledgeSourceInput,
     initialVersion: ManagedCandidateKnowledgeFileVersionInput,
@@ -328,6 +341,53 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
   ) => Promise<string | undefined>;
   readonly inspectManagedCandidateKnowledgeFiles: () => Promise<ManagedCandidateKnowledgeFileInventory>;
   readonly close: () => Promise<void>;
+}
+
+export type CandidateKnowledgeWriterLeaseOptions = Omit<
+  StorageWriterLeaseOptions,
+  "coordinatorPath" | "scope" | "operation"
+>;
+
+interface CandidateKnowledgeWriterContext {
+  readonly root: string;
+  readonly lease: StorageWriterLease;
+}
+
+const candidateKnowledgeWriterContext = new AsyncLocalStorage<CandidateKnowledgeWriterContext>();
+
+export async function withCandidateKnowledgeStoreWriterLease<T>(
+  rootInput: string,
+  operation: string,
+  callback: () => Promise<T>,
+  options: CandidateKnowledgeWriterLeaseOptions = {},
+): Promise<T> {
+  const requestedRoot = requiredPath(rootInput);
+  await requireDirectory(requestedRoot, "Candidate knowledge store root");
+  const root = await realpath(requestedRoot);
+  const existing = candidateKnowledgeWriterContext.getStore();
+  if (existing?.root === root) {
+    existing.lease.assertCurrent();
+    const result = await callback();
+    existing.lease.assertCurrent();
+    return result;
+  }
+  const internalRoot = join(root, privateDirectory);
+  await requireDirectory(internalRoot, "Candidate knowledge store private directory");
+  return withStorageWriterLease(
+    {
+      ...options,
+      coordinatorPath: join(internalRoot, writerCoordinatorFilename),
+      scope: "candidate-knowledge-store",
+      operation,
+    },
+    async (lease) =>
+      candidateKnowledgeWriterContext.run({ root, lease }, async () => {
+        lease.assertCurrent();
+        const result = await callback();
+        lease.assertCurrent();
+        return result;
+      }),
+  );
 }
 
 function requiredPath(value: string): string {
@@ -1819,22 +1879,35 @@ function createHandle(
   root: string,
   storage: SqliteStorage,
 ): CandidateKnowledgeStoreHandle {
+  const coordinateWrite = <T>(operation: string, callback: () => Promise<T>): Promise<T> =>
+    withCandidateKnowledgeStoreWriterLease(root, operation, callback);
   const handle: CandidateKnowledgeStoreHandle = {
     descriptor: Object.freeze({ ...descriptor }),
     root,
+    withWriterLease: (operation, callback, options) =>
+      withCandidateKnowledgeStoreWriterLease(root, operation, callback, options),
     ensureDefaultCandidateKnowledgeBase: (input) =>
-      storage.ensureDefaultCandidateKnowledgeBase(input),
-    createCandidateKnowledgeBase: (input) => storage.createCandidateKnowledgeBase(input),
+      coordinateWrite("ckb-ensure-default", () =>
+        storage.ensureDefaultCandidateKnowledgeBase(input),
+      ),
+    createCandidateKnowledgeBase: (input) =>
+      coordinateWrite("ckb-create", () => storage.createCandidateKnowledgeBase(input)),
     getCandidateKnowledgeBase: (id) => storage.getCandidateKnowledgeBase(id),
     listCandidateKnowledgeBases: () => storage.listCandidateKnowledgeBases(),
     renameCandidateKnowledgeBase: (id, displayName, updatedAt) =>
-      storage.renameCandidateKnowledgeBase(id, displayName, updatedAt),
+      coordinateWrite("ckb-rename", () =>
+        storage.renameCandidateKnowledgeBase(id, displayName, updatedAt),
+      ),
     archiveCandidateKnowledgeBase: (id, archivedAt) =>
-      storage.archiveCandidateKnowledgeBase(id, archivedAt),
+      coordinateWrite("ckb-archive", () => storage.archiveCandidateKnowledgeBase(id, archivedAt)),
     createCandidateKnowledgeSource: (source, initialVersion) =>
-      storage.createCandidateKnowledgeSource(source, initialVersion),
+      coordinateWrite("ckb-source-create", () =>
+        storage.createCandidateKnowledgeSource(source, initialVersion),
+      ),
     appendCandidateKnowledgeSourceVersion: (knowledgeBaseId, sourceId, version) =>
-      storage.appendCandidateKnowledgeSourceVersion(knowledgeBaseId, sourceId, version),
+      coordinateWrite("ckb-source-append", () =>
+        storage.appendCandidateKnowledgeSourceVersion(knowledgeBaseId, sourceId, version),
+      ),
     getCandidateKnowledgeSource: (knowledgeBaseId, sourceId) =>
       storage.getCandidateKnowledgeSource(knowledgeBaseId, sourceId),
     listCandidateKnowledgeSources: (knowledgeBaseId) =>
@@ -1852,8 +1925,10 @@ function createHandle(
       );
       return binding === undefined ? undefined : Object.freeze({ ...binding });
     },
-    createCandidateKnowledgeDirectoryBinding: async (input) =>
-      Object.freeze({ ...(await storage.createCandidateKnowledgeDirectoryBinding(input)) }),
+    createCandidateKnowledgeDirectoryBinding: (input) =>
+      coordinateWrite("ckb-directory-bind", async () =>
+        Object.freeze({ ...(await storage.createCandidateKnowledgeDirectoryBinding(input)) }),
+      ),
     getCandidateKnowledgeDirectoryBinding: async (knowledgeBaseId, directoryId) => {
       const binding = await storage.getCandidateKnowledgeDirectoryBinding(
         knowledgeBaseId,
@@ -1880,73 +1955,77 @@ function createHandle(
       );
       return revision === undefined ? undefined : Object.freeze({ ...revision });
     },
-    rebindManagedCandidateKnowledgeDirectoryRoot: async (input) => {
-      const candidateRootPath = await verifyCandidateDirectoryRoot(root, input.candidateRootPath);
-      if (!Array.isArray(input.members)) {
-        throw new StorageValidationError(
-          "Candidate knowledge directory root rebind members are required.",
-        );
-      }
-      const sourceIds = new Set<string>();
-      const verifiedMembers: Array<CandidateKnowledgeDirectoryRootRebindInput["members"][number]> =
-        [];
-      const members = [...input.members].sort((left, right) =>
-        left.sourceId.localeCompare(right.sourceId),
-      );
-      for (const member of members) {
-        const sourceId = requiredManagedText(
-          member.sourceId,
-          "Candidate knowledge directory root rebind source id",
-        );
-        if (sourceIds.has(sourceId)) {
-          throw new StorageConflictError(
-            "Candidate knowledge directory root rebind sources must be unique.",
-          );
-        }
-        sourceIds.add(sourceId);
-        const verified = await verifyManagedFileOrigin(root, {
-          sourcePath: member.sourcePath,
-          mediaType: member.mediaType,
-          checksum: member.checksum,
-          sizeBytes: member.sizeBytes,
-          boundAt: input.reboundAt,
-          beforeSourceRecheck: member.beforeSourceRecheck,
-        });
-        if (
-          verified.originPath === candidateRootPath ||
-          !isWithin(candidateRootPath, verified.originPath)
-        ) {
+    rebindManagedCandidateKnowledgeDirectoryRoot: (input) =>
+      coordinateWrite("ckb-directory-root-rebind", async () => {
+        const candidateRootPath = await verifyCandidateDirectoryRoot(root, input.candidateRootPath);
+        if (!Array.isArray(input.members)) {
           throw new StorageValidationError(
-            "Candidate knowledge directory root rebind source must be strictly inside its root.",
+            "Candidate knowledge directory root rebind members are required.",
           );
         }
-        verifiedMembers.push({
-          sourceId,
-          originPath: verified.originPath,
-          mediaType: member.mediaType,
-          checksum: verified.checksum,
-          sizeBytes: verified.sizeBytes,
-          expectedVersionId: member.expectedVersionId,
-          expectedOriginBoundAt: member.expectedOriginBoundAt,
+        const sourceIds = new Set<string>();
+        const verifiedMembers: Array<
+          CandidateKnowledgeDirectoryRootRebindInput["members"][number]
+        > = [];
+        const members = [...input.members].sort((left, right) =>
+          left.sourceId.localeCompare(right.sourceId),
+        );
+        for (const member of members) {
+          const sourceId = requiredManagedText(
+            member.sourceId,
+            "Candidate knowledge directory root rebind source id",
+          );
+          if (sourceIds.has(sourceId)) {
+            throw new StorageConflictError(
+              "Candidate knowledge directory root rebind sources must be unique.",
+            );
+          }
+          sourceIds.add(sourceId);
+          const verified = await verifyManagedFileOrigin(root, {
+            sourcePath: member.sourcePath,
+            mediaType: member.mediaType,
+            checksum: member.checksum,
+            sizeBytes: member.sizeBytes,
+            boundAt: input.reboundAt,
+            beforeSourceRecheck: member.beforeSourceRecheck,
+          });
+          if (
+            verified.originPath === candidateRootPath ||
+            !isWithin(candidateRootPath, verified.originPath)
+          ) {
+            throw new StorageValidationError(
+              "Candidate knowledge directory root rebind source must be strictly inside its root.",
+            );
+          }
+          verifiedMembers.push({
+            sourceId,
+            originPath: verified.originPath,
+            mediaType: member.mediaType,
+            checksum: verified.checksum,
+            sizeBytes: verified.sizeBytes,
+            expectedVersionId: member.expectedVersionId,
+            expectedOriginBoundAt: member.expectedOriginBoundAt,
+          });
+        }
+        const rebound = await storage.rebindCandidateKnowledgeDirectoryRoot({
+          knowledgeBaseId: input.knowledgeBaseId,
+          directoryId: input.directoryId,
+          candidateRootPath,
+          expectedRootPath: input.expectedRootPath,
+          expectedRevision: input.expectedRevision,
+          reboundAt: input.reboundAt,
+          members: verifiedMembers,
         });
-      }
-      const rebound = await storage.rebindCandidateKnowledgeDirectoryRoot({
-        knowledgeBaseId: input.knowledgeBaseId,
-        directoryId: input.directoryId,
-        candidateRootPath,
-        expectedRootPath: input.expectedRootPath,
-        expectedRevision: input.expectedRevision,
-        reboundAt: input.reboundAt,
-        members: verifiedMembers,
-      });
-      return Object.freeze({
-        binding: Object.freeze({ ...rebound.binding }),
-        revision: Object.freeze({ ...rebound.revision }),
-        rebound: rebound.rebound,
-      });
-    },
+        return Object.freeze({
+          binding: Object.freeze({ ...rebound.binding }),
+          revision: Object.freeze({ ...rebound.revision }),
+          rebound: rebound.rebound,
+        });
+      }),
     moveManagedCandidateKnowledgeDirectoryMember: (input) =>
-      moveManagedCandidateKnowledgeDirectoryMember(storage, root, input),
+      coordinateWrite("ckb-directory-member-move", () =>
+        moveManagedCandidateKnowledgeDirectoryMember(storage, root, input),
+      ),
     findCandidateKnowledgeDirectoryBinding: async (knowledgeBaseId, rootPath) => {
       const binding = await storage.findCandidateKnowledgeDirectoryBinding(
         knowledgeBaseId,
@@ -1998,19 +2077,17 @@ function createHandle(
           sourceId,
         )),
       }),
-    upsertCandidateKnowledgeDirectoryRefreshObservations: async (
-      knowledgeBaseId,
-      directoryId,
-      input,
-    ) =>
-      Object.freeze(
-        (
-          await storage.upsertCandidateKnowledgeDirectoryRefreshObservations(
-            knowledgeBaseId,
-            directoryId,
-            input,
-          )
-        ).map((observation) => Object.freeze({ ...observation })),
+    upsertCandidateKnowledgeDirectoryRefreshObservations: (knowledgeBaseId, directoryId, input) =>
+      coordinateWrite("ckb-directory-observe", async () =>
+        Object.freeze(
+          (
+            await storage.upsertCandidateKnowledgeDirectoryRefreshObservations(
+              knowledgeBaseId,
+              directoryId,
+              input,
+            )
+          ).map((observation) => Object.freeze({ ...observation })),
+        ),
       ),
     getCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId) => {
       const observation = await storage.getCandidateKnowledgeSourceRefreshObservation(
@@ -2027,14 +2104,16 @@ function createHandle(
       );
       return provenance === undefined ? undefined : Object.freeze({ ...provenance });
     },
-    upsertCandidateKnowledgeSourceRefreshObservation: async (knowledgeBaseId, sourceId, input) =>
-      Object.freeze({
-        ...(await storage.upsertCandidateKnowledgeSourceRefreshObservation(
-          knowledgeBaseId,
-          sourceId,
-          input,
-        )),
-      }),
+    upsertCandidateKnowledgeSourceRefreshObservation: (knowledgeBaseId, sourceId, input) =>
+      coordinateWrite("ckb-source-observe", async () =>
+        Object.freeze({
+          ...(await storage.upsertCandidateKnowledgeSourceRefreshObservation(
+            knowledgeBaseId,
+            sourceId,
+            input,
+          )),
+        }),
+      ),
     getCandidateKnowledgeSourceRetirement: async (knowledgeBaseId, sourceId) => {
       const retirement = await storage.getCandidateKnowledgeSourceRetirement(
         knowledgeBaseId,
@@ -2042,52 +2121,66 @@ function createHandle(
       );
       return retirement === undefined ? undefined : Object.freeze({ ...retirement });
     },
-    retireCandidateKnowledgeSource: async (knowledgeBaseId, sourceId, input) =>
-      Object.freeze({
-        ...(await storage.retireCandidateKnowledgeSource(knowledgeBaseId, sourceId, input)),
-      }),
+    retireCandidateKnowledgeSource: (knowledgeBaseId, sourceId, input) =>
+      coordinateWrite("ckb-source-retire", async () =>
+        Object.freeze({
+          ...(await storage.retireCandidateKnowledgeSource(knowledgeBaseId, sourceId, input)),
+        }),
+      ),
     retireCandidateKnowledgeDirectoryMember: async (
       knowledgeBaseId,
       directoryId,
       sourceId,
       input,
     ) =>
-      Object.freeze({
-        ...(await storage.retireCandidateKnowledgeDirectoryMember(
-          knowledgeBaseId,
-          directoryId,
-          sourceId,
-          input,
-        )),
-      }),
+      coordinateWrite("ckb-directory-member-retire", async () =>
+        Object.freeze({
+          ...(await storage.retireCandidateKnowledgeDirectoryMember(
+            knowledgeBaseId,
+            directoryId,
+            sourceId,
+            input,
+          )),
+        }),
+      ),
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
-      writeManagedCandidateKnowledgeFile(storage, root, {
-        kind: "create",
-        source,
-        version: initialVersion,
-      }),
+      coordinateWrite("ckb-managed-file-create", () =>
+        writeManagedCandidateKnowledgeFile(storage, root, {
+          kind: "create",
+          source,
+          version: initialVersion,
+        }),
+      ),
     createManagedCandidateKnowledgeUrlSource: (source, initialVersion) =>
-      writeManagedCandidateKnowledgeUrlVersion(storage, root, {
-        kind: "create",
-        source,
-        version: initialVersion,
-      }),
+      coordinateWrite("ckb-managed-url-create", () =>
+        writeManagedCandidateKnowledgeUrlVersion(storage, root, {
+          kind: "create",
+          source,
+          version: initialVersion,
+        }),
+      ),
     appendManagedCandidateKnowledgeUrlVersion: (knowledgeBaseId, sourceId, version) =>
-      writeManagedCandidateKnowledgeUrlVersion(storage, root, {
-        kind: "append",
-        knowledgeBaseId,
-        sourceId,
-        version,
-      }),
+      coordinateWrite("ckb-managed-url-append", () =>
+        writeManagedCandidateKnowledgeUrlVersion(storage, root, {
+          kind: "append",
+          knowledgeBaseId,
+          sourceId,
+          version,
+        }),
+      ),
     appendManagedCandidateKnowledgeFileVersion: (knowledgeBaseId, sourceId, version) =>
-      writeManagedCandidateKnowledgeFile(storage, root, {
-        kind: "append",
-        knowledgeBaseId,
-        sourceId,
-        version,
-      }),
+      coordinateWrite("ckb-managed-file-append", () =>
+        writeManagedCandidateKnowledgeFile(storage, root, {
+          kind: "append",
+          knowledgeBaseId,
+          sourceId,
+          version,
+        }),
+      ),
     rebindManagedCandidateKnowledgeFileOrigin: (knowledgeBaseId, sourceId, input) =>
-      rebindManagedCandidateKnowledgeFileOrigin(storage, root, knowledgeBaseId, sourceId, input),
+      coordinateWrite("ckb-managed-file-rebind", () =>
+        rebindManagedCandidateKnowledgeFileOrigin(storage, root, knowledgeBaseId, sourceId, input),
+      ),
     getManagedCandidateKnowledgeFilePath: async (knowledgeBaseId, sourceId, versionId) => {
       const managed = await storage.isCandidateKnowledgeSourceVersionManaged(
         knowledgeBaseId,
