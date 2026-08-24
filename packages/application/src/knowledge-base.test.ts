@@ -214,6 +214,49 @@ describe("candidate knowledge store application service", () => {
     await expect(lstat(mismatchedDestination)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
+  it("requires restore approval before invoking storage and forwards the explicit collision policy", async () => {
+    const restore = vi.fn(async () => ({
+      status: "restored" as const,
+      format: "draft-loop-candidate-knowledge-backup" as const,
+      schemaVersion: 1 as const,
+      storeId: "store-uuid",
+      manifestChecksum: "a".repeat(64),
+      knowledgeBaseCount: 1,
+      sourceCount: 0,
+      versionCount: 0,
+      contentObjectCount: 0,
+      contentBytes: 0,
+      integrity: "integrity-verified-not-authenticity" as const,
+    }));
+    const service = createCandidateKnowledgeStoreService({
+      restorePortableBackup: restore as never,
+    });
+    const packagePath = join(temporaryParent, "backup");
+    const destination = join(temporaryParent, "restored");
+
+    await expect(
+      service.restoreCandidateKnowledgeStore({
+        packagePath,
+        destination,
+        collision: "fail-if-destination-exists",
+        approved: false,
+      }),
+    ).rejects.toThrow(/explicit approval/i);
+    expect(restore).not.toHaveBeenCalled();
+
+    await expect(
+      service.restoreCandidateKnowledgeStore({
+        packagePath,
+        destination,
+        collision: "fail-if-destination-exists",
+        approved: true,
+      }),
+    ).resolves.toMatchObject({ status: "restored", storeId: "store-uuid" });
+    expect(restore).toHaveBeenCalledWith(packagePath, destination, {
+      collision: "fail-if-destination-exists",
+    });
+  });
+
   it("exposes the effective retention policy and plan through the shared service", async () => {
     const ids = ["store-uuid", "default-ckb-uuid"];
     const service = createCandidateKnowledgeStoreService({

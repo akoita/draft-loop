@@ -1515,6 +1515,31 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       );
     });
 
+  knowledgeStore
+    .command("restore")
+    .description("Restore a verified portable backup into a new local store directory")
+    .argument("<package-path>", "portable backup directory")
+    .argument("<destination>", "new candidate-knowledge store directory")
+    .requiredOption("--collision <policy>", "collision policy (must be fail-if-destination-exists)")
+    .option("--yes", "approve restoring the complete CKB backup to this destination")
+    .action(async (packagePath: string, destination: string, options: Record<string, unknown>) => {
+      if (options.yes !== true) {
+        throw new Error("knowledge store restore requires --yes destination approval.");
+      }
+      if (options.collision !== "fail-if-destination-exists") {
+        throw new Error("knowledge store restore requires --collision fail-if-destination-exists.");
+      }
+      writeJson(
+        io,
+        await candidateKnowledge.restoreCandidateKnowledgeStore({
+          packagePath,
+          destination,
+          collision: "fail-if-destination-exists",
+          approved: true,
+        }),
+      );
+    });
+
   const knowledgeBase = knowledge
     .command("base")
     .description("Create and maintain knowledge bases in a local store");

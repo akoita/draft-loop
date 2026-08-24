@@ -18,6 +18,8 @@ import {
   workflowStates,
 } from "@draft-loop/domain";
 import {
+  type CandidateKnowledgePortableBackupManifest,
+  candidateKnowledgePortableBackupManifestSchema,
   candidateKnowledgeRetentionOverrideInputSchema,
   candidateKnowledgeRetentionPolicyUpdateSchema,
 } from "@draft-loop/schemas";
@@ -266,6 +268,26 @@ export interface CandidateKnowledgeSourceUrlProvenanceRecord
   extends CandidateKnowledgeSourceUrlProvenanceInput {
   readonly sourceId: string;
   readonly versionId: string;
+}
+
+export interface CandidateKnowledgeSourcePortableUrlProvenance {
+  readonly fetchedAt: string;
+  readonly kind: CandidateKnowledgeSourceUrlKind;
+}
+
+export interface CandidateKnowledgePortableBackupImportInput {
+  readonly manifest: CandidateKnowledgePortableBackupManifest;
+  readonly operationId: string;
+  readonly manifestChecksum: string;
+  readonly restoredAt: string;
+}
+
+export interface CandidateKnowledgePortableBackupProvenance {
+  readonly operationId: string;
+  readonly manifestChecksum: string;
+  readonly sourceStoreId: string;
+  readonly packageSchemaVersion: number;
+  readonly restoredAt: string;
 }
 
 export type CandidateKnowledgeSourceRefreshObservationStatus =
@@ -672,6 +694,11 @@ export interface CandidateKnowledgeBaseStoragePort {
     sourceId: string,
     versionId: string,
   ) => Promise<CandidateKnowledgeSourceUrlProvenanceRecord | undefined>;
+  readonly getCandidateKnowledgeSourcePortableUrlProvenance: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ) => Promise<CandidateKnowledgeSourcePortableUrlProvenance | undefined>;
   readonly getCandidateKnowledgeSourceRefreshObservation: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1091,7 +1118,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 18 as const;
+export const storageSchemaVersion = 20 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -2607,6 +2634,97 @@ const migrationEighteen: Migration = {
   `.trim(),
 };
 
+const migrationNineteen: Migration = {
+  version: 19,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_source_restored_url_provenance (
+      version_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_source_versions(id),
+      source_id TEXT NOT NULL
+        REFERENCES candidate_knowledge_sources(id),
+      fetched_at TEXT NOT NULL CHECK (julianday(fetched_at) IS NOT NULL),
+      kind TEXT NOT NULL CHECK (kind IN ('github', 'certification', 'profile', 'portfolio', 'job-description', 'generic')),
+      UNIQUE (source_id, version_id)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_restored_url_provenance_require_valid_insert
+      BEFORE INSERT ON candidate_knowledge_source_restored_url_provenance
+      WHEN NOT EXISTS (
+        SELECT 1
+        FROM candidate_knowledge_source_versions AS version
+        JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+        JOIN candidate_knowledge_managed_source_versions AS managed ON managed.version_id = version.id
+        WHERE version.id = NEW.version_id
+          AND version.source_id = NEW.source_id
+          AND source.kind = 'url'
+          AND julianday(NEW.fetched_at) = julianday(version.created_at)
+      )
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge restored URL provenance is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_restored_url_provenance_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_source_restored_url_provenance
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge restored URL provenance is immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_source_restored_url_provenance_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_source_restored_url_provenance
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge restored URL provenance is immutable'); END;
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_retention_override_revision_snapshots (
+      knowledge_base_id TEXT PRIMARY KEY NOT NULL
+        REFERENCES candidate_knowledge_bases(id),
+      override_revision INTEGER NOT NULL
+        CHECK (typeof(override_revision) = 'integer' AND override_revision >= 0)
+    );
+
+    INSERT INTO candidate_knowledge_retention_override_revision_snapshots
+      (knowledge_base_id, override_revision)
+    SELECT knowledge_base_id, COALESCE(MAX(override_revision), 0)
+    FROM candidate_knowledge_retention_override_events
+    GROUP BY knowledge_base_id
+    ON CONFLICT(knowledge_base_id) DO UPDATE SET
+      override_revision = MAX(
+        candidate_knowledge_retention_override_revision_snapshots.override_revision,
+        excluded.override_revision
+      );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_retention_override_revision_snapshot_after_insert
+      AFTER INSERT ON candidate_knowledge_retention_override_events
+      BEGIN
+        INSERT INTO candidate_knowledge_retention_override_revision_snapshots
+          (knowledge_base_id, override_revision)
+        VALUES (NEW.knowledge_base_id, NEW.override_revision)
+        ON CONFLICT(knowledge_base_id) DO UPDATE SET
+          override_revision = MAX(
+            candidate_knowledge_retention_override_revision_snapshots.override_revision,
+            excluded.override_revision
+          );
+      END;
+  `.trim(),
+};
+
+const migrationTwenty: Migration = {
+  version: 20,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_portable_restore_provenance (
+      operation_id TEXT PRIMARY KEY NOT NULL
+        CHECK (length(trim(operation_id)) > 0),
+      manifest_checksum TEXT NOT NULL CHECK (
+        length(manifest_checksum) = 64 AND manifest_checksum NOT GLOB '*[^0-9a-f]*'
+      ),
+      source_store_id TEXT NOT NULL CHECK (length(trim(source_store_id)) > 0),
+      package_schema_version INTEGER NOT NULL
+        CHECK (typeof(package_schema_version) = 'integer' AND package_schema_version >= 1),
+      restored_at TEXT NOT NULL CHECK (julianday(restored_at) IS NOT NULL)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_portable_restore_provenance_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_portable_restore_provenance
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge portable restore provenance is immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_portable_restore_provenance_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_portable_restore_provenance
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge portable restore provenance is immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -2626,6 +2744,8 @@ const migrations: readonly Migration[] = [
   migrationSixteen,
   migrationSeventeen,
   migrationEighteen,
+  migrationNineteen,
+  migrationTwenty,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3127,6 +3247,221 @@ export class SqliteStorage
       };
     })();
     return result as CandidateKnowledgeBaseRecord;
+  }
+
+  /**
+   * Import a fully inspected portable backup into an empty, freshly migrated
+   * candidate-knowledge database. The caller owns package and byte integrity
+   * validation; this method is intentionally narrower than the public source
+   * mutation APIs and never creates origin bindings or managed-write journal rows.
+   */
+  public async importCandidateKnowledgePortableBackup(
+    input: CandidateKnowledgePortableBackupImportInput,
+  ): Promise<void> {
+    this.ensureOpen();
+    let manifest: CandidateKnowledgePortableBackupManifest;
+    try {
+      manifest = candidateKnowledgePortableBackupManifestSchema.parse(input.manifest);
+    } catch {
+      throw new StorageValidationError("Portable candidate knowledge backup manifest is invalid.");
+    }
+    const operationId = requireNonEmpty(
+      input.operationId,
+      "Portable candidate knowledge restore operation id",
+    ).trim();
+    if (!/^[0-9a-f]{64}$/.test(operationId)) {
+      throw new StorageValidationError(
+        "Portable candidate knowledge restore operation id is invalid.",
+      );
+    }
+    const manifestChecksum = requireNonEmpty(
+      input.manifestChecksum,
+      "Portable candidate knowledge restore manifest checksum",
+    ).trim();
+    if (!/^[0-9a-f]{64}$/.test(manifestChecksum)) {
+      throw new StorageValidationError(
+        "Portable candidate knowledge restore manifest checksum is invalid.",
+      );
+    }
+    const restoredAt = requireTimestamp(
+      input.restoredAt,
+      "Portable candidate knowledge restore restoredAt",
+    );
+    if (Date.parse(restoredAt) > Date.now()) {
+      throw new StorageValidationError(
+        "Portable candidate knowledge restore restoredAt is in the future.",
+      );
+    }
+    this.database.transaction(() => {
+      const existingKnowledgeBase = this.database
+        .prepare("SELECT id FROM candidate_knowledge_bases LIMIT 1")
+        .get();
+      if (existingKnowledgeBase !== undefined) {
+        throw new StorageConflictError("Portable candidate knowledge restore target is not empty.");
+      }
+      this.database
+        .prepare(
+          `INSERT INTO candidate_knowledge_portable_restore_provenance
+           (operation_id, manifest_checksum, source_store_id, package_schema_version, restored_at)
+           VALUES (?, ?, ?, ?, ?)`,
+        )
+        .run(
+          operationId,
+          manifestChecksum,
+          manifest.descriptor.id,
+          manifest.schemaVersion,
+          restoredAt,
+        );
+
+      for (const entry of manifest.knowledgeBases) {
+        const knowledgeBase = entry.knowledgeBase;
+        this.insertCandidateKnowledgeBase({
+          id: knowledgeBase.id,
+          displayName: knowledgeBase.displayName,
+          description: knowledgeBase.description,
+          state: knowledgeBase.state,
+          isDefault: knowledgeBase.isDefault,
+          createdAt: knowledgeBase.createdAt,
+          updatedAt: knowledgeBase.updatedAt,
+          archivedAt: knowledgeBase.archivedAt,
+        });
+        if (entry.retentionPolicy.revision > 0) {
+          const insertPolicy = this.database.prepare(
+            "INSERT INTO candidate_knowledge_retention_policy_events (knowledge_base_id, revision, retention_class, rule, expire_after_days, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+          );
+          for (const policy of entry.retentionPolicy.classes) {
+            insertPolicy.run(
+              knowledgeBase.id,
+              entry.retentionPolicy.revision,
+              policy.class,
+              policy.rule,
+              policy.expireAfterDays,
+              entry.retentionPolicy.updatedAt,
+            );
+          }
+        }
+        for (const override of entry.retentionPolicy.activeOverrides) {
+          this.database
+            .prepare(
+              `INSERT INTO candidate_knowledge_retention_override_events
+               (knowledge_base_id, retention_class, override_kind, sequence, state,
+                override_revision, policy_revision, changed_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            )
+            .run(
+              knowledgeBase.id,
+              override.class,
+              override.kind,
+              override.sequence,
+              override.state,
+              override.overrideRevision,
+              override.policyRevision,
+              override.changedAt,
+            );
+        }
+        this.database
+          .prepare(
+            `INSERT INTO candidate_knowledge_retention_override_revision_snapshots
+             (knowledge_base_id, override_revision)
+             VALUES (?, ?)
+             ON CONFLICT(knowledge_base_id) DO UPDATE SET override_revision = excluded.override_revision`,
+          )
+          .run(knowledgeBase.id, entry.retentionPolicy.overrideRevision);
+
+        for (const source of entry.sources) {
+          this.insertCandidateKnowledgeSource({
+            id: source.id,
+            knowledgeBaseId: source.knowledgeBaseId,
+            kind: source.kind,
+            displayName: source.displayName,
+            createdAt: source.createdAt,
+          });
+          for (const version of source.versions) {
+            this.insertCandidateKnowledgeSourceVersion({
+              id: version.id,
+              sourceId: source.id,
+              version: version.version,
+              parentVersionId: version.parentVersionId,
+              mediaType: version.mediaType,
+              checksum: version.checksum,
+              sizeBytes: version.sizeBytes,
+              createdAt: version.createdAt,
+            });
+            this.insertManagedCandidateKnowledgeSourceVersion(version.id);
+            if (source.kind === "url") {
+              const provenance = version.urlProvenance;
+              if (provenance === undefined) {
+                throw new StorageValidationError(
+                  "Portable candidate knowledge URL provenance is missing.",
+                );
+              }
+              this.database
+                .prepare(
+                  `INSERT INTO candidate_knowledge_source_restored_url_provenance
+                   (version_id, source_id, fetched_at, kind) VALUES (?, ?, ?, ?)`,
+                )
+                .run(version.id, source.id, provenance.fetchedAt, provenance.kind);
+            }
+          }
+          if (source.refreshObservation !== null) {
+            this.database
+              .prepare(
+                `INSERT INTO candidate_knowledge_source_refresh_observations
+                 (source_id, observed_version_id, status, checked_at,
+                  last_refreshed_version_id, last_refreshed_at)
+                 VALUES (?, ?, ?, ?, ?, ?)`,
+              )
+              .run(
+                source.id,
+                source.refreshObservation.observedVersionId,
+                source.refreshObservation.status,
+                source.refreshObservation.checkedAt,
+                source.refreshObservation.lastRefreshedVersionId,
+                source.refreshObservation.lastRefreshedAt,
+              );
+          }
+          if (source.retirement !== null) {
+            this.database
+              .prepare(
+                `INSERT INTO candidate_knowledge_source_retirements
+                 (source_id, retired_at, reason) VALUES (?, ?, ?)`,
+              )
+              .run(source.id, source.retirement.retiredAt, source.retirement.reason);
+          }
+        }
+      }
+    })();
+    this.validateCandidateKnowledgeSourceGraph();
+    this.validateCandidateKnowledgeRetentionContract();
+  }
+
+  public getCandidateKnowledgePortableBackupProvenance():
+    | CandidateKnowledgePortableBackupProvenance
+    | undefined {
+    this.ensureOpen();
+    const row = this.database
+      .prepare(
+        `SELECT operation_id, manifest_checksum, source_store_id,
+                package_schema_version, restored_at
+         FROM candidate_knowledge_portable_restore_provenance
+         ORDER BY restored_at DESC, operation_id DESC
+         LIMIT 1`,
+      )
+      .get();
+    if (row === undefined) return undefined;
+    return {
+      operationId: rowString(row, "operation_id"),
+      manifestChecksum: rowString(row, "manifest_checksum"),
+      sourceStoreId: rowString(row, "source_store_id"),
+      packageSchemaVersion: requirePositive(
+        rowNumber(row, "package_schema_version"),
+        "Portable candidate knowledge restore package schema version",
+      ),
+      restoredAt: requireTimestamp(
+        rowString(row, "restored_at"),
+        "Portable candidate knowledge restore restoredAt",
+      ),
+    };
   }
 
   public async createCandidateKnowledgeSource(
@@ -3758,9 +4093,15 @@ export class SqliteStorage
       if (source.kind === "url") {
         const provenance = this.database
           .prepare(
-            "SELECT version_id FROM candidate_knowledge_source_url_provenance WHERE source_id = ? AND version_id = ?",
+            `SELECT version_id
+             FROM candidate_knowledge_source_url_provenance
+             WHERE source_id = ? AND version_id = ?
+             UNION ALL
+             SELECT version_id
+             FROM candidate_knowledge_source_restored_url_provenance
+             WHERE source_id = ? AND version_id = ?`,
           )
-          .get(operation.sourceId, current.id);
+          .get(operation.sourceId, current.id, operation.sourceId, current.id);
         if (provenance === undefined) {
           throw new StorageValidationError(
             "managed candidate knowledge URL noop requires URL provenance",
@@ -4203,6 +4544,56 @@ export class SqliteStorage
       )
       .get(normalizedKnowledgeBaseId, normalizedSourceId, normalizedVersionId);
     return row === undefined ? undefined : candidateKnowledgeSourceUrlProvenanceFromRow(row);
+  }
+
+  public async getCandidateKnowledgeSourcePortableUrlProvenance(
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ): Promise<CandidateKnowledgeSourcePortableUrlProvenance | undefined> {
+    this.ensureOpen();
+    const normalizedKnowledgeBaseId = requireNonEmpty(
+      knowledgeBaseId,
+      "candidate knowledge base id",
+    ).trim();
+    const normalizedSourceId = requireNonEmpty(sourceId, "candidate knowledge source id").trim();
+    const normalizedVersionId = requireNonEmpty(
+      versionId,
+      "candidate knowledge source version id",
+    ).trim();
+    this.requireCandidateKnowledgeBase(normalizedKnowledgeBaseId);
+    const row = this.database
+      .prepare(
+        `SELECT provenance.fetched_at, provenance.kind
+         FROM candidate_knowledge_source_url_provenance AS provenance
+         JOIN candidate_knowledge_sources AS source ON source.id = provenance.source_id
+         WHERE source.candidate_knowledge_base_id = ?
+           AND provenance.source_id = ?
+           AND provenance.version_id = ?
+         UNION ALL
+         SELECT provenance.fetched_at, provenance.kind
+         FROM candidate_knowledge_source_restored_url_provenance AS provenance
+         JOIN candidate_knowledge_sources AS source ON source.id = provenance.source_id
+         WHERE source.candidate_knowledge_base_id = ?
+           AND provenance.source_id = ?
+           AND provenance.version_id = ?`,
+      )
+      .get(
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+        normalizedVersionId,
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+        normalizedVersionId,
+      );
+    if (row === undefined) return undefined;
+    return {
+      fetchedAt: requireTimestamp(
+        rowString(row, "fetched_at"),
+        "candidate knowledge URL fetchedAt",
+      ),
+      kind: rowString(row, "kind") as CandidateKnowledgeSourceUrlKind,
+    };
   }
 
   public async getCandidateKnowledgeSource(
@@ -6362,6 +6753,7 @@ export class SqliteStorage
             `SELECT provenance.source_id, provenance.version_id,
                     provenance.original_url, provenance.final_url,
                     provenance.fetched_at, provenance.kind,
+                    0 AS restored,
                     version.source_id AS version_source_id,
                     source.candidate_knowledge_base_id AS version_knowledge_base_id
              FROM candidate_knowledge_source_url_provenance AS provenance
@@ -6370,63 +6762,94 @@ export class SqliteStorage
              LEFT JOIN candidate_knowledge_sources AS source
                ON source.id = version.source_id
              WHERE provenance.source_id = ? OR version.source_id = ?
+             UNION ALL
+             SELECT provenance.source_id, provenance.version_id,
+                    NULL AS original_url, NULL AS final_url,
+                    provenance.fetched_at, provenance.kind,
+                    1 AS restored,
+                    version.source_id AS version_source_id,
+                    source.candidate_knowledge_base_id AS version_knowledge_base_id
+             FROM candidate_knowledge_source_restored_url_provenance AS provenance
+             LEFT JOIN candidate_knowledge_source_versions AS version
+               ON version.id = provenance.version_id
+             LEFT JOIN candidate_knowledge_sources AS source
+               ON source.id = version.source_id
+             WHERE provenance.source_id = ? OR version.source_id = ?
              ORDER BY provenance.version_id`,
           )
-          .all(source.id, source.id);
-        const provenanceByVersion = new Map<string, CandidateKnowledgeSourceUrlProvenanceRecord>();
+          .all(source.id, source.id, source.id, source.id);
+        const provenanceByVersion = new Map<
+          string,
+          CandidateKnowledgeSourcePortableUrlProvenance
+        >();
         let provenanceOriginalUrl: string | undefined;
         for (const provenanceRow of provenanceRows) {
-          const provenance = candidateKnowledgeSourceUrlProvenanceFromRow(provenanceRow);
           const versionSourceId = rowNullableString(provenanceRow, "version_source_id");
           const versionKnowledgeBaseId = rowNullableString(
             provenanceRow,
             "version_knowledge_base_id",
           );
+          const restored = rowNumber(provenanceRow, "restored") === 1;
+          const provenanceSourceId = rowString(provenanceRow, "source_id");
+          const provenanceVersionId = rowString(provenanceRow, "version_id");
           if (
-            provenance.sourceId !== source.id ||
+            provenanceSourceId !== source.id ||
             versionSourceId !== source.id ||
             versionKnowledgeBaseId !== normalizedKnowledgeBaseId ||
-            !versionIds.has(provenance.versionId)
+            !versionIds.has(provenanceVersionId)
           ) {
             throw new StorageValidationError(
               "candidate knowledge source URL provenance is malformed or out of scope",
             );
           }
-          const version = versions.find((candidate) => candidate.id === provenance.versionId);
+          const version = versions.find((candidate) => candidate.id === provenanceVersionId);
           if (version === undefined) {
             throw new StorageValidationError(
               "candidate knowledge source URL provenance version is malformed",
             );
           }
-          const normalizedProvenance = normalizeCandidateKnowledgeSourceUrlProvenance(provenance);
-          if (
-            normalizedProvenance.originalUrl !== provenance.originalUrl ||
-            normalizedProvenance.finalUrl !== provenance.finalUrl ||
-            Date.parse(normalizedProvenance.fetchedAt) !== Date.parse(version.createdAt)
-          ) {
+          const fetchedAt = requireTimestamp(
+            rowString(provenanceRow, "fetched_at"),
+            "candidate knowledge source URL fetchedAt",
+          );
+          if (Date.parse(fetchedAt) !== Date.parse(version.createdAt)) {
             throw new StorageValidationError(
               "candidate knowledge source URL provenance is malformed",
             );
           }
-          if (
-            provenanceOriginalUrl !== undefined &&
-            provenanceOriginalUrl !== normalizedProvenance.originalUrl
-          ) {
+          const kind = rowString(provenanceRow, "kind") as CandidateKnowledgeSourceUrlKind;
+          if (!candidateKnowledgeSourceUrlKinds.includes(kind)) {
             throw new StorageValidationError(
-              "candidate knowledge source URL provenance is contradictory",
+              "candidate knowledge source URL provenance is malformed",
             );
           }
-          provenanceOriginalUrl = normalizedProvenance.originalUrl;
-          if (provenanceByVersion.has(provenance.versionId)) {
+          if (!restored) {
+            const provenance = candidateKnowledgeSourceUrlProvenanceFromRow(provenanceRow);
+            const normalizedProvenance = normalizeCandidateKnowledgeSourceUrlProvenance(provenance);
+            if (
+              normalizedProvenance.originalUrl !== provenance.originalUrl ||
+              normalizedProvenance.finalUrl !== provenance.finalUrl
+            ) {
+              throw new StorageValidationError(
+                "candidate knowledge source URL provenance is malformed",
+              );
+            }
+            if (
+              provenanceOriginalUrl !== undefined &&
+              provenanceOriginalUrl !== normalizedProvenance.originalUrl
+            ) {
+              throw new StorageValidationError(
+                "candidate knowledge source URL provenance is contradictory",
+              );
+            }
+            provenanceOriginalUrl = normalizedProvenance.originalUrl;
+          }
+          if (provenanceByVersion.has(provenanceVersionId)) {
             throw new StorageValidationError(
               "candidate knowledge source URL provenance is duplicated",
             );
           }
-          provenanceByVersion.set(provenance.versionId, {
-            sourceId: provenance.sourceId,
-            versionId: provenance.versionId,
-            ...normalizedProvenance,
-          });
+          provenanceByVersion.set(provenanceVersionId, { fetchedAt, kind });
         }
         if (source.kind === "file" && provenanceRows.length > 0) {
           throw new StorageValidationError(
@@ -6879,13 +7302,18 @@ export class SqliteStorage
         readonly kind: string;
       }>();
     const selectUrlProvenance = this.database.prepare(
-      `SELECT source_id, version_id, original_url, final_url, fetched_at, kind
+      `SELECT source_id, version_id, original_url, final_url, fetched_at, kind, 0 AS restored
        FROM candidate_knowledge_source_url_provenance
+       WHERE version_id = ?
+       UNION ALL
+       SELECT source_id, version_id, NULL AS original_url, NULL AS final_url,
+              fetched_at, kind, 1 AS restored
+       FROM candidate_knowledge_source_restored_url_provenance
        WHERE version_id = ?`,
     );
     for (const managed of managedVersions) {
       if (managed.kind === "file") {
-        if (selectUrlProvenance.get(managed.version_id) !== undefined) {
+        if (selectUrlProvenance.get(managed.version_id, managed.version_id) !== undefined) {
           throw new StorageValidationError(
             "Candidate knowledge store contains URL provenance for a file version.",
           );
@@ -6897,24 +7325,44 @@ export class SqliteStorage
           "Candidate knowledge store contains a managed version for an unsupported source.",
         );
       }
-      const provenanceRow = selectUrlProvenance.get(managed.version_id);
+      const provenanceRow = selectUrlProvenance.get(managed.version_id, managed.version_id);
       if (provenanceRow === undefined) {
         throw new StorageValidationError(
           "Candidate knowledge store contains a managed URL version without provenance.",
         );
       }
-      const provenance = candidateKnowledgeSourceUrlProvenanceFromRow(provenanceRow);
-      const normalizedProvenance = normalizeCandidateKnowledgeSourceUrlProvenance(provenance);
-      if (
-        provenance.sourceId !== managed.source_id ||
-        provenance.versionId !== managed.version_id ||
-        normalizedProvenance.originalUrl !== provenance.originalUrl ||
-        normalizedProvenance.finalUrl !== provenance.finalUrl ||
-        Date.parse(normalizedProvenance.fetchedAt) !== Date.parse(managed.created_at)
-      ) {
-        throw new StorageValidationError(
-          "Candidate knowledge store contains invalid managed URL provenance.",
-        );
+      if (rowNumber(provenanceRow, "restored") === 1) {
+        if (
+          rowString(provenanceRow, "source_id") !== managed.source_id ||
+          rowString(provenanceRow, "version_id") !== managed.version_id ||
+          Date.parse(
+            requireTimestamp(
+              rowString(provenanceRow, "fetched_at"),
+              "candidate knowledge restored URL fetchedAt",
+            ),
+          ) !== Date.parse(managed.created_at) ||
+          !candidateKnowledgeSourceUrlKinds.includes(
+            rowString(provenanceRow, "kind") as CandidateKnowledgeSourceUrlKind,
+          )
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains invalid restored URL provenance.",
+          );
+        }
+      } else {
+        const provenance = candidateKnowledgeSourceUrlProvenanceFromRow(provenanceRow);
+        const normalizedProvenance = normalizeCandidateKnowledgeSourceUrlProvenance(provenance);
+        if (
+          provenance.sourceId !== managed.source_id ||
+          provenance.versionId !== managed.version_id ||
+          normalizedProvenance.originalUrl !== provenance.originalUrl ||
+          normalizedProvenance.finalUrl !== provenance.finalUrl ||
+          Date.parse(normalizedProvenance.fetchedAt) !== Date.parse(managed.created_at)
+        ) {
+          throw new StorageValidationError(
+            "Candidate knowledge store contains invalid managed URL provenance.",
+          );
+        }
       }
     }
     const originBindings = this.database
@@ -7394,6 +7842,10 @@ export class SqliteStorage
 
   public validateCandidateKnowledgeRetentionContract(): void {
     this.ensureOpen();
+    const hasPortableRestoreProvenance =
+      this.database
+        .prepare("SELECT 1 FROM candidate_knowledge_portable_restore_provenance LIMIT 1")
+        .get() !== undefined;
     const knowledgeBases = this.database
       .prepare("SELECT id, created_at FROM candidate_knowledge_bases ORDER BY id")
       .all<{ readonly id: string; readonly created_at: string }>();
@@ -7426,7 +7878,8 @@ export class SqliteStorage
         revisions.set(revision, bucket);
       }
       let previousUpdatedAt = knowledgeBase.created_at;
-      let expectedRevision = 1;
+      let expectedRevision =
+        hasPortableRestoreProvenance && revisions.size > 0 ? Math.min(...revisions.keys()) : 1;
       for (const [revision, rows] of revisions) {
         if (
           revision !== expectedRevision ||
@@ -7475,13 +7928,19 @@ export class SqliteStorage
       const currentPolicy = this.readCandidateKnowledgeRetentionPolicy(knowledgeBase.id);
       for (const records of overrideGroups.values()) {
         let previous: CandidateKnowledgeRetentionOverrideRecord | undefined;
+        let expectedSequence =
+          hasPortableRestoreProvenance && records.length > 0 ? (records.at(0)?.sequence ?? 1) : 1;
         for (const record of records) {
-          if (record.sequence !== (previous?.sequence ?? 0) + 1) {
+          if (record.sequence !== expectedSequence) {
             throw new StorageValidationError(
               "candidate knowledge retention override sequences must be contiguous",
             );
           }
-          if (previous === undefined && record.state !== "applied") {
+          if (
+            previous === undefined &&
+            !hasPortableRestoreProvenance &&
+            record.state !== "applied"
+          ) {
             throw new StorageValidationError(
               "candidate knowledge retention override cannot be released before applying",
             );
@@ -7513,6 +7972,7 @@ export class SqliteStorage
             );
           }
           previous = record;
+          expectedSequence = record.sequence + 1;
         }
       }
       const globalOverrideRows = this.database
@@ -7523,7 +7983,10 @@ export class SqliteStorage
            ORDER BY override_revision`,
         )
         .all(knowledgeBase.id);
-      let expectedOverrideRevision = 1;
+      let expectedOverrideRevision =
+        hasPortableRestoreProvenance && globalOverrideRows.length > 0
+          ? Math.min(...globalOverrideRows.map((row) => rowNumber(row, "override_revision")))
+          : 1;
       for (const row of globalOverrideRows) {
         if (rowNumber(row, "override_revision") !== expectedOverrideRevision) {
           throw new StorageValidationError(
@@ -9885,12 +10348,29 @@ export class SqliteStorage
          WHERE knowledge_base_id = ?${where}`,
       )
       .get(...(asOf === undefined ? [knowledgeBaseId] : [knowledgeBaseId, asOf]));
-    return row === undefined || row.override_revision === null
-      ? 0
-      : requireNonNegativeInteger(
-          rowNumber(row, "override_revision"),
-          "candidate knowledge retention override revision",
-        );
+    const eventRevision =
+      row === undefined || row.override_revision === null
+        ? 0
+        : requireNonNegativeInteger(
+            rowNumber(row, "override_revision"),
+            "candidate knowledge retention override revision",
+          );
+    if (asOf !== undefined) return eventRevision;
+    const snapshot = this.database
+      .prepare(
+        `SELECT override_revision
+         FROM candidate_knowledge_retention_override_revision_snapshots
+         WHERE knowledge_base_id = ?`,
+      )
+      .get(knowledgeBaseId);
+    if (snapshot === undefined) return eventRevision;
+    return Math.max(
+      eventRevision,
+      requireNonNegativeInteger(
+        rowNumber(snapshot, "override_revision"),
+        "candidate knowledge retention override revision",
+      ),
+    );
   }
 
   private readCandidateKnowledgeRetentionOverrideState(

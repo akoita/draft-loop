@@ -40,6 +40,7 @@ import {
   maximumManagedCandidateKnowledgeInventoryEntries,
   openCandidateKnowledgeStore,
   type RebindManagedCandidateKnowledgeDirectoryRootInput,
+  restoreCandidateKnowledgePortableBackup,
 } from "./knowledge-store.js";
 import { StorageWriterLeaseConflictError, StorageWriterLeaseLostError } from "./writer-lease.js";
 
@@ -286,14 +287,374 @@ describe("portable candidate knowledge store", () => {
       {
         class: "raw-sources",
         kind: "legal-hold",
+        state: "applied",
         sequence: 1,
         overrideRevision: 1,
         policyRevision: 0,
         changedAt: "2026-08-21T15:00:00.000Z",
       },
     ]);
-    expect(activeOverrides?.[0]).not.toHaveProperty("state");
     await store.close();
+  });
+
+  it("restores logical metadata, managed bytes, safe URL provenance, and lifecycle state", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const restoredRoot = join(parent, "restored-candidate-knowledge");
+    const sourcePath = join(parent, "resume.md");
+    const content = "Portable restore evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const fileSource = await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "restore-file-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Restored file",
+        createdAt,
+      },
+      {
+        id: "restore-file-version",
+        mediaType: "text/markdown",
+        checksum: sha256(content),
+        sizeBytes: Buffer.byteLength(content),
+        createdAt,
+        sourcePath,
+      },
+    );
+    const urlSource = await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "restore-url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Restored URL",
+        createdAt,
+      },
+      managedUrlVersion(Buffer.from("URL restore evidence"), {
+        id: "restore-url-version",
+      }),
+    );
+    await store.upsertCandidateKnowledgeSourceRefreshObservation(
+      "ckb-default",
+      fileSource.source.id,
+      {
+        observedVersionId: fileSource.version.id,
+        status: "current",
+        checkedAt: "2026-08-21T14:02:00.000Z",
+        lastRefreshedVersionId: fileSource.version.id,
+        lastRefreshedAt: "2026-08-21T14:02:00.000Z",
+      },
+    );
+    await store.retireCandidateKnowledgeSource("ckb-default", fileSource.source.id, {
+      retiredAt: "2026-08-21T14:03:00.000Z",
+      reason: "user-requested",
+    });
+    const retentionClasses = candidateKnowledgeRetentionClasses.map((retentionClass) => ({
+      class: retentionClass,
+      rule:
+        retentionClass === "raw-sources"
+          ? ("expire-after-days" as const)
+          : ("retain-until-deletion" as const),
+      ...(retentionClass === "raw-sources" ? { expireAfterDays: 30 } : {}),
+    }));
+    await store.setCandidateKnowledgeRetentionPolicy("ckb-default", {
+      expectedRevision: 0,
+      updatedAt: "2026-08-21T14:04:00.000Z",
+      classes: retentionClasses,
+    });
+    const revisionTwoPolicy = await store.setCandidateKnowledgeRetentionPolicy("ckb-default", {
+      expectedRevision: 1,
+      updatedAt: "2026-08-21T14:05:00.000Z",
+      classes: retentionClasses,
+    });
+    await store.applyCandidateKnowledgeRetentionOverride("ckb-default", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: revisionTwoPolicy.revision,
+      expectedState: "none",
+      changedAt: "2026-08-21T14:06:00.000Z",
+    });
+    await store.releaseCandidateKnowledgeRetentionOverride("ckb-default", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: revisionTwoPolicy.revision,
+      expectedState: "applied",
+      changedAt: "2026-08-21T14:07:00.000Z",
+    });
+    await store.applyCandidateKnowledgeRetentionOverride("ckb-default", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: revisionTwoPolicy.revision,
+      expectedState: "released",
+      changedAt: "2026-08-21T14:08:00.000Z",
+    });
+    await expect(store.getCandidateKnowledgeRetentionPolicy("ckb-default")).resolves.toMatchObject({
+      revision: 2,
+      overrideRevision: 3,
+      activeOverrides: [expect.objectContaining({ sequence: 3, overrideRevision: 3 })],
+    });
+    const backup = join(parent, "portable-backup");
+    await store.exportPortableBackup(backup, { createdAt: "2026-08-21T15:00:00.000Z" });
+    await store.close();
+
+    const restored = await restoreCandidateKnowledgePortableBackup(backup, restoredRoot, {
+      restoredAt: "2026-08-24T10:00:00.000Z",
+    });
+    expect(restored).toMatchObject({
+      status: "restored",
+      storeId: "knowledge-store-1",
+      knowledgeBaseCount: 1,
+      sourceCount: 2,
+      versionCount: 2,
+    });
+    expect(JSON.stringify(restored)).not.toContain(restoredRoot);
+    const reopened = await openCandidateKnowledgeStore(restoredRoot);
+    await expect(
+      reopened.getCandidateKnowledgeSourceOriginBinding("ckb-default", fileSource.source.id),
+    ).resolves.toBeUndefined();
+    await expect(
+      reopened.getCandidateKnowledgeSourceRefreshObservation("ckb-default", fileSource.source.id),
+    ).resolves.toMatchObject({
+      observedVersionId: fileSource.version.id,
+      status: "current",
+    });
+    await expect(
+      reopened.getCandidateKnowledgeSourceRetirement("ckb-default", fileSource.source.id),
+    ).resolves.toEqual({
+      sourceId: fileSource.source.id,
+      retiredAt: "2026-08-21T14:03:00.000Z",
+      reason: "user-requested",
+    });
+    await expect(
+      reopened.getCandidateKnowledgeSourceUrlProvenance(
+        "ckb-default",
+        "restore-url-source",
+        urlSource.version.id,
+      ),
+    ).resolves.toBeUndefined();
+    await expect(
+      reopened.getCandidateKnowledgeSourcePortableUrlProvenance(
+        "ckb-default",
+        "restore-url-source",
+        urlSource.version.id,
+      ),
+    ).resolves.toEqual({
+      fetchedAt: "2026-08-21T14:01:00.000Z",
+      kind: "generic",
+    });
+    await expect(
+      reopened.getCandidateKnowledgeRetentionPolicy("ckb-default"),
+    ).resolves.toMatchObject({
+      revision: 2,
+      overrideRevision: 3,
+      activeOverrides: [
+        expect.objectContaining({
+          state: "applied",
+          kind: "legal-hold",
+          sequence: 3,
+          overrideRevision: 3,
+        }),
+      ],
+    });
+    const restoredPath = await reopened.getManagedCandidateKnowledgeFilePath(
+      "ckb-default",
+      fileSource.source.id,
+      fileSource.version.id,
+    );
+    await expect(readFile(restoredPath as string, "utf8")).resolves.toBe(content);
+    const restoredStorage = openSqliteStorage(
+      join(restoredRoot, ".draft-loop", "knowledge.sqlite"),
+    );
+    expect(restoredStorage.getCandidateKnowledgePortableBackupProvenance()).toMatchObject({
+      sourceStoreId: "knowledge-store-1",
+      packageSchemaVersion: 1,
+      restoredAt: "2026-08-24T10:00:00.000Z",
+    });
+    await restoredStorage.close();
+    await reopened.close();
+  });
+
+  it("keeps restore destination collision, tamper, interruption, and unowned partial state fail-closed", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const backup = join(parent, "portable-backup");
+    const destination = join(parent, "restored-candidate-knowledge");
+    const sourcePath = join(parent, "resume.md");
+    await writeFile(sourcePath, "restore bytes", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "restore-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Restore source",
+        createdAt,
+      },
+      {
+        id: "restore-version",
+        mediaType: "text/plain",
+        checksum: sha256("restore bytes"),
+        sizeBytes: 13,
+        createdAt,
+        sourcePath,
+      },
+    );
+    await store.exportPortableBackup(backup, { createdAt: "2026-08-21T15:00:00.000Z" });
+    await store.close();
+
+    const unowned = join(parent, "unowned-partial");
+    await mkdir(unowned);
+    await writeFile(join(unowned, "keep.txt"), "keep", "utf8");
+    await expect(restoreCandidateKnowledgePortableBackup(backup, unowned)).rejects.toThrow(
+      /already exists/i,
+    );
+    await expect(readFile(join(unowned, "keep.txt"), "utf8")).resolves.toBe("keep");
+
+    const tamperedObject = (await readdir(join(backup, "objects")))[0];
+    if (tamperedObject === undefined) throw new Error("restore object fixture is missing");
+    const tamperedPath = join(backup, "objects", tamperedObject);
+    const originalBytes = await readFile(tamperedPath);
+    await writeFile(tamperedPath, "tampered", "utf8");
+    await expect(restoreCandidateKnowledgePortableBackup(backup, destination)).rejects.toThrow(
+      /invalid or incomplete/i,
+    );
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
+    await writeFile(tamperedPath, originalBytes);
+
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, destination, {
+        interruptAt: "manifest-publication",
+      }),
+    ).rejects.toThrow(/interruption/i);
+    await expect(lstat(join(destination, "draft-loop-knowledge.json"))).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, destination, {
+        restoredAt: "2026-08-24T10:01:00.000Z",
+      }),
+    ).resolves.toMatchObject({ status: "restored" });
+    await expect(lstat(join(destination, "draft-loop-knowledge.json"))).resolves.toBeDefined();
+    await expect(restoreCandidateKnowledgePortableBackup(backup, destination)).rejects.toThrow(
+      /already exists/i,
+    );
+
+    const claimedDestination = join(parent, "claimed-restored-candidate-knowledge");
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, claimedDestination, {
+        interruptAt: "destination-claim",
+      }),
+    ).rejects.toThrow(/interruption/i);
+    await expect(lstat(claimedDestination)).resolves.toBeDefined();
+    await expect(lstat(join(claimedDestination, ".draft-loop-restore.json"))).rejects.toMatchObject(
+      {
+        code: "ENOENT",
+      },
+    );
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, claimedDestination),
+    ).resolves.toMatchObject({ status: "restored" });
+
+    const committedDestination = join(parent, "committed-restored-candidate-knowledge");
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, committedDestination, {
+        interruptAt: "after-manifest-publication",
+      }),
+    ).rejects.toThrow(/interruption/i);
+    await expect(
+      lstat(join(committedDestination, "draft-loop-knowledge.json")),
+    ).resolves.toBeDefined();
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, committedDestination),
+    ).rejects.toThrow(/already exists/i);
+
+    const failedPublicationDestination = join(parent, "failed-publication-candidate-knowledge");
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, failedPublicationDestination, {
+        beforePublication: async () => {
+          throw new Error("simulated restore publication failure");
+        },
+      }),
+    ).rejects.toThrow(/invalid or incomplete|restore/i);
+    await expect(lstat(failedPublicationDestination)).rejects.toMatchObject({ code: "ENOENT" });
+
+    const replacementDestination = join(parent, "replacement-candidate-knowledge");
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, replacementDestination, {
+        interruptAt: "manifest-publication",
+      }),
+    ).rejects.toThrow(/interruption/i);
+    const replacementFile = join(
+      replacementDestination,
+      "sources",
+      digestSegment("restore-source"),
+      digestSegment("restore-version"),
+    );
+    const replacementBytes = await readFile(replacementFile);
+    await rm(replacementFile);
+    await writeFile(replacementFile, replacementBytes);
+    await expect(
+      restoreCandidateKnowledgePortableBackup(backup, replacementDestination),
+    ).rejects.toThrow(/already exists/i);
+    await expect(readFile(replacementFile)).resolves.toEqual(replacementBytes);
+  });
+
+  it("preserves staging while a concurrent restore is building it", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const backup = join(parent, "portable-backup");
+    const destination = join(parent, "concurrent-restored-candidate-knowledge");
+    const sourcePath = join(parent, "resume.md");
+    await writeFile(sourcePath, "concurrent restore bytes", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "concurrent-restore-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Concurrent restore source",
+        createdAt,
+      },
+      {
+        id: "concurrent-restore-version",
+        mediaType: "text/plain",
+        checksum: sha256("concurrent restore bytes"),
+        sizeBytes: 24,
+        createdAt,
+        sourcePath,
+      },
+    );
+    await store.exportPortableBackup(backup, { createdAt: "2026-08-21T15:00:00.000Z" });
+    await store.close();
+
+    let releaseImport!: () => void;
+    let reportImportStarted!: () => void;
+    const importStarted = new Promise<void>((resolve) => {
+      reportImportStarted = resolve;
+    });
+    const importRelease = new Promise<void>((resolve) => {
+      releaseImport = resolve;
+    });
+    const firstRestore = restoreCandidateKnowledgePortableBackup(backup, destination, {
+      beforeImport: async () => {
+        reportImportStarted();
+        await importRelease;
+      },
+    });
+    await importStarted;
+    const stagingName = (await readdir(parent)).find((entry) =>
+      entry.startsWith(".concurrent-restored-candidate-knowledge.draft-loop-restore-"),
+    );
+    expect(stagingName).toBeDefined();
+    const stagingPath = join(parent, stagingName as string);
+    await expect(restoreCandidateKnowledgePortableBackup(backup, destination)).rejects.toThrow(
+      /already in progress/i,
+    );
+    await expect(lstat(join(stagingPath, ".draft-loop-restore.json"))).resolves.toBeDefined();
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
+    releaseImport();
+    await expect(firstRestore).resolves.toMatchObject({ status: "restored" });
+    await expect(lstat(join(destination, "draft-loop-knowledge.json"))).resolves.toBeDefined();
   });
 
   it("rejects incomplete inventory and corrupted portable backup objects", async () => {
