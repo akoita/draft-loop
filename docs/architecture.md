@@ -246,9 +246,10 @@ privacy invariants are canonical in [ADR 0007][adr-0007].
 The explicit move command accepts no target path. It forwards a runtime-only
 match through the verified member handle and does not change source identity,
 version, observation, retirement, blob, journal, or baseline membership
-evidence. Root rebind is also exposed through shared adapters; member move
-remains at the component/application-contract boundary. Neither infers renames
-or reconciles all removals.
+evidence. Root rebind and one-source member move are exposed through shared
+CLI and desktop adapters; moved-candidate preview is read-only, while move
+requires confirmation and returns only opaque identity, time, and status.
+Neither infers renames automatically or reconciles all removals.
 
 Automatic move inference, physical deletion, directory reconciliation adapters,
 indexing, and background refresh remain deferred under their owning roadmap

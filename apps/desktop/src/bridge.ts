@@ -30,6 +30,8 @@ export const bridgeCapabilities = [
   "knowledge.import-directory",
   "knowledge.directory-refresh-preview",
   "knowledge.directory-refresh-apply",
+  "knowledge.directory-moved-candidates",
+  "knowledge.directory-member-move",
   "knowledge.directory-rebind-preview",
   "knowledge.directory-rebind-apply",
   "knowledge.import-url",
@@ -272,6 +274,22 @@ const knowledgeDirectoryRefreshApplyKeys = inputKeys<KnowledgeDirectoryRefreshAp
   "storeId",
   "knowledgeBaseId",
   "directoryId",
+  "confirmed",
+]);
+
+export type KnowledgeDirectoryMovedCandidatesInput = KnowledgeDirectoryRefreshPreviewInput;
+const knowledgeDirectoryMovedCandidatesKeys = knowledgeDirectoryRefreshPreviewKeys;
+
+export interface KnowledgeDirectoryMemberMoveInput extends KnowledgeDirectoryRefreshPreviewInput {
+  readonly sourceId: string;
+  readonly confirmed: boolean;
+}
+
+const knowledgeDirectoryMemberMoveKeys = inputKeys<KnowledgeDirectoryMemberMoveInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "directoryId",
+  "sourceId",
   "confirmed",
 ]);
 
@@ -846,6 +864,34 @@ export interface KnowledgeDirectoryRefreshApplyResult
   readonly failedStatus?: KnowledgeDirectoryRefreshMemberStatus;
 }
 
+export interface KnowledgeDirectoryMovedCandidateResult {
+  readonly sourceId: string;
+  readonly status: "moved-candidate";
+}
+
+export interface KnowledgeDirectoryMovedCandidatesResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly candidates: readonly KnowledgeDirectoryMovedCandidateResult[];
+  readonly candidateCount: number;
+  readonly candidatesTruncated: boolean;
+  readonly newSourceCount: number;
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+
+export interface KnowledgeDirectoryMemberMoveResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly sourceId: string;
+  readonly checkedAt: string;
+  readonly status: "moved" | "current";
+}
+
 export interface KnowledgeUrlImportResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -1062,6 +1108,30 @@ const knowledgeDirectoryRefreshApplyResultKeys = resultKeys<KnowledgeDirectoryRe
     "failedStatus",
   ],
 );
+const knowledgeDirectoryMovedCandidateResultKeys =
+  resultKeys<KnowledgeDirectoryMovedCandidateResult>()(["sourceId", "status"]);
+const knowledgeDirectoryMovedCandidatesResultKeys =
+  resultKeys<KnowledgeDirectoryMovedCandidatesResult>()([
+    "storeId",
+    "knowledgeBaseId",
+    "directoryId",
+    "checkedAt",
+    "candidates",
+    "candidateCount",
+    "candidatesTruncated",
+    "newSourceCount",
+    "scannedEntryCount",
+    "discoveredFileCount",
+    "skippedEntryCount",
+  ]);
+const knowledgeDirectoryMemberMoveResultKeys = resultKeys<KnowledgeDirectoryMemberMoveResult>()([
+  "storeId",
+  "knowledgeBaseId",
+  "directoryId",
+  "sourceId",
+  "checkedAt",
+  "status",
+]);
 const knowledgeUrlImportResultKeys = resultKeys<KnowledgeUrlImportResult>()([
   "storeId",
   "knowledgeBaseId",
@@ -1346,6 +1416,8 @@ export interface BridgeCommandInputMap {
   "knowledge.import-directory": KnowledgeDirectoryImportInput;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewInput;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyInput;
+  "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesInput;
+  "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveInput;
   "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindPreviewInput;
   "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindApplyInput;
   "knowledge.import-url": KnowledgeUrlImportInput;
@@ -1393,6 +1465,8 @@ export interface BridgeCommandOutputMap {
   "knowledge.import-directory": KnowledgeDirectoryImportResult;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewResult;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyResult;
+  "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesResult;
+  "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveResult;
   "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindResult;
   "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindResult;
   "knowledge.import-url": KnowledgeUrlImportResult;
@@ -1944,6 +2018,32 @@ function validateKnowledgeDirectoryRefreshApplyInput(
   };
 }
 
+function validateKnowledgeDirectoryMovedCandidatesInput(
+  value: unknown,
+): KnowledgeDirectoryMovedCandidatesInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDirectoryMovedCandidatesKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    directoryId: identifier(input.directoryId),
+  };
+}
+
+function validateKnowledgeDirectoryMemberMoveInput(
+  value: unknown,
+): KnowledgeDirectoryMemberMoveInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDirectoryMemberMoveKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    directoryId: identifier(input.directoryId),
+    sourceId: identifier(input.sourceId),
+    confirmed: booleanValue(input.confirmed),
+  };
+}
+
 function validateKnowledgeDirectoryRootRebindPreviewInput(
   value: unknown,
 ): KnowledgeDirectoryRootRebindPreviewInput {
@@ -2437,6 +2537,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.directory-refresh-apply",
         input: validateKnowledgeDirectoryRefreshApplyInput(command.input),
+      };
+    case "knowledge.directory-moved-candidates":
+      return {
+        type: "knowledge.directory-moved-candidates",
+        input: validateKnowledgeDirectoryMovedCandidatesInput(command.input),
+      };
+    case "knowledge.directory-member-move":
+      return {
+        type: "knowledge.directory-member-move",
+        input: validateKnowledgeDirectoryMemberMoveInput(command.input),
       };
     case "knowledge.directory-rebind-preview":
       return {
@@ -3070,6 +3180,69 @@ function normalizeKnowledgeDirectoryRefreshApplyResult(
   };
 }
 
+function normalizeKnowledgeDirectoryMovedCandidatesResult(
+  value: unknown,
+): KnowledgeDirectoryMovedCandidatesResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeDirectoryMovedCandidatesResultKeys) ||
+    !Array.isArray(result.candidates) ||
+    result.candidates.length > maximumKnowledgeInspectionEntries
+  )
+    return invalidInput();
+  const candidates = result.candidates
+    .map((entry) => {
+      const candidate = requireRecord(entry);
+      if (!hasOnlyKeys(candidate, knowledgeDirectoryMovedCandidateResultKeys))
+        return invalidInput();
+      return {
+        sourceId: identifier(candidate.sourceId),
+        status: enumValue(candidate.status, ["moved-candidate"] as const),
+      } satisfies KnowledgeDirectoryMovedCandidateResult;
+    })
+    .sort((left, right) => left.sourceId.localeCompare(right.sourceId));
+  const candidateCount = finiteInteger(result.candidateCount, 1_000_000);
+  const candidatesTruncated = booleanValue(result.candidatesTruncated);
+  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
+  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
+  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
+  if (
+    new Set(candidates.map(({ sourceId }) => sourceId)).size !== candidates.length ||
+    candidateCount < candidates.length ||
+    candidatesTruncated !== candidateCount > candidates.length ||
+    discoveredFileCount + skippedEntryCount > scannedEntryCount
+  )
+    return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    directoryId: identifier(result.directoryId),
+    checkedAt: timestampValue(result.checkedAt),
+    candidates,
+    candidateCount,
+    candidatesTruncated,
+    newSourceCount: finiteInteger(result.newSourceCount, discoveredFileCount),
+    scannedEntryCount,
+    discoveredFileCount,
+    skippedEntryCount,
+  };
+}
+
+function normalizeKnowledgeDirectoryMemberMoveResult(
+  value: unknown,
+): KnowledgeDirectoryMemberMoveResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeDirectoryMemberMoveResultKeys)) return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    directoryId: identifier(result.directoryId),
+    sourceId: identifier(result.sourceId),
+    checkedAt: timestampValue(result.checkedAt),
+    status: enumValue(result.status, ["moved", "current"] as const),
+  };
+}
+
 function normalizeKnowledgeUrlImportResult(value: unknown): KnowledgeUrlImportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeUrlImportResultKeys)) return invalidInput();
@@ -3477,6 +3650,10 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeDirectoryRefreshPreviewResult(value);
     case "knowledge.directory-refresh-apply":
       return normalizeKnowledgeDirectoryRefreshApplyResult(value);
+    case "knowledge.directory-moved-candidates":
+      return normalizeKnowledgeDirectoryMovedCandidatesResult(value);
+    case "knowledge.directory-member-move":
+      return normalizeKnowledgeDirectoryMemberMoveResult(value);
     case "knowledge.directory-rebind-preview":
       return normalizeKnowledgeDirectoryRootRebindResult(value, ["current", "ready"] as const);
     case "knowledge.directory-rebind-apply":

@@ -141,6 +141,10 @@ pnpm --filter @draft-loop/cli start knowledge source directory-refresh-preview \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID
 pnpm --filter @draft-loop/cli start knowledge source directory-refresh-apply \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID --confirm
+pnpm --filter @draft-loop/cli start knowledge source directory-moved-candidates \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID
+pnpm --filter @draft-loop/cli start knowledge source directory-member-move \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID SOURCE_ID --confirm
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -180,6 +184,9 @@ read-only preview from confirmed apply. Apply rescans the remembered root,
 records current and missing observations, and appends changed same-member bytes
 in source-ID order; a later failure reports bounded path-free partial progress.
 Adding members, reconciliation, deletion, backup, and restore remain staged.
+Moved-candidate preview reports only unique exact-integrity source matches.
+Confirmed one-source member move repeats the bounded scan, changes only the
+selected member's remembered origin, and returns `moved` or idempotent `current`.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

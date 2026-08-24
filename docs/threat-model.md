@@ -84,6 +84,10 @@ confirmation before store access and repeats the bounded scan. Generic results
 cap and sort opaque member/refreshed identities, report partial progress
 explicitly, and omit paths, filenames, hashes, checksums, labels, and content.
 
+Moved-candidate preview exposes only unique source identities and never target
+paths. One-source move requires explicit confirmation, repeats the bounded
+scan, and atomically guards the root, member revision, version, and origin.
+
 Lifecycle actions are explicit and bounded. A root rebind performs one complete
 bounded scan, stable per-member verification, and a guarded all-member origin
 commit or same-root no-op. The implemented one-source member-move command

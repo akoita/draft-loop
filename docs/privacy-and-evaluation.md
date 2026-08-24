@@ -84,6 +84,11 @@ observations, and may append changed managed bytes. Complete or partial results
 contain only capped opaque source identities and status; filenames, roots,
 hashes, checksums, labels, and content remain local.
 
+Moved-candidate preview and confirmed one-source member move are local-only.
+They derive a unique exact-integrity match from one bounded scan without
+accepting a replacement path. Generic results contain only opaque identities,
+time, status, and scan counts; paths and integrity tuples remain local.
+
 Origin status and refresh-state results are content-free. They expose only
 opaque source/version identity, lifecycle status, and timestamps. Explicit file
 refresh reads the sensitive remembered local origin without returning it. URL
