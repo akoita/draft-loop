@@ -284,19 +284,28 @@ release prevent concurrent commands from interleaving. Conflict diagnostics
 identify only the active operation and scope; they never include roots, paths,
 source identity, or content. Reads remain unleased. Store opening uses the same
 lease to roll back verified incomplete publication or finish verified committed
-cleanup, with idempotent path-free reports. Backup, restore, retention, and
-user-requested deletion remain owned by their later Sprint 2 slices.
+cleanup, with idempotent path-free reports.
+
+The CKB retention contract enumerates raw sources, normalized facts, indexes,
+run snapshots, exports, and backups. All six default to retention until explicit
+deletion. Append-only policy revisions may set bounded day-based expiry, while
+append-only legal-hold and manual-preservation events override expiry. Plans are
+keyed by policy revision, override revision, and an explicit evaluation time.
+They expose only bounded counts and effective states. Current ownership proof
+can mark committed managed raw-source versions eligible; unmanaged, unknown,
+and not-yet-materialized classes remain preserved. Planning never deletes data.
+Backup, restore, and confirmed deletion remain owned by #164–#166.
 
 The schema currently preserves append-only source/version, origin, observation,
 retirement, URL, directory-root, and directory-member history. [ADR 0007][adr-0007]
-records the compact v6–v17 schema-evolution summary and the invariants that
+records the compact v6–v18 schema-evolution summary and the invariants that
 motivated each boundary.
 
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
 retrieval-index drift enforcement, provider transmission scope, complete
-CLI/desktop lifecycle controls, missing-blob repair, deletion, cleanup, or
+CLI/desktop lifecycle controls, missing-blob repair, physical deletion, cleanup, or
 complete portable backup/export/restore. Until those contracts are
 integrated and validated, the workspace-scoped evidence and retrieval path
 remains authoritative for application runs.

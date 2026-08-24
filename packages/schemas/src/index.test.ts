@@ -9,6 +9,8 @@ import {
   agentContextReferenceSchema,
   candidateKnowledgeBaseSchema,
   candidateKnowledgeBaseStateSchema,
+  candidateKnowledgeRetentionOverrideInputSchema,
+  candidateKnowledgeRetentionPolicyUpdateSchema,
   candidateKnowledgeSelectionSnapshotSchema,
   candidateKnowledgeSourceKindSchema,
   candidateKnowledgeSourceRetirementReasonSchema,
@@ -27,6 +29,15 @@ import {
 } from "./index.js";
 
 const checksum = "a".repeat(64);
+
+const retentionClasses = [
+  "raw-sources",
+  "normalized-facts",
+  "indexes",
+  "run-snapshots",
+  "exports",
+  "backups",
+] as const;
 
 function validInput(): ContextSnapshotInput {
   return {
@@ -689,6 +700,68 @@ describe("candidateKnowledgeBaseSchema", () => {
         archivedAt: "2026-08-20T11:00:00.000Z",
       }),
     ).toThrow(/archivedAt must not precede createdAt or follow updatedAt/i);
+  });
+});
+
+describe("candidate knowledge retention schemas", () => {
+  const classes = retentionClasses.map((retentionClass) => ({
+    class: retentionClass,
+    rule: "retain-until-deletion" as const,
+  }));
+
+  it("requires every class exactly once and rejects contradictory or extra values", () => {
+    expect(
+      candidateKnowledgeRetentionPolicyUpdateSchema.parse({
+        expectedRevision: 0,
+        updatedAt: "2026-08-24T12:00:00.000Z",
+        classes,
+      }),
+    ).toBeDefined();
+    expect(() =>
+      candidateKnowledgeRetentionPolicyUpdateSchema.parse({
+        expectedRevision: 0,
+        updatedAt: "2026-08-24T12:00:00.000Z",
+        classes: classes.slice(0, -1),
+      }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeRetentionPolicyUpdateSchema.parse({
+        expectedRevision: 0,
+        updatedAt: "2026-08-24T12:00:00.000Z",
+        classes: classes.map((entry, index) =>
+          index === 0 ? { ...entry, expireAfterDays: 30 } : entry,
+        ),
+      }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgeRetentionPolicyUpdateSchema.parse({
+        expectedRevision: 0,
+        updatedAt: "2026-08-24T12:00:00.000Z",
+        classes,
+        unexpected: true,
+      }),
+    ).toThrow();
+  });
+
+  it("validates strict preservation override input", () => {
+    expect(
+      candidateKnowledgeRetentionOverrideInputSchema.parse({
+        class: "raw-sources",
+        kind: "legal-hold",
+        expectedPolicyRevision: 1,
+        expectedState: "none",
+        changedAt: "2026-08-24T12:00:00.000Z",
+      }),
+    ).toBeDefined();
+    expect(() =>
+      candidateKnowledgeRetentionOverrideInputSchema.parse({
+        class: "raw-sources",
+        kind: "delete-now",
+        expectedPolicyRevision: 1,
+        expectedState: "none",
+        changedAt: "2026-08-24T12:00:00.000Z",
+      }),
+    ).toThrow();
   });
 });
 

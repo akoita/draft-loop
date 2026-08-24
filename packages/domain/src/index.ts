@@ -221,6 +221,29 @@ export const candidateKnowledgeSourceRetirementReasons = ["user-requested"] as c
 export type CandidateKnowledgeSourceRetirementReason =
   (typeof candidateKnowledgeSourceRetirementReasons)[number];
 
+export const candidateKnowledgeRetentionClasses = [
+  "raw-sources",
+  "normalized-facts",
+  "indexes",
+  "run-snapshots",
+  "exports",
+  "backups",
+] as const;
+export type CandidateKnowledgeRetentionClass = (typeof candidateKnowledgeRetentionClasses)[number];
+
+export const candidateKnowledgeRetentionRules = [
+  "retain-until-deletion",
+  "expire-after-days",
+] as const;
+export type CandidateKnowledgeRetentionRule = (typeof candidateKnowledgeRetentionRules)[number];
+
+export const candidateKnowledgeRetentionOverrideKinds = [
+  "legal-hold",
+  "manual-preservation",
+] as const;
+export type CandidateKnowledgeRetentionOverrideKind =
+  (typeof candidateKnowledgeRetentionOverrideKinds)[number];
+
 export interface CandidateKnowledgeSourceRetirement {
   readonly sourceId: CandidateKnowledgeSourceId;
   readonly retiredAt: string;

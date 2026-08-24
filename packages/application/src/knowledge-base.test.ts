@@ -17,7 +17,10 @@ import {
   ingestDirectory as ingestDirectoryImplementation,
   ingestFile as ingestFileImplementation,
 } from "@draft-loop/ingestion";
-import type { CandidateKnowledgeSourceVersionRecord } from "@draft-loop/storage";
+import {
+  type CandidateKnowledgeSourceVersionRecord,
+  candidateKnowledgeRetentionClasses,
+} from "@draft-loop/storage";
 import {
   type CandidateKnowledgeStoreHandle,
   maximumManagedCandidateKnowledgeFileBytes,
@@ -149,6 +152,69 @@ describe("candidate knowledge store application service", () => {
     });
     await expect(service.openStore({ storeRoot })).resolves.toEqual(initialized);
     await expect(service.listKnowledgeBases({ storeRoot })).resolves.toEqual(initialized);
+  });
+
+  it("exposes the effective retention policy and plan through the shared service", async () => {
+    const ids = ["store-uuid", "default-ckb-uuid"];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+
+    const initial = await service.getKnowledgeRetentionPolicy({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+    });
+    expect(initial.revision).toBe(0);
+    expect(initial.classes.map((entry) => entry.class)).toEqual(candidateKnowledgeRetentionClasses);
+
+    const configured = await service.setKnowledgeRetentionPolicy({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      expectedRevision: 0,
+      updatedAt: changedAt,
+      classes: initial.classes.map((entry) =>
+        entry.class === "raw-sources"
+          ? { class: entry.class, rule: "expire-after-days", expireAfterDays: 30 }
+          : entry,
+      ),
+    });
+    const held = await service.applyKnowledgeRetentionOverride({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: configured.revision,
+      expectedState: "none",
+      changedAt,
+    });
+    expect(held.activeOverrides).toHaveLength(1);
+
+    const plan = await service.planKnowledgeRetention({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      asOf: changedAt,
+    });
+    expect(plan).toMatchObject({
+      schemaVersion: 1,
+      knowledgeBaseId: "default-ckb-uuid",
+      policyRevision: 1,
+      overrideRevision: 1,
+    });
+    expect(plan.classes).toHaveLength(6);
+    expect(JSON.stringify(plan)).not.toContain(storeRoot);
+
+    const released = await service.releaseKnowledgeRetentionOverride({
+      storeRoot,
+      knowledgeBaseId: "default-ckb-uuid",
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: configured.revision,
+      expectedState: "applied",
+      changedAt,
+    });
+    expect(released.activeOverrides).toEqual([]);
   });
 
   it("preserves path-free writer conflicts and recovers after the active command releases", async () => {

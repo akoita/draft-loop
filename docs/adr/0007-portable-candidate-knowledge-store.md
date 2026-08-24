@@ -262,8 +262,28 @@ before and after its work, and an expired owner cannot renew or release its
 successor. Cancellation is cooperative once a callback has started: the writer
 must settle before `finally` releases ownership. Interrupted-write recovery uses
 the same generation fence and only acts after acquiring the current lease.
-Retention, backup, restore, user-requested deletion, and their approval controls
-remain separate Sprint 2 slices.
+Retention-policy mutations and deterministic planning use the same lease.
+Backup, restore, user-requested deletion, and their approval controls remain
+separate Sprint 2 slices.
+
+### Retention policy
+
+Each CKB has one effective policy for six explicit classes: raw sources,
+normalized facts, indexes, run snapshots, exports, and backups. A legacy store
+with no policy events defaults every class to `retain-until-deletion`; migration
+therefore never makes existing data newly eligible for expiry. A configured
+class may instead use a bounded positive `expire-after-days` rule. Every update
+must provide all six classes exactly once and match the expected policy revision.
+
+Legal holds and manual-preservation overrides are separate append-only events.
+Their monotonic override revision is part of each live plan's identity, so a
+consumer can detect a policy or override change before acting. Planning uses a
+non-future `asOf` timestamp and produces bounded, path-free counts. Only committed
+managed raw-source versions can currently become expiry-eligible. Unmanaged or
+unknown entries are preserved; the other five classes remain
+`not-materialized` until their owning storage contracts can prove ownership.
+The policy and plan do not delete anything. Confirmed deletion in #166 must
+revalidate the exact effective revisions and physical ownership before acting.
 
 ### Compact schema-evolution summary
 
@@ -283,6 +303,7 @@ summary explains the durable shape; it is not a migration diary.
 | v15    | Append-only per-member revisions preserve baseline membership and make one-source verified moves independently auditable.         |
 | v16    | Versioned owned-write metadata binds integrity, staging identity, and lease generation to path-free restart recovery.             |
 | v17    | Durable generation-fenced recovery claims block stale database transitions before artifact inspection and support safe retry.     |
+| v18    | Append-only six-class retention rules and preservation overrides support live effective-revision deletion planning.                |
 
 Changing an immutable v13 row or adding a no-backfill overlay was rejected: it
 would erase baseline evidence or leave legacy members without a trustworthy
