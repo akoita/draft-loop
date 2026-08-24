@@ -10,6 +10,11 @@ discovery or pilot evidence, and **Later** is directional. The status model
 describes evidence for a product outcome; it does not count lines of code or
 package-level capabilities.
 
+GitHub milestones are bounded delivery sprints, not containers for an entire
+roadmap stage. A sprint contains independently closable leaf issues with one
+goal and a frozen exit condition. Broad outcome issues remain open as epics
+outside sprint milestones and link to their current delivery slices.
+
 ## Vision
 
 DraftLoop helps a candidate produce a job-specific CV that is relevant,
@@ -73,7 +78,7 @@ The product status is easiest to read by outcome:
 | Integrated author–critic workspace | Integrated foundation                 | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
 | Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
 | Workspace retrieval and policy     | Partial integration                   | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. The initial workspace writing-policy slice is integrated behind explicit local selection. Neither establishes reusable CKB selection or application-grade drafting.                                                                                                                                                                                              |
-| Portable CKB                       | Implemented component; not integrated | The separate local store has logical identity, source/version provenance, managed bytes, local-only origins, URL provenance, retirement markers, and a prospective write journal. Explicit file/URL operations and bounded directory operations are available behind application contracts.                                                                                                                                                  |
+| Portable CKB                       | Integrated control foundation         | The separate local store has logical identity, source/version provenance, managed bytes, local-only origins, URL provenance, retirement markers, and a prospective write journal. Shared CLI/desktop application contracts expose explicit selection plus file, URL, and bounded directory lifecycle controls without projecting sensitive origins.                                                                                              |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
 | Product CKB workflow               | Integrated control foundation         | Shared CLI/desktop controls create, open, select, rename, and archive CKBs without projecting roots through the renderer; archive has an explicit confirmation boundary. Read-only adapters expose bounded path-free source/version summaries, duplicate groups, lifecycle readiness, structural inventory, origin status, persisted refresh state, and retirement state. Explicit file/URL/directory intake and maintenance controls cover refresh, rebind, member add/move/reconciliation, and logical retirement while keeping sensitive origins local. Workspace bindings pin store/CKB identities and record freshly validated source/version selections in new run contexts, with fail-closed drift checks. Retrieval, reactivation, deletion, backup/restore, and provider use remain outside the product path. |
 
@@ -134,7 +139,7 @@ contact employers, or submit applications.
 | Horizon  | Stage                                                                                                             | Evidence status                                      | Outcome                                                                               | Remaining gate                                                                                                          |
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
-| Now      | Evidence-backed CV drafting ([milestone v0.7.0](https://github.com/akoita/draft-loop/milestone/2))                | Designed; portable CKB component implemented         | Produce a complete factual, source-traceable application draft                        | Integrated CKB selection/lifecycle, reviewed profile and opportunity, lexical RAG, plan, complete CV, and policy checks |
+| Now      | Evidence-backed CV drafting (v0.7 program; [active sprint](https://github.com/akoita/draft-loop/milestone/2))      | Designed; CKB control foundation integrated          | Produce a complete factual, source-traceable application draft                        | Legacy selection migration, storage safety, reviewed profile and opportunity, lexical RAG, plan, complete CV, and policy checks |
 | Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Designed; foundation components partially integrated | Turn the factual draft into a reviewed, revised, human-approvable artifact            | Structured critique, adjudication, calibrated readiness gates, and professional rendering                               |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
@@ -159,10 +164,15 @@ not waived by the integration or packaging evidence.
 
 v0.7 is the first complete drafting vertical for the application-grade program.
 It must connect reusable CKB data to the application path, not merely add more
-storage components:
+storage components. Delivery is sequenced through bounded sprints while the
+larger outcome issues remain open as roadmap epics:
 
-- Finish CKB intake, refresh, selection, shared CLI/desktop controls, and
-  lifecycle safety through #110–#113, with #78 tracking the combined outcome.
+- Finish the CKB foundation with the single legacy selection-migration slice
+  #160 in [Sprint 1](https://github.com/akoita/draft-loop/milestone/2).
+- Deliver concurrency, recovery, retention, backup, restore, and deletion
+  safety through #161–#166 in
+  [Sprint 2](https://github.com/akoita/draft-loop/milestone/5), with #113
+  retaining the aggregate outcome.
 - Derive a candidate-reviewed canonical profile (#66), assemble a reviewed
   opportunity brief (#67), and use the CKB-scoped SQLite FTS/BM25 baseline
   (#80).
@@ -172,14 +182,11 @@ storage components:
 
 Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
 outside this critical path. Source lifecycle work through #136, workspace/run
-binding through #111, and the first path-safe CLI/desktop CKB controls from #112
-are implemented, including explicit selection and combination approval plus
-bounded source, duplicate, and structural inventory inspection and explicit
-single-file, bounded directory, and approved URL intake, one-source file-version
-append, path-free status/refresh controls, exact-byte rebind, and confirmed
-logical retirement. They do not satisfy the stage without remaining directory
-lifecycle controls beyond root rebind, retrieval enforcement, and drafting
-integration.
+binding slices under #111, and the shared path-safe CLI/desktop controls rolled
+up by #112 are implemented. The broad profile, opportunity, retrieval,
+planning, artifact, and writing-policy epics (#66–#70 and #80) stay outside a
+sprint milestone until each next bounded batch is planned. They still define
+the v0.7 stage exit and are not treated as completed work.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -308,6 +315,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-24 | Reframed GitHub milestones as bounded delivery sprints: Sprint 1 closes the CKB foundation with #160, while Sprint 2 delivers storage safety through #161–#166; broad issues #66–#70, #80, #111, and #113 remain unmilestoned epics. | Milestone progress now measures independently closable outcomes instead of PR volume inside long-lived epics. Closing #112 records the delivered shared lifecycle surface while its storage, retrieval, and migration residuals remain explicit in their leaf issues. |
 | 2026-08-24 | Exposed confirmed directory add-members through shared CLI and desktop contracts.                                                                                                                                          | One bounded scan appends unmatched files in deterministic order; complete or partial results contain capped opaque source identities and counts while roots, paths, labels, hashes, checksums, and content remain local.                                                       |
 | 2026-08-24 | Exposed directory reconciliation preview and confirmed retirement apply through shared CLI and desktop contracts.                                                                                                         | Complete scans partition member state path-free; apply acts only on explicitly approved missing source IDs, preserves deterministic partial progress, and refuses incomplete scans through the shared application contract.                                                    |
 | 2026-08-24 | Exposed moved-candidate preview and confirmed one-source directory member move through shared CLI and desktop contracts.                                                                                                  | Both controls derive targets from one bounded local scan and expose only opaque identity, time, status, and counts. Move changes only the selected member origin under atomic guards; no target path crosses an adapter boundary.                                                |
