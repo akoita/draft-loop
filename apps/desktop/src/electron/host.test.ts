@@ -3000,6 +3000,60 @@ describe("candidate knowledge native controls", () => {
     expect(knowledgeService.openStore).not.toHaveBeenCalled();
   });
 
+  it("exports and inspects a portable CKB backup without crossing renderer paths", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-backup-host-"));
+    const destination = join(parent, "portable-backup");
+    const selectedDirectories: Array<string | undefined> = [parent, parent, destination];
+    const chooseDirectory = vi.fn(async () => selectedDirectories.shift());
+    try {
+      const host = createNativeHost({
+        dialogs: { chooseDirectory, chooseFiles: async () => [] },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+
+      const exported = await host.invoke({
+        type: "knowledge.backup-export",
+        input: {
+          storeId,
+          selection: "native-dialog",
+          name: "portable-backup",
+          approved: true,
+        },
+      });
+      expect(exported).toMatchObject({
+        ok: true,
+        value: {
+          status: "exported",
+          storeId,
+          integrity: "integrity-verified-not-authenticity",
+        },
+      });
+      expect(JSON.stringify(exported)).not.toContain(parent);
+
+      const inspected = await host.invoke({
+        type: "knowledge.backup-inspect",
+        input: { selection: "native-dialog" },
+      });
+      expect(inspected).toMatchObject({
+        ok: true,
+        value: {
+          status: "valid",
+          storeId,
+          integrity: "integrity-verified-not-authenticity",
+        },
+      });
+      expect(JSON.stringify(inspected)).not.toContain(destination);
+      expect(chooseDirectory).toHaveBeenCalledTimes(3);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("imports one selected candidate-knowledge directory without exposing its paths", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-directory-host-"));
     const directoryPath = join(parent, "private-career-directory");

@@ -1220,6 +1220,69 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("keeps portable backup paths native and validates bounded integrity results", async () => {
+    const exportInput = {
+      storeId: "store-1",
+      selection: "native-dialog",
+      name: "candidate-backup",
+      approved: true,
+    } as const;
+    expect(validateBridgeCommand({ type: "knowledge.backup-export", input: exportInput })).toEqual({
+      type: "knowledge.backup-export",
+      input: exportInput,
+    });
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.backup-inspect",
+        input: { selection: "native-dialog" },
+      }),
+    ).toEqual({ type: "knowledge.backup-inspect", input: { selection: "native-dialog" } });
+    for (const input of [
+      { ...exportInput, approved: false },
+      { ...exportInput, destination: "/private/backup" },
+      { ...exportInput, name: "../backup" },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "knowledge.backup-export", input })).toThrow(
+        "invalid",
+      );
+    }
+
+    const portableResult = {
+      format: "draft-loop-candidate-knowledge-backup",
+      schemaVersion: 1,
+      status: "exported",
+      descriptorSchemaVersion: 1,
+      storeId: "store-1",
+      createdAt: "2026-08-24T20:00:00.000Z",
+      manifestChecksum: "a".repeat(64),
+      knowledgeBaseCount: 1,
+      sourceCount: 2,
+      versionCount: 3,
+      contentObjectCount: 3,
+      contentBytes: 128,
+      integrity: "integrity-verified-not-authenticity",
+    };
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: portableResult }), ["knowledge.backup-export"]),
+    );
+    await expect(
+      port.execute({ type: "knowledge.backup-export", input: exportInput }),
+    ).resolves.toEqual({ ok: true, value: portableResult });
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: { ...portableResult, destination: "/private/backup" },
+        }),
+        ["knowledge.backup-export"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({ type: "knowledge.backup-export", input: exportInput }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("validates native-only path-free candidate-knowledge file intake", async () => {
     const input = {
       storeId: "store-1",

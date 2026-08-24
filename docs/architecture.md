@@ -294,7 +294,24 @@ keyed by policy revision, override revision, and an explicit evaluation time.
 They expose only bounded counts and effective states. Current ownership proof
 can mark committed managed raw-source versions eligible; unmanaged, unknown,
 and not-yet-materialized classes remain preserved. Planning never deletes data.
-Backup, restore, and confirmed deletion remain owned by #164–#166.
+
+Portable backup export holds the same store-wide lease while it builds a
+versioned directory package outside the source store. The package contains a
+strict logical manifest plus checksum-addressed managed source objects; it
+fails closed when ownership inventory is incomplete or a required managed
+version cannot be verified. Machine-local origins, directory roots, writer
+coordination, recovery journals, application/provider credentials, and
+unrelated workspace data are not exported. A manifest checksum and per-object
+hashes detect corruption or modification but do not authenticate who created a
+package. Export requires an explicit destination approval and publishes with no
+replacement only after the package passes its own inspector. Restore and
+confirmed deletion remain owned by #165–#166.
+
+The package deliberately represents every restored source as unbound. It does
+not preserve directory-root/member relationships or host-binding history, and
+a valid legacy store containing unmanaged source versions cannot be described
+as a complete package, so export refuses it rather than silently omitting
+provenance.
 
 The schema currently preserves append-only source/version, origin, observation,
 retirement, URL, directory-root, and directory-member history. [ADR 0007][adr-0007]
@@ -306,7 +323,7 @@ motivated each boundary.
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
 retrieval-index drift enforcement, provider transmission scope, complete
 CLI/desktop lifecycle controls, missing-blob repair, physical deletion, cleanup, or
-complete portable backup/export/restore. Until those contracts are
+portable restore or physical deletion. Until those contracts are
 integrated and validated, the workspace-scoped evidence and retrieval path
 remains authoritative for application runs.
 

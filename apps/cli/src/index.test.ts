@@ -675,6 +675,86 @@ describe("candidate knowledge CLI controls", () => {
     expect(output).not.toContain("Private display name");
     expect(output).not.toContain("Private description");
   });
+
+  it("requires backup destination approval and prints only path-free integrity results", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-candidate-store");
+    const destination = resolve("private-backup-destination");
+    const portableResult = {
+      format: "draft-loop-candidate-knowledge-backup" as const,
+      schemaVersion: 1 as const,
+      status: "exported" as const,
+      descriptorSchemaVersion: 1 as const,
+      storeId: "store-opaque",
+      createdAt: "2026-08-24T20:00:00.000Z",
+      manifestChecksum: "a".repeat(64),
+      knowledgeBaseCount: 1,
+      sourceCount: 2,
+      versionCount: 3,
+      contentObjectCount: 3,
+      contentBytes: 128,
+      integrity: "integrity-verified-not-authenticity" as const,
+    };
+    const exportCandidateKnowledgeStore = vi.fn(async () => portableResult);
+    const inspectCandidateKnowledgeBackup = vi.fn(async () => ({
+      ...portableResult,
+      status: "valid" as const,
+    }));
+    const knowledgeService = {
+      exportCandidateKnowledgeStore,
+      inspectCandidateKnowledgeBackup,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "store",
+        "backup",
+        storeRoot,
+        destination,
+      ]),
+    ).rejects.toThrow(/requires --yes/i);
+    expect(exportCandidateKnowledgeStore).not.toHaveBeenCalled();
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "store",
+      "backup",
+      storeRoot,
+      destination,
+      "--yes",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "store",
+      "inspect-backup",
+      destination,
+    ]);
+
+    expect(exportCandidateKnowledgeStore).toHaveBeenCalledWith({
+      storeRoot,
+      destination,
+      approved: true,
+    });
+    expect(inspectCandidateKnowledgeBackup).toHaveBeenCalledWith({ packagePath: destination });
+    const output = dependencies.lines.join("\n");
+    expect(output).toContain('"status":"exported"');
+    expect(output).toContain('"status":"valid"');
+    expect(output).toContain('"storeId":"store-opaque"');
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(destination);
+  });
 });
 
 describe("candidate knowledge base maintenance CLI controls", () => {

@@ -3,6 +3,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { constants, type Dirent } from "node:fs";
 import {
   chmod,
+  copyFile,
   type FileHandle,
   link,
   lstat,
@@ -17,7 +18,20 @@ import {
 } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-import { candidateKnowledgeStoreSchema } from "@draft-loop/schemas";
+import {
+  type CandidateKnowledgePortableBackupInspection,
+  type CandidateKnowledgePortableBackupManifest,
+  candidateKnowledgePortableBackupFormat,
+  candidateKnowledgePortableBackupInspectionSchema,
+  candidateKnowledgePortableBackupIntegrityIndicator,
+  candidateKnowledgePortableBackupManifestChecksumFilename,
+  candidateKnowledgePortableBackupManifestFilename,
+  candidateKnowledgePortableBackupManifestSchema,
+  candidateKnowledgePortableBackupMaximumEntries,
+  candidateKnowledgePortableBackupObjectsDirectory,
+  candidateKnowledgePortableBackupSchemaVersion,
+  candidateKnowledgeStoreSchema,
+} from "@draft-loop/schemas";
 
 import {
   type CandidateKnowledgeBaseInput,
@@ -54,6 +68,7 @@ import {
   managedCandidateKnowledgeWriteOwnerKind,
   managedCandidateKnowledgeWriteOwnerSchemaVersion,
   openSqliteStorage,
+  openSqliteStorageReadOnly,
   type SqliteStorage,
   StorageConflictError,
   StorageValidationError,
@@ -72,6 +87,7 @@ const databaseFilename = "knowledge.sqlite";
 const writerCoordinatorFilename = "writer-coordination.sqlite";
 const sourcesDirectory = "sources";
 const maximumManifestBytes = 64 * 1024;
+const maximumPortableBackupManifestBytes = 16 * 1024 * 1024;
 const maximumDatabaseBytes = 16 * 1024 * 1024 * 1024;
 const descriptorKeyPrefix = "candidateKnowledgeStore";
 
@@ -102,6 +118,18 @@ export interface ManagedCandidateKnowledgeFileInventory {
   };
   readonly complete: boolean;
   readonly scanLimitReached: boolean;
+}
+
+export interface CandidateKnowledgePortableBackupExportOptions {
+  /** @internal Deterministic timestamp seam for application/tests. */
+  readonly createdAt?: string;
+  /** @internal Simulates a failure after the no-replace destination claim. */
+  readonly beforePublication?: () => Promise<void>;
+}
+
+export interface CandidateKnowledgePortableBackupExportResult
+  extends CandidateKnowledgePortableBackupInspection {
+  readonly status: "exported";
 }
 
 export interface CandidateKnowledgeStoreDescriptor {
@@ -373,6 +401,10 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     versionId: string,
   ) => Promise<string | undefined>;
   readonly inspectManagedCandidateKnowledgeFiles: () => Promise<ManagedCandidateKnowledgeFileInventory>;
+  readonly exportPortableBackup: (
+    destination: string,
+    options?: CandidateKnowledgePortableBackupExportOptions,
+  ) => Promise<CandidateKnowledgePortableBackupExportResult>;
   readonly close: () => Promise<void>;
 }
 
@@ -1502,6 +1534,709 @@ async function inspectManagedCandidateKnowledgeFiles(
   });
 }
 
+const portableBackupMaximumObjectCount = candidateKnowledgePortableBackupMaximumEntries;
+const portableBackupMaximumKnowledgeBaseCount = candidateKnowledgePortableBackupMaximumEntries;
+const portableBackupMaximumSourceCount = candidateKnowledgePortableBackupMaximumEntries;
+const portableBackupMaximumVersionCount = candidateKnowledgePortableBackupMaximumEntries;
+const portableBackupMaximumBytes = maximumDatabaseBytes;
+
+function portableBackupFailure(): StorageValidationError {
+  return new StorageValidationError(
+    "Portable candidate knowledge backup is invalid or incomplete.",
+  );
+}
+
+function portableBackupExportFailure(): StorageValidationError {
+  return new StorageValidationError("Portable candidate knowledge backup export failed.");
+}
+
+function portableBackupTimestamp(value: string | undefined): string {
+  const candidate = value ?? new Date().toISOString();
+  if (
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(candidate) ||
+    Number.isNaN(Date.parse(candidate)) ||
+    Date.parse(candidate) > Date.now()
+  ) {
+    throw new StorageValidationError(
+      "Portable candidate knowledge backup timestamp is invalid or in the future.",
+    );
+  }
+  return candidate;
+}
+
+function validatePortableBackupManifestTimestamps(
+  manifest: CandidateKnowledgePortableBackupManifest,
+): void {
+  const timestamps = [manifest.createdAt, manifest.descriptor.createdAt];
+  for (const entry of manifest.knowledgeBases) {
+    timestamps.push(
+      entry.knowledgeBase.createdAt,
+      entry.knowledgeBase.updatedAt,
+      ...(entry.knowledgeBase.archivedAt === null ? [] : [entry.knowledgeBase.archivedAt]),
+      entry.retentionPolicy.updatedAt,
+    );
+    for (const override of entry.retentionPolicy.activeOverrides) {
+      timestamps.push(override.changedAt);
+    }
+    for (const source of entry.sources) {
+      timestamps.push(source.createdAt);
+      if (source.refreshObservation !== null) {
+        timestamps.push(source.refreshObservation.checkedAt);
+        if (source.refreshObservation.lastRefreshedAt !== null) {
+          timestamps.push(source.refreshObservation.lastRefreshedAt);
+        }
+      }
+      if (source.retirement !== null) timestamps.push(source.retirement.retiredAt);
+      for (const version of source.versions) {
+        timestamps.push(version.createdAt);
+        if (version.urlProvenance !== undefined) {
+          timestamps.push(version.urlProvenance.fetchedAt);
+        }
+      }
+    }
+  }
+  if (timestamps.some((timestamp) => Date.parse(timestamp) > Date.now())) {
+    throw portableBackupFailure();
+  }
+}
+
+function portableBackupObjectName(checksum: string): string {
+  return `${candidateKnowledgePortableBackupObjectsDirectory}/${checksum}.bin`;
+}
+
+function freezePortableBackupInspection(
+  inspection: CandidateKnowledgePortableBackupInspection,
+): CandidateKnowledgePortableBackupInspection {
+  return Object.freeze({ ...inspection });
+}
+
+async function readPortableBackupDirectoryEntries(
+  path: string,
+  maximumEntries: number,
+): Promise<readonly Dirent[]> {
+  const directory = await opendir(path);
+  const entries: Dirent[] = [];
+  let closeError: unknown;
+  try {
+    while (true) {
+      const entry = await directory.read();
+      if (entry === null) break;
+      if (entries.length === maximumEntries) throw portableBackupFailure();
+      entries.push(entry);
+    }
+  } finally {
+    try {
+      await directory.close();
+    } catch (error) {
+      if (errorCode(error) !== "ERR_DIR_CLOSED") closeError = error;
+    }
+  }
+  if (closeError !== undefined) throw closeError;
+  return entries;
+}
+
+function validatePortableBackupManifestBounds(
+  manifest: CandidateKnowledgePortableBackupManifest,
+): void {
+  if (manifest.knowledgeBases.length > portableBackupMaximumKnowledgeBaseCount) {
+    throw portableBackupFailure();
+  }
+  let sourceCount = 0;
+  let versionCount = 0;
+  for (const entry of manifest.knowledgeBases) {
+    sourceCount += entry.sources.length;
+    if (sourceCount > portableBackupMaximumSourceCount) throw portableBackupFailure();
+    for (const source of entry.sources) {
+      versionCount += source.versions.length;
+      if (versionCount > portableBackupMaximumVersionCount) throw portableBackupFailure();
+    }
+  }
+  if (manifest.contentObjects.length > portableBackupMaximumObjectCount) {
+    throw portableBackupFailure();
+  }
+}
+
+async function hashPortableBackupObject(path: string, expectedSize: number): Promise<string> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(path, sourceOpenFlags());
+    const before = await handle.stat();
+    if (!before.isFile() || before.size !== expectedSize) throw portableBackupFailure();
+    const digest = createHash("sha256");
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let sizeBytes = 0;
+    while (true) {
+      const result = await handle.read(buffer, 0, buffer.length, null);
+      if (result.bytesRead === 0) break;
+      sizeBytes += result.bytesRead;
+      if (sizeBytes > maximumManagedCandidateKnowledgeFileBytes) throw portableBackupFailure();
+      digest.update(buffer.subarray(0, result.bytesRead));
+    }
+    const after = await handle.stat();
+    if (!sameFileState(before, after) || sizeBytes !== expectedSize) throw portableBackupFailure();
+    const checksum = digest.digest("hex");
+    if (checksum.length !== 64) throw portableBackupFailure();
+    return checksum;
+  } catch (error) {
+    if (error instanceof StorageValidationError) throw error;
+    throw portableBackupFailure();
+  } finally {
+    await closeQuietly(handle);
+  }
+}
+
+async function readPortableBackupManifest(packagePath: string): Promise<{
+  readonly manifest: CandidateKnowledgePortableBackupManifest;
+  readonly manifestChecksum: string;
+}> {
+  try {
+    await requireDirectory(packagePath, "Portable candidate knowledge backup");
+    const expectedTopLevel = new Set<string>([
+      candidateKnowledgePortableBackupManifestFilename,
+      candidateKnowledgePortableBackupManifestChecksumFilename,
+      candidateKnowledgePortableBackupObjectsDirectory,
+    ]);
+    const entries = await readPortableBackupDirectoryEntries(packagePath, expectedTopLevel.size);
+    if (
+      entries.length !== expectedTopLevel.size ||
+      entries.some((entry) => !expectedTopLevel.has(entry.name))
+    ) {
+      throw portableBackupFailure();
+    }
+    const manifestEntry = entries.find(
+      (entry) => entry.name === candidateKnowledgePortableBackupManifestFilename,
+    );
+    const checksumEntry = entries.find(
+      (entry) => entry.name === candidateKnowledgePortableBackupManifestChecksumFilename,
+    );
+    const objectsEntry = entries.find(
+      (entry) => entry.name === candidateKnowledgePortableBackupObjectsDirectory,
+    );
+    if (
+      manifestEntry === undefined ||
+      checksumEntry === undefined ||
+      objectsEntry === undefined ||
+      manifestEntry.isSymbolicLink() ||
+      checksumEntry.isSymbolicLink() ||
+      objectsEntry.isSymbolicLink() ||
+      !manifestEntry.isFile() ||
+      !checksumEntry.isFile() ||
+      !objectsEntry.isDirectory()
+    ) {
+      throw portableBackupFailure();
+    }
+    await requireRegularFile(
+      join(packagePath, manifestEntry.name),
+      "Portable candidate knowledge backup manifest",
+      maximumPortableBackupManifestBytes,
+    );
+    await requireRegularFile(
+      join(packagePath, checksumEntry.name),
+      "Portable candidate knowledge backup checksum",
+      128,
+    );
+    const manifestBytes = await readFile(join(packagePath, manifestEntry.name));
+    const checksumBytes = await readFile(join(packagePath, checksumEntry.name));
+    const manifestChecksum = createHash("sha256").update(manifestBytes).digest("hex");
+    if (checksumBytes.toString("utf8") !== `${manifestChecksum}\n`) throw portableBackupFailure();
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(manifestBytes.toString("utf8"));
+    } catch {
+      throw portableBackupFailure();
+    }
+    const manifest = candidateKnowledgePortableBackupManifestSchema.parse(parsed);
+    validatePortableBackupManifestTimestamps(manifest);
+    validatePortableBackupManifestBounds(manifest);
+    return { manifest, manifestChecksum };
+  } catch (error) {
+    if (error instanceof StorageValidationError) throw error;
+    throw portableBackupFailure();
+  }
+}
+
+async function inspectPortableBackupPackage(
+  packagePath: string,
+): Promise<CandidateKnowledgePortableBackupInspection> {
+  const { manifest, manifestChecksum } = await readPortableBackupManifest(packagePath);
+  try {
+    const objectsPath = join(packagePath, candidateKnowledgePortableBackupObjectsDirectory);
+    const entries = await readPortableBackupDirectoryEntries(
+      objectsPath,
+      portableBackupMaximumObjectCount,
+    );
+    const expected = new Map(
+      manifest.contentObjects.map((object) => [object.name.slice("objects/".length), object]),
+    );
+    if (
+      entries.length !== expected.size ||
+      entries.some(
+        (entry) => entry.isSymbolicLink() || !entry.isFile() || !expected.has(entry.name),
+      )
+    ) {
+      throw portableBackupFailure();
+    }
+    let contentBytes = 0;
+    for (const [name, object] of expected) {
+      if (!Number.isSafeInteger(contentBytes + object.sizeBytes)) throw portableBackupFailure();
+      contentBytes += object.sizeBytes;
+      if (contentBytes > portableBackupMaximumBytes) throw portableBackupFailure();
+      const checksum = await hashPortableBackupObject(join(objectsPath, name), object.sizeBytes);
+      if (checksum !== object.checksum) throw portableBackupFailure();
+    }
+    const sourceCount = manifest.knowledgeBases.reduce(
+      (total, entry) => total + entry.sources.length,
+      0,
+    );
+    const versionCount = manifest.knowledgeBases.reduce(
+      (total, entry) =>
+        total +
+        entry.sources.reduce((sourceTotal, source) => sourceTotal + source.versions.length, 0),
+      0,
+    );
+    return freezePortableBackupInspection(
+      candidateKnowledgePortableBackupInspectionSchema.parse({
+        format: candidateKnowledgePortableBackupFormat,
+        schemaVersion: candidateKnowledgePortableBackupSchemaVersion,
+        status: "valid",
+        descriptorSchemaVersion: manifest.descriptor.schemaVersion,
+        storeId: manifest.descriptor.id,
+        createdAt: manifest.createdAt,
+        manifestChecksum,
+        knowledgeBaseCount: manifest.knowledgeBases.length,
+        sourceCount,
+        versionCount,
+        contentObjectCount: manifest.contentObjects.length,
+        contentBytes,
+        integrity: candidateKnowledgePortableBackupIntegrityIndicator,
+      }),
+    );
+  } catch (error) {
+    if (error instanceof StorageValidationError) throw error;
+    throw portableBackupFailure();
+  }
+}
+
+export async function inspectCandidateKnowledgePortableBackup(
+  packagePathInput: string,
+): Promise<CandidateKnowledgePortableBackupInspection> {
+  const packagePath = requiredPath(packagePathInput);
+  try {
+    return await inspectPortableBackupPackage(packagePath);
+  } catch (error) {
+    if (error instanceof StorageValidationError) throw error;
+    throw portableBackupFailure();
+  }
+}
+
+async function buildPortableBackupManifest(
+  storage: SqliteStorage,
+  descriptor: CandidateKnowledgeStoreDescriptor,
+  root: string,
+  createdAt: string,
+): Promise<{
+  readonly manifest: CandidateKnowledgePortableBackupManifest;
+  readonly sourceFiles: readonly { readonly objectName: string; readonly sourcePath: string }[];
+}> {
+  const inventory = await inspectManagedCandidateKnowledgeFiles(storage, root);
+  const unknownCount = Object.values(inventory.unknownEntries).reduce(
+    (total, count) => total + count,
+    0,
+  );
+  if (!inventory.complete || unknownCount !== 0) throw portableBackupFailure();
+  const operations = await storage.listManagedCandidateKnowledgeWriteOperations();
+  if (
+    operations.some(
+      (operation) => !["completed", "aborted", "noop"].includes(operation.latestPhase),
+    )
+  ) {
+    throw portableBackupFailure();
+  }
+  const contentObjects = new Map<
+    string,
+    { readonly checksum: string; readonly sizeBytes: number }
+  >();
+  const sourceFiles: { readonly objectName: string; readonly sourcePath: string }[] = [];
+  const knowledgeBases = [] as CandidateKnowledgePortableBackupManifest["knowledgeBases"][number][];
+  const knowledgeBaseRecords = await storage.listCandidateKnowledgeBases();
+  for (const knowledgeBase of knowledgeBaseRecords) {
+    const sources =
+      [] as CandidateKnowledgePortableBackupManifest["knowledgeBases"][number]["sources"];
+    const sourceRecords = [...(await storage.listCandidateKnowledgeSources(knowledgeBase.id))].sort(
+      (left, right) => left.id.localeCompare(right.id),
+    );
+    for (const source of sourceRecords) {
+      const versions = [
+        ...(await storage.listCandidateKnowledgeSourceVersions(knowledgeBase.id, source.id)),
+      ].sort((left, right) => left.version - right.version || left.id.localeCompare(right.id));
+      const portableVersions =
+        [] as CandidateKnowledgePortableBackupManifest["knowledgeBases"][number]["sources"][number]["versions"];
+      for (const version of versions) {
+        if (
+          !(await storage.isCandidateKnowledgeSourceVersionManaged(
+            knowledgeBase.id,
+            source.id,
+            version.id,
+          ))
+        ) {
+          throw portableBackupFailure();
+        }
+        const sourcePath = managedVersionPath(root, source.id, version.id);
+        await verifyManagedFile(sourcePath, version);
+        const objectName = portableBackupObjectName(version.checksum);
+        const previous = contentObjects.get(objectName);
+        if (previous !== undefined && previous.sizeBytes !== version.sizeBytes)
+          throw portableBackupFailure();
+        contentObjects.set(objectName, {
+          checksum: version.checksum,
+          sizeBytes: version.sizeBytes,
+        });
+        sourceFiles.push({ objectName, sourcePath });
+        const provenance = await storage.getCandidateKnowledgeSourceUrlProvenance(
+          knowledgeBase.id,
+          source.id,
+          version.id,
+        );
+        portableVersions.push({
+          ...version,
+          contentObject: objectName,
+          ...(provenance === undefined
+            ? {}
+            : { urlProvenance: { fetchedAt: provenance.fetchedAt, kind: provenance.kind } }),
+        });
+      }
+      const refreshObservation = await storage.getCandidateKnowledgeSourceRefreshObservation(
+        knowledgeBase.id,
+        source.id,
+      );
+      const retirement = await storage.getCandidateKnowledgeSourceRetirement(
+        knowledgeBase.id,
+        source.id,
+      );
+      sources.push({
+        ...source,
+        versions: portableVersions,
+        refreshObservation:
+          refreshObservation === undefined
+            ? null
+            : {
+                observedVersionId: refreshObservation.observedVersionId,
+                status: refreshObservation.status,
+                checkedAt: refreshObservation.checkedAt,
+                lastRefreshedVersionId: refreshObservation.lastRefreshedVersionId,
+                lastRefreshedAt: refreshObservation.lastRefreshedAt,
+              },
+        retirement:
+          retirement === undefined
+            ? null
+            : { retiredAt: retirement.retiredAt, reason: retirement.reason },
+      });
+    }
+    const policy = await storage.getCandidateKnowledgeRetentionPolicy(knowledgeBase.id);
+    knowledgeBases.push({
+      knowledgeBase: { ...knowledgeBase },
+      sources,
+      retentionPolicy: {
+        revision: policy.revision,
+        overrideRevision: policy.overrideRevision,
+        updatedAt: policy.updatedAt,
+        classes: policy.classes.map((entry) =>
+          entry.rule === "expire-after-days"
+            ? {
+                class: entry.class,
+                rule: entry.rule,
+                expireAfterDays: entry.expireAfterDays as number,
+              }
+            : { class: entry.class, rule: entry.rule, expireAfterDays: null },
+        ),
+        activeOverrides: policy.activeOverrides.map((entry) => ({
+          class: entry.class,
+          kind: entry.kind,
+          sequence: entry.sequence,
+          overrideRevision: entry.overrideRevision,
+          policyRevision: entry.policyRevision,
+          changedAt: entry.changedAt,
+        })),
+      },
+    });
+  }
+  const manifest = candidateKnowledgePortableBackupManifestSchema.parse({
+    format: candidateKnowledgePortableBackupFormat,
+    schemaVersion: candidateKnowledgePortableBackupSchemaVersion,
+    createdAt,
+    descriptor: { ...descriptor },
+    knowledgeBases,
+    contentObjects: [...contentObjects.entries()]
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([name, object]) => ({ name, ...object })),
+  });
+  validatePortableBackupManifestTimestamps(manifest);
+  return { manifest, sourceFiles };
+}
+
+interface PortableBackupPublishedFile {
+  readonly path: string;
+  readonly identity: FileIdentity;
+}
+
+async function publishPortableBackupFile(
+  lease: StorageWriterLease,
+  sourcePath: string,
+  destinationPath: string,
+  publishedFiles: PortableBackupPublishedFile[],
+): Promise<void> {
+  const sourceDetails = await lstat(sourcePath);
+  if (sourceDetails.isSymbolicLink() || !sourceDetails.isFile()) {
+    throw portableBackupFailure();
+  }
+  const identity = { dev: sourceDetails.dev, ino: sourceDetails.ino };
+  lease.renew();
+  lease.assertCurrent();
+  try {
+    await link(sourcePath, destinationPath);
+  } catch (error) {
+    if (errorCode(error) === "EEXIST") {
+      throw new StorageConflictError("Portable backup destination entry already exists.");
+    }
+    throw error;
+  }
+  publishedFiles.push({ path: destinationPath, identity });
+  lease.assertCurrent();
+}
+
+async function cleanupPortableBackupPublication(
+  destination: string,
+  objectsPath: string,
+  publishedFiles: readonly PortableBackupPublishedFile[],
+  createdObjectsDirectory: boolean,
+  createdDestination: boolean,
+): Promise<void> {
+  for (const published of [...publishedFiles].reverse()) {
+    await removeRegularFileIfIdentityMatches(published.path, published.identity);
+  }
+  if (createdObjectsDirectory) {
+    try {
+      await rmdir(objectsPath);
+    } catch {
+      // Preserve concurrent or unrelated entries in the destination.
+    }
+  }
+  if (createdDestination) {
+    try {
+      await rmdir(destination);
+    } catch {
+      // Preserve concurrent or unrelated entries in the destination.
+    }
+  }
+}
+
+async function exportPortableBackupPackage(
+  storage: SqliteStorage,
+  descriptor: CandidateKnowledgeStoreDescriptor,
+  root: string,
+  destinationInput: string,
+  options: CandidateKnowledgePortableBackupExportOptions | undefined,
+): Promise<CandidateKnowledgePortableBackupExportResult> {
+  const lease = currentCandidateKnowledgeWriterLease(root);
+  const destination = requiredPath(destinationInput);
+  if (isWithin(root, destination)) throw portableBackupExportFailure();
+  const parent = dirname(destination);
+  const staging = join(parent, `.${basename(destination)}.draft-loop-backup-${randomUUID()}`);
+  const objectsPath = join(destination, candidateKnowledgePortableBackupObjectsDirectory);
+  const publishedFiles: PortableBackupPublishedFile[] = [];
+  let createdStaging = false;
+  let createdDestination = false;
+  let createdObjectsDirectory = false;
+  try {
+    lease.renew();
+    lease.assertCurrent();
+    await requireDirectory(parent, "Portable candidate knowledge backup destination parent");
+    if (isWithin(root, await realpath(parent))) throw portableBackupExportFailure();
+    await requireAbsent(destination);
+    await requireAbsent(staging);
+    const createdAt = portableBackupTimestamp(options?.createdAt);
+    const { manifest, sourceFiles } = await buildPortableBackupManifest(
+      storage,
+      descriptor,
+      root,
+      createdAt,
+    );
+    lease.renew();
+    lease.assertCurrent();
+    await mkdir(staging, { mode: 0o700 });
+    createdStaging = true;
+    await mkdir(join(staging, candidateKnowledgePortableBackupObjectsDirectory), { mode: 0o700 });
+    const manifestBytes = Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, "utf8");
+    const manifestChecksum = createHash("sha256").update(manifestBytes).digest("hex");
+    lease.renew();
+    lease.assertCurrent();
+    await writeFile(
+      join(staging, candidateKnowledgePortableBackupManifestFilename),
+      manifestBytes,
+      {
+        flag: "wx",
+        mode: 0o600,
+      },
+    );
+    lease.renew();
+    lease.assertCurrent();
+    await writeFile(
+      join(staging, candidateKnowledgePortableBackupManifestChecksumFilename),
+      `${manifestChecksum}\n`,
+      { flag: "wx", mode: 0o600 },
+    );
+    const copied = new Set<string>();
+    for (const sourceFile of sourceFiles) {
+      if (copied.has(sourceFile.objectName)) continue;
+      copied.add(sourceFile.objectName);
+      lease.renew();
+      lease.assertCurrent();
+      await copyFile(
+        sourceFile.sourcePath,
+        join(staging, sourceFile.objectName),
+        constants.COPYFILE_EXCL,
+      );
+      await chmodWhereSupported(join(staging, sourceFile.objectName), 0o600);
+      lease.assertCurrent();
+    }
+    lease.renew();
+    lease.assertCurrent();
+    await inspectPortableBackupPackage(staging);
+    lease.renew();
+    lease.assertCurrent();
+    try {
+      await mkdir(destination, { mode: 0o700 });
+    } catch (error) {
+      if (errorCode(error) === "EEXIST")
+        throw new StorageConflictError("Portable backup destination already exists.");
+      throw error;
+    }
+    createdDestination = true;
+    lease.assertCurrent();
+    await mkdir(objectsPath, { mode: 0o700 });
+    createdObjectsDirectory = true;
+    lease.assertCurrent();
+    await options?.beforePublication?.();
+    for (const object of manifest.contentObjects) {
+      await publishPortableBackupFile(
+        lease,
+        join(staging, object.name),
+        join(
+          objectsPath,
+          object.name.slice(`${candidateKnowledgePortableBackupObjectsDirectory}/`.length),
+        ),
+        publishedFiles,
+      );
+    }
+    await publishPortableBackupFile(
+      lease,
+      join(staging, candidateKnowledgePortableBackupManifestChecksumFilename),
+      join(destination, candidateKnowledgePortableBackupManifestChecksumFilename),
+      publishedFiles,
+    );
+    lease.renew();
+    lease.assertCurrent();
+    await publishPortableBackupFile(
+      lease,
+      join(staging, candidateKnowledgePortableBackupManifestFilename),
+      join(destination, candidateKnowledgePortableBackupManifestFilename),
+      publishedFiles,
+    );
+    lease.assertCurrent();
+    const publishedInspection = await inspectPortableBackupPackage(destination);
+    lease.renew();
+    lease.assertCurrent();
+    try {
+      await rm(staging, { recursive: true, force: true });
+      createdStaging = false;
+    } catch {
+      // Preserve the primary export/publication failure.
+    }
+    lease.assertCurrent();
+    return Object.freeze({ ...publishedInspection, status: "exported" });
+  } catch (error) {
+    await cleanupPortableBackupPublication(
+      destination,
+      objectsPath,
+      publishedFiles,
+      createdObjectsDirectory,
+      createdDestination,
+    );
+    if (createdStaging) {
+      try {
+        await rm(staging, { recursive: true, force: true });
+      } catch {
+        // Preserve the primary export/publication failure.
+      }
+    }
+    if (error instanceof StorageConflictError) throw error;
+    if (error instanceof StorageValidationError) throw error;
+    if (error instanceof StorageWriterLeaseError) throw error;
+    throw portableBackupExportFailure();
+  }
+}
+
+export async function exportCandidateKnowledgePortableBackup(
+  rootInput: string,
+  destinationInput: string,
+  options: CandidateKnowledgePortableBackupExportOptions = {},
+  expectedStoreId?: string,
+): Promise<CandidateKnowledgePortableBackupExportResult> {
+  const requestedRoot = requiredPath(rootInput);
+  await requireDirectory(requestedRoot, "Candidate knowledge store root");
+  const root = await realpath(requestedRoot);
+  const descriptor = await readDescriptor(root);
+  if (
+    expectedStoreId !== undefined &&
+    descriptor.id !== requiredManagedText(expectedStoreId, "store id")
+  ) {
+    throw new StorageConflictError(
+      "Candidate knowledge store identity does not match the request.",
+    );
+  }
+  const internalRoot = join(root, privateDirectory);
+  const managedSources = join(root, sourcesDirectory);
+  await requireDirectory(internalRoot, "Candidate knowledge store private directory");
+  await requireDirectory(managedSources, "Candidate knowledge store sources directory");
+  const databasePath = join(internalRoot, databaseFilename);
+  await requireRegularFile(
+    databasePath,
+    "Candidate knowledge store database",
+    maximumDatabaseBytes,
+  );
+  let storage: SqliteStorage | undefined;
+  try {
+    return await withCandidateKnowledgeStoreWriterLease(
+      root,
+      "ckb-portable-backup-export",
+      async () => {
+        const readOnlyStorage = openSqliteStorageReadOnly(databasePath);
+        storage = readOnlyStorage;
+        try {
+          await validateOpenedStore(readOnlyStorage, descriptor);
+          await validateManagedCandidateKnowledgeFiles(readOnlyStorage, root);
+          return await exportPortableBackupPackage(
+            readOnlyStorage,
+            descriptor,
+            root,
+            destinationInput,
+            options,
+          );
+        } finally {
+          await closePreservingFailure(storage);
+          storage = undefined;
+        }
+      },
+    );
+  } catch (error) {
+    if (storage !== undefined) {
+      await closePreservingFailure(storage);
+      storage = undefined;
+    }
+    throw error;
+  }
+}
+
 function requiredRetentionPlanTimestamp(value: string, label: string): string {
   if (
     typeof value !== "string" ||
@@ -1688,6 +2423,14 @@ async function validateOpenedStore(
   ) {
     throw new StorageValidationError(
       "Candidate knowledge store uses an unsupported future storage schema.",
+    );
+  }
+  if (
+    migrationVersions.length !== storageSchemaVersion ||
+    migrationVersions.some((version, index) => version !== index + 1)
+  ) {
+    throw new StorageValidationError(
+      "Candidate knowledge store uses an incomplete or unsupported storage schema.",
     );
   }
   const [boundSchemaVersion, boundId, boundCreatedAt] = await Promise.all([
@@ -2834,6 +3577,10 @@ function createHandle(
     },
     inspectManagedCandidateKnowledgeFiles: () =>
       inspectManagedCandidateKnowledgeFiles(storage, root),
+    exportPortableBackup: (destination, options) =>
+      coordinateWrite("ckb-portable-backup-export", () =>
+        exportPortableBackupPackage(storage, descriptor, root, destination, options),
+      ),
     close: () => storage.close(),
   };
   return Object.freeze(handle);

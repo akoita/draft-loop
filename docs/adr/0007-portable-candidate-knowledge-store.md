@@ -263,8 +263,19 @@ successor. Cancellation is cooperative once a callback has started: the writer
 must settle before `finally` releases ownership. Interrupted-write recovery uses
 the same generation fence and only acts after acquiring the current lease.
 Retention-policy mutations and deterministic planning use the same lease.
-Backup, restore, user-requested deletion, and their approval controls remain
-separate Sprint 2 slices.
+Portable backup export reuses this lease for a complete source-store snapshot.
+It writes a strict versioned directory package outside the store, containing
+only allowlisted logical metadata and checksum-addressed managed source bytes.
+Export fails closed on unknown inventory or unverifiable managed versions,
+requires explicit destination approval, self-inspects the completed staging
+package, and publishes without replacing an existing destination. Origin and
+directory-root paths, writer coordination, write/recovery journals,
+application/provider credentials, and workspace/run data never enter the
+package. Checksums detect corruption or modification but do not authenticate
+package authorship. Restore and user-requested deletion remain separate Sprint
+2 slices. Directory membership and host-binding history are omitted, so restore
+must mark sources unbound. Any unmanaged version blocks export because its bytes
+cannot be proven complete.
 
 ### Retention policy
 
@@ -404,8 +415,8 @@ This decision deliberately leaves the following outside the product workflow:
   deletion;
 - missing/corrupt blob repair, cleanup approval, and reconciliation of unknown
   entries;
-- CKB deletion semantics and complete portable export, backup, restore,
-  conflict handling, or migration rollback; and
+- CKB deletion semantics, portable restore conflict handling, or migration
+  rollback; and
 - URL redirect history, conditional requests, and URL-specific failure policy.
 
 Until those contracts are integrated and validated, workspace-scoped evidence
@@ -442,8 +453,8 @@ selection evidence but does not make a run read its content implicitly.
   claiming legacy or unjournaled entries. Unknown opaque files cannot be
   cleaned up safely yet.
 - Store-wide fenced writer leases prevent current CKB commands from
-  interleaving and reserve the same private coordination boundary for future
-  backup, restore, deletion, and cleanup work.
+  interleaving and protect portable export; restore, deletion, and cleanup reuse
+  the same private coordination boundary in later slices.
 - Deleting a workspace does not delete the CKB, and deleting an original host
   file does not delete its managed copy. A SQLite-only copy is not a complete
   CKB backup.

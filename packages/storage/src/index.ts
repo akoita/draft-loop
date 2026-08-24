@@ -1116,7 +1116,12 @@ interface SqliteHandle {
 }
 
 interface SqliteConstructor {
-  new (filename: string): SqliteHandle;
+  new (filename: string, options?: { readonly?: boolean; fileMustExist?: boolean }): SqliteHandle;
+}
+
+export interface SqliteStorageOpenOptions {
+  readonly readOnly?: boolean;
+  readonly fileMustExist?: boolean;
 }
 
 interface Migration {
@@ -2794,7 +2799,7 @@ function moduleRequire(): NodeRequire {
   }
 }
 
-function loadSqlite(filename: string): SqliteHandle {
+function loadSqlite(filename: string, options: SqliteStorageOpenOptions = {}): SqliteHandle {
   let loaded: unknown;
   const require = moduleRequire();
   try {
@@ -2821,7 +2826,10 @@ function loadSqlite(filename: string): SqliteHandle {
   if (typeof Constructor !== "function") {
     throw new StorageUnavailableError("The better-sqlite3 module did not expose a constructor.");
   }
-  return new (Constructor as SqliteConstructor)(filename);
+  const sqliteOptions: { readonly?: boolean; fileMustExist?: boolean } = {};
+  if (options.readOnly !== undefined) sqliteOptions.readonly = options.readOnly;
+  if (options.fileMustExist !== undefined) sqliteOptions.fileMustExist = options.fileMustExist;
+  return new (Constructor as SqliteConstructor)(filename, sqliteOptions);
 }
 
 function rowString(row: Record<string, unknown>, field: string): string {
@@ -2900,11 +2908,13 @@ export class SqliteStorage
 {
   private readonly database: SqliteHandle;
   private closed = false;
+  private readonly readOnly: boolean;
 
-  public constructor(filename: string) {
-    this.database = loadSqlite(requireNonEmpty(filename, "filename"));
+  public constructor(filename: string, options: SqliteStorageOpenOptions = {}) {
+    this.readOnly = options.readOnly === true;
+    this.database = loadSqlite(requireNonEmpty(filename, "filename"), options);
     this.database.pragma("foreign_keys = ON");
-    this.migrate();
+    if (!this.readOnly) this.migrate();
   }
 
   public migrate(): void {
@@ -11083,4 +11093,8 @@ function auditFromRow(row: Record<string, unknown>): AuditEvent {
 
 export function openSqliteStorage(filename: string): SqliteStorage {
   return new SqliteStorage(filename);
+}
+
+export function openSqliteStorageReadOnly(filename: string): SqliteStorage {
+  return new SqliteStorage(filename, { readOnly: true, fileMustExist: true });
 }

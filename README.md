@@ -112,6 +112,10 @@ requires `--approve-combination`. For example:
 pnpm --filter @draft-loop/cli start knowledge store init ./candidate-knowledge
 pnpm --filter @draft-loop/cli start knowledge store list ./candidate-knowledge
 pnpm --filter @draft-loop/cli start knowledge store inventory ./candidate-knowledge
+pnpm --filter @draft-loop/cli start knowledge store backup \
+  ./candidate-knowledge ./candidate-knowledge-backup --yes
+pnpm --filter @draft-loop/cli start knowledge store inspect-backup \
+  ./candidate-knowledge-backup
 pnpm --filter @draft-loop/cli start knowledge base create ./candidate-knowledge "Public projects"
 pnpm --filter @draft-loop/cli start knowledge source import \
   ./candidate-knowledge KNOWLEDGE_BASE_ID ./career-history.md
@@ -192,7 +196,11 @@ records current and missing observations, and appends changed same-member bytes
 in source-ID order; a later failure reports bounded path-free partial progress.
 Adding directory members requires confirmation, rescans the remembered root,
 and reports deterministic complete or partial progress using opaque source IDs.
-Deletion, backup, and restore remain staged.
+Portable backup export requires an approved new destination and returns only
+path-free integrity counts. The strict directory package can be inspected
+before restore; it excludes machine-local origins, active locks, recovery
+journals, application/provider credentials, and unrelated workspace data. Restore and physical
+deletion remain staged.
 Moved-candidate preview reports only unique exact-integrity source matches.
 Confirmed one-source member move repeats the bounded scan, changes only the
 selected member's remembered origin, and returns `moved` or idempotent `current`.
