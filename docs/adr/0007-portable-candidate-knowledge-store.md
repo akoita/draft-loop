@@ -215,19 +215,29 @@ failures clean up staging or newly published bytes. A crash or concurrent loser
 may leave an unreferenced opaque entry, but its shape or matching bytes do not
 authenticate DraftLoop ownership.
 
-The prospective append-only journal records an opaque intent before staging,
-resolved target before publication, publication, atomic managed-marker/database
-commit, and completion after staging cleanup. It contains no origin paths,
-filenames, labels, checksums, source content, provider data, diagnostics,
-cleanup tokens, approvals, or externally visible IDs. Legacy and unjournaled
-entries remain unknown. Same-current-byte appends record a terminal non-owning
-no-op; a metadata-only version may be materialized through normal managed-copy
-checks, but an unowned file is never adopted because its bytes or shape match.
+The append-only journal records an opaque intent before staging, resolved target
+before publication, publication, atomic managed-marker/database commit, and
+completion after staging cleanup. New intents also record a versioned DraftLoop
+ownership marker, the writer's fencing generation, and expected media type,
+checksum, and size. After capture, a separate immutable record binds the staging
+file's device and inode identity to that intent. These sensitive local fields
+authorize only recovery of that exact interrupted operation; they are never
+projected through application diagnostics or sent to a provider. Origin paths,
+filenames, labels, source content, provider data, and owner tokens remain
+excluded.
 
-The journal is evidence for a future cleanup policy, not cleanup authority. This
-decision does not delete, adopt, quarantine, repair, reconcile, or automatically
-scan entries or provide approval UI. Future cleanup requires the store-wide
-writer coordination described below plus explicit visible approval.
+Opening a store acquires the store-wide writer lease before validating and
+reconciling incomplete owned intents. Before inspecting or changing artifacts,
+recovery durably claims the observed phase with its newer fencing generation;
+this blocks every stale journal event, no-op, and commit transaction. A verified
+pre-commit operation is rolled back and marked aborted; a verified committed
+operation keeps its managed target, removes only its matching staging file, and
+is marked complete. Claims survive cleanup failure and can be renewed by a later
+generation, so replay is idempotent. Reports contain only safe operation kind,
+phase, and outcome. Legacy records without the ownership version, unknown or
+unjournaled entries, and mismatched or unrecognized artifacts are preserved.
+This automatic rollback is limited to proven residue from an incomplete write;
+retention and user-requested deletion retain separate visible approval boundaries.
 
 ### Store-wide writer coordination
 
@@ -250,9 +260,10 @@ heartbeat renews a live command; expiry permits deterministic takeover with a
 larger fencing generation. Every nested mutation asserts the current lease
 before and after its work, and an expired owner cannot renew or release its
 successor. Cancellation is cooperative once a callback has started: the writer
-must settle before `finally` releases ownership. This slice establishes the
-coordination boundary but does not itself implement interrupted-write repair,
-retention, backup, restore, deletion, or cleanup approval.
+must settle before `finally` releases ownership. Interrupted-write recovery uses
+the same generation fence and only acts after acquiring the current lease.
+Retention, backup, restore, user-requested deletion, and their approval controls
+remain separate Sprint 2 slices.
 
 ### Compact schema-evolution summary
 
@@ -270,6 +281,8 @@ summary explains the durable shape; it is not a migration diary.
 | v13    | Complete directory imports add sensitive root bindings and immutable hashed member rows without backfilling runtime-only imports. |
 | v14    | Append-only directory-root revisions reserve historical roots and provide a guarded current-root view.                            |
 | v15    | Append-only per-member revisions preserve baseline membership and make one-source verified moves independently auditable.         |
+| v16    | Versioned owned-write metadata binds integrity, staging identity, and lease generation to path-free restart recovery.             |
+| v17    | Durable generation-fenced recovery claims block stale database transitions before artifact inspection and support safe retry.     |
 
 Changing an immutable v13 row or adding a no-backfill overlay was rejected: it
 would erase baseline evidence or leave legacy members without a trustworthy

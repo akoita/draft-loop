@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   copyFile,
+  link,
   lstat,
   mkdir,
   mkdtemp,
@@ -33,7 +34,7 @@ import {
   openCandidateKnowledgeStore,
   type RebindManagedCandidateKnowledgeDirectoryRootInput,
 } from "./knowledge-store.js";
-import { StorageWriterLeaseConflictError } from "./writer-lease.js";
+import { StorageWriterLeaseConflictError, StorageWriterLeaseLostError } from "./writer-lease.js";
 
 const createdAt = "2026-08-21T14:00:00.000Z";
 const cleanupRoots: string[] = [];
@@ -1656,6 +1657,14 @@ describe("portable candidate knowledge store", () => {
       status: "active",
     });
     expect((conflict as Error).message).not.toContain(root);
+    await expect(openCandidateKnowledgeStore(root)).rejects.toMatchObject({
+      diagnostic: {
+        scope: "candidate-knowledge-store",
+        activeOperation: "ckb-directory-refresh",
+        retryable: true,
+        status: "active",
+      },
+    });
 
     releaseWriter();
     await holdWriter;
@@ -1668,6 +1677,141 @@ describe("portable candidate knowledge store", () => {
     ).resolves.toMatchObject({ displayName: "Renamed safely" });
     await secondStore.close();
     await firstStore.close();
+  });
+
+  it("fences a stale managed writer before its next durable transition", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "stale-writer.md");
+    await writeFile(sourcePath, "stale writer evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    let clock = 1_000;
+
+    await expect(
+      store.withWriterLease(
+        "ckb-stale-writer-test",
+        () =>
+          store.createManagedCandidateKnowledgeFileSource(
+            {
+              id: "stale-writer-source",
+              knowledgeBaseId: "ckb-default",
+              kind: "file",
+              displayName: "Stale writer",
+              createdAt,
+            },
+            managedVersion(sourcePath, "stale writer evidence", {
+              id: "stale-writer-version",
+              afterTargetPublication: async () => {
+                clock = 1_200;
+              },
+            }),
+          ),
+        { now: () => clock, leaseDurationMs: 100 },
+      ),
+    ).rejects.toBeInstanceOf(StorageWriterLeaseLostError);
+    await store.close();
+
+    const recovered = await openCandidateKnowledgeStore(root);
+    expect(recovered.recoveryReport.entries).toEqual([
+      { kind: "create", phase: "targeted", outcome: "aborted" },
+    ]);
+    await expect(
+      recovered.getCandidateKnowledgeSource("ckb-default", "stale-writer-source"),
+    ).resolves.toBeUndefined();
+    await recovered.close();
+  });
+
+  it("rejects an owned event after recovery claims the prepared operation", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "recovery-claim-race");
+    const sourcePath = join(parent, "recovery-claim-race.md");
+    await writeFile(sourcePath, "recovery claim race evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    let clock = 1_000;
+    let releaseWriter!: () => void;
+    let reportPaused!: () => void;
+    const paused = new Promise<void>((resolve) => {
+      reportPaused = resolve;
+    });
+    const resume = new Promise<void>((resolve) => {
+      releaseWriter = resolve;
+    });
+
+    const writePromise = store.withWriterLease(
+      "ckb-recovery-claim-race",
+      () =>
+        store.createManagedCandidateKnowledgeFileSource(
+          {
+            id: "recovery-claim-race-source",
+            knowledgeBaseId: "ckb-default",
+            kind: "file",
+            displayName: "Recovery claim race",
+            createdAt,
+          },
+          managedVersion(sourcePath, "recovery claim race evidence", {
+            id: "recovery-claim-race-version",
+            afterLeaseRenewBeforeDatabaseWrite: async () => {
+              reportPaused();
+              await resume;
+            },
+          }),
+        ),
+      { now: () => clock, leaseDurationMs: 100 },
+    );
+
+    let recovered: Awaited<ReturnType<typeof openCandidateKnowledgeStore>> | undefined;
+    try {
+      await paused;
+      clock = 1_200;
+      recovered = await openCandidateKnowledgeStore(root);
+      expect(recovered.recoveryReport.entries).toEqual([
+        { kind: "create", phase: "prepared", outcome: "aborted" },
+      ]);
+      await recovered.close();
+      recovered = undefined;
+
+      releaseWriter();
+      await expect(writePromise).rejects.toBeInstanceOf(StorageWriterLeaseLostError);
+      await store.close();
+
+      const [{ operation_id: operationId }] = queryDatabase(
+        root,
+        "SELECT operation_id FROM candidate_knowledge_managed_write_operations",
+      ) as [{ readonly operation_id: string }];
+      expect(
+        queryDatabase(
+          root,
+          `SELECT state, target_version_id
+           FROM candidate_knowledge_managed_write_events
+           WHERE operation_id = '${operationId}'
+           ORDER BY sequence DESC
+           LIMIT 1`,
+        ),
+      ).toEqual([{ state: "aborted", target_version_id: "recovery-claim-race-version" }]);
+      expect(
+        queryDatabase(
+          root,
+          `SELECT COUNT(*) AS count
+           FROM candidate_knowledge_source_versions
+           WHERE id = 'recovery-claim-race-version'`,
+        ),
+      ).toEqual([{ count: 0 }]);
+      await expect(
+        lstat(
+          join(
+            root,
+            "sources",
+            digestSegment("recovery-claim-race-source"),
+            digestSegment("recovery-claim-race-version"),
+          ),
+        ),
+      ).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      if (recovered !== undefined) await recovered.close();
+      releaseWriter();
+      await writePromise.catch(() => undefined);
+      await store.close().catch(() => undefined);
+    }
   });
 
   it("keeps directory membership stable across append, rebind, retirement, and reopen", async () => {
@@ -4500,7 +4644,7 @@ describe("portable candidate knowledge store", () => {
        VALUES ('legacy-managed-version');
        DROP TABLE candidate_knowledge_managed_write_events;
        DROP TABLE candidate_knowledge_managed_write_operations;
-       DELETE FROM schema_migrations WHERE version = 7`,
+       DELETE FROM schema_migrations WHERE version >= 7`,
     );
 
     const migrated = await openCandidateKnowledgeStore(root);
@@ -5748,5 +5892,554 @@ describe("portable candidate knowledge store", () => {
     expect(JSON.parse(manifest)).toEqual(initialization(root).descriptor);
     expect(manifest).not.toContain(root);
     expect(Object.keys(JSON.parse(manifest))).toEqual(["schemaVersion", "id", "createdAt"]);
+  });
+
+  it("replays every managed file interruption boundary and reports only safe outcomes", async () => {
+    const boundaries = [
+      "intent",
+      "staging",
+      "target-intent",
+      "target-publication",
+      "published-event",
+      "commit",
+      "staging-cleanup",
+      "after-staging-cleanup",
+    ] as const;
+    const committedBoundaries = new Set(["commit", "staging-cleanup", "after-staging-cleanup"]);
+
+    for (const boundary of boundaries) {
+      const parent = await temporaryParent();
+      const root = join(parent, `candidate-${boundary}`);
+      const sourcePath = join(parent, `${boundary}.md`);
+      const sourceId = `interrupted-${boundary}`;
+      const versionId = `version-${boundary}`;
+      const content = `interrupted content at ${boundary}`;
+      const operationCreatedAt = boundary === "intent" ? "2030-08-21T14:01:00.000Z" : createdAt;
+      await writeFile(sourcePath, content, "utf8");
+      const store = await initializeCandidateKnowledgeStore(initialization(root));
+      await expect(
+        store.createManagedCandidateKnowledgeFileSource(
+          {
+            id: sourceId,
+            knowledgeBaseId: "ckb-default",
+            kind: "file",
+            displayName: "Interruption fixture",
+            createdAt: operationCreatedAt,
+          },
+          managedVersion(sourcePath, content, {
+            id: versionId,
+            createdAt: operationCreatedAt,
+            interruptAt: boundary,
+          }),
+        ),
+      ).rejects.toThrow(/interruption/i);
+      await store.close();
+
+      const reopened = await openCandidateKnowledgeStore(root);
+      const expectedPhase =
+        boundary === "published-event"
+          ? "published"
+          : boundary === "target-intent" || boundary === "target-publication"
+            ? "targeted"
+            : committedBoundaries.has(boundary)
+              ? "committed"
+              : "prepared";
+      const expectedOutcome = committedBoundaries.has(boundary) ? "completed" : "aborted";
+      expect(reopened.recoveryReport).toEqual({
+        schemaVersion: 1,
+        entries: [
+          {
+            kind: "create",
+            phase: expectedPhase,
+            outcome: expectedOutcome,
+          },
+        ],
+      });
+      expect(Object.isFrozen(reopened.recoveryReport)).toBe(true);
+      expect(Object.isFrozen(reopened.recoveryReport.entries)).toBe(true);
+      expect(JSON.stringify(reopened.recoveryReport)).not.toContain(sourceId);
+      if (committedBoundaries.has(boundary)) {
+        await expect(
+          reopened.getManagedCandidateKnowledgeFilePath("ckb-default", sourceId, versionId),
+        ).resolves.toBeTypeOf("string");
+      } else {
+        await expect(
+          reopened.getCandidateKnowledgeSource("ckb-default", sourceId),
+        ).resolves.toBeUndefined();
+        await expect(lstat(join(root, "sources", digestSegment(sourceId)))).rejects.toMatchObject({
+          code: "ENOENT",
+        });
+      }
+      await reopened.close();
+
+      const idempotent = await openCandidateKnowledgeStore(root);
+      expect(idempotent.recoveryReport.entries).toEqual([]);
+      await idempotent.close();
+    }
+  });
+
+  it("replays URL interruptions and preserves mismatched committed staging", async () => {
+    const boundaries = ["target-publication", "commit", "after-staging-cleanup"] as const;
+    for (const boundary of boundaries) {
+      const parent = await temporaryParent();
+      const root = join(parent, `url-${boundary}`);
+      const sourceId = `url-interrupted-${boundary}`;
+      const versionId = `url-version-${boundary}`;
+      const responseBytes = new TextEncoder().encode(`url interruption at ${boundary}`);
+      const store = await initializeCandidateKnowledgeStore(initialization(root));
+      await expect(
+        store.createManagedCandidateKnowledgeUrlSource(
+          {
+            id: sourceId,
+            knowledgeBaseId: "ckb-default",
+            kind: "url",
+            displayName: "URL interruption fixture",
+            createdAt,
+          },
+          managedUrlVersion(responseBytes, {
+            id: versionId,
+            interruptAt: boundary,
+          }),
+        ),
+      ).rejects.toThrow(/interruption/i);
+      await store.close();
+
+      const [{ operation_id: operationId }] = queryDatabase(
+        root,
+        "SELECT operation_id FROM candidate_knowledge_managed_write_operations",
+      ) as [{ readonly operation_id: string }];
+      const stagingPath = join(root, "sources", `.intake-${digestSegment(operationId)}`);
+      if (boundary === "commit") {
+        await rm(stagingPath);
+        await writeFile(stagingPath, "mismatched staging residue", "utf8");
+      }
+      const reopened = await openCandidateKnowledgeStore(root);
+      const committed = boundary !== "target-publication";
+      expect(reopened.recoveryReport.entries).toEqual([
+        {
+          kind: "create",
+          phase: committed ? "committed" : "targeted",
+          outcome: !committed ? "aborted" : boundary === "commit" ? "preserved" : "completed",
+        },
+      ]);
+      expect(JSON.stringify(reopened.recoveryReport)).not.toContain(sourceId);
+      await reopened.close();
+      if (boundary === "commit") {
+        await expect(lstat(stagingPath)).resolves.toBeDefined();
+      }
+    }
+  });
+
+  it("preserves same-content staging replacements with a different inode", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "same-content-staging");
+    const sourcePath = join(parent, "same-content-staging.md");
+    const content = "same bytes, different inode";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "same-content-staging-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Same content staging",
+          createdAt,
+        },
+        managedVersion(sourcePath, content, {
+          id: "same-content-staging-version",
+          interruptAt: "staging",
+        }),
+      ),
+    ).rejects.toThrow(/interruption/i);
+    await store.close();
+
+    const [{ operation_id: operationId }] = queryDatabase(
+      root,
+      "SELECT operation_id FROM candidate_knowledge_managed_write_operations",
+    ) as [{ readonly operation_id: string }];
+    const stagingPath = join(root, "sources", `.intake-${digestSegment(operationId)}`);
+    const original = await lstat(stagingPath);
+    const originalBackupPath = `${stagingPath}.original`;
+    await link(stagingPath, originalBackupPath);
+    const replacementPath = `${stagingPath}.replacement`;
+    await writeFile(replacementPath, content, "utf8");
+    const replacement = await lstat(replacementPath);
+    expect({ dev: replacement.dev, ino: replacement.ino }).not.toEqual({
+      dev: original.dev,
+      ino: original.ino,
+    });
+    await rm(stagingPath);
+    await rename(replacementPath, stagingPath);
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    expect(reopened.recoveryReport.entries).toEqual([
+      { kind: "create", phase: "prepared", outcome: "preserved" },
+    ]);
+    await expect(readFile(stagingPath, "utf8")).resolves.toBe(content);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT phase, claim_generation
+         FROM candidate_knowledge_managed_write_recovery_claims
+         WHERE operation_id = '${operationId}'`,
+      ),
+    ).toEqual([{ phase: "prepared", claim_generation: 3 }]);
+    await reopened.close();
+
+    await rm(stagingPath);
+    await rename(originalBackupPath, stagingPath);
+    const retried = await openCandidateKnowledgeStore(root);
+    expect(retried.recoveryReport.entries).toEqual([
+      { kind: "create", phase: "prepared", outcome: "aborted" },
+    ]);
+    await expect(lstat(stagingPath)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(
+      queryDatabase(
+        root,
+        `SELECT phase, claim_generation
+         FROM candidate_knowledge_managed_write_recovery_claims
+         WHERE operation_id = '${operationId}'`,
+      ),
+    ).toEqual([{ phase: "prepared", claim_generation: 4 }]);
+    await retried.close();
+  });
+
+  it("preserves same-content committed staging residue with a different inode", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "same-content-committed");
+    const sourcePath = join(parent, "same-content-committed.md");
+    const content = "same committed bytes, different inode";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "same-content-committed-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Same content committed",
+          createdAt,
+        },
+        managedVersion(sourcePath, content, {
+          id: "same-content-committed-version",
+          interruptAt: "commit",
+        }),
+      ),
+    ).rejects.toThrow(/interruption/i);
+    await store.close();
+
+    const [{ operation_id: operationId }] = queryDatabase(
+      root,
+      "SELECT operation_id FROM candidate_knowledge_managed_write_operations",
+    ) as [{ readonly operation_id: string }];
+    const stagingPath = join(root, "sources", `.intake-${digestSegment(operationId)}`);
+    const targetPath = join(
+      root,
+      "sources",
+      digestSegment("same-content-committed-source"),
+      digestSegment("same-content-committed-version"),
+    );
+    const original = await lstat(stagingPath);
+    const replacementPath = `${stagingPath}.replacement`;
+    await writeFile(replacementPath, content, "utf8");
+    const replacement = await lstat(replacementPath);
+    expect({ dev: replacement.dev, ino: replacement.ino }).not.toEqual({
+      dev: original.dev,
+      ino: original.ino,
+    });
+    await rm(stagingPath);
+    await rename(replacementPath, stagingPath);
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    expect(reopened.recoveryReport.entries).toEqual([
+      { kind: "create", phase: "committed", outcome: "preserved" },
+    ]);
+    await expect(readFile(stagingPath, "utf8")).resolves.toBe(content);
+    await reopened.close();
+
+    const originalTarget = await lstat(targetPath);
+    const replacementTargetPath = `${targetPath}.replacement`;
+    await writeFile(replacementTargetPath, content, "utf8");
+    const replacementTarget = await lstat(replacementTargetPath);
+    expect({ dev: replacementTarget.dev, ino: replacementTarget.ino }).not.toEqual({
+      dev: originalTarget.dev,
+      ino: originalTarget.ino,
+    });
+    await rm(targetPath);
+    await rename(replacementTargetPath, targetPath);
+
+    const targetReopened = await openCandidateKnowledgeStore(root);
+    expect(targetReopened.recoveryReport.entries).toEqual([
+      { kind: "create", phase: "committed", outcome: "preserved" },
+    ]);
+    await expect(readFile(targetPath, "utf8")).resolves.toBe(content);
+    await targetReopened.close();
+  });
+
+  it("uses a future latest journal event timestamp for recovery terminalization", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "future-journal-event");
+    const sourcePath = join(parent, "future-journal-event.md");
+    const content = "future journal event";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "future-journal-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Future journal event",
+          createdAt,
+        },
+        managedVersion(sourcePath, content, {
+          id: "future-journal-version",
+          interruptAt: "target-publication",
+        }),
+      ),
+    ).rejects.toThrow(/interruption/i);
+    await store.close();
+
+    const [{ operation_id: operationId }] = queryDatabase(
+      root,
+      "SELECT operation_id FROM candidate_knowledge_managed_write_operations",
+    ) as [{ readonly operation_id: string }];
+    const future = "2099-08-21T14:00:00.000Z";
+    mutateDatabase(
+      root,
+      `DROP TRIGGER candidate_knowledge_managed_write_events_immutable_update;
+       UPDATE candidate_knowledge_managed_write_events
+       SET created_at = '${future}'
+       WHERE operation_id = '${operationId}' AND sequence = 1;`,
+    );
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    expect(reopened.recoveryReport.entries).toEqual([
+      { kind: "create", phase: "targeted", outcome: "aborted" },
+    ]);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT created_at
+         FROM candidate_knowledge_managed_write_events
+         WHERE operation_id = '${operationId}'
+         ORDER BY sequence DESC
+         LIMIT 1`,
+      ),
+    ).toEqual([{ created_at: future }]);
+    await reopened.close();
+  });
+
+  it("recovers changed and no-op append interruptions without changing the current version", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "append-recovery");
+    const sourcePath = join(parent, "append-recovery.md");
+    await writeFile(sourcePath, "first", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "append-recovery-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Append recovery",
+        createdAt,
+      },
+      managedVersion(sourcePath, "first", { id: "append-recovery-v1" }),
+    );
+
+    await writeFile(sourcePath, "second", "utf8");
+    await expect(
+      store.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "append-recovery-source",
+        managedVersion(sourcePath, "second", {
+          id: "append-recovery-v2",
+          createdAt: "2026-08-21T14:02:00.000Z",
+          interruptAt: "target-publication",
+        }),
+      ),
+    ).rejects.toThrow(/interruption/i);
+    await store.close();
+
+    const afterChanged = await openCandidateKnowledgeStore(root);
+    expect(afterChanged.recoveryReport.entries).toEqual([
+      { kind: "append", phase: "targeted", outcome: "aborted" },
+    ]);
+    await expect(
+      afterChanged.listCandidateKnowledgeSourceVersions("ckb-default", "append-recovery-source"),
+    ).resolves.toHaveLength(1);
+
+    await writeFile(sourcePath, "first", "utf8");
+    await expect(
+      afterChanged.appendManagedCandidateKnowledgeFileVersion(
+        "ckb-default",
+        "append-recovery-source",
+        managedVersion(sourcePath, "first", {
+          id: "append-recovery-noop",
+          createdAt: "2026-08-21T14:03:00.000Z",
+          interruptAt: "after-staging-cleanup",
+        }),
+      ),
+    ).rejects.toThrow(/interruption/i);
+    await afterChanged.close();
+
+    const afterNoop = await openCandidateKnowledgeStore(root);
+    expect(afterNoop.recoveryReport.entries).toEqual([
+      { kind: "append", phase: "prepared", outcome: "aborted" },
+    ]);
+    await expect(
+      afterNoop.listCandidateKnowledgeSourceVersions("ckb-default", "append-recovery-source"),
+    ).resolves.toHaveLength(1);
+    await expect(
+      afterNoop.getManagedCandidateKnowledgeFilePath(
+        "ckb-default",
+        "append-recovery-source",
+        "append-recovery-v1",
+      ),
+    ).resolves.toBeTypeOf("string");
+    await afterNoop.close();
+  });
+
+  it("preserves legacy and unsafe recovery artifacts without exposing their identities", async () => {
+    const parent = await temporaryParent();
+    const legacyRoot = join(parent, "legacy");
+    const legacyStore = await initializeCandidateKnowledgeStore(initialization(legacyRoot));
+    await legacyStore.close();
+    mutateDatabase(
+      legacyRoot,
+      `INSERT INTO candidate_knowledge_managed_write_operations
+         (operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at)
+       VALUES ('legacy-operation', 'ckb-default', 'legacy-source', 'legacy-version', 'create', '${createdAt}')`,
+    );
+    const legacyReopened = await openCandidateKnowledgeStore(legacyRoot);
+    expect(legacyReopened.recoveryReport).toEqual({
+      schemaVersion: 1,
+      entries: [{ kind: "create", phase: "prepared", outcome: "preserved" }],
+    });
+    expect(JSON.stringify(legacyReopened.recoveryReport)).not.toContain("legacy-operation");
+    await legacyReopened.close();
+
+    const artifactRoot = join(parent, "unsafe-artifact");
+    const sourcePath = join(parent, "unsafe-artifact.md");
+    await writeFile(sourcePath, "unsafe artifact source", "utf8");
+    const artifactStore = await initializeCandidateKnowledgeStore(initialization(artifactRoot));
+    await expect(
+      artifactStore.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "unsafe-source",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Unsafe artifact",
+          createdAt,
+        },
+        managedVersion(sourcePath, "unsafe artifact source", {
+          id: "unsafe-version",
+          interruptAt: "staging",
+        }),
+      ),
+    ).rejects.toThrow(/interruption/i);
+    await artifactStore.close();
+    const [{ operation_id: operationId }] = queryDatabase(
+      artifactRoot,
+      "SELECT operation_id FROM candidate_knowledge_managed_write_operations",
+    ) as [{ readonly operation_id: string }];
+    const stagingPath = join(artifactRoot, "sources", `.intake-${digestSegment(operationId)}`);
+    const externalPath = join(parent, "external-artifact.md");
+    await writeFile(externalPath, "external artifact", "utf8");
+    await rm(stagingPath);
+    await symlink(externalPath, stagingPath, "file");
+    const artifactReopened = await openCandidateKnowledgeStore(artifactRoot);
+    expect(artifactReopened.recoveryReport).toEqual({
+      schemaVersion: 1,
+      entries: [{ kind: "create", phase: "prepared", outcome: "preserved" }],
+    });
+    expect(JSON.stringify(artifactReopened.recoveryReport)).not.toContain(operationId);
+    const preservedStaging = await lstat(stagingPath);
+    expect(preservedStaging.isSymbolicLink()).toBe(true);
+    await artifactReopened.close();
+  });
+
+  it("migrates a populated v15 legacy journal without claiming it for recovery", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "populated-v15");
+    const initialized = await initializeCandidateKnowledgeStore(initialization(root));
+    await initialized.close();
+
+    mutateDatabase(
+      root,
+      `INSERT INTO candidate_knowledge_managed_write_operations
+         (operation_id, candidate_knowledge_base_id, source_id, requested_version_id, kind, created_at)
+       VALUES ('v15-legacy-operation', 'ckb-default', 'v15-legacy-source', 'v15-legacy-version', 'create', '${createdAt}');
+       INSERT INTO candidate_knowledge_managed_write_events
+         (operation_id, sequence, state, target_version_id, created_at)
+       VALUES ('v15-legacy-operation', 1, 'targeted', 'v15-legacy-version', '${createdAt}');
+       DROP TRIGGER candidate_knowledge_managed_write_operations_ownership_insert;
+       DROP TRIGGER candidate_knowledge_managed_write_recovery_claims_insert;
+       DROP TRIGGER candidate_knowledge_managed_write_recovery_claims_immutable_update;
+       DROP TRIGGER candidate_knowledge_managed_write_recovery_claims_immutable_delete;
+       DROP TABLE candidate_knowledge_managed_write_recovery_claims;
+       DROP TABLE candidate_knowledge_managed_write_staging_identities;
+       ALTER TABLE candidate_knowledge_managed_write_operations DROP COLUMN owner_kind;
+       ALTER TABLE candidate_knowledge_managed_write_operations DROP COLUMN owner_schema_version;
+       ALTER TABLE candidate_knowledge_managed_write_operations DROP COLUMN owner_generation;
+       ALTER TABLE candidate_knowledge_managed_write_operations DROP COLUMN requested_media_type;
+       ALTER TABLE candidate_knowledge_managed_write_operations DROP COLUMN requested_checksum;
+       ALTER TABLE candidate_knowledge_managed_write_operations DROP COLUMN requested_size_bytes;
+       DELETE FROM schema_migrations WHERE version IN (16, 17);`,
+    );
+
+    expect(
+      queryDatabase(root, "PRAGMA table_info(candidate_knowledge_managed_write_operations)").map(
+        (row) => row.name,
+      ),
+    ).not.toContain("owner_generation");
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    expect(reopened.recoveryReport.entries).toEqual([
+      { kind: "create", phase: "targeted", outcome: "preserved" },
+    ]);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT operation.owner_kind,
+                operation.owner_schema_version,
+                operation.owner_generation,
+                operation.requested_media_type,
+                operation.requested_checksum,
+                operation.requested_size_bytes,
+                staging.operation_id AS staging_operation_id
+         FROM candidate_knowledge_managed_write_operations AS operation
+         LEFT JOIN candidate_knowledge_managed_write_staging_identities AS staging
+           ON staging.operation_id = operation.operation_id
+         WHERE operation.operation_id = 'v15-legacy-operation'`,
+      ),
+    ).toEqual([
+      {
+        owner_kind: null,
+        owner_schema_version: null,
+        owner_generation: null,
+        requested_media_type: null,
+        requested_checksum: null,
+        requested_size_bytes: null,
+        staging_operation_id: null,
+      },
+    ]);
+    expect(
+      queryDatabase(
+        root,
+        `SELECT sequence, state, target_version_id, created_at
+         FROM candidate_knowledge_managed_write_events
+         WHERE operation_id = 'v15-legacy-operation'`,
+      ),
+    ).toEqual([
+      {
+        sequence: 1,
+        state: "targeted",
+        target_version_id: "v15-legacy-version",
+        created_at: createdAt,
+      },
+    ]);
+    await reopened.close();
   });
 });
