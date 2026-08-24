@@ -326,6 +326,9 @@ Moved-candidate preview and confirmed one-source member move are also shared
 adapter controls. Neither accepts a target path: the application derives one
 unique exact-integrity match from a fresh bounded scan. Move returns only
 opaque directory/source identity, check time, and `moved` or `current` status.
+Directory reconciliation preview and confirmed apply are shared adapters too.
+Apply forwards only approved missing source IDs, refuses incomplete scans, and
+returns deterministic path-free complete, current, or partial progress.
 
 ## Deferred integration
 

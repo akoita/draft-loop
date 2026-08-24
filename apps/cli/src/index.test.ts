@@ -7,6 +7,7 @@ import type {
   ApplicationIo,
   ApplicationService,
   ApplyKnowledgeSourceDirectoryMemberMoveResult,
+  ApplyKnowledgeSourceDirectoryReconciliationResult,
   ApplyKnowledgeSourceDirectoryRefreshResult,
   ApplyKnowledgeSourceDirectoryRootRebindResult,
   CandidateKnowledgeSourceManifest,
@@ -25,6 +26,7 @@ import type {
   KnowledgeSourceRefreshStateResult,
   KnowledgeSourceRetirementResult,
   PreviewKnowledgeSourceDirectoryMovedCandidatesResult,
+  PreviewKnowledgeSourceDirectoryReconciliationResult,
   PreviewKnowledgeSourceDirectoryRefreshResult,
   PreviewKnowledgeSourceDirectoryRootRebindResult,
   StatusCommand,
@@ -411,6 +413,50 @@ function knowledgeSourceDirectoryMemberMoveResult(
     status,
     ...overrides,
   };
+}
+
+function knowledgeSourceDirectoryReconciliationPreviewResult(
+  overrides: Partial<PreviewKnowledgeSourceDirectoryReconciliationResult> = {},
+): PreviewKnowledgeSourceDirectoryReconciliationResult {
+  return {
+    directoryId: "directory-opaque",
+    checkedAt: "2026-08-23T10:08:00.000Z",
+    members: [
+      { sourceId: "source-current", status: "current" },
+      { sourceId: "source-changed", status: "changed" },
+      { sourceId: "source-retired", status: "already-retired" },
+      { sourceId: "source-conflicted", status: "conflicted" },
+      { sourceId: "source-moved", status: "moved-candidate" },
+      { sourceId: "source-missing", status: "missing" },
+    ],
+    currentCount: 1,
+    changedCount: 1,
+    alreadyRetiredCount: 1,
+    conflictedCount: 1,
+    movedCandidateCount: 1,
+    missingCount: 1,
+    newSourceCount: 1,
+    scanStatus: "complete",
+    scannedEntryCount: 6,
+    discoveredFileCount: 4,
+    skippedEntryCount: 0,
+    ...overrides,
+  };
+}
+
+function knowledgeSourceDirectoryReconciliationApplyResult(
+  status: "applied" | "current" | "partial" = "applied",
+  overrides: Partial<ApplyKnowledgeSourceDirectoryReconciliationResult> = {},
+): ApplyKnowledgeSourceDirectoryReconciliationResult {
+  return {
+    directoryId: "directory-opaque",
+    checkedAt: "2026-08-23T10:08:00.000Z",
+    status,
+    retiredSourceIds: status === "applied" ? ["source-missing"] : [],
+    alreadyRetiredSourceIds: status === "current" ? ["source-retired"] : [],
+    ...(status === "partial" ? { failedSourceId: "source-missing" } : {}),
+    ...overrides,
+  } as ApplyKnowledgeSourceDirectoryReconciliationResult;
 }
 
 function knowledgeDuplicateGroups(): readonly KnowledgeSourceDuplicateGroup[] {
@@ -1848,6 +1894,415 @@ describe("candidate knowledge source inspection CLI controls", () => {
       ]),
     ).rejects.toBe(failure);
     expect(dependencies.lines).toEqual([]);
+  });
+
+  it("maps directory reconciliation preview and apply with bounded path-free output", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-directory-store");
+    const knowledgeBaseId = "base-one";
+    const directoryId = "directory-opaque";
+    const privateDirectoryPath = resolve("private-reconciliation-directory");
+    const previewKnowledgeSourceDirectoryReconciliation = vi.fn().mockResolvedValueOnce({
+      ...knowledgeSourceDirectoryReconciliationPreviewResult(),
+      privateDirectoryPath,
+      privateContent: "private directory content",
+      checksum: "a".repeat(64),
+    } as unknown as PreviewKnowledgeSourceDirectoryReconciliationResult);
+    const applyKnowledgeSourceDirectoryReconciliation = vi
+      .fn()
+      .mockResolvedValueOnce(knowledgeSourceDirectoryReconciliationApplyResult("applied"))
+      .mockResolvedValueOnce(knowledgeSourceDirectoryReconciliationApplyResult("current"))
+      .mockResolvedValueOnce(
+        knowledgeSourceDirectoryReconciliationApplyResult("partial", {
+          retiredSourceIds: ["source-old"],
+          alreadyRetiredSourceIds: ["source-retired"],
+          failedSourceId: "source-failed",
+        }),
+      );
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryReconciliation,
+      applyKnowledgeSourceDirectoryReconciliation,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-preview",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--max-depth",
+      "4",
+      "--max-scanned-entries",
+      "8",
+      "--max-accepted-files",
+      "3",
+      "--max-accepted-bytes",
+      "32",
+      "--max-source-bytes",
+      "16",
+      "--max-chunk-characters",
+      "12",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-apply",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--approved-retirement-source-id",
+      "source-missing",
+      "--approved-retirement-source-id",
+      "source-retired",
+      "--confirm",
+      "--max-accepted-files",
+      "2",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-apply",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--approved-retirement-source-id",
+      "source-retired",
+      "--confirm",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-apply",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--approved-retirement-source-id",
+      "source-old",
+      "--approved-retirement-source-id",
+      "source-retired",
+      "--approved-retirement-source-id",
+      "source-failed",
+      "--confirm",
+    ]);
+
+    expect(previewKnowledgeSourceDirectoryReconciliation).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      options: {
+        maxDepth: 4,
+        maxScannedEntries: 8,
+        maxAcceptedFiles: 3,
+        maxAcceptedBytes: 32,
+        maxSourceBytes: 16,
+        maxChunkCharacters: 12,
+      },
+    });
+    expect(applyKnowledgeSourceDirectoryReconciliation).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      approvedRetirementSourceIds: ["source-missing", "source-retired"],
+      options: { maxAcceptedFiles: 2 },
+    });
+    expect(applyKnowledgeSourceDirectoryReconciliation).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      approvedRetirementSourceIds: ["source-retired"],
+    });
+    expect(applyKnowledgeSourceDirectoryReconciliation).toHaveBeenNthCalledWith(3, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      approvedRetirementSourceIds: ["source-old", "source-retired", "source-failed"],
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:08:00.000Z",
+        members: [
+          { sourceId: "source-changed", status: "changed" },
+          { sourceId: "source-conflicted", status: "conflicted" },
+          { sourceId: "source-current", status: "current" },
+          { sourceId: "source-missing", status: "missing" },
+          { sourceId: "source-moved", status: "moved-candidate" },
+          { sourceId: "source-retired", status: "already-retired" },
+        ],
+        memberCount: 6,
+        membersTruncated: false,
+        currentCount: 1,
+        changedCount: 1,
+        alreadyRetiredCount: 1,
+        conflictedCount: 1,
+        movedCandidateCount: 1,
+        missingCount: 1,
+        newSourceCount: 1,
+        scanStatus: "complete",
+        scannedEntryCount: 6,
+        discoveredFileCount: 4,
+        skippedEntryCount: 0,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:08:00.000Z",
+        status: "applied",
+        retiredSourceIds: ["source-missing"],
+        retiredSourceCount: 1,
+        retiredSourceIdsTruncated: false,
+        alreadyRetiredSourceIds: [],
+        alreadyRetiredSourceCount: 0,
+        alreadyRetiredSourceIdsTruncated: false,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:08:00.000Z",
+        status: "current",
+        retiredSourceIds: [],
+        retiredSourceCount: 0,
+        retiredSourceIdsTruncated: false,
+        alreadyRetiredSourceIds: ["source-retired"],
+        alreadyRetiredSourceCount: 1,
+        alreadyRetiredSourceIdsTruncated: false,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:08:00.000Z",
+        status: "partial",
+        retiredSourceIds: ["source-old"],
+        retiredSourceCount: 1,
+        retiredSourceIdsTruncated: false,
+        alreadyRetiredSourceIds: ["source-retired"],
+        alreadyRetiredSourceCount: 1,
+        alreadyRetiredSourceIdsTruncated: false,
+        failedSourceId: "source-failed",
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(privateDirectoryPath);
+    expect(output).not.toContain("private directory content");
+    expect(output).not.toContain("a".repeat(64));
+  });
+
+  it("requires confirmation before invoking directory reconciliation apply", async () => {
+    const dependencies = harness();
+    const applyKnowledgeSourceDirectoryReconciliation = vi.fn(async () =>
+      knowledgeSourceDirectoryReconciliationApplyResult("applied"),
+    );
+    const knowledgeService = {
+      applyKnowledgeSourceDirectoryReconciliation,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "directory-reconciliation-apply",
+        resolve("private-directory-store"),
+        "base-one",
+        "directory-opaque",
+        "--approved-retirement-source-id",
+        "source-missing",
+      ]),
+    ).rejects.toThrow("knowledge source directory-reconciliation-apply requires --confirm");
+    expect(applyKnowledgeSourceDirectoryReconciliation).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("validates full directory reconciliation arrays and phase invariants", async () => {
+    const dependencies = harness();
+    const validPreview = knowledgeSourceDirectoryReconciliationPreviewResult();
+    const previewResults = [
+      { ...validPreview, status: "preview" },
+      { ...validPreview, directoryId: "other-directory" },
+      { ...validPreview, checkedAt: "not-a-timestamp" },
+      { ...validPreview, members: [{ sourceId: "source-a", status: "current" }], currentCount: 0 },
+      {
+        ...validPreview,
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-a", status: "changed" },
+        ],
+        currentCount: 1,
+        changedCount: 1,
+        alreadyRetiredCount: 0,
+        conflictedCount: 0,
+        movedCandidateCount: 0,
+        missingCount: 0,
+      },
+      { ...validPreview, scanStatus: "incomplete", skippedEntryCount: 0 },
+      { ...validPreview, scanStatus: "complete", skippedEntryCount: 1 },
+      { ...validPreview, discoveredFileCount: 7 },
+    ];
+    const previewKnowledgeSourceDirectoryReconciliation = vi.fn();
+    for (const result of previewResults) {
+      previewKnowledgeSourceDirectoryReconciliation.mockResolvedValueOnce(
+        result as unknown as PreviewKnowledgeSourceDirectoryReconciliationResult,
+      );
+    }
+
+    const validApplied = knowledgeSourceDirectoryReconciliationApplyResult("applied");
+    const validCurrent = knowledgeSourceDirectoryReconciliationApplyResult("current");
+    const validPartial = knowledgeSourceDirectoryReconciliationApplyResult("partial");
+    const applyResults = [
+      { ...validApplied, status: "invalid" },
+      { ...validApplied, retiredSourceIds: ["source-a", "source-a"] },
+      { ...validApplied, retiredSourceIds: ["source-a"], alreadyRetiredSourceIds: ["source-a"] },
+      { ...validApplied, retiredSourceIds: [] },
+      { ...validCurrent, retiredSourceIds: ["source-a"] },
+      { ...validCurrent, failedSourceId: "source-failed" },
+      { ...validPartial, failedSourceId: undefined },
+      { ...validPartial, retiredSourceIds: ["source-missing"] },
+    ];
+    const applyKnowledgeSourceDirectoryReconciliation = vi.fn();
+    for (const result of applyResults) {
+      applyKnowledgeSourceDirectoryReconciliation.mockResolvedValueOnce(
+        result as unknown as ApplyKnowledgeSourceDirectoryReconciliationResult,
+      );
+    }
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryReconciliation,
+      applyKnowledgeSourceDirectoryReconciliation,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const previewCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-preview",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+    ] as const;
+    const applyCommand = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-apply",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      "--approved-retirement-source-id",
+      "source-a",
+      "--approved-retirement-source-id",
+      "source-missing",
+      "--approved-retirement-source-id",
+      "source-retired",
+      "--approved-retirement-source-id",
+      "source-failed",
+      "--confirm",
+    ] as const;
+
+    for (let index = 0; index < previewResults.length; index += 1) {
+      await expect(cli.parseAsync(previewCommand)).rejects.toThrow(
+        "The candidate knowledge source directory reconciliation result was invalid.",
+      );
+    }
+    for (let index = 0; index < applyResults.length; index += 1) {
+      await expect(cli.parseAsync(applyCommand)).rejects.toThrow(
+        "The candidate knowledge source directory reconciliation result was invalid.",
+      );
+    }
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("caps directory reconciliation arrays after validating their full contents", async () => {
+    const dependencies = harness();
+    const members = Array.from({ length: 300 }, (_, index) => ({
+      sourceId: `source-${String(index).padStart(3, "0")}`,
+      status: "current" as const,
+    }));
+    const sourceIds = members.map(({ sourceId }) => sourceId);
+    const previewResult = knowledgeSourceDirectoryReconciliationPreviewResult({
+      members,
+      currentCount: members.length,
+      changedCount: 0,
+      alreadyRetiredCount: 0,
+      conflictedCount: 0,
+      movedCandidateCount: 0,
+      missingCount: 0,
+      newSourceCount: 0,
+      scannedEntryCount: members.length,
+      discoveredFileCount: members.length,
+      skippedEntryCount: 0,
+    });
+    const applyResult = knowledgeSourceDirectoryReconciliationApplyResult("applied", {
+      retiredSourceIds: sourceIds,
+    });
+    const previewKnowledgeSourceDirectoryReconciliation = vi.fn(async () => previewResult);
+    const applyKnowledgeSourceDirectoryReconciliation = vi.fn(async () => applyResult);
+    const knowledgeService = {
+      previewKnowledgeSourceDirectoryReconciliation,
+      applyKnowledgeSourceDirectoryReconciliation,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-preview",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-reconciliation-apply",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      ...sourceIds.flatMap((sourceId) => ["--approved-retirement-source-id", sourceId]),
+      "--confirm",
+    ]);
+
+    const [previewOutput, applyOutput] = dependencies.lines.map((line) => JSON.parse(line));
+    expect(previewOutput.memberCount).toBe(300);
+    expect(previewOutput.membersTruncated).toBe(true);
+    expect(previewOutput.members).toEqual(members.slice(0, 256));
+    expect(applyOutput.status).toBe("applied");
+    expect(applyOutput.retiredSourceCount).toBe(300);
+    expect(applyOutput.retiredSourceIdsTruncated).toBe(true);
+    expect(applyOutput.retiredSourceIds).toEqual(sourceIds.slice(0, 256));
   });
 
   it("maps moved-candidate preview and member moves with bounded path-free output", async () => {

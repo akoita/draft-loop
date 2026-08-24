@@ -1621,6 +1621,67 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("validates confirmed path-free directory reconciliation controls", async () => {
+    const input = { storeId: "store-1", knowledgeBaseId: "kb-1", directoryId: "directory-1" };
+    expect(
+      validateBridgeCommand({ type: "knowledge.directory-reconciliation-preview", input }),
+    ).toEqual({ type: "knowledge.directory-reconciliation-preview", input });
+    const applyInput = { ...input, approvedRetirementSourceIds: ["source-1"], confirmed: true };
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.directory-reconciliation-apply",
+        input: applyInput,
+      }),
+    ).toEqual({ type: "knowledge.directory-reconciliation-apply", input: applyInput });
+    const preview = {
+      ...input,
+      checkedAt: "2026-08-24T10:00:00.000Z",
+      members: [{ sourceId: "source-1", status: "missing" }],
+      memberCount: 1,
+      membersTruncated: false,
+      currentCount: 0,
+      changedCount: 0,
+      alreadyRetiredCount: 0,
+      conflictedCount: 0,
+      movedCandidateCount: 0,
+      missingCount: 1,
+      newSourceCount: 0,
+      scanStatus: "complete",
+      scannedEntryCount: 0,
+      discoveredFileCount: 0,
+      skippedEntryCount: 0,
+    } as const;
+    const previewPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: preview }),
+        ["knowledge.directory-reconciliation-preview"],
+      ),
+    );
+    await expect(
+      previewPort.execute({ type: "knowledge.directory-reconciliation-preview", input }),
+    ).resolves.toEqual({ ok: true, value: preview });
+    const applied = {
+      ...input,
+      checkedAt: preview.checkedAt,
+      status: "applied",
+      retiredSourceIds: ["source-1"],
+      retiredSourceCount: 1,
+      retiredSourceIdsTruncated: false,
+      alreadyRetiredSourceIds: [],
+      alreadyRetiredSourceCount: 0,
+      alreadyRetiredSourceIdsTruncated: false,
+    } as const;
+    const applyPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: applied }),
+        ["knowledge.directory-reconciliation-apply"],
+      ),
+    );
+    await expect(
+      applyPort.execute({ type: "knowledge.directory-reconciliation-apply", input: applyInput }),
+    ).resolves.toEqual({ ok: true, value: applied });
+  });
+
   it("validates path-free candidate-knowledge file-version append", async () => {
     const input = {
       storeId: "store-1",

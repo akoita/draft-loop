@@ -145,6 +145,11 @@ pnpm --filter @draft-loop/cli start knowledge source directory-moved-candidates 
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID
 pnpm --filter @draft-loop/cli start knowledge source directory-member-move \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID SOURCE_ID --confirm
+pnpm --filter @draft-loop/cli start knowledge source directory-reconciliation-preview \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID
+pnpm --filter @draft-loop/cli start knowledge source directory-reconciliation-apply \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID \
+  --approved-retirement-source-id SOURCE_ID --confirm
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -187,6 +192,8 @@ Adding members, reconciliation, deletion, backup, and restore remain staged.
 Moved-candidate preview reports only unique exact-integrity source matches.
 Confirmed one-source member move repeats the bounded scan, changes only the
 selected member's remembered origin, and returns `moved` or idempotent `current`.
+Directory reconciliation previews every member state and applies only explicitly
+approved missing-member retirements; incomplete scans never retire sources.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

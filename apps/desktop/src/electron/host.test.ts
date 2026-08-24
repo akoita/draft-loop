@@ -3357,6 +3357,33 @@ describe("candidate knowledge native controls", () => {
           input: { ...input, sourceId, confirmed: true },
         }),
       ).resolves.toMatchObject({ ok: true, value: { status: "current" } });
+      await rm(movedPath);
+      await expect(
+        host.invoke({ type: "knowledge.directory-reconciliation-preview", input }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: {
+          ...input,
+          members: [{ sourceId, status: "missing" }],
+          missingCount: 1,
+          scanStatus: "complete",
+        },
+      });
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-reconciliation-apply",
+          input: { ...input, approvedRetirementSourceIds: [sourceId], confirmed: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-reconciliation-apply",
+          input: { ...input, approvedRetirementSourceIds: [sourceId], confirmed: true },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { ...input, status: "applied", retiredSourceIds: [sourceId] },
+      });
     } finally {
       await rm(parent, { recursive: true, force: true });
     }

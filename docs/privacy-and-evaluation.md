@@ -89,6 +89,10 @@ They derive a unique exact-integrity match from one bounded scan without
 accepting a replacement path. Generic results contain only opaque identities,
 time, status, and scan counts; paths and integrity tuples remain local.
 
+Directory reconciliation exposes only opaque member identities, statuses, and
+counts. Confirmed apply forwards only explicitly approved source IDs and returns
+bounded applied/already-retired/failed identities; local paths remain private.
+
 Origin status and refresh-state results are content-free. They expose only
 opaque source/version identity, lifecycle status, and timestamps. Explicit file
 refresh reads the sensitive remembered local origin without returning it. URL
