@@ -1283,6 +1283,58 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("keeps restore selections native and accepts only the fail-if-existing policy", async () => {
+    const restoreInput = {
+      packageSelection: "native-dialog",
+      destinationSelection: "native-dialog",
+      name: "restored-candidate-store",
+      collision: "fail-if-destination-exists",
+    } as const;
+    expect(
+      validateBridgeCommand({ type: "knowledge.backup-restore", input: restoreInput }),
+    ).toEqual({ type: "knowledge.backup-restore", input: restoreInput });
+    for (const input of [
+      { ...restoreInput, collision: "overwrite" },
+      { ...restoreInput, packagePath: "/private/backup" },
+      { ...restoreInput, destinationSelection: "path" },
+      { ...restoreInput, name: "../restored" },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "knowledge.backup-restore", input })).toThrow(
+        "invalid",
+      );
+    }
+
+    const restoredResult = {
+      status: "restored",
+      format: "draft-loop-candidate-knowledge-backup",
+      schemaVersion: 1,
+      storeId: "store-1",
+      manifestChecksum: "a".repeat(64),
+      knowledgeBaseCount: 1,
+      sourceCount: 2,
+      versionCount: 3,
+      contentObjectCount: 3,
+      contentBytes: 128,
+      integrity: "integrity-verified-not-authenticity",
+    } as const;
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: restoredResult }), ["knowledge.backup-restore"]),
+    );
+    await expect(
+      port.execute({ type: "knowledge.backup-restore", input: restoreInput }),
+    ).resolves.toEqual({ ok: true, value: restoredResult });
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { ...restoredResult, destination: "/private/store" } }),
+        ["knowledge.backup-restore"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({ type: "knowledge.backup-restore", input: restoreInput }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("validates native-only path-free candidate-knowledge file intake", async () => {
     const input = {
       storeId: "store-1",

@@ -116,6 +116,9 @@ pnpm --filter @draft-loop/cli start knowledge store backup \
   ./candidate-knowledge ./candidate-knowledge-backup --yes
 pnpm --filter @draft-loop/cli start knowledge store inspect-backup \
   ./candidate-knowledge-backup
+pnpm --filter @draft-loop/cli start knowledge store restore \
+  ./candidate-knowledge-backup ./restored-candidate-knowledge \
+  --collision fail-if-destination-exists --yes
 pnpm --filter @draft-loop/cli start knowledge base create ./candidate-knowledge "Public projects"
 pnpm --filter @draft-loop/cli start knowledge source import \
   ./candidate-knowledge KNOWLEDGE_BASE_ID ./career-history.md
@@ -197,10 +200,13 @@ in source-ID order; a later failure reports bounded path-free partial progress.
 Adding directory members requires confirmation, rescans the remembered root,
 and reports deterministic complete or partial progress using opaque source IDs.
 Portable backup export requires an approved new destination and returns only
-path-free integrity counts. The strict directory package can be inspected
-before restore; it excludes machine-local origins, active locks, recovery
-journals, application/provider credentials, and unrelated workspace data. Restore and physical
-deletion remain staged.
+path-free integrity counts. The strict directory package can be inspected and
+restored to an approved new store directory with an explicit
+`fail-if-destination-exists` collision policy. Restore verifies the package
+before writing, preserves logical store, CKB, source, and version identities,
+and leaves every source unbound from its original machine. The package excludes
+machine-local origins, active locks, recovery journals, application/provider
+credentials, and unrelated workspace data. Physical deletion remains staged.
 Moved-candidate preview reports only unique exact-integrity source matches.
 Confirmed one-source member move repeats the bounded scan, changes only the
 selected member's remembered origin, and returns `moved` or idempotent `current`.

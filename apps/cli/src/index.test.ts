@@ -755,6 +755,85 @@ describe("candidate knowledge CLI controls", () => {
     expect(output).not.toContain(storeRoot);
     expect(output).not.toContain(destination);
   });
+
+  it("restores only an explicitly approved backup with the supported collision policy", async () => {
+    const dependencies = harness();
+    const packagePath = resolve("private-backup-package");
+    const destination = resolve("private-restored-store");
+    const restoredResult = {
+      status: "restored" as const,
+      format: "draft-loop-candidate-knowledge-backup" as const,
+      schemaVersion: 1 as const,
+      storeId: "store-opaque",
+      manifestChecksum: "a".repeat(64),
+      knowledgeBaseCount: 1,
+      sourceCount: 2,
+      versionCount: 3,
+      contentObjectCount: 3,
+      contentBytes: 128,
+      integrity: "integrity-verified-not-authenticity" as const,
+    };
+    const restoreCandidateKnowledgeStore = vi.fn(async () => restoredResult);
+    const knowledgeService = {
+      restoreCandidateKnowledgeStore,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "store",
+        "restore",
+        packagePath,
+        destination,
+        "--collision",
+        "fail-if-destination-exists",
+      ]),
+    ).rejects.toThrow(/requires --yes/i);
+    expect(restoreCandidateKnowledgeStore).not.toHaveBeenCalled();
+
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "store",
+        "restore",
+        packagePath,
+        destination,
+        "--collision",
+        "overwrite",
+        "--yes",
+      ]),
+    ).rejects.toThrow(/fail-if-destination-exists/i);
+    expect(restoreCandidateKnowledgeStore).not.toHaveBeenCalled();
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "store",
+      "restore",
+      packagePath,
+      destination,
+      "--collision",
+      "fail-if-destination-exists",
+      "--yes",
+    ]);
+    expect(restoreCandidateKnowledgeStore).toHaveBeenCalledWith({
+      packagePath,
+      destination,
+      collision: "fail-if-destination-exists",
+      approved: true,
+    });
+    expect(dependencies.lines).toEqual([JSON.stringify(restoredResult)]);
+  });
 });
 
 describe("candidate knowledge base maintenance CLI controls", () => {

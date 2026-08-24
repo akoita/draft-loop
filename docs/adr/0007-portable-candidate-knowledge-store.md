@@ -272,10 +272,14 @@ package, and publishes without replacing an existing destination. Origin and
 directory-root paths, writer coordination, write/recovery journals,
 application/provider credentials, and workspace/run data never enter the
 package. Checksums detect corruption or modification but do not authenticate
-package authorship. Restore and user-requested deletion remain separate Sprint
-2 slices. Directory membership and host-binding history are omitted, so restore
-must mark sources unbound. Any unmanaged version blocks export because its bytes
-cannot be proven complete.
+package authorship. Restore repeats inspection, builds and validates a migrated
+store in private staging, and publishes only to an approved absent destination.
+Its explicit `fail-if-destination-exists` policy rejects collisions; it does not
+merge stores, overwrite data, or rename store, CKB, source, or version IDs.
+Directory membership and host-binding history are omitted, so every restored
+source remains unbound. Restored URL provenance retains the path-free fetch time
+and classification without inventing original or final URLs. Any unmanaged
+version blocks export because its bytes cannot be proven complete.
 
 ### Retention policy
 
@@ -415,8 +419,8 @@ This decision deliberately leaves the following outside the product workflow:
   deletion;
 - missing/corrupt blob repair, cleanup approval, and reconciliation of unknown
   entries;
-- CKB deletion semantics, portable restore conflict handling, or migration
-  rollback; and
+- CKB deletion semantics, merging a portable backup into an existing store, and
+  restore-time logical-ID renaming; and
 - URL redirect history, conditional requests, and URL-specific failure policy.
 
 Until those contracts are integrated and validated, workspace-scoped evidence

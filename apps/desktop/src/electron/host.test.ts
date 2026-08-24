@@ -3054,6 +3054,59 @@ describe("candidate knowledge native controls", () => {
     }
   });
 
+  it("restores a portable CKB backup only after both native selections", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-restore-host-"));
+    const backup = join(parent, "portable-backup");
+    const selectedDirectories: Array<string | undefined> = [parent, parent, backup, parent];
+    const chooseDirectory = vi.fn(async () => selectedDirectories.shift());
+    try {
+      const host = createNativeHost({
+        dialogs: { chooseDirectory, chooseFiles: async () => [] },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "source-store" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+
+      const exported = await host.invoke({
+        type: "knowledge.backup-export",
+        input: {
+          storeId,
+          selection: "native-dialog",
+          name: "portable-backup",
+          approved: true,
+        },
+      });
+      expect(exported).toMatchObject({ ok: true, value: { status: "exported", storeId } });
+
+      const restoredResult = await host.invoke({
+        type: "knowledge.backup-restore",
+        input: {
+          packageSelection: "native-dialog",
+          destinationSelection: "native-dialog",
+          name: "restored-store",
+          collision: "fail-if-destination-exists",
+        },
+      });
+      expect(restoredResult).toMatchObject({
+        ok: true,
+        value: {
+          status: "restored",
+          storeId,
+          integrity: "integrity-verified-not-authenticity",
+        },
+      });
+      expect(JSON.stringify(restoredResult)).not.toContain(parent);
+      expect(chooseDirectory).toHaveBeenCalledTimes(4);
+      expect(chooseDirectory).toHaveBeenNthCalledWith(3, "open");
+      expect(chooseDirectory).toHaveBeenNthCalledWith(4, "create");
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("imports one selected candidate-knowledge directory without exposing its paths", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-directory-host-"));
     const directoryPath = join(parent, "private-career-directory");

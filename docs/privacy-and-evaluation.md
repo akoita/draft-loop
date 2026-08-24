@@ -275,14 +275,19 @@ credentials, and unrelated workspace or run data. Restored file bindings must
 therefore be selected again. Manifest and object hashes detect corruption or
 modification; they are not signatures and do not establish package authorship.
 
-Directory membership and host-binding history are intentionally omitted, so a
-later restore must mark every source unbound. Legacy or otherwise unmanaged
-source versions block export because DraftLoop cannot prove it captured their
-bytes completely.
+Restore requires separate approval for a new destination and an explicit
+fail-if-existing collision decision. It verifies the complete package before
+writing, preserves logical identities and safe provenance, and creates no file,
+directory, or active-ownership binding. Restored URL provenance contains only
+the already-exported fetch time and classification; original and final URLs are
+not reconstructed. Directory membership and host-binding history stay omitted,
+so every restored source is unbound. Legacy or otherwise unmanaged source
+versions block export because DraftLoop cannot prove it captured their bytes
+completely.
 
 Complete deletion across raw, unknown, derived, backed-up, and exported data is
-not implemented. CKB restore, retrieval-index lifecycle and cleanup, confirmed
-deletion, and repair of missing blobs remain future privacy boundaries. Users
+not implemented. Retrieval-index lifecycle and cleanup, confirmed deletion,
+and repair of missing blobs remain future privacy boundaries. Users
 remain responsible for selected directories, filesystems, devices, cloud
 backups, exported packages, and copies made outside DraftLoop.
 

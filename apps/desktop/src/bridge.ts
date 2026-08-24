@@ -28,6 +28,7 @@ export const bridgeCapabilities = [
   "knowledge.inventory",
   "knowledge.backup-export",
   "knowledge.backup-inspect",
+  "knowledge.backup-restore",
   "knowledge.import-file",
   "knowledge.import-directory",
   "knowledge.directory-refresh-preview",
@@ -248,6 +249,25 @@ export interface KnowledgeBackupInspectInput {
 }
 
 const knowledgeBackupInspectKeys = inputKeys<KnowledgeBackupInspectInput>()(["selection"]);
+
+/**
+ * Restore is deliberately path-free at the renderer boundary. The host opens
+ * the package picker first, then chooses a new destination parent; the only
+ * renderer-supplied destination value is a single safe directory name.
+ */
+export interface KnowledgeBackupRestoreInput {
+  readonly packageSelection: "native-dialog";
+  readonly destinationSelection: "native-dialog";
+  readonly name: string;
+  readonly collision: "fail-if-destination-exists";
+}
+
+const knowledgeBackupRestoreKeys = inputKeys<KnowledgeBackupRestoreInput>()([
+  "packageSelection",
+  "destinationSelection",
+  "name",
+  "collision",
+]);
 
 export interface KnowledgeFileImportInput extends KnowledgeReadinessInput {
   /** The native host owns the file picker; no filesystem path crosses this API. */
@@ -852,6 +872,20 @@ export interface KnowledgePortableBackupResult {
   readonly integrity: "integrity-verified-not-authenticity";
 }
 
+export interface KnowledgePortableBackupRestoreResult {
+  readonly status: "restored";
+  readonly format: "draft-loop-candidate-knowledge-backup";
+  readonly schemaVersion: 1;
+  readonly storeId: string;
+  readonly manifestChecksum: string;
+  readonly knowledgeBaseCount: number;
+  readonly sourceCount: number;
+  readonly versionCount: number;
+  readonly contentObjectCount: number;
+  readonly contentBytes: number;
+  readonly integrity: "integrity-verified-not-authenticity";
+}
+
 export interface KnowledgeFileImportResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -1186,6 +1220,21 @@ const knowledgePortableBackupResultKeys = resultKeys<KnowledgePortableBackupResu
   "contentBytes",
   "integrity",
 ]);
+const knowledgePortableBackupRestoreResultKeys = resultKeys<KnowledgePortableBackupRestoreResult>()(
+  [
+    "status",
+    "format",
+    "schemaVersion",
+    "storeId",
+    "manifestChecksum",
+    "knowledgeBaseCount",
+    "sourceCount",
+    "versionCount",
+    "contentObjectCount",
+    "contentBytes",
+    "integrity",
+  ],
+);
 const knowledgeFileWriteResultKeys = resultKeys<KnowledgeFileImportResult>()([
   "storeId",
   "knowledgeBaseId",
@@ -1599,6 +1648,7 @@ export interface BridgeCommandInputMap {
   "knowledge.inventory": KnowledgeInventoryInput;
   "knowledge.backup-export": KnowledgeBackupExportInput;
   "knowledge.backup-inspect": KnowledgeBackupInspectInput;
+  "knowledge.backup-restore": KnowledgeBackupRestoreInput;
   "knowledge.import-file": KnowledgeFileImportInput;
   "knowledge.import-directory": KnowledgeDirectoryImportInput;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewInput;
@@ -1653,6 +1703,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.inventory": KnowledgeInventoryResult;
   "knowledge.backup-export": KnowledgePortableBackupResult;
   "knowledge.backup-inspect": KnowledgePortableBackupResult;
+  "knowledge.backup-restore": KnowledgePortableBackupRestoreResult;
   "knowledge.import-file": KnowledgeFileImportResult;
   "knowledge.import-directory": KnowledgeDirectoryImportResult;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewResult;
@@ -2147,6 +2198,24 @@ function validateKnowledgeBackupInspectInput(value: unknown): KnowledgeBackupIns
     return invalidInput();
   }
   return { selection: "native-dialog" };
+}
+
+function validateKnowledgeBackupRestoreInput(value: unknown): KnowledgeBackupRestoreInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeBackupRestoreKeys)) return invalidInput();
+  if (
+    input.packageSelection !== "native-dialog" ||
+    input.destinationSelection !== "native-dialog" ||
+    input.collision !== "fail-if-destination-exists"
+  ) {
+    return invalidInput();
+  }
+  return {
+    packageSelection: "native-dialog",
+    destinationSelection: "native-dialog",
+    name: workspaceName(input.name),
+    collision: "fail-if-destination-exists",
+  };
 }
 
 function validateKnowledgeReadinessInput(value: unknown): KnowledgeReadinessInput {
@@ -2791,6 +2860,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "knowledge.backup-inspect",
         input: validateKnowledgeBackupInspectInput(command.input),
       };
+    case "knowledge.backup-restore":
+      return {
+        type: "knowledge.backup-restore",
+        input: validateKnowledgeBackupRestoreInput(command.input),
+      };
     case "knowledge.import-file":
       return {
         type: "knowledge.import-file",
@@ -3264,6 +3338,36 @@ function normalizeKnowledgePortableBackupResult(value: unknown): KnowledgePortab
     descriptorSchemaVersion: 1,
     storeId: identifier(result.storeId),
     createdAt: timestampValue(result.createdAt),
+    manifestChecksum: checksum,
+    knowledgeBaseCount: finiteInteger(result.knowledgeBaseCount, 1_024),
+    sourceCount: finiteInteger(result.sourceCount, 1_024),
+    versionCount: finiteInteger(result.versionCount, 1_024),
+    contentObjectCount: finiteInteger(result.contentObjectCount, 1_024),
+    contentBytes: finiteInteger(result.contentBytes, 16 * 1024 * 1024 * 1024),
+    integrity: "integrity-verified-not-authenticity",
+  };
+}
+
+function normalizeKnowledgePortableBackupRestoreResult(
+  value: unknown,
+): KnowledgePortableBackupRestoreResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgePortableBackupRestoreResultKeys)) return invalidInput();
+  const checksum = stringValue(result.manifestChecksum, 64);
+  if (!/^[a-f0-9]{64}$/u.test(checksum)) return invalidInput();
+  if (
+    result.status !== "restored" ||
+    result.format !== "draft-loop-candidate-knowledge-backup" ||
+    result.schemaVersion !== 1 ||
+    result.integrity !== "integrity-verified-not-authenticity"
+  ) {
+    return invalidInput();
+  }
+  return {
+    status: "restored",
+    format: "draft-loop-candidate-knowledge-backup",
+    schemaVersion: 1,
+    storeId: identifier(result.storeId),
     manifestChecksum: checksum,
     knowledgeBaseCount: finiteInteger(result.knowledgeBaseCount, 1_024),
     sourceCount: finiteInteger(result.sourceCount, 1_024),
@@ -4162,6 +4266,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "knowledge.backup-export":
     case "knowledge.backup-inspect":
       return normalizeKnowledgePortableBackupResult(value);
+    case "knowledge.backup-restore":
+      return normalizeKnowledgePortableBackupRestoreResult(value);
     case "knowledge.import-file":
     case "knowledge.append-file-version":
       return normalizeKnowledgeFileWriteResult(value);

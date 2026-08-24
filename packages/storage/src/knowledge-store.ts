@@ -21,6 +21,7 @@ import { basename, dirname, isAbsolute, join, relative, resolve } from "node:pat
 import {
   type CandidateKnowledgePortableBackupInspection,
   type CandidateKnowledgePortableBackupManifest,
+  type CandidateKnowledgePortableBackupRestoreResult,
   candidateKnowledgePortableBackupFormat,
   candidateKnowledgePortableBackupInspectionSchema,
   candidateKnowledgePortableBackupIntegrityIndicator,
@@ -29,6 +30,8 @@ import {
   candidateKnowledgePortableBackupManifestSchema,
   candidateKnowledgePortableBackupMaximumEntries,
   candidateKnowledgePortableBackupObjectsDirectory,
+  candidateKnowledgePortableBackupRestoreOptionsSchema,
+  candidateKnowledgePortableBackupRestoreResultSchema,
   candidateKnowledgePortableBackupSchemaVersion,
   candidateKnowledgeStoreSchema,
 } from "@draft-loop/schemas";
@@ -124,6 +127,27 @@ export interface CandidateKnowledgePortableBackupExportOptions {
   /** @internal Deterministic timestamp seam for application/tests. */
   readonly createdAt?: string;
   /** @internal Simulates a failure after the no-replace destination claim. */
+  readonly beforePublication?: () => Promise<void>;
+}
+
+export type CandidateKnowledgePortableBackupRestoreInterruptionBoundary =
+  | "staging"
+  | "import"
+  | "commit"
+  | "target-publication"
+  | "destination-claim"
+  | "manifest-publication"
+  | "after-manifest-publication";
+
+export interface CandidateKnowledgePortableBackupRestoreOptions {
+  readonly collision?: "fail-if-destination-exists";
+  /** @internal Deterministic restoredAt seam for tests. */
+  readonly restoredAt?: string;
+  /** @internal Simulates an interruption and preserves owned staging state. */
+  readonly interruptAt?: CandidateKnowledgePortableBackupRestoreInterruptionBoundary;
+  /** @internal Failure seam before the trusted metadata import. */
+  readonly beforeImport?: () => Promise<void>;
+  /** @internal Failure seam before no-replace target publication. */
   readonly beforePublication?: () => Promise<void>;
 }
 
@@ -591,6 +615,39 @@ async function removeRegularFileIfIdentityMatches(
       return false;
     }
     await rm(path);
+    return true;
+  } catch (error) {
+    return isMissing(error);
+  }
+}
+
+async function requireDirectoryIdentity(path: string, identity: FileIdentity): Promise<void> {
+  const details = await lstat(path);
+  if (
+    details.isSymbolicLink() ||
+    !details.isDirectory() ||
+    details.dev !== identity.dev ||
+    details.ino !== identity.ino
+  ) {
+    throw new StorageConflictError("Portable candidate knowledge restore state changed.");
+  }
+}
+
+async function removeEmptyDirectoryIfIdentityMatches(
+  path: string,
+  identity: FileIdentity,
+): Promise<boolean> {
+  try {
+    const details = await lstat(path);
+    if (
+      details.isSymbolicLink() ||
+      !details.isDirectory() ||
+      details.dev !== identity.dev ||
+      details.ino !== identity.ino
+    ) {
+      return false;
+    }
+    await rmdir(path);
     return true;
   } catch (error) {
     return isMissing(error);
@@ -1539,6 +1596,14 @@ const portableBackupMaximumKnowledgeBaseCount = candidateKnowledgePortableBackup
 const portableBackupMaximumSourceCount = candidateKnowledgePortableBackupMaximumEntries;
 const portableBackupMaximumVersionCount = candidateKnowledgePortableBackupMaximumEntries;
 const portableBackupMaximumBytes = maximumDatabaseBytes;
+const portableBackupRestoreMarkerFilename = ".draft-loop-restore.json";
+const portableBackupRestoreReadyFilename = ".draft-loop-restore-ready.json";
+const portableBackupRestoreMarkerSchemaVersion = 1 as const;
+
+// A restore target and its deterministic staging directory are shared by
+// callers that retry the same package. Keep same-process attempts serialized
+// so one caller cannot publish or clean another caller's in-flight state.
+const activePortableBackupRestoreOperations = new Set<string>();
 
 function portableBackupFailure(): StorageValidationError {
   return new StorageValidationError(
@@ -1548,6 +1613,149 @@ function portableBackupFailure(): StorageValidationError {
 
 function portableBackupExportFailure(): StorageValidationError {
   return new StorageValidationError("Portable candidate knowledge backup export failed.");
+}
+
+function portableBackupRestoreFailure(): StorageValidationError {
+  return new StorageValidationError("Portable candidate knowledge backup restore failed.");
+}
+
+interface PortableBackupRestoreMarker {
+  readonly schemaVersion: 1;
+  readonly operationId: string;
+  readonly manifestChecksum: string;
+  readonly storeId: string;
+  readonly destinationIdentity: string;
+}
+
+class SimulatedPortableBackupRestoreInterruption extends Error {
+  public constructor(boundary: CandidateKnowledgePortableBackupRestoreInterruptionBoundary) {
+    super(`Simulated portable candidate knowledge restore interruption at ${boundary}.`);
+    this.name = "SimulatedPortableBackupRestoreInterruption";
+  }
+}
+
+function restoreOperationIdentity(
+  storeId: string,
+  manifestChecksum: string,
+  destination: string,
+): {
+  readonly operationId: string;
+  readonly destinationIdentity: string;
+} {
+  const destinationIdentity = createHash("sha256").update(destination, "utf8").digest("hex");
+  const operationId = createHash("sha256")
+    .update(`${storeId}\u0000${manifestChecksum}\u0000${destinationIdentity}`, "utf8")
+    .digest("hex");
+  return { operationId, destinationIdentity };
+}
+
+function restoreMarker(
+  storeId: string,
+  manifestChecksum: string,
+  destination: string,
+): PortableBackupRestoreMarker {
+  const identity = restoreOperationIdentity(storeId, manifestChecksum, destination);
+  return {
+    schemaVersion: portableBackupRestoreMarkerSchemaVersion,
+    operationId: identity.operationId,
+    manifestChecksum,
+    storeId,
+    destinationIdentity: identity.destinationIdentity,
+  };
+}
+
+function parseRestoreMarker(value: unknown): PortableBackupRestoreMarker | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const marker = value as Record<string, unknown>;
+  if (
+    marker.schemaVersion !== portableBackupRestoreMarkerSchemaVersion ||
+    typeof marker.operationId !== "string" ||
+    !/^[0-9a-f]{64}$/.test(marker.operationId) ||
+    typeof marker.manifestChecksum !== "string" ||
+    !/^[0-9a-f]{64}$/.test(marker.manifestChecksum) ||
+    typeof marker.storeId !== "string" ||
+    marker.storeId.trim() === "" ||
+    typeof marker.destinationIdentity !== "string" ||
+    !/^[0-9a-f]{64}$/.test(marker.destinationIdentity)
+  ) {
+    return undefined;
+  }
+  return {
+    schemaVersion: 1,
+    operationId: marker.operationId,
+    manifestChecksum: marker.manifestChecksum,
+    storeId: marker.storeId,
+    destinationIdentity: marker.destinationIdentity,
+  };
+}
+
+function sameRestoreMarker(
+  first: PortableBackupRestoreMarker,
+  second: PortableBackupRestoreMarker,
+): boolean {
+  return (
+    first.schemaVersion === second.schemaVersion &&
+    first.operationId === second.operationId &&
+    first.manifestChecksum === second.manifestChecksum &&
+    first.storeId === second.storeId &&
+    first.destinationIdentity === second.destinationIdentity
+  );
+}
+
+async function readRestoreMarker(path: string): Promise<PortableBackupRestoreMarker | undefined> {
+  try {
+    const details = await lstat(path);
+    if (details.isSymbolicLink() || !details.isFile() || details.size > 4096) return undefined;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(await readFile(path, "utf8"));
+    } catch {
+      return undefined;
+    }
+    return parseRestoreMarker(parsed);
+  } catch (error) {
+    if (isMissing(error)) return undefined;
+    throw error;
+  }
+}
+
+async function readPortableBackupRestoreReadiness(
+  path: string,
+  marker: PortableBackupRestoreMarker,
+): Promise<boolean> {
+  const readiness = await readRestoreMarker(path);
+  return readiness !== undefined && sameRestoreMarker(readiness, marker);
+}
+
+async function readPortableRestoreDirectoryEntries(path: string): Promise<readonly Dirent[]> {
+  const directory = await opendir(path);
+  const entries: Dirent[] = [];
+  try {
+    while (true) {
+      const entry = await directory.read();
+      if (entry === null) break;
+      if (entries.length >= 16) {
+        throw new StorageConflictError(
+          "Portable candidate knowledge restore target already exists.",
+        );
+      }
+      entries.push(entry);
+    }
+  } finally {
+    await directory.close().catch((error: unknown) => {
+      if (errorCode(error) !== "ERR_DIR_CLOSED") throw error;
+    });
+  }
+  return entries;
+}
+
+async function interruptPortableBackupRestoreAt(
+  options: CandidateKnowledgePortableBackupRestoreOptions,
+  boundary: CandidateKnowledgePortableBackupRestoreInterruptionBoundary,
+): Promise<void> {
+  if (options.interruptAt === boundary) {
+    throw new SimulatedPortableBackupRestoreInterruption(boundary);
+  }
 }
 
 function portableBackupTimestamp(value: string | undefined): string {
@@ -1682,6 +1890,68 @@ async function hashPortableBackupObject(path: string, expectedSize: number): Pro
     throw portableBackupFailure();
   } finally {
     await closeQuietly(handle);
+  }
+}
+
+async function copyPortableBackupObject(
+  sourcePath: string,
+  targetPath: string,
+  expectedChecksum: string,
+  expectedSize: number,
+): Promise<void> {
+  let sourceHandle: FileHandle | undefined;
+  let targetHandle: FileHandle | undefined;
+  let targetIdentity: FileIdentity | undefined;
+  let completed = false;
+  try {
+    sourceHandle = await open(sourcePath, sourceOpenFlags());
+    const before = await sourceHandle.stat();
+    if (!before.isFile() || before.size !== expectedSize) throw portableBackupRestoreFailure();
+    targetHandle = await open(
+      targetPath,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
+    const targetDetails = await targetHandle.stat();
+    targetIdentity = { dev: targetDetails.dev, ino: targetDetails.ino };
+    const digest = createHash("sha256");
+    const buffer = Buffer.allocUnsafe(64 * 1024);
+    let sizeBytes = 0;
+    while (true) {
+      const result = await sourceHandle.read(buffer, 0, buffer.length, null);
+      if (result.bytesRead === 0) break;
+      sizeBytes += result.bytesRead;
+      if (sizeBytes > maximumManagedCandidateKnowledgeFileBytes) {
+        throw portableBackupRestoreFailure();
+      }
+      digest.update(buffer.subarray(0, result.bytesRead));
+      let written = 0;
+      while (written < result.bytesRead) {
+        const writeResult = await targetHandle.write(buffer, written, result.bytesRead - written);
+        if (writeResult.bytesWritten <= 0) throw portableBackupRestoreFailure();
+        written += writeResult.bytesWritten;
+      }
+    }
+    await targetHandle.sync();
+    const after = await sourceHandle.stat();
+    const checksum = digest.digest("hex");
+    if (
+      !sameFileState(before, after) ||
+      sizeBytes !== expectedSize ||
+      checksum !== expectedChecksum
+    ) {
+      throw portableBackupRestoreFailure();
+    }
+    completed = true;
+  } catch (error) {
+    if (error instanceof StorageValidationError) throw error;
+    throw portableBackupRestoreFailure();
+  } finally {
+    await closeQuietly(targetHandle);
+    await closeQuietly(sourceHandle);
+    if (!completed && targetIdentity !== undefined) {
+      await removeRegularFileIfIdentityMatches(targetPath, targetIdentity);
+    }
   }
 }
 
@@ -1892,7 +2162,7 @@ async function buildPortableBackupManifest(
           sizeBytes: version.sizeBytes,
         });
         sourceFiles.push({ objectName, sourcePath });
-        const provenance = await storage.getCandidateKnowledgeSourceUrlProvenance(
+        const provenance = await storage.getCandidateKnowledgeSourcePortableUrlProvenance(
           knowledgeBase.id,
           source.id,
           version.id,
@@ -1952,6 +2222,7 @@ async function buildPortableBackupManifest(
         activeOverrides: policy.activeOverrides.map((entry) => ({
           class: entry.class,
           kind: entry.kind,
+          state: "applied" as const,
           sequence: entry.sequence,
           overrideRevision: entry.overrideRevision,
           policyRevision: entry.policyRevision,
@@ -2235,6 +2506,703 @@ export async function exportCandidateKnowledgePortableBackup(
     }
     throw error;
   }
+}
+
+interface PortableBackupRestorePublishedFile {
+  readonly path: string;
+  readonly identity: FileIdentity;
+}
+
+interface PortableBackupRestoreCreatedDirectory {
+  readonly path: string;
+  readonly identity: FileIdentity;
+}
+
+async function publishPortableBackupRestoreFile(
+  sourcePath: string,
+  destinationPath: string,
+  publishedFiles: PortableBackupRestorePublishedFile[],
+): Promise<void> {
+  const sourceDetails = await lstat(sourcePath);
+  if (sourceDetails.isSymbolicLink() || !sourceDetails.isFile()) {
+    throw portableBackupRestoreFailure();
+  }
+  try {
+    const destinationDetails = await lstat(destinationPath);
+    if (destinationDetails.isSymbolicLink() || !destinationDetails.isFile()) {
+      throw new StorageConflictError("Portable candidate knowledge restore target already exists.");
+    }
+    if (
+      destinationDetails.dev !== sourceDetails.dev ||
+      destinationDetails.ino !== sourceDetails.ino
+    ) {
+      throw new StorageConflictError("Portable candidate knowledge restore target already exists.");
+    }
+    return;
+  } catch (error) {
+    if (error instanceof StorageConflictError) throw error;
+    if (!isMissing(error)) throw error;
+  }
+  try {
+    await link(sourcePath, destinationPath);
+    publishedFiles.push({
+      path: destinationPath,
+      identity: { dev: sourceDetails.dev, ino: sourceDetails.ino },
+    });
+  } catch (error) {
+    if (errorCode(error) === "EEXIST") {
+      throw new StorageConflictError("Portable candidate knowledge restore target already exists.");
+    }
+    throw error;
+  }
+}
+
+async function cleanupPortableBackupRestorePublication(
+  publishedFiles: readonly PortableBackupRestorePublishedFile[],
+  createdPrivateDirectory: PortableBackupRestoreCreatedDirectory | undefined,
+  createdSourcesDirectory: PortableBackupRestoreCreatedDirectory | undefined,
+  createdSourceDirectories: readonly PortableBackupRestoreCreatedDirectory[],
+  createdDestination: PortableBackupRestoreCreatedDirectory | undefined,
+): Promise<void> {
+  for (const published of [...publishedFiles].reverse()) {
+    await removeRegularFileIfIdentityMatches(published.path, published.identity);
+  }
+  for (const createdSourceDirectory of [...createdSourceDirectories].reverse()) {
+    await removeEmptyDirectoryIfIdentityMatches(
+      createdSourceDirectory.path,
+      createdSourceDirectory.identity,
+    );
+  }
+  if (createdSourcesDirectory !== undefined) {
+    await removeEmptyDirectoryIfIdentityMatches(
+      createdSourcesDirectory.path,
+      createdSourcesDirectory.identity,
+    );
+  }
+  if (createdPrivateDirectory !== undefined) {
+    await removeEmptyDirectoryIfIdentityMatches(
+      createdPrivateDirectory.path,
+      createdPrivateDirectory.identity,
+    );
+  }
+  if (createdDestination !== undefined) {
+    await removeEmptyDirectoryIfIdentityMatches(
+      createdDestination.path,
+      createdDestination.identity,
+    );
+  }
+}
+
+async function cleanupPortableBackupRestoreStaging(
+  staging: string,
+  stagingIdentity: FileIdentity,
+  manifest: CandidateKnowledgePortableBackupManifest,
+): Promise<void> {
+  const files = [
+    join(staging, portableBackupRestoreMarkerFilename),
+    join(staging, portableBackupRestoreReadyFilename),
+    join(staging, manifestFilename),
+    join(staging, privateDirectory, databaseFilename),
+    join(staging, privateDirectory, `${databaseFilename}-wal`),
+    join(staging, privateDirectory, `${databaseFilename}-shm`),
+  ];
+  const directories = [
+    ...manifest.knowledgeBases.flatMap((entry) =>
+      entry.sources.map((source) => join(staging, sourcesDirectory, managedPathSegment(source.id))),
+    ),
+    join(staging, sourcesDirectory),
+    join(staging, privateDirectory),
+    staging,
+  ];
+  for (const entry of manifest.knowledgeBases) {
+    for (const source of entry.sources) {
+      for (const version of source.versions) {
+        files.push(
+          join(
+            staging,
+            sourcesDirectory,
+            managedPathSegment(source.id),
+            managedPathSegment(version.id),
+          ),
+        );
+      }
+    }
+  }
+  for (const path of files) {
+    try {
+      const details = await lstat(path);
+      if (details.isSymbolicLink() || !details.isFile()) continue;
+      await removeRegularFileIfIdentityMatches(path, {
+        dev: details.dev,
+        ino: details.ino,
+      });
+    } catch {
+      // Preserve unknown or concurrently replaced entries.
+    }
+  }
+  for (const path of [...directories].reverse()) {
+    try {
+      const details = await lstat(path);
+      if (details.isSymbolicLink() || !details.isDirectory()) continue;
+      const identity = { dev: details.dev, ino: details.ino };
+      if (path === staging) {
+        if (identity.dev !== stagingIdentity.dev || identity.ino !== stagingIdentity.ino) {
+          continue;
+        }
+      }
+      await removeEmptyDirectoryIfIdentityMatches(path, identity);
+    } catch {
+      // Preserve unknown or concurrently replaced entries.
+    }
+  }
+}
+
+async function buildPortableBackupRestoreStaging(
+  packagePath: string,
+  staging: string,
+  marker: PortableBackupRestoreMarker,
+  manifest: CandidateKnowledgePortableBackupManifest,
+  operationId: string,
+  manifestChecksum: string,
+  options: CandidateKnowledgePortableBackupRestoreOptions,
+): Promise<FileIdentity> {
+  let stagingIdentity: FileIdentity | undefined;
+  try {
+    await mkdir(staging, { mode: 0o700 });
+    const stagingDetails = await lstat(staging);
+    if (stagingDetails.isSymbolicLink() || !stagingDetails.isDirectory()) {
+      throw portableBackupRestoreFailure();
+    }
+    stagingIdentity = { dev: stagingDetails.dev, ino: stagingDetails.ino };
+    await writeFile(
+      join(staging, portableBackupRestoreMarkerFilename),
+      `${JSON.stringify(marker)}\n`,
+      { encoding: "utf8", flag: "wx", mode: 0o600 },
+    );
+    await mkdir(join(staging, privateDirectory), { mode: 0o700 });
+    await mkdir(join(staging, sourcesDirectory), { mode: 0o700 });
+    await writeFile(
+      join(staging, manifestFilename),
+      `${JSON.stringify(manifest.descriptor, null, 2)}\n`,
+      {
+        encoding: "utf8",
+        flag: "wx",
+        mode: 0o600,
+      },
+    );
+    const databasePath = join(staging, privateDirectory, databaseFilename);
+    let storage: SqliteStorage | undefined;
+    try {
+      storage = openSqliteStorage(databasePath);
+      await persistDescriptorBinding(storage, manifest.descriptor);
+      await options.beforeImport?.();
+      await interruptPortableBackupRestoreAt(options, "import");
+      await storage.importCandidateKnowledgePortableBackup({
+        manifest,
+        operationId,
+        manifestChecksum,
+        restoredAt: options.restoredAt ?? new Date().toISOString(),
+      });
+      await interruptPortableBackupRestoreAt(options, "commit");
+    } finally {
+      if (storage !== undefined) await closePreservingFailure(storage);
+    }
+
+    for (const entry of manifest.knowledgeBases) {
+      for (const source of entry.sources) {
+        const sourceDirectory = join(staging, sourcesDirectory, managedPathSegment(source.id));
+        await mkdir(sourceDirectory, { mode: 0o700 });
+        for (const version of source.versions) {
+          await interruptPortableBackupRestoreAt(options, "staging");
+          const sourceObject = join(packagePath, version.contentObject);
+          const targetVersion = join(sourceDirectory, managedPathSegment(version.id));
+          await copyPortableBackupObject(
+            sourceObject,
+            targetVersion,
+            version.checksum,
+            version.sizeBytes,
+          );
+          await chmodWhereSupported(targetVersion, 0o600);
+          await verifyManagedFile(targetVersion, version);
+        }
+      }
+    }
+    const readOnlyStorage = openSqliteStorageReadOnly(databasePath);
+    try {
+      await validateOpenedStore(readOnlyStorage, manifest.descriptor);
+      await validateManagedCandidateKnowledgeFiles(readOnlyStorage, staging);
+    } finally {
+      await closePreservingFailure(readOnlyStorage);
+    }
+    await chmodWhereSupported(join(staging, privateDirectory), 0o700);
+    await chmodWhereSupported(join(staging, sourcesDirectory), 0o700);
+    await chmodWhereSupported(staging, 0o700);
+    await writeFile(
+      join(staging, portableBackupRestoreReadyFilename),
+      `${JSON.stringify(marker)}\n`,
+      { encoding: "utf8", flag: "wx", mode: 0o600 },
+    );
+    return stagingIdentity;
+  } catch (error) {
+    if (stagingIdentity !== undefined) {
+      await cleanupPortableBackupRestoreStaging(staging, stagingIdentity, manifest);
+    }
+    throw error;
+  }
+}
+
+async function restorePortableBackupPackage(
+  packagePath: string,
+  destinationInput: string,
+  options: CandidateKnowledgePortableBackupRestoreOptions,
+): Promise<CandidateKnowledgePortableBackupRestoreResult> {
+  const packageInspection = await inspectPortableBackupPackage(packagePath);
+  const { manifest, manifestChecksum } = await readPortableBackupManifest(packagePath);
+  if (packageInspection.manifestChecksum !== manifestChecksum) throw portableBackupFailure();
+  const destination = requiredPath(destinationInput);
+  if (isWithin(packagePath, destination)) throw portableBackupRestoreFailure();
+  const parent = dirname(destination);
+  await requireDirectory(parent, "Portable candidate knowledge restore destination parent");
+  if (isWithin(packagePath, await realpath(parent))) throw portableBackupRestoreFailure();
+  const marker = restoreMarker(manifest.descriptor.id, manifestChecksum, destination);
+  const staging = join(
+    parent,
+    `.${basename(destination)}.draft-loop-restore-${marker.operationId}`,
+  );
+  const markerName = portableBackupRestoreMarkerFilename;
+  const claimPath = join(
+    parent,
+    `.${basename(destination)}.draft-loop-restore-claim-${marker.operationId}`,
+  );
+  const destinationMarkerPath = join(destination, markerName);
+  const stagingMarkerPath = join(staging, markerName);
+  const targetPrivatePath = join(destination, privateDirectory);
+  const targetSourcesPath = join(destination, sourcesDirectory);
+  const publishedFiles: PortableBackupRestorePublishedFile[] = [];
+  let createdDestination: PortableBackupRestoreCreatedDirectory | undefined;
+  let createdPrivateDirectory: PortableBackupRestoreCreatedDirectory | undefined;
+  let createdSourcesDirectory: PortableBackupRestoreCreatedDirectory | undefined;
+  const createdSourceDirectories: PortableBackupRestoreCreatedDirectory[] = [];
+  let stagingIdentity: FileIdentity | undefined;
+  let createdStaging = false;
+  let manifestPublished = false;
+  let preserveOwnedState = false;
+  if (activePortableBackupRestoreOperations.has(marker.operationId)) {
+    throw new StorageConflictError("Portable candidate knowledge restore is already in progress.");
+  }
+  activePortableBackupRestoreOperations.add(marker.operationId);
+  let destinationExists = false;
+  let destinationIdentity: FileIdentity | undefined;
+  let destinationMarkerIdentity: FileIdentity | undefined;
+  let claimIdentity: FileIdentity | undefined;
+  try {
+    try {
+      try {
+        const destinationDetails = await lstat(destination);
+        destinationExists = true;
+        if (destinationDetails.isSymbolicLink() || !destinationDetails.isDirectory()) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore target already exists.",
+          );
+        }
+        let completeManifestPresent = false;
+        try {
+          await lstat(join(destination, manifestFilename));
+          completeManifestPresent = true;
+        } catch (error) {
+          if (!isMissing(error)) throw error;
+        }
+        if (completeManifestPresent) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore target already exists.",
+          );
+        }
+        const existingMarker = await readRestoreMarker(destinationMarkerPath);
+        if (existingMarker !== undefined && sameRestoreMarker(existingMarker, marker)) {
+          const markerDetails = await lstat(destinationMarkerPath);
+          destinationMarkerIdentity = {
+            dev: markerDetails.dev,
+            ino: markerDetails.ino,
+          };
+          preserveOwnedState = true;
+        } else if (existingMarker !== undefined || destinationExists) {
+          // A pre-existing directory is adoptable only with the exact operation
+          // marker and a later claim check. Unknown partial state is preserved.
+          if (destinationExists) {
+            const entries = await readPortableRestoreDirectoryEntries(destination);
+            if (entries.length !== 0) {
+              throw new StorageConflictError(
+                "Portable candidate knowledge restore target already exists.",
+              );
+            }
+          }
+        }
+        if (destinationExists) {
+          const destinationDetails = await lstat(destination);
+          destinationIdentity = {
+            dev: destinationDetails.dev,
+            ino: destinationDetails.ino,
+          };
+        }
+      } catch (error) {
+        if (error instanceof StorageConflictError) throw error;
+        if (!isMissing(error)) throw error;
+      }
+
+      let stagingReady = false;
+      try {
+        const stagingDetails = await lstat(staging);
+        if (stagingDetails.isSymbolicLink() || !stagingDetails.isDirectory()) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore staging is invalid.",
+          );
+        }
+        stagingIdentity = { dev: stagingDetails.dev, ino: stagingDetails.ino };
+        const existingMarker = await readRestoreMarker(stagingMarkerPath);
+        if (existingMarker === undefined || !sameRestoreMarker(existingMarker, marker)) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore staging is not owned.",
+          );
+        }
+        if (
+          !(await readPortableBackupRestoreReadiness(
+            join(staging, portableBackupRestoreReadyFilename),
+            marker,
+          ))
+        ) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore staging is still in progress.",
+          );
+        }
+        stagingReady = true;
+      } catch (error) {
+        if (error instanceof StorageConflictError) throw error;
+        if (!isMissing(error)) throw error;
+      }
+      if (!stagingReady) {
+        await requireAbsent(staging);
+        stagingIdentity = await buildPortableBackupRestoreStaging(
+          packagePath,
+          staging,
+          marker,
+          manifest,
+          marker.operationId,
+          manifestChecksum,
+          options,
+        );
+        createdStaging = true;
+      } else {
+        let stagingIsValid = true;
+        try {
+          const stagedStorage = openSqliteStorageReadOnly(
+            join(staging, privateDirectory, databaseFilename),
+          );
+          try {
+            await validateOpenedStore(stagedStorage, manifest.descriptor);
+            await validateManagedCandidateKnowledgeFiles(stagedStorage, staging);
+          } finally {
+            await closePreservingFailure(stagedStorage);
+          }
+        } catch {
+          stagingIsValid = false;
+        }
+        if (!stagingIsValid) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore staging is invalid.",
+          );
+        }
+      }
+      await options.beforePublication?.();
+      await interruptPortableBackupRestoreAt(options, "target-publication");
+
+      if (stagingIdentity === undefined) {
+        throw new StorageConflictError(
+          "Portable candidate knowledge restore staging is unavailable.",
+        );
+      }
+      await requireDirectoryIdentity(staging, stagingIdentity);
+      const stagingMarkerDetails = await lstat(stagingMarkerPath);
+      if (stagingMarkerDetails.isSymbolicLink() || !stagingMarkerDetails.isFile()) {
+        throw new StorageConflictError("Portable candidate knowledge restore staging is invalid.");
+      }
+      const stagingMarkerIdentity: FileIdentity = {
+        dev: stagingMarkerDetails.dev,
+        ino: stagingMarkerDetails.ino,
+      };
+      if (
+        destinationMarkerIdentity !== undefined &&
+        (destinationMarkerIdentity.dev !== stagingMarkerIdentity.dev ||
+          destinationMarkerIdentity.ino !== stagingMarkerIdentity.ino)
+      ) {
+        throw new StorageConflictError(
+          "Portable candidate knowledge restore target marker is not owned.",
+        );
+      }
+      try {
+        const claimDetails = await lstat(claimPath);
+        if (claimDetails.isSymbolicLink() || !claimDetails.isFile()) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore publication claim already exists.",
+          );
+        }
+        const claimMarker = await readRestoreMarker(claimPath);
+        if (
+          claimMarker === undefined ||
+          !sameRestoreMarker(claimMarker, marker) ||
+          claimDetails.dev !== stagingMarkerIdentity.dev ||
+          claimDetails.ino !== stagingMarkerIdentity.ino
+        ) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore publication claim is not owned.",
+          );
+        }
+        claimIdentity = { dev: claimDetails.dev, ino: claimDetails.ino };
+      } catch (error) {
+        if (error instanceof StorageConflictError) throw error;
+        if (!isMissing(error)) throw error;
+        if (destinationExists) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore target already exists.",
+          );
+        }
+        const publishedCount = publishedFiles.length;
+        await publishPortableBackupRestoreFile(stagingMarkerPath, claimPath, publishedFiles);
+        if (publishedFiles.length === publishedCount) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore publication claim is already in use.",
+          );
+        }
+        claimIdentity = stagingMarkerIdentity;
+      }
+      if (!destinationExists) {
+        try {
+          await mkdir(destination, { mode: 0o700 });
+          const destinationDetails = await lstat(destination);
+          if (destinationDetails.isSymbolicLink() || !destinationDetails.isDirectory()) {
+            throw new StorageConflictError(
+              "Portable candidate knowledge restore target already exists.",
+            );
+          }
+          destinationIdentity = {
+            dev: destinationDetails.dev,
+            ino: destinationDetails.ino,
+          };
+          createdDestination = { path: destination, identity: destinationIdentity };
+        } catch (error) {
+          if (errorCode(error) === "EEXIST") {
+            throw new StorageConflictError(
+              "Portable candidate knowledge restore target already exists.",
+            );
+          }
+          throw error;
+        }
+      }
+      await interruptPortableBackupRestoreAt(options, "destination-claim");
+      if (destinationIdentity === undefined || claimIdentity === undefined) {
+        throw new StorageConflictError(
+          "Portable candidate knowledge restore target is unavailable.",
+        );
+      }
+      await requireDirectoryIdentity(destination, destinationIdentity);
+      if (!preserveOwnedState) {
+        await publishPortableBackupRestoreFile(
+          stagingMarkerPath,
+          destinationMarkerPath,
+          publishedFiles,
+        );
+        preserveOwnedState = true;
+      }
+      try {
+        await mkdir(targetPrivatePath, { mode: 0o700 });
+        const privateDetails = await lstat(targetPrivatePath);
+        if (privateDetails.isSymbolicLink() || !privateDetails.isDirectory()) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore private directory is invalid.",
+          );
+        }
+        createdPrivateDirectory = {
+          path: targetPrivatePath,
+          identity: { dev: privateDetails.dev, ino: privateDetails.ino },
+        };
+      } catch (error) {
+        if (errorCode(error) !== "EEXIST") throw error;
+        await requireDirectory(
+          targetPrivatePath,
+          "Portable candidate knowledge restore private directory",
+        );
+      }
+      try {
+        await mkdir(targetSourcesPath, { mode: 0o700 });
+        const sourcesDetails = await lstat(targetSourcesPath);
+        if (sourcesDetails.isSymbolicLink() || !sourcesDetails.isDirectory()) {
+          throw new StorageConflictError(
+            "Portable candidate knowledge restore sources directory is invalid.",
+          );
+        }
+        createdSourcesDirectory = {
+          path: targetSourcesPath,
+          identity: { dev: sourcesDetails.dev, ino: sourcesDetails.ino },
+        };
+      } catch (error) {
+        if (errorCode(error) !== "EEXIST") throw error;
+        await requireDirectory(
+          targetSourcesPath,
+          "Portable candidate knowledge restore sources directory",
+        );
+      }
+      await publishPortableBackupRestoreFile(
+        join(staging, privateDirectory, databaseFilename),
+        join(targetPrivatePath, databaseFilename),
+        publishedFiles,
+      );
+      for (const entry of manifest.knowledgeBases) {
+        for (const source of entry.sources) {
+          const sourceDirectory = join(targetSourcesPath, managedPathSegment(source.id));
+          try {
+            await mkdir(sourceDirectory, { mode: 0o700 });
+            const sourceDirectoryDetails = await lstat(sourceDirectory);
+            if (sourceDirectoryDetails.isSymbolicLink() || !sourceDirectoryDetails.isDirectory()) {
+              throw new StorageConflictError(
+                "Portable candidate knowledge restore source directory is invalid.",
+              );
+            }
+            createdSourceDirectories.push({
+              path: sourceDirectory,
+              identity: { dev: sourceDirectoryDetails.dev, ino: sourceDirectoryDetails.ino },
+            });
+          } catch (error) {
+            if (errorCode(error) !== "EEXIST") throw error;
+            await requireDirectory(
+              sourceDirectory,
+              "Portable candidate knowledge restore source directory",
+            );
+          }
+          for (const version of source.versions) {
+            await publishPortableBackupRestoreFile(
+              join(
+                staging,
+                sourcesDirectory,
+                managedPathSegment(source.id),
+                managedPathSegment(version.id),
+              ),
+              join(sourceDirectory, managedPathSegment(version.id)),
+              publishedFiles,
+            );
+          }
+        }
+      }
+      const targetStorage = openSqliteStorageReadOnly(join(targetPrivatePath, databaseFilename));
+      try {
+        await validateOpenedStore(targetStorage, manifest.descriptor);
+        await validateManagedCandidateKnowledgeFiles(targetStorage, destination);
+      } finally {
+        await closePreservingFailure(targetStorage);
+      }
+      await interruptPortableBackupRestoreAt(options, "manifest-publication");
+      await publishPortableBackupRestoreFile(
+        join(staging, manifestFilename),
+        join(destination, manifestFilename),
+        publishedFiles,
+      );
+      manifestPublished = true;
+      await interruptPortableBackupRestoreAt(options, "after-manifest-publication");
+      const markerPublication = publishedFiles.find(
+        (published) => published.path === destinationMarkerPath,
+      );
+      if (markerPublication !== undefined) {
+        await removeRegularFileIfIdentityMatches(
+          markerPublication.path,
+          markerPublication.identity,
+        );
+      }
+      const claimPublication = publishedFiles.find((published) => published.path === claimPath);
+      if (claimPublication !== undefined) {
+        await removeRegularFileIfIdentityMatches(claimPublication.path, claimPublication.identity);
+      }
+      if (createdStaging && stagingIdentity !== undefined) {
+        await cleanupPortableBackupRestoreStaging(staging, stagingIdentity, manifest);
+        createdStaging = false;
+      }
+      return candidateKnowledgePortableBackupRestoreResultSchema.parse({
+        status: "restored",
+        format: packageInspection.format,
+        schemaVersion: packageInspection.schemaVersion,
+        storeId: packageInspection.storeId,
+        manifestChecksum: packageInspection.manifestChecksum,
+        knowledgeBaseCount: packageInspection.knowledgeBaseCount,
+        sourceCount: packageInspection.sourceCount,
+        versionCount: packageInspection.versionCount,
+        contentObjectCount: packageInspection.contentObjectCount,
+        contentBytes: packageInspection.contentBytes,
+        integrity: packageInspection.integrity,
+      });
+    } catch (error) {
+      if (error instanceof SimulatedPortableBackupRestoreInterruption) throw error;
+      if (manifestPublished) {
+        for (const published of publishedFiles.filter(
+          (entry) => entry.path === destinationMarkerPath || entry.path === claimPath,
+        )) {
+          try {
+            await removeRegularFileIfIdentityMatches(published.path, published.identity);
+          } catch {
+            // The manifest is the commit point; cleanup is best effort.
+          }
+        }
+        if (createdStaging && stagingIdentity !== undefined) {
+          try {
+            await cleanupPortableBackupRestoreStaging(staging, stagingIdentity, manifest);
+          } catch {
+            // The manifest is the commit point; cleanup is best effort.
+          }
+        }
+        return candidateKnowledgePortableBackupRestoreResultSchema.parse({
+          status: "restored",
+          format: packageInspection.format,
+          schemaVersion: packageInspection.schemaVersion,
+          storeId: packageInspection.storeId,
+          manifestChecksum: packageInspection.manifestChecksum,
+          knowledgeBaseCount: packageInspection.knowledgeBaseCount,
+          sourceCount: packageInspection.sourceCount,
+          versionCount: packageInspection.versionCount,
+          contentObjectCount: packageInspection.contentObjectCount,
+          contentBytes: packageInspection.contentBytes,
+          integrity: packageInspection.integrity,
+        });
+      }
+      await cleanupPortableBackupRestorePublication(
+        publishedFiles,
+        createdPrivateDirectory,
+        createdSourcesDirectory,
+        createdSourceDirectories,
+        createdDestination,
+      );
+      if (createdStaging && stagingIdentity !== undefined) {
+        await cleanupPortableBackupRestoreStaging(staging, stagingIdentity, manifest);
+        createdStaging = false;
+      }
+      if (error instanceof StorageConflictError) throw error;
+      if (error instanceof StorageValidationError) throw error;
+      throw portableBackupRestoreFailure();
+    }
+  } finally {
+    activePortableBackupRestoreOperations.delete(marker.operationId);
+  }
+}
+
+export async function restoreCandidateKnowledgePortableBackup(
+  packagePathInput: string,
+  destinationInput: string,
+  options: CandidateKnowledgePortableBackupRestoreOptions = {},
+): Promise<CandidateKnowledgePortableBackupRestoreResult> {
+  const parsed = candidateKnowledgePortableBackupRestoreOptionsSchema.safeParse({
+    collision: options.collision,
+  });
+  if (!parsed.success)
+    throw new StorageValidationError("Portable candidate knowledge restore options are invalid.");
+  const packagePath = requiredPath(packagePathInput);
+  await requireDirectory(packagePath, "Portable candidate knowledge backup");
+  const canonicalPackagePath = await realpath(packagePath);
+  return restorePortableBackupPackage(canonicalPackagePath, destinationInput, options);
 }
 
 function requiredRetentionPlanTimestamp(value: string, label: string): string {
@@ -3457,6 +4425,18 @@ function createHandle(
     },
     getCandidateKnowledgeSourceUrlProvenance: async (knowledgeBaseId, sourceId, versionId) => {
       const provenance = await storage.getCandidateKnowledgeSourceUrlProvenance(
+        knowledgeBaseId,
+        sourceId,
+        versionId,
+      );
+      return provenance === undefined ? undefined : Object.freeze({ ...provenance });
+    },
+    getCandidateKnowledgeSourcePortableUrlProvenance: async (
+      knowledgeBaseId,
+      sourceId,
+      versionId,
+    ) => {
+      const provenance = await storage.getCandidateKnowledgeSourcePortableUrlProvenance(
         knowledgeBaseId,
         sourceId,
         versionId,

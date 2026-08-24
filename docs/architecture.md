@@ -304,8 +304,16 @@ coordination, recovery journals, application/provider credentials, and
 unrelated workspace data are not exported. A manifest checksum and per-object
 hashes detect corruption or modification but do not authenticate who created a
 package. Export requires an explicit destination approval and publishes with no
-replacement only after the package passes its own inspector. Restore and
-confirmed deletion remain owned by #165–#166.
+replacement only after the package passes its own inspector.
+
+Portable restore repeats complete package inspection before any destination
+write, imports into a fully staged v20 store, validates the restored graph and
+managed bytes, and then publishes to an approved new directory without replacing
+an existing entry. The only supported collision decision is
+`fail-if-destination-exists`; restore never merges stores, renames logical
+identities, or claims continuity with the exporting host. Restored URL evidence
+keeps only its safe fetched-at and kind fields. Original URLs and all file and
+directory bindings remain absent. Confirmed deletion remains owned by #166.
 
 The package deliberately represents every restored source as unbound. It does
 not preserve directory-root/member relationships or host-binding history, and
@@ -314,16 +322,17 @@ as a complete package, so export refuses it rather than silently omitting
 provenance.
 
 The schema currently preserves append-only source/version, origin, observation,
-retirement, URL, directory-root, and directory-member history. [ADR 0007][adr-0007]
-records the compact v6–v18 schema-evolution summary and the invariants that
+retirement, URL, restored path-free URL provenance, directory-root, and
+directory-member history. [ADR 0007][adr-0007] records the compact v6–v20
+schema-evolution summary and the invariants that
 motivated each boundary.
 
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
 retrieval-index drift enforcement, provider transmission scope, complete
-CLI/desktop lifecycle controls, missing-blob repair, physical deletion, cleanup, or
-portable restore or physical deletion. Until those contracts are
+CLI/desktop lifecycle controls, missing-blob repair, physical deletion, or cleanup.
+Until those contracts are
 integrated and validated, the workspace-scoped evidence and retrieval path
 remains authoritative for application runs.
 

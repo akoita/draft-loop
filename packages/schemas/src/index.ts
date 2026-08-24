@@ -627,6 +627,7 @@ const portableBackupRetentionOverrideSchema = z
   .object({
     class: candidateKnowledgeRetentionClassSchema,
     kind: candidateKnowledgeRetentionOverrideKindSchema,
+    state: z.literal("applied").default("applied"),
     sequence: z.number().finite().int().positive(),
     overrideRevision: z.number().finite().int().nonnegative(),
     policyRevision: z.number().finite().int().nonnegative(),
@@ -858,6 +859,42 @@ export const candidateKnowledgePortableBackupInspectionSchema = z
 
 export type CandidateKnowledgePortableBackupInspection = z.infer<
   typeof candidateKnowledgePortableBackupInspectionSchema
+>;
+
+export const candidateKnowledgePortableBackupRestoreCollisionModes = [
+  "fail-if-destination-exists",
+] as const;
+export type CandidateKnowledgePortableBackupRestoreCollisionMode =
+  (typeof candidateKnowledgePortableBackupRestoreCollisionModes)[number];
+
+export const candidateKnowledgePortableBackupRestoreOptionsSchema = z
+  .object({
+    collision: z.literal("fail-if-destination-exists").default("fail-if-destination-exists"),
+  })
+  .strict();
+
+export type CandidateKnowledgePortableBackupRestoreOptions = z.input<
+  typeof candidateKnowledgePortableBackupRestoreOptionsSchema
+>;
+
+export const candidateKnowledgePortableBackupRestoreResultSchema = z
+  .object({
+    status: z.literal("restored"),
+    format: z.literal(candidateKnowledgePortableBackupFormat),
+    schemaVersion: z.literal(candidateKnowledgePortableBackupSchemaVersion),
+    storeId: nonEmptyString,
+    manifestChecksum: sha256ChecksumSchema,
+    knowledgeBaseCount: z.number().finite().int().nonnegative(),
+    sourceCount: z.number().finite().int().nonnegative(),
+    versionCount: z.number().finite().int().nonnegative(),
+    contentObjectCount: z.number().finite().int().nonnegative(),
+    contentBytes: z.number().finite().int().nonnegative(),
+    integrity: z.literal(candidateKnowledgePortableBackupIntegrityIndicator),
+  })
+  .strict();
+
+export type CandidateKnowledgePortableBackupRestoreResult = z.infer<
+  typeof candidateKnowledgePortableBackupRestoreResultSchema
 >;
 
 const candidateKnowledgeSelectionLifecycleObservationSchema = z.object({

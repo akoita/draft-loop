@@ -175,7 +175,8 @@ larger outcome issues remain open as roadmap epics:
   owned writes after lease takeover without claiming legacy or unknown data.
   #163 defines six-class retention, expiry eligibility, and preservation
   overrides without deleting data. #164 exports strict integrity-checkable
-  packages without machine-local state; restore and deletion follow through #165–#166 in
+  packages without machine-local state, and #165 restores them into approved
+  new directories without overwriting identities. Deletion follows through #166 in
   [Sprint 2](https://github.com/akoita/draft-loop/milestone/5), with #113
   retaining the aggregate outcome.
 - Derive a candidate-reviewed canonical profile (#66), assemble a reviewed
@@ -323,6 +324,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-25 | Bounded portable CKB restore to new destinations with an explicit fail-if-existing collision policy. | Restore re-inspects and migrates a package transactionally, preserves logical IDs and safe provenance, publishes only a validated store, and deliberately recreates no machine origin or active ownership; merge and rename modes remain out of scope. |
 | 2026-08-24 | Defined portable CKB backup as a strict directory package with a logical manifest and checksum-addressed managed objects. | Export requires destination approval, complete ownership evidence, self-inspection, and no-replace manifest-last publication; machine-local origins, locks, journals, credentials, and workspace data stay out, while #165 owns restore. |
 | 2026-08-24 | Defined append-only CKB retention policy and deterministic effective-revision planning across six explicit data classes. | Legacy data remains retained by default; holds override expiry, only proven managed raw versions can become eligible, and #166 retains the separate confirmation and physical-deletion boundary. |
 | 2026-08-24 | Made new managed CKB writes recoverable from versioned owned journal records under the store-wide lease. | Restart reconciliation rolls back verified pre-commit artifacts or completes verified committed cleanup, reports only path-free operation status, and preserves legacy, unknown, unjournaled, or mismatched data. |
