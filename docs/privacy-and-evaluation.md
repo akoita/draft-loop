@@ -154,6 +154,10 @@ applied directory refresh handles only existing active same-member changed
 files. Automatic rename inference, reconciliation of unknown entries,
 background refresh, and automatic deletion remain deferred.
 
+Shared add-member controls require explicit confirmation and keep the remembered
+root local. Complete or partial results expose only bounded opaque source IDs,
+member states, and scan counts; paths, labels, hashes, and content stay local.
+
 Root rebind is a separate explicit operation. It performs one complete bounded
 scan, stable per-member final verification, and one guarded all-member origin
 commit or same-root no-op; it does not revise membership.

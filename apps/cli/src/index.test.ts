@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createCli } from "./index.js";
 import type {
+  AddKnowledgeSourceDirectoryMembersResult,
   ApplicationIo,
   ApplicationService,
   ApplyKnowledgeSourceDirectoryMemberMoveResult,
@@ -381,6 +382,20 @@ function knowledgeSourceDirectoryRefreshApplyResult(
       : {}),
     ...overrides,
   } as ApplyKnowledgeSourceDirectoryRefreshResult;
+}
+
+function knowledgeSourceDirectoryAddMembersResult(
+  status: "complete" | "partial" = "complete",
+  overrides: Partial<AddKnowledgeSourceDirectoryMembersResult> = {},
+): AddKnowledgeSourceDirectoryMembersResult {
+  return {
+    ...knowledgeSourceDirectoryRefreshPreviewResult(),
+    addedSourceIds: status === "complete" ? ["source-new"] : [],
+    addedSourceCount: status === "complete" ? 1 : 0,
+    status,
+    ...(status === "complete" ? { newSourceCount: 1 } : {}),
+    ...overrides,
+  } as AddKnowledgeSourceDirectoryMembersResult;
 }
 
 function knowledgeSourceDirectoryMovedCandidatesResult(
@@ -1893,6 +1908,275 @@ describe("candidate knowledge source inspection CLI controls", () => {
         "directory-opaque",
       ]),
     ).rejects.toBe(failure);
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("maps directory member additions with deterministic bounded path-free output", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-directory-store");
+    const knowledgeBaseId = "base-one";
+    const directoryId = "directory-opaque";
+    const privateDirectoryPath = resolve("private-add-members-directory");
+    const addKnowledgeSourceDirectoryMembers = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ...knowledgeSourceDirectoryAddMembersResult("complete"),
+        privateDirectoryPath,
+        relativePathHash: "a".repeat(64),
+        content: "private directory content",
+      } as unknown as AddKnowledgeSourceDirectoryMembersResult)
+      .mockResolvedValueOnce(
+        knowledgeSourceDirectoryAddMembersResult("partial", {
+          addedSourceIds: ["source-new-a"],
+          addedSourceCount: 1,
+          newSourceCount: 2,
+        }),
+      );
+    const knowledgeService = {
+      addKnowledgeSourceDirectoryMembers,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-add-members",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--confirm",
+      "--max-depth",
+      "4",
+      "--max-scanned-entries",
+      "8",
+      "--max-accepted-files",
+      "3",
+      "--max-accepted-bytes",
+      "32",
+      "--max-source-bytes",
+      "16",
+      "--max-chunk-characters",
+      "12",
+    ]);
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-add-members",
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      "--confirm",
+      "--max-accepted-files",
+      "2",
+    ]);
+
+    expect(addKnowledgeSourceDirectoryMembers).toHaveBeenNthCalledWith(1, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      options: {
+        maxDepth: 4,
+        maxScannedEntries: 8,
+        maxAcceptedFiles: 3,
+        maxAcceptedBytes: 32,
+        maxSourceBytes: 16,
+        maxChunkCharacters: 12,
+      },
+    });
+    expect(addKnowledgeSourceDirectoryMembers).toHaveBeenNthCalledWith(2, {
+      storeRoot,
+      knowledgeBaseId,
+      directoryId,
+      options: { maxAcceptedFiles: 2 },
+    });
+    expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:06:00.000Z",
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-b", status: "changed" },
+        ],
+        memberCount: 2,
+        membersTruncated: false,
+        newSourceCount: 1,
+        scannedEntryCount: 5,
+        discoveredFileCount: 3,
+        skippedEntryCount: 2,
+        status: "complete",
+        addedSourceIds: ["source-new"],
+        addedSourceCount: 1,
+        addedSourceIdsTruncated: false,
+      },
+      {
+        knowledgeBaseId,
+        directoryId,
+        checkedAt: "2026-08-23T10:06:00.000Z",
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-b", status: "changed" },
+        ],
+        memberCount: 2,
+        membersTruncated: false,
+        newSourceCount: 2,
+        scannedEntryCount: 5,
+        discoveredFileCount: 3,
+        skippedEntryCount: 2,
+        status: "partial",
+        addedSourceIds: ["source-new-a"],
+        addedSourceCount: 1,
+        addedSourceIdsTruncated: false,
+      },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).not.toContain(storeRoot);
+    expect(output).not.toContain(privateDirectoryPath);
+    expect(output).not.toContain("a".repeat(64));
+    expect(output).not.toContain("private directory content");
+  });
+
+  it("requires explicit confirmation before adding directory members", async () => {
+    const dependencies = harness();
+    const addKnowledgeSourceDirectoryMembers = vi.fn(async () =>
+      knowledgeSourceDirectoryAddMembersResult("complete"),
+    );
+    const knowledgeService = {
+      addKnowledgeSourceDirectoryMembers,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await expect(
+      createCli({
+        service: dependencies.service,
+        io: dependencies.io,
+        knowledgeService,
+      }).parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "source",
+        "directory-add-members",
+        resolve("private-directory-store"),
+        "base-one",
+        "directory-opaque",
+      ]),
+    ).rejects.toThrow("knowledge source directory-add-members requires --confirm");
+    expect(addKnowledgeSourceDirectoryMembers).not.toHaveBeenCalled();
+    expect(dependencies.lines).toEqual([]);
+  });
+
+  it("validates complete add-member arrays before truncating them", async () => {
+    const dependencies = harness();
+    const members = Array.from({ length: 300 }, (_, index) => ({
+      sourceId: `source-${String(index).padStart(3, "0")}`,
+      status: "current" as const,
+    }));
+    const addedSourceIds = Array.from(
+      { length: 300 },
+      (_, index) => `added-${String(index).padStart(3, "0")}`,
+    );
+    const result = knowledgeSourceDirectoryAddMembersResult("complete", {
+      members,
+      newSourceCount: addedSourceIds.length,
+      discoveredFileCount: addedSourceIds.length,
+      scannedEntryCount: addedSourceIds.length,
+      skippedEntryCount: 0,
+      addedSourceIds,
+      addedSourceCount: addedSourceIds.length,
+    });
+    const addKnowledgeSourceDirectoryMembers = vi.fn(async () => result);
+    const knowledgeService = {
+      addKnowledgeSourceDirectoryMembers,
+    } as unknown as CandidateKnowledgeStoreService;
+
+    await createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    }).parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-add-members",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      "--confirm",
+    ]);
+
+    const output = JSON.parse(dependencies.lines[0] ?? "{}");
+    expect(output.memberCount).toBe(300);
+    expect(output.membersTruncated).toBe(true);
+    expect(output.members).toEqual(members.slice(0, 256));
+    expect(output.addedSourceCount).toBe(300);
+    expect(output.addedSourceIdsTruncated).toBe(true);
+    expect(output.addedSourceIds).toEqual(addedSourceIds.slice(0, 256));
+  });
+
+  it("rejects malformed add-member results without output", async () => {
+    const dependencies = harness();
+    const valid = knowledgeSourceDirectoryAddMembersResult("complete");
+    const results = [
+      { ...valid, directoryId: "other-directory" },
+      { ...valid, checkedAt: "not-a-timestamp" },
+      { ...valid, status: undefined },
+      { ...valid, members: [{ sourceId: "", status: "current" }] },
+      {
+        ...valid,
+        members: [
+          { sourceId: "source-a", status: "current" },
+          { sourceId: "source-a", status: "changed" },
+        ],
+      },
+      { ...valid, members: [{ sourceId: "source-a", status: "invalid" }] },
+      { ...valid, addedSourceIds: ["source-new", "source-new"] },
+      { ...valid, addedSourceCount: 0 },
+      { ...valid, addedSourceIds: [], addedSourceCount: 0 },
+      { ...valid, newSourceCount: 0 },
+      { ...valid, discoveredFileCount: 4 },
+      { ...valid, scannedEntryCount: 4 },
+      { ...valid, status: "complete", addedSourceCount: 0, addedSourceIds: [] },
+    ];
+    const addKnowledgeSourceDirectoryMembers = vi.fn();
+    for (const result of results) {
+      addKnowledgeSourceDirectoryMembers.mockResolvedValueOnce(
+        result as unknown as AddKnowledgeSourceDirectoryMembersResult,
+      );
+    }
+    const knowledgeService = {
+      addKnowledgeSourceDirectoryMembers,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+    const command = [
+      "node",
+      "draft-loop",
+      "knowledge",
+      "source",
+      "directory-add-members",
+      resolve("private-directory-store"),
+      "base-one",
+      "directory-opaque",
+      "--confirm",
+    ] as const;
+
+    for (let index = 0; index < results.length; index += 1) {
+      await expect(cli.parseAsync(command)).rejects.toThrow(
+        "The candidate knowledge source directory add-members result was invalid.",
+      );
+    }
     expect(dependencies.lines).toEqual([]);
   });
 

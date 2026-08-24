@@ -150,6 +150,8 @@ pnpm --filter @draft-loop/cli start knowledge source directory-reconciliation-pr
 pnpm --filter @draft-loop/cli start knowledge source directory-reconciliation-apply \
   ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID \
   --approved-retirement-source-id SOURCE_ID --confirm
+pnpm --filter @draft-loop/cli start knowledge source directory-add-members \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID DIRECTORY_ID --confirm
 pnpm --filter @draft-loop/cli start knowledge source list \
   ./candidate-knowledge KNOWLEDGE_BASE_ID
 pnpm --filter @draft-loop/cli start knowledge source duplicates \
@@ -188,7 +190,9 @@ historical member still matches exactly. Directory refresh likewise separates
 read-only preview from confirmed apply. Apply rescans the remembered root,
 records current and missing observations, and appends changed same-member bytes
 in source-ID order; a later failure reports bounded path-free partial progress.
-Adding members, reconciliation, deletion, backup, and restore remain staged.
+Adding directory members requires confirmation, rescans the remembered root,
+and reports deterministic complete or partial progress using opaque source IDs.
+Deletion, backup, and restore remain staged.
 Moved-candidate preview reports only unique exact-integrity source matches.
 Confirmed one-source member move repeats the bounded scan, changes only the
 selected member's remembered origin, and returns `moved` or idempotent `current`.

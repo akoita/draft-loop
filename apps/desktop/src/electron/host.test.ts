@@ -3284,6 +3284,85 @@ describe("candidate knowledge native controls", () => {
     }
   });
 
+  it("confirms a path-free directory member addition", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-directory-add-members-host-"));
+    const directoryPath = join(parent, "private-career-directory");
+    await mkdir(directoryPath);
+    await writeFile(join(directoryPath, "career.md"), "Private career evidence.\n", "utf8");
+    const newSourcePath = join(directoryPath, "new-career.md");
+    try {
+      const underlying = createCandidateKnowledgeStoreService();
+      const addMembers = vi.fn(underlying.addKnowledgeSourceDirectoryMembers);
+      const host = createNativeHost({
+        knowledgeService: {
+          ...underlying,
+          addKnowledgeSourceDirectoryMembers: addMembers,
+        },
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceDirectory: async () => directoryPath,
+        },
+      });
+      const created = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected candidate knowledge store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      const imported = await host.invoke({
+        type: "knowledge.import-directory",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
+      const directoryId = (imported.value as { directoryId: string }).directoryId;
+      await writeFile(newSourcePath, "Private new career evidence.\n", "utf8");
+      const input = { storeId, knowledgeBaseId, directoryId };
+
+      await expect(
+        host.invoke({
+          type: "knowledge.directory-add-members",
+          input: { ...input, confirmed: false },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      expect(addMembers).not.toHaveBeenCalled();
+
+      const added = await host.invoke({
+        type: "knowledge.directory-add-members",
+        input: { ...input, confirmed: true },
+      });
+      expect(added).toMatchObject({
+        ok: true,
+        value: {
+          ...input,
+          members: [{ status: "current" }],
+          memberCount: 1,
+          membersTruncated: false,
+          newSourceCount: 1,
+          status: "complete",
+          addedSourceCount: 1,
+          addedSourceIdsTruncated: false,
+        },
+      });
+      if (!added.ok) throw new Error("Expected directory member addition to succeed.");
+      const addedValue = added.value as {
+        addedSourceIds: readonly string[];
+        addedSourceCount: number;
+      };
+      expect(addedValue.addedSourceIds).toHaveLength(1);
+      expect(addedValue.addedSourceCount).toBe(1);
+      expect(JSON.stringify(added)).not.toContain(parent);
+      expect(JSON.stringify(added)).not.toContain("new-career.md");
+      expect(JSON.stringify(added)).not.toContain("Private new career evidence");
+      expect(addMembers).toHaveBeenCalledOnce();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("previews and confirms a path-free directory member move", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-directory-member-move-host-"));
     const directoryPath = join(parent, "private-career-directory");

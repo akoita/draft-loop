@@ -30,6 +30,7 @@ export const bridgeCapabilities = [
   "knowledge.import-directory",
   "knowledge.directory-refresh-preview",
   "knowledge.directory-refresh-apply",
+  "knowledge.directory-add-members",
   "knowledge.directory-moved-candidates",
   "knowledge.directory-member-move",
   "knowledge.directory-reconciliation-preview",
@@ -273,6 +274,18 @@ export interface KnowledgeDirectoryRefreshApplyInput extends KnowledgeDirectoryR
 }
 
 const knowledgeDirectoryRefreshApplyKeys = inputKeys<KnowledgeDirectoryRefreshApplyInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "directoryId",
+  "confirmed",
+]);
+
+export interface KnowledgeDirectoryAddMembersInput extends KnowledgeDirectoryRefreshPreviewInput {
+  /** Adding newly discovered directory members requires an explicit confirmation. */
+  readonly confirmed: boolean;
+}
+
+const knowledgeDirectoryAddMembersKeys = inputKeys<KnowledgeDirectoryAddMembersInput>()([
   "storeId",
   "knowledgeBaseId",
   "directoryId",
@@ -883,6 +896,13 @@ export interface KnowledgeDirectoryRefreshApplyResult
   readonly failedStatus?: KnowledgeDirectoryRefreshMemberStatus;
 }
 
+export interface KnowledgeDirectoryAddMembersResult extends KnowledgeDirectoryRefreshPreviewResult {
+  readonly status: "complete" | "partial";
+  readonly addedSourceIds: readonly string[];
+  readonly addedSourceCount: number;
+  readonly addedSourceIdsTruncated: boolean;
+}
+
 export interface KnowledgeDirectoryMovedCandidateResult {
   readonly sourceId: string;
   readonly status: "moved-candidate";
@@ -1176,6 +1196,13 @@ const knowledgeDirectoryRefreshApplyResultKeys = resultKeys<KnowledgeDirectoryRe
     "failedStatus",
   ],
 );
+const knowledgeDirectoryAddMembersResultKeys = resultKeys<KnowledgeDirectoryAddMembersResult>()([
+  ...knowledgeDirectoryRefreshPreviewResultKeys,
+  "status",
+  "addedSourceIds",
+  "addedSourceCount",
+  "addedSourceIdsTruncated",
+]);
 const knowledgeDirectoryMovedCandidateResultKeys =
   resultKeys<KnowledgeDirectoryMovedCandidateResult>()(["sourceId", "status"]);
 const knowledgeDirectoryMovedCandidatesResultKeys =
@@ -1522,6 +1549,7 @@ export interface BridgeCommandInputMap {
   "knowledge.import-directory": KnowledgeDirectoryImportInput;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewInput;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyInput;
+  "knowledge.directory-add-members": KnowledgeDirectoryAddMembersInput;
   "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesInput;
   "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveInput;
   "knowledge.directory-reconciliation-preview": KnowledgeDirectoryReconciliationPreviewInput;
@@ -1573,6 +1601,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.import-directory": KnowledgeDirectoryImportResult;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewResult;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyResult;
+  "knowledge.directory-add-members": KnowledgeDirectoryAddMembersResult;
   "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesResult;
   "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveResult;
   "knowledge.directory-reconciliation-preview": KnowledgeDirectoryReconciliationPreviewResult;
@@ -2120,6 +2149,19 @@ function validateKnowledgeDirectoryRefreshApplyInput(
 ): KnowledgeDirectoryRefreshApplyInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeDirectoryRefreshApplyKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    directoryId: identifier(input.directoryId),
+    confirmed: booleanValue(input.confirmed),
+  };
+}
+
+function validateKnowledgeDirectoryAddMembersInput(
+  value: unknown,
+): KnowledgeDirectoryAddMembersInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDirectoryAddMembersKeys)) return invalidInput();
   return {
     storeId: identifier(input.storeId),
     knowledgeBaseId: identifier(input.knowledgeBaseId),
@@ -2682,6 +2724,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.directory-refresh-apply",
         input: validateKnowledgeDirectoryRefreshApplyInput(command.input),
+      };
+    case "knowledge.directory-add-members":
+      return {
+        type: "knowledge.directory-add-members",
+        input: validateKnowledgeDirectoryAddMembersInput(command.input),
       };
     case "knowledge.directory-moved-candidates":
       return {
@@ -3335,6 +3382,57 @@ function normalizeKnowledgeDirectoryRefreshApplyResult(
   };
 }
 
+function normalizeKnowledgeDirectoryAddMembersResult(
+  value: unknown,
+): KnowledgeDirectoryAddMembersResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeDirectoryAddMembersResultKeys) ||
+    !Array.isArray(result.addedSourceIds) ||
+    result.addedSourceIds.length > maximumKnowledgeInspectionEntries
+  ) {
+    return invalidInput();
+  }
+  const preview = normalizeKnowledgeDirectoryRefreshPreviewResult({
+    storeId: result.storeId,
+    knowledgeBaseId: result.knowledgeBaseId,
+    directoryId: result.directoryId,
+    checkedAt: result.checkedAt,
+    members: result.members,
+    memberCount: result.memberCount,
+    membersTruncated: result.membersTruncated,
+    newSourceCount: result.newSourceCount,
+    scannedEntryCount: result.scannedEntryCount,
+    discoveredFileCount: result.discoveredFileCount,
+    skippedEntryCount: result.skippedEntryCount,
+  });
+  const status = enumValue(result.status, ["complete", "partial"] as const);
+  const addedSourceIds = result.addedSourceIds
+    .map((sourceId) => identifier(sourceId))
+    .sort((left, right) => left.localeCompare(right));
+  const addedSourceCount = finiteInteger(result.addedSourceCount, 1_000_000);
+  const addedSourceIdsTruncated = booleanValue(result.addedSourceIdsTruncated);
+  const visibleMemberSourceIds = new Set(preview.members.map(({ sourceId }) => sourceId));
+  if (
+    new Set(addedSourceIds).size !== addedSourceIds.length ||
+    addedSourceIds.some((sourceId) => visibleMemberSourceIds.has(sourceId)) ||
+    addedSourceCount < addedSourceIds.length ||
+    addedSourceCount > preview.newSourceCount ||
+    addedSourceIdsTruncated !== addedSourceCount > addedSourceIds.length ||
+    (status === "complete" && addedSourceCount !== preview.newSourceCount) ||
+    (status === "partial" && addedSourceCount >= preview.newSourceCount)
+  ) {
+    return invalidInput();
+  }
+  return {
+    ...preview,
+    status,
+    addedSourceIds,
+    addedSourceCount,
+    addedSourceIdsTruncated,
+  };
+}
+
 function normalizeKnowledgeDirectoryMovedCandidatesResult(
   value: unknown,
 ): KnowledgeDirectoryMovedCandidatesResult {
@@ -3954,6 +4052,8 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeDirectoryRefreshPreviewResult(value);
     case "knowledge.directory-refresh-apply":
       return normalizeKnowledgeDirectoryRefreshApplyResult(value);
+    case "knowledge.directory-add-members":
+      return normalizeKnowledgeDirectoryAddMembersResult(value);
     case "knowledge.directory-moved-candidates":
       return normalizeKnowledgeDirectoryMovedCandidatesResult(value);
     case "knowledge.directory-member-move":

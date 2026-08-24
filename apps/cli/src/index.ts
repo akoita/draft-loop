@@ -5,6 +5,7 @@ import packageJson from "../package.json";
 import { independentReviewLines } from "./independent-review.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
 import {
+  type AddKnowledgeSourceDirectoryMembersResult,
   type ApplicationIo,
   type ApplicationService,
   type ApplyKnowledgeSourceDirectoryMemberMoveResult,
@@ -526,6 +527,92 @@ function writeKnowledgeSourceDirectoryRefresh(
     }
   }
   writeJson(io, Object.freeze(projection));
+}
+
+function writeKnowledgeSourceDirectoryAddMembers(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  directoryId: string,
+  result: AddKnowledgeSourceDirectoryMembersResult,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.directoryId !== directoryId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !Array.isArray(result.members) ||
+    !["complete", "partial"].includes(result.status) ||
+    !Array.isArray(result.addedSourceIds) ||
+    ![
+      result.newSourceCount,
+      result.scannedEntryCount,
+      result.discoveredFileCount,
+      result.skippedEntryCount,
+      result.addedSourceCount,
+    ].every((count) => Number.isSafeInteger(count) && count >= 0) ||
+    result.newSourceCount > result.discoveredFileCount ||
+    result.discoveredFileCount + result.skippedEntryCount > result.scannedEntryCount ||
+    result.addedSourceCount !== result.addedSourceIds.length ||
+    result.addedSourceCount > result.newSourceCount ||
+    (result.status === "complete" && result.addedSourceCount !== result.newSourceCount) ||
+    (result.status === "partial" && result.addedSourceCount >= result.newSourceCount)
+  ) {
+    throw new Error("The candidate knowledge source directory add-members result was invalid.");
+  }
+
+  const memberIds = new Set<string>();
+  for (const member of result.members) {
+    if (
+      typeof member !== "object" ||
+      member === null ||
+      typeof member.sourceId !== "string" ||
+      member.sourceId.trim() === "" ||
+      memberIds.has(member.sourceId) ||
+      !["current", "changed", "missing", "retired", "origin-conflict"].includes(member.status)
+    ) {
+      throw new Error("The candidate knowledge source directory add-members result was invalid.");
+    }
+    memberIds.add(member.sourceId);
+  }
+
+  const addedSourceIds = new Set<string>();
+  for (const sourceId of result.addedSourceIds) {
+    if (
+      typeof sourceId !== "string" ||
+      sourceId.trim() === "" ||
+      addedSourceIds.has(sourceId) ||
+      memberIds.has(sourceId)
+    ) {
+      throw new Error("The candidate knowledge source directory add-members result was invalid.");
+    }
+    addedSourceIds.add(sourceId);
+  }
+
+  const orderedMembers = [...result.members].sort((left, right) =>
+    lexicalCompare(left.sourceId, right.sourceId),
+  );
+  const orderedAddedSourceIds = [...addedSourceIds].sort(lexicalCompare);
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      directoryId,
+      checkedAt: result.checkedAt,
+      members: orderedMembers
+        .slice(0, maximumKnowledgeInspectionItems)
+        .map(({ sourceId, status }) => ({ sourceId, status })),
+      memberCount: orderedMembers.length,
+      membersTruncated: orderedMembers.length > maximumKnowledgeInspectionItems,
+      newSourceCount: result.newSourceCount,
+      scannedEntryCount: result.scannedEntryCount,
+      discoveredFileCount: result.discoveredFileCount,
+      skippedEntryCount: result.skippedEntryCount,
+      status: result.status,
+      addedSourceIds: orderedAddedSourceIds.slice(0, maximumKnowledgeInspectionItems),
+      addedSourceCount: orderedAddedSourceIds.length,
+      addedSourceIdsTruncated: orderedAddedSourceIds.length > maximumKnowledgeInspectionItems,
+    }),
+  );
 }
 
 function writeKnowledgeSourceDirectoryMovedCandidates(
@@ -1544,6 +1631,40 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
         });
         writeKnowledgeSourceDirectoryRefresh(io, knowledgeBaseId, directoryId, result, "apply");
+      },
+    );
+
+  knowledgeSource
+    .command("directory-add-members")
+    .description("Add newly discovered directory members after explicit confirmation")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .option("--max-depth <number>", "maximum directory depth", integerOption)
+    .option("--max-scanned-entries <number>", "maximum scanned directory entries", integerOption)
+    .option("--max-accepted-files <number>", "maximum accepted directory files", integerOption)
+    .option("--max-accepted-bytes <number>", "maximum accepted directory bytes", integerOption)
+    .option("--max-source-bytes <number>", "maximum bytes per source file", integerOption)
+    .option("--max-chunk-characters <number>", "maximum extracted chunk characters", integerOption)
+    .option("--confirm", "confirm adding newly discovered directory members")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.confirm !== true) {
+          throw new Error("knowledge source directory-add-members requires --confirm.");
+        }
+        const ingestionOptions = directoryIngestionOptions(options);
+        const result = await candidateKnowledge.addKnowledgeSourceDirectoryMembers({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
+        });
+        writeKnowledgeSourceDirectoryAddMembers(io, knowledgeBaseId, directoryId, result);
       },
     );
 

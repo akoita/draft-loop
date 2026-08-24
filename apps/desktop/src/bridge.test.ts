@@ -1621,6 +1621,67 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("validates confirmed path-free directory member additions", async () => {
+    const input = { storeId: "store-1", knowledgeBaseId: "kb-1", directoryId: "directory-1" };
+    const addInput = { ...input, confirmed: true } as const;
+    expect(
+      validateBridgeCommand({ type: "knowledge.directory-add-members", input: addInput }),
+    ).toEqual({ type: "knowledge.directory-add-members", input: addInput });
+    expect(() =>
+      validateBridgeCommand({
+        type: "knowledge.directory-add-members",
+        input: { ...addInput, directoryPath: "/private/career" },
+      }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "knowledge.directory-add-members",
+        input: { ...addInput, confirmed: "yes" },
+      }),
+    ).toThrow("invalid");
+
+    const addedValue = {
+      ...input,
+      checkedAt: "2026-08-24T10:00:00.000Z",
+      members: [{ sourceId: "existing-source", status: "current" }],
+      memberCount: 1,
+      membersTruncated: false,
+      newSourceCount: 2,
+      scannedEntryCount: 3,
+      discoveredFileCount: 2,
+      skippedEntryCount: 1,
+      status: "complete" as const,
+      addedSourceIds: ["new-source-1", "new-source-2"],
+      addedSourceCount: 2,
+      addedSourceIdsTruncated: false,
+    } as const;
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: addedValue }), ["knowledge.directory-add-members"]),
+    );
+    await expect(
+      port.execute({ type: "knowledge.directory-add-members", input: addInput }),
+    ).resolves.toEqual({ ok: true, value: addedValue });
+
+    for (const invalidValue of [
+      { ...addedValue, addedSourceIds: ["new-source-1", "new-source-1"] },
+      { ...addedValue, addedSourceCount: 1 },
+      { ...addedValue, addedSourceIdsTruncated: true },
+      { ...addedValue, status: "partial" },
+      { ...addedValue, addedSourceIds: ["new-source-1"], addedSourceCount: 1 },
+      { ...addedValue, sourcePath: "/private/career" },
+    ]) {
+      const invalidPort = createCapabilityPort(
+        bridge(
+          async () => ({ ok: true, value: invalidValue }),
+          ["knowledge.directory-add-members"],
+        ),
+      );
+      await expect(
+        invalidPort.execute({ type: "knowledge.directory-add-members", input: addInput }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+  });
+
   it("validates confirmed path-free directory reconciliation controls", async () => {
     const input = { storeId: "store-1", knowledgeBaseId: "kb-1", directoryId: "directory-1" };
     expect(
