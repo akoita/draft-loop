@@ -9,6 +9,8 @@ import {
   agentContextReferenceSchema,
   candidateKnowledgeBaseSchema,
   candidateKnowledgeBaseStateSchema,
+  candidateKnowledgePortableBackupInspectionSchema,
+  candidateKnowledgePortableBackupManifestSchema,
   candidateKnowledgeRetentionOverrideInputSchema,
   candidateKnowledgeRetentionPolicyUpdateSchema,
   candidateKnowledgeSelectionSnapshotSchema,
@@ -914,6 +916,197 @@ describe("candidate knowledge source schemas", () => {
     expect(() =>
       candidateKnowledgeSourceVersionSchema.parse({ ...valid, createdAt: ` ${createdAt} ` }),
     ).toThrow(/valid ISO timestamp/i);
+  });
+});
+
+describe("portable candidate knowledge backup schemas", () => {
+  const createdAt = "2026-08-21T12:30:00.000Z";
+  const manifest = {
+    format: "draft-loop-candidate-knowledge-backup",
+    schemaVersion: 1,
+    createdAt,
+    descriptor: { schemaVersion: 1, id: "store-1", createdAt },
+    knowledgeBases: [
+      {
+        knowledgeBase: {
+          id: "ckb-1",
+          displayName: "Career evidence",
+          description: "",
+          isDefault: true,
+          state: "active",
+          createdAt,
+          updatedAt: createdAt,
+          archivedAt: null,
+        },
+        sources: [
+          {
+            id: "source-1",
+            knowledgeBaseId: "ckb-1",
+            kind: "file",
+            displayName: "Resume",
+            createdAt,
+            versions: [
+              {
+                id: "version-1",
+                sourceId: "source-1",
+                version: 1,
+                parentVersionId: null,
+                mediaType: "text/plain",
+                checksum,
+                sizeBytes: 12,
+                createdAt,
+                contentObject: `objects/${checksum}.bin`,
+              },
+            ],
+            refreshObservation: null,
+            retirement: null,
+          },
+        ],
+        retentionPolicy: {
+          revision: 0,
+          overrideRevision: 0,
+          updatedAt: createdAt,
+          classes: retentionClasses.map((className) => ({
+            class: className,
+            rule: "retain-until-deletion" as const,
+            expireAfterDays: null,
+          })),
+          activeOverrides: [],
+        },
+      },
+    ],
+    contentObjects: [{ name: `objects/${checksum}.bin`, checksum, sizeBytes: 12 }],
+  };
+
+  it("accepts a strict, path-free manifest with lineage and object references", () => {
+    expect(candidateKnowledgePortableBackupManifestSchema.parse(manifest)).toEqual(manifest);
+    expect(
+      candidateKnowledgePortableBackupInspectionSchema.parse({
+        format: "draft-loop-candidate-knowledge-backup",
+        schemaVersion: 1,
+        status: "valid",
+        descriptorSchemaVersion: 1,
+        storeId: "store-1",
+        createdAt,
+        manifestChecksum: checksum,
+        knowledgeBaseCount: 1,
+        sourceCount: 1,
+        versionCount: 1,
+        contentObjectCount: 1,
+        contentBytes: 12,
+        integrity: "integrity-verified-not-authenticity",
+      }),
+    ).toMatchObject({ storeId: "store-1", contentBytes: 12 });
+  });
+
+  it("rejects traversal, undeclared objects, and unknown fields", () => {
+    const knowledgeBase = manifest.knowledgeBases[0];
+    const source = knowledgeBase?.sources[0];
+    const version = source?.versions[0];
+    if (knowledgeBase === undefined || source === undefined || version === undefined) {
+      throw new Error("portable backup schema fixture is incomplete");
+    }
+    expect(() =>
+      candidateKnowledgePortableBackupManifestSchema.parse({
+        ...manifest,
+        contentObjects: [{ name: "objects/../secret.bin", checksum, sizeBytes: 12 }],
+      }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgePortableBackupManifestSchema.parse({
+        ...manifest,
+        knowledgeBases: [
+          {
+            ...knowledgeBase,
+            sources: [
+              {
+                ...source,
+                versions: [
+                  {
+                    ...version,
+                    contentObject: `objects/${"b".repeat(64)}.bin`,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/declared content object/i);
+    expect(() =>
+      candidateKnowledgePortableBackupManifestSchema.parse({ ...manifest, path: "/local/store" }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgePortableBackupManifestSchema.parse({
+        ...manifest,
+        contentObjects: [
+          ...manifest.contentObjects,
+          { name: `objects/${"b".repeat(64)}.bin`, checksum: "b".repeat(64), sizeBytes: 1 },
+        ],
+      }),
+    ).toThrow(/every content object/i);
+    expect(() =>
+      candidateKnowledgePortableBackupManifestSchema.parse({
+        ...manifest,
+        knowledgeBases: [
+          {
+            ...knowledgeBase,
+            sources: [
+              {
+                ...source,
+                versions: [],
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      candidateKnowledgePortableBackupManifestSchema.parse({
+        ...manifest,
+        knowledgeBases: [
+          {
+            ...knowledgeBase,
+            sources: [
+              {
+                ...source,
+                refreshObservation: {
+                  observedVersionId: "missing-version",
+                  status: "current",
+                  checkedAt: createdAt,
+                  lastRefreshedVersionId: null,
+                  lastRefreshedAt: null,
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/observedVersionId/i);
+    expect(() =>
+      candidateKnowledgePortableBackupManifestSchema.parse({
+        ...manifest,
+        knowledgeBases: [
+          {
+            ...knowledgeBase,
+            retentionPolicy: {
+              ...knowledgeBase.retentionPolicy,
+              overrideRevision: 0,
+              activeOverrides: [
+                {
+                  class: "raw-sources",
+                  kind: "legal-hold",
+                  sequence: 1,
+                  overrideRevision: 1,
+                  policyRevision: 0,
+                  changedAt: createdAt,
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    ).toThrow(/override revision/i);
   });
 });
 

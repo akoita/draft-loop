@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import {
+  lstat,
   mkdir,
   mkdtemp,
   readdir,
@@ -152,6 +153,65 @@ describe("candidate knowledge store application service", () => {
     });
     await expect(service.openStore({ storeRoot })).resolves.toEqual(initialized);
     await expect(service.listKnowledgeBases({ storeRoot })).resolves.toEqual(initialized);
+  });
+
+  it("requires export approval before opening the source or touching the destination", async () => {
+    const open = vi.fn();
+    const destination = join(temporaryParent, "portable-backup");
+    const service = createCandidateKnowledgeStoreService({ open: open as never });
+
+    await expect(
+      service.exportCandidateKnowledgeStore({
+        storeRoot,
+        destination,
+        approved: false,
+      }),
+    ).rejects.toThrow(/explicit approval/i);
+    expect(open).not.toHaveBeenCalled();
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("exports and inspects a path-free portable backup through the shared service", async () => {
+    const service = createCandidateKnowledgeStoreService({
+      generateId: vi
+        .fn<() => string>()
+        .mockReturnValueOnce("store-uuid")
+        .mockReturnValueOnce("default-ckb-uuid"),
+      now: () => createdAt,
+    });
+    await service.initializeStore({ storeRoot });
+    const destination = join(temporaryParent, "portable-backup");
+
+    const exported = await service.exportCandidateKnowledgeStore({
+      storeRoot,
+      destination,
+      approved: true,
+    });
+    expect(exported).toMatchObject({
+      status: "exported",
+      storeId: "store-uuid",
+      knowledgeBaseCount: 1,
+      integrity: "integrity-verified-not-authenticity",
+    });
+    expect(JSON.stringify(exported)).not.toContain(storeRoot);
+    const inspected = await service.inspectCandidateKnowledgeBackup({ packagePath: destination });
+    expect(inspected).toMatchObject({
+      status: "valid",
+      storeId: "store-uuid",
+      manifestChecksum: exported.manifestChecksum,
+    });
+    expect(JSON.stringify(inspected)).not.toContain(destination);
+
+    const mismatchedDestination = join(temporaryParent, "mismatched-backup");
+    await expect(
+      service.exportCandidateKnowledgeStore({
+        storeRoot,
+        destination: mismatchedDestination,
+        approved: true,
+        expectedStoreId: "different-store",
+      }),
+    ).rejects.toThrow(/could not be exported/i);
+    await expect(lstat(mismatchedDestination)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("exposes the effective retention policy and plan through the shared service", async () => {

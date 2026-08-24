@@ -324,6 +324,542 @@ export const candidateKnowledgeSourceVersionSchema = z
 
 export type CandidateKnowledgeSourceVersion = z.infer<typeof candidateKnowledgeSourceVersionSchema>;
 
+export const candidateKnowledgePortableBackupFormat =
+  "draft-loop-candidate-knowledge-backup" as const;
+export const candidateKnowledgePortableBackupSchemaVersion = 1 as const;
+export const candidateKnowledgePortableBackupIntegrityIndicator =
+  "integrity-verified-not-authenticity" as const;
+export const candidateKnowledgePortableBackupMaximumEntries = 1024 as const;
+export const candidateKnowledgePortableBackupManifestFilename = "manifest.json" as const;
+export const candidateKnowledgePortableBackupManifestChecksumFilename = "manifest.sha256" as const;
+export const candidateKnowledgePortableBackupObjectsDirectory = "objects" as const;
+
+const portableBackupObjectNameSchema = z
+  .string()
+  .regex(/^objects\/[a-f0-9]{64}\.bin$/u, "must be a safe portable backup object name");
+
+const portableBackupStoreDescriptorSchema = z
+  .object({
+    schemaVersion: z.literal(candidateKnowledgeStoreSchemaVersion),
+    id: nonEmptyString,
+    createdAt: strictTimestampSchema,
+  })
+  .strict();
+
+const portableBackupKnowledgeBaseSchema = z
+  .object({
+    id: nonEmptyString,
+    displayName: nonEmptyString,
+    description: z.string(),
+    isDefault: z.boolean(),
+    state: candidateKnowledgeBaseStateSchema,
+    createdAt: strictTimestampSchema,
+    updatedAt: strictTimestampSchema,
+    archivedAt: strictTimestampSchema.nullable(),
+  })
+  .strict()
+  .superRefine((knowledgeBase, context) => {
+    if (Date.parse(knowledgeBase.updatedAt) < Date.parse(knowledgeBase.createdAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["updatedAt"],
+        message: "updatedAt must not precede createdAt",
+      });
+    }
+    if (knowledgeBase.state === "active" && knowledgeBase.archivedAt !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["archivedAt"],
+        message: "active stores must not have archivedAt",
+      });
+    }
+    if (knowledgeBase.state === "archived" && knowledgeBase.archivedAt === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["archivedAt"],
+        message: "archived stores require archivedAt",
+      });
+    }
+  });
+
+const portableBackupUrlKindSchema = z.enum([
+  "github",
+  "certification",
+  "profile",
+  "portfolio",
+  "job-description",
+  "generic",
+]);
+
+const portableBackupUrlProvenanceSchema = z
+  .object({
+    fetchedAt: strictTimestampSchema,
+    kind: portableBackupUrlKindSchema,
+  })
+  .strict();
+
+const portableBackupRefreshObservationSchema = z
+  .object({
+    observedVersionId: nonEmptyString,
+    status: z.enum(["current", "changed", "missing", "inaccessible", "unbound"]),
+    checkedAt: strictTimestampSchema,
+    lastRefreshedVersionId: nonEmptyString.nullable(),
+    lastRefreshedAt: strictTimestampSchema.nullable(),
+  })
+  .strict();
+
+const portableBackupRetirementSchema = z
+  .object({
+    retiredAt: strictTimestampSchema,
+    reason: z.literal("user-requested"),
+  })
+  .strict();
+
+const portableBackupSourceVersionSchema = z
+  .object({
+    id: nonEmptyString,
+    sourceId: nonEmptyString,
+    version: z.number().finite().int().positive(),
+    parentVersionId: nonEmptyString.nullable(),
+    mediaType: nonEmptyString,
+    checksum: sha256ChecksumSchema,
+    sizeBytes: z.number().finite().int().nonnegative(),
+    createdAt: strictTimestampSchema,
+    contentObject: portableBackupObjectNameSchema,
+    urlProvenance: portableBackupUrlProvenanceSchema.optional(),
+  })
+  .strict()
+  .superRefine((version, context) => {
+    if (version.version === 1 && version.parentVersionId !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentVersionId"],
+        message: "version 1 must not have a parent version",
+      });
+    }
+    if (version.version > 1 && version.parentVersionId === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentVersionId"],
+        message: "versions after version 1 require a parent version",
+      });
+    }
+  });
+
+const portableBackupSourceSchema = z
+  .object({
+    id: nonEmptyString,
+    knowledgeBaseId: nonEmptyString,
+    kind: candidateKnowledgeSourceKindSchema,
+    displayName: nonEmptyString,
+    createdAt: strictTimestampSchema,
+    versions: z
+      .array(portableBackupSourceVersionSchema)
+      .min(1)
+      .max(candidateKnowledgePortableBackupMaximumEntries),
+    refreshObservation: portableBackupRefreshObservationSchema.nullable(),
+    retirement: portableBackupRetirementSchema.nullable(),
+  })
+  .strict()
+  .superRefine((source, context) => {
+    const versionIds = new Set<string>();
+    const versionsById = new Map<string, (typeof source.versions)[number]>();
+    let previousVersion = 0;
+    for (const [index, version] of source.versions.entries()) {
+      if (version.sourceId !== source.id) {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "sourceId"],
+          message: "version sourceId must match its source",
+        });
+      }
+      if (versionIds.has(version.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "id"],
+          message: "version ids must be unique",
+        });
+      }
+      versionIds.add(version.id);
+      versionsById.set(version.id, version);
+      if (Date.parse(version.createdAt) < Date.parse(source.createdAt)) {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "createdAt"],
+          message: "version createdAt must not precede its source",
+        });
+      }
+      if (version.version !== previousVersion + 1) {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "version"],
+          message: "source versions must be contiguous",
+        });
+      }
+      if (version.version > 1 && version.parentVersionId !== source.versions[index - 1]?.id) {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "parentVersionId"],
+          message: "source version parent must be the preceding version",
+        });
+      }
+      const parentVersion = source.versions[index - 1];
+      if (
+        parentVersion !== undefined &&
+        Date.parse(version.createdAt) < Date.parse(parentVersion.createdAt)
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "createdAt"],
+          message: "version createdAt must not precede its parent",
+        });
+      }
+      if (version.urlProvenance !== undefined && source.kind !== "url") {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "urlProvenance"],
+          message: "URL provenance is only valid for URL sources",
+        });
+      }
+      if (version.contentObject !== `objects/${version.checksum}.bin`) {
+        context.addIssue({
+          code: "custom",
+          path: ["versions", index, "contentObject"],
+          message: "version contentObject must be derived from its checksum",
+        });
+      }
+      previousVersion = version.version;
+    }
+    const refresh = source.refreshObservation;
+    if (refresh !== null) {
+      const observedVersion = versionsById.get(refresh.observedVersionId);
+      if (observedVersion === undefined) {
+        context.addIssue({
+          code: "custom",
+          path: ["refreshObservation", "observedVersionId"],
+          message: "refresh observedVersionId must refer to a source version",
+        });
+      } else if (Date.parse(refresh.checkedAt) < Date.parse(observedVersion.createdAt)) {
+        context.addIssue({
+          code: "custom",
+          path: ["refreshObservation", "checkedAt"],
+          message: "refresh checkedAt must not precede the observed version",
+        });
+      }
+      if (Date.parse(refresh.checkedAt) < Date.parse(source.createdAt)) {
+        context.addIssue({
+          code: "custom",
+          path: ["refreshObservation", "checkedAt"],
+          message: "refresh checkedAt must not precede its source",
+        });
+      }
+      if (refresh.lastRefreshedVersionId === null) {
+        if (refresh.lastRefreshedAt !== null) {
+          context.addIssue({
+            code: "custom",
+            path: ["refreshObservation", "lastRefreshedAt"],
+            message: "lastRefreshedAt requires lastRefreshedVersionId",
+          });
+        }
+      } else {
+        const refreshedVersion = versionsById.get(refresh.lastRefreshedVersionId);
+        if (refreshedVersion === undefined) {
+          context.addIssue({
+            code: "custom",
+            path: ["refreshObservation", "lastRefreshedVersionId"],
+            message: "lastRefreshedVersionId must refer to a source version",
+          });
+        }
+        if (refresh.lastRefreshedAt === null) {
+          context.addIssue({
+            code: "custom",
+            path: ["refreshObservation", "lastRefreshedAt"],
+            message: "lastRefreshedVersionId requires lastRefreshedAt",
+          });
+        } else {
+          if (
+            refreshedVersion !== undefined &&
+            Date.parse(refresh.lastRefreshedAt) < Date.parse(refreshedVersion.createdAt)
+          ) {
+            context.addIssue({
+              code: "custom",
+              path: ["refreshObservation", "lastRefreshedAt"],
+              message: "lastRefreshedAt must not precede the refreshed version",
+            });
+          }
+          if (Date.parse(refresh.lastRefreshedAt) > Date.parse(refresh.checkedAt)) {
+            context.addIssue({
+              code: "custom",
+              path: ["refreshObservation", "lastRefreshedAt"],
+              message: "lastRefreshedAt must not follow checkedAt",
+            });
+          }
+        }
+      }
+    }
+    if (source.retirement !== null) {
+      const latestVersion = source.versions[source.versions.length - 1];
+      if (
+        Date.parse(source.retirement.retiredAt) < Date.parse(source.createdAt) ||
+        (latestVersion !== undefined &&
+          Date.parse(source.retirement.retiredAt) < Date.parse(latestVersion.createdAt))
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["retirement", "retiredAt"],
+          message: "retiredAt must not precede the source or its latest version",
+        });
+      }
+    }
+    if (
+      source.kind === "url" &&
+      source.versions.some((version) => version.urlProvenance === undefined)
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["versions"],
+        message: "URL sources require safe URL provenance for every version",
+      });
+    }
+  });
+
+const portableBackupRetentionOverrideSchema = z
+  .object({
+    class: candidateKnowledgeRetentionClassSchema,
+    kind: candidateKnowledgeRetentionOverrideKindSchema,
+    sequence: z.number().finite().int().positive(),
+    overrideRevision: z.number().finite().int().nonnegative(),
+    policyRevision: z.number().finite().int().nonnegative(),
+    changedAt: strictTimestampSchema,
+  })
+  .strict();
+
+const portableBackupRetentionPolicySchema = z
+  .object({
+    revision: z.number().finite().int().nonnegative(),
+    overrideRevision: z.number().finite().int().nonnegative(),
+    updatedAt: strictTimestampSchema,
+    classes: exactRetentionClasses,
+    activeOverrides: z
+      .array(portableBackupRetentionOverrideSchema)
+      .max(candidateKnowledgePortableBackupMaximumEntries),
+  })
+  .strict()
+  .superRefine((policy, context) => {
+    const overrides = new Set<string>();
+    const overrideRevisions = new Set<number>();
+    for (const [index, override] of policy.activeOverrides.entries()) {
+      const key = `${override.class}\u0000${override.kind}`;
+      if (overrides.has(key)) {
+        context.addIssue({
+          code: "custom",
+          path: ["activeOverrides", index],
+          message: "active retention overrides must be unique by class and kind",
+        });
+      }
+      overrides.add(key);
+      if (overrideRevisions.has(override.overrideRevision)) {
+        context.addIssue({
+          code: "custom",
+          path: ["activeOverrides", index, "overrideRevision"],
+          message: "active override revisions must be unique",
+        });
+      }
+      overrideRevisions.add(override.overrideRevision);
+      if (override.overrideRevision === 0 || override.overrideRevision > policy.overrideRevision) {
+        context.addIssue({
+          code: "custom",
+          path: ["activeOverrides", index, "overrideRevision"],
+          message: "active override revision must be within the policy override revision",
+        });
+      }
+      if (override.policyRevision > policy.revision) {
+        context.addIssue({
+          code: "custom",
+          path: ["activeOverrides", index, "policyRevision"],
+          message: "active override policy revision must be within the policy revision",
+        });
+      }
+    }
+  });
+
+const portableBackupKnowledgeBaseEntrySchema = z
+  .object({
+    knowledgeBase: portableBackupKnowledgeBaseSchema,
+    sources: z
+      .array(portableBackupSourceSchema)
+      .max(candidateKnowledgePortableBackupMaximumEntries),
+    retentionPolicy: portableBackupRetentionPolicySchema,
+  })
+  .strict()
+  .superRefine((entry, context) => {
+    const sourceIds = new Set<string>();
+    for (const [index, source] of entry.sources.entries()) {
+      if (source.knowledgeBaseId !== entry.knowledgeBase.id) {
+        context.addIssue({
+          code: "custom",
+          path: ["sources", index, "knowledgeBaseId"],
+          message: "source knowledgeBaseId must match its knowledge base",
+        });
+      }
+      if (sourceIds.has(source.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["sources", index, "id"],
+          message: "source ids must be unique within a knowledge base",
+        });
+      }
+      sourceIds.add(source.id);
+    }
+  });
+
+const portableBackupContentObjectSchema = z
+  .object({
+    name: portableBackupObjectNameSchema,
+    checksum: sha256ChecksumSchema,
+    sizeBytes: z.number().finite().int().nonnegative(),
+  })
+  .strict();
+
+export const candidateKnowledgePortableBackupManifestSchema = z
+  .object({
+    format: z.literal(candidateKnowledgePortableBackupFormat),
+    schemaVersion: z.literal(candidateKnowledgePortableBackupSchemaVersion),
+    createdAt: strictTimestampSchema,
+    descriptor: portableBackupStoreDescriptorSchema,
+    knowledgeBases: z
+      .array(portableBackupKnowledgeBaseEntrySchema)
+      .max(candidateKnowledgePortableBackupMaximumEntries),
+    contentObjects: z
+      .array(portableBackupContentObjectSchema)
+      .max(candidateKnowledgePortableBackupMaximumEntries),
+  })
+  .strict()
+  .superRefine((manifest, context) => {
+    const names = new Set<string>();
+    const referencedObjectNames = new Set<string>();
+    const objectsByName = new Map<string, (typeof manifest.contentObjects)[number]>();
+    for (const [index, object] of manifest.contentObjects.entries()) {
+      if (object.name !== `objects/${object.checksum}.bin`) {
+        context.addIssue({
+          code: "custom",
+          path: ["contentObjects", index, "name"],
+          message: "content object names must be derived from their checksum",
+        });
+      }
+      if (names.has(object.name)) {
+        context.addIssue({
+          code: "custom",
+          path: ["contentObjects", index, "name"],
+          message: "content object names must be unique",
+        });
+      }
+      names.add(object.name);
+      objectsByName.set(object.name, object);
+    }
+    const versionIds = new Set<string>();
+    const knowledgeBaseIds = new Set<string>();
+    const sourceIds = new Set<string>();
+    let defaultKnowledgeBaseCount = 0;
+    for (const entry of manifest.knowledgeBases) {
+      if (knowledgeBaseIds.has(entry.knowledgeBase.id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["knowledgeBases"],
+          message: "knowledge base ids must be unique in a portable backup",
+        });
+      }
+      knowledgeBaseIds.add(entry.knowledgeBase.id);
+      if (entry.knowledgeBase.isDefault) defaultKnowledgeBaseCount += 1;
+      for (const source of entry.sources) {
+        if (sourceIds.has(source.id)) {
+          context.addIssue({
+            code: "custom",
+            path: ["knowledgeBases"],
+            message: "source ids must be unique in a portable backup",
+          });
+        }
+        sourceIds.add(source.id);
+        for (const version of source.versions) {
+          if (versionIds.has(version.id)) {
+            context.addIssue({
+              code: "custom",
+              path: ["knowledgeBases"],
+              message: "source version ids must be unique in a portable backup",
+            });
+          }
+          versionIds.add(version.id);
+          referencedObjectNames.add(version.contentObject);
+          if (!names.has(version.contentObject)) {
+            context.addIssue({
+              code: "custom",
+              path: ["knowledgeBases"],
+              message: "every source version must reference a declared content object",
+            });
+          } else {
+            const object = objectsByName.get(version.contentObject);
+            if (object?.checksum !== version.checksum || object.sizeBytes !== version.sizeBytes) {
+              context.addIssue({
+                code: "custom",
+                path: ["knowledgeBases"],
+                message: "source version integrity must match its content object",
+              });
+            }
+          }
+        }
+      }
+    }
+    if (defaultKnowledgeBaseCount !== 1) {
+      context.addIssue({
+        code: "custom",
+        path: ["knowledgeBases"],
+        message: "a portable backup must contain exactly one default knowledge base",
+      });
+    }
+    for (const object of manifest.contentObjects) {
+      if (!referencedObjectNames.has(object.name)) {
+        context.addIssue({
+          code: "custom",
+          path: ["contentObjects"],
+          message: "every content object must be referenced by a source version",
+        });
+      }
+    }
+    if (Date.parse(manifest.createdAt) < Date.parse(manifest.descriptor.createdAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["createdAt"],
+        message: "backup createdAt must not precede its store descriptor",
+      });
+    }
+  });
+
+export type CandidateKnowledgePortableBackupManifest = z.output<
+  typeof candidateKnowledgePortableBackupManifestSchema
+>;
+
+export const candidateKnowledgePortableBackupInspectionSchema = z
+  .object({
+    format: z.literal(candidateKnowledgePortableBackupFormat),
+    schemaVersion: z.literal(candidateKnowledgePortableBackupSchemaVersion),
+    status: z.enum(["valid", "exported"]),
+    descriptorSchemaVersion: z.literal(candidateKnowledgeStoreSchemaVersion),
+    storeId: nonEmptyString,
+    createdAt: strictTimestampSchema,
+    manifestChecksum: sha256ChecksumSchema,
+    knowledgeBaseCount: z.number().finite().int().nonnegative(),
+    sourceCount: z.number().finite().int().nonnegative(),
+    versionCount: z.number().finite().int().nonnegative(),
+    contentObjectCount: z.number().finite().int().nonnegative(),
+    contentBytes: z.number().finite().int().nonnegative(),
+    integrity: z.literal(candidateKnowledgePortableBackupIntegrityIndicator),
+  })
+  .strict();
+
+export type CandidateKnowledgePortableBackupInspection = z.infer<
+  typeof candidateKnowledgePortableBackupInspectionSchema
+>;
+
 const candidateKnowledgeSelectionLifecycleObservationSchema = z.object({
   observedVersionId: nonEmptyString,
   status: z.enum(candidateKnowledgeSelectionLifecycleObservationStatuses),

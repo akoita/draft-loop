@@ -1189,6 +1189,18 @@ function writeManagedKnowledgeInventory(
   });
 }
 
+function writePortableKnowledgeBackupResult(
+  io: ApplicationIo,
+  result: Awaited<
+    ReturnType<
+      | CandidateKnowledgeStoreService["exportCandidateKnowledgeStore"]
+      | CandidateKnowledgeStoreService["inspectCandidateKnowledgeBackup"]
+    >
+  >,
+): void {
+  writeJson(io, result);
+}
+
 function writeKnowledgeSelection(io: ApplicationIo, descriptor: WorkspaceDescriptor): void {
   const selections = descriptor.candidateKnowledgeSelection;
   if (!Array.isArray(selections) || selections.length === 0) {
@@ -1469,6 +1481,37 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       writeManagedKnowledgeInventory(
         io,
         await candidateKnowledge.inspectManagedCandidateKnowledgeFiles({ storeRoot }),
+      );
+    });
+
+  knowledgeStore
+    .command("backup")
+    .description("Export a verified portable backup to a new local directory")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<destination>", "new portable backup directory")
+    .option("--yes", "approve writing the complete CKB backup to this destination")
+    .action(async (storeRoot: string, destination: string, options: Record<string, unknown>) => {
+      if (options.yes !== true) {
+        throw new Error("knowledge store backup requires --yes destination approval.");
+      }
+      writePortableKnowledgeBackupResult(
+        io,
+        await candidateKnowledge.exportCandidateKnowledgeStore({
+          storeRoot,
+          destination,
+          approved: true,
+        }),
+      );
+    });
+
+  knowledgeStore
+    .command("inspect-backup")
+    .description("Verify a portable backup before restore")
+    .argument("<package-path>", "portable backup directory")
+    .action(async (packagePath: string) => {
+      writePortableKnowledgeBackupResult(
+        io,
+        await candidateKnowledge.inspectCandidateKnowledgeBackup({ packagePath }),
       );
     });
 

@@ -265,11 +265,26 @@ and the five not-yet-materialized classes are preserved. Planning does not
 delete files or records and is not a substitute for the confirmed deletion
 boundary planned in #166.
 
+Portable CKB export is an explicit local operation with a separately approved
+destination. It produces a versioned directory package only when every required
+managed source object and the bounded ownership inventory can be verified. The
+package preserves logical store, CKB, source, version, provenance, retirement,
+and retention state needed by a later restore, but excludes original file and
+directory paths, active locks, writer/recovery journals, application/provider
+credentials, and unrelated workspace or run data. Restored file bindings must
+therefore be selected again. Manifest and object hashes detect corruption or
+modification; they are not signatures and do not establish package authorship.
+
+Directory membership and host-binding history are intentionally omitted, so a
+later restore must mark every source unbound. Legacy or otherwise unmanaged
+source versions block export because DraftLoop cannot prove it captured their
+bytes completely.
+
 Complete deletion across raw, unknown, derived, backed-up, and exported data is
-not implemented. CKB backup/export/restore, retrieval-index lifecycle and
-cleanup, confirmed deletion, and repair of missing blobs remain future privacy
-boundaries. Users remain responsible for selected directories, filesystems,
-devices, cloud backups, and copies made outside DraftLoop.
+not implemented. CKB restore, retrieval-index lifecycle and cleanup, confirmed
+deletion, and repair of missing blobs remain future privacy boundaries. Users
+remain responsible for selected directories, filesystems, devices, cloud
+backups, exported packages, and copies made outside DraftLoop.
 
 ## Redaction and logging
 

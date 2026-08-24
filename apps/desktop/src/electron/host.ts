@@ -68,6 +68,7 @@ import {
   type KnowledgeFileImportResult,
   type KnowledgeFileVersionAppendResult,
   type KnowledgeInventoryResult,
+  type KnowledgePortableBackupResult,
   type KnowledgeReadinessResult,
   type KnowledgeSelectionResult,
   type KnowledgeSourceOriginRebindResult,
@@ -2206,6 +2207,31 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             scanLimitReached: inventory.scanLimitReached,
           };
           return { ok: true, value: result };
+        }
+        case "knowledge.backup-export": {
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const parent = await options.dialogs.chooseDirectory("create");
+          if (parent === undefined) {
+            return fail("permission-denied", "Candidate knowledge backup export was cancelled.");
+          }
+          const exported = await knowledgeService.exportCandidateKnowledgeStore({
+            storeRoot: root,
+            destination: resolve(parent, command.input.name),
+            approved: true,
+            expectedStoreId: command.input.storeId,
+          });
+          return { ok: true, value: exported satisfies KnowledgePortableBackupResult };
+        }
+        case "knowledge.backup-inspect": {
+          const packagePath = await options.dialogs.chooseDirectory("open");
+          if (packagePath === undefined) {
+            return fail(
+              "permission-denied",
+              "Candidate knowledge backup inspection was cancelled.",
+            );
+          }
+          const inspected = await knowledgeService.inspectCandidateKnowledgeBackup({ packagePath });
+          return { ok: true, value: inspected satisfies KnowledgePortableBackupResult };
         }
         case "knowledge.import-file": {
           const chooseKnowledgeSourceFile = options.dialogs.chooseKnowledgeSourceFile;

@@ -30,7 +30,9 @@ import {
   StorageValidationError,
 } from "./index.js";
 import {
+  exportCandidateKnowledgePortableBackup,
   initializeCandidateKnowledgeStore,
+  inspectCandidateKnowledgePortableBackup,
   type ManagedCandidateKnowledgeFileVersionInput,
   type ManagedCandidateKnowledgeUrlVersionInput,
   type MoveManagedCandidateKnowledgeDirectoryMemberInput,
@@ -82,6 +84,15 @@ function initialization(root: string) {
 
 function mutateDatabase(root: string, sql: string): void {
   const database = new Database(join(root, ".draft-loop", "knowledge.sqlite"));
+  try {
+    database.exec(sql);
+  } finally {
+    database.close();
+  }
+}
+
+function mutateWriterCoordinator(root: string, sql: string): void {
+  const database = new Database(join(root, ".draft-loop", "writer-coordination.sqlite"));
   try {
     database.exec(sql);
   } finally {
@@ -195,6 +206,401 @@ describe("portable candidate knowledge store", () => {
       isDefault: true,
     });
     await reopened.close();
+  });
+
+  it("exports and inspects a complete path-free portable backup", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "resume.md");
+    const destination = join(parent, "portable-backup");
+    const content = "Portable evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "source-1",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Resume",
+        createdAt,
+      },
+      {
+        id: "version-1",
+        mediaType: "text/markdown",
+        checksum: sha256(content),
+        sizeBytes: Buffer.byteLength(content),
+        createdAt,
+        sourcePath,
+      },
+    );
+
+    const exported = await store.exportPortableBackup(destination, {
+      createdAt: "2026-08-21T15:00:00.000Z",
+    });
+    expect(exported).toMatchObject({
+      status: "exported",
+      storeId: "knowledge-store-1",
+      knowledgeBaseCount: 1,
+      sourceCount: 1,
+      versionCount: 1,
+      contentObjectCount: 1,
+      contentBytes: Buffer.byteLength(content),
+      integrity: "integrity-verified-not-authenticity",
+    });
+    expect(JSON.stringify(exported)).not.toContain(root);
+    expect(JSON.stringify(exported)).not.toContain(sourcePath);
+    expect(await readdir(destination)).toEqual(
+      expect.arrayContaining(["manifest.json", "manifest.sha256", "objects"]),
+    );
+    const inspected = await inspectCandidateKnowledgePortableBackup(destination);
+    expect(inspected).toMatchObject({
+      status: "valid",
+      storeId: "knowledge-store-1",
+      manifestChecksum: exported.manifestChecksum,
+      contentObjectCount: 1,
+    });
+    await store.close();
+  });
+
+  it("projects active retention holds without exporting storage-only state", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const destination = join(parent, "portable-backup");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.applyCandidateKnowledgeRetentionOverride("ckb-default", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: 0,
+      expectedState: "none",
+      changedAt: "2026-08-21T15:00:00.000Z",
+    });
+
+    await store.exportPortableBackup(destination, { createdAt: "2026-08-21T16:00:00.000Z" });
+    const manifest = JSON.parse(await readFile(join(destination, "manifest.json"), "utf8")) as {
+      readonly knowledgeBases: readonly {
+        readonly retentionPolicy: { readonly activeOverrides: readonly Record<string, unknown>[] };
+      }[];
+    };
+    const activeOverrides = manifest.knowledgeBases[0]?.retentionPolicy.activeOverrides;
+    expect(activeOverrides).toEqual([
+      {
+        class: "raw-sources",
+        kind: "legal-hold",
+        sequence: 1,
+        overrideRevision: 1,
+        policyRevision: 0,
+        changedAt: "2026-08-21T15:00:00.000Z",
+      },
+    ]);
+    expect(activeOverrides?.[0]).not.toHaveProperty("state");
+    await store.close();
+  });
+
+  it("rejects incomplete inventory and corrupted portable backup objects", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "resume.md");
+    const destination = join(parent, "portable-backup");
+    await writeFile(sourcePath, "Portable evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "source-1",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Resume",
+        createdAt,
+      },
+      {
+        id: "version-1",
+        mediaType: "text/markdown",
+        checksum: sha256("Portable evidence"),
+        sizeBytes: 17,
+        createdAt,
+        sourcePath,
+      },
+    );
+    await writeFile(join(root, "sources", "unknown.bin"), "unknown", "utf8");
+    await expect(
+      store.exportPortableBackup(destination, { createdAt: "2026-08-21T15:00:00.000Z" }),
+    ).rejects.toThrow(/invalid or incomplete/i);
+    expect(await lstat(destination).catch(() => undefined)).toBeUndefined();
+    await rm(join(root, "sources", "unknown.bin"), { force: true });
+    await store.exportPortableBackup(destination, { createdAt: "2026-08-21T15:00:00.000Z" });
+    const objectName = (await readdir(join(destination, "objects")))[0];
+    if (objectName === undefined) throw new Error("portable backup object fixture is missing");
+    await writeFile(join(destination, "objects", objectName), "corrupt", "utf8");
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.toThrow(
+      /invalid or incomplete/i,
+    );
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.not.toThrow(root);
+    await store.close();
+  });
+
+  it("cleans a claimed destination after publication failure and never replaces an existing one", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const destination = join(parent, "portable-backup");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+
+    await expect(
+      store.exportPortableBackup(destination, {
+        createdAt: "2026-08-21T15:00:00.000Z",
+        beforePublication: async () => {
+          throw new Error("simulated publication failure");
+        },
+      }),
+    ).rejects.toThrow(/export failed/i);
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
+    expect((await readdir(parent)).some((name) => name.includes("draft-loop-backup"))).toBe(false);
+
+    const concurrentDestination = join(parent, "concurrent-backup");
+    const concurrentChild = join(concurrentDestination, "objects", "unrelated.bin");
+    await expect(
+      store.exportPortableBackup(concurrentDestination, {
+        createdAt: "2026-08-21T15:00:00.000Z",
+        beforePublication: async () => {
+          await writeFile(concurrentChild, "unrelated", "utf8");
+          throw new Error("simulated concurrent publication failure");
+        },
+      }),
+    ).rejects.toThrow(/export failed/i);
+    await expect(readFile(concurrentChild, "utf8")).resolves.toBe("unrelated");
+    await expect(lstat(concurrentDestination)).resolves.toBeDefined();
+
+    await mkdir(destination);
+    const marker = join(destination, "keep.txt");
+    await writeFile(marker, "keep", "utf8");
+    await expect(
+      store.exportPortableBackup(destination, { createdAt: "2026-08-21T15:00:00.000Z" }),
+    ).rejects.toThrow(/already exists/i);
+    await expect(readFile(marker, "utf8")).resolves.toBe("keep");
+    await store.close();
+  });
+
+  it("rejects unsupported or tampered packages and unsafe object layouts", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "resume.md");
+    const destination = join(parent, "portable-backup");
+    const content = "Portable evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "source-1",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Resume",
+        createdAt,
+      },
+      {
+        id: "version-1",
+        mediaType: "text/markdown",
+        checksum: sha256(content),
+        sizeBytes: Buffer.byteLength(content),
+        createdAt,
+        sourcePath,
+      },
+    );
+    await store.exportPortableBackup(destination, { createdAt: "2026-08-21T15:00:00.000Z" });
+
+    const manifestPath = join(destination, "manifest.json");
+    const checksumPath = join(destination, "manifest.sha256");
+    const originalManifest = await readFile(manifestPath);
+    const originalChecksum = await readFile(checksumPath);
+    const objectName = (await readdir(join(destination, "objects")))[0];
+    if (objectName === undefined) throw new Error("portable backup object fixture is missing");
+    const objectPath = join(destination, "objects", objectName);
+    const originalObject = await readFile(objectPath);
+
+    const raceDestination = join(parent, "race-backup");
+    const raceObjectPath = join(raceDestination, "objects", objectName);
+    await expect(
+      store.exportPortableBackup(raceDestination, {
+        createdAt: "2026-08-21T15:00:00.000Z",
+        beforePublication: async () => {
+          await writeFile(raceObjectPath, "concurrent", "utf8");
+        },
+      }),
+    ).rejects.toThrow(/already exists/i);
+    await expect(readFile(raceObjectPath, "utf8")).resolves.toBe("concurrent");
+
+    await writeFile(manifestPath, Buffer.concat([originalManifest, Buffer.from(" ")]));
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.toThrow(
+      /invalid or incomplete/i,
+    );
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.not.toThrow(
+      destination,
+    );
+    await writeFile(manifestPath, originalManifest);
+
+    const unsupportedManifest = Buffer.from(
+      `${JSON.stringify({ ...JSON.parse(originalManifest.toString("utf8")), schemaVersion: 2 })}\n`,
+      "utf8",
+    );
+    await writeFile(manifestPath, unsupportedManifest);
+    await writeFile(checksumPath, `${sha256(unsupportedManifest)}\n`, "utf8");
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.toThrow(
+      /invalid or incomplete/i,
+    );
+    await writeFile(manifestPath, originalManifest);
+    await writeFile(checksumPath, originalChecksum);
+
+    const futureManifest = Buffer.from(
+      `${JSON.stringify({
+        ...JSON.parse(originalManifest.toString("utf8")),
+        createdAt: "2099-08-21T15:00:00.000Z",
+      })}\n`,
+      "utf8",
+    );
+    await writeFile(manifestPath, futureManifest);
+    await writeFile(checksumPath, `${sha256(futureManifest)}\n`, "utf8");
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.toThrow(
+      /invalid or incomplete/i,
+    );
+    await writeFile(manifestPath, originalManifest);
+    await writeFile(checksumPath, originalChecksum);
+
+    await rm(objectPath);
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.toThrow(
+      /invalid or incomplete/i,
+    );
+    await writeFile(objectPath, originalObject);
+
+    const extraObjectPath = join(destination, "objects", "extra.bin");
+    await writeFile(extraObjectPath, "extra", "utf8");
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.toThrow(
+      /invalid or incomplete/i,
+    );
+    await rm(extraObjectPath);
+
+    if (process.platform !== "win32") {
+      const externalObject = join(parent, "external-object.bin");
+      await writeFile(externalObject, originalObject);
+      await rm(objectPath);
+      await symlink(externalObject, objectPath);
+      await expect(inspectCandidateKnowledgePortableBackup(destination)).rejects.toThrow(
+        /invalid or incomplete/i,
+      );
+      await rm(objectPath);
+      await writeFile(objectPath, originalObject);
+    }
+
+    await expect(inspectCandidateKnowledgePortableBackup(destination)).resolves.toMatchObject({
+      status: "valid",
+    });
+    await store.close();
+  });
+
+  it("uses a read-only export path that does not recover an incomplete journal", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "resume.md");
+    const destination = join(parent, "portable-backup");
+    await writeFile(sourcePath, "incomplete write", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await expect(
+      store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: "source-incomplete",
+          knowledgeBaseId: "ckb-default",
+          kind: "file",
+          displayName: "Incomplete source",
+          createdAt,
+        },
+        {
+          id: "version-incomplete",
+          mediaType: "text/plain",
+          checksum: sha256("incomplete write"),
+          sizeBytes: 16,
+          createdAt,
+          sourcePath,
+          interruptAt: "staging",
+        },
+      ),
+    ).rejects.toThrow(/interruption/i);
+    await store.close();
+
+    const before = queryDatabase(
+      root,
+      "SELECT operation_id, owner_generation FROM candidate_knowledge_managed_write_operations ORDER BY rowid DESC LIMIT 1",
+    );
+    await expect(
+      exportCandidateKnowledgePortableBackup(root, destination, {
+        createdAt: "2026-08-21T15:00:00.000Z",
+      }),
+    ).rejects.toThrow(/invalid or incomplete/i);
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
+    expect(
+      queryDatabase(
+        root,
+        "SELECT operation_id, owner_generation FROM candidate_knowledge_managed_write_operations ORDER BY rowid DESC LIMIT 1",
+      ),
+    ).toEqual(before);
+    await expect(
+      lstat(
+        join(
+          root,
+          "sources",
+          `.intake-${digestSegment(String((before[0] as { readonly operation_id: string }).operation_id))}`,
+        ),
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it("fences publication before a stale writer can publish readiness", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const destination = join(parent, "portable-backup");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.close();
+
+    await expect(
+      exportCandidateKnowledgePortableBackup(root, destination, {
+        createdAt: "2026-08-21T15:00:00.000Z",
+        beforePublication: async () => {
+          const expiresAt = Date.now() + 60_000;
+          mutateWriterCoordinator(
+            root,
+            `UPDATE writer_leases
+             SET generation = generation + 1,
+                 owner_id = 'successor',
+                 operation_code = 'successor-operation',
+                 acquired_at = ${Date.now()},
+                 expires_at = ${expiresAt}
+             WHERE scope = 'candidate-knowledge-store'`,
+          );
+        },
+      }),
+    ).rejects.toThrow(/lost/i);
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("rejects future backup and logical timestamps before publication", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const destination = join(parent, "portable-backup");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.close();
+
+    await expect(
+      exportCandidateKnowledgePortableBackup(root, destination, {
+        createdAt: "2099-08-21T15:00:00.000Z",
+      }),
+    ).rejects.toThrow(/invalid or in the future/i);
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
+
+    mutateDatabase(
+      root,
+      "UPDATE candidate_knowledge_bases SET updated_at = '2099-08-21T15:00:00.000Z' WHERE id = 'ckb-default'",
+    );
+    await expect(
+      exportCandidateKnowledgePortableBackup(root, destination, {
+        createdAt: "2026-08-21T15:00:00.000Z",
+      }),
+    ).rejects.toThrow(/invalid or incomplete/i);
+    await expect(lstat(destination)).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("persists additional lifecycle changes across reopen", async () => {

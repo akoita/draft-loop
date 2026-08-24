@@ -24,6 +24,7 @@ import {
   supportedMediaTypes,
 } from "@draft-loop/ingestion";
 import {
+  type CandidateKnowledgePortableBackupInspection,
   candidateKnowledgeRetentionOverrideInputSchema,
   candidateKnowledgeRetentionPolicyUpdateSchema,
 } from "@draft-loop/schemas";
@@ -45,8 +46,11 @@ import type {
 } from "@draft-loop/storage";
 import {
   type CandidateKnowledgeBaseRecord,
+  type CandidateKnowledgePortableBackupExportResult,
   type CandidateKnowledgeStoreHandle,
+  exportCandidateKnowledgePortableBackup,
   initializeCandidateKnowledgeStore,
+  inspectCandidateKnowledgePortableBackup,
   type ManagedCandidateKnowledgeFileInventory,
   type ManagedCandidateKnowledgeUrlVersionInput,
   maximumManagedCandidateKnowledgeFileBytes,
@@ -73,6 +77,17 @@ export interface InitializeStoreCommand {
 
 export interface OpenStoreCommand {
   readonly storeRoot: string;
+}
+
+export interface ExportCandidateKnowledgeStoreCommand {
+  readonly storeRoot: string;
+  readonly destination: string;
+  readonly approved: boolean;
+  readonly expectedStoreId?: string;
+}
+
+export interface InspectCandidateKnowledgeBackupCommand {
+  readonly packagePath: string;
 }
 
 export interface GetKnowledgeBaseLifecycleReadinessCommand {
@@ -668,6 +683,12 @@ export interface CandidateKnowledgeStoreService {
     command: InitializeStoreCommand,
   ) => Promise<CandidateKnowledgeStoreView>;
   readonly openStore: (command: OpenStoreCommand) => Promise<CandidateKnowledgeStoreView>;
+  readonly exportCandidateKnowledgeStore: (
+    command: ExportCandidateKnowledgeStoreCommand,
+  ) => Promise<CandidateKnowledgePortableBackupExportResult>;
+  readonly inspectCandidateKnowledgeBackup: (
+    command: InspectCandidateKnowledgeBackupCommand,
+  ) => Promise<CandidateKnowledgePortableBackupInspection>;
   readonly getKnowledgeBaseLifecycleReadiness: (
     command: GetKnowledgeBaseLifecycleReadinessCommand,
   ) => Promise<KnowledgeBaseLifecycleReadinessResult>;
@@ -789,6 +810,7 @@ export interface CandidateKnowledgeStoreServiceDependencies {
   readonly now?: () => string;
   readonly initialize?: typeof initializeCandidateKnowledgeStore;
   readonly open?: typeof openCandidateKnowledgeStore;
+  readonly exportPortableBackup?: typeof exportCandidateKnowledgePortableBackup;
   readonly ingestFile?: typeof ingestFile;
   readonly ingestDirectory?: typeof ingestDirectory;
   readonly ingestUrl?: typeof ingestUrl;
@@ -803,6 +825,7 @@ interface ResolvedDependencies {
   readonly now: () => string;
   readonly initialize: typeof initializeCandidateKnowledgeStore;
   readonly open: typeof openCandidateKnowledgeStore;
+  readonly exportPortableBackup: typeof exportCandidateKnowledgePortableBackup;
   readonly ingestFile: typeof ingestFile;
   readonly ingestDirectory: typeof ingestDirectory;
   readonly ingestUrl: typeof ingestUrl;
@@ -868,6 +891,18 @@ function selectionSnapshotFailure(): Error {
   return new Error(
     "The selected candidate knowledge base selection snapshot could not be created.",
   );
+}
+
+function portableBackupApprovalFailure(): Error {
+  return new Error("Portable candidate knowledge backup export requires explicit approval.");
+}
+
+function portableBackupExportFailure(): Error {
+  return new Error("The portable candidate knowledge backup could not be exported.");
+}
+
+function portableBackupInspectionFailure(): Error {
+  return new Error("The portable candidate knowledge backup could not be inspected.");
 }
 
 function previewDirectoryRefreshFailure(): Error {
@@ -3700,6 +3735,8 @@ function resolveDependencies(
     now: dependencies.now ?? (() => new Date().toISOString()),
     initialize: dependencies.initialize ?? initializeCandidateKnowledgeStore,
     open: dependencies.open ?? openCandidateKnowledgeStore,
+    exportPortableBackup:
+      dependencies.exportPortableBackup ?? exportCandidateKnowledgePortableBackup,
     ingestFile: dependencies.ingestFile ?? ingestFile,
     ingestDirectory: dependencies.ingestDirectory ?? ingestDirectory,
     ingestUrl: dependencies.ingestUrl ?? ingestUrl,
@@ -3767,6 +3804,38 @@ export function createCandidateKnowledgeStoreService(
       );
     },
     openStore: async (command) => openAndProject(requireStoreRoot(command.storeRoot)),
+    exportCandidateKnowledgeStore: async (command) => {
+      if (command.approved !== true) throw portableBackupApprovalFailure();
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const destination = requireText(
+        command.destination,
+        "Portable candidate knowledge backup destination",
+      );
+      try {
+        return await resolved.exportPortableBackup(
+          storeRoot,
+          destination,
+          {
+            createdAt: resolved.now(),
+          },
+          command.expectedStoreId,
+        );
+      } catch (error) {
+        preserveWriterLeaseError(error);
+        throw portableBackupExportFailure();
+      }
+    },
+    inspectCandidateKnowledgeBackup: async (command) => {
+      const packagePath = requireText(
+        command.packagePath,
+        "Portable candidate knowledge backup package",
+      );
+      try {
+        return await inspectCandidateKnowledgePortableBackup(packagePath);
+      } catch {
+        throw portableBackupInspectionFailure();
+      }
+    },
     getKnowledgeBaseLifecycleReadiness: async (command) => {
       try {
         const storeRoot = requireStoreRoot(command.storeRoot);
@@ -5479,6 +5548,8 @@ const defaultService = createCandidateKnowledgeStoreService();
 
 export const initializeStore = defaultService.initializeStore;
 export const openStore = defaultService.openStore;
+export const exportCandidateKnowledgeStore = defaultService.exportCandidateKnowledgeStore;
+export const inspectCandidateKnowledgeBackup = defaultService.inspectCandidateKnowledgeBackup;
 export const getKnowledgeBaseLifecycleReadiness = defaultService.getKnowledgeBaseLifecycleReadiness;
 export const getKnowledgeRetentionPolicy = defaultService.getKnowledgeRetentionPolicy;
 export const setKnowledgeRetentionPolicy = defaultService.setKnowledgeRetentionPolicy;
