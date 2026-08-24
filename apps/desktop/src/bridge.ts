@@ -32,6 +32,8 @@ export const bridgeCapabilities = [
   "knowledge.directory-refresh-apply",
   "knowledge.directory-moved-candidates",
   "knowledge.directory-member-move",
+  "knowledge.directory-reconciliation-preview",
+  "knowledge.directory-reconciliation-apply",
   "knowledge.directory-rebind-preview",
   "knowledge.directory-rebind-apply",
   "knowledge.import-url",
@@ -292,6 +294,23 @@ const knowledgeDirectoryMemberMoveKeys = inputKeys<KnowledgeDirectoryMemberMoveI
   "sourceId",
   "confirmed",
 ]);
+
+export type KnowledgeDirectoryReconciliationPreviewInput = KnowledgeDirectoryRefreshPreviewInput;
+const knowledgeDirectoryReconciliationPreviewKeys = knowledgeDirectoryRefreshPreviewKeys;
+
+export interface KnowledgeDirectoryReconciliationApplyInput
+  extends KnowledgeDirectoryRefreshPreviewInput {
+  readonly approvedRetirementSourceIds: readonly string[];
+  readonly confirmed: boolean;
+}
+const knowledgeDirectoryReconciliationApplyKeys =
+  inputKeys<KnowledgeDirectoryReconciliationApplyInput>()([
+    "storeId",
+    "knowledgeBaseId",
+    "directoryId",
+    "approvedRetirementSourceIds",
+    "confirmed",
+  ]);
 
 const knowledgeDirectoryRootRebindPreviewKeys =
   inputKeys<KnowledgeDirectoryRootRebindPreviewInput>()([
@@ -892,6 +911,55 @@ export interface KnowledgeDirectoryMemberMoveResult {
   readonly status: "moved" | "current";
 }
 
+export const knowledgeDirectoryReconciliationStatuses = [
+  "current",
+  "changed",
+  "already-retired",
+  "conflicted",
+  "moved-candidate",
+  "missing",
+] as const;
+export type KnowledgeDirectoryReconciliationStatus =
+  (typeof knowledgeDirectoryReconciliationStatuses)[number];
+export interface KnowledgeDirectoryReconciliationMemberResult {
+  readonly sourceId: string;
+  readonly status: KnowledgeDirectoryReconciliationStatus;
+}
+export interface KnowledgeDirectoryReconciliationPreviewResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly members: readonly KnowledgeDirectoryReconciliationMemberResult[];
+  readonly memberCount: number;
+  readonly membersTruncated: boolean;
+  readonly currentCount: number;
+  readonly changedCount: number;
+  readonly alreadyRetiredCount: number;
+  readonly conflictedCount: number;
+  readonly movedCandidateCount: number;
+  readonly missingCount: number;
+  readonly newSourceCount: number;
+  readonly scanStatus: "complete" | "incomplete";
+  readonly scannedEntryCount: number;
+  readonly discoveredFileCount: number;
+  readonly skippedEntryCount: number;
+}
+export interface KnowledgeDirectoryReconciliationApplyResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly directoryId: string;
+  readonly checkedAt: string;
+  readonly status: "applied" | "current" | "partial";
+  readonly retiredSourceIds: readonly string[];
+  readonly retiredSourceCount: number;
+  readonly retiredSourceIdsTruncated: boolean;
+  readonly alreadyRetiredSourceIds: readonly string[];
+  readonly alreadyRetiredSourceCount: number;
+  readonly alreadyRetiredSourceIdsTruncated: boolean;
+  readonly failedSourceId?: string;
+}
+
 export interface KnowledgeUrlImportResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -1132,6 +1200,44 @@ const knowledgeDirectoryMemberMoveResultKeys = resultKeys<KnowledgeDirectoryMemb
   "checkedAt",
   "status",
 ]);
+const knowledgeDirectoryReconciliationMemberResultKeys =
+  resultKeys<KnowledgeDirectoryReconciliationMemberResult>()(["sourceId", "status"]);
+const knowledgeDirectoryReconciliationPreviewResultKeys =
+  resultKeys<KnowledgeDirectoryReconciliationPreviewResult>()([
+    "storeId",
+    "knowledgeBaseId",
+    "directoryId",
+    "checkedAt",
+    "members",
+    "memberCount",
+    "membersTruncated",
+    "currentCount",
+    "changedCount",
+    "alreadyRetiredCount",
+    "conflictedCount",
+    "movedCandidateCount",
+    "missingCount",
+    "newSourceCount",
+    "scanStatus",
+    "scannedEntryCount",
+    "discoveredFileCount",
+    "skippedEntryCount",
+  ]);
+const knowledgeDirectoryReconciliationApplyResultKeys =
+  resultKeys<KnowledgeDirectoryReconciliationApplyResult>()([
+    "storeId",
+    "knowledgeBaseId",
+    "directoryId",
+    "checkedAt",
+    "status",
+    "retiredSourceIds",
+    "retiredSourceCount",
+    "retiredSourceIdsTruncated",
+    "alreadyRetiredSourceIds",
+    "alreadyRetiredSourceCount",
+    "alreadyRetiredSourceIdsTruncated",
+    "failedSourceId",
+  ]);
 const knowledgeUrlImportResultKeys = resultKeys<KnowledgeUrlImportResult>()([
   "storeId",
   "knowledgeBaseId",
@@ -1418,6 +1524,8 @@ export interface BridgeCommandInputMap {
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyInput;
   "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesInput;
   "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveInput;
+  "knowledge.directory-reconciliation-preview": KnowledgeDirectoryReconciliationPreviewInput;
+  "knowledge.directory-reconciliation-apply": KnowledgeDirectoryReconciliationApplyInput;
   "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindPreviewInput;
   "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindApplyInput;
   "knowledge.import-url": KnowledgeUrlImportInput;
@@ -1467,6 +1575,8 @@ export interface BridgeCommandOutputMap {
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyResult;
   "knowledge.directory-moved-candidates": KnowledgeDirectoryMovedCandidatesResult;
   "knowledge.directory-member-move": KnowledgeDirectoryMemberMoveResult;
+  "knowledge.directory-reconciliation-preview": KnowledgeDirectoryReconciliationPreviewResult;
+  "knowledge.directory-reconciliation-apply": KnowledgeDirectoryReconciliationApplyResult;
   "knowledge.directory-rebind-preview": KnowledgeDirectoryRootRebindResult;
   "knowledge.directory-rebind-apply": KnowledgeDirectoryRootRebindResult;
   "knowledge.import-url": KnowledgeUrlImportResult;
@@ -2044,6 +2154,41 @@ function validateKnowledgeDirectoryMemberMoveInput(
   };
 }
 
+function validateKnowledgeDirectoryReconciliationPreviewInput(
+  value: unknown,
+): KnowledgeDirectoryReconciliationPreviewInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeDirectoryReconciliationPreviewKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    directoryId: identifier(input.directoryId),
+  };
+}
+function validateKnowledgeDirectoryReconciliationApplyInput(
+  value: unknown,
+): KnowledgeDirectoryReconciliationApplyInput {
+  const input = requireRecord(value);
+  if (
+    !hasOnlyKeys(input, knowledgeDirectoryReconciliationApplyKeys) ||
+    !Array.isArray(input.approvedRetirementSourceIds) ||
+    input.approvedRetirementSourceIds.length > maximumKnowledgeInspectionEntries
+  )
+    return invalidInput();
+  const approvedRetirementSourceIds = input.approvedRetirementSourceIds
+    .map((sourceId) => identifier(sourceId))
+    .sort((a, b) => a.localeCompare(b));
+  if (new Set(approvedRetirementSourceIds).size !== approvedRetirementSourceIds.length)
+    return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    directoryId: identifier(input.directoryId),
+    approvedRetirementSourceIds,
+    confirmed: booleanValue(input.confirmed),
+  };
+}
+
 function validateKnowledgeDirectoryRootRebindPreviewInput(
   value: unknown,
 ): KnowledgeDirectoryRootRebindPreviewInput {
@@ -2547,6 +2692,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.directory-member-move",
         input: validateKnowledgeDirectoryMemberMoveInput(command.input),
+      };
+    case "knowledge.directory-reconciliation-preview":
+      return {
+        type: "knowledge.directory-reconciliation-preview",
+        input: validateKnowledgeDirectoryReconciliationPreviewInput(command.input),
+      };
+    case "knowledge.directory-reconciliation-apply":
+      return {
+        type: "knowledge.directory-reconciliation-apply",
+        input: validateKnowledgeDirectoryReconciliationApplyInput(command.input),
       };
     case "knowledge.directory-rebind-preview":
       return {
@@ -3243,6 +3398,155 @@ function normalizeKnowledgeDirectoryMemberMoveResult(
   };
 }
 
+function normalizeKnowledgeDirectoryReconciliationPreviewResult(
+  value: unknown,
+): KnowledgeDirectoryReconciliationPreviewResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeDirectoryReconciliationPreviewResultKeys) ||
+    !Array.isArray(result.members) ||
+    result.members.length > maximumKnowledgeInspectionEntries
+  )
+    return invalidInput();
+  const members = result.members
+    .map((entry) => {
+      const member = requireRecord(entry);
+      if (!hasOnlyKeys(member, knowledgeDirectoryReconciliationMemberResultKeys))
+        return invalidInput();
+      return {
+        sourceId: identifier(member.sourceId),
+        status: enumValue(member.status, knowledgeDirectoryReconciliationStatuses),
+      } satisfies KnowledgeDirectoryReconciliationMemberResult;
+    })
+    .sort((a, b) => a.sourceId.localeCompare(b.sourceId));
+  const memberCount = finiteInteger(result.memberCount, 1_000_000);
+  const membersTruncated = booleanValue(result.membersTruncated);
+  const currentCount = finiteInteger(result.currentCount, 1_000_000);
+  const changedCount = finiteInteger(result.changedCount, 1_000_000);
+  const alreadyRetiredCount = finiteInteger(result.alreadyRetiredCount, 1_000_000);
+  const conflictedCount = finiteInteger(result.conflictedCount, 1_000_000);
+  const movedCandidateCount = finiteInteger(result.movedCandidateCount, 1_000_000);
+  const missingCount = finiteInteger(result.missingCount, 1_000_000);
+  const totalStatusCount =
+    currentCount +
+    changedCount +
+    alreadyRetiredCount +
+    conflictedCount +
+    movedCandidateCount +
+    missingCount;
+  const visibleCounts = new Map<string, number>();
+  for (const member of members)
+    visibleCounts.set(member.status, (visibleCounts.get(member.status) ?? 0) + 1);
+  const scannedEntryCount = finiteInteger(result.scannedEntryCount, 1_000_000);
+  const discoveredFileCount = finiteInteger(result.discoveredFileCount, scannedEntryCount);
+  const skippedEntryCount = finiteInteger(result.skippedEntryCount, scannedEntryCount);
+  const newSourceCount = finiteInteger(result.newSourceCount, discoveredFileCount);
+  const scanStatus = enumValue(result.scanStatus, ["complete", "incomplete"] as const);
+  const statusTotals = new Map<string, number>([
+    ["current", currentCount],
+    ["changed", changedCount],
+    ["already-retired", alreadyRetiredCount],
+    ["conflicted", conflictedCount],
+    ["moved-candidate", movedCandidateCount],
+    ["missing", missingCount],
+  ]);
+  if (
+    new Set(members.map(({ sourceId }) => sourceId)).size !== members.length ||
+    memberCount !== totalStatusCount ||
+    memberCount < members.length ||
+    membersTruncated !== memberCount > members.length ||
+    [...visibleCounts].some(([status, count]) => count > (statusTotals.get(status) ?? 0)) ||
+    (!membersTruncated &&
+      [
+        ["current", currentCount],
+        ["changed", changedCount],
+        ["already-retired", alreadyRetiredCount],
+        ["conflicted", conflictedCount],
+        ["moved-candidate", movedCandidateCount],
+        ["missing", missingCount],
+      ].some(([status, count]) => (visibleCounts.get(status as string) ?? 0) !== count)) ||
+    discoveredFileCount + skippedEntryCount > scannedEntryCount ||
+    newSourceCount > discoveredFileCount ||
+    (scanStatus === "complete") !== (skippedEntryCount === 0)
+  )
+    return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    directoryId: identifier(result.directoryId),
+    checkedAt: timestampValue(result.checkedAt),
+    members,
+    memberCount,
+    membersTruncated,
+    currentCount,
+    changedCount,
+    alreadyRetiredCount,
+    conflictedCount,
+    movedCandidateCount,
+    missingCount,
+    newSourceCount,
+    scanStatus,
+    scannedEntryCount,
+    discoveredFileCount,
+    skippedEntryCount,
+  };
+}
+function normalizeKnowledgeDirectoryReconciliationApplyResult(
+  value: unknown,
+): KnowledgeDirectoryReconciliationApplyResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeDirectoryReconciliationApplyResultKeys) ||
+    !Array.isArray(result.retiredSourceIds) ||
+    !Array.isArray(result.alreadyRetiredSourceIds) ||
+    result.retiredSourceIds.length > maximumKnowledgeInspectionEntries ||
+    result.alreadyRetiredSourceIds.length > maximumKnowledgeInspectionEntries
+  )
+    return invalidInput();
+  const retiredSourceIds = result.retiredSourceIds
+    .map((id) => identifier(id))
+    .sort((a, b) => a.localeCompare(b));
+  const alreadyRetiredSourceIds = result.alreadyRetiredSourceIds
+    .map((id) => identifier(id))
+    .sort((a, b) => a.localeCompare(b));
+  const status = enumValue(result.status, ["applied", "current", "partial"] as const);
+  const failedSourceId = optionalIdentifier(result.failedSourceId);
+  const retiredSourceCount = finiteInteger(result.retiredSourceCount, 1_000_000);
+  const alreadyRetiredSourceCount = finiteInteger(result.alreadyRetiredSourceCount, 1_000_000);
+  if (
+    new Set(retiredSourceIds).size !== retiredSourceIds.length ||
+    new Set(alreadyRetiredSourceIds).size !== alreadyRetiredSourceIds.length ||
+    retiredSourceIds.some((id) => alreadyRetiredSourceIds.includes(id)) ||
+    retiredSourceCount < retiredSourceIds.length ||
+    alreadyRetiredSourceCount < alreadyRetiredSourceIds.length ||
+    booleanValue(result.retiredSourceIdsTruncated) !==
+      retiredSourceCount > retiredSourceIds.length ||
+    booleanValue(result.alreadyRetiredSourceIdsTruncated) !==
+      alreadyRetiredSourceCount > alreadyRetiredSourceIds.length ||
+    (status === "partial") !== (failedSourceId !== undefined) ||
+    (status === "applied" && retiredSourceCount === 0) ||
+    (status === "current" && retiredSourceCount !== 0) ||
+    (failedSourceId !== undefined &&
+      (retiredSourceIds.includes(failedSourceId) ||
+        alreadyRetiredSourceIds.includes(failedSourceId)))
+  )
+    return invalidInput();
+  return {
+    storeId: identifier(result.storeId),
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    directoryId: identifier(result.directoryId),
+    checkedAt: timestampValue(result.checkedAt),
+    status,
+    retiredSourceIds,
+    retiredSourceCount,
+    retiredSourceIdsTruncated: booleanValue(result.retiredSourceIdsTruncated),
+    alreadyRetiredSourceIds,
+    alreadyRetiredSourceCount,
+    alreadyRetiredSourceIdsTruncated: booleanValue(result.alreadyRetiredSourceIdsTruncated),
+    ...(failedSourceId === undefined ? {} : { failedSourceId }),
+  };
+}
+
 function normalizeKnowledgeUrlImportResult(value: unknown): KnowledgeUrlImportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, knowledgeUrlImportResultKeys)) return invalidInput();
@@ -3654,6 +3958,10 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeDirectoryMovedCandidatesResult(value);
     case "knowledge.directory-member-move":
       return normalizeKnowledgeDirectoryMemberMoveResult(value);
+    case "knowledge.directory-reconciliation-preview":
+      return normalizeKnowledgeDirectoryReconciliationPreviewResult(value);
+    case "knowledge.directory-reconciliation-apply":
+      return normalizeKnowledgeDirectoryReconciliationApplyResult(value);
     case "knowledge.directory-rebind-preview":
       return normalizeKnowledgeDirectoryRootRebindResult(value, ["current", "ready"] as const);
     case "knowledge.directory-rebind-apply":

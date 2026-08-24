@@ -251,7 +251,7 @@ CLI and desktop adapters; moved-candidate preview is read-only, while move
 requires confirmation and returns only opaque identity, time, and status.
 Neither infers renames automatically or reconciles all removals.
 
-Automatic move inference, physical deletion, directory reconciliation adapters,
+Automatic move inference, physical deletion,
 indexing, and background refresh remain deferred under their owning roadmap
 issues.
 Historical membership is not rewritten by later source versions, explicit

@@ -88,6 +88,10 @@ Moved-candidate preview exposes only unique source identities and never target
 paths. One-source move requires explicit confirmation, repeats the bounded
 scan, and atomically guards the root, member revision, version, and origin.
 
+Reconciliation apply requires explicit confirmation and source-ID retirement
+selection. The application refuses incomplete scans and guards each logical
+retirement; generic complete or partial progress remains path-free.
+
 Lifecycle actions are explicit and bounded. A root rebind performs one complete
 bounded scan, stable per-member verification, and a guarded all-member origin
 commit or same-root no-op. The implemented one-source member-move command

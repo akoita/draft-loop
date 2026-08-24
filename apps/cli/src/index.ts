@@ -8,6 +8,7 @@ import {
   type ApplicationIo,
   type ApplicationService,
   type ApplyKnowledgeSourceDirectoryMemberMoveResult,
+  type ApplyKnowledgeSourceDirectoryReconciliationResult,
   type ApplyKnowledgeSourceDirectoryRefreshResult,
   type ApplyKnowledgeSourceDirectoryRootRebindResult,
   applicationService,
@@ -25,6 +26,7 @@ import {
   type KnowledgeSourceRetirementResult,
   knowledgeService,
   type PreviewKnowledgeSourceDirectoryMovedCandidatesResult,
+  type PreviewKnowledgeSourceDirectoryReconciliationResult,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
   type PreviewKnowledgeSourceDirectoryRootRebindResult,
   runPilot,
@@ -57,6 +59,10 @@ function integerOption(value: string): number {
     throw new Error(`Expected an integer, received ${value}.`);
   }
   return parsed;
+}
+
+function repeatedStringOption(value: string, previous: string[] = []): string[] {
+  return [...previous, value];
 }
 
 function directoryIngestionOptions(
@@ -585,6 +591,254 @@ function writeKnowledgeSourceDirectoryMovedCandidates(
       scannedEntryCount: result.scannedEntryCount,
       discoveredFileCount: result.discoveredFileCount,
       skippedEntryCount: result.skippedEntryCount,
+    }),
+  );
+}
+
+function writeKnowledgeSourceDirectoryReconciliationPreview(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  directoryId: string,
+  result: PreviewKnowledgeSourceDirectoryReconciliationResult,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.directoryId !== directoryId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !Array.isArray(result.members) ||
+    !["complete", "incomplete"].includes(result.scanStatus) ||
+    ![
+      result.currentCount,
+      result.changedCount,
+      result.alreadyRetiredCount,
+      result.conflictedCount,
+      result.movedCandidateCount,
+      result.missingCount,
+      result.newSourceCount,
+      result.scannedEntryCount,
+      result.discoveredFileCount,
+      result.skippedEntryCount,
+    ].every((count) => Number.isSafeInteger(count) && count >= 0) ||
+    result.newSourceCount > result.discoveredFileCount ||
+    result.discoveredFileCount + result.skippedEntryCount > result.scannedEntryCount ||
+    (result.scanStatus === "complete") !== (result.skippedEntryCount === 0) ||
+    Object.hasOwn(result, "status") ||
+    Object.hasOwn(result, "retiredSourceIds") ||
+    Object.hasOwn(result, "alreadyRetiredSourceIds") ||
+    Object.hasOwn(result, "failedSourceId") ||
+    Object.hasOwn(result, "failedStatus") ||
+    Object.hasOwn(result, "retiredSourceCount") ||
+    Object.hasOwn(result, "retiredSourceIdsTruncated") ||
+    Object.hasOwn(result, "alreadyRetiredSourceCount") ||
+    Object.hasOwn(result, "alreadyRetiredSourceIdsTruncated")
+  ) {
+    throw new Error("The candidate knowledge source directory reconciliation result was invalid.");
+  }
+
+  const memberIds = new Set<string>();
+  const observedCounts = {
+    current: 0,
+    changed: 0,
+    "already-retired": 0,
+    conflicted: 0,
+    "moved-candidate": 0,
+    missing: 0,
+  };
+  for (const member of result.members) {
+    if (
+      typeof member !== "object" ||
+      member === null ||
+      typeof member.sourceId !== "string" ||
+      member.sourceId.trim() === "" ||
+      memberIds.has(member.sourceId)
+    ) {
+      throw new Error(
+        "The candidate knowledge source directory reconciliation result was invalid.",
+      );
+    }
+    switch (member.status) {
+      case "current":
+      case "changed":
+      case "already-retired":
+      case "conflicted":
+      case "moved-candidate":
+      case "missing":
+        break;
+      default:
+        throw new Error(
+          "The candidate knowledge source directory reconciliation result was invalid.",
+        );
+    }
+    memberIds.add(member.sourceId);
+    const status = member.status as keyof typeof observedCounts;
+    observedCounts[status] += 1;
+  }
+
+  const expectedCounts = [
+    result.currentCount,
+    result.changedCount,
+    result.alreadyRetiredCount,
+    result.conflictedCount,
+    result.movedCandidateCount,
+    result.missingCount,
+  ];
+  const actualCounts = [
+    observedCounts.current,
+    observedCounts.changed,
+    observedCounts["already-retired"],
+    observedCounts.conflicted,
+    observedCounts["moved-candidate"],
+    observedCounts.missing,
+  ];
+  if (
+    result.members.length !== expectedCounts.reduce((sum, count) => sum + count, 0) ||
+    expectedCounts.some((count, index) => count !== actualCounts[index])
+  ) {
+    throw new Error("The candidate knowledge source directory reconciliation result was invalid.");
+  }
+
+  const orderedMembers = [...result.members].sort((left, right) =>
+    lexicalCompare(left.sourceId, right.sourceId),
+  );
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      directoryId,
+      checkedAt: result.checkedAt,
+      members: orderedMembers
+        .slice(0, maximumKnowledgeInspectionItems)
+        .map(({ sourceId, status }) => ({ sourceId, status })),
+      memberCount: orderedMembers.length,
+      membersTruncated: orderedMembers.length > maximumKnowledgeInspectionItems,
+      currentCount: result.currentCount,
+      changedCount: result.changedCount,
+      alreadyRetiredCount: result.alreadyRetiredCount,
+      conflictedCount: result.conflictedCount,
+      movedCandidateCount: result.movedCandidateCount,
+      missingCount: result.missingCount,
+      newSourceCount: result.newSourceCount,
+      scanStatus: result.scanStatus,
+      scannedEntryCount: result.scannedEntryCount,
+      discoveredFileCount: result.discoveredFileCount,
+      skippedEntryCount: result.skippedEntryCount,
+    }),
+  );
+}
+
+function writeKnowledgeSourceDirectoryReconciliationApply(
+  io: ApplicationIo,
+  knowledgeBaseId: string,
+  directoryId: string,
+  approvedRetirementSourceIds: readonly string[],
+  result: ApplyKnowledgeSourceDirectoryReconciliationResult,
+): void {
+  if (
+    typeof result !== "object" ||
+    result === null ||
+    result.directoryId !== directoryId ||
+    !isValidIsoTimestamp(result.checkedAt) ||
+    !["applied", "current", "partial"].includes(result.status) ||
+    !Array.isArray(result.retiredSourceIds) ||
+    !Array.isArray(result.alreadyRetiredSourceIds) ||
+    Object.hasOwn(result, "members") ||
+    Object.hasOwn(result, "memberCount") ||
+    Object.hasOwn(result, "membersTruncated") ||
+    Object.hasOwn(result, "currentCount") ||
+    Object.hasOwn(result, "changedCount") ||
+    Object.hasOwn(result, "alreadyRetiredCount") ||
+    Object.hasOwn(result, "conflictedCount") ||
+    Object.hasOwn(result, "movedCandidateCount") ||
+    Object.hasOwn(result, "missingCount") ||
+    Object.hasOwn(result, "newSourceCount") ||
+    Object.hasOwn(result, "scanStatus") ||
+    Object.hasOwn(result, "scannedEntryCount") ||
+    Object.hasOwn(result, "discoveredFileCount") ||
+    Object.hasOwn(result, "skippedEntryCount") ||
+    Object.hasOwn(result, "retiredSourceCount") ||
+    Object.hasOwn(result, "retiredSourceIdsTruncated") ||
+    Object.hasOwn(result, "alreadyRetiredSourceCount") ||
+    Object.hasOwn(result, "alreadyRetiredSourceIdsTruncated") ||
+    Object.hasOwn(result, "failedStatus")
+  ) {
+    throw new Error("The candidate knowledge source directory reconciliation result was invalid.");
+  }
+
+  const approvedSourceIds = new Set(approvedRetirementSourceIds);
+
+  const retiredSourceIds = new Set<string>();
+  for (const sourceId of result.retiredSourceIds) {
+    if (
+      typeof sourceId !== "string" ||
+      sourceId.trim() === "" ||
+      retiredSourceIds.has(sourceId) ||
+      !approvedSourceIds.has(sourceId)
+    ) {
+      throw new Error(
+        "The candidate knowledge source directory reconciliation result was invalid.",
+      );
+    }
+    retiredSourceIds.add(sourceId);
+  }
+  const alreadyRetiredSourceIds = new Set<string>();
+  for (const sourceId of result.alreadyRetiredSourceIds) {
+    if (
+      typeof sourceId !== "string" ||
+      sourceId.trim() === "" ||
+      alreadyRetiredSourceIds.has(sourceId) ||
+      retiredSourceIds.has(sourceId) ||
+      !approvedSourceIds.has(sourceId)
+    ) {
+      throw new Error(
+        "The candidate knowledge source directory reconciliation result was invalid.",
+      );
+    }
+    alreadyRetiredSourceIds.add(sourceId);
+  }
+
+  const hasFailedSourceId = Object.hasOwn(result, "failedSourceId");
+  if (result.status === "partial") {
+    if (
+      !hasFailedSourceId ||
+      typeof result.failedSourceId !== "string" ||
+      result.failedSourceId.trim() === "" ||
+      !approvedSourceIds.has(result.failedSourceId) ||
+      retiredSourceIds.has(result.failedSourceId) ||
+      alreadyRetiredSourceIds.has(result.failedSourceId)
+    ) {
+      throw new Error(
+        "The candidate knowledge source directory reconciliation result was invalid.",
+      );
+    }
+  } else if (
+    hasFailedSourceId ||
+    (result.status === "applied" && result.retiredSourceIds.length === 0) ||
+    (result.status === "current" && result.retiredSourceIds.length !== 0)
+  ) {
+    throw new Error("The candidate knowledge source directory reconciliation result was invalid.");
+  }
+
+  const orderedRetiredSourceIds = [...retiredSourceIds].sort(lexicalCompare);
+  const orderedAlreadyRetiredSourceIds = [...alreadyRetiredSourceIds].sort(lexicalCompare);
+  writeJson(
+    io,
+    Object.freeze({
+      knowledgeBaseId,
+      directoryId,
+      checkedAt: result.checkedAt,
+      status: result.status,
+      retiredSourceIds: orderedRetiredSourceIds.slice(0, maximumKnowledgeInspectionItems),
+      retiredSourceCount: orderedRetiredSourceIds.length,
+      retiredSourceIdsTruncated: orderedRetiredSourceIds.length > maximumKnowledgeInspectionItems,
+      alreadyRetiredSourceIds: orderedAlreadyRetiredSourceIds.slice(
+        0,
+        maximumKnowledgeInspectionItems,
+      ),
+      alreadyRetiredSourceCount: orderedAlreadyRetiredSourceIds.length,
+      alreadyRetiredSourceIdsTruncated:
+        orderedAlreadyRetiredSourceIds.length > maximumKnowledgeInspectionItems,
+      ...(result.status === "partial" ? { failedSourceId: result.failedSourceId } : {}),
     }),
   );
 }
@@ -1290,6 +1544,91 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
         });
         writeKnowledgeSourceDirectoryRefresh(io, knowledgeBaseId, directoryId, result, "apply");
+      },
+    );
+
+  knowledgeSource
+    .command("directory-reconciliation-preview")
+    .description("Preview directory reconciliation without changing stored state")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .option("--max-depth <number>", "maximum directory depth", integerOption)
+    .option("--max-scanned-entries <number>", "maximum scanned directory entries", integerOption)
+    .option("--max-accepted-files <number>", "maximum accepted directory files", integerOption)
+    .option("--max-accepted-bytes <number>", "maximum accepted directory bytes", integerOption)
+    .option("--max-source-bytes <number>", "maximum bytes per source file", integerOption)
+    .option("--max-chunk-characters <number>", "maximum extracted chunk characters", integerOption)
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        options: Record<string, unknown>,
+      ) => {
+        const ingestionOptions = directoryIngestionOptions(options);
+        const result = await candidateKnowledge.previewKnowledgeSourceDirectoryReconciliation({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
+        });
+        writeKnowledgeSourceDirectoryReconciliationPreview(
+          io,
+          knowledgeBaseId,
+          directoryId,
+          result,
+        );
+      },
+    );
+
+  knowledgeSource
+    .command("directory-reconciliation-apply")
+    .description("Apply approved directory reconciliation retirements after explicit confirmation")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .argument("<directory-id>", "opaque directory id")
+    .option(
+      "--approved-retirement-source-id <source-id>",
+      "approve retiring one opaque source id; repeat for each approved retirement",
+      repeatedStringOption,
+      [],
+    )
+    .option("--max-depth <number>", "maximum directory depth", integerOption)
+    .option("--max-scanned-entries <number>", "maximum scanned directory entries", integerOption)
+    .option("--max-accepted-files <number>", "maximum accepted directory files", integerOption)
+    .option("--max-accepted-bytes <number>", "maximum accepted directory bytes", integerOption)
+    .option("--max-source-bytes <number>", "maximum bytes per source file", integerOption)
+    .option("--max-chunk-characters <number>", "maximum extracted chunk characters", integerOption)
+    .option("--confirm", "confirm applying approved directory reconciliation retirements")
+    .action(
+      async (
+        storeRoot: string,
+        knowledgeBaseId: string,
+        directoryId: string,
+        options: Record<string, unknown>,
+      ) => {
+        if (options.confirm !== true) {
+          throw new Error("knowledge source directory-reconciliation-apply requires --confirm.");
+        }
+        const ingestionOptions = directoryIngestionOptions(options);
+        const approvedRetirementSourceIds = Array.isArray(options.approvedRetirementSourceId)
+          ? (options.approvedRetirementSourceId as string[])
+          : [];
+        const result = await candidateKnowledge.applyKnowledgeSourceDirectoryReconciliation({
+          storeRoot,
+          knowledgeBaseId,
+          directoryId,
+          approvedRetirementSourceIds,
+          ...(ingestionOptions === undefined ? {} : { options: ingestionOptions }),
+        });
+        writeKnowledgeSourceDirectoryReconciliationApply(
+          io,
+          knowledgeBaseId,
+          directoryId,
+          approvedRetirementSourceIds,
+          result,
+        );
       },
     );
 

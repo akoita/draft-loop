@@ -57,6 +57,8 @@ import {
   type KnowledgeDirectoryImportSourceResult,
   type KnowledgeDirectoryMemberMoveResult,
   type KnowledgeDirectoryMovedCandidatesResult,
+  type KnowledgeDirectoryReconciliationApplyResult,
+  type KnowledgeDirectoryReconciliationPreviewResult,
   type KnowledgeDirectoryRefreshApplyResult,
   type KnowledgeDirectoryRefreshMemberResult,
   type KnowledgeDirectoryRefreshPreviewResult,
@@ -2604,6 +2606,161 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             sourceId: moved.sourceId,
             checkedAt: moved.checkedAt,
             status: moved.status,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-reconciliation-preview": {
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const preview = await knowledgeService.previewKnowledgeSourceDirectoryReconciliation({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+          });
+          const allowed = new Set([
+            "current",
+            "changed",
+            "already-retired",
+            "conflicted",
+            "moved-candidate",
+            "missing",
+          ]);
+          const ids = new Set<string>();
+          const members = preview.members
+            .map((member) => {
+              if (
+                typeof member.sourceId !== "string" ||
+                member.sourceId.trim() === "" ||
+                ids.has(member.sourceId) ||
+                !allowed.has(member.status)
+              )
+                return fail(
+                  "operation-failed",
+                  "Candidate knowledge directory reconciliation preview returned inconsistent state.",
+                );
+              ids.add(member.sourceId);
+              return { sourceId: member.sourceId, status: member.status };
+            })
+            .sort((a, b) => a.sourceId.localeCompare(b.sourceId));
+          const counts = [
+            preview.currentCount,
+            preview.changedCount,
+            preview.alreadyRetiredCount,
+            preview.conflictedCount,
+            preview.movedCandidateCount,
+            preview.missingCount,
+          ];
+          const actualCounts = new Map<string, number>();
+          for (const member of members)
+            actualCounts.set(member.status, (actualCounts.get(member.status) ?? 0) + 1);
+          if (
+            preview.directoryId !== command.input.directoryId ||
+            !isValidTimestamp(preview.checkedAt) ||
+            !counts.every((count) => Number.isSafeInteger(count) && count >= 0) ||
+            counts.reduce((sum, count) => sum + count, 0) !== members.length ||
+            [
+              "current",
+              "changed",
+              "already-retired",
+              "conflicted",
+              "moved-candidate",
+              "missing",
+            ].some((status, index) => (actualCounts.get(status) ?? 0) !== counts[index]) ||
+            (preview.scanStatus !== "complete" && preview.scanStatus !== "incomplete") ||
+            (preview.scanStatus === "complete") !== (preview.skippedEntryCount === 0) ||
+            ![
+              preview.newSourceCount,
+              preview.scannedEntryCount,
+              preview.discoveredFileCount,
+              preview.skippedEntryCount,
+            ].every((count) => Number.isSafeInteger(count) && count >= 0) ||
+            preview.newSourceCount > preview.discoveredFileCount ||
+            preview.discoveredFileCount + preview.skippedEntryCount > preview.scannedEntryCount
+          )
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory reconciliation preview returned inconsistent state.",
+            );
+          const projected = members.slice(0, maximumKnowledgeInspectionEntries);
+          const result: KnowledgeDirectoryReconciliationPreviewResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: preview.directoryId,
+            checkedAt: preview.checkedAt,
+            members: projected,
+            memberCount: members.length,
+            membersTruncated: projected.length < members.length,
+            currentCount: preview.currentCount,
+            changedCount: preview.changedCount,
+            alreadyRetiredCount: preview.alreadyRetiredCount,
+            conflictedCount: preview.conflictedCount,
+            movedCandidateCount: preview.movedCandidateCount,
+            missingCount: preview.missingCount,
+            newSourceCount: preview.newSourceCount,
+            scanStatus: preview.scanStatus,
+            scannedEntryCount: preview.scannedEntryCount,
+            discoveredFileCount: preview.discoveredFileCount,
+            skippedEntryCount: preview.skippedEntryCount,
+          };
+          return { ok: true, value: result };
+        }
+        case "knowledge.directory-reconciliation-apply": {
+          if (!command.input.confirmed)
+            return fail(
+              "permission-denied",
+              "Candidate knowledge directory reconciliation requires confirmation.",
+            );
+          const root = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const applied = await knowledgeService.applyKnowledgeSourceDirectoryReconciliation({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: command.input.directoryId,
+            approvedRetirementSourceIds: command.input.approvedRetirementSourceIds,
+          });
+          const retired = [...applied.retiredSourceIds].sort((a, b) => a.localeCompare(b));
+          const already = [...applied.alreadyRetiredSourceIds].sort((a, b) => a.localeCompare(b));
+          const failed = applied.status === "partial" ? applied.failedSourceId : undefined;
+          const approved = new Set(command.input.approvedRetirementSourceIds);
+          const hasFailedSourceId = Object.hasOwn(applied, "failedSourceId");
+          if (
+            applied.directoryId !== command.input.directoryId ||
+            !isValidTimestamp(applied.checkedAt) ||
+            !["applied", "current", "partial"].includes(applied.status) ||
+            new Set(retired).size !== retired.length ||
+            new Set(already).size !== already.length ||
+            retired.some((id) => already.includes(id)) ||
+            [...retired, ...already].some((id) => !approved.has(id)) ||
+            (applied.status === "partial") !== (failed !== undefined) ||
+            (applied.status !== "partial" && hasFailedSourceId) ||
+            (applied.status === "applied" && retired.length === 0) ||
+            (applied.status === "current" && retired.length !== 0) ||
+            (failed !== undefined && !approved.has(failed)) ||
+            (failed !== undefined && (retired.includes(failed) || already.includes(failed)))
+          )
+            return fail(
+              "operation-failed",
+              "Candidate knowledge directory reconciliation returned inconsistent state.",
+            );
+          const retiredProjected = retired.slice(0, maximumKnowledgeInspectionEntries);
+          const alreadyProjected = already.slice(0, maximumKnowledgeInspectionEntries);
+          const result: KnowledgeDirectoryReconciliationApplyResult = {
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryId: applied.directoryId,
+            checkedAt: applied.checkedAt,
+            status: applied.status,
+            retiredSourceIds: retiredProjected,
+            retiredSourceCount: retired.length,
+            retiredSourceIdsTruncated: retiredProjected.length < retired.length,
+            alreadyRetiredSourceIds: alreadyProjected,
+            alreadyRetiredSourceCount: already.length,
+            alreadyRetiredSourceIdsTruncated: alreadyProjected.length < already.length,
+            ...(failed === undefined ? {} : { failedSourceId: failed }),
           };
           return { ok: true, value: result };
         }
