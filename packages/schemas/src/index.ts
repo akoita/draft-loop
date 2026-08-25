@@ -1,7 +1,14 @@
-import type { CandidateKnowledgeSelectionSnapshotInput } from "@draft-loop/domain";
+import type {
+  ApplicationReadinessStoppingDecisionStopReason,
+  CandidateKnowledgeSelectionSnapshotInput,
+} from "@draft-loop/domain";
 import {
   adjudicatedRevisionEffectStatuses,
   adjudicatedRevisionTraceSchemaVersion,
+  applicationReadinessStoppingDecisionBlockerCodes,
+  applicationReadinessStoppingDecisionLimitationCodes,
+  applicationReadinessStoppingDecisionSchemaVersion,
+  applicationReadinessStoppingDecisionStopReasons,
   authorAdjudicationDispositions,
   authorAdjudicationEffectRequirements,
   authorAdjudicationPlanSchemaVersion,
@@ -24,6 +31,7 @@ import {
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
   outputFormats,
+  readinessDimensionAgreementStatuses,
   readinessDimensions,
   requirementPriorities,
 } from "@draft-loop/domain";
@@ -1605,6 +1613,609 @@ export const adjudicatedRevisionTraceSchema = z
 
 export type AdjudicatedRevisionTrace = z.infer<typeof adjudicatedRevisionTraceSchema>;
 
+const stoppingDecisionReferenceIdSchema = independentReadinessReportNonEmptyString.max(200);
+const stoppingDecisionCategorySchema = z.enum([
+  "format",
+  "factuality",
+  "coverage",
+  "evidence",
+  "quality",
+]);
+
+/** One explicit, bounded agreement for a canonical readiness dimension. */
+export const readinessDimensionAgreementSchema = z.strictObject({
+  dimension: z.enum(readinessDimensions),
+  status: z.enum(readinessDimensionAgreementStatuses),
+  rationale: independentReadinessReportNonEmptyString.max(500),
+});
+
+export type ReadinessDimensionAgreement = z.infer<typeof readinessDimensionAgreementSchema>;
+
+const canonicalReadinessDimensionAgreementsSchema = z
+  .array(readinessDimensionAgreementSchema)
+  .length(readinessDimensions.length)
+  .superRefine((agreements, context) => {
+    const counts = new Map<string, number>();
+    for (const agreement of agreements) {
+      counts.set(agreement.dimension, (counts.get(agreement.dimension) ?? 0) + 1);
+    }
+
+    for (const [index, dimension] of readinessDimensions.entries()) {
+      const agreement = agreements[index];
+      if (counts.get(dimension) !== 1) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "dimension"],
+          message: `readiness dimension ${dimension} must appear exactly once in agreements`,
+        });
+      }
+      if (agreement?.dimension !== dimension) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "dimension"],
+          message: `readiness agreements must use canonical dimension order: ${readinessDimensions.join(", ")}`,
+        });
+      }
+    }
+  });
+
+/** Content-free projection of one deterministic validation diagnostic. */
+export const applicationReadinessDeterministicCheckSchema = z.strictObject({
+  code: stoppingDecisionReferenceIdSchema,
+  severity: z.enum(["error", "warning"]),
+  category: stoppingDecisionCategorySchema,
+  claimId: stoppingDecisionReferenceIdSchema.optional(),
+  sectionId: stoppingDecisionReferenceIdSchema.optional(),
+  requirementId: stoppingDecisionReferenceIdSchema.optional(),
+});
+
+export type ApplicationReadinessDeterministicCheck = z.infer<
+  typeof applicationReadinessDeterministicCheckSchema
+>;
+
+type StoppingDecisionReferenceKeyInput = {
+  readonly code: string;
+} & Partial<
+  Readonly<{
+    readonly checkCode: string | undefined;
+    readonly findingId: string | undefined;
+    readonly inputId: string | undefined;
+    readonly dimension: string | undefined;
+    readonly claimId: string | undefined;
+    readonly sectionId: string | undefined;
+    readonly requirementId: string | undefined;
+  }>
+>;
+
+const referenceKey = (reference: StoppingDecisionReferenceKeyInput): string =>
+  [
+    reference.code,
+    reference.checkCode,
+    reference.findingId,
+    reference.inputId,
+    reference.dimension,
+    reference.claimId,
+    reference.sectionId,
+    reference.requirementId,
+  ]
+    .map((value) => value ?? "")
+    .join("\u0000");
+
+type StoppingDecisionTargetReferences = Pick<
+  StoppingDecisionReferenceKeyInput,
+  "dimension" | "claimId" | "sectionId" | "requirementId"
+>;
+
+const deterministicCheckKey = (
+  check: Pick<
+    ApplicationReadinessDeterministicCheck,
+    "code" | "severity" | "category" | "claimId" | "sectionId" | "requirementId"
+  >,
+): string =>
+  [check.code, check.severity, check.category, check.claimId, check.sectionId, check.requirementId]
+    .map((value) => value ?? "")
+    .join("\u0000");
+
+function compareStrings(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
+}
+
+function orderStoppingDecisionReferences<T extends StoppingDecisionReferenceKeyInput>(
+  references: readonly T[],
+): readonly T[] {
+  return [...references].sort((left, right) =>
+    compareStrings(referenceKey(left), referenceKey(right)),
+  );
+}
+
+function targetReferences(
+  target: IndependentReadinessReport["findings"][number]["target"],
+): StoppingDecisionTargetReferences {
+  switch (target.kind) {
+    case "rubric":
+      return { dimension: target.id };
+    case "claim":
+      return { claimId: target.id };
+    case "section":
+      return { sectionId: target.id };
+    case "requirement":
+      return { requirementId: target.id };
+    case "artifact":
+    case "evidence":
+      return {};
+  }
+}
+
+/** The only blocker reference shape accepted for each blocker code. */
+export const applicationReadinessStoppingDecisionBlockerSchema = z.discriminatedUnion("code", [
+  z.strictObject({
+    code: z.literal("incomplete-report-inputs"),
+    inputId: stoppingDecisionReferenceIdSchema,
+  }),
+  z.strictObject({ code: z.literal("independent-review-incomplete") }),
+  z.strictObject({
+    code: z.literal("deterministic-error"),
+    checkCode: stoppingDecisionReferenceIdSchema,
+    claimId: stoppingDecisionReferenceIdSchema.optional(),
+    sectionId: stoppingDecisionReferenceIdSchema.optional(),
+    requirementId: stoppingDecisionReferenceIdSchema.optional(),
+  }),
+  z.strictObject({
+    code: z.literal("report-error"),
+    findingId: stoppingDecisionReferenceIdSchema,
+    dimension: z.enum(readinessDimensions).optional(),
+    claimId: stoppingDecisionReferenceIdSchema.optional(),
+    sectionId: stoppingDecisionReferenceIdSchema.optional(),
+    requirementId: stoppingDecisionReferenceIdSchema.optional(),
+  }),
+  z.strictObject({
+    code: z.literal("unmet-rubric-threshold"),
+    dimension: z.enum(readinessDimensions),
+  }),
+  z.strictObject({
+    code: z.literal("disputed-dimension"),
+    dimension: z.enum(readinessDimensions),
+  }),
+  z.strictObject({
+    code: z.literal("missing-revision-effect"),
+    findingId: stoppingDecisionReferenceIdSchema,
+  }),
+]);
+export type ApplicationReadinessStoppingDecisionBlocker = z.infer<
+  typeof applicationReadinessStoppingDecisionBlockerSchema
+>;
+
+/** The only limitation reference shape accepted for each limitation code. */
+export const applicationReadinessStoppingDecisionLimitationSchema = z.discriminatedUnion("code", [
+  z.strictObject({
+    code: z.literal("deterministic-warning"),
+    checkCode: stoppingDecisionReferenceIdSchema,
+    claimId: stoppingDecisionReferenceIdSchema.optional(),
+    sectionId: stoppingDecisionReferenceIdSchema.optional(),
+    requirementId: stoppingDecisionReferenceIdSchema.optional(),
+  }),
+  z.strictObject({
+    code: z.literal("report-warning"),
+    findingId: stoppingDecisionReferenceIdSchema,
+    dimension: z.enum(readinessDimensions).optional(),
+    claimId: stoppingDecisionReferenceIdSchema.optional(),
+    sectionId: stoppingDecisionReferenceIdSchema.optional(),
+    requirementId: stoppingDecisionReferenceIdSchema.optional(),
+  }),
+  z.strictObject({
+    code: z.literal("revision-effect-overridden"),
+    findingId: stoppingDecisionReferenceIdSchema,
+  }),
+  z.strictObject({
+    code: z.literal("disagreement-preserved"),
+    findingId: stoppingDecisionReferenceIdSchema,
+  }),
+]);
+export type ApplicationReadinessStoppingDecisionLimitation = z.infer<
+  typeof applicationReadinessStoppingDecisionLimitationSchema
+>;
+
+function addReferenceOrderAndUniquenessIssues<T extends StoppingDecisionReferenceKeyInput>(
+  references: readonly T[],
+  context: z.RefinementCtx,
+  label: string,
+): void {
+  const seen = new Set<string>();
+  let previousKey: string | undefined;
+  for (const [index, reference] of references.entries()) {
+    const key = referenceKey(reference);
+    if (seen.has(key)) {
+      context.addIssue({
+        code: "custom",
+        path: [index],
+        message: `${label} references must be unique`,
+      });
+    }
+    if (previousKey !== undefined && compareStrings(previousKey, key) >= 0) {
+      context.addIssue({
+        code: "custom",
+        path: [index],
+        message: `${label} references must use canonical order`,
+      });
+    }
+    seen.add(key);
+    previousKey = key;
+  }
+}
+
+const uniqueStoppingDecisionBlockersSchema = z
+  .array(applicationReadinessStoppingDecisionBlockerSchema)
+  .superRefine((blockers, context) => {
+    addReferenceOrderAndUniquenessIssues(blockers, context, "stopping decision blocker");
+  });
+
+const uniqueStoppingDecisionLimitationsSchema = z
+  .array(applicationReadinessStoppingDecisionLimitationSchema)
+  .superRefine((limitations, context) => {
+    addReferenceOrderAndUniquenessIssues(limitations, context, "stopping decision limitation");
+  });
+
+const applicationReadinessStoppingDecisionChecksSchema = z
+  .array(applicationReadinessDeterministicCheckSchema)
+  .superRefine((checks, context) => {
+    const seen = new Set<string>();
+    let previousKey: string | undefined;
+    for (const [index, check] of checks.entries()) {
+      const key = deterministicCheckKey(check);
+      if (seen.has(key)) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "deterministic check references must be unique",
+        });
+      }
+      if (previousKey !== undefined && compareStrings(previousKey, key) >= 0) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "deterministic checks must use canonical order",
+        });
+      }
+      seen.add(key);
+      previousKey = key;
+    }
+  });
+
+const positiveSafeIntegerSchema = z
+  .number()
+  .finite()
+  .int()
+  .positive()
+  .refine(Number.isSafeInteger, "must be a safe integer");
+
+/** Bounded loop state used to derive the stopping reason. */
+export const applicationReadinessStoppingLoopContextSchema = z.strictObject({
+  round: positiveSafeIntegerSchema,
+  maxRounds: positiveSafeIntegerSchema,
+  stable: z.boolean(),
+  budgetExhausted: z.boolean(),
+  cancelled: z.boolean(),
+});
+
+export type ApplicationReadinessStoppingLoopContext = z.infer<
+  typeof applicationReadinessStoppingLoopContextSchema
+>;
+
+/** The artifact identity and chronology projection carried by a decision. */
+export const applicationReadinessStoppingDecisionArtifactSchema = z
+  .strictObject({
+    ...artifactIdentitySchema.shape,
+    createdAt: strictTimestampSchema,
+    parentVersionId: independentReadinessReportNonEmptyString.nullable(),
+  })
+  .superRefine((artifact, context) => {
+    if (artifact.version === 1 && artifact.parentVersionId !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentVersionId"],
+        message: "version 1 decision artifacts must not have a parent version",
+      });
+    }
+    if (artifact.version > 1 && artifact.parentVersionId === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentVersionId"],
+        message: "decision artifact versions after version 1 must link to a parent version",
+      });
+    }
+  });
+
+export type ApplicationReadinessStoppingDecisionArtifact = z.infer<
+  typeof applicationReadinessStoppingDecisionArtifactSchema
+>;
+
+function expectedStoppingDecisionBlockers(
+  report: IndependentReadinessReport,
+  deterministicChecks: readonly ApplicationReadinessDeterministicCheck[],
+  agreements: readonly ReadinessDimensionAgreement[],
+  latestRevisionTrace: AdjudicatedRevisionTrace | undefined,
+): readonly StoppingDecisionReferenceKeyInput[] {
+  const blockers: StoppingDecisionReferenceKeyInput[] = [];
+  if (report.inputAssessment.status === "incomplete") {
+    for (const inputId of report.inputAssessment.missingInputs) {
+      blockers.push({ code: "incomplete-report-inputs", inputId });
+    }
+  }
+
+  const independentReview = report.independentReview;
+  if (
+    !independentReview.required ||
+    (!independentReview.lineagesDistinct && independentReview.overrideRationale === undefined)
+  ) {
+    blockers.push({ code: "independent-review-incomplete" });
+  }
+
+  for (const check of deterministicChecks) {
+    if (check.severity === "error") {
+      blockers.push({
+        code: "deterministic-error",
+        checkCode: check.code,
+        ...(check.claimId === undefined ? {} : { claimId: check.claimId }),
+        ...(check.sectionId === undefined ? {} : { sectionId: check.sectionId }),
+        ...(check.requirementId === undefined ? {} : { requirementId: check.requirementId }),
+      });
+    }
+  }
+
+  for (const finding of report.findings) {
+    if (finding.severity === "error") {
+      blockers.push({
+        code: "report-error",
+        findingId: finding.id,
+        ...targetReferences(finding.target),
+      });
+    }
+  }
+
+  for (const thresholdResult of report.evaluation.thresholdResults) {
+    if (!thresholdResult.meets) {
+      blockers.push({ code: "unmet-rubric-threshold", dimension: thresholdResult.dimension });
+    }
+  }
+
+  for (const agreement of agreements) {
+    if (agreement.status === "disputed") {
+      blockers.push({ code: "disputed-dimension", dimension: agreement.dimension });
+    }
+  }
+
+  if (latestRevisionTrace !== undefined) {
+    const decisionsById = new Map(
+      latestRevisionTrace.adjudication.decisions.map((decision) => [decision.findingId, decision]),
+    );
+    for (const effect of latestRevisionTrace.effects) {
+      const decision = decisionsById.get(effect.findingId);
+      if (decision?.disposition === "accept" && effect.status === "missing") {
+        blockers.push({ code: "missing-revision-effect", findingId: effect.findingId });
+      }
+    }
+  }
+
+  return orderStoppingDecisionReferences(blockers);
+}
+
+function expectedStoppingDecisionLimitations(
+  report: IndependentReadinessReport,
+  deterministicChecks: readonly ApplicationReadinessDeterministicCheck[],
+  latestRevisionTrace: AdjudicatedRevisionTrace | undefined,
+): readonly StoppingDecisionReferenceKeyInput[] {
+  const limitations: StoppingDecisionReferenceKeyInput[] = [];
+  for (const check of deterministicChecks) {
+    if (check.severity === "warning") {
+      limitations.push({
+        code: "deterministic-warning",
+        checkCode: check.code,
+        ...(check.claimId === undefined ? {} : { claimId: check.claimId }),
+        ...(check.sectionId === undefined ? {} : { sectionId: check.sectionId }),
+        ...(check.requirementId === undefined ? {} : { requirementId: check.requirementId }),
+      });
+    }
+  }
+  for (const finding of report.findings) {
+    if (finding.severity === "warning") {
+      limitations.push({
+        code: "report-warning",
+        findingId: finding.id,
+        ...targetReferences(finding.target),
+      });
+    }
+  }
+  if (latestRevisionTrace !== undefined) {
+    for (const effect of latestRevisionTrace.effects) {
+      if (effect.status === "overridden") {
+        limitations.push({ code: "revision-effect-overridden", findingId: effect.findingId });
+      } else if (effect.status === "disagreement-preserved") {
+        limitations.push({ code: "disagreement-preserved", findingId: effect.findingId });
+      }
+    }
+  }
+  return orderStoppingDecisionReferences(limitations);
+}
+
+function referenceArraysMatch(
+  actual: readonly StoppingDecisionReferenceKeyInput[],
+  expected: readonly StoppingDecisionReferenceKeyInput[],
+): boolean {
+  return (
+    actual.length === expected.length &&
+    actual.every((reference, index) => {
+      const expectedReference = expected[index];
+      return (
+        expectedReference !== undefined &&
+        referenceKey(reference) === referenceKey(expectedReference)
+      );
+    })
+  );
+}
+
+function expectedStoppingDecisionReason(
+  applicationReady: boolean,
+  loopContext: ApplicationReadinessStoppingLoopContext,
+): ApplicationReadinessStoppingDecisionStopReason {
+  if (applicationReady) return "application-ready";
+  if (loopContext.cancelled) return "cancelled";
+  if (loopContext.budgetExhausted) return "budget-exhausted";
+  if (loopContext.round >= loopContext.maxRounds) return "max-rounds";
+  if (loopContext.stable) return "stable-convergence";
+  return "continue";
+}
+
+/** Versioned, provider-independent application-readiness stopping decision. */
+export const applicationReadinessStoppingDecisionSchema = z
+  .strictObject({
+    schemaVersion: z.literal(applicationReadinessStoppingDecisionSchemaVersion),
+    contextSnapshotId: independentReadinessReportNonEmptyString,
+    artifact: applicationReadinessStoppingDecisionArtifactSchema,
+    createdAt: strictTimestampSchema,
+    report: independentReadinessReportSchema,
+    latestRevisionTrace: adjudicatedRevisionTraceSchema.optional(),
+    deterministicChecks: applicationReadinessStoppingDecisionChecksSchema,
+    agreements: canonicalReadinessDimensionAgreementsSchema,
+    blockers: uniqueStoppingDecisionBlockersSchema,
+    limitations: uniqueStoppingDecisionLimitationsSchema,
+    loopContext: applicationReadinessStoppingLoopContextSchema,
+    applicationReady: z.boolean(),
+    shouldStop: z.boolean(),
+    bestAvailable: z.boolean(),
+    stopReason: z.enum(applicationReadinessStoppingDecisionStopReasons),
+    humanApprovalRequired: z.literal(true),
+  })
+  .superRefine((decision, context) => {
+    if (
+      decision.artifact.id !== decision.report.artifact.id ||
+      decision.artifact.version !== decision.report.artifact.version
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["artifact"],
+        message: "decision artifact must match the readiness report artifact identity",
+      });
+    }
+    if (decision.contextSnapshotId !== decision.report.contextSnapshotId) {
+      context.addIssue({
+        code: "custom",
+        path: ["contextSnapshotId"],
+        message: "decision context must match the readiness report context",
+      });
+    }
+    if (Date.parse(decision.report.createdAt) > Date.parse(decision.createdAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["createdAt"],
+        message: "decision createdAt must not precede the readiness report",
+      });
+    }
+    if (Date.parse(decision.report.createdAt) < Date.parse(decision.artifact.createdAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["report", "createdAt"],
+        message: "readiness report createdAt must not precede artifact creation",
+      });
+    }
+
+    const trace = decision.latestRevisionTrace;
+    if (trace !== undefined) {
+      if (
+        trace.revisedArtifact.id !== decision.artifact.id ||
+        trace.revisedArtifact.version !== decision.artifact.version ||
+        trace.revisedArtifact.parentVersionId !== decision.artifact.parentVersionId
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["latestRevisionTrace", "revisedArtifact"],
+          message: "revision trace must describe the decision artifact",
+        });
+      }
+      if (trace.adjudication.contextSnapshotId !== decision.contextSnapshotId) {
+        context.addIssue({
+          code: "custom",
+          path: ["latestRevisionTrace", "adjudication", "contextSnapshotId"],
+          message: "revision trace context must match the decision context",
+        });
+      }
+      if (Date.parse(trace.createdAt) > Date.parse(decision.report.createdAt)) {
+        context.addIssue({
+          code: "custom",
+          path: ["report", "createdAt"],
+          message: "readiness report createdAt must not precede its revision trace",
+        });
+      }
+    }
+
+    const expectedBlockers = expectedStoppingDecisionBlockers(
+      decision.report,
+      decision.deterministicChecks,
+      decision.agreements,
+      trace,
+    );
+    const expectedLimitations = expectedStoppingDecisionLimitations(
+      decision.report,
+      decision.deterministicChecks,
+      trace,
+    );
+    if (!referenceArraysMatch(decision.blockers, expectedBlockers)) {
+      context.addIssue({
+        code: "custom",
+        path: ["blockers"],
+        message: "blockers must exactly cover the derived blocking references in canonical order",
+      });
+    }
+    if (!referenceArraysMatch(decision.limitations, expectedLimitations)) {
+      context.addIssue({
+        code: "custom",
+        path: ["limitations"],
+        message:
+          "limitations must exactly cover the derived non-blocking references in canonical order",
+      });
+    }
+
+    const expectedApplicationReady = expectedBlockers.length === 0;
+    if (decision.applicationReady !== expectedApplicationReady) {
+      context.addIssue({
+        code: "custom",
+        path: ["applicationReady"],
+        message: "applicationReady must equal whether the derived blocker set is absent",
+      });
+    }
+    const expectedReason = expectedStoppingDecisionReason(
+      expectedApplicationReady,
+      decision.loopContext,
+    );
+    if (decision.stopReason !== expectedReason) {
+      context.addIssue({
+        code: "custom",
+        path: ["stopReason"],
+        message: "stopReason must equal the loop-context precedence result",
+      });
+    }
+    const expectedShouldStop = expectedReason !== "continue";
+    if (decision.shouldStop !== expectedShouldStop) {
+      context.addIssue({
+        code: "custom",
+        path: ["shouldStop"],
+        message: "shouldStop must equal whether the derived stop reason is not continue",
+      });
+    }
+    if (decision.bestAvailable !== (expectedShouldStop && !expectedApplicationReady)) {
+      context.addIssue({
+        code: "custom",
+        path: ["bestAvailable"],
+        message: "bestAvailable must equal stopped and not derived application-ready",
+      });
+    }
+  });
+
+export type ApplicationReadinessStoppingDecision = z.infer<
+  typeof applicationReadinessStoppingDecisionSchema
+>;
+
 export const modelConfigurationSchema = z
   .object({
     author: modelSelectionSchema,
@@ -1788,6 +2399,10 @@ export const checksumPattern = checksumSchema;
 export {
   adjudicatedRevisionEffectStatuses,
   adjudicatedRevisionTraceSchemaVersion,
+  applicationReadinessStoppingDecisionBlockerCodes,
+  applicationReadinessStoppingDecisionLimitationCodes,
+  applicationReadinessStoppingDecisionSchemaVersion,
+  applicationReadinessStoppingDecisionStopReasons,
   authorAdjudicationDispositions,
   authorAdjudicationEffectRequirements,
   authorAdjudicationPlanSchemaVersion,
@@ -1796,6 +2411,7 @@ export {
   independentReadinessReportSchemaVersion,
   independentReadinessReportTargetKinds,
   outputFormats,
+  readinessDimensionAgreementStatuses,
   readinessDimensions,
   requirementPriorities,
 };

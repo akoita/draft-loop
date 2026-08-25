@@ -548,6 +548,57 @@ export const adjudicatedRevisionEffectStatuses = [
 ] as const;
 export type AdjudicatedRevisionEffectStatus = (typeof adjudicatedRevisionEffectStatuses)[number];
 
+/** Version of the provider-independent application-readiness stopping contract. */
+export const applicationReadinessStoppingDecisionSchemaVersion = 1 as const;
+export type ApplicationReadinessStoppingDecisionSchemaVersion =
+  typeof applicationReadinessStoppingDecisionSchemaVersion;
+
+/** The explicit agreement recorded for each readiness dimension. */
+export const readinessDimensionAgreementStatuses = ["agreed", "disputed"] as const;
+export type ReadinessDimensionAgreementStatus =
+  (typeof readinessDimensionAgreementStatuses)[number];
+
+/** Reasons a bounded author–critic loop may stop. */
+export const applicationReadinessStoppingDecisionStopReasons = [
+  "application-ready",
+  "stable-convergence",
+  "max-rounds",
+  "budget-exhausted",
+  "cancelled",
+  "continue",
+] as const;
+export type ApplicationReadinessStoppingDecisionStopReason =
+  (typeof applicationReadinessStoppingDecisionStopReasons)[number];
+
+/** Finite, content-free reasons that prevent application readiness. */
+export const applicationReadinessStoppingDecisionBlockerCodes = [
+  "incomplete-report-inputs",
+  "independent-review-incomplete",
+  "deterministic-error",
+  "report-error",
+  "unmet-rubric-threshold",
+  "disputed-dimension",
+  "missing-revision-effect",
+] as const;
+export type ApplicationReadinessStoppingDecisionBlockerCode =
+  (typeof applicationReadinessStoppingDecisionBlockerCodes)[number];
+
+/** Finite, content-free limitations that remain visible without blocking. */
+export const applicationReadinessStoppingDecisionLimitationCodes = [
+  "deterministic-warning",
+  "report-warning",
+  "revision-effect-overridden",
+  "disagreement-preserved",
+] as const;
+export type ApplicationReadinessStoppingDecisionLimitationCode =
+  (typeof applicationReadinessStoppingDecisionLimitationCodes)[number];
+
+export interface ReadinessDimensionAgreement {
+  readonly dimension: ReadinessDimension;
+  readonly status: ReadinessDimensionAgreementStatus;
+  readonly rationale: string;
+}
+
 export type ReadinessRubric = Readonly<Record<ReadinessDimension, number>>;
 export type ReadinessRubricInput = Partial<ReadinessRubric>;
 
