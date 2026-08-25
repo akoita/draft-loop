@@ -141,7 +141,7 @@ contact employers, or submit applications.
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Now      | Evidence-backed CV drafting (v0.7 program) | [Released Sprint 2 checkpoint](stage-evidence-v0.7.0-alpha.2.md); v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | Confirmed deletion, reviewed profile and opportunity, lexical RAG, planning, complete CV, and policy checks remain |
-| Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Designed; foundation components partially integrated | Turn the factual draft into a reviewed, revised, human-approvable artifact            | Structured critique, adjudication, calibrated readiness gates, and professional rendering                               |
+| Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Designed; #71 report-contract component implemented; runtime integration blocked | Turn the factual draft into a reviewed, revised, human-approvable artifact            | #69/#70 drafting dependencies, then structured critique, adjudication, calibrated readiness gates, and professional rendering |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
@@ -211,6 +211,12 @@ Produce the structured independent readiness report (#71), record per-finding
 author adjudication and artifact revision (#72), apply calibrated stopping
 rules (#73), and render a professional ATS-readable DOCX/PDF with visual QA
 (#74).
+
+The first #71 component is implemented as a strict, provider-independent
+report contract and pure assembler. Runtime integration and the v0.8 outcome
+remain blocked on the complete drafting and writing-policy dependencies in #69
+and #70. The v0.8 stage remains Next and incomplete; this component does not
+claim the milestone is complete.
 
 **Exit criterion:** The complete factual draft receives an independent critique
 and traceable revision; unresolved disagreements remain visible; deterministic
