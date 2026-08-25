@@ -11,6 +11,7 @@ import {
 export * from "./pilot.js";
 export * from "./readiness-report.js";
 export * from "./retrieval.js";
+export * from "./stopping-decision.js";
 
 export const readinessDimensions = schemaReadinessDimensions;
 

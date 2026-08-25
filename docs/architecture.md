@@ -415,6 +415,28 @@ and stopping semantics. It stores no raw prompts, raw responses, or hidden
 reasoning. Runtime integration remains gated by the complete drafting and
 writing-policy work in #69 and #70.
 
+### Application-readiness stopping decision boundary
+
+`packages/schemas` owns the strict, versioned application-readiness stopping
+decision contract. It binds one #71 readiness report, an optional latest #72
+revision trace, the exact artifact and context identities, artifact creation
+and parent-version chronology, canonical per-dimension agreements,
+content-free deterministic checks, blockers, limitations, embedded loop
+context, and derived stop fields. Human approval remains a required literal in
+the contract; application readiness never means that approval was given.
+
+The pure `evaluateApplicationReadinessStoppingDecision` helper in
+`packages/evaluations` validates the artifact, report, and trace, reruns local
+deterministic validation, and applies conservative readiness blockers and
+bounded stop-reason precedence. It stores no diagnostic messages, source
+excerpts, provider payloads, or hidden reasoning in its deterministic
+projection.
+
+This first #73 component deliberately leaves runtime lifecycle, human
+approval/export/version invalidation, persistence/history, budget accounting,
+providers, CLI/desktop wiring, and full #69/#70/#72 integration out of scope.
+The v0.8 runtime outcome remains incomplete and blocked on those boundaries.
+
 ## Author–critic loop
 
 1. Create a workspace with a job description, local evidence directory,
