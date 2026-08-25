@@ -1,20 +1,32 @@
 import type { EvidenceReference } from "@draft-loop/evidence";
 import {
+  type AdjudicatedRevisionEffectOverride,
+  type AdjudicatedRevisionTrace,
   type ArtifactClaim,
   type ArtifactDecision,
+  type ArtifactDiff,
   type ArtifactKind,
   type ArtifactSection,
+  type AuthorAdjudicationPlan,
+  adjudicatedRevisionEffectOverrideSchema,
+  adjudicatedRevisionTraceSchema,
+  artifactDiffSchema,
   artifactSchemaVersion,
+  authorAdjudicationPlanSchema,
   type DraftArtifact,
   draftArtifactSchema,
 } from "@draft-loop/schemas";
 
 export type {
+  AdjudicatedRevisionEffectOverride,
+  AdjudicatedRevisionTrace,
   ArtifactBlock,
   ArtifactClaim,
   ArtifactDecision,
+  ArtifactDiff,
   ArtifactKind,
   ArtifactSection,
+  AuthorAdjudicationPlan,
   DraftArtifact,
 } from "@draft-loop/schemas";
 
@@ -40,14 +52,6 @@ export interface ArtifactValidationIssue {
   readonly message: string;
   readonly path: string;
   readonly claimId?: string;
-}
-
-export interface ArtifactDiff {
-  readonly addedClaimIds: readonly string[];
-  readonly removedClaimIds: readonly string[];
-  readonly changedClaimIds: readonly string[];
-  readonly changedEvidenceClaimIds: readonly string[];
-  readonly changedSectionIds: readonly string[];
 }
 
 function deepFreeze<T>(value: T): T {
@@ -329,10 +333,12 @@ function changedIds<T extends { readonly id: string }>(
 export function diffArtifacts(before: DraftArtifact, after: DraftArtifact): ArtifactDiff {
   const beforeClaimIds = new Set(before.claims.map((claim) => claim.id));
   const afterClaimIds = new Set(after.claims.map((claim) => claim.id));
+  const beforeSectionIds = new Set(before.sections.map((section) => section.id));
+  const afterSectionIds = new Set(after.sections.map((section) => section.id));
   const beforeClaims = new Map(before.claims.map((claim) => [claim.id, claim]));
   const afterClaims = new Map(after.claims.map((claim) => [claim.id, claim]));
 
-  return {
+  return artifactDiffSchema.parse({
     addedClaimIds: [...afterClaimIds].filter((id) => !beforeClaimIds.has(id)).sort(),
     removedClaimIds: [...beforeClaimIds].filter((id) => !afterClaimIds.has(id)).sort(),
     changedClaimIds: changedIds(before.claims, after.claims, stableClaimWithoutEvidence),
@@ -344,8 +350,151 @@ export function diffArtifacts(before: DraftArtifact, after: DraftArtifact): Arti
             stableEvidence(afterClaims.get(id) as ArtifactClaim),
       )
       .sort(),
+    addedSectionIds: [...afterSectionIds].filter((id) => !beforeSectionIds.has(id)).sort(),
+    removedSectionIds: [...beforeSectionIds].filter((id) => !afterSectionIds.has(id)).sort(),
     changedSectionIds: changedIds(before.sections, after.sections, (section) =>
       JSON.stringify(stableValue(section)),
     ),
-  };
+  });
+}
+
+export interface TraceAdjudicatedRevisionInput {
+  readonly plan: AuthorAdjudicationPlan;
+  readonly sourceArtifact: DraftArtifact;
+  readonly revisedArtifact: DraftArtifact;
+  readonly createdAt: string;
+  readonly acceptedEffectOverrides?: readonly AdjudicatedRevisionEffectOverride[];
+}
+
+function directEffectForFinding(
+  finding: AuthorAdjudicationPlan["decisions"][number],
+  diff: ArtifactDiff,
+): boolean {
+  switch (finding.target.kind) {
+    case "claim":
+      return [
+        ...diff.addedClaimIds,
+        ...diff.removedClaimIds,
+        ...diff.changedClaimIds,
+        ...diff.changedEvidenceClaimIds,
+      ].includes(finding.target.id);
+    case "section":
+      return [
+        ...diff.addedSectionIds,
+        ...diff.removedSectionIds,
+        ...diff.changedSectionIds,
+      ].includes(finding.target.id);
+    case "artifact":
+      return Object.values(diff).some((ids) => ids.length > 0);
+    case "evidence":
+    case "requirement":
+    case "rubric":
+      return false;
+  }
+}
+
+/**
+ * Trace one pure, parent-linked artifact revision against an adjudication
+ * plan. This records observable effects only; it never marks a finding
+ * resolved or infers changes from provider output.
+ */
+export function traceAdjudicatedRevision(
+  input: TraceAdjudicatedRevisionInput,
+): AdjudicatedRevisionTrace {
+  const parsedPlan = authorAdjudicationPlanSchema.parse(input.plan);
+  const parsedSource = draftArtifactSchema.parse(input.sourceArtifact);
+  const parsedRevised = draftArtifactSchema.parse(input.revisedArtifact);
+
+  if (
+    parsedSource.id !== parsedPlan.sourceArtifact.id ||
+    parsedSource.version !== parsedPlan.sourceArtifact.version ||
+    parsedSource.id !== parsedPlan.sourceReport.artifact.id ||
+    parsedSource.version !== parsedPlan.sourceReport.artifact.version
+  ) {
+    throw new Error("The source artifact must match the adjudication plan and source report.");
+  }
+  if (parsedRevised.id === parsedSource.id) {
+    throw new Error("The revised artifact must have a distinct id from the source artifact.");
+  }
+  if (parsedRevised.parentVersionId !== parsedSource.id) {
+    throw new Error("The revised artifact must link to the source artifact as its parent.");
+  }
+  if (parsedRevised.version !== parsedSource.version + 1) {
+    throw new Error("The revised artifact version must immediately follow the source version.");
+  }
+  if (Date.parse(parsedRevised.createdAt) < Date.parse(parsedSource.createdAt)) {
+    throw new Error("The revised artifact createdAt must not precede the source artifact.");
+  }
+  if (Date.parse(input.createdAt) < Date.parse(parsedRevised.createdAt)) {
+    throw new Error("The revision trace createdAt must not precede the revised artifact.");
+  }
+
+  const diff = diffArtifacts(parsedSource, parsedRevised);
+  const overrides = new Map<string, AdjudicatedRevisionEffectOverride>();
+  for (const candidate of input.acceptedEffectOverrides ?? []) {
+    const override = adjudicatedRevisionEffectOverrideSchema.parse(candidate);
+    if (overrides.has(override.findingId)) {
+      throw new Error(`Accepted effect override ${override.findingId} is duplicated.`);
+    }
+    const decision = parsedPlan.decisions.find(
+      (candidateDecision) => candidateDecision.findingId === override.findingId,
+    );
+    if (decision === undefined) {
+      throw new Error(`Accepted effect override ${override.findingId} is unknown.`);
+    }
+    if (decision.disposition !== "accept") {
+      throw new Error(
+        `Accepted effect override ${override.findingId} requires an accepted adjudication decision.`,
+      );
+    }
+    if (directEffectForFinding(decision, diff)) {
+      throw new Error(
+        `Accepted effect override ${override.findingId} is unused because its effect is already verified.`,
+      );
+    }
+    overrides.set(override.findingId, override);
+  }
+
+  const effects = parsedPlan.decisions.map((decision) => {
+    if (decision.disposition !== "accept") {
+      return {
+        findingId: decision.findingId,
+        status: "disagreement-preserved" as const,
+      };
+    }
+    if (directEffectForFinding(decision, diff)) {
+      return {
+        findingId: decision.findingId,
+        status: "verified" as const,
+      };
+    }
+    const override = overrides.get(decision.findingId);
+    if (override !== undefined) {
+      return {
+        findingId: decision.findingId,
+        status: "overridden" as const,
+        rationale: override.rationale,
+      };
+    }
+    return {
+      findingId: decision.findingId,
+      status: "missing" as const,
+    };
+  });
+
+  return deepFreeze(
+    adjudicatedRevisionTraceSchema.parse({
+      schemaVersion: 1,
+      adjudication: parsedPlan,
+      revisedArtifact: {
+        id: parsedRevised.id,
+        version: parsedRevised.version,
+        parentVersionId: parsedRevised.parentVersionId,
+      },
+      createdAt: input.createdAt,
+      diff,
+      effects,
+      valid: effects.every((effect) => effect.status !== "missing"),
+    }),
+  );
 }

@@ -389,6 +389,32 @@ persist reports, wire the CLI or desktop, establish approval semantics, or
 derive application-ready status or stopping decisions. Runtime integration is
 gated on the complete drafting and writing-policy work in #69 and #70.
 
+### Author adjudication and revision trace boundary
+
+`packages/schemas` also owns the strict, versioned author-adjudication plan and
+adjudicated-revision trace contracts. A plan binds one explicit `accept`,
+`reject`, or `nuance` decision and concise rationale to every finding in one
+readiness report, snapshots only the finding metadata needed for audit, and
+derives whether a revision is required or a disagreement must remain visible.
+The pure `buildAuthorAdjudicationPlan` helper in `packages/orchestrator`
+validates the report/source-artifact identity, target references, complete
+decision coverage, and deterministic report order.
+
+`packages/artifacts` owns the pure `diffArtifacts` and
+`traceAdjudicatedRevision` helpers. A trace requires a distinct next artifact
+version linked to its source parent, records strict claim/section/artifact
+diff IDs, and marks accepted effects verified only when the current diff proves
+them. Evidence, requirement, and rubric effects remain missing unless an
+explicit, bounded effect override records a concise rationale; rejected and nuanced
+findings remain `disagreement-preserved`. A trace is valid only when no
+accepted effect is missing, and it never exposes a `resolved` flag.
+
+This slice has no provider calls, persistence or migrations, orchestration
+lifecycle changes, application commands, CLI or desktop wiring, or approval
+and stopping semantics. It stores no raw prompts, raw responses, or hidden
+reasoning. Runtime integration remains gated by the complete drafting and
+writing-policy work in #69 and #70.
+
 ## Author–critic loop
 
 1. Create a workspace with a job description, local evidence directory,

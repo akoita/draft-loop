@@ -1,5 +1,10 @@
 import type { CandidateKnowledgeSelectionSnapshotInput } from "@draft-loop/domain";
 import {
+  adjudicatedRevisionEffectStatuses,
+  adjudicatedRevisionTraceSchemaVersion,
+  authorAdjudicationDispositions,
+  authorAdjudicationEffectRequirements,
+  authorAdjudicationPlanSchemaVersion,
   candidateKnowledgeBaseStates,
   candidateKnowledgeRetentionClasses,
   candidateKnowledgeRetentionOverrideKinds,
@@ -1222,10 +1227,12 @@ export type IndependentReadinessReportEvaluation = z.infer<
   typeof independentReadinessReportEvaluationSchema
 >;
 
-const independentReadinessReportArtifactIdentitySchema = z.strictObject({
+export const artifactIdentitySchema = z.strictObject({
   id: independentReadinessReportNonEmptyString,
   version: z.number().finite().int().positive(),
 });
+
+const independentReadinessReportArtifactIdentitySchema = artifactIdentitySchema;
 
 const independentReadinessReportFindingsSchema = z
   .array(independentReadinessReportFindingSchema)
@@ -1274,6 +1281,329 @@ export const independentReadinessReportSchema = z
   });
 
 export type IndependentReadinessReport = z.infer<typeof independentReadinessReportSchema>;
+
+const uniqueArtifactDiffIdsSchema = z
+  .array(independentReadinessReportNonEmptyString)
+  .superRefine((ids, context) => {
+    if (new Set(ids).size !== ids.length) {
+      context.addIssue({
+        code: "custom",
+        message: "artifact diff ids must be unique within each array",
+      });
+    }
+  });
+
+/** Strict, provider-independent projection of the artifact changes. */
+export const artifactDiffSchema = z
+  .strictObject({
+    addedClaimIds: uniqueArtifactDiffIdsSchema,
+    removedClaimIds: uniqueArtifactDiffIdsSchema,
+    changedClaimIds: uniqueArtifactDiffIdsSchema,
+    changedEvidenceClaimIds: uniqueArtifactDiffIdsSchema,
+    addedSectionIds: uniqueArtifactDiffIdsSchema,
+    removedSectionIds: uniqueArtifactDiffIdsSchema,
+    changedSectionIds: uniqueArtifactDiffIdsSchema,
+  })
+  .superRefine((diff, context) => {
+    const assertDisjoint = (
+      leftName:
+        | "addedClaimIds"
+        | "removedClaimIds"
+        | "changedClaimIds"
+        | "addedSectionIds"
+        | "removedSectionIds"
+        | "changedSectionIds",
+      rightName:
+        | "addedClaimIds"
+        | "removedClaimIds"
+        | "changedClaimIds"
+        | "addedSectionIds"
+        | "removedSectionIds"
+        | "changedSectionIds",
+    ): void => {
+      const right = new Set(diff[rightName]);
+      for (const [index, id] of diff[leftName].entries()) {
+        if (right.has(id)) {
+          context.addIssue({
+            code: "custom",
+            path: [leftName, index],
+            message: `${leftName} and ${rightName} must be disjoint`,
+          });
+        }
+      }
+    };
+
+    assertDisjoint("addedClaimIds", "removedClaimIds");
+    assertDisjoint("addedClaimIds", "changedClaimIds");
+    assertDisjoint("removedClaimIds", "changedClaimIds");
+    assertDisjoint("addedSectionIds", "removedSectionIds");
+    assertDisjoint("addedSectionIds", "changedSectionIds");
+    assertDisjoint("removedSectionIds", "changedSectionIds");
+
+    const addedOrRemovedClaims = new Set([...diff.addedClaimIds, ...diff.removedClaimIds]);
+    for (const [index, id] of diff.changedEvidenceClaimIds.entries()) {
+      if (addedOrRemovedClaims.has(id)) {
+        context.addIssue({
+          code: "custom",
+          path: ["changedEvidenceClaimIds", index],
+          message: "changed evidence claim ids must not be added or removed claim ids",
+        });
+      }
+    }
+  });
+
+export type ArtifactDiff = z.infer<typeof artifactDiffSchema>;
+
+// Descriptive alias for callers that want to distinguish this from the full
+// in-memory artifact diff helper.
+export const artifactDiffProjectionSchema = artifactDiffSchema;
+export type ArtifactDiffProjection = ArtifactDiff;
+
+const authorAdjudicationDecisionInputShape = {
+  findingId: independentReadinessReportNonEmptyString,
+  disposition: z.enum(authorAdjudicationDispositions),
+  rationale: independentReadinessReportNonEmptyString.max(500),
+};
+
+/** The only author input accepted when adjudicating a report finding. */
+export const authorAdjudicationDecisionInputSchema = z.strictObject(
+  authorAdjudicationDecisionInputShape,
+);
+export type AuthorAdjudicationDecisionInput = z.infer<typeof authorAdjudicationDecisionInputSchema>;
+
+const authorAdjudicationDecisionFindingShape = {
+  findingId: independentReadinessReportNonEmptyString,
+  origin: z.enum(independentReadinessReportFindingOrigins),
+  code: independentReadinessReportNonEmptyString,
+  severity: z.enum(["error", "warning"]),
+  target: independentReadinessReportTargetSchema,
+  recommendedAction: independentReadinessReportNonEmptyString.max(400),
+  rationale: independentReadinessReportNonEmptyString.max(500),
+};
+
+/** A report finding plus the author's bounded, explicit decision. */
+export const authorAdjudicationDecisionSchema = z.discriminatedUnion("disposition", [
+  z.strictObject({
+    ...authorAdjudicationDecisionFindingShape,
+    disposition: z.literal(authorAdjudicationDispositions[0]),
+    effectRequirement: z.literal(authorAdjudicationEffectRequirements[0]),
+  }),
+  z.strictObject({
+    ...authorAdjudicationDecisionFindingShape,
+    disposition: z.literal(authorAdjudicationDispositions[1]),
+    effectRequirement: z.literal(authorAdjudicationEffectRequirements[1]),
+  }),
+  z.strictObject({
+    ...authorAdjudicationDecisionFindingShape,
+    disposition: z.literal(authorAdjudicationDispositions[2]),
+    effectRequirement: z.literal(authorAdjudicationEffectRequirements[1]),
+  }),
+]);
+
+export type AuthorAdjudicationDecision = z.infer<typeof authorAdjudicationDecisionSchema>;
+
+const authorAdjudicationSourceReportSchema = z.strictObject({
+  schemaVersion: z.literal(independentReadinessReportSchemaVersion),
+  createdAt: strictTimestampSchema,
+  artifact: artifactIdentitySchema,
+});
+
+const uniqueAuthorAdjudicationDecisionsSchema = z
+  .array(authorAdjudicationDecisionSchema)
+  .superRefine((decisions, context) => {
+    const seen = new Set<string>();
+    for (const [index, decision] of decisions.entries()) {
+      if (seen.has(decision.findingId)) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "findingId"],
+          message: "adjudication decision finding ids must be unique",
+        });
+      }
+      seen.add(decision.findingId);
+    }
+  });
+
+/** Versioned, strict author adjudication plan bound to one readiness report. */
+export const authorAdjudicationPlanSchema = z
+  .strictObject({
+    schemaVersion: z.literal(authorAdjudicationPlanSchemaVersion),
+    contextSnapshotId: independentReadinessReportNonEmptyString,
+    sourceReport: authorAdjudicationSourceReportSchema,
+    sourceArtifact: artifactIdentitySchema,
+    createdAt: strictTimestampSchema,
+    decisions: uniqueAuthorAdjudicationDecisionsSchema,
+  })
+  .superRefine((plan, context) => {
+    if (
+      plan.sourceReport.artifact.id !== plan.sourceArtifact.id ||
+      plan.sourceReport.artifact.version !== plan.sourceArtifact.version
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["sourceArtifact"],
+        message: "source artifact must match the source report artifact identity",
+      });
+    }
+    if (Date.parse(plan.createdAt) < Date.parse(plan.sourceReport.createdAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["createdAt"],
+        message: "adjudication plan createdAt must not precede source report createdAt",
+      });
+    }
+  });
+
+export type AuthorAdjudicationPlan = z.infer<typeof authorAdjudicationPlanSchema>;
+
+const adjudicatedRevisionEffectRationaleSchema = independentReadinessReportNonEmptyString.max(500);
+
+/** One bounded, observable effect of a plan decision on a revised artifact. */
+export const adjudicatedRevisionEffectSchema = z.discriminatedUnion("status", [
+  z.strictObject({
+    findingId: independentReadinessReportNonEmptyString,
+    status: z.literal(adjudicatedRevisionEffectStatuses[0]),
+  }),
+  z.strictObject({
+    findingId: independentReadinessReportNonEmptyString,
+    status: z.literal(adjudicatedRevisionEffectStatuses[1]),
+    rationale: adjudicatedRevisionEffectRationaleSchema,
+  }),
+  z.strictObject({
+    findingId: independentReadinessReportNonEmptyString,
+    status: z.literal(adjudicatedRevisionEffectStatuses[2]),
+  }),
+  z.strictObject({
+    findingId: independentReadinessReportNonEmptyString,
+    status: z.literal(adjudicatedRevisionEffectStatuses[3]),
+  }),
+]);
+
+export type AdjudicatedRevisionEffect = z.infer<typeof adjudicatedRevisionEffectSchema>;
+
+export const adjudicatedRevisionEffectOverrideSchema = z.strictObject({
+  findingId: independentReadinessReportNonEmptyString,
+  rationale: adjudicatedRevisionEffectRationaleSchema,
+});
+
+export type AdjudicatedRevisionEffectOverride = z.infer<
+  typeof adjudicatedRevisionEffectOverrideSchema
+>;
+
+const uniqueAdjudicatedRevisionEffectsSchema = z
+  .array(adjudicatedRevisionEffectSchema)
+  .superRefine((effects, context) => {
+    const seen = new Set<string>();
+    for (const [index, effect] of effects.entries()) {
+      if (seen.has(effect.findingId)) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "findingId"],
+          message: "revision effect finding ids must be unique",
+        });
+      }
+      seen.add(effect.findingId);
+    }
+  });
+
+const revisedArtifactIdentitySchema = z.strictObject({
+  ...artifactIdentitySchema.shape,
+  parentVersionId: independentReadinessReportNonEmptyString,
+});
+
+/** Versioned, strict projection of one adjudication's artifact revision. */
+export const adjudicatedRevisionTraceSchema = z
+  .strictObject({
+    schemaVersion: z.literal(adjudicatedRevisionTraceSchemaVersion),
+    adjudication: authorAdjudicationPlanSchema,
+    revisedArtifact: revisedArtifactIdentitySchema,
+    createdAt: strictTimestampSchema,
+    diff: artifactDiffSchema,
+    effects: uniqueAdjudicatedRevisionEffectsSchema,
+    valid: z.boolean(),
+  })
+  .superRefine((trace, context) => {
+    if (trace.revisedArtifact.id === trace.adjudication.sourceArtifact.id) {
+      context.addIssue({
+        code: "custom",
+        path: ["revisedArtifact", "id"],
+        message: "revised artifact must have a distinct id from the source artifact",
+      });
+    }
+    if (trace.revisedArtifact.parentVersionId !== trace.adjudication.sourceArtifact.id) {
+      context.addIssue({
+        code: "custom",
+        path: ["revisedArtifact", "parentVersionId"],
+        message: "revised artifact must link to the adjudication source artifact",
+      });
+    }
+    if (trace.revisedArtifact.version !== trace.adjudication.sourceArtifact.version + 1) {
+      context.addIssue({
+        code: "custom",
+        path: ["revisedArtifact", "version"],
+        message: "revised artifact version must immediately follow the source version",
+      });
+    }
+    const decisionsById = new Map(
+      trace.adjudication.decisions.map((decision) => [decision.findingId, decision]),
+    );
+    const effectsById = new Map(trace.effects.map((effect) => [effect.findingId, effect]));
+    if (
+      effectsById.size !== decisionsById.size ||
+      effectsById.size !== trace.effects.length ||
+      decisionsById.size !== trace.adjudication.decisions.length ||
+      [...decisionsById.keys()].some((findingId) => !effectsById.has(findingId))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["effects"],
+        message: "revision effects must cover each adjudication decision exactly once",
+      });
+    }
+    for (const decision of trace.adjudication.decisions) {
+      const effect = effectsById.get(decision.findingId);
+      if (effect === undefined) {
+        continue;
+      }
+      const acceptedStatus =
+        effect.status === "verified" ||
+        effect.status === "overridden" ||
+        effect.status === "missing";
+      if (decision.disposition === "accept" && !acceptedStatus) {
+        context.addIssue({
+          code: "custom",
+          path: ["effects"],
+          message: `accepted finding ${decision.findingId} must have a revision effect status`,
+        });
+      }
+      if (decision.disposition !== "accept" && effect.status !== "disagreement-preserved") {
+        context.addIssue({
+          code: "custom",
+          path: ["effects"],
+          message: `finding ${decision.findingId} must preserve its disagreement`,
+        });
+      }
+    }
+    if (Date.parse(trace.createdAt) < Date.parse(trace.adjudication.createdAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["createdAt"],
+        message: "revision trace createdAt must not precede adjudication createdAt",
+      });
+    }
+    const expectedValid = trace.effects.every(
+      (effect) => effect.status !== adjudicatedRevisionEffectStatuses[2],
+    );
+    if (trace.valid !== expectedValid) {
+      context.addIssue({
+        code: "custom",
+        path: ["valid"],
+        message: "valid must equal the absence of missing revision effects",
+      });
+    }
+  });
+
+export type AdjudicatedRevisionTrace = z.infer<typeof adjudicatedRevisionTraceSchema>;
 
 export const modelConfigurationSchema = z
   .object({
@@ -1456,6 +1786,11 @@ export const checksumPattern = checksumSchema;
 // Keep the dimensions exported alongside the schemas so consumers do not have
 // to duplicate the rubric's canonical keys.
 export {
+  adjudicatedRevisionEffectStatuses,
+  adjudicatedRevisionTraceSchemaVersion,
+  authorAdjudicationDispositions,
+  authorAdjudicationEffectRequirements,
+  authorAdjudicationPlanSchemaVersion,
   independentReadinessReportFindingOrigins,
   independentReadinessReportInputAssessmentStatuses,
   independentReadinessReportSchemaVersion,

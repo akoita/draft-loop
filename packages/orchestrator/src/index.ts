@@ -1399,4 +1399,5 @@ export interface OrchestrationPort {
   readonly run: (request: OrchestrationRequest) => Promise<RunSnapshot>;
 }
 
+export * from "./adjudication.js";
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };

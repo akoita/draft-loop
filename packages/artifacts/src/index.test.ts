@@ -199,6 +199,8 @@ describe("structured CV artifacts", () => {
       removedClaimIds: [],
       changedClaimIds: ["claim-summary-1"],
       changedEvidenceClaimIds: ["claim-summary-1"],
+      addedSectionIds: [],
+      removedSectionIds: [],
       changedSectionIds: ["section-summary"],
     });
 
