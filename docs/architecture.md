@@ -374,6 +374,21 @@ cost, or time limits, when quality is stable, or when the user reviews early.
 It never loops indefinitely to optimize a subjective score. See [ADR
 0003](adr/0003-evidence-grounded-evaluator-optimizer.md).
 
+### Independent-readiness report boundary
+
+`packages/schemas` owns the strict, versioned
+`independentReadinessReport` contract. It records the context and artifact
+identity, independent-review record, input completeness, all seven rubric
+dimensions, and provenance-preserving deterministic and critic findings. The
+pure assembler in `packages/evaluations` orders enriched findings, assigns
+their origin, validates the complete report, and returns a deeply immutable
+projection without provider payloads or hidden reasoning.
+
+This first v0.8 component is a contract slice only. It does not call providers,
+persist reports, wire the CLI or desktop, establish approval semantics, or
+derive application-ready status or stopping decisions. Runtime integration is
+gated on the complete drafting and writing-policy work in #69 and #70.
+
 ## Author–critic loop
 
 1. Create a workspace with a job description, local evidence directory,

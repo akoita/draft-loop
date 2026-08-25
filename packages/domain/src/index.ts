@@ -495,6 +495,33 @@ export const readinessDimensions = [
 
 export type ReadinessDimension = (typeof readinessDimensions)[number];
 
+/** Version of the provider-independent independent-readiness report contract. */
+export const independentReadinessReportSchemaVersion = 1 as const;
+export type IndependentReadinessReportSchemaVersion =
+  typeof independentReadinessReportSchemaVersion;
+
+export const independentReadinessReportFindingOrigins = ["deterministic", "critic"] as const;
+export type IndependentReadinessReportFindingOrigin =
+  (typeof independentReadinessReportFindingOrigins)[number];
+
+export const independentReadinessReportTargetKinds = [
+  "artifact",
+  "claim",
+  "section",
+  "requirement",
+  "evidence",
+  "rubric",
+] as const;
+export type IndependentReadinessReportTargetKind =
+  (typeof independentReadinessReportTargetKinds)[number];
+
+export const independentReadinessReportInputAssessmentStatuses = [
+  "complete",
+  "incomplete",
+] as const;
+export type IndependentReadinessReportInputAssessmentStatus =
+  (typeof independentReadinessReportInputAssessmentStatuses)[number];
+
 export type ReadinessRubric = Readonly<Record<ReadinessDimension, number>>;
 export type ReadinessRubricInput = Partial<ReadinessRubric>;
 

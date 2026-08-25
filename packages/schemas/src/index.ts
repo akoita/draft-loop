@@ -12,6 +12,10 @@ import {
   contextSchemaVersion,
   createCandidateKnowledgeSelectionSnapshot,
   deriveModelLineage,
+  independentReadinessReportFindingOrigins,
+  independentReadinessReportInputAssessmentStatuses,
+  independentReadinessReportSchemaVersion,
+  independentReadinessReportTargetKinds,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
   outputFormats,
@@ -997,6 +1001,280 @@ export const independentReviewSchema = z.object({
 
 export type IndependentReview = z.infer<typeof independentReviewSchema>;
 
+/*
+ * Independent-readiness reports are an exchange boundary. Keep their text
+ * values intact while rejecting empty (including whitespace-only) values;
+ * callers should be able to audit exactly what the assembler was given.
+ */
+const independentReadinessReportNonEmptyString = z
+  .string()
+  .refine((value) => value.trim().length > 0, "must not be empty");
+
+const independentReadinessReportScoreSchema = z.number().finite().min(0).max(1);
+
+const independentReadinessReportTargetIdSchema = independentReadinessReportNonEmptyString;
+
+/** A report finding target. Rubric targets are limited to canonical dimensions. */
+export const independentReadinessReportTargetSchema = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal(independentReadinessReportTargetKinds[0]),
+    id: independentReadinessReportTargetIdSchema,
+  }),
+  z.strictObject({
+    kind: z.literal(independentReadinessReportTargetKinds[1]),
+    id: independentReadinessReportTargetIdSchema,
+  }),
+  z.strictObject({
+    kind: z.literal(independentReadinessReportTargetKinds[2]),
+    id: independentReadinessReportTargetIdSchema,
+  }),
+  z.strictObject({
+    kind: z.literal(independentReadinessReportTargetKinds[3]),
+    id: independentReadinessReportTargetIdSchema,
+  }),
+  z.strictObject({
+    kind: z.literal(independentReadinessReportTargetKinds[4]),
+    id: independentReadinessReportTargetIdSchema,
+  }),
+  z.strictObject({
+    kind: z.literal(independentReadinessReportTargetKinds[5]),
+    id: z.enum(readinessDimensions),
+  }),
+]);
+
+export type IndependentReadinessReportTarget = z.infer<
+  typeof independentReadinessReportTargetSchema
+>;
+
+const independentReadinessReportFindingCategorySchema = z.enum([
+  "format",
+  "factuality",
+  "coverage",
+  "evidence",
+  "quality",
+]);
+
+const independentReadinessReportFindingSeveritySchema = z.enum(["error", "warning"]);
+
+/** A complete finding with provenance assigned by the producer. */
+export const independentReadinessReportFindingSchema = z.strictObject({
+  id: independentReadinessReportNonEmptyString,
+  origin: z.enum(independentReadinessReportFindingOrigins),
+  code: independentReadinessReportNonEmptyString,
+  category: independentReadinessReportFindingCategorySchema,
+  severity: independentReadinessReportFindingSeveritySchema,
+  rationale: independentReadinessReportNonEmptyString.max(400),
+  target: independentReadinessReportTargetSchema,
+  recommendedAction: independentReadinessReportNonEmptyString.max(400),
+  confidence: z.number().finite().min(0).max(1),
+});
+
+export type IndependentReadinessReportFinding = z.infer<
+  typeof independentReadinessReportFindingSchema
+>;
+
+/** Finding input used by the pure assembler before it assigns `origin`. */
+export type IndependentReadinessReportFindingInput = Omit<
+  IndependentReadinessReportFinding,
+  "origin"
+>;
+
+const independentReadinessReportCompleteMissingInputsSchema = z
+  .array(independentReadinessReportNonEmptyString)
+  .length(0);
+
+const independentReadinessReportIncompleteMissingInputsSchema = z
+  .array(independentReadinessReportNonEmptyString)
+  .min(1)
+  .superRefine((missingInputs, context) => {
+    if (new Set(missingInputs).size !== missingInputs.length) {
+      context.addIssue({
+        code: "custom",
+        message: "missingInputs must contain unique values",
+      });
+    }
+  });
+
+/** Indicates whether all inputs needed for an independent report were present. */
+export const independentReadinessReportInputAssessmentSchema = z.discriminatedUnion("status", [
+  z.strictObject({
+    status: z.literal(independentReadinessReportInputAssessmentStatuses[0]),
+    missingInputs: independentReadinessReportCompleteMissingInputsSchema,
+  }),
+  z.strictObject({
+    status: z.literal(independentReadinessReportInputAssessmentStatuses[1]),
+    missingInputs: independentReadinessReportIncompleteMissingInputsSchema,
+  }),
+]);
+
+export type IndependentReadinessReportInputAssessment = z.infer<
+  typeof independentReadinessReportInputAssessmentSchema
+>;
+
+const independentReadinessReportScoresSchema = z
+  .array(
+    z.strictObject({
+      dimension: z.enum(readinessDimensions),
+      score: independentReadinessReportScoreSchema,
+      rationale: independentReadinessReportNonEmptyString,
+    }),
+  )
+  .length(readinessDimensions.length)
+  .superRefine((scores, context) => {
+    const counts = new Map<string, number>();
+    for (const score of scores) {
+      counts.set(score.dimension, (counts.get(score.dimension) ?? 0) + 1);
+    }
+    for (const dimension of readinessDimensions) {
+      if (counts.get(dimension) !== 1) {
+        context.addIssue({
+          code: "custom",
+          path: ["dimension"],
+          message: `readiness dimension ${dimension} must appear exactly once in scores`,
+        });
+      }
+    }
+  });
+
+const independentReadinessReportThresholdResultsSchema = z
+  .array(
+    z.strictObject({
+      dimension: z.enum(readinessDimensions),
+      score: independentReadinessReportScoreSchema,
+      threshold: independentReadinessReportScoreSchema,
+      meets: z.boolean(),
+    }),
+  )
+  .length(readinessDimensions.length)
+  .superRefine((thresholdResults, context) => {
+    const counts = new Map<string, number>();
+    for (const thresholdResult of thresholdResults) {
+      counts.set(thresholdResult.dimension, (counts.get(thresholdResult.dimension) ?? 0) + 1);
+    }
+    for (const dimension of readinessDimensions) {
+      if (counts.get(dimension) !== 1) {
+        context.addIssue({
+          code: "custom",
+          path: ["dimension"],
+          message: `readiness dimension ${dimension} must appear exactly once in thresholdResults`,
+        });
+      }
+    }
+  });
+
+/** The persisted evaluation fields, independent of the evaluations package. */
+export const independentReadinessReportEvaluationSchema = z
+  .strictObject({
+    scores: independentReadinessReportScoresSchema,
+    thresholdResults: independentReadinessReportThresholdResultsSchema,
+    meetsRubric: z.boolean(),
+  })
+  .superRefine((evaluation, context) => {
+    const scoresByDimension = new Map(
+      evaluation.scores.map((score, index) => [score.dimension, { score, index }] as const),
+    );
+    const thresholdResultsByDimension = new Map(
+      evaluation.thresholdResults.map(
+        (thresholdResult, index) =>
+          [thresholdResult.dimension, { thresholdResult, index }] as const,
+      ),
+    );
+
+    for (const dimension of readinessDimensions) {
+      const scoreEntry = scoresByDimension.get(dimension);
+      const thresholdEntry = thresholdResultsByDimension.get(dimension);
+      if (scoreEntry === undefined || thresholdEntry === undefined) {
+        continue;
+      }
+
+      if (scoreEntry.score.score !== thresholdEntry.thresholdResult.score) {
+        context.addIssue({
+          code: "custom",
+          path: ["thresholdResults", thresholdEntry.index, "score"],
+          message: `score for ${dimension} must match the corresponding score entry`,
+        });
+      }
+      if (
+        thresholdEntry.thresholdResult.meets !==
+        thresholdEntry.thresholdResult.score >= thresholdEntry.thresholdResult.threshold
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["thresholdResults", thresholdEntry.index, "meets"],
+          message: `meets for ${dimension} must equal score >= threshold`,
+        });
+      }
+    }
+
+    const allThresholdsMeet = evaluation.thresholdResults.every(
+      (thresholdResult) => thresholdResult.meets,
+    );
+    if (evaluation.meetsRubric !== allThresholdsMeet) {
+      context.addIssue({
+        code: "custom",
+        path: ["meetsRubric"],
+        message: "meetsRubric must equal whether every threshold result meets",
+      });
+    }
+  });
+
+export type IndependentReadinessReportEvaluation = z.infer<
+  typeof independentReadinessReportEvaluationSchema
+>;
+
+const independentReadinessReportArtifactIdentitySchema = z.strictObject({
+  id: independentReadinessReportNonEmptyString,
+  version: z.number().finite().int().positive(),
+});
+
+const independentReadinessReportFindingsSchema = z
+  .array(independentReadinessReportFindingSchema)
+  .superRefine((findings, context) => {
+    const seen = new Set<string>();
+    for (const [index, finding] of findings.entries()) {
+      if (seen.has(finding.id)) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "id"],
+          message: "finding ids must be globally unique",
+        });
+      }
+      seen.add(finding.id);
+    }
+  });
+
+/** Versioned, provider-independent output for an independent readiness read. */
+export const independentReadinessReportSchema = z
+  .strictObject({
+    schemaVersion: z.literal(independentReadinessReportSchemaVersion),
+    contextSnapshotId: independentReadinessReportNonEmptyString,
+    artifact: independentReadinessReportArtifactIdentitySchema,
+    createdAt: strictTimestampSchema,
+    summary: independentReadinessReportNonEmptyString.max(1200),
+    independentReview: independentReviewSchema.strict(),
+    inputAssessment: independentReadinessReportInputAssessmentSchema,
+    evaluation: independentReadinessReportEvaluationSchema,
+    findings: independentReadinessReportFindingsSchema,
+  })
+  .superRefine((report, context) => {
+    const artifactId = report.artifact?.id;
+    if (typeof artifactId !== "string") {
+      return;
+    }
+
+    for (const [index, finding] of report.findings.entries()) {
+      if (finding.target.kind === "artifact" && finding.target.id !== artifactId) {
+        context.addIssue({
+          code: "custom",
+          path: ["findings", index, "target", "id"],
+          message: "artifact finding targets must match the report artifact id",
+        });
+      }
+    }
+  });
+
+export type IndependentReadinessReport = z.infer<typeof independentReadinessReportSchema>;
+
 export const modelConfigurationSchema = z
   .object({
     author: modelSelectionSchema,
@@ -1177,7 +1455,15 @@ export const checksumPattern = checksumSchema;
 
 // Keep the dimensions exported alongside the schemas so consumers do not have
 // to duplicate the rubric's canonical keys.
-export { outputFormats, readinessDimensions, requirementPriorities };
+export {
+  independentReadinessReportFindingOrigins,
+  independentReadinessReportInputAssessmentStatuses,
+  independentReadinessReportSchemaVersion,
+  independentReadinessReportTargetKinds,
+  outputFormats,
+  readinessDimensions,
+  requirementPriorities,
+};
 
 export const artifactSchemaVersion = 1 as const;
 
