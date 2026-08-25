@@ -522,6 +522,32 @@ export const independentReadinessReportInputAssessmentStatuses = [
 export type IndependentReadinessReportInputAssessmentStatus =
   (typeof independentReadinessReportInputAssessmentStatuses)[number];
 
+/** Version of the provider-independent author-adjudication plan contract. */
+export const authorAdjudicationPlanSchemaVersion = 1 as const;
+export type AuthorAdjudicationPlanSchemaVersion = typeof authorAdjudicationPlanSchemaVersion;
+
+/** Version of the provider-independent adjudicated-revision trace contract. */
+export const adjudicatedRevisionTraceSchemaVersion = 1 as const;
+export type AdjudicatedRevisionTraceSchemaVersion = typeof adjudicatedRevisionTraceSchemaVersion;
+
+export const authorAdjudicationDispositions = ["accept", "reject", "nuance"] as const;
+export type AuthorAdjudicationDisposition = (typeof authorAdjudicationDispositions)[number];
+
+export const authorAdjudicationEffectRequirements = [
+  "revision-required",
+  "disagreement-preserved",
+] as const;
+export type AuthorAdjudicationEffectRequirement =
+  (typeof authorAdjudicationEffectRequirements)[number];
+
+export const adjudicatedRevisionEffectStatuses = [
+  "verified",
+  "overridden",
+  "missing",
+  "disagreement-preserved",
+] as const;
+export type AdjudicatedRevisionEffectStatus = (typeof adjudicatedRevisionEffectStatuses)[number];
+
 export type ReadinessRubric = Readonly<Record<ReadinessDimension, number>>;
 export type ReadinessRubricInput = Partial<ReadinessRubric>;
 
