@@ -47,7 +47,9 @@ The first user-session slice is experimental and local-only. It uses an empty
 temporary working directory, disables tools, extensions, repository rules,
 MCP servers, web search, and session persistence where the runtime supports
 those controls, applies a host timeout and cancellation, bounds process output,
-and validates the final JSON locally. Any observed tool event fails the call.
+scrubs provider API credential and endpoint override variables case-insensitively
+before spawning local runtimes, and validates the final JSON locally. Any
+observed tool event fails the call.
 Raw process output and provider errors never enter history or renderer IPC.
 
 The transmission preflight identifies each provider's actual endpoint. If any

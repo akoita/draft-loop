@@ -176,9 +176,18 @@ function sanitizedEnvironment(
   environment: Readonly<Record<string, string | undefined>>,
   names: readonly string[],
 ): Record<string, string | undefined> {
+  const normalizedNames = new Set(names.map((name) => asciiLowercase(name)));
   const sanitized = { ...environment };
-  for (const name of names) delete sanitized[name];
+  for (const name of Object.keys(sanitized)) {
+    if (normalizedNames.has(asciiLowercase(name))) delete sanitized[name];
+  }
   return sanitized;
+}
+
+function asciiLowercase(value: string): string {
+  return value.replace(/[A-Z]/gu, (character) =>
+    String.fromCharCode(character.charCodeAt(0) + 0x20),
+  );
 }
 
 async function withPrivateTemporaryDirectory<T>(
