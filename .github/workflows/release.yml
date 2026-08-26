@@ -243,12 +243,12 @@ jobs:
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             `Stage issue: https://github.com/${repository}/issues/${process.env.RELEASE_STAGE_ISSUE}`,
             "SBOM: CycloneDX JSON is attached to the release.",
-            "Checkpoint status: this release integrates the CKB foundation but does not validate or complete the v0.7 drafting outcome.",
+            "Checkpoint status: this alpha.3 checkpoint freezes drafting/review foundations and Windows user-session hardening but does not validate or complete the v0.7 drafting outcome.",
             ...(process.env.ATTEST_PROVENANCE === "true"
               ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]
               : ["Provenance: not requested for this run."]),
             "",
-            "Known limitations: profile, opportunity, retrieval, planning, complete-CV, writing-policy, storage-safety, signing, and automatic-update work remains incomplete; CLI remains source-distributed.",
+            "Known limitations: CKB roll-up/product reactivation-retrieval, profile, opportunity, planning, complete-CV, writing-policy, runtime review/readiness/rendering integration, signing, and automatic updates remain incomplete; CLI remains source-distributed.",
           ].join("\n");
           fs.writeFileSync("release-output/release-notes.md", `${notes}\n`, "utf8");
           NODE
