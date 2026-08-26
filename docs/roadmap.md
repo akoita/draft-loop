@@ -10,10 +10,12 @@ discovery or pilot evidence, and **Later** is directional. The status model
 describes evidence for a product outcome; it does not count lines of code or
 package-level capabilities.
 
-GitHub milestones are bounded delivery sprints, not containers for an entire
-roadmap stage. A sprint contains independently closable leaf issues with one
-goal and a frozen exit condition. Broad outcome issues remain open as epics
-outside sprint milestones and link to their current delivery slices.
+GitHub milestones are dependency-closed delivery sprints. Every open prerequisite
+of a sprint issue belongs to the same milestone and is ordered before the work
+it enables; completed prerequisites remain in their historical milestones.
+This keeps execution inside the visible sprint scope. Broad outcome issues may
+join a sprint when they are required for its exit, while implementation should
+still proceed through independently closable slices.
 
 ## Vision
 
@@ -141,7 +143,7 @@ contact employers, or submit applications.
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Now      | Evidence-backed CV drafting (v0.7 program) | [Released Sprint 2 checkpoint](stage-evidence-v0.7.0-alpha.2.md); v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | Reviewed profile and opportunity, lexical RAG, planning, complete CV, and policy checks remain |
-| Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Designed; #71 report, #72 adjudication/trace plus its first runtime-carrier slice, and #73 stopping-decision contract component implemented; full runtime integration blocked | Turn the factual draft into a reviewed, revised, human-approvable artifact            | #69/#70 drafting dependencies, then structured critique, adjudication, calibrated readiness gates, and professional rendering |
+| Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Dependency-closed sprint; #71 report, #72 adjudication/trace plus its first runtime-carrier slice, and #73 stopping-decision contract component implemented | Turn the factual draft into a reviewed, revised, human-approvable artifact            | Finish the in-sprint CKB, profile, opportunity, retrieval, planning, artifact, and policy prerequisites before the remaining review, readiness, and rendering integration |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
@@ -165,8 +167,9 @@ not waived by the integration or packaging evidence.
 
 v0.7 is the first complete drafting vertical for the application-grade program.
 It must connect reusable CKB data to the application path, not merely add more
-storage components. Delivery is sequenced through bounded sprints while the
-larger outcome issues remain open as roadmap epics:
+storage components. The first two sprints used bounded leaf issues. Milestone 3
+now carries every open prerequisite needed to complete the drafting and review
+vertical, ordered dependency-first:
 
 - Sprint 1 is complete: the single legacy selection-migration slice #160 closed
   [Sprint 1](https://github.com/akoita/draft-loop/milestone/2).
@@ -197,9 +200,9 @@ retention, backup export, and collision-safe restore. Its five feature PRs
 added 10,365 lines across 71 file-changes, so #166 was removed instead of
 extending an already oversized sprint. Future sprint admission requires
 measured, independently closable units. Confirmed deletion #166 was subsequently
-implemented as a standalone prerequisite on the #69 dependency chain; broad
-epics #66–#70, #80, and #113 remain outcome trackers rather than delivery
-milestones.
+implemented as a standalone prerequisite on the #69 dependency chain. Milestone
+3 now includes open prerequisite epics #66–#70, #78, #80, #111, and #113 so no
+remaining sprint issue depends on open work outside the sprint.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -213,6 +216,13 @@ Produce the structured independent readiness report (#71), record per-finding
 author adjudication and artifact revision (#72), apply calibrated stopping
 rules (#73), and render a professional ATS-readable DOCX/PDF with visual QA
 (#74).
+
+The milestone executes its dependency graph rather than starting with the final
+review issues. First finish the CKB roll-ups (#111, #113, #78) and the independent
+opportunity and policy inputs (#67, #70). Then deliver the profile, lexical
+retrieval, and planning chain (#66, #80, #68), followed by the complete artifact
+(#69). The remaining outcome order is #72, #73, and #74; #71 is already closed.
+Closed prerequisites such as #60 and #110 remain in their historical milestones.
 
 The #71 component is implemented as a strict, provider-independent report
 contract and pure assembler. The first #72 component is implemented as strict
@@ -305,8 +315,8 @@ decision.
 ## Explicitly deferred
 
 - Retrieval and index-version enforcement of bound CKB selection snapshots,
-  normalized facts, source repair, reactivation, deletion, portable restore,
-  and cross-store writer coordination.
+  normalized facts, source repair, reactivation, and cross-store writer
+  coordination.
 - Automatic move inference, reconciliation of unknown entries, background
   refresh, time-based freshness, and automatic retirement or deletion. The
   path-free lifecycle projection does not perform those actions or establish
@@ -350,6 +360,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | Made milestone 3 dependency-closed and ordered its open prerequisites before the review/readiness outcomes. | #66–#70, #78, #80, #111, and #113 joined the sprint. Work now proceeds #111 → #113 → #78; #67/#70; #66 → #80 → #68; #69; then #72 → #73 → #74, without leaving the sprint for an open blocker. |
 | 2026-08-26 | Implemented confirmed deletion #166 as an independently closable prerequisite on the #69 dependency chain. | An archived non-default CKB can be deleted only with an exact fresh-plan token under the store-wide lease. Verified managed data is staged and recoverable, blockers fail closed, unknown or unowned entries are preserved, and CLI/desktop results stay path-free. |
 | 2026-08-26 | Added the first #74 controlled-layout and rendering-QA contract component. | A4 profile selection, content-free deterministic integrity signals, local active-content checks, and inspectable PDF page targets are available behind package contracts; independent viewer evidence, visual golden tests, adapters, persistence, UI selection, approval/export wiring, and full #74/#69/#73 integration remain out of scope. |
 | 2026-08-26 | Added the first #73 application-readiness stopping-decision component behind strict provider-independent contracts. | Deterministic and report errors, unmet thresholds, disputed dimensions, incomplete independence or inputs, and missing accepted revision effects block readiness; stop precedence and limitations remain inspectable. Runtime lifecycle, human approval/export/version invalidation, persistence/history, budget accounting, providers, CLI/desktop, and full #69/#70/#72 integration remain out of scope. |
