@@ -276,6 +276,14 @@ describe("OpenAICodexUserSessionAdapter", () => {
           JSON.stringify({ type: "thread.started", thread_id: "codex-thread" }),
           JSON.stringify({ type: "turn.started" }),
           JSON.stringify({
+            type: "item.started",
+            item: { type: "reasoning" },
+          }),
+          JSON.stringify({
+            type: "item.completed",
+            item: { type: "reasoning", text: "must not be projected" },
+          }),
+          JSON.stringify({
             type: "item.completed",
             item: { type: "agent_message", text: '{"answer":"yes"}' },
           }),

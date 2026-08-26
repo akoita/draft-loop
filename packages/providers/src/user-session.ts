@@ -624,6 +624,11 @@ const permittedCodexEventTypes = new Set([
   "turn.completed",
 ]);
 
+// Codex may report its internal reasoning lifecycle before the final message.
+// Accept the event type so normal generation can complete, but deliberately do
+// not read, retain, or return its content. Tool-bearing items remain prohibited.
+const permittedCodexItemTypes = new Set(["agent_message", "reasoning"]);
+
 function parseCodexEvents(text: string): {
   readonly inputTokens: number;
   readonly outputTokens: number;
@@ -680,7 +685,7 @@ function parseCodexEvents(text: string): {
     }
     if (event.type === "item.started" || event.type === "item.completed") {
       const item = event.item as { readonly type?: unknown } | undefined;
-      if (item?.type !== "agent_message") {
+      if (typeof item?.type !== "string" || !permittedCodexItemTypes.has(item.type)) {
         throw new ProviderAdapterError(
           "openai",
           "invalid-response",
