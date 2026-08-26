@@ -1100,6 +1100,22 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               await activePort.removeCredential?.(provider);
             },
           })}
+      {...(activePort.getProviderAuthModeStatus === undefined
+        ? {}
+        : { getProviderAuthModeStatus: activePort.getProviderAuthModeStatus })}
+      {...(activePort.setProviderAuthMode === undefined
+        ? {}
+        : {
+            onSetProviderAuthMode: async (
+              provider: "anthropic" | "openai",
+              mode: "api-key" | "user-session",
+            ) => {
+              if (activePort.setProviderAuthMode === undefined) {
+                throw new Error("Provider authentication mode changes are unavailable.");
+              }
+              return activePort.setProviderAuthMode(provider, mode);
+            },
+          })}
     />
   );
 }

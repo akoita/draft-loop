@@ -11,6 +11,9 @@ import {
   type ModelsListResult,
   type ModelsPreviewIndependenceResult,
   type NativeBridge,
+  type ProviderAuthMode,
+  type ProviderAuthModeResult,
+  type ProviderAuthModeStatus,
   type WorkspaceCreateInput,
 } from "./bridge.js";
 import {
@@ -63,7 +66,15 @@ export interface WorkspaceSetupCapabilities {
 }
 
 export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
-  WorkspaceSetupCapabilities;
+  WorkspaceSetupCapabilities & {
+    readonly getProviderAuthModeStatus?: (
+      provider: "anthropic" | "openai",
+    ) => Promise<ProviderAuthModeStatus>;
+    readonly setProviderAuthMode?: (
+      provider: "anthropic" | "openai",
+      mode: ProviderAuthMode,
+    ) => Promise<ProviderAuthModeResult>;
+  };
 
 /**
  * Fills `workspace.create` in from a form's strings.
@@ -234,6 +245,28 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       });
       return unwrap(result);
     },
+    ...(capabilityPort.hasCapability("provider-auth.status")
+      ? {
+          getProviderAuthModeStatus: async (provider: "anthropic" | "openai") =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "provider-auth.status",
+                input: { provider },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("provider-auth.set")
+      ? {
+          setProviderAuthMode: async (provider: "anthropic" | "openai", mode: ProviderAuthMode) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "provider-auth.set",
+                input: { provider, mode },
+              }),
+            ),
+        }
+      : {}),
     ...(capabilityPort.hasCapability("models.list")
       ? {
           listModels: async (provider: ModelDiscoveryProvider) =>
