@@ -437,6 +437,28 @@ approval/export/version invalidation, persistence/history, budget accounting,
 providers, CLI/desktop wiring, and full #69/#70/#72 integration out of scope.
 The v0.8 runtime outcome remains incomplete and blocked on those boundaries.
 
+### Rendering and rendering-QA boundary (#74)
+
+`packages/rendering` owns two controlled A4 layout profiles:
+`compact-one-page` and `standard-two-page` (the default). The selected profile
+is recorded with the source-content and rendered-byte checksums, and is applied
+consistently to the minimal HTML, PDF, and DOCX implementations. Content is
+never truncated, reordered, summarized, or rewritten to satisfy a page target;
+an overflowing PDF is a deterministic QA failure signal.
+
+`buildRenderingQaReport` produces a strict, immutable, content-free report of
+exact visible-content integrity, section/block order, active-content signatures,
+and inspectable PDF page counts. An independent viewer observation is optional
+for Markdown, but is required before PDF or DOCX QA can be complete or pass.
+Self-extraction from the renderer is deterministic integrity evidence, not
+independent ATS or viewer evidence. Structured links and images are explicit
+limitations because the current artifact model does not represent them.
+
+This first #74 component does not deliver visual golden tests, a viewer adapter,
+link modeling, persistence, UI profile selection, approval/export wiring, or
+complete #69/#73 integration. The current PDF and DOCX implementations remain
+minimal, and v0.8 is not complete or validated by this contract slice.
+
 ## Author–critic loop
 
 1. Create a workspace with a job description, local evidence directory,

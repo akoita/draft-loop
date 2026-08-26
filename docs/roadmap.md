@@ -224,6 +224,17 @@ complete drafting and writing-policy dependencies in #69 and #70. The v0.8
 stage remains Next and incomplete; these components do not claim the
 milestone is complete.
 
+The first #74 component is implemented as controlled A4 layout profiles and a
+strict, content-free rendering-QA report builder. It preserves exact visible
+content and ordering signals, detects local active-content signatures, and
+inspects PDF page targets. PDF/DOCX reports remain incomplete without an
+independent viewer observation; renderer self-extraction is not independent
+ATS or visual evidence. The current PDF/DOCX implementations remain minimal.
+Visual golden tests, viewer adapters, link modeling, persistence, UI profile
+selection, approval/export wiring, and complete #69/#73 integration are not
+delivered. This is the first #74 component only; #74 and v0.8 remain incomplete
+and unvalidated.
+
 **Exit criterion:** The complete factual draft receives an independent critique
 and traceable revision; unresolved disagreements remain visible; deterministic
 factuality, completeness, chronology, ATS, and approval gates prevent a
@@ -337,6 +348,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-26 | Added the first #74 controlled-layout and rendering-QA contract component. | A4 profile selection, content-free deterministic integrity signals, local active-content checks, and inspectable PDF page targets are available behind package contracts; independent viewer evidence, visual golden tests, adapters, persistence, UI selection, approval/export wiring, and full #74/#69/#73 integration remain out of scope. |
 | 2026-08-26 | Added the first #73 application-readiness stopping-decision component behind strict provider-independent contracts. | Deterministic and report errors, unmet thresholds, disputed dimensions, incomplete independence or inputs, and missing accepted revision effects block readiness; stop precedence and limitations remain inspectable. Runtime lifecycle, human approval/export/version invalidation, persistence/history, budget accounting, providers, CLI/desktop, and full #69/#70/#72 integration remain out of scope. |
 | 2026-08-26 | Added the first #72 author-adjudication and artifact-revision trace component behind strict provider-independent contracts. | The contract requires one explicit accept/reject/nuance rationale for each report finding; accepted effects are proven only by bounded artifact diffs or explicit effect overrides, while disagreements remain visible. Runtime, persistence, provider, CLI, and desktop integration remain gated by #69. |
 | 2026-08-25 | Published [v0.7.0-alpha.2](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.2) with [Sprint 2 checkpoint evidence](stage-evidence-v0.7.0-alpha.2.md). | The released storage-safety foundation does not complete or validate the v0.7 drafting outcome. |

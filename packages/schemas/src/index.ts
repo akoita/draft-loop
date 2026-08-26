@@ -1,6 +1,8 @@
 import type {
   ApplicationReadinessStoppingDecisionStopReason,
   CandidateKnowledgeSelectionSnapshotInput,
+  RenderingLayoutProfileId,
+  RenderingQaLimitationCode,
 } from "@draft-loop/domain";
 import {
   adjudicatedRevisionEffectStatuses,
@@ -33,9 +35,16 @@ import {
   outputFormats,
   readinessDimensionAgreementStatuses,
   readinessDimensions,
+  renderingLayoutProfileIds,
+  renderingQaActiveContentSignatures,
+  renderingQaLimitationCodes,
+  renderingQaReportSchemaVersion,
+  renderingQaVisibleContentOrderSignals,
   requirementPriorities,
 } from "@draft-loop/domain";
 import { z } from "zod";
+
+export type { RenderingLayoutProfileId } from "@draft-loop/domain";
 
 const nonEmptyString = z.string().trim().min(1, "must not be empty");
 
@@ -2413,6 +2422,11 @@ export {
   outputFormats,
   readinessDimensionAgreementStatuses,
   readinessDimensions,
+  renderingLayoutProfileIds,
+  renderingQaActiveContentSignatures,
+  renderingQaLimitationCodes,
+  renderingQaReportSchemaVersion,
+  renderingQaVisibleContentOrderSignals,
   requirementPriorities,
 };
 
@@ -2699,3 +2713,380 @@ export const draftArtifactSchema = artifactVersionShape.superRefine((artifact, c
 
 export type DraftArtifactInput = z.input<typeof draftArtifactSchema>;
 export type DraftArtifact = z.output<typeof draftArtifactSchema>;
+
+/*
+ * Rendering QA is deliberately a content-free exchange boundary.  It carries
+ * checksums, counts, ordering signals, and bounded observations; rendered
+ * text, source paths, bytes, prompts, and provider responses do not cross it.
+ */
+export const renderingLayoutProfileSchema = z.enum(renderingLayoutProfileIds);
+
+export const renderingQaOutputFormats = ["markdown", "pdf", "docx"] as const;
+export const renderingQaOutputFormatSchema = z.enum(renderingQaOutputFormats);
+export type RenderingQaOutputFormat = z.infer<typeof renderingQaOutputFormatSchema>;
+
+const nonNegativeSafeIntegerSchema = z
+  .number()
+  .finite()
+  .int()
+  .nonnegative()
+  .refine(Number.isSafeInteger, "must be a safe integer");
+
+function addCanonicalNumberArrayIssues(
+  values: readonly number[],
+  context: z.RefinementCtx,
+  label: string,
+): void {
+  const seen = new Set<number>();
+  let previous: number | undefined;
+  for (const [index, value] of values.entries()) {
+    if (seen.has(value)) {
+      context.addIssue({
+        code: "custom",
+        path: [index],
+        message: `${label} must contain unique values`,
+      });
+    }
+    if (previous !== undefined && value <= previous) {
+      context.addIssue({
+        code: "custom",
+        path: [index],
+        message: `${label} must use ascending canonical order`,
+      });
+    }
+    seen.add(value);
+    previous = value;
+  }
+}
+
+function addCanonicalStringArrayIssues(
+  values: readonly string[],
+  context: z.RefinementCtx,
+  label: string,
+): void {
+  const seen = new Set<string>();
+  let previous: string | undefined;
+  for (const [index, value] of values.entries()) {
+    if (seen.has(value)) {
+      context.addIssue({
+        code: "custom",
+        path: [index],
+        message: `${label} must contain unique values`,
+      });
+    }
+    if (previous !== undefined && compareStrings(previous, value) >= 0) {
+      context.addIssue({
+        code: "custom",
+        path: [index],
+        message: `${label} must use ascending canonical order`,
+      });
+    }
+    seen.add(value);
+    previous = value;
+  }
+}
+
+const renderingQaPageNumbersSchema = z
+  .array(positiveSafeIntegerSchema)
+  .superRefine((values, context) => {
+    addCanonicalNumberArrayIssues(values, context, "page numbers");
+  });
+
+const renderingQaOrphanSectionIdsSchema = z
+  .array(independentReadinessReportNonEmptyString)
+  .superRefine((values, context) => {
+    addCanonicalStringArrayIssues(values, context, "orphan section ids");
+  });
+
+const boundedViewerNameSchema = independentReadinessReportNonEmptyString.max(120);
+const boundedViewerVersionSchema = independentReadinessReportNonEmptyString.max(80);
+
+/** Optional independent viewer evidence, bound to one rendered checksum. */
+export const renderingQaViewerObservationSchema = z
+  .strictObject({
+    renderedChecksum: sha256ChecksumSchema,
+    viewerName: boundedViewerNameSchema,
+    viewerVersion: boundedViewerVersionSchema,
+    recoveredVisibleContentChecksum: sha256ChecksumSchema,
+    recoveredVisibleContentCount: nonNegativeSafeIntegerSchema,
+    recoveredVisibleContentOrder: z.enum(renderingQaVisibleContentOrderSignals),
+    pageCount: positiveSafeIntegerSchema,
+    blankPageNumbers: renderingQaPageNumbersSchema,
+    overflowPageNumbers: renderingQaPageNumbersSchema,
+    orphanSectionIds: renderingQaOrphanSectionIdsSchema,
+    clippedText: z.boolean(),
+  })
+  .superRefine((observation, context) => {
+    for (const [field, values] of [
+      ["blankPageNumbers", observation.blankPageNumbers],
+      ["overflowPageNumbers", observation.overflowPageNumbers],
+    ] as const) {
+      for (const [index, page] of values.entries()) {
+        if (page > observation.pageCount) {
+          context.addIssue({
+            code: "custom",
+            path: [field, index],
+            message: `${field} must refer to a page in pageCount`,
+          });
+        }
+      }
+    }
+  });
+
+export type RenderingQaViewerObservation = z.infer<typeof renderingQaViewerObservationSchema>;
+
+/** Render metadata copied into a QA report and checked against the bytes. */
+export const renderingQaRenderedMetadataSchema = z.strictObject({
+  artifactId: independentReadinessReportNonEmptyString,
+  artifactVersion: positiveSafeIntegerSchema,
+  format: renderingQaOutputFormatSchema,
+  generatedAt: strictTimestampSchema,
+  templateVersion: independentReadinessReportNonEmptyString.max(200),
+  layoutProfile: renderingLayoutProfileSchema,
+  checksum: sha256ChecksumSchema,
+  sourceContentChecksum: sha256ChecksumSchema,
+});
+export type RenderingQaRenderedMetadata = z.infer<typeof renderingQaRenderedMetadataSchema>;
+
+const renderingQaTargetPageCounts: Readonly<Record<RenderingLayoutProfileId, 1 | 2>> = {
+  "compact-one-page": 1,
+  "standard-two-page": 2,
+};
+
+/** Deterministic integrity metrics; this object never contains raw content. */
+export const renderingQaContentIntegritySchema = z
+  .strictObject({
+    expectedVisibleContentChecksum: sha256ChecksumSchema,
+    recoveredVisibleContentChecksum: sha256ChecksumSchema,
+    expectedVisibleContentCount: nonNegativeSafeIntegerSchema,
+    recoveredVisibleContentCount: nonNegativeSafeIntegerSchema,
+    visibleContentMatches: z.boolean(),
+    sectionOrderMatches: z.boolean(),
+    blockOrderMatches: z.boolean(),
+    duplicateContentPreserved: z.boolean(),
+    punctuationPreserved: z.boolean(),
+  })
+  .superRefine((integrity, context) => {
+    const expectedMatch =
+      integrity.expectedVisibleContentChecksum === integrity.recoveredVisibleContentChecksum &&
+      integrity.expectedVisibleContentCount === integrity.recoveredVisibleContentCount;
+    if (integrity.visibleContentMatches !== expectedMatch) {
+      context.addIssue({
+        code: "custom",
+        path: ["visibleContentMatches"],
+        message: "visibleContentMatches must equal the checksum and count comparison",
+      });
+    }
+  });
+export type RenderingQaContentIntegrity = z.infer<typeof renderingQaContentIntegritySchema>;
+
+/** Local active-content scan output, represented only by finite signatures. */
+export const renderingQaActiveContentSchema = z
+  .strictObject({
+    detected: z.boolean(),
+    signatures: z
+      .array(z.enum(renderingQaActiveContentSignatures))
+      .superRefine((values, context) => {
+        addCanonicalStringArrayIssues(values, context, "active-content signatures");
+      }),
+  })
+  .superRefine((activeContent, context) => {
+    if (activeContent.detected !== activeContent.signatures.length > 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["detected"],
+        message: "active-content detected must equal whether signatures are present",
+      });
+    }
+  });
+export type RenderingQaActiveContent = z.infer<typeof renderingQaActiveContentSchema>;
+
+const renderingQaLimitationsSchema = z
+  .array(z.enum(renderingQaLimitationCodes))
+  .superRefine((values, context) => {
+    const seen = new Set<string>();
+    let previousIndex = -1;
+    for (const [index, value] of values.entries()) {
+      const valueIndex = renderingQaLimitationCodes.indexOf(value);
+      if (seen.has(value)) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "rendering QA limitations must be unique",
+        });
+      }
+      if (valueIndex <= previousIndex) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "rendering QA limitations must use canonical order",
+        });
+      }
+      seen.add(value);
+      previousIndex = valueIndex;
+    }
+  });
+
+function expectedRenderingQaLimitations(
+  rendered: RenderingQaRenderedMetadata,
+  deterministicPageCount: number | null,
+  viewerObservation: RenderingQaViewerObservation | null,
+): readonly RenderingQaLimitationCode[] {
+  return [
+    ...(rendered.format !== "pdf" || deterministicPageCount === null
+      ? ["deterministic-page-count-not-assessed" as const]
+      : []),
+    ...(rendered.format !== "markdown" && viewerObservation === null
+      ? ["independent-viewer-observation-not-run" as const]
+      : []),
+    "structured-images-unsupported",
+    "structured-links-unsupported",
+  ];
+}
+
+export const renderingQaReportSchema = z
+  .strictObject({
+    schemaVersion: z.literal(renderingQaReportSchemaVersion),
+    artifact: artifactIdentitySchema,
+    rendered: renderingQaRenderedMetadataSchema,
+    createdAt: strictTimestampSchema,
+    contentIntegrity: renderingQaContentIntegritySchema,
+    activeContent: renderingQaActiveContentSchema,
+    targetPageCount: positiveSafeIntegerSchema,
+    deterministicPageCount: positiveSafeIntegerSchema.nullable(),
+    viewerObservation: renderingQaViewerObservationSchema.nullable(),
+    limitations: renderingQaLimitationsSchema,
+    deterministicPassed: z.boolean(),
+    complete: z.boolean(),
+    passed: z.boolean(),
+  })
+  .superRefine((report, context) => {
+    if (
+      report.artifact.id !== report.rendered.artifactId ||
+      report.artifact.version !== report.rendered.artifactVersion
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["artifact"],
+        message: "report artifact must match rendered metadata identity",
+      });
+    }
+
+    const expectedTargetPageCount = renderingQaTargetPageCounts[report.rendered.layoutProfile];
+    if (report.targetPageCount !== expectedTargetPageCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["targetPageCount"],
+        message: "targetPageCount must equal the selected layout profile target",
+      });
+    }
+    if (Date.parse(report.createdAt) < Date.parse(report.rendered.generatedAt)) {
+      context.addIssue({
+        code: "custom",
+        path: ["createdAt"],
+        message: "createdAt must not precede rendered.generatedAt",
+      });
+    }
+    if (report.rendered.format !== "pdf" && report.deterministicPageCount !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["deterministicPageCount"],
+        message: "only PDF reports may include a deterministic page count",
+      });
+    }
+
+    const observation = report.viewerObservation;
+    if (observation !== null && observation.renderedChecksum !== report.rendered.checksum) {
+      context.addIssue({
+        code: "custom",
+        path: ["viewerObservation", "renderedChecksum"],
+        message: "viewer observation must bind to the rendered checksum",
+      });
+    }
+
+    if (
+      report.rendered.format === "pdf" &&
+      observation !== null &&
+      report.deterministicPageCount !== null &&
+      observation.pageCount !== report.deterministicPageCount
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["viewerObservation", "pageCount"],
+        message: "PDF viewer pageCount must equal the deterministic page count",
+      });
+    }
+
+    const expectedLimitations = expectedRenderingQaLimitations(
+      report.rendered,
+      report.deterministicPageCount,
+      observation,
+    );
+    if (
+      report.limitations.length !== expectedLimitations.length ||
+      report.limitations.some((limitation, index) => limitation !== expectedLimitations[index])
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["limitations"],
+        message: "rendering QA limitations must exactly match the report state",
+      });
+    }
+
+    const pageTargetPassed =
+      report.rendered.format !== "pdf" ||
+      (report.deterministicPageCount !== null &&
+        report.deterministicPageCount <= report.targetPageCount);
+    const deterministicPassed =
+      report.contentIntegrity.visibleContentMatches &&
+      report.contentIntegrity.sectionOrderMatches &&
+      report.contentIntegrity.blockOrderMatches &&
+      report.contentIntegrity.duplicateContentPreserved &&
+      report.contentIntegrity.punctuationPreserved &&
+      !report.activeContent.detected &&
+      pageTargetPassed;
+    if (report.deterministicPassed !== deterministicPassed) {
+      context.addIssue({
+        code: "custom",
+        path: ["deterministicPassed"],
+        message: "deterministicPassed must equal the deterministic QA result",
+      });
+    }
+
+    const expectedComplete = report.rendered.format === "markdown" || observation !== null;
+    if (report.complete !== expectedComplete) {
+      context.addIssue({
+        code: "custom",
+        path: ["complete"],
+        message: "complete must require independent observation for PDF and DOCX",
+      });
+    }
+
+    let observationPassed = report.rendered.format === "markdown" && observation === null;
+    if (observation !== null) {
+      observationPassed =
+        observation.recoveredVisibleContentChecksum ===
+          report.contentIntegrity.expectedVisibleContentChecksum &&
+        observation.recoveredVisibleContentCount ===
+          report.contentIntegrity.expectedVisibleContentCount &&
+        observation.recoveredVisibleContentOrder === "preserved" &&
+        (report.rendered.format !== "pdf" ||
+          report.deterministicPageCount === null ||
+          observation.pageCount === report.deterministicPageCount) &&
+        observation.pageCount <= report.targetPageCount &&
+        observation.blankPageNumbers.length === 0 &&
+        observation.overflowPageNumbers.length === 0 &&
+        observation.orphanSectionIds.length === 0 &&
+        !observation.clippedText;
+    }
+    const passed = report.deterministicPassed && report.complete && observationPassed;
+    if (report.passed !== passed) {
+      context.addIssue({
+        code: "custom",
+        path: ["passed"],
+        message: "passed must equal the deterministic, completeness, and viewer result",
+      });
+    }
+  });
+
+export type RenderingQaReport = z.infer<typeof renderingQaReportSchema>;
