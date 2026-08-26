@@ -207,6 +207,9 @@ importers:
 
   packages/orchestrator:
     dependencies:
+      '@draft-loop/artifacts':
+        specifier: workspace:*
+        version: link:../artifacts
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../domain

@@ -1,3 +1,4 @@
+import { traceAdjudicatedRevision } from "@draft-loop/artifacts";
 import {
   type ContextSnapshot,
   type RetrievalOptions,
@@ -9,11 +10,26 @@ import {
   type Workspace,
 } from "@draft-loop/domain";
 import {
+  type BuiltIndependentReadinessReport,
   evaluateReadiness,
   type ReadinessEvaluation,
   type ReadinessScoreVector,
 } from "@draft-loop/evaluations";
-import type { DraftArtifact, WorkspaceInput } from "@draft-loop/schemas";
+import {
+  type AdjudicatedRevisionEffectOverride,
+  type AdjudicatedRevisionTrace,
+  type AuthorAdjudicationDecisionInput,
+  type AuthorAdjudicationPlan,
+  adjudicatedRevisionEffectOverrideSchema,
+  adjudicatedRevisionTraceSchema,
+  authorAdjudicationDecisionInputSchema,
+  authorAdjudicationPlanSchema,
+  type DraftArtifact,
+  draftArtifactSchema,
+  type IndependentReadinessReport,
+  independentReadinessReportSchema,
+  type WorkspaceInput,
+} from "@draft-loop/schemas";
 import type {
   AuditEventInput,
   JsonValue,
@@ -25,6 +41,7 @@ import {
   type ValidationIssue,
   validateDraftArtifact,
 } from "@draft-loop/validation";
+import { buildAuthorAdjudicationPlan } from "./adjudication.js";
 
 export type RunState = WorkflowState | "provider-error";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
@@ -52,6 +69,22 @@ export interface Critique {
   readonly findings: readonly CritiqueFinding[];
 }
 
+/** Durable, provider-independent state for one adjudicated revision request. */
+export interface AdjudicationRuntimeState {
+  readonly report: IndependentReadinessReport;
+  readonly plan: AuthorAdjudicationPlan;
+  readonly acceptedEffectOverrides: readonly AdjudicatedRevisionEffectOverride[];
+  readonly trace: AdjudicatedRevisionTrace | null;
+  /** Null unless this state is the pending carrier for the current revision. */
+  readonly pendingRevisionRound: number | null;
+}
+
+export interface RequestAdjudicatedRevisionInput {
+  readonly report: IndependentReadinessReport | BuiltIndependentReadinessReport;
+  readonly decisions: readonly AuthorAdjudicationDecisionInput[];
+  readonly acceptedEffectOverrides?: readonly AdjudicatedRevisionEffectOverride[];
+}
+
 export interface AgentExecution<T> {
   readonly output: T;
   readonly provider: string;
@@ -72,6 +105,10 @@ export interface AuthorRequest {
   readonly context: ContextSnapshot;
   readonly currentArtifact: DraftArtifact | null;
   readonly findings: readonly ValidationIssue[];
+  readonly pendingAdjudication?: Pick<
+    AdjudicationRuntimeState,
+    "report" | "plan" | "acceptedEffectOverrides"
+  >;
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
   readonly signal?: AbortSignal;
 }
@@ -116,6 +153,7 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly attempt?: number;
   readonly maxAttempts?: number;
   readonly retryable?: boolean;
+  readonly adjudicatedRevisionTrace?: AdjudicatedRevisionTrace;
 }
 
 export interface RunError {
@@ -157,6 +195,8 @@ export interface RunSnapshot {
   readonly startedAt: string;
   readonly updatedAt: string;
   readonly lastError: RunError | null;
+  /** Optional for snapshots written before the adjudication runtime existed. */
+  readonly adjudicationRuntime?: AdjudicationRuntimeState | null;
 }
 
 export type RunEventType =
@@ -173,6 +213,7 @@ export type RunEventType =
   | "user.approved"
   | "user.exported"
   | "user.revision-requested"
+  | "user.adjudicated-revision-requested"
   | "user.round-budget-recovered";
 
 export interface RunEventInput {
@@ -232,6 +273,10 @@ export interface OrchestrationEngine {
   readonly approve: (runId: string) => Promise<RunSnapshot>;
   readonly markExported: (runId: string) => Promise<RunSnapshot>;
   readonly requestRevision: (runId: string) => Promise<RunSnapshot>;
+  readonly requestAdjudicatedRevision: (
+    runId: string,
+    input: RequestAdjudicatedRevisionInput,
+  ) => Promise<RunSnapshot>;
   readonly events: (runId: string) => Promise<readonly RunEvent[]>;
 }
 
@@ -344,11 +389,18 @@ function executionOutputIsCritique(
 }
 
 function structurallyValidCritique(output: unknown): output is Critique {
+  if (typeof output !== "object" || output === null || Array.isArray(output)) {
+    return false;
+  }
+  const candidate = output as {
+    readonly findings?: unknown;
+    readonly schemaVersion?: unknown;
+    readonly artifact?: unknown;
+  };
   return (
-    typeof output === "object" &&
-    output !== null &&
-    !Array.isArray(output) &&
-    Array.isArray((output as { readonly findings?: unknown }).findings)
+    Array.isArray(candidate.findings) &&
+    candidate.schemaVersion === undefined &&
+    candidate.artifact === undefined
   );
 }
 
@@ -548,6 +600,181 @@ function asJson(value: unknown): JsonValue {
   return JSON.parse(JSON.stringify(value)) as JsonValue;
 }
 
+type PendingAdjudication = Pick<
+  AdjudicationRuntimeState,
+  "report" | "plan" | "acceptedEffectOverrides"
+>;
+
+function assertAdjudicatedRevisionInput(
+  input: RequestAdjudicatedRevisionInput,
+): asserts input is RequestAdjudicatedRevisionInput {
+  if (typeof input !== "object" || input === null || Array.isArray(input)) {
+    throw new TypeError("Adjudicated revision input must be an object.");
+  }
+  const allowedKeys = new Set(["report", "decisions", "acceptedEffectOverrides"]);
+  for (const key of Object.keys(input as object)) {
+    if (!allowedKeys.has(key)) {
+      throw new TypeError(`Unknown adjudicated revision input field: ${key}`);
+    }
+  }
+  if (!Array.isArray(input.decisions)) {
+    throw new TypeError("Adjudicated revision decisions must be an array.");
+  }
+  if (
+    input.acceptedEffectOverrides !== undefined &&
+    !Array.isArray(input.acceptedEffectOverrides)
+  ) {
+    throw new TypeError("Accepted effect overrides must be an array.");
+  }
+}
+
+function canonicalAcceptedEffectOverrides(
+  plan: AuthorAdjudicationPlan,
+  candidates: readonly AdjudicatedRevisionEffectOverride[] | undefined,
+): readonly AdjudicatedRevisionEffectOverride[] {
+  const byFindingId = new Map<string, AdjudicatedRevisionEffectOverride>();
+  for (const [index, candidate] of (candidates ?? []).entries()) {
+    const parsed = adjudicatedRevisionEffectOverrideSchema.safeParse(candidate);
+    if (!parsed.success) {
+      throw new Error(`Accepted effect override ${index + 1} is invalid.`);
+    }
+    if (byFindingId.has(parsed.data.findingId)) {
+      throw new Error(`Accepted effect override ${parsed.data.findingId} is duplicated.`);
+    }
+    const decision = plan.decisions.find(
+      (candidateDecision) => candidateDecision.findingId === parsed.data.findingId,
+    );
+    if (decision === undefined) {
+      throw new Error(`Accepted effect override ${parsed.data.findingId} is unknown.`);
+    }
+    if (decision.disposition !== "accept") {
+      throw new Error(
+        `Accepted effect override ${parsed.data.findingId} requires an accepted decision.`,
+      );
+    }
+    byFindingId.set(parsed.data.findingId, parsed.data);
+  }
+  return plan.decisions.flatMap((decision) => {
+    const override = byFindingId.get(decision.findingId);
+    return override === undefined ? [] : [override];
+  });
+}
+
+function pendingAdjudicationFor(
+  snapshot: RunSnapshot,
+  context: ContextSnapshot,
+): PendingAdjudication | undefined {
+  const runtime = snapshot.adjudicationRuntime;
+  if (
+    runtime !== undefined &&
+    runtime !== null &&
+    runtime.pendingRevisionRound !== undefined &&
+    runtime.pendingRevisionRound !== null &&
+    (!Number.isInteger(runtime.pendingRevisionRound) || runtime.pendingRevisionRound < 1)
+  ) {
+    throw new InvalidAdjudicationRuntimeError();
+  }
+  if (
+    snapshot.state !== "revising" ||
+    snapshot.currentStep !== "revision" ||
+    runtime === undefined ||
+    runtime === null
+  ) {
+    return undefined;
+  }
+  const allowedKeys = new Set([
+    "report",
+    "plan",
+    "acceptedEffectOverrides",
+    "trace",
+    "pendingRevisionRound",
+  ]);
+  if (Object.keys(runtime).some((key) => !allowedKeys.has(key))) {
+    throw new InvalidAdjudicationRuntimeError();
+  }
+  if (runtime.trace !== null) {
+    if (runtime.pendingRevisionRound === snapshot.round) {
+      throw new InvalidAdjudicationRuntimeError();
+    }
+    if (!adjudicatedRevisionTraceSchema.safeParse(runtime.trace).success) {
+      throw new InvalidAdjudicationRuntimeError();
+    }
+    return undefined;
+  }
+  if (runtime.pendingRevisionRound !== snapshot.round) return undefined;
+  if (snapshot.artifact === null) {
+    throw new InvalidAdjudicationRuntimeError();
+  }
+
+  const report = independentReadinessReportSchema.safeParse(runtime.report);
+  const plan = authorAdjudicationPlanSchema.safeParse(runtime.plan);
+  if (!report.success || !plan.success || !Array.isArray(runtime.acceptedEffectOverrides)) {
+    throw new InvalidAdjudicationRuntimeError();
+  }
+  if (
+    report.data.contextSnapshotId !== snapshot.contextSnapshotId ||
+    report.data.artifact.id !== snapshot.artifact.id ||
+    report.data.artifact.version !== snapshot.artifact.version ||
+    plan.data.contextSnapshotId !== context.id ||
+    plan.data.contextSnapshotId !== snapshot.contextSnapshotId ||
+    plan.data.sourceArtifact.id !== snapshot.artifact.id ||
+    plan.data.sourceArtifact.version !== snapshot.artifact.version ||
+    plan.data.sourceReport.artifact.id !== report.data.artifact.id ||
+    plan.data.sourceReport.artifact.version !== report.data.artifact.version
+  ) {
+    throw new InvalidAdjudicationRuntimeError();
+  }
+  const acceptedEffectOverrides = canonicalAcceptedEffectOverrides(
+    plan.data,
+    runtime.acceptedEffectOverrides,
+  );
+  if (JSON.stringify(acceptedEffectOverrides) !== JSON.stringify(runtime.acceptedEffectOverrides)) {
+    throw new InvalidAdjudicationRuntimeError();
+  }
+  return {
+    report: immutable(report.data),
+    plan: immutable(plan.data),
+    acceptedEffectOverrides: immutable(acceptedEffectOverrides),
+  };
+}
+
+class InvalidAdjudicationRuntimeError extends Error {
+  constructor() {
+    super("The persisted adjudication runtime state is invalid.");
+    this.name = "InvalidAdjudicationRuntimeError";
+  }
+}
+
+class InvalidAdjudicatedRevisionResponseError extends Error {
+  constructor() {
+    super("The adjudicated revision response is invalid.");
+    this.name = "InvalidAdjudicatedRevisionResponseError";
+  }
+}
+
+function deriveAdjudicatedRevisionTrace(
+  pending: PendingAdjudication,
+  sourceArtifact: DraftArtifact,
+  revisedArtifact: unknown,
+  createdAt: string,
+): AdjudicatedRevisionTrace {
+  const parsedRevisedArtifact = draftArtifactSchema.safeParse(revisedArtifact);
+  if (!parsedRevisedArtifact.success) {
+    throw new InvalidAdjudicatedRevisionResponseError();
+  }
+  try {
+    return traceAdjudicatedRevision({
+      plan: pending.plan,
+      sourceArtifact,
+      revisedArtifact: parsedRevisedArtifact.data,
+      createdAt,
+      acceptedEffectOverrides: pending.acceptedEffectOverrides,
+    });
+  } catch {
+    throw new InvalidAdjudicatedRevisionResponseError();
+  }
+}
+
 export class InMemoryRunStore implements RunStore {
   private readonly runs = new Map<string, RunSnapshot>();
   private readonly executions = new Map<string, ExecutionRecord>();
@@ -715,6 +942,7 @@ function initialSnapshot(request: OrchestrationRequest, now: string): RunSnapsho
     startedAt: now,
     updatedAt: now,
     lastError: null,
+    adjudicationRuntime: null,
   });
 }
 
@@ -839,6 +1067,24 @@ export function createOrchestrationEngine(
       return transitionToAwaitingApproval(exhausted, reason);
     }
 
+    let pendingAdjudication: PendingAdjudication | undefined;
+    try {
+      pendingAdjudication =
+        step === "revision" ? pendingAdjudicationFor(snapshot, context) : undefined;
+    } catch (error) {
+      if (!(error instanceof InvalidAdjudicationRuntimeError)) throw error;
+      return recordFailure(
+        snapshot,
+        providerFailure(
+          { code: "invalid-response", retryable: false },
+          context,
+          step,
+          MAX_ORCHESTRATION_ATTEMPTS,
+          clock(),
+        ),
+      );
+    }
+
     const existing = await options.store.findCompletedExecution(
       snapshot.runId,
       snapshot.round,
@@ -855,7 +1101,64 @@ export function createOrchestrationEngine(
             totalCostUsd: snapshot.totalCostUsd + (existing.estimatedUsd ?? 0),
             updatedAt: clock(),
           };
-      const saved = alreadyRecorded ? replaySnapshot : await save(replaySnapshot);
+      let reusableSnapshot = replaySnapshot;
+      if (pendingAdjudication !== undefined) {
+        const runtime = snapshot.adjudicationRuntime;
+        if (runtime === undefined || runtime === null || snapshot.artifact === null) {
+          return recordFailure(
+            snapshot,
+            providerFailure(
+              { code: "invalid-response", retryable: false },
+              context,
+              step,
+              MAX_ORCHESTRATION_ATTEMPTS,
+              clock(),
+            ),
+          );
+        }
+        let trace: AdjudicatedRevisionTrace;
+        try {
+          const storedTrace =
+            existing.adjudicatedRevisionTrace === undefined
+              ? undefined
+              : adjudicatedRevisionTraceSchema.safeParse(existing.adjudicatedRevisionTrace);
+          if (storedTrace !== undefined && !storedTrace.success) {
+            throw new InvalidAdjudicatedRevisionResponseError();
+          }
+          trace = deriveAdjudicatedRevisionTrace(
+            pendingAdjudication,
+            snapshot.artifact,
+            existing.output,
+            storedTrace?.success === true ? storedTrace.data.createdAt : clock(),
+          );
+          if (
+            storedTrace?.success === true &&
+            JSON.stringify(trace) !== JSON.stringify(storedTrace.data)
+          ) {
+            throw new InvalidAdjudicatedRevisionResponseError();
+          }
+        } catch {
+          return recordFailure(
+            snapshot,
+            providerFailure(
+              { code: "invalid-response", retryable: false },
+              context,
+              step,
+              MAX_ORCHESTRATION_ATTEMPTS,
+              clock(),
+            ),
+          );
+        }
+        reusableSnapshot = {
+          ...reusableSnapshot,
+          adjudicationRuntime: {
+            ...runtime,
+            trace,
+            pendingRevisionRound: null,
+          },
+        };
+      }
+      const saved = await save(reusableSnapshot);
       return completeStep(saved, context, existing);
     }
 
@@ -882,6 +1185,7 @@ export function createOrchestrationEngine(
     }
     const id = executionId(snapshot.runId, snapshot.round, step, attempt);
     await emit(snapshot, "step.started", { step, executionId: id });
+    let completedExecutionSaved = false;
     try {
       if (step === "critic" && snapshot.artifact === null) {
         throw new Error("critic requires an artifact");
@@ -914,9 +1218,19 @@ export function createOrchestrationEngine(
               context,
               currentArtifact: snapshot.artifact,
               findings: snapshot.findings,
+              ...(pendingAdjudication === undefined ? {} : { pendingAdjudication }),
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
               ...(signal === undefined ? {} : { signal }),
             });
+      const adjudicatedRevisionTrace =
+        pendingAdjudication === undefined
+          ? undefined
+          : deriveAdjudicatedRevisionTrace(
+              pendingAdjudication,
+              snapshot.artifact as DraftArtifact,
+              execution.output,
+              clock(),
+            );
       const record: ExecutionRecord = {
         id,
         runId: snapshot.runId,
@@ -937,20 +1251,39 @@ export function createOrchestrationEngine(
         attempt,
         maxAttempts: MAX_ORCHESTRATION_ATTEMPTS,
         retryable: false,
+        ...(adjudicatedRevisionTrace === undefined ? {} : { adjudicatedRevisionTrace }),
       };
       await options.store.saveExecution(record);
+      completedExecutionSaved = true;
       const updated = {
         ...snapshot,
         executionHistory: [...snapshot.executionHistory, record],
         totalCostUsd: snapshot.totalCostUsd + (execution.estimatedUsd ?? 0),
         updatedAt: clock(),
         lastError: null,
+        ...(adjudicatedRevisionTrace === undefined ||
+        snapshot.adjudicationRuntime === undefined ||
+        snapshot.adjudicationRuntime === null
+          ? {}
+          : {
+              adjudicationRuntime: {
+                ...snapshot.adjudicationRuntime,
+                trace: adjudicatedRevisionTrace,
+                pendingRevisionRound: null,
+              },
+            }),
       };
       const saved = await saveAndEmit(updated, "step.completed", { step, executionId: id });
       return completeStep(saved, context, record);
     } catch (error) {
+      // A completed execution is immutable. If snapshot/event persistence
+      // fails after it was saved, let the caller retry/resume and reuse that
+      // execution instead of attempting to overwrite it with a failed row.
+      if (completedExecutionSaved) throw error;
       const failure = providerFailure(
-        executionFailure(error, signal),
+        error instanceof InvalidAdjudicatedRevisionResponseError
+          ? { code: "invalid-response", retryable: false }
+          : executionFailure(error, signal),
         context,
         step,
         attempt,
@@ -1310,6 +1643,104 @@ export function createOrchestrationEngine(
     return updated;
   };
 
+  const requestAdjudicatedRevision = async (
+    runId: string,
+    input: RequestAdjudicatedRevisionInput,
+  ): Promise<RunSnapshot> => {
+    assertAdjudicatedRevisionInput(input);
+    const snapshot = await loadForAction(runId);
+    if (snapshot.state !== "awaiting-approval") {
+      throw new Error("Only a run awaiting approval can request an adjudicated revision.");
+    }
+    if (!hasCompletedIndependentCritique(snapshot)) {
+      throw new Error(
+        "A completed independent critic review is required before requesting an adjudicated revision.",
+      );
+    }
+    if (snapshot.artifact === null) {
+      throw new Error("A draft artifact is required before requesting an adjudicated revision.");
+    }
+    const now = clock();
+    if (snapshot.round >= snapshot.budget.maxRounds) {
+      throw new Error(
+        `Maximum round limit reached (${snapshot.budget.maxRounds}). Increase the workspace limit before requesting another revision.`,
+      );
+    }
+    const exhaustedReason = budgetReason(snapshot, now);
+    if (exhaustedReason !== undefined) {
+      throw new Error(`Cannot request an adjudicated revision: ${exhaustedReason}.`);
+    }
+
+    let report: IndependentReadinessReport;
+    try {
+      report = independentReadinessReportSchema.parse(input.report);
+    } catch {
+      throw new Error("The independent readiness report is invalid.");
+    }
+    if (report.contextSnapshotId !== snapshot.contextSnapshotId) {
+      throw new Error("The readiness report context does not match the run context.");
+    }
+    if (
+      report.artifact.id !== snapshot.artifact.id ||
+      report.artifact.version !== snapshot.artifact.version
+    ) {
+      throw new Error("The readiness report artifact does not match the current artifact.");
+    }
+
+    const decisions = input.decisions.map((decision, index) => {
+      const parsed = authorAdjudicationDecisionInputSchema.safeParse(decision);
+      if (!parsed.success) {
+        throw new Error(`Adjudication decision ${index + 1} is invalid.`);
+      }
+      return parsed.data;
+    });
+    const plan = buildAuthorAdjudicationPlan({
+      report,
+      sourceArtifact: snapshot.artifact,
+      createdAt: now,
+      decisions,
+    });
+    const acceptedEffectOverrides = canonicalAcceptedEffectOverrides(
+      plan,
+      input.acceptedEffectOverrides,
+    );
+    const runtime: AdjudicationRuntimeState = immutable({
+      report,
+      plan,
+      acceptedEffectOverrides,
+      trace: null,
+      // The staged snapshot is still in the awaiting-approval round. Mark the
+      // carrier as pending only in the following revision-round snapshot so a
+      // crash between these durable writes cannot leak it into a legacy
+      // requestRevision call.
+      pendingRevisionRound: null,
+    });
+    const staged = await save({
+      ...snapshot,
+      adjudicationRuntime: runtime,
+      updatedAt: now,
+    });
+    const updated = {
+      ...staged,
+      state: "revising" as const,
+      approval: "rejected" as const,
+      round: snapshot.round + 1,
+      currentStep: "revision" as const,
+      updatedAt: now,
+      adjudicationRuntime: {
+        ...runtime,
+        pendingRevisionRound: snapshot.round + 1,
+      },
+    };
+    const saved = await saveAndEmit(updated, "user.adjudicated-revision-requested", {
+      revisionKind: "adjudicated",
+      findingCount: plan.decisions.length,
+      acceptedEffectOverrideCount: acceptedEffectOverrides.length,
+    });
+    await emit(saved, "state.changed", { to: "revising" });
+    return saved;
+  };
+
   const requestRevision = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
     if (snapshot.state !== "awaiting-approval")
@@ -1391,6 +1822,7 @@ export function createOrchestrationEngine(
     approve,
     markExported,
     requestRevision,
+    requestAdjudicatedRevision,
     events,
   };
 }

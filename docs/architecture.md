@@ -409,11 +409,16 @@ explicit, bounded effect override records a concise rationale; rejected and nuan
 findings remain `disagreement-preserved`. A trace is valid only when no
 accepted effect is missing, and it never exposes a `resolved` flag.
 
-This slice has no provider calls, persistence or migrations, orchestration
-lifecycle changes, application commands, CLI or desktop wiring, or approval
-and stopping semantics. It stores no raw prompts, raw responses, or hidden
-reasoning. Runtime integration remains gated by the complete drafting and
-writing-policy work in #69 and #70.
+The orchestrator now exposes a dormant `requestAdjudicatedRevision` runtime
+carrier. It persists the exact report, canonical plan, accepted-effect
+overrides, and nullable derived trace in the existing run snapshot, and passes
+that carrier only to the matching revision author execution. Legacy revision
+requests remain separate, and invalid provider lineage fails closed without a
+trace. This is only the first runtime-carrier slice: it does not generate
+reports, add persistence tables or migrations, wire provider prompts,
+application commands, CLI or desktop controls, or change approval and stopping
+semantics. It stores no raw prompts, raw responses, or hidden reasoning, and
+full #69/#70/#72 integration remains out of scope.
 
 ### Application-readiness stopping decision boundary
 
