@@ -605,6 +605,45 @@ export type ReadinessRubricInput = Partial<ReadinessRubric>;
 export const outputFormats = ["markdown", "plain-text", "json", "pdf", "docx"] as const;
 export type OutputFormat = (typeof outputFormats)[number];
 
+/** Version of the provider-independent rendering QA report contract. */
+export const renderingQaReportSchemaVersion = 1 as const;
+export type RenderingQaReportSchemaVersion = typeof renderingQaReportSchemaVersion;
+
+/** The only layout profiles accepted by the controlled renderer. */
+export const renderingLayoutProfileIds = ["compact-one-page", "standard-two-page"] as const;
+export type RenderingLayoutProfileId = (typeof renderingLayoutProfileIds)[number];
+
+/** Signals recorded by an independent viewer when it extracts a rendering. */
+export const renderingQaVisibleContentOrderSignals = ["preserved", "mismatch"] as const;
+export type RenderingQaVisibleContentOrderSignal =
+  (typeof renderingQaVisibleContentOrderSignals)[number];
+
+/** Finite content-free active-content signatures recognized by local QA. */
+export const renderingQaActiveContentSignatures = [
+  "docx-attached-template",
+  "docx-embedded-object",
+  "docx-external-link",
+  "docx-macro-project",
+  "html-event-handler",
+  "html-iframe",
+  "html-javascript-url",
+  "html-script",
+  "pdf-additional-action",
+  "pdf-javascript",
+  "pdf-launch-action",
+  "pdf-open-action",
+] as const;
+export type RenderingQaActiveContentSignature = (typeof renderingQaActiveContentSignatures)[number];
+
+/** Canonical, content-free rendering limitations. */
+export const renderingQaLimitationCodes = [
+  "deterministic-page-count-not-assessed",
+  "independent-viewer-observation-not-run",
+  "structured-images-unsupported",
+  "structured-links-unsupported",
+] as const;
+export type RenderingQaLimitationCode = (typeof renderingQaLimitationCodes)[number];
+
 export interface OutputConstraints {
   readonly format: OutputFormat;
   readonly maxWords?: number;
