@@ -261,9 +261,13 @@ Legal hold and manual preservation take precedence over expiry. Policy
 inspection and planning expose only effective rules and bounded counts. At
 present, only committed managed raw-source versions have enough CKB-local
 ownership evidence to be marked expiry-eligible. Unmanaged or unknown entries
-and the five not-yet-materialized classes are preserved. Planning does not
-delete files or records and is not a substitute for the confirmed deletion
-boundary planned in #166.
+and the five not-yet-materialized classes are preserved. Planning is read-only.
+Confirmed deletion is a separate approved operation for an archived non-default
+CKB: it requires the exact token from a fresh plan, revalidates retention
+revisions and physical ownership under the store-wide lease, and deletes only
+ownership-proven managed records and blobs. Legal hold, manual preservation,
+unmanaged database records, missing or mismatched blobs, and unknown deletion
+state block it. Unknown filesystem entries remain untouched.
 
 Portable CKB export is an explicit local operation with a separately approved
 destination. It produces a versioned directory package only when every required
@@ -285,11 +289,13 @@ so every restored source is unbound. Legacy or otherwise unmanaged source
 versions block export because DraftLoop cannot prove it captured their bytes
 completely.
 
-Complete deletion across raw, unknown, derived, backed-up, and exported data is
-not implemented. Retrieval-index lifecycle and cleanup, confirmed deletion,
-and repair of missing blobs remain future privacy boundaries. Users
-remain responsible for selected directories, filesystems, devices, cloud
-backups, exported packages, and copies made outside DraftLoop.
+Confirmed CKB deletion does not claim secure erasure or deletion of every copy.
+It covers the selected archived CKB's current logical graph and verified managed
+raw blobs only. The other retention classes are not yet materialized in this
+store, and unknown data is deliberately preserved. Retrieval-index lifecycle,
+general cleanup, and repair of missing blobs remain future privacy boundaries.
+Users remain responsible for selected directories, filesystems, devices, cloud
+backups, exported packages, restored stores, and copies made outside DraftLoop.
 
 ## Redaction and logging
 

@@ -46,6 +46,8 @@ import type {
 } from "@draft-loop/storage";
 import {
   type CandidateKnowledgeBaseRecord,
+  type CandidateKnowledgeDeletionPlan,
+  type CandidateKnowledgeDeletionResult,
   type CandidateKnowledgePortableBackupExportResult,
   type CandidateKnowledgePortableBackupRestoreOptions,
   type CandidateKnowledgeStoreHandle,
@@ -68,6 +70,10 @@ export type {
   CandidateKnowledgeSourceVersion,
   CandidateKnowledgeStore,
 } from "@draft-loop/domain";
+export type {
+  CandidateKnowledgeDeletionPlan,
+  CandidateKnowledgeDeletionResult,
+} from "@draft-loop/storage/knowledge-store";
 
 const defaultKnowledgeBaseDisplayName = "Career evidence";
 
@@ -96,6 +102,16 @@ export interface RestoreCandidateKnowledgeStoreCommand {
   readonly packagePath: string;
   readonly destination: string;
   readonly collision: "fail-if-destination-exists";
+  readonly approved: boolean;
+}
+
+export interface PreviewKnowledgeBaseDeletionCommand {
+  readonly storeRoot: string;
+  readonly knowledgeBaseId: string;
+}
+
+export interface DeleteKnowledgeBaseCommand extends PreviewKnowledgeBaseDeletionCommand {
+  readonly confirmationToken: string;
   readonly approved: boolean;
 }
 
@@ -715,6 +731,12 @@ export interface CandidateKnowledgeStoreService {
   readonly restoreCandidateKnowledgeStore: (
     command: RestoreCandidateKnowledgeStoreCommand,
   ) => Promise<CandidateKnowledgePortableBackupRestoreResult>;
+  readonly previewKnowledgeBaseDeletion: (
+    command: PreviewKnowledgeBaseDeletionCommand,
+  ) => Promise<CandidateKnowledgeDeletionPlan>;
+  readonly deleteKnowledgeBase: (
+    command: DeleteKnowledgeBaseCommand,
+  ) => Promise<CandidateKnowledgeDeletionResult>;
   readonly getKnowledgeBaseLifecycleReadiness: (
     command: GetKnowledgeBaseLifecycleReadinessCommand,
   ) => Promise<KnowledgeBaseLifecycleReadinessResult>;
@@ -927,6 +949,10 @@ function portableBackupApprovalFailure(): Error {
 
 function portableBackupRestoreApprovalFailure(): Error {
   return new Error("Portable candidate knowledge backup restore requires explicit approval.");
+}
+
+function knowledgeBaseDeletionApprovalFailure(): Error {
+  return new Error("Candidate knowledge base deletion requires explicit approval.");
 }
 
 function portableBackupExportFailure(): Error {
@@ -3896,6 +3922,27 @@ export function createCandidateKnowledgeStoreService(
         throw portableBackupRestoreFailure();
       }
     },
+    previewKnowledgeBaseDeletion: async (command) => {
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      return useHandle(
+        () => resolved.open(storeRoot),
+        (handle) => handle.planCandidateKnowledgeBaseDeletion(knowledgeBaseId),
+      );
+    },
+    deleteKnowledgeBase: async (command) => {
+      if (command.approved !== true) throw knowledgeBaseDeletionApprovalFailure();
+      const storeRoot = requireStoreRoot(command.storeRoot);
+      const knowledgeBaseId = requireText(command.knowledgeBaseId, "Candidate knowledge base id");
+      const confirmationToken = requireText(
+        command.confirmationToken,
+        "Candidate knowledge base deletion confirmation token",
+      );
+      return useHandle(
+        () => resolved.open(storeRoot),
+        (handle) => handle.deleteCandidateKnowledgeBase(knowledgeBaseId, confirmationToken),
+      );
+    },
     getKnowledgeBaseLifecycleReadiness: async (command) => {
       try {
         const storeRoot = requireStoreRoot(command.storeRoot);
@@ -5610,6 +5657,8 @@ export const initializeStore = defaultService.initializeStore;
 export const openStore = defaultService.openStore;
 export const exportCandidateKnowledgeStore = defaultService.exportCandidateKnowledgeStore;
 export const inspectCandidateKnowledgeBackup = defaultService.inspectCandidateKnowledgeBackup;
+export const previewKnowledgeBaseDeletion = defaultService.previewKnowledgeBaseDeletion;
+export const deleteKnowledgeBase = defaultService.deleteKnowledgeBase;
 export const getKnowledgeBaseLifecycleReadiness = defaultService.getKnowledgeBaseLifecycleReadiness;
 export const getKnowledgeRetentionPolicy = defaultService.getKnowledgeRetentionPolicy;
 export const setKnowledgeRetentionPolicy = defaultService.setKnowledgeRetentionPolicy;

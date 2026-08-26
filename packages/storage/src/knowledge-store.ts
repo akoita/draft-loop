@@ -12,6 +12,7 @@ import {
   opendir,
   readFile,
   realpath,
+  rename,
   rm,
   rmdir,
   writeFile,
@@ -40,6 +41,12 @@ import {
   type CandidateKnowledgeBaseInput,
   type CandidateKnowledgeBaseRecord,
   type CandidateKnowledgeBaseStoragePort,
+  type CandidateKnowledgeDeletionArtifactRecord,
+  type CandidateKnowledgeDeletionAuditRecord,
+  type CandidateKnowledgeDeletionCommitInput,
+  type CandidateKnowledgeDeletionDatabaseSnapshot,
+  type CandidateKnowledgeDeletionOperationInput,
+  type CandidateKnowledgeDeletionOperationRecord,
   type CandidateKnowledgeDirectoryBindingInput,
   type CandidateKnowledgeDirectoryBindingRecord,
   type CandidateKnowledgeDirectoryMemberMoveInput,
@@ -51,8 +58,11 @@ import {
   type CandidateKnowledgeDirectoryRootRebindInput,
   type CandidateKnowledgeDirectoryRootRebindResult,
   type CandidateKnowledgeDirectoryRootRevisionRecord,
+  type CandidateKnowledgeRetentionClass,
+  type CandidateKnowledgeRetentionOwnershipStatus,
   type CandidateKnowledgeRetentionPlan,
   type CandidateKnowledgeRetentionPlanClass,
+  type CandidateKnowledgeRetentionRule,
   type CandidateKnowledgeSourceInput,
   type CandidateKnowledgeSourceOriginBindingRecord,
   type CandidateKnowledgeSourceRefreshObservationInput,
@@ -97,6 +107,113 @@ const descriptorKeyPrefix = "candidateKnowledgeStore";
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
+
+function currentKnowledgeStoreTimestamp(): string {
+  return new Date().toISOString();
+}
+
+export type CandidateKnowledgeDeletionBlockerCode =
+  | "legal-hold"
+  | "manual-preservation"
+  | "unmanaged-database-records"
+  | "pending-managed-write"
+  | "managed-artifact-missing"
+  | "managed-artifact-integrity"
+  | "unknown-deletion-state";
+
+export interface CandidateKnowledgeDeletionBlocker {
+  readonly code: CandidateKnowledgeDeletionBlockerCode;
+  readonly count: number;
+}
+
+export type CandidateKnowledgeDeletionPlanClassStatus = "delete" | "blocked" | "not-materialized";
+
+export interface CandidateKnowledgeDeletionPlanClass {
+  readonly class: CandidateKnowledgeRetentionClass;
+  readonly rule: CandidateKnowledgeRetentionRule;
+  readonly expireAfterDays: number | null;
+  readonly status: CandidateKnowledgeDeletionPlanClassStatus;
+  readonly ownershipStatus: CandidateKnowledgeRetentionOwnershipStatus;
+  readonly managedCount: number;
+  readonly eligibleCount: number;
+  readonly preservedCount: number;
+  readonly unmanagedCount: number;
+  readonly unknownCount: number;
+  readonly countCapped: boolean;
+  readonly preservationReasons: readonly (
+    | "override"
+    | "unmanaged"
+    | "unknown"
+    | "not-materialized"
+    | "blocked"
+  )[];
+}
+
+/** Path-free, bounded preview of one archived non-default CKB deletion. */
+export interface CandidateKnowledgeDeletionPlan {
+  readonly schemaVersion: 1;
+  readonly knowledgeBaseId: string;
+  readonly archivedAt: string;
+  readonly status: "ready" | "blocked";
+  readonly policyRevision: number;
+  readonly overrideRevision: number;
+  readonly sourceCount: number;
+  readonly versionCount: number;
+  readonly managedArtifactCount: number;
+  readonly managedArtifactBytes: number;
+  readonly preservedUnknownCount: number;
+  readonly preservedUnmanagedCount: number;
+  readonly countCapped: boolean;
+  readonly blockers: readonly CandidateKnowledgeDeletionBlocker[];
+  readonly classes: readonly CandidateKnowledgeDeletionPlanClass[];
+  /** Opaque digest bound to the complete store, graph, policy, and inventory. */
+  readonly confirmationToken: string;
+}
+
+export type CandidateKnowledgeDeletionInterruptionBoundary =
+  | "intent"
+  | "staging"
+  | "before-commit"
+  | "commit"
+  | "after-commit"
+  | "staging-cleanup"
+  | "after-staging-cleanup";
+
+export interface CandidateKnowledgeDeletionOptions {
+  /** @internal Simulates a restart-worthy failure at a deletion boundary. */
+  readonly interruptAt?: CandidateKnowledgeDeletionInterruptionBoundary;
+  /** @internal Failure seam before the operation journal is created. */
+  readonly beforeIntent?: () => Promise<void>;
+  /** @internal Failure seam before filesystem staging starts. */
+  readonly beforeStaging?: () => Promise<void>;
+  /** @internal Failure seam before the logical SQLite commit. */
+  readonly beforeCommit?: () => Promise<void>;
+  /** @internal Failure seam after the logical SQLite commit. */
+  readonly afterCommit?: () => Promise<void>;
+  /** @internal Failure seam before staging cleanup. */
+  readonly beforeStagingCleanup?: () => Promise<void>;
+  /** @internal Failure seam after staging cleanup, before audit completion. */
+  readonly afterStagingCleanup?: () => Promise<void>;
+}
+
+export type CandidateKnowledgeDeletionAudit = CandidateKnowledgeDeletionAuditRecord;
+
+/** Content-free result and audit projection for a completed CKB deletion. */
+export interface CandidateKnowledgeDeletionResult {
+  readonly schemaVersion: 1;
+  readonly status: "deleted";
+  readonly knowledgeBaseId: string;
+  readonly operationId: string;
+  readonly auditId: string;
+  readonly confirmationToken: string;
+  readonly completedAt: string;
+  readonly managedArtifactCount: number;
+  readonly managedArtifactBytes: number;
+  readonly preservedUnknownCount: number;
+  readonly preservedUnmanagedCount: number;
+  readonly countCapped: boolean;
+  readonly audit: CandidateKnowledgeDeletionAudit;
+}
 
 export type ManagedCandidateKnowledgeWriteInterruptionBoundary =
   | "intent"
@@ -419,6 +536,14 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     knowledgeBaseId: string,
     asOf: string,
   ) => Promise<CandidateKnowledgeRetentionPlan>;
+  readonly planCandidateKnowledgeBaseDeletion: (
+    knowledgeBaseId: string,
+  ) => Promise<CandidateKnowledgeDeletionPlan>;
+  readonly deleteCandidateKnowledgeBase: (
+    knowledgeBaseId: string,
+    confirmationToken: string,
+    options?: CandidateKnowledgeDeletionOptions,
+  ) => Promise<CandidateKnowledgeDeletionResult>;
   readonly getManagedCandidateKnowledgeFilePath: (
     knowledgeBaseId: string,
     sourceId: string,
@@ -1483,10 +1608,17 @@ interface MutableManagedCandidateKnowledgeFileInventory {
 const intakeShapedFilename =
   /^\.intake-(?:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|[0-9a-f]{64})$/;
 
+function entryType(entry: Dirent): "directory" | "file" | "symbolic-link" | "other" {
+  if (entry.isDirectory()) return "directory";
+  if (entry.isFile()) return "file";
+  if (entry.isSymbolicLink()) return "symbolic-link";
+  return "other";
+}
+
 async function scanManagedCandidateKnowledgeDirectory(
   path: string,
   inventory: MutableManagedCandidateKnowledgeFileInventory,
-  inspect: (entry: Dirent) => void,
+  inspect: (entry: Dirent, entryPath: string) => void,
 ): Promise<void> {
   if (inventory.scanLimitReached) return;
   const directory = await opendir(path);
@@ -1500,7 +1632,7 @@ async function scanManagedCandidateKnowledgeDirectory(
         break;
       }
       inventory.scannedEntryCount += 1;
-      inspect(entry);
+      inspect(entry, join(path, entry.name));
     }
   } finally {
     try {
@@ -3360,6 +3492,721 @@ async function planCandidateKnowledgeRetention(
   });
 }
 
+const candidateKnowledgeDeletionStagingDirectory = ".deletion-staging";
+const candidateKnowledgeDeletionPlanSchemaVersion = 1 as const;
+
+type CandidateKnowledgeDeletionArtifactStatus = "verified" | "missing" | "integrity-mismatch";
+
+interface CandidateKnowledgeDeletionArtifactObservation {
+  readonly sourceId: string;
+  readonly versionId: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly status: CandidateKnowledgeDeletionArtifactStatus;
+  readonly identity: FileIdentity | null;
+}
+
+interface CandidateKnowledgeDeletionPhysicalInventory {
+  readonly artifacts: readonly CandidateKnowledgeDeletionArtifactObservation[];
+  readonly unknownEntries: ManagedCandidateKnowledgeFileInventory["unknownEntries"];
+  readonly scanLimitReached: boolean;
+  readonly inventoryDigest: string;
+}
+
+function deletionDigest(value: unknown): string {
+  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
+}
+
+async function observeCandidateKnowledgeDeletionArtifacts(
+  root: string,
+  snapshot: CandidateKnowledgeDeletionDatabaseSnapshot,
+): Promise<readonly CandidateKnowledgeDeletionArtifactObservation[]> {
+  const observations: CandidateKnowledgeDeletionArtifactObservation[] = [];
+  for (const artifact of snapshot.managedArtifacts) {
+    const path = managedVersionPath(root, artifact.sourceId, artifact.versionId);
+    try {
+      const details = await lstat(path);
+      if (details.isSymbolicLink() || !details.isFile()) {
+        observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
+        continue;
+      }
+      try {
+        await verifyManagedFile(path, artifact);
+        const after = await lstat(path);
+        if (
+          after.isSymbolicLink() ||
+          !after.isFile() ||
+          after.dev !== details.dev ||
+          after.ino !== details.ino
+        ) {
+          observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
+          continue;
+        }
+        observations.push({
+          ...artifact,
+          status: "verified",
+          identity: { dev: after.dev, ino: after.ino },
+        });
+      } catch {
+        observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
+      }
+    } catch (error) {
+      if (isMissing(error)) {
+        observations.push({ ...artifact, status: "missing", identity: null });
+        continue;
+      }
+      observations.push({ ...artifact, status: "integrity-mismatch", identity: null });
+    }
+  }
+  return observations;
+}
+
+async function inspectCandidateKnowledgeDeletionInventory(
+  storage: SqliteStorage,
+  root: string,
+  snapshot: CandidateKnowledgeDeletionDatabaseSnapshot,
+): Promise<CandidateKnowledgeDeletionPhysicalInventory> {
+  const allManaged = storage.listManagedCandidateKnowledgeSourceVersions();
+  const targetSources = await storage.listCandidateKnowledgeSources(snapshot.knowledgeBaseId);
+  const expectedSourceDirectories = new Set(
+    allManaged.map((version) => managedPathSegment(version.sourceId)),
+  );
+  const targetSourceDirectories = new Map<string, Set<string>>();
+  for (const source of targetSources) {
+    targetSourceDirectories.set(managedPathSegment(source.id), new Set<string>());
+  }
+  for (const artifact of snapshot.managedArtifacts) {
+    const sourceDirectory = managedPathSegment(artifact.sourceId);
+    const expectedFiles = targetSourceDirectories.get(sourceDirectory) ?? new Set<string>();
+    expectedFiles.add(managedPathSegment(artifact.versionId));
+    targetSourceDirectories.set(sourceDirectory, expectedFiles);
+  }
+  const inventory: MutableManagedCandidateKnowledgeFileInventory = {
+    scannedEntryCount: 0,
+    scanLimitReached: false,
+    unknownEntries: {
+      intakeShapedFilesAtSourcesRoot: 0,
+      opaqueEntriesAtSourcesRoot: 0,
+      entriesInsideManagedSourceDirectories: 0,
+      symbolicLinks: 0,
+      otherEntries: 0,
+    },
+  };
+  const inventoryFingerprints: string[] = [];
+  const targetDirectories: string[] = [];
+  const sourcesRoot = join(root, sourcesDirectory);
+  await scanManagedCandidateKnowledgeDirectory(sourcesRoot, inventory, (entry, entryPath) => {
+    inventoryFingerprints.push(`${relative(sourcesRoot, entryPath)}:${entryType(entry)}`);
+    if (entry.isSymbolicLink()) {
+      inventory.unknownEntries.symbolicLinks += 1;
+    } else if (entry.isFile()) {
+      if (intakeShapedFilename.test(entry.name)) {
+        inventory.unknownEntries.intakeShapedFilesAtSourcesRoot += 1;
+      } else {
+        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
+      }
+    } else if (entry.isDirectory()) {
+      if (!expectedSourceDirectories.has(entry.name)) {
+        inventory.unknownEntries.opaqueEntriesAtSourcesRoot += 1;
+      } else if (targetSourceDirectories.has(entry.name)) {
+        targetDirectories.push(entry.name);
+      }
+    } else {
+      inventory.unknownEntries.otherEntries += 1;
+    }
+  });
+  for (const sourceDirectory of targetDirectories) {
+    if (inventory.scanLimitReached) break;
+    const sourcePath = join(sourcesRoot, sourceDirectory);
+    try {
+      await scanManagedCandidateKnowledgeDirectory(sourcePath, inventory, (entry, entryPath) => {
+        inventoryFingerprints.push(`${relative(sourcesRoot, entryPath)}:${entryType(entry)}`);
+        if (entry.isSymbolicLink()) {
+          inventory.unknownEntries.symbolicLinks += 1;
+        } else if (entry.isFile()) {
+          const expectedFiles = targetSourceDirectories.get(sourceDirectory);
+          if (expectedFiles === undefined || !expectedFiles.has(entry.name)) {
+            inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
+          }
+        } else if (entry.isDirectory()) {
+          inventory.unknownEntries.entriesInsideManagedSourceDirectories += 1;
+        } else {
+          inventory.unknownEntries.otherEntries += 1;
+        }
+      });
+    } catch (error) {
+      if (!isMissing(error)) throw error;
+    }
+  }
+  const unknownEntries = Object.freeze({ ...inventory.unknownEntries });
+  return Object.freeze({
+    artifacts: Object.freeze([
+      ...(await observeCandidateKnowledgeDeletionArtifacts(root, snapshot)),
+    ]),
+    unknownEntries,
+    scanLimitReached: inventory.scanLimitReached,
+    inventoryDigest: deletionDigest(inventoryFingerprints.sort()),
+  });
+}
+
+function freezeCandidateKnowledgeDeletionPlan(
+  plan: CandidateKnowledgeDeletionPlan,
+): CandidateKnowledgeDeletionPlan {
+  return Object.freeze({
+    ...plan,
+    blockers: Object.freeze(plan.blockers.map((blocker) => Object.freeze({ ...blocker }))),
+    classes: Object.freeze(
+      plan.classes.map((entry) =>
+        Object.freeze({
+          ...entry,
+          preservationReasons: Object.freeze([...entry.preservationReasons]),
+        }),
+      ),
+    ),
+  });
+}
+
+function boundedDeletionCount(value: number): { readonly count: number; readonly capped: boolean } {
+  if (value <= maximumManagedCandidateKnowledgeInventoryEntries) {
+    return { count: value, capped: false };
+  }
+  return { count: maximumManagedCandidateKnowledgeInventoryEntries, capped: true };
+}
+
+function deletionBlocker(
+  code: CandidateKnowledgeDeletionBlockerCode,
+  count = 1,
+): CandidateKnowledgeDeletionBlocker {
+  return { code, count: boundedDeletionCount(count).count };
+}
+
+async function planCandidateKnowledgeBaseDeletion(
+  storage: SqliteStorage,
+  descriptor: CandidateKnowledgeStoreDescriptor,
+  root: string,
+  knowledgeBaseIdInput: string,
+): Promise<{
+  readonly plan: CandidateKnowledgeDeletionPlan;
+  readonly snapshot: CandidateKnowledgeDeletionDatabaseSnapshot;
+  readonly inventory: CandidateKnowledgeDeletionPhysicalInventory;
+}> {
+  const knowledgeBaseId = requiredManagedText(
+    knowledgeBaseIdInput,
+    "Candidate knowledge deletion knowledge base id",
+  );
+  const snapshot = storage.getCandidateKnowledgeDeletionDatabaseSnapshot(knowledgeBaseId);
+  if (snapshot.state !== "archived") {
+    throw new StorageConflictError("candidate knowledge base deletion requires an archived target");
+  }
+  if (snapshot.isDefault) {
+    throw new StorageConflictError("the default candidate knowledge base cannot be deleted");
+  }
+  const inventory = await inspectCandidateKnowledgeDeletionInventory(storage, root, snapshot);
+  const boundedSourceCount = boundedDeletionCount(snapshot.sourceCount);
+  const boundedVersionCount = boundedDeletionCount(snapshot.versionCount);
+  const boundedManagedRecordCount = boundedDeletionCount(
+    snapshot.versionCount - snapshot.unmanagedVersionCount,
+  );
+  const boundedManagedCount = boundedDeletionCount(snapshot.managedArtifacts.length);
+  const managedArtifactBytes = snapshot.managedArtifacts.reduce(
+    (total, artifact) => total + artifact.sizeBytes,
+    0,
+  );
+  const unknownTotal = Object.values(inventory.unknownEntries).reduce(
+    (total, count) => total + count,
+    0,
+  );
+  const boundedUnknown = boundedDeletionCount(unknownTotal);
+  const boundedUnmanaged = boundedDeletionCount(
+    snapshot.unmanagedVersionCount + snapshot.unmanagedSourceCount,
+  );
+  const blockers: CandidateKnowledgeDeletionBlocker[] = [];
+  const activeOverrides = snapshot.policy.activeOverrides;
+  for (const kind of ["legal-hold", "manual-preservation"] as const) {
+    const count = activeOverrides.filter((override) => override.kind === kind).length;
+    if (count > 0) blockers.push(deletionBlocker(kind, count));
+  }
+  if (snapshot.unmanagedSourceCount > 0 || snapshot.unmanagedVersionCount > 0) {
+    blockers.push(
+      deletionBlocker(
+        "unmanaged-database-records",
+        snapshot.unmanagedVersionCount + snapshot.unmanagedSourceCount,
+      ),
+    );
+  }
+  if (snapshot.pendingOperationCount > 0) {
+    blockers.push(deletionBlocker("pending-managed-write", snapshot.pendingOperationCount));
+  }
+  const missingArtifacts = inventory.artifacts.filter(
+    (artifact) => artifact.status === "missing",
+  ).length;
+  const mismatchedArtifacts = inventory.artifacts.filter(
+    (artifact) => artifact.status === "integrity-mismatch",
+  ).length;
+  if (missingArtifacts > 0)
+    blockers.push(deletionBlocker("managed-artifact-missing", missingArtifacts));
+  if (mismatchedArtifacts > 0) {
+    blockers.push(deletionBlocker("managed-artifact-integrity", mismatchedArtifacts));
+  }
+  // The durable artifact journal intentionally has a bounded count. A plan
+  // that exceeds it cannot describe an exact mutation set, so execution must
+  // remain unavailable until the inventory is reduced.
+  if (boundedManagedCount.capped) {
+    blockers.push(deletionBlocker("unknown-deletion-state"));
+  }
+  if (inventory.scanLimitReached && !boundedManagedCount.capped) {
+    blockers.push(deletionBlocker("unknown-deletion-state"));
+  }
+  const countCapped =
+    boundedSourceCount.capped ||
+    boundedVersionCount.capped ||
+    boundedManagedRecordCount.capped ||
+    boundedManagedCount.capped ||
+    boundedUnknown.capped ||
+    boundedUnmanaged.capped ||
+    inventory.scanLimitReached;
+  const blockersByClass = new Set<CandidateKnowledgeRetentionClass>();
+  for (const override of activeOverrides) blockersByClass.add(override.class);
+  const rawBlocked = blockers.length > 0;
+  const rawReasons: CandidateKnowledgeDeletionPlanClass["preservationReasons"][number][] = [];
+  if (activeOverrides.some((override) => override.class === "raw-sources")) {
+    rawReasons.push("override");
+  }
+  if (boundedUnmanaged.count > 0) rawReasons.push("unmanaged");
+  if (boundedUnknown.count > 0) rawReasons.push("unknown");
+  if (rawBlocked) rawReasons.push("blocked");
+  const rawPolicy = snapshot.policy.classes.find((entry) => entry.class === "raw-sources");
+  if (rawPolicy === undefined) {
+    throw new StorageValidationError("Candidate knowledge retention policy is incomplete.");
+  }
+  const classes: CandidateKnowledgeDeletionPlanClass[] = [
+    {
+      class: "raw-sources",
+      rule: rawPolicy.rule,
+      expireAfterDays: rawPolicy.expireAfterDays,
+      status: rawBlocked ? "blocked" : "delete",
+      ownershipStatus: boundedManagedRecordCount.count > 0 ? "owned" : "preserved",
+      managedCount: boundedManagedRecordCount.count,
+      eligibleCount: boundedManagedRecordCount.count,
+      preservedCount: boundedDeletionCount(boundedUnknown.count + boundedUnmanaged.count).count,
+      unmanagedCount: boundedUnmanaged.count,
+      unknownCount: boundedUnknown.count,
+      countCapped,
+      preservationReasons: rawReasons,
+    },
+  ];
+  for (const retentionClass of candidateKnowledgeRetentionClasses) {
+    if (retentionClass === "raw-sources") continue;
+    const classPolicy = snapshot.policy.classes.find((entry) => entry.class === retentionClass);
+    if (classPolicy === undefined) {
+      throw new StorageValidationError("Candidate knowledge retention policy is incomplete.");
+    }
+    const overridden = blockersByClass.has(retentionClass);
+    classes.push({
+      class: retentionClass,
+      rule: classPolicy.rule,
+      expireAfterDays: classPolicy.expireAfterDays,
+      status: overridden ? "blocked" : "not-materialized",
+      ownershipStatus: "not-materialized",
+      managedCount: 0,
+      eligibleCount: 0,
+      preservedCount: 0,
+      unmanagedCount: 0,
+      unknownCount: 0,
+      countCapped: false,
+      preservationReasons: overridden ? ["override", "not-materialized"] : ["not-materialized"],
+    });
+  }
+  const planWithoutToken = {
+    schemaVersion: candidateKnowledgeDeletionPlanSchemaVersion,
+    knowledgeBaseId,
+    archivedAt: snapshot.archivedAt as string,
+    status: rawBlocked ? ("blocked" as const) : ("ready" as const),
+    policyRevision: snapshot.policy.revision,
+    overrideRevision: snapshot.policy.overrideRevision,
+    sourceCount: boundedSourceCount.count,
+    versionCount: boundedVersionCount.count,
+    managedArtifactCount: boundedManagedCount.count,
+    managedArtifactBytes,
+    preservedUnknownCount: boundedUnknown.count,
+    preservedUnmanagedCount: boundedUnmanaged.count,
+    countCapped,
+    blockers,
+    classes,
+  };
+  const token = deletionDigest({
+    schemaVersion: candidateKnowledgeDeletionPlanSchemaVersion,
+    storeId: descriptor.id,
+    knowledgeBaseId,
+    state: snapshot.state,
+    isDefault: snapshot.isDefault,
+    createdAt: snapshot.createdAt,
+    updatedAt: snapshot.updatedAt,
+    archivedAt: snapshot.archivedAt,
+    policyRevision: snapshot.policy.revision,
+    overrideRevision: snapshot.policy.overrideRevision,
+    graphDigest: snapshot.graphDigest,
+    plan: planWithoutToken,
+    managedArtifacts: inventory.artifacts.map((artifact) => ({
+      sourceId: artifact.sourceId,
+      versionId: artifact.versionId,
+      checksum: artifact.checksum,
+      sizeBytes: artifact.sizeBytes,
+      status: artifact.status,
+      identity: artifact.identity,
+    })),
+    unknownEntries: inventory.unknownEntries,
+    scanLimitReached: inventory.scanLimitReached,
+    inventoryDigest: inventory.inventoryDigest,
+  });
+  return {
+    plan: freezeCandidateKnowledgeDeletionPlan({ ...planWithoutToken, confirmationToken: token }),
+    snapshot,
+    inventory,
+  };
+}
+
+class SimulatedCandidateKnowledgeDeletionInterruption extends Error {
+  public constructor(boundary: CandidateKnowledgeDeletionInterruptionBoundary) {
+    super(`Simulated candidate knowledge deletion interruption at ${boundary}.`);
+    this.name = "SimulatedCandidateKnowledgeDeletionInterruption";
+  }
+}
+
+async function interruptCandidateKnowledgeDeletionAt(
+  options: CandidateKnowledgeDeletionOptions,
+  boundary: CandidateKnowledgeDeletionInterruptionBoundary,
+): Promise<void> {
+  if (options.interruptAt === boundary) {
+    throw new SimulatedCandidateKnowledgeDeletionInterruption(boundary);
+  }
+}
+
+function deletionOperationId(confirmationToken: string): string {
+  return deletionDigest(`${confirmationToken}\u0000${randomUUID()}`);
+}
+
+function deletionStagingPath(root: string, operationId: string): string {
+  return join(root, privateDirectory, candidateKnowledgeDeletionStagingDirectory, operationId);
+}
+
+function deletionArtifactStagingPath(
+  stagingPath: string,
+  sourceId: string,
+  versionId: string,
+): string {
+  return join(stagingPath, `${managedPathSegment(sourceId)}-${managedPathSegment(versionId)}`);
+}
+
+function sameFileIdentity(first: FileIdentity, second: FileIdentity): boolean {
+  return first.dev === second.dev && first.ino === second.ino;
+}
+
+async function createCandidateKnowledgeDeletionStaging(
+  root: string,
+  operationId: string,
+): Promise<{ readonly path: string; readonly identity: FileIdentity }> {
+  const parent = join(root, privateDirectory, candidateKnowledgeDeletionStagingDirectory);
+  await mkdir(parent, { mode: 0o700, recursive: true });
+  await requireDirectory(parent, "Candidate knowledge deletion staging parent");
+  await chmodWhereSupported(parent, 0o700);
+  const path = deletionStagingPath(root, operationId);
+  try {
+    await mkdir(path, { mode: 0o700 });
+  } catch (error) {
+    if (errorCode(error) === "EEXIST") {
+      throw new StorageConflictError("Candidate knowledge deletion staging is already owned.");
+    }
+    throw error;
+  }
+  await chmodWhereSupported(path, 0o700);
+  const details = await lstat(path);
+  if (details.isSymbolicLink() || !details.isDirectory()) {
+    throw new StorageConflictError("Candidate knowledge deletion staging is not a real directory.");
+  }
+  return { path, identity: { dev: details.dev, ino: details.ino } };
+}
+
+async function verifyDeletionStagingDirectory(
+  path: string,
+  operation: CandidateKnowledgeDeletionOperationRecord,
+): Promise<FileIdentity | null> {
+  try {
+    const details = await lstat(path);
+    if (details.isSymbolicLink() || !details.isDirectory()) {
+      throw new StorageConflictError(
+        "Candidate knowledge deletion staging is not a real directory.",
+      );
+    }
+    if (
+      operation.stagingDevice !== null &&
+      operation.stagingInode !== null &&
+      (details.dev !== operation.stagingDevice || details.ino !== operation.stagingInode)
+    ) {
+      throw new StorageConflictError("Candidate knowledge deletion staging ownership changed.");
+    }
+    return { dev: details.dev, ino: details.ino };
+  } catch (error) {
+    if (isMissing(error)) return null;
+    throw error;
+  }
+}
+
+async function verifyDeletionArtifactAt(
+  path: string,
+  artifact: CandidateKnowledgeDeletionArtifactRecord,
+): Promise<{
+  readonly status: "missing" | "verified" | "preserved";
+  readonly identity?: FileIdentity;
+}> {
+  let details: Awaited<ReturnType<typeof lstat>>;
+  try {
+    details = await lstat(path);
+  } catch (error) {
+    if (isMissing(error)) return { status: "missing" };
+    return { status: "preserved" };
+  }
+  if (details.isSymbolicLink() || !details.isFile()) return { status: "preserved" };
+  const identity = { dev: details.dev, ino: details.ino };
+  if (!sameFileIdentity(identity, { dev: artifact.device, ino: artifact.inode })) {
+    return { status: "preserved" };
+  }
+  try {
+    await verifyManagedFile(path, artifact);
+  } catch {
+    return { status: "preserved" };
+  }
+  return { status: "verified", identity };
+}
+
+async function moveCandidateKnowledgeDeletionArtifactsToStaging(
+  root: string,
+  operation: CandidateKnowledgeDeletionOperationRecord,
+  stagingPath: string,
+): Promise<void> {
+  for (const artifact of operation.artifacts) {
+    const originalPath = managedVersionPath(root, artifact.sourceId, artifact.versionId);
+    const stagedPath = deletionArtifactStagingPath(
+      stagingPath,
+      artifact.sourceId,
+      artifact.versionId,
+    );
+    const staged = await verifyDeletionArtifactAt(stagedPath, artifact);
+    const original = await verifyDeletionArtifactAt(originalPath, artifact);
+    if (staged.status === "verified") {
+      if (original.status !== "missing") {
+        throw new StorageConflictError(
+          "Candidate knowledge deletion artifact exists in two locations.",
+        );
+      }
+      continue;
+    }
+    if (staged.status === "preserved") {
+      throw new StorageConflictError(
+        "Candidate knowledge deletion staging contains an unowned entry.",
+      );
+    }
+    if (original.status !== "verified") {
+      throw new StorageConflictError(
+        "Candidate knowledge deletion managed artifact changed before staging.",
+      );
+    }
+    try {
+      await rename(originalPath, stagedPath);
+    } catch (error) {
+      if (errorCode(error) === "EEXIST") {
+        throw new StorageConflictError(
+          "Candidate knowledge deletion artifact target already exists.",
+        );
+      }
+      throw error;
+    }
+    const moved = await verifyDeletionArtifactAt(stagedPath, artifact);
+    if (moved.status !== "verified") {
+      throw new StorageConflictError(
+        "Candidate knowledge deletion artifact changed while staging.",
+      );
+    }
+  }
+}
+
+async function verifyCandidateKnowledgeDeletionStagingArtifacts(
+  root: string,
+  operation: CandidateKnowledgeDeletionOperationRecord,
+  stagingPath: string,
+): Promise<void> {
+  const stagingIdentity = await verifyDeletionStagingDirectory(stagingPath, operation);
+  if (stagingIdentity === null) {
+    throw new StorageConflictError("Candidate knowledge deletion staging disappeared.");
+  }
+  for (const artifact of operation.artifacts) {
+    const stagedPath = deletionArtifactStagingPath(
+      stagingPath,
+      artifact.sourceId,
+      artifact.versionId,
+    );
+    const originalPath = managedVersionPath(root, artifact.sourceId, artifact.versionId);
+    const staged = await verifyDeletionArtifactAt(stagedPath, artifact);
+    const original = await verifyDeletionArtifactAt(originalPath, artifact);
+    if (staged.status !== "verified" || original.status !== "missing") {
+      throw new StorageConflictError("Candidate knowledge deletion staging inventory changed.");
+    }
+  }
+}
+
+async function cleanupCandidateKnowledgeDeletionStaging(
+  root: string,
+  operation: CandidateKnowledgeDeletionOperationRecord,
+): Promise<void> {
+  const stagingPath = deletionStagingPath(root, operation.operationId);
+  const identity = await verifyDeletionStagingDirectory(stagingPath, operation);
+  if (identity !== null) {
+    const entries = await readDirectoryEntriesSafely(stagingPath);
+    const expected = new Map(
+      operation.artifacts.map((artifact) => [
+        `${managedPathSegment(artifact.sourceId)}-${managedPathSegment(artifact.versionId)}`,
+        artifact,
+      ]),
+    );
+    for (const entry of entries) {
+      const artifact = expected.get(entry.name);
+      if (artifact === undefined || !entry.isFile()) {
+        throw new StorageConflictError(
+          "Candidate knowledge deletion staging contains an unowned entry.",
+        );
+      }
+      const path = join(stagingPath, entry.name);
+      const observed = await verifyDeletionArtifactAt(path, artifact);
+      if (observed.status !== "verified" || observed.identity === undefined) {
+        throw new StorageConflictError(
+          "Candidate knowledge deletion staging artifact is not owned.",
+        );
+      }
+      await removeRegularFileIfIdentityMatches(path, observed.identity);
+    }
+    await removeEmptyDirectoryIfIdentityMatches(stagingPath, identity);
+  }
+  await removeCandidateKnowledgeDeletionSourceDirectories(root, operation);
+}
+
+async function removeCandidateKnowledgeDeletionSourceDirectories(
+  root: string,
+  operation: CandidateKnowledgeDeletionOperationRecord,
+): Promise<void> {
+  const sourceIds = [...new Set(operation.artifacts.map((artifact) => artifact.sourceId))];
+  for (const sourceId of sourceIds) {
+    const path = join(root, sourcesDirectory, managedPathSegment(sourceId));
+    let details: Awaited<ReturnType<typeof lstat>>;
+    try {
+      details = await lstat(path);
+    } catch (error) {
+      if (isMissing(error)) continue;
+      throw error;
+    }
+    if (details.isSymbolicLink() || !details.isDirectory()) continue;
+    const entries = await readDirectoryEntriesSafely(path);
+    if (entries.length > 0) continue;
+    // The helper re-checks lstat identity immediately before rmdir. A race
+    // that adds an unknown entry therefore leaves the directory untouched.
+    await removeEmptyDirectoryIfIdentityMatches(path, { dev: details.dev, ino: details.ino });
+  }
+}
+
+async function restoreCandidateKnowledgeDeletionArtifacts(
+  root: string,
+  operation: CandidateKnowledgeDeletionOperationRecord,
+): Promise<boolean> {
+  const stagingPath = deletionStagingPath(root, operation.operationId);
+  const identity = await verifyDeletionStagingDirectory(stagingPath, operation);
+  if (identity === null) return true;
+  let restored = true;
+  for (const artifact of operation.artifacts) {
+    const originalPath = managedVersionPath(root, artifact.sourceId, artifact.versionId);
+    const stagedPath = deletionArtifactStagingPath(
+      stagingPath,
+      artifact.sourceId,
+      artifact.versionId,
+    );
+    const staged = await verifyDeletionArtifactAt(stagedPath, artifact);
+    const original = await verifyDeletionArtifactAt(originalPath, artifact);
+    if (staged.status === "missing") {
+      if (original.status === "verified") continue;
+      restored = false;
+      continue;
+    }
+    if (staged.status !== "verified" || original.status !== "missing") {
+      restored = false;
+      continue;
+    }
+    try {
+      await rename(stagedPath, originalPath);
+    } catch {
+      restored = false;
+    }
+  }
+  if (!restored) return false;
+  await removeEmptyDirectoryIfIdentityMatches(stagingPath, identity);
+  return true;
+}
+
+async function readDirectoryEntriesSafely(path: string): Promise<readonly Dirent[]> {
+  const directory = await opendir(path);
+  const entries: Dirent[] = [];
+  try {
+    while (true) {
+      const entry = await directory.read();
+      if (entry === null) break;
+      entries.push(entry);
+    }
+  } finally {
+    await directory.close().catch((error: unknown) => {
+      if (errorCode(error) !== "ERR_DIR_CLOSED") throw error;
+    });
+  }
+  return entries;
+}
+
+async function recoverIncompleteCandidateKnowledgeDeletions(
+  storage: SqliteStorage,
+  root: string,
+): Promise<void> {
+  const lease = currentCandidateKnowledgeWriterLease(root);
+  const operations = await storage.listCandidateKnowledgeDeletionOperations();
+  for (const operation of operations) {
+    lease.assertCurrent();
+    lease.renew();
+    if (operation.phase === "completed") continue;
+    if (operation.phase === "committed") {
+      await cleanupCandidateKnowledgeDeletionStaging(root, operation);
+      lease.assertCurrent();
+      await storage.completeCandidateKnowledgeDeletion(
+        operation.operationId,
+        new Date(
+          Math.max(Date.now(), Date.parse(operation.committedAt ?? operation.createdAt)),
+        ).toISOString(),
+      );
+      continue;
+    }
+    if (operation.phase === "aborted") {
+      const restored = await restoreCandidateKnowledgeDeletionArtifacts(root, operation);
+      if (!restored) {
+        throw new StorageConflictError(
+          "Candidate knowledge deletion recovery could not restore its original graph.",
+        );
+      }
+      continue;
+    }
+    const restored = await restoreCandidateKnowledgeDeletionArtifacts(root, operation);
+    if (!restored) {
+      throw new StorageConflictError(
+        "Candidate knowledge deletion recovery could not restore its original graph.",
+      );
+    }
+    lease.assertCurrent();
+    await storage.abortCandidateKnowledgeDeletion(operation.operationId);
+  }
+}
+
 function parseDescriptor(value: unknown): CandidateKnowledgeStoreDescriptor {
   try {
     return candidateKnowledgeStoreSchema.parse(value) as CandidateKnowledgeStoreDescriptor;
@@ -4199,6 +5046,202 @@ async function moveManagedCandidateKnowledgeDirectoryMember(
   });
 }
 
+function deletionResultFromAudit(
+  audit: CandidateKnowledgeDeletionAuditRecord,
+): CandidateKnowledgeDeletionResult {
+  return Object.freeze({
+    schemaVersion: candidateKnowledgeDeletionPlanSchemaVersion,
+    status: "deleted",
+    knowledgeBaseId: audit.knowledgeBaseId,
+    operationId: audit.operationId,
+    auditId: audit.auditId,
+    confirmationToken: audit.confirmationToken,
+    completedAt: audit.completedAt,
+    managedArtifactCount: audit.counts.managedArtifactCount,
+    managedArtifactBytes: audit.counts.managedArtifactBytes,
+    preservedUnknownCount: audit.counts.preservedUnknownCount,
+    preservedUnmanagedCount: audit.counts.preservedUnmanagedCount,
+    countCapped: audit.counts.countCapped,
+    audit,
+  });
+}
+
+function requiredDeletionConfirmationToken(value: string): string {
+  const token = requiredManagedText(value, "Candidate knowledge deletion confirmation token");
+  if (!/^[0-9a-f]{64}$/.test(token)) {
+    throw new StorageValidationError("Candidate knowledge deletion confirmation token is invalid.");
+  }
+  return token;
+}
+
+async function deleteCandidateKnowledgeBase(
+  storage: SqliteStorage,
+  descriptor: CandidateKnowledgeStoreDescriptor,
+  root: string,
+  knowledgeBaseIdInput: string,
+  confirmationTokenInput: string,
+  options: CandidateKnowledgeDeletionOptions = {},
+): Promise<CandidateKnowledgeDeletionResult> {
+  const knowledgeBaseId = requiredManagedText(
+    knowledgeBaseIdInput,
+    "Candidate knowledge deletion knowledge base id",
+  );
+  const confirmationToken = requiredDeletionConfirmationToken(confirmationTokenInput);
+  // A retry may run in the same process after an injected interruption. Run
+  // the same journal recovery used during store-open so the retry observes a
+  // stable graph and can safely reuse an aborted operation.
+  await recoverIncompleteCandidateKnowledgeDeletions(storage, root);
+  const existingAudit = await storage.getCandidateKnowledgeDeletionAuditByToken(confirmationToken);
+  if (existingAudit !== undefined) {
+    if (existingAudit.knowledgeBaseId !== knowledgeBaseId) {
+      throw new StorageConflictError("Candidate knowledge deletion confirmation is mismatched.");
+    }
+    return deletionResultFromAudit(existingAudit);
+  }
+
+  const planned = await planCandidateKnowledgeBaseDeletion(
+    storage,
+    descriptor,
+    root,
+    knowledgeBaseId,
+  );
+  if (planned.plan.confirmationToken !== confirmationToken) {
+    throw new StorageConflictError("Candidate knowledge deletion confirmation is stale.");
+  }
+  if (planned.plan.status !== "ready") {
+    throw new StorageConflictError("Candidate knowledge deletion is blocked by its current state.");
+  }
+  await options.beforeIntent?.();
+  await interruptCandidateKnowledgeDeletionAt(options, "intent");
+
+  const verifiedArtifacts = planned.inventory.artifacts.filter(
+    (
+      artifact,
+    ): artifact is CandidateKnowledgeDeletionArtifactObservation & {
+      readonly identity: FileIdentity;
+    } => artifact.status === "verified" && artifact.identity !== null,
+  );
+  if (verifiedArtifacts.length !== planned.snapshot.managedArtifacts.length) {
+    throw new StorageConflictError("Candidate knowledge deletion artifact inventory changed.");
+  }
+  const existingOperation = (await storage.listCandidateKnowledgeDeletionOperations()).find(
+    (candidate) => candidate.confirmationToken === confirmationToken,
+  );
+  if (existingOperation !== undefined && existingOperation.knowledgeBaseId !== knowledgeBaseId) {
+    throw new StorageConflictError("Candidate knowledge deletion confirmation is mismatched.");
+  }
+  const operationId = existingOperation?.operationId ?? deletionOperationId(confirmationToken);
+  const createdAt = currentKnowledgeStoreTimestamp();
+  const operationInput: CandidateKnowledgeDeletionOperationInput = {
+    operationId,
+    knowledgeBaseId,
+    confirmationToken,
+    graphDigest: planned.snapshot.graphDigest,
+    createdAt,
+    managedArtifactCount: planned.plan.managedArtifactCount,
+    managedArtifactBytes: planned.plan.managedArtifactBytes,
+    preservedUnknownCount: planned.plan.preservedUnknownCount,
+    preservedUnmanagedCount: planned.plan.preservedUnmanagedCount,
+    countCapped: planned.plan.countCapped,
+    artifacts: verifiedArtifacts.map((artifact) => ({
+      sourceId: artifact.sourceId,
+      versionId: artifact.versionId,
+      checksum: artifact.checksum,
+      sizeBytes: artifact.sizeBytes,
+      device: artifact.identity.dev,
+      inode: artifact.identity.ino,
+    })),
+  };
+  await storage.beginCandidateKnowledgeDeletion(operationInput);
+  let logicallyCommitted = false;
+  let stagingCreated = false;
+  try {
+    await options.beforeStaging?.();
+    const staging = await createCandidateKnowledgeDeletionStaging(root, operationId);
+    stagingCreated = true;
+    await storage.stageCandidateKnowledgeDeletion(
+      operationId,
+      staging.identity.dev,
+      staging.identity.ino,
+    );
+    const stagedOperation = (await storage.listCandidateKnowledgeDeletionOperations()).find(
+      (candidate) => candidate.operationId === operationId,
+    );
+    if (stagedOperation === undefined) {
+      throw new StorageConflictError("Candidate knowledge deletion operation disappeared.");
+    }
+    await moveCandidateKnowledgeDeletionArtifactsToStaging(root, stagedOperation, staging.path);
+    await interruptCandidateKnowledgeDeletionAt(options, "staging");
+    await options.beforeCommit?.();
+    await verifyCandidateKnowledgeDeletionStagingArtifacts(root, stagedOperation, staging.path);
+    await interruptCandidateKnowledgeDeletionAt(options, "before-commit");
+    const commitInput: CandidateKnowledgeDeletionCommitInput = {
+      operationId,
+      knowledgeBaseId,
+      confirmationToken,
+      graphDigest: planned.snapshot.graphDigest,
+      committedAt: currentKnowledgeStoreTimestamp(),
+    };
+    await storage.commitCandidateKnowledgeDeletion(commitInput);
+    logicallyCommitted = true;
+    await options.afterCommit?.();
+    await interruptCandidateKnowledgeDeletionAt(options, "commit");
+    await interruptCandidateKnowledgeDeletionAt(options, "after-commit");
+    await options.beforeStagingCleanup?.();
+    await interruptCandidateKnowledgeDeletionAt(options, "staging-cleanup");
+    const committedOperation = (await storage.listCandidateKnowledgeDeletionOperations()).find(
+      (candidate) => candidate.operationId === operationId,
+    );
+    if (committedOperation === undefined) {
+      throw new StorageConflictError("Candidate knowledge deletion operation disappeared.");
+    }
+    await cleanupCandidateKnowledgeDeletionStaging(root, committedOperation);
+    await options.afterStagingCleanup?.();
+    await interruptCandidateKnowledgeDeletionAt(options, "after-staging-cleanup");
+    const audit = await storage.completeCandidateKnowledgeDeletion(
+      operationId,
+      currentKnowledgeStoreTimestamp(),
+    );
+    return deletionResultFromAudit(audit);
+  } catch (error) {
+    if (logicallyCommitted || error instanceof SimulatedCandidateKnowledgeDeletionInterruption) {
+      throw error;
+    }
+    const operation = (await storage.listCandidateKnowledgeDeletionOperations()).find(
+      (candidate) => candidate.operationId === operationId,
+    );
+    if (
+      operation !== undefined &&
+      operation.phase !== "committed" &&
+      operation.phase !== "completed"
+    ) {
+      const restored = await restoreCandidateKnowledgeDeletionArtifacts(root, operation);
+      if (restored) {
+        await storage.abortCandidateKnowledgeDeletion(operationId);
+      } else {
+        throw new StorageConflictError(
+          "Candidate knowledge deletion failed and its original graph could not be restored.",
+        );
+      }
+    }
+    if (stagingCreated) {
+      // The operation owns this namespace. Cleanup is best effort after a
+      // successful restore; an inaccessible remainder is recovered on open.
+      try {
+        const afterAbort = (await storage.listCandidateKnowledgeDeletionOperations()).find(
+          (candidate) => candidate.operationId === operationId,
+        );
+        if (afterAbort !== undefined && afterAbort.phase === "aborted") {
+          await restoreCandidateKnowledgeDeletionArtifacts(root, afterAbort);
+        }
+      } catch {
+        // Preserve the original failure and let deterministic open recovery retry.
+      }
+    }
+    throw error;
+  }
+}
+
 function createHandle(
   descriptor: CandidateKnowledgeStoreDescriptor,
   root: string,
@@ -4500,6 +5543,24 @@ function createHandle(
       coordinateWrite("ckb-retention-plan", () =>
         planCandidateKnowledgeRetention(storage, root, knowledgeBaseId, asOf),
       ),
+    planCandidateKnowledgeBaseDeletion: (knowledgeBaseId) =>
+      coordinateWrite(
+        "ckb-deletion-plan",
+        async () =>
+          (await planCandidateKnowledgeBaseDeletion(storage, descriptor, root, knowledgeBaseId))
+            .plan,
+      ),
+    deleteCandidateKnowledgeBase: (knowledgeBaseId, confirmationToken, options) =>
+      coordinateWrite("ckb-deletion", () =>
+        deleteCandidateKnowledgeBase(
+          storage,
+          descriptor,
+          root,
+          knowledgeBaseId,
+          confirmationToken,
+          options,
+        ),
+      ),
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
       coordinateWrite("ckb-managed-file-create", () =>
         writeManagedCandidateKnowledgeFile(storage, root, {
@@ -4592,6 +5653,7 @@ export async function openCandidateKnowledgeStore(
         storage = openSqliteStorage(databasePath);
         await validateOpenedStore(storage, descriptor);
         const report = await recoverIncompleteManagedCandidateKnowledgeWrites(storage, root);
+        await recoverIncompleteCandidateKnowledgeDeletions(storage, root);
         await validateOpenedStore(storage, descriptor);
         await validateManagedCandidateKnowledgeFiles(storage, root);
         return report;

@@ -2922,6 +2922,54 @@ describe("candidate knowledge native controls", () => {
         },
       });
       expect(JSON.stringify(archived)).not.toContain(parent);
+      const deletionPreview = await createHost.invoke({
+        type: "knowledge.delete-base-preview",
+        input: { storeId, knowledgeBaseId: additionalId },
+      });
+      expect(deletionPreview).toMatchObject({
+        ok: true,
+        value: {
+          schemaVersion: 1,
+          knowledgeBaseId: additionalId,
+          status: "ready",
+          blockers: [],
+        },
+      });
+      expect(JSON.stringify(deletionPreview)).not.toContain(parent);
+      if (!deletionPreview.ok) throw new Error("Expected deletion preview to succeed.");
+      const confirmationToken = (deletionPreview.value as { confirmationToken: string })
+        .confirmationToken;
+      await expect(
+        createHost.invoke({
+          type: "knowledge.delete-base",
+          input: {
+            storeId,
+            knowledgeBaseId: additionalId,
+            confirmationToken,
+            confirmed: false,
+          },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      const deleted = await createHost.invoke({
+        type: "knowledge.delete-base",
+        input: {
+          storeId,
+          knowledgeBaseId: additionalId,
+          confirmationToken,
+          confirmed: true,
+        },
+      });
+      expect(deleted).toMatchObject({
+        ok: true,
+        value: { schemaVersion: 1, status: "deleted", knowledgeBaseId: additionalId },
+      });
+      expect(JSON.stringify(deleted)).not.toContain(parent);
+      await expect(
+        createHost.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { storeId, knowledgeBases: [{ id: knowledgeBaseId, isDefault: true }] },
+      });
       await expect(
         createHost.invoke({
           type: "knowledge.archive-base",

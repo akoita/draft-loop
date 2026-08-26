@@ -7338,4 +7338,464 @@ describe("portable candidate knowledge store", () => {
     );
     await reopened.close();
   });
+
+  it("previews and deletes one archived non-default knowledge base", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "evidence.md");
+    const content = "Deletion-safe evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-archived",
+      displayName: "Archived",
+      isDefault: false,
+      createdAt,
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "deletion-source",
+        knowledgeBaseId: "ckb-archived",
+        kind: "file",
+        displayName: "Evidence",
+        createdAt,
+      },
+      managedVersion(sourcePath, content, {
+        id: "deletion-version",
+      }),
+    );
+    await store.archiveCandidateKnowledgeBase("ckb-archived", "2026-08-21T14:02:00.000Z");
+
+    const plan = await store.planCandidateKnowledgeBaseDeletion("ckb-archived");
+    expect(plan).toMatchObject({
+      schemaVersion: 1,
+      knowledgeBaseId: "ckb-archived",
+      status: "ready",
+      sourceCount: 1,
+      versionCount: 1,
+      managedArtifactCount: 1,
+      preservedUnknownCount: 0,
+      preservedUnmanagedCount: 0,
+    });
+    expect(plan.classes).toHaveLength(6);
+    expect(plan.classes.find((entry) => entry.class === "raw-sources")).toMatchObject({
+      status: "delete",
+      managedCount: 1,
+    });
+    expect(JSON.stringify(plan)).not.toContain(sourcePath);
+    expect(JSON.stringify(plan)).not.toContain("Evidence");
+
+    const result = await store.deleteCandidateKnowledgeBase("ckb-archived", plan.confirmationToken);
+    expect(result).toMatchObject({
+      schemaVersion: 1,
+      status: "deleted",
+      knowledgeBaseId: "ckb-archived",
+      managedArtifactCount: 1,
+      audit: { status: "completed" },
+    });
+    await expect(store.getCandidateKnowledgeBase("ckb-archived")).resolves.toBeUndefined();
+    await expect(
+      lstat(join(root, "sources", digestSegment("deletion-source"))),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(store.getCandidateKnowledgeBase("ckb-default")).resolves.toMatchObject({
+      isDefault: true,
+    });
+    await store.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    await expect(reopened.getCandidateKnowledgeBase("ckb-archived")).resolves.toBeUndefined();
+    await reopened.close();
+  });
+
+  it("recovers staged and logically committed deletion interruptions", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "evidence.md");
+    const content = "Recoverable evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-staged",
+      displayName: "Staged",
+      isDefault: false,
+      createdAt,
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "staged-source",
+        knowledgeBaseId: "ckb-staged",
+        kind: "file",
+        displayName: "Staged evidence",
+        createdAt,
+      },
+      managedVersion(sourcePath, content, { id: "staged-version" }),
+    );
+    await store.archiveCandidateKnowledgeBase("ckb-staged", "2026-08-21T14:02:00.000Z");
+    const stagedPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-staged");
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-staged", stagedPlan.confirmationToken, {
+        interruptAt: "staging",
+      }),
+    ).rejects.toThrow(/interruption/i);
+    await store.close();
+
+    const recovered = await openCandidateKnowledgeStore(root);
+    await expect(recovered.getCandidateKnowledgeBase("ckb-staged")).resolves.toMatchObject({
+      state: "archived",
+    });
+    await expect(recovered.planCandidateKnowledgeBaseDeletion("ckb-staged")).resolves.toEqual(
+      stagedPlan,
+    );
+    const stagedResult = await recovered.deleteCandidateKnowledgeBase(
+      "ckb-staged",
+      stagedPlan.confirmationToken,
+    );
+    expect(stagedResult.status).toBe("deleted");
+
+    await recovered.createCandidateKnowledgeBase({
+      id: "ckb-committed",
+      displayName: "Committed",
+      isDefault: false,
+      createdAt: "2026-08-21T14:03:00.000Z",
+    });
+    await recovered.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "committed-source",
+        knowledgeBaseId: "ckb-committed",
+        kind: "file",
+        displayName: "Committed evidence",
+        createdAt,
+      },
+      managedVersion(sourcePath, content, { id: "committed-version" }),
+    );
+    await recovered.archiveCandidateKnowledgeBase("ckb-committed", "2026-08-21T14:04:00.000Z");
+    const committedPlan = await recovered.planCandidateKnowledgeBaseDeletion("ckb-committed");
+    await expect(
+      recovered.deleteCandidateKnowledgeBase("ckb-committed", committedPlan.confirmationToken, {
+        interruptAt: "after-staging-cleanup",
+      }),
+    ).rejects.toThrow(/interruption/i);
+    await recovered.close();
+
+    const reopened = await openCandidateKnowledgeStore(root);
+    const committedRetry = await reopened.deleteCandidateKnowledgeBase(
+      "ckb-committed",
+      committedPlan.confirmationToken,
+    );
+    expect(committedRetry.status).toBe("deleted");
+    await expect(reopened.getCandidateKnowledgeBase("ckb-committed")).resolves.toBeUndefined();
+    await reopened.close();
+  });
+
+  it("fails closed for active, default, unmanaged, and stale deletion confirmations", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "evidence.md");
+    await writeFile(sourcePath, "Deletion evidence", "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-active",
+      displayName: "Active",
+      isDefault: false,
+      createdAt,
+    });
+    await expect(store.planCandidateKnowledgeBaseDeletion("ckb-active")).rejects.toThrow(
+      /archived/i,
+    );
+    await expect(store.planCandidateKnowledgeBaseDeletion("ckb-default")).rejects.toThrow(
+      /archived|default/i,
+    );
+
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-unmanaged",
+      displayName: "Unmanaged",
+      isDefault: false,
+      createdAt: "2026-08-21T14:01:00.000Z",
+    });
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "unmanaged-source",
+        knowledgeBaseId: "ckb-unmanaged",
+        kind: "file",
+        displayName: "Unmanaged evidence",
+        createdAt,
+      },
+      {
+        id: "unmanaged-version",
+        mediaType: "text/plain",
+        checksum: sha256("Deletion evidence"),
+        sizeBytes: Buffer.byteLength("Deletion evidence"),
+        createdAt,
+      },
+    );
+    await store.archiveCandidateKnowledgeBase("ckb-unmanaged", "2026-08-21T14:02:00.000Z");
+    const unmanagedPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-unmanaged");
+    expect(unmanagedPlan.status).toBe("blocked");
+    expect(unmanagedPlan.blockers).toContainEqual(
+      expect.objectContaining({ code: "unmanaged-database-records" }),
+    );
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-unmanaged", unmanagedPlan.confirmationToken),
+    ).rejects.toThrow(/blocked/i);
+    await expect(store.getCandidateKnowledgeBase("ckb-unmanaged")).resolves.toMatchObject({
+      state: "archived",
+    });
+
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-stale",
+      displayName: "Stale",
+      isDefault: false,
+      createdAt: "2026-08-21T14:03:00.000Z",
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "stale-source",
+        knowledgeBaseId: "ckb-stale",
+        kind: "file",
+        displayName: "Stale evidence",
+        createdAt,
+      },
+      managedVersion(sourcePath, "Deletion evidence", { id: "stale-version" }),
+    );
+    await store.archiveCandidateKnowledgeBase("ckb-stale", "2026-08-21T14:04:00.000Z");
+    const stalePlan = await store.planCandidateKnowledgeBaseDeletion("ckb-stale");
+    await writeFile(join(root, "sources", "unknown-artifact.bin"), "preserve", "utf8");
+    const changedPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-stale");
+    expect(changedPlan.confirmationToken).not.toBe(stalePlan.confirmationToken);
+    expect(changedPlan.preservedUnknownCount).toBe(1);
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-stale", stalePlan.confirmationToken),
+    ).rejects.toThrow(/stale/i);
+    await store.close();
+  });
+
+  it("deletes managed URL records without treating them as filesystem blobs", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-url",
+      displayName: "URL archive",
+      isDefault: false,
+      createdAt,
+    });
+    await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "url-source",
+        knowledgeBaseId: "ckb-url",
+        kind: "url",
+        displayName: "URL evidence",
+        createdAt,
+      },
+      managedUrlVersion(new TextEncoder().encode("URL response"), {
+        id: "url-version",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      }),
+    );
+    await store.archiveCandidateKnowledgeBase("ckb-url", "2026-08-21T14:02:00.000Z");
+    const plan = await store.planCandidateKnowledgeBaseDeletion("ckb-url");
+    expect(plan).toMatchObject({
+      status: "ready",
+      sourceCount: 1,
+      versionCount: 1,
+      managedArtifactCount: 0,
+      managedArtifactBytes: 0,
+    });
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-url", plan.confirmationToken),
+    ).resolves.toMatchObject({ status: "deleted", managedArtifactCount: 0 });
+    await store.close();
+  });
+
+  it("blocks legal holds and manual preservation until released, binding each token revision", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "held-evidence.md");
+    const content = "Held evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-held",
+      displayName: "Held",
+      isDefault: false,
+      createdAt,
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "held-source",
+        knowledgeBaseId: "ckb-held",
+        kind: "file",
+        displayName: "Held evidence",
+        createdAt,
+      },
+      managedVersion(sourcePath, content, { id: "held-version" }),
+    );
+    const sourceDirectory = join(root, "sources", digestSegment("held-source"));
+    const unknownPath = join(sourceDirectory, "preserve-me.bin");
+    await writeFile(unknownPath, "preserve", "utf8");
+    await store.archiveCandidateKnowledgeBase("ckb-held", "2026-08-21T14:02:00.000Z");
+
+    const baseline = await store.planCandidateKnowledgeBaseDeletion("ckb-held");
+    const policy = await store.getCandidateKnowledgeRetentionPolicy("ckb-held");
+    const held = await store.applyCandidateKnowledgeRetentionOverride("ckb-held", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: policy.revision,
+      expectedState: "none",
+      changedAt: "2026-08-21T14:03:00.000Z",
+    });
+    const legalHoldPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-held");
+    expect(legalHoldPlan.status).toBe("blocked");
+    expect(legalHoldPlan.blockers).toContainEqual(expect.objectContaining({ code: "legal-hold" }));
+    expect(legalHoldPlan.confirmationToken).not.toBe(baseline.confirmationToken);
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-held", legalHoldPlan.confirmationToken),
+    ).rejects.toThrow(/blocked/i);
+
+    await store.releaseCandidateKnowledgeRetentionOverride("ckb-held", {
+      class: "raw-sources",
+      kind: "legal-hold",
+      expectedPolicyRevision: held.revision,
+      expectedState: "applied",
+      changedAt: "2026-08-21T14:04:00.000Z",
+    });
+    const releasedLegalHoldPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-held");
+    expect(releasedLegalHoldPlan.status).toBe("ready");
+    expect(releasedLegalHoldPlan.confirmationToken).not.toBe(legalHoldPlan.confirmationToken);
+
+    const manual = await store.applyCandidateKnowledgeRetentionOverride("ckb-held", {
+      class: "raw-sources",
+      kind: "manual-preservation",
+      expectedPolicyRevision: held.revision,
+      expectedState: "none",
+      changedAt: "2026-08-21T14:05:00.000Z",
+    });
+    const manualPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-held");
+    expect(manualPlan.status).toBe("blocked");
+    expect(manualPlan.blockers).toContainEqual(
+      expect.objectContaining({ code: "manual-preservation" }),
+    );
+    expect(manualPlan.confirmationToken).not.toBe(releasedLegalHoldPlan.confirmationToken);
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-held", manualPlan.confirmationToken),
+    ).rejects.toThrow(/blocked/i);
+
+    await store.releaseCandidateKnowledgeRetentionOverride("ckb-held", {
+      class: "raw-sources",
+      kind: "manual-preservation",
+      expectedPolicyRevision: manual.revision,
+      expectedState: "applied",
+      changedAt: "2026-08-21T14:06:00.000Z",
+    });
+    const readyPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-held");
+    expect(readyPlan.status).toBe("ready");
+    expect(readyPlan.confirmationToken).not.toBe(manualPlan.confirmationToken);
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-held", readyPlan.confirmationToken),
+    ).resolves.toMatchObject({ status: "deleted", preservedUnknownCount: 1 });
+    await expect(readFile(unknownPath, "utf8")).resolves.toBe("preserve");
+    expect((await lstat(sourceDirectory)).isDirectory()).toBe(true);
+    await store.close();
+  });
+
+  it("does not allow a valid confirmation token to target another knowledge base", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "cross-ckb-evidence.md");
+    const content = "Cross CKB evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    for (const knowledgeBaseId of ["ckb-a", "ckb-b"] as const) {
+      await store.createCandidateKnowledgeBase({
+        id: knowledgeBaseId,
+        displayName: knowledgeBaseId,
+        isDefault: false,
+        createdAt,
+      });
+      await store.createManagedCandidateKnowledgeFileSource(
+        {
+          id: `${knowledgeBaseId}-source`,
+          knowledgeBaseId,
+          kind: "file",
+          displayName: `${knowledgeBaseId} evidence`,
+          createdAt,
+        },
+        managedVersion(sourcePath, content, { id: `${knowledgeBaseId}-version` }),
+      );
+      await store.archiveCandidateKnowledgeBase(knowledgeBaseId, "2026-08-21T14:02:00.000Z");
+    }
+    const planA = await store.planCandidateKnowledgeBaseDeletion("ckb-a");
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-b", planA.confirmationToken),
+    ).rejects.toThrow(/stale|mismatch/i);
+    await expect(store.getCandidateKnowledgeBase("ckb-a")).resolves.toMatchObject({
+      state: "archived",
+    });
+    await expect(store.getCandidateKnowledgeBase("ckb-b")).resolves.toMatchObject({
+      state: "archived",
+    });
+    await store.close();
+  });
+
+  it("recreates immutable delete triggers after successful and failed deletion transactions", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const sourcePath = join(parent, "trigger-evidence.md");
+    const content = "Trigger evidence";
+    await writeFile(sourcePath, content, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-success",
+      displayName: "Successful deletion",
+      isDefault: false,
+      createdAt,
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "success-source",
+        knowledgeBaseId: "ckb-success",
+        kind: "file",
+        displayName: "Success evidence",
+        createdAt,
+      },
+      managedVersion(sourcePath, content, { id: "success-version" }),
+    );
+    await store.archiveCandidateKnowledgeBase("ckb-success", "2026-08-21T14:02:00.000Z");
+    const successPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-success");
+    await store.deleteCandidateKnowledgeBase("ckb-success", successPlan.confirmationToken);
+
+    await store.createCandidateKnowledgeBase({
+      id: "ckb-failed",
+      displayName: "Failed deletion",
+      isDefault: false,
+      createdAt: "2026-08-21T14:03:00.000Z",
+    });
+    await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "failed-source",
+        knowledgeBaseId: "ckb-failed",
+        kind: "file",
+        displayName: "Failed evidence",
+        createdAt,
+      },
+      managedVersion(sourcePath, content, { id: "failed-version" }),
+    );
+    await store.archiveCandidateKnowledgeBase("ckb-failed", "2026-08-21T14:04:00.000Z");
+    const failedPlan = await store.planCandidateKnowledgeBaseDeletion("ckb-failed");
+    await expect(
+      store.deleteCandidateKnowledgeBase("ckb-failed", failedPlan.confirmationToken, {
+        beforeCommit: async () => {
+          throw new Error("injected deletion failure");
+        },
+      }),
+    ).rejects.toThrow("injected deletion failure");
+
+    await expect(() =>
+      mutateDatabase(
+        root,
+        "DELETE FROM candidate_knowledge_sources WHERE id IN ('success-source', 'failed-source')",
+      ),
+    ).toThrow(/immutable/i);
+    await store.close();
+  });
 });

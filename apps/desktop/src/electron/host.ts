@@ -53,6 +53,8 @@ import {
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
+  type KnowledgeBaseDeletionPlanResult,
+  type KnowledgeBaseDeletionResult,
   type KnowledgeDirectoryAddMembersResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeDirectoryImportSourceResult,
@@ -3313,6 +3315,44 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ok: true,
             value: verifiedKnowledgeStoreResult(command.input.storeId, view),
           };
+        }
+        case "knowledge.delete-base-preview": {
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const plan = await knowledgeService.previewKnowledgeBaseDeletion({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+          });
+          return { ok: true, value: plan satisfies KnowledgeBaseDeletionPlanResult };
+        }
+        case "knowledge.delete-base": {
+          if (!command.input.confirmed) {
+            return fail(
+              "permission-denied",
+              "Confirm deletion after reviewing the current deletion preview.",
+            );
+          }
+          const root = knowledgeStoreRoot(command.input.storeId);
+          const deleted = await knowledgeService.deleteKnowledgeBase({
+            storeRoot: root,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            confirmationToken: command.input.confirmationToken,
+            approved: true,
+          });
+          const result: KnowledgeBaseDeletionResult = {
+            schemaVersion: deleted.schemaVersion,
+            status: deleted.status,
+            knowledgeBaseId: deleted.knowledgeBaseId,
+            operationId: deleted.operationId,
+            auditId: deleted.auditId,
+            confirmationToken: deleted.confirmationToken,
+            completedAt: deleted.completedAt,
+            managedArtifactCount: deleted.managedArtifactCount,
+            managedArtifactBytes: deleted.managedArtifactBytes,
+            preservedUnknownCount: deleted.preservedUnknownCount,
+            preservedUnmanagedCount: deleted.preservedUnmanagedCount,
+            countCapped: deleted.countCapped,
+          };
+          return { ok: true, value: result };
         }
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);

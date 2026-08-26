@@ -200,11 +200,11 @@ evidence. The match is runtime-only; paths and integrity tuples are not
 returned. Append-only root and member revisions preserve historical roots and
 membership hashes while current views expose the latest verified state.
 
-Applied rename inference, automatic move inference, physical deletion, remaining
-lifecycle adapters, indexing, and background refresh remain deferred under
-their owning roadmap issues. Explicit reconciliation and lifecycle projection do not imply
-automatic discovery, retirement, cleanup, or retrieval eligibility outside the
-returned snapshot.
+Applied rename inference, automatic move inference, general destructive cleanup,
+remaining lifecycle adapters, indexing, and background refresh remain deferred
+under their owning roadmap issues. Explicit reconciliation and lifecycle
+projection do not imply automatic discovery, retirement, cleanup, or retrieval
+eligibility outside the returned snapshot.
 
 ### Managed publication and journal
 
@@ -307,8 +307,12 @@ non-future `asOf` timestamp and produces bounded, path-free counts. Only committ
 managed raw-source versions can currently become expiry-eligible. Unmanaged or
 unknown entries are preserved; the other five classes remain
 `not-materialized` until their owning storage contracts can prove ownership.
-The policy and plan do not delete anything. Confirmed deletion in #166 must
-revalidate the exact effective revisions and physical ownership before acting.
+Planning does not delete anything. Confirmed deletion accepts the plan's exact
+token only for an archived non-default CKB and revalidates the complete graph,
+effective revisions, physical ownership, and bounded inventory under the
+store-wide writer lease before acting. Preservation overrides, unmanaged
+database records, missing or mismatched managed artifacts, and unknown deletion
+state fail closed.
 
 ### Compact schema-evolution summary
 
@@ -329,6 +333,9 @@ summary explains the durable shape; it is not a migration diary.
 | v16    | Versioned owned-write metadata binds integrity, staging identity, and lease generation to path-free restart recovery.             |
 | v17    | Durable generation-fenced recovery claims block stale database transitions before artifact inspection and support safe retry.     |
 | v18    | Append-only six-class retention rules and preservation overrides support live effective-revision deletion planning.                |
+| v19    | Restored URL provenance and monotonic override-revision snapshots preserve path-free restore and plan identity.                  |
+| v20    | Immutable portable-restore provenance records the inspected source package without recreating machine bindings.                 |
+| v21    | Durable deletion operations, staged managed artifacts, and content-free audits make exact-plan deletion recoverable.             |
 
 Changing an immutable v13 row or adding a no-backfill overlay was rejected: it
 would erase baseline evidence or leave legacy members without a trustworthy
@@ -415,16 +422,16 @@ This decision deliberately leaves the following outside the product workflow:
 - normalized facts and lexical, vector, or hybrid CKB indexes;
 - retrieval/index versions and provider transmission approval for the bound CKB
   selection;
-- physical deletion and destructive store lifecycle controls;
+- general cleanup or secure erasure beyond exact-plan deletion of one archived
+  non-default CKB's ownership-proven managed data;
 - automatic directory removal/rename reconciliation and move inference,
   broader member-retirement policy, background refresh, and time-based
   readiness;
-- automatic duplicate preference or merging, source reactivation, and physical
-  deletion;
+- automatic duplicate preference or merging and source reactivation;
 - missing/corrupt blob repair, cleanup approval, and reconciliation of unknown
   entries;
-- CKB deletion semantics, merging a portable backup into an existing store, and
-  restore-time logical-ID renaming; and
+- merging a portable backup into an existing store and restore-time logical-ID
+  renaming; and
 - URL redirect history, conditional requests, and URL-specific failure policy.
 
 Until those contracts are integrated and validated, workspace-scoped evidence
@@ -460,9 +467,9 @@ selection evidence but does not make a run read its content implicitly.
 - Prospective journal events provide evidence for new managed writes without
   claiming legacy or unjournaled entries. Unknown opaque files cannot be
   cleaned up safely yet.
-- Store-wide fenced writer leases prevent current CKB commands from
-  interleaving and protect portable export; restore, deletion, and cleanup reuse
-  the same private coordination boundary in later slices.
+- Store-wide fenced writer leases prevent CKB commands from interleaving and
+  protect portable export, restore, and confirmed deletion. General cleanup
+  remains a separate future boundary.
 - Deleting a workspace does not delete the CKB, and deleting an original host
   file does not delete its managed copy. A SQLite-only copy is not a complete
   CKB backup.
@@ -474,11 +481,11 @@ selection evidence but does not make a run read its content implicitly.
 
 - Bind retrieval and index versions to the fail-closed run selection before CKB
   data enters a provider request.
-- Define deletion coverage for raw, normalized, indexed, cached, historical,
-  exported, and backed-up data.
+- Define ownership and deletion coverage when normalized, indexed, cached,
+  exported, or backed-up classes become materialized inside the CKB.
 - Require visible approval before coordinated reconciliation can act on
   prospective journal evidence; unjournaled entries remain unknown.
-- Add CLI and desktop approval surfaces only after those contracts have focused
-  tests and provider-preflight integration.
+- Add user-interface presentation for deletion preview and retained audit when
+  the desktop workflow exposes CKB lifecycle controls visually.
 - Revisit the architecture and threat model before enabling retrieval cutover,
   lifecycle reconciliation, export/restore, or provider use.
