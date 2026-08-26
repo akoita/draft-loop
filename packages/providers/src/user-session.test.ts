@@ -284,6 +284,30 @@ describe("OpenAICodexUserSessionAdapter", () => {
             item: { type: "reasoning", text: "must not be projected" },
           }),
           JSON.stringify({
+            type: "item.started",
+            item: {
+              type: "todo_list",
+              id: "todo-list-1",
+              items: [{ text: "Draft the answer", completed: false }],
+            },
+          }),
+          JSON.stringify({
+            type: "item.updated",
+            item: {
+              type: "todo_list",
+              id: "todo-list-1",
+              items: [{ text: "Draft the answer", completed: true }],
+            },
+          }),
+          JSON.stringify({
+            type: "item.completed",
+            item: {
+              type: "todo_list",
+              id: "todo-list-1",
+              items: [{ text: "Draft the answer", completed: true }],
+            },
+          }),
+          JSON.stringify({
             type: "item.completed",
             item: { type: "agent_message", text: '{"answer":"yes"}' },
           }),
@@ -311,7 +335,8 @@ describe("OpenAICodexUserSessionAdapter", () => {
       },
     });
 
-    await expect(adapter.execute(request(openAIModel))).resolves.toMatchObject({
+    const response = await adapter.execute(request(openAIModel));
+    expect(response).toMatchObject({
       output: { answer: "yes" },
       provider: "openai",
       company: "openai",
@@ -320,6 +345,10 @@ describe("OpenAICodexUserSessionAdapter", () => {
       usage: { inputTokens: 12, outputTokens: 3, totalTokens: 15 },
       cost: { estimatedUsd: null },
     });
+    expect(response).not.toHaveProperty("todo_list");
+    expect(response).not.toHaveProperty("items");
+    expect(response).not.toHaveProperty("reasoning");
+    expect(JSON.stringify(response)).not.toContain("Draft the answer");
   });
 
   it("keeps author reasoning at the runtime default", async () => {
@@ -362,6 +391,35 @@ describe("OpenAICodexUserSessionAdapter", () => {
           JSON.stringify({ type: "thread.started", thread_id: "thread" }),
           JSON.stringify({
             type: "item.completed",
+            item: { type: "command_execution", command: "pwd" },
+          }),
+          JSON.stringify({
+            type: "turn.completed",
+            usage: { input_tokens: 1, output_tokens: 1 },
+          }),
+        ].join("\n"),
+        stderr: "",
+      };
+    };
+    const adapter = new OpenAICodexUserSessionAdapter({ configuredModel: openAIModel, runner });
+
+    await expect(adapter.execute(request(openAIModel))).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "prohibited_item" }],
+    });
+  });
+
+  it("rejects prohibited item.updated types before reading a valid final response", async () => {
+    const runner: UserSessionProcessRunner = async (_command, args) => {
+      const outputPath = args[args.indexOf("--output-last-message") + 1];
+      if (outputPath === undefined) throw new Error("output path missing");
+      await writeFile(outputPath, '{"answer":"unsafe"}');
+      return {
+        exitCode: 0,
+        stdout: [
+          JSON.stringify({ type: "thread.started", thread_id: "thread" }),
+          JSON.stringify({
+            type: "item.updated",
             item: { type: "command_execution", command: "pwd" },
           }),
           JSON.stringify({
