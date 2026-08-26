@@ -257,6 +257,61 @@ describe("candidate knowledge store application service", () => {
     });
   });
 
+  it("previews deletion and requires approval before forwarding the exact confirmation", async () => {
+    const plan = {
+      schemaVersion: 1,
+      knowledgeBaseId: "archived-ckb",
+      status: "ready",
+      confirmationToken: "a".repeat(64),
+    } as const;
+    const result = {
+      schemaVersion: 1,
+      knowledgeBaseId: "archived-ckb",
+      status: "deleted",
+      confirmationToken: plan.confirmationToken,
+    } as const;
+    const planCandidateKnowledgeBaseDeletion = vi.fn(async () => plan);
+    const deleteCandidateKnowledgeBase = vi.fn(async () => result);
+    const close = vi.fn(async () => undefined);
+    const open = vi.fn(async () => ({
+      planCandidateKnowledgeBaseDeletion,
+      deleteCandidateKnowledgeBase,
+      close,
+    }));
+    const service = createCandidateKnowledgeStoreService({ open: open as never });
+
+    await expect(
+      service.deleteKnowledgeBase({
+        storeRoot,
+        knowledgeBaseId: "archived-ckb",
+        confirmationToken: plan.confirmationToken,
+        approved: false,
+      }),
+    ).rejects.toThrow(/explicit approval/i);
+    expect(open).not.toHaveBeenCalled();
+
+    await expect(
+      service.previewKnowledgeBaseDeletion({
+        storeRoot,
+        knowledgeBaseId: "archived-ckb",
+      }),
+    ).resolves.toBe(plan);
+    await expect(
+      service.deleteKnowledgeBase({
+        storeRoot,
+        knowledgeBaseId: "archived-ckb",
+        confirmationToken: plan.confirmationToken,
+        approved: true,
+      }),
+    ).resolves.toBe(result);
+    expect(planCandidateKnowledgeBaseDeletion).toHaveBeenCalledWith("archived-ckb");
+    expect(deleteCandidateKnowledgeBase).toHaveBeenCalledWith(
+      "archived-ckb",
+      plan.confirmationToken,
+    );
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
   it("exposes the effective retention policy and plan through the shared service", async () => {
     const ids = ["store-uuid", "default-ckb-uuid"];
     const service = createCandidateKnowledgeStoreService({

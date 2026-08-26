@@ -950,6 +950,84 @@ describe("candidate knowledge base maintenance CLI controls", () => {
     expect(dependencies.lines).toEqual([]);
   });
 
+  it("previews an exact deletion and requires both its token and explicit approval", async () => {
+    const dependencies = harness();
+    const storeRoot = resolve("private-maintenance-store");
+    const confirmationToken = "a".repeat(64);
+    const plan = {
+      schemaVersion: 1,
+      knowledgeBaseId: "base-two",
+      status: "ready",
+      confirmationToken,
+    } as const;
+    const result = {
+      schemaVersion: 1,
+      knowledgeBaseId: "base-two",
+      status: "deleted",
+      confirmationToken,
+    } as const;
+    const previewKnowledgeBaseDeletion = vi.fn(async () => plan);
+    const deleteKnowledgeBase = vi.fn(async () => result);
+    const knowledgeService = {
+      previewKnowledgeBaseDeletion,
+      deleteKnowledgeBase,
+    } as unknown as CandidateKnowledgeStoreService;
+    const cli = createCli({
+      service: dependencies.service,
+      io: dependencies.io,
+      knowledgeService,
+    });
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "base",
+      "delete-preview",
+      storeRoot,
+      "base-two",
+    ]);
+    await expect(
+      cli.parseAsync([
+        "node",
+        "draft-loop",
+        "knowledge",
+        "base",
+        "delete",
+        storeRoot,
+        "base-two",
+        "--confirmation-token",
+        confirmationToken,
+      ]),
+    ).rejects.toThrow(/requires --yes/i);
+    expect(deleteKnowledgeBase).not.toHaveBeenCalled();
+
+    await cli.parseAsync([
+      "node",
+      "draft-loop",
+      "knowledge",
+      "base",
+      "delete",
+      storeRoot,
+      "base-two",
+      "--confirmation-token",
+      confirmationToken,
+      "--yes",
+    ]);
+
+    expect(previewKnowledgeBaseDeletion).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId: "base-two",
+    });
+    expect(deleteKnowledgeBase).toHaveBeenCalledWith({
+      storeRoot,
+      knowledgeBaseId: "base-two",
+      confirmationToken,
+      approved: true,
+    });
+    expect(dependencies.lines).toEqual([JSON.stringify(plan), JSON.stringify(result)]);
+  });
+
   it("propagates an application maintenance failure without adding CLI output", async () => {
     const dependencies = harness();
     const failure = new Error("application maintenance failure");

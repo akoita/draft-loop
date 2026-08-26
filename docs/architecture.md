@@ -252,9 +252,8 @@ CLI and desktop adapters; moved-candidate preview is read-only, while move
 requires confirmation and returns only opaque identity, time, and status.
 Neither infers renames automatically or reconciles all removals.
 
-Automatic move inference, physical deletion,
-indexing, and background refresh remain deferred under their owning roadmap
-issues.
+Automatic move inference, indexing, and background refresh remain deferred
+under their owning roadmap issues.
 Historical membership is not rewritten by later source versions, explicit
 origin rebinds, retirement, or readiness projection.
 
@@ -308,13 +307,25 @@ package. Export requires an explicit destination approval and publishes with no
 replacement only after the package passes its own inspector.
 
 Portable restore repeats complete package inspection before any destination
-write, imports into a fully staged v20 store, validates the restored graph and
+write, imports into a fully staged current-schema store, validates the restored graph and
 managed bytes, and then publishes to an approved new directory without replacing
 an existing entry. The only supported collision decision is
 `fail-if-destination-exists`; restore never merges stores, renames logical
 identities, or claims continuity with the exporting host. Restored URL evidence
 keeps only its safe fetched-at and kind fields. Original URLs and all file and
-directory bindings remain absent. Confirmed deletion remains owned by #166.
+directory bindings remain absent.
+
+Confirmed deletion accepts only an archived non-default CKB after a separate
+path-free preview. Its exact token binds the store graph, effective retention
+and override revisions, managed-object integrity, and bounded physical
+inventory. The command revalidates that state under the store-wide writer
+lease, stages verified managed blobs before committing the logical deletion,
+and uses a durable v21 operation journal to recover safely across interruption.
+Legal hold, manual preservation, unmanaged database records, missing or
+mismatched managed blobs, and unknown deletion state block the operation.
+Unknown or unowned filesystem entries are preserved. The retained completion
+audit is content-free; external backups, exports, and copied stores are not
+deleted.
 
 The package deliberately represents every restored source as unbound. It does
 not preserve directory-root/member relationships or host-binding history, and
@@ -324,15 +335,15 @@ provenance.
 
 The schema currently preserves append-only source/version, origin, observation,
 retirement, URL, restored path-free URL provenance, directory-root, and
-directory-member history. [ADR 0007][adr-0007] records the compact v6–v20
+directory-member history. [ADR 0007][adr-0007] records the compact v6–v21
 schema-evolution summary and the invariants that
 motivated each boundary.
 
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
-retrieval-index drift enforcement, provider transmission scope, complete
-CLI/desktop lifecycle controls, missing-blob repair, physical deletion, or cleanup.
+retrieval-index drift enforcement, provider transmission scope, missing-blob
+repair, or general cleanup beyond confirmed deletion of ownership-proven data.
 Until those contracts are
 integrated and validated, the workspace-scoped evidence and retrieval path
 remains authoritative for application runs.

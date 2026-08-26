@@ -120,6 +120,13 @@ pnpm --filter @draft-loop/cli start knowledge store restore \
   ./candidate-knowledge-backup ./restored-candidate-knowledge \
   --collision fail-if-destination-exists --yes
 pnpm --filter @draft-loop/cli start knowledge base create ./candidate-knowledge "Public projects"
+pnpm --filter @draft-loop/cli start knowledge base archive \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID --confirm
+pnpm --filter @draft-loop/cli start knowledge base delete-preview \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID
+pnpm --filter @draft-loop/cli start knowledge base delete \
+  ./candidate-knowledge KNOWLEDGE_BASE_ID \
+  --confirmation-token TOKEN_FROM_PREVIEW --yes
 pnpm --filter @draft-loop/cli start knowledge source import \
   ./candidate-knowledge KNOWLEDGE_BASE_ID ./career-history.md
 pnpm --filter @draft-loop/cli start knowledge source import-directory \
@@ -224,7 +231,11 @@ and keeps paths local.
 
 Portable packages exclude machine-local origins, active locks, recovery
 journals, application or provider credentials, and unrelated workspace data.
-Physical deletion remains staged.
+Confirmed deletion is limited to archived non-default CKBs and requires the
+exact token from a fresh path-free preview. DraftLoop removes only ownership-
+verified managed data, preserves unknown filesystem entries, and blocks on
+unmanaged database records or active preservation overrides. External backups,
+exports, and copies remain independent user-controlled data.
 
 Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real

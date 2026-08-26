@@ -2284,6 +2284,26 @@ describe("desktop capability bridge", () => {
       type: "knowledge.archive-base",
       input: { storeId: "store-1", knowledgeBaseId: "kb-2", confirmed: true },
     });
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.delete-base-preview",
+        input: { storeId: "store-1", knowledgeBaseId: "kb-2" },
+      }),
+    ).toEqual({
+      type: "knowledge.delete-base-preview",
+      input: { storeId: "store-1", knowledgeBaseId: "kb-2" },
+    });
+    expect(
+      validateBridgeCommand({
+        type: "knowledge.delete-base",
+        input: {
+          storeId: "store-1",
+          knowledgeBaseId: "kb-2",
+          confirmationToken: "a".repeat(64),
+          confirmed: true,
+        },
+      }),
+    ).toMatchObject({ type: "knowledge.delete-base", input: { confirmed: true } });
 
     for (const command of [
       {
@@ -2298,8 +2318,116 @@ describe("desktop capability bridge", () => {
         type: "knowledge.archive-base",
         input: { storeId: "store-1", knowledgeBaseId: "kb-2" },
       },
+      {
+        type: "knowledge.delete-base",
+        input: {
+          storeId: "store-1",
+          knowledgeBaseId: "kb-2",
+          confirmationToken: "not-a-token",
+          confirmed: true,
+        },
+      },
     ]) {
       expect(() => validateBridgeCommand(command)).toThrow("invalid");
     }
+  });
+
+  it("normalizes bounded, path-free CKB deletion previews and results", async () => {
+    const token = "a".repeat(64);
+    const classes = [
+      "raw-sources",
+      "normalized-facts",
+      "indexes",
+      "run-snapshots",
+      "exports",
+      "backups",
+    ].map((retentionClass, index) => ({
+      class: retentionClass,
+      rule: "retain-until-deletion",
+      expireAfterDays: null,
+      status: index === 0 ? "delete" : "not-materialized",
+      ownershipStatus: index === 0 ? "owned" : "not-materialized",
+      managedCount: index === 0 ? 1 : 0,
+      eligibleCount: index === 0 ? 1 : 0,
+      preservedCount: 0,
+      unmanagedCount: 0,
+      unknownCount: 0,
+      countCapped: false,
+      preservationReasons: index === 0 ? [] : ["not-materialized"],
+    }));
+    const preview = {
+      schemaVersion: 1,
+      knowledgeBaseId: "kb-2",
+      archivedAt: "2026-08-26T10:00:00.000Z",
+      status: "ready",
+      policyRevision: 1,
+      overrideRevision: 0,
+      sourceCount: 1,
+      versionCount: 1,
+      managedArtifactCount: 1,
+      managedArtifactBytes: 42,
+      preservedUnknownCount: 0,
+      preservedUnmanagedCount: 0,
+      countCapped: false,
+      blockers: [],
+      classes,
+      confirmationToken: token,
+    };
+    const previewPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: preview }), ["knowledge.delete-base-preview"]),
+    );
+    await expect(
+      previewPort.execute({
+        type: "knowledge.delete-base-preview",
+        input: { storeId: "store-1", knowledgeBaseId: "kb-2" },
+      }),
+    ).resolves.toEqual({ ok: true, value: preview });
+
+    const deletion = {
+      schemaVersion: 1,
+      status: "deleted",
+      knowledgeBaseId: "kb-2",
+      operationId: "delete-1",
+      auditId: "audit-1",
+      confirmationToken: token,
+      completedAt: "2026-08-26T10:01:00.000Z",
+      managedArtifactCount: 1,
+      managedArtifactBytes: 42,
+      preservedUnknownCount: 0,
+      preservedUnmanagedCount: 0,
+      countCapped: false,
+    };
+    const deletionPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: deletion }), ["knowledge.delete-base"]),
+    );
+    await expect(
+      deletionPort.execute({
+        type: "knowledge.delete-base",
+        input: {
+          storeId: "store-1",
+          knowledgeBaseId: "kb-2",
+          confirmationToken: token,
+          confirmed: true,
+        },
+      }),
+    ).resolves.toEqual({ ok: true, value: deletion });
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { ...deletion, audit: { path: "/private/store" } } }),
+        ["knowledge.delete-base"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({
+        type: "knowledge.delete-base",
+        input: {
+          storeId: "store-1",
+          knowledgeBaseId: "kb-2",
+          confirmationToken: token,
+          confirmed: true,
+        },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 });

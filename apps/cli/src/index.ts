@@ -1594,6 +1594,42 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       },
     );
 
+  knowledgeBase
+    .command("delete-preview")
+    .description("Preview confirmed deletion of one archived non-default knowledge base")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .action(async (storeRoot: string, knowledgeBaseId: string) => {
+      writeJson(
+        io,
+        await candidateKnowledge.previewKnowledgeBaseDeletion({ storeRoot, knowledgeBaseId }),
+      );
+    });
+
+  knowledgeBase
+    .command("delete")
+    .description("Delete an archived knowledge base using its exact preview token")
+    .argument("<store-root>", "local candidate-knowledge store directory")
+    .argument("<knowledge-base-id>", "opaque knowledge-base id")
+    .requiredOption("--confirmation-token <token>", "exact token from delete-preview")
+    .option("--yes", "approve deletion of the exact previewed data")
+    .action(
+      async (storeRoot: string, knowledgeBaseId: string, options: Record<string, unknown>) => {
+        if (options.yes !== true) {
+          throw new Error("knowledge base deletion requires --yes explicit approval.");
+        }
+        writeJson(
+          io,
+          await candidateKnowledge.deleteKnowledgeBase({
+            storeRoot,
+            knowledgeBaseId,
+            confirmationToken: options.confirmationToken as string,
+            approved: true,
+          }),
+        );
+      },
+    );
+
   const knowledgeSource = knowledge
     .command("source")
     .description("Import, refresh, and inspect candidate knowledge sources");

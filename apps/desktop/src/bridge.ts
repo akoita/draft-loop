@@ -53,6 +53,8 @@ export const bridgeCapabilities = [
   "knowledge.create-base",
   "knowledge.rename-base",
   "knowledge.archive-base",
+  "knowledge.delete-base-preview",
+  "knowledge.delete-base",
   "run.status",
   "run.start",
   "run.pause",
@@ -503,6 +505,14 @@ export interface KnowledgeBaseArchiveInput extends KnowledgeReadinessInput {
   readonly confirmed: boolean;
 }
 
+export interface KnowledgeBaseDeletionPreviewInput extends KnowledgeReadinessInput {}
+
+export interface KnowledgeBaseDeletionInput extends KnowledgeBaseDeletionPreviewInput {
+  readonly confirmationToken: string;
+  /** Destructive deletion must be visibly confirmed by the renderer. */
+  readonly confirmed: boolean;
+}
+
 const knowledgeBaseCreateKeys = inputKeys<KnowledgeBaseCreateInput>()([
   "storeId",
   "displayName",
@@ -516,6 +526,16 @@ const knowledgeBaseRenameKeys = inputKeys<KnowledgeBaseRenameInput>()([
 const knowledgeBaseArchiveKeys = inputKeys<KnowledgeBaseArchiveInput>()([
   "storeId",
   "knowledgeBaseId",
+  "confirmed",
+]);
+const knowledgeBaseDeletionPreviewKeys = inputKeys<KnowledgeBaseDeletionPreviewInput>()([
+  "storeId",
+  "knowledgeBaseId",
+]);
+const knowledgeBaseDeletionKeys = inputKeys<KnowledgeBaseDeletionInput>()([
+  "storeId",
+  "knowledgeBaseId",
+  "confirmationToken",
   "confirmed",
 ]);
 
@@ -1143,6 +1163,83 @@ export interface KnowledgeSelectionResult {
   readonly entries: readonly KnowledgeSelectionEntry[];
 }
 
+export type KnowledgeDeletionBlockerCode =
+  | "legal-hold"
+  | "manual-preservation"
+  | "unmanaged-database-records"
+  | "pending-managed-write"
+  | "managed-artifact-missing"
+  | "managed-artifact-integrity"
+  | "unknown-deletion-state";
+
+export interface KnowledgeDeletionBlocker {
+  readonly code: KnowledgeDeletionBlockerCode;
+  readonly count: number;
+}
+
+export type KnowledgeRetentionClass =
+  | "raw-sources"
+  | "normalized-facts"
+  | "indexes"
+  | "run-snapshots"
+  | "exports"
+  | "backups";
+
+export interface KnowledgeDeletionPlanClass {
+  readonly class: KnowledgeRetentionClass;
+  readonly rule: "retain-until-deletion" | "expire-after-days";
+  readonly expireAfterDays: number | null;
+  readonly status: "delete" | "blocked" | "not-materialized";
+  readonly ownershipStatus: "owned" | "preserved" | "not-materialized";
+  readonly managedCount: number;
+  readonly eligibleCount: number;
+  readonly preservedCount: number;
+  readonly unmanagedCount: number;
+  readonly unknownCount: number;
+  readonly countCapped: boolean;
+  readonly preservationReasons: readonly (
+    | "override"
+    | "unmanaged"
+    | "unknown"
+    | "not-materialized"
+    | "blocked"
+  )[];
+}
+
+export interface KnowledgeBaseDeletionPlanResult {
+  readonly schemaVersion: 1;
+  readonly knowledgeBaseId: string;
+  readonly archivedAt: string;
+  readonly status: "ready" | "blocked";
+  readonly policyRevision: number;
+  readonly overrideRevision: number;
+  readonly sourceCount: number;
+  readonly versionCount: number;
+  readonly managedArtifactCount: number;
+  readonly managedArtifactBytes: number;
+  readonly preservedUnknownCount: number;
+  readonly preservedUnmanagedCount: number;
+  readonly countCapped: boolean;
+  readonly blockers: readonly KnowledgeDeletionBlocker[];
+  readonly classes: readonly KnowledgeDeletionPlanClass[];
+  readonly confirmationToken: string;
+}
+
+export interface KnowledgeBaseDeletionResult {
+  readonly schemaVersion: 1;
+  readonly status: "deleted";
+  readonly knowledgeBaseId: string;
+  readonly operationId: string;
+  readonly auditId: string;
+  readonly confirmationToken: string;
+  readonly completedAt: string;
+  readonly managedArtifactCount: number;
+  readonly managedArtifactBytes: number;
+  readonly preservedUnknownCount: number;
+  readonly preservedUnmanagedCount: number;
+  readonly countCapped: boolean;
+}
+
 const knowledgeBaseSummaryKeys = resultKeys<KnowledgeBaseSummary>()([
   "id",
   "displayName",
@@ -1159,6 +1256,53 @@ const knowledgeReadinessResultKeys = resultKeys<KnowledgeReadinessResult>()([
   "readyCount",
   "blockedCount",
   "blockerReasons",
+]);
+const knowledgeDeletionBlockerKeys = resultKeys<KnowledgeDeletionBlocker>()(["code", "count"]);
+const knowledgeDeletionPlanClassKeys = resultKeys<KnowledgeDeletionPlanClass>()([
+  "class",
+  "rule",
+  "expireAfterDays",
+  "status",
+  "ownershipStatus",
+  "managedCount",
+  "eligibleCount",
+  "preservedCount",
+  "unmanagedCount",
+  "unknownCount",
+  "countCapped",
+  "preservationReasons",
+]);
+const knowledgeBaseDeletionPlanResultKeys = resultKeys<KnowledgeBaseDeletionPlanResult>()([
+  "schemaVersion",
+  "knowledgeBaseId",
+  "archivedAt",
+  "status",
+  "policyRevision",
+  "overrideRevision",
+  "sourceCount",
+  "versionCount",
+  "managedArtifactCount",
+  "managedArtifactBytes",
+  "preservedUnknownCount",
+  "preservedUnmanagedCount",
+  "countCapped",
+  "blockers",
+  "classes",
+  "confirmationToken",
+]);
+const knowledgeBaseDeletionResultKeys = resultKeys<KnowledgeBaseDeletionResult>()([
+  "schemaVersion",
+  "status",
+  "knowledgeBaseId",
+  "operationId",
+  "auditId",
+  "confirmationToken",
+  "completedAt",
+  "managedArtifactCount",
+  "managedArtifactBytes",
+  "preservedUnknownCount",
+  "preservedUnmanagedCount",
+  "countCapped",
 ]);
 const knowledgeSourceSummaryKeys = resultKeys<KnowledgeSourceSummary>()([
   "sourceId",
@@ -1673,6 +1817,8 @@ export interface BridgeCommandInputMap {
   "knowledge.create-base": KnowledgeBaseCreateInput;
   "knowledge.rename-base": KnowledgeBaseRenameInput;
   "knowledge.archive-base": KnowledgeBaseArchiveInput;
+  "knowledge.delete-base-preview": KnowledgeBaseDeletionPreviewInput;
+  "knowledge.delete-base": KnowledgeBaseDeletionInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -1728,6 +1874,8 @@ export interface BridgeCommandOutputMap {
   "knowledge.create-base": KnowledgeStoreResult;
   "knowledge.rename-base": KnowledgeStoreResult;
   "knowledge.archive-base": KnowledgeStoreResult;
+  "knowledge.delete-base-preview": KnowledgeBaseDeletionPlanResult;
+  "knowledge.delete-base": KnowledgeBaseDeletionResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -2551,6 +2699,34 @@ function validateKnowledgeBaseArchiveInput(value: unknown): KnowledgeBaseArchive
   };
 }
 
+function confirmationToken(value: unknown): string {
+  const token = stringValue(value, 64);
+  if (!/^[a-f0-9]{64}$/u.test(token)) return invalidInput();
+  return token;
+}
+
+function validateKnowledgeBaseDeletionPreviewInput(
+  value: unknown,
+): KnowledgeBaseDeletionPreviewInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeBaseDeletionPreviewKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+  };
+}
+
+function validateKnowledgeBaseDeletionInput(value: unknown): KnowledgeBaseDeletionInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeBaseDeletionKeys)) return invalidInput();
+  return {
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    confirmationToken: confirmationToken(input.confirmationToken),
+    confirmed: booleanValue(input.confirmed),
+  };
+}
+
 function validateWorkspaceCreateInput(value: unknown): WorkspaceCreateInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, workspaceCreateKeys)) return invalidInput();
@@ -2982,6 +3158,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
         type: "knowledge.archive-base",
         input: validateKnowledgeBaseArchiveInput(command.input),
       };
+    case "knowledge.delete-base-preview":
+      return {
+        type: "knowledge.delete-base-preview",
+        input: validateKnowledgeBaseDeletionPreviewInput(command.input),
+      };
+    case "knowledge.delete-base":
+      return {
+        type: "knowledge.delete-base",
+        input: validateKnowledgeBaseDeletionInput(command.input),
+      };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
     case "run.start":
@@ -3194,6 +3380,142 @@ function normalizeKnowledgeReadinessResult(value: unknown): KnowledgeReadinessRe
     readyCount,
     blockedCount,
     blockerReasons,
+  };
+}
+
+const knowledgeRetentionClasses = [
+  "raw-sources",
+  "normalized-facts",
+  "indexes",
+  "run-snapshots",
+  "exports",
+  "backups",
+] as const;
+const knowledgeDeletionBlockerCodes = [
+  "legal-hold",
+  "manual-preservation",
+  "unmanaged-database-records",
+  "pending-managed-write",
+  "managed-artifact-missing",
+  "managed-artifact-integrity",
+  "unknown-deletion-state",
+] as const;
+const knowledgePreservationReasons = [
+  "override",
+  "unmanaged",
+  "unknown",
+  "not-materialized",
+  "blocked",
+] as const;
+const maximumDeletionCount = 1_000_000;
+const maximumDeletionBytes = 32 * 1024 * 1024 * 1024;
+
+function normalizeKnowledgeBaseDeletionPlanResult(value: unknown): KnowledgeBaseDeletionPlanResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeBaseDeletionPlanResultKeys) ||
+    !Array.isArray(result.blockers) ||
+    !Array.isArray(result.classes) ||
+    result.schemaVersion !== 1 ||
+    result.blockers.length > knowledgeDeletionBlockerCodes.length ||
+    result.classes.length !== knowledgeRetentionClasses.length
+  ) {
+    return invalidInput();
+  }
+  const blockers = result.blockers.map((value) => {
+    const blocker = requireRecord(value);
+    if (!hasOnlyKeys(blocker, knowledgeDeletionBlockerKeys)) return invalidInput();
+    return {
+      code: enumValue(blocker.code, knowledgeDeletionBlockerCodes),
+      count: finiteInteger(blocker.count, maximumDeletionCount),
+    } satisfies KnowledgeDeletionBlocker;
+  });
+  const classes = result.classes.map((value) => {
+    const entry = requireRecord(value);
+    if (
+      !hasOnlyKeys(entry, knowledgeDeletionPlanClassKeys) ||
+      !Array.isArray(entry.preservationReasons) ||
+      entry.preservationReasons.length > knowledgePreservationReasons.length
+    ) {
+      return invalidInput();
+    }
+    const preservationReasons = entry.preservationReasons.map((reason) =>
+      enumValue(reason, knowledgePreservationReasons),
+    );
+    if (new Set(preservationReasons).size !== preservationReasons.length) return invalidInput();
+    const rule = enumValue(entry.rule, ["retain-until-deletion", "expire-after-days"] as const);
+    const expireAfterDays =
+      entry.expireAfterDays === null
+        ? null
+        : finiteInteger(entry.expireAfterDays, maximumDeletionCount);
+    if ((rule === "retain-until-deletion") !== (expireAfterDays === null)) return invalidInput();
+    return {
+      class: enumValue(entry.class, knowledgeRetentionClasses),
+      rule,
+      expireAfterDays,
+      status: enumValue(entry.status, ["delete", "blocked", "not-materialized"] as const),
+      ownershipStatus: enumValue(entry.ownershipStatus, [
+        "owned",
+        "preserved",
+        "not-materialized",
+      ] as const),
+      managedCount: finiteInteger(entry.managedCount, maximumDeletionCount),
+      eligibleCount: finiteInteger(entry.eligibleCount, maximumDeletionCount),
+      preservedCount: finiteInteger(entry.preservedCount, maximumDeletionCount),
+      unmanagedCount: finiteInteger(entry.unmanagedCount, maximumDeletionCount),
+      unknownCount: finiteInteger(entry.unknownCount, maximumDeletionCount),
+      countCapped: booleanValue(entry.countCapped),
+      preservationReasons,
+    } satisfies KnowledgeDeletionPlanClass;
+  });
+  if (
+    new Set(blockers.map((blocker) => blocker.code)).size !== blockers.length ||
+    new Set(classes.map((entry) => entry.class)).size !== knowledgeRetentionClasses.length
+  ) {
+    return invalidInput();
+  }
+  return {
+    schemaVersion: 1,
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    archivedAt: timestampValue(result.archivedAt),
+    status: enumValue(result.status, ["ready", "blocked"] as const),
+    policyRevision: finiteInteger(result.policyRevision, maximumDeletionCount),
+    overrideRevision: finiteInteger(result.overrideRevision, maximumDeletionCount),
+    sourceCount: finiteInteger(result.sourceCount, maximumDeletionCount),
+    versionCount: finiteInteger(result.versionCount, maximumDeletionCount),
+    managedArtifactCount: finiteInteger(result.managedArtifactCount, maximumDeletionCount),
+    managedArtifactBytes: finiteInteger(result.managedArtifactBytes, maximumDeletionBytes),
+    preservedUnknownCount: finiteInteger(result.preservedUnknownCount, maximumDeletionCount),
+    preservedUnmanagedCount: finiteInteger(result.preservedUnmanagedCount, maximumDeletionCount),
+    countCapped: booleanValue(result.countCapped),
+    blockers,
+    classes,
+    confirmationToken: confirmationToken(result.confirmationToken),
+  };
+}
+
+function normalizeKnowledgeBaseDeletionResult(value: unknown): KnowledgeBaseDeletionResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, knowledgeBaseDeletionResultKeys) ||
+    result.schemaVersion !== 1 ||
+    result.status !== "deleted"
+  ) {
+    return invalidInput();
+  }
+  return {
+    schemaVersion: 1,
+    status: "deleted",
+    knowledgeBaseId: identifier(result.knowledgeBaseId),
+    operationId: identifier(result.operationId),
+    auditId: identifier(result.auditId),
+    confirmationToken: confirmationToken(result.confirmationToken),
+    completedAt: timestampValue(result.completedAt),
+    managedArtifactCount: finiteInteger(result.managedArtifactCount, maximumDeletionCount),
+    managedArtifactBytes: finiteInteger(result.managedArtifactBytes, maximumDeletionBytes),
+    preservedUnknownCount: finiteInteger(result.preservedUnknownCount, maximumDeletionCount),
+    preservedUnmanagedCount: finiteInteger(result.preservedUnmanagedCount, maximumDeletionCount),
+    countCapped: booleanValue(result.countCapped),
   };
 }
 
@@ -4255,6 +4577,10 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "knowledge.rename-base":
     case "knowledge.archive-base":
       return normalizeKnowledgeStoreResult(value);
+    case "knowledge.delete-base-preview":
+      return normalizeKnowledgeBaseDeletionPlanResult(value);
+    case "knowledge.delete-base":
+      return normalizeKnowledgeBaseDeletionResult(value);
     case "knowledge.readiness":
       return normalizeKnowledgeReadinessResult(value);
     case "knowledge.sources":

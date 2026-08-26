@@ -972,6 +972,117 @@ export interface RetentionPurgeResult {
   readonly executedAt: string;
 }
 
+/** Internal journal phase for a confirmed candidate knowledge-base deletion. */
+export type CandidateKnowledgeDeletionOperationPhase =
+  | "prepared"
+  | "staging"
+  | "committed"
+  | "completed"
+  | "aborted";
+
+/**
+ * Internal deletion artifact identity. These records are deliberately not
+ * exposed by `CandidateKnowledgeStoreHandle`; they let restart recovery prove
+ * ownership of a staged managed blob without retaining a filesystem path.
+ */
+export interface CandidateKnowledgeDeletionArtifactRecord {
+  readonly operationId: string;
+  readonly sourceId: string;
+  readonly versionId: string;
+  readonly checksum: string;
+  readonly sizeBytes: number;
+  readonly device: number;
+  readonly inode: number;
+}
+
+/** Internal deletion operation journal projection used by the filesystem adapter. */
+export interface CandidateKnowledgeDeletionOperationRecord {
+  readonly operationId: string;
+  readonly knowledgeBaseId: string;
+  readonly confirmationToken: string;
+  readonly graphDigest: string;
+  readonly phase: CandidateKnowledgeDeletionOperationPhase;
+  readonly createdAt: string;
+  readonly committedAt: string | null;
+  readonly completedAt: string | null;
+  readonly stagingDevice: number | null;
+  readonly stagingInode: number | null;
+  readonly managedArtifactCount: number;
+  readonly managedArtifactBytes: number;
+  readonly preservedUnknownCount: number;
+  readonly preservedUnmanagedCount: number;
+  readonly countCapped: boolean;
+  readonly artifacts: readonly CandidateKnowledgeDeletionArtifactRecord[];
+}
+
+/** Internal bounded deletion audit counters retained after graph removal. */
+export interface CandidateKnowledgeDeletionAuditCounts {
+  readonly managedArtifactCount: number;
+  readonly managedArtifactBytes: number;
+  readonly preservedUnknownCount: number;
+  readonly preservedUnmanagedCount: number;
+  readonly countCapped: boolean;
+}
+
+/** Content-free deletion audit projection retained after a successful deletion. */
+export interface CandidateKnowledgeDeletionAuditRecord {
+  readonly auditId: string;
+  readonly operationId: string;
+  readonly knowledgeBaseId: string;
+  readonly confirmationToken: string;
+  readonly status: "completed";
+  readonly createdAt: string;
+  readonly completedAt: string;
+  readonly counts: CandidateKnowledgeDeletionAuditCounts;
+}
+
+/** Internal graph snapshot used to bind a deletion confirmation token. */
+export interface CandidateKnowledgeDeletionDatabaseSnapshot {
+  readonly knowledgeBaseId: string;
+  readonly state: CandidateKnowledgeBaseState;
+  readonly isDefault: boolean;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly archivedAt: string | null;
+  readonly policy: CandidateKnowledgeRetentionPolicyRecord;
+  readonly graphDigest: string;
+  readonly sourceCount: number;
+  readonly versionCount: number;
+  readonly managedArtifacts: readonly {
+    readonly sourceId: string;
+    readonly versionId: string;
+    readonly checksum: string;
+    readonly sizeBytes: number;
+  }[];
+  readonly unmanagedSourceCount: number;
+  readonly unmanagedVersionCount: number;
+  readonly pendingOperationCount: number;
+}
+
+/** Internal input for creating an owned deletion operation journal. */
+export interface CandidateKnowledgeDeletionOperationInput {
+  readonly operationId: string;
+  readonly knowledgeBaseId: string;
+  readonly confirmationToken: string;
+  readonly graphDigest: string;
+  readonly createdAt: string;
+  readonly managedArtifactCount: number;
+  readonly managedArtifactBytes: number;
+  readonly preservedUnknownCount: number;
+  readonly preservedUnmanagedCount: number;
+  readonly countCapped: boolean;
+  readonly artifacts: readonly Omit<CandidateKnowledgeDeletionArtifactRecord, "operationId">[];
+}
+
+/** Internal input for the logical deletion commit. */
+export interface CandidateKnowledgeDeletionCommitInput {
+  readonly operationId: string;
+  readonly knowledgeBaseId: string;
+  readonly confirmationToken: string;
+  readonly graphDigest: string;
+  readonly committedAt: string;
+}
+
 export interface DiagnosticTelemetryReport {
   readonly generatedAt: string;
   readonly schemaVersion: 1;
@@ -1118,7 +1229,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 20 as const;
+export const storageSchemaVersion = 21 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -2725,6 +2836,123 @@ const migrationTwenty: Migration = {
   `.trim(),
 };
 
+const migrationTwentyOne: Migration = {
+  version: 21,
+  sql: `
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_deletion_operations (
+      operation_id TEXT PRIMARY KEY NOT NULL CHECK (
+        length(operation_id) = 64 AND operation_id NOT GLOB '*[^0-9a-f]*'
+      ),
+      knowledge_base_id TEXT NOT NULL CHECK (length(trim(knowledge_base_id)) > 0),
+      confirmation_token TEXT NOT NULL CHECK (
+        length(confirmation_token) = 64 AND confirmation_token NOT GLOB '*[^0-9a-f]*'
+      ),
+      graph_digest TEXT NOT NULL CHECK (
+        length(graph_digest) = 64 AND graph_digest NOT GLOB '*[^0-9a-f]*'
+      ),
+      phase TEXT NOT NULL CHECK (phase IN ('prepared', 'staging', 'committed', 'completed', 'aborted')),
+      created_at TEXT NOT NULL CHECK (julianday(created_at) IS NOT NULL),
+      committed_at TEXT,
+      completed_at TEXT,
+      staging_device INTEGER CHECK (staging_device IS NULL OR (typeof(staging_device) = 'integer' AND staging_device >= 0)),
+      staging_inode INTEGER CHECK (staging_inode IS NULL OR (typeof(staging_inode) = 'integer' AND staging_inode >= 0)),
+      managed_artifact_count INTEGER NOT NULL CHECK (typeof(managed_artifact_count) = 'integer' AND managed_artifact_count >= 0 AND managed_artifact_count <= 1024),
+      managed_artifact_bytes INTEGER NOT NULL CHECK (typeof(managed_artifact_bytes) = 'integer' AND managed_artifact_bytes >= 0),
+      preserved_unknown_count INTEGER NOT NULL CHECK (typeof(preserved_unknown_count) = 'integer' AND preserved_unknown_count >= 0 AND preserved_unknown_count <= 1024),
+      preserved_unmanaged_count INTEGER NOT NULL CHECK (typeof(preserved_unmanaged_count) = 'integer' AND preserved_unmanaged_count >= 0 AND preserved_unmanaged_count <= 1024),
+      count_capped INTEGER NOT NULL CHECK (count_capped IN (0, 1)),
+      CHECK ((phase IN ('committed', 'completed') AND committed_at IS NOT NULL) OR phase IN ('prepared', 'staging', 'aborted')),
+      CHECK ((phase = 'completed' AND completed_at IS NOT NULL) OR phase <> 'completed'),
+      CHECK ((staging_device IS NULL) = (staging_inode IS NULL))
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS candidate_knowledge_deletion_operations_token_idx
+      ON candidate_knowledge_deletion_operations(confirmation_token);
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_deletion_artifacts (
+      operation_id TEXT NOT NULL REFERENCES candidate_knowledge_deletion_operations(operation_id),
+      source_id TEXT NOT NULL CHECK (length(trim(source_id)) > 0),
+      version_id TEXT NOT NULL CHECK (length(trim(version_id)) > 0),
+      checksum TEXT NOT NULL CHECK (
+        length(checksum) = 64 AND checksum NOT GLOB '*[^0-9a-f]*'
+      ),
+      size_bytes INTEGER NOT NULL CHECK (typeof(size_bytes) = 'integer' AND size_bytes >= 0),
+      device INTEGER NOT NULL CHECK (typeof(device) = 'integer' AND device >= 0),
+      inode INTEGER NOT NULL CHECK (typeof(inode) = 'integer' AND inode >= 0),
+      PRIMARY KEY (operation_id, version_id),
+      UNIQUE (operation_id, source_id, version_id)
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_deletion_artifacts_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_deletion_artifacts
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge deletion artifacts are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_deletion_artifacts_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_deletion_artifacts
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge deletion artifacts are immutable'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_deletion_operations_guarded_update
+      BEFORE UPDATE ON candidate_knowledge_deletion_operations
+      WHEN NEW.operation_id <> OLD.operation_id
+        OR NEW.knowledge_base_id <> OLD.knowledge_base_id
+        OR NEW.confirmation_token <> OLD.confirmation_token
+        OR NEW.graph_digest <> OLD.graph_digest
+        OR NEW.created_at <> OLD.created_at
+        OR NEW.managed_artifact_count <> OLD.managed_artifact_count
+        OR NEW.managed_artifact_bytes <> OLD.managed_artifact_bytes
+        OR NEW.preserved_unknown_count <> OLD.preserved_unknown_count
+        OR NEW.preserved_unmanaged_count <> OLD.preserved_unmanaged_count
+        OR NEW.count_capped <> OLD.count_capped
+        OR (NEW.phase = 'staging' AND OLD.phase <> 'prepared')
+        OR (NEW.phase = 'committed' AND OLD.phase <> 'staging')
+        OR (NEW.phase = 'completed' AND OLD.phase <> 'committed')
+        OR (NEW.phase = 'aborted' AND OLD.phase NOT IN ('prepared', 'staging'))
+        OR (NEW.phase = 'prepared' AND OLD.phase NOT IN ('prepared', 'aborted'))
+        OR (NEW.phase = 'staging' AND (NEW.committed_at IS NOT OLD.committed_at OR NEW.completed_at IS NOT OLD.completed_at))
+        OR (NEW.phase = 'committed' AND (NEW.committed_at IS NULL OR NEW.completed_at IS NOT NULL))
+        OR (NEW.phase = 'completed' AND (NEW.committed_at IS NULL OR NEW.completed_at IS NULL))
+        OR (NEW.phase = 'aborted' AND (NEW.committed_at IS NOT NULL OR NEW.completed_at IS NOT NULL))
+        OR (NEW.phase IN ('prepared', 'staging') AND (NEW.committed_at IS NOT OLD.committed_at OR NEW.completed_at IS NOT OLD.completed_at))
+        OR (OLD.staging_device IS NOT NULL
+          AND NEW.staging_device IS NOT OLD.staging_device
+          AND NOT (NEW.phase = 'aborted' AND OLD.phase IN ('prepared', 'staging')))
+        OR (OLD.staging_inode IS NOT NULL
+          AND NEW.staging_inode IS NOT OLD.staging_inode
+          AND NOT (NEW.phase = 'aborted' AND OLD.phase IN ('prepared', 'staging')))
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge deletion operation transition is invalid'); END;
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_deletion_operations_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_deletion_operations
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge deletion operations are immutable'); END;
+
+    CREATE TABLE IF NOT EXISTS candidate_knowledge_deletion_audits (
+      audit_id TEXT PRIMARY KEY NOT NULL CHECK (
+        length(audit_id) = 64 AND audit_id NOT GLOB '*[^0-9a-f]*'
+      ),
+      operation_id TEXT NOT NULL UNIQUE
+        REFERENCES candidate_knowledge_deletion_operations(operation_id),
+      knowledge_base_id TEXT NOT NULL CHECK (length(trim(knowledge_base_id)) > 0),
+      confirmation_token TEXT NOT NULL CHECK (
+        length(confirmation_token) = 64 AND confirmation_token NOT GLOB '*[^0-9a-f]*'
+      ),
+      status TEXT NOT NULL CHECK (status = 'completed'),
+      created_at TEXT NOT NULL CHECK (julianday(created_at) IS NOT NULL),
+      completed_at TEXT NOT NULL CHECK (julianday(completed_at) IS NOT NULL),
+      managed_artifact_count INTEGER NOT NULL CHECK (typeof(managed_artifact_count) = 'integer' AND managed_artifact_count >= 0 AND managed_artifact_count <= 1024),
+      managed_artifact_bytes INTEGER NOT NULL CHECK (typeof(managed_artifact_bytes) = 'integer' AND managed_artifact_bytes >= 0),
+      preserved_unknown_count INTEGER NOT NULL CHECK (typeof(preserved_unknown_count) = 'integer' AND preserved_unknown_count >= 0 AND preserved_unknown_count <= 1024),
+      preserved_unmanaged_count INTEGER NOT NULL CHECK (typeof(preserved_unmanaged_count) = 'integer' AND preserved_unmanaged_count >= 0 AND preserved_unmanaged_count <= 1024),
+      count_capped INTEGER NOT NULL CHECK (count_capped IN (0, 1))
+    );
+
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_deletion_audits_immutable_update
+      BEFORE UPDATE ON candidate_knowledge_deletion_audits
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge deletion audits are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS candidate_knowledge_deletion_audits_immutable_delete
+      BEFORE DELETE ON candidate_knowledge_deletion_audits
+      BEGIN SELECT RAISE(ABORT, 'candidate knowledge deletion audits are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -2746,6 +2974,7 @@ const migrations: readonly Migration[] = [
   migrationEighteen,
   migrationNineteen,
   migrationTwenty,
+  migrationTwentyOne,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3002,6 +3231,135 @@ function requireNonNegativeInteger(value: number, field: string): number {
     throw new StorageValidationError(`${field} must be a non-negative integer`);
   }
   return value;
+}
+
+function requireSha256(value: string, field: string): string {
+  const normalized = requireNonEmpty(value, field).trim();
+  if (!/^[0-9a-f]{64}$/.test(normalized)) {
+    throw new StorageValidationError(`${field} must be a lowercase SHA-256 value`);
+  }
+  return normalized;
+}
+
+function requireBoundedDeletionCount(value: number, field: string): number {
+  const normalized = requireNonNegativeInteger(value, field);
+  if (normalized > 1_024) {
+    throw new StorageValidationError(`${field} must be at most 1024`);
+  }
+  return normalized;
+}
+
+const candidateKnowledgeDeletionImmutableDeleteTriggers: readonly {
+  readonly name: string;
+  readonly table: string;
+  readonly message: string;
+}[] = [
+  {
+    name: "candidate_knowledge_sources_immutable_delete",
+    table: "candidate_knowledge_sources",
+    message: "candidate knowledge sources are immutable",
+  },
+  {
+    name: "candidate_knowledge_source_versions_immutable_delete",
+    table: "candidate_knowledge_source_versions",
+    message: "candidate knowledge source versions are immutable",
+  },
+  {
+    name: "candidate_knowledge_managed_source_versions_immutable_delete",
+    table: "candidate_knowledge_managed_source_versions",
+    message: "managed candidate knowledge source versions are immutable",
+  },
+  {
+    name: "candidate_knowledge_managed_write_operations_immutable_delete",
+    table: "candidate_knowledge_managed_write_operations",
+    message: "managed candidate knowledge write operations are immutable",
+  },
+  {
+    name: "candidate_knowledge_managed_write_events_immutable_delete",
+    table: "candidate_knowledge_managed_write_events",
+    message: "managed candidate knowledge write events are immutable",
+  },
+  {
+    name: "candidate_knowledge_managed_write_staging_identities_immutable_delete",
+    table: "candidate_knowledge_managed_write_staging_identities",
+    message: "managed candidate knowledge staging identities are immutable",
+  },
+  {
+    name: "candidate_knowledge_managed_write_recovery_claims_immutable_delete",
+    table: "candidate_knowledge_managed_write_recovery_claims",
+    message: "managed candidate knowledge recovery claims are immutable",
+  },
+  {
+    name: "candidate_knowledge_source_origin_bindings_immutable_delete",
+    table: "candidate_knowledge_source_origin_bindings",
+    message: "candidate knowledge source origin bindings are immutable",
+  },
+  {
+    name: "candidate_knowledge_source_refresh_observations_immutable_delete",
+    table: "candidate_knowledge_source_refresh_observations",
+    message: "candidate knowledge source refresh observations are immutable",
+  },
+  {
+    name: "candidate_knowledge_source_retirements_immutable_delete",
+    table: "candidate_knowledge_source_retirements",
+    message: "candidate knowledge source retirements are immutable",
+  },
+  {
+    name: "candidate_knowledge_source_url_provenance_immutable_delete",
+    table: "candidate_knowledge_source_url_provenance",
+    message: "candidate knowledge source URL provenance is immutable",
+  },
+  {
+    name: "candidate_knowledge_source_restored_url_provenance_immutable_delete",
+    table: "candidate_knowledge_source_restored_url_provenance",
+    message: "candidate knowledge restored URL provenance is immutable",
+  },
+  {
+    name: "candidate_knowledge_directory_bindings_immutable_delete",
+    table: "candidate_knowledge_directory_bindings",
+    message: "candidate knowledge directory bindings are immutable",
+  },
+  {
+    name: "candidate_knowledge_directory_members_immutable_delete",
+    table: "candidate_knowledge_directory_members",
+    message: "candidate knowledge directory members are immutable",
+  },
+  {
+    name: "candidate_knowledge_directory_root_revisions_immutable_delete",
+    table: "candidate_knowledge_directory_root_revisions",
+    message: "candidate knowledge directory root revisions are immutable",
+  },
+  {
+    name: "candidate_knowledge_directory_member_revisions_immutable_delete",
+    table: "candidate_knowledge_directory_member_revisions",
+    message: "candidate knowledge directory member revisions are immutable",
+  },
+  {
+    name: "candidate_knowledge_retention_policy_events_immutable_delete",
+    table: "candidate_knowledge_retention_policy_events",
+    message: "candidate knowledge retention policy events are immutable",
+  },
+  {
+    name: "candidate_knowledge_retention_override_events_immutable_delete",
+    table: "candidate_knowledge_retention_override_events",
+    message: "candidate knowledge retention override events are immutable",
+  },
+];
+
+function dropCandidateKnowledgeDeletionImmutableDeleteTriggers(database: SqliteHandle): void {
+  for (const trigger of candidateKnowledgeDeletionImmutableDeleteTriggers) {
+    database.exec(`DROP TRIGGER IF EXISTS ${trigger.name}`);
+  }
+}
+
+function recreateCandidateKnowledgeDeletionImmutableDeleteTriggers(database: SqliteHandle): void {
+  for (const trigger of candidateKnowledgeDeletionImmutableDeleteTriggers) {
+    database.exec(
+      `CREATE TRIGGER IF NOT EXISTS ${trigger.name}
+       BEFORE DELETE ON ${trigger.table}
+       BEGIN SELECT RAISE(ABORT, '${trigger.message}'); END;`,
+    );
+  }
 }
 
 function requireNonNegativeNumber(value: number, field: string): number {
@@ -4423,6 +4781,918 @@ export class SqliteStorage
         knowledgeBaseId: rowString(row, "candidate_knowledge_base_id"),
         kind: rowString(row, "kind") as CandidateKnowledgeSourceKind,
       }));
+  }
+
+  /**
+   * Return the database facts that a confirmed CKB deletion binds to its
+   * confirmation token. The knowledge-store adapter keeps this internal
+   * coordination projection out of its public deletion plan.
+   */
+  public getCandidateKnowledgeDeletionDatabaseSnapshot(
+    knowledgeBaseIdInput: string,
+  ): CandidateKnowledgeDeletionDatabaseSnapshot {
+    this.ensureOpen();
+    const knowledgeBaseId = requireNonEmpty(
+      knowledgeBaseIdInput,
+      "candidate knowledge base deletion knowledge base id",
+    ).trim();
+    const knowledgeBase = this.requireCandidateKnowledgeBase(knowledgeBaseId);
+    const policy = this.readCandidateKnowledgeRetentionPolicy(knowledgeBaseId);
+    const sources = this.database
+      .prepare(
+        `SELECT id, candidate_knowledge_base_id, kind, display_name, created_at
+         FROM candidate_knowledge_sources
+         WHERE candidate_knowledge_base_id = ?
+         ORDER BY id`,
+      )
+      .all(knowledgeBaseId);
+    const versions = this.database
+      .prepare(
+        `SELECT version.id, version.source_id, version.version, version.parent_version_id,
+                version.media_type, version.checksum, version.size_bytes, version.created_at
+         FROM candidate_knowledge_source_versions AS version
+         JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+         WHERE source.candidate_knowledge_base_id = ?
+         ORDER BY version.source_id, version.version, version.id`,
+      )
+      .all(knowledgeBaseId);
+    const managedVersions = this.database
+      .prepare(
+        `SELECT managed.version_id, version.source_id, source.kind,
+                version.checksum, version.size_bytes
+         FROM candidate_knowledge_managed_source_versions AS managed
+         JOIN candidate_knowledge_source_versions AS version
+           ON version.id = managed.version_id
+         JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+         WHERE source.candidate_knowledge_base_id = ?
+         ORDER BY version.source_id, version.version, version.id`,
+      )
+      .all(knowledgeBaseId);
+    const managedKeys = new Set(
+      managedVersions.map(
+        (row) => `${rowString(row, "source_id")}\u0000${rowString(row, "version_id")}`,
+      ),
+    );
+    const sourceIds = new Set(sources.map((row) => rowString(row, "id")));
+    const versionRecords = versions.map((row) => ({
+      sourceId: rowString(row, "source_id"),
+      versionId: rowString(row, "id"),
+    }));
+    const unmanagedVersionCount = versionRecords.filter(
+      (version) => !managedKeys.has(`${version.sourceId}\u0000${version.versionId}`),
+    ).length;
+    const versionsBySource = new Map<string, number>();
+    for (const version of versionRecords) {
+      versionsBySource.set(version.sourceId, (versionsBySource.get(version.sourceId) ?? 0) + 1);
+    }
+    const unmanagedSourceCount = [...sourceIds].filter(
+      (sourceId) =>
+        (versionsBySource.get(sourceId) ?? 0) === 0 ||
+        versionRecords.some(
+          (version) =>
+            version.sourceId === sourceId &&
+            !managedKeys.has(`${version.sourceId}\u0000${version.versionId}`),
+        ),
+    ).length;
+    const pendingOperationRow = this.database
+      .prepare(
+        `SELECT COUNT(*) AS count
+         FROM candidate_knowledge_managed_write_operations AS operation
+         LEFT JOIN candidate_knowledge_managed_write_events AS event
+           ON event.operation_id = operation.operation_id
+          AND event.sequence = (
+            SELECT MAX(latest.sequence)
+            FROM candidate_knowledge_managed_write_events AS latest
+            WHERE latest.operation_id = operation.operation_id
+          )
+         WHERE operation.candidate_knowledge_base_id = ?
+           AND COALESCE(event.state, 'prepared') NOT IN ('completed', 'aborted', 'noop')`,
+      )
+      .get<{ readonly count: number }>(knowledgeBaseId);
+
+    // Keep every CKB-owned persisted row in the digest. Values such as source
+    // names, origins, and URLs are internal token material and never leave the
+    // storage boundary as part of the public deletion plan.
+    const graph = {
+      knowledgeBase: this.database
+        .prepare(
+          `SELECT id, display_name, description, state, is_default,
+                  created_at, updated_at, archived_at
+           FROM candidate_knowledge_bases WHERE id = ?`,
+        )
+        .all(knowledgeBaseId),
+      sources,
+      versions,
+      managedVersions: this.database
+        .prepare(
+          `SELECT managed.version_id
+           FROM candidate_knowledge_managed_source_versions AS managed
+           JOIN candidate_knowledge_source_versions AS version
+             ON version.id = managed.version_id
+           JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+           WHERE source.candidate_knowledge_base_id = ?
+           ORDER BY managed.version_id`,
+        )
+        .all(knowledgeBaseId),
+      writeOperations: this.database
+        .prepare(
+          `SELECT operation.operation_id, operation.candidate_knowledge_base_id,
+                  operation.source_id, operation.requested_version_id, operation.kind,
+                  operation.created_at, operation.owner_kind, operation.owner_schema_version,
+                  operation.owner_generation, operation.requested_media_type,
+                  operation.requested_checksum, operation.requested_size_bytes
+           FROM candidate_knowledge_managed_write_operations AS operation
+           WHERE operation.candidate_knowledge_base_id = ?
+           ORDER BY operation.operation_id`,
+        )
+        .all(knowledgeBaseId),
+      writeEvents: this.database
+        .prepare(
+          `SELECT event.operation_id, event.sequence, event.state,
+                  event.target_version_id, event.created_at
+           FROM candidate_knowledge_managed_write_events AS event
+           JOIN candidate_knowledge_managed_write_operations AS operation
+             ON operation.operation_id = event.operation_id
+           WHERE operation.candidate_knowledge_base_id = ?
+           ORDER BY event.operation_id, event.sequence`,
+        )
+        .all(knowledgeBaseId),
+      writeStaging: this.database
+        .prepare(
+          `SELECT staging.operation_id, staging.device, staging.inode, staging.created_at
+           FROM candidate_knowledge_managed_write_staging_identities AS staging
+           JOIN candidate_knowledge_managed_write_operations AS operation
+             ON operation.operation_id = staging.operation_id
+           WHERE operation.candidate_knowledge_base_id = ?
+           ORDER BY staging.operation_id`,
+        )
+        .all(knowledgeBaseId),
+      writeClaims: this.database
+        .prepare(
+          `SELECT claim.operation_id, claim.phase, claim.claim_generation, claim.claimed_at
+           FROM candidate_knowledge_managed_write_recovery_claims AS claim
+           JOIN candidate_knowledge_managed_write_operations AS operation
+             ON operation.operation_id = claim.operation_id
+           WHERE operation.candidate_knowledge_base_id = ?
+           ORDER BY claim.operation_id`,
+        )
+        .all(knowledgeBaseId),
+      origins: this.database
+        .prepare(
+          `SELECT binding.source_id, binding.origin_path, binding.bound_at
+           FROM candidate_knowledge_source_origin_bindings AS binding
+           JOIN candidate_knowledge_sources AS source ON source.id = binding.source_id
+           WHERE source.candidate_knowledge_base_id = ?
+           ORDER BY binding.source_id`,
+        )
+        .all(knowledgeBaseId),
+      observations: this.database
+        .prepare(
+          `SELECT observation.source_id, observation.observed_version_id, observation.status,
+                  observation.checked_at, observation.last_refreshed_version_id,
+                  observation.last_refreshed_at
+           FROM candidate_knowledge_source_refresh_observations AS observation
+           JOIN candidate_knowledge_sources AS source ON source.id = observation.source_id
+           WHERE source.candidate_knowledge_base_id = ?
+           ORDER BY observation.source_id`,
+        )
+        .all(knowledgeBaseId),
+      retirements: this.database
+        .prepare(
+          `SELECT retirement.source_id, retirement.retired_at, retirement.reason
+           FROM candidate_knowledge_source_retirements AS retirement
+           JOIN candidate_knowledge_sources AS source ON source.id = retirement.source_id
+           WHERE source.candidate_knowledge_base_id = ?
+           ORDER BY retirement.source_id`,
+        )
+        .all(knowledgeBaseId),
+      urlProvenance: this.database
+        .prepare(
+          `SELECT provenance.version_id, provenance.source_id, provenance.original_url,
+                  provenance.final_url, provenance.fetched_at, provenance.kind
+           FROM candidate_knowledge_source_url_provenance AS provenance
+           JOIN candidate_knowledge_sources AS source ON source.id = provenance.source_id
+           WHERE source.candidate_knowledge_base_id = ?
+           ORDER BY provenance.source_id, provenance.version_id`,
+        )
+        .all(knowledgeBaseId),
+      restoredUrlProvenance: this.database
+        .prepare(
+          `SELECT provenance.version_id, provenance.source_id,
+                  provenance.fetched_at, provenance.kind
+           FROM candidate_knowledge_source_restored_url_provenance AS provenance
+           JOIN candidate_knowledge_sources AS source ON source.id = provenance.source_id
+           WHERE source.candidate_knowledge_base_id = ?
+           ORDER BY provenance.source_id, provenance.version_id`,
+        )
+        .all(knowledgeBaseId),
+      directoryBindings: this.database
+        .prepare(
+          `SELECT id, candidate_knowledge_base_id, root_path, bound_at
+           FROM candidate_knowledge_directory_bindings
+           WHERE candidate_knowledge_base_id = ?
+           ORDER BY id`,
+        )
+        .all(knowledgeBaseId),
+      directoryRoots: this.database
+        .prepare(
+          `SELECT directory_id, candidate_knowledge_base_id, revision, root_path, bound_at
+           FROM candidate_knowledge_directory_root_revisions
+           WHERE candidate_knowledge_base_id = ?
+           ORDER BY directory_id, revision`,
+        )
+        .all(knowledgeBaseId),
+      directoryMembers: this.database
+        .prepare(
+          `SELECT directory_id, candidate_knowledge_base_id, source_id, relative_path_hash
+           FROM candidate_knowledge_directory_members
+           WHERE candidate_knowledge_base_id = ?
+           ORDER BY directory_id, source_id`,
+        )
+        .all(knowledgeBaseId),
+      directoryMemberRevisions: this.database
+        .prepare(
+          `SELECT directory_id, candidate_knowledge_base_id, source_id, revision,
+                  relative_path_hash, bound_at
+           FROM candidate_knowledge_directory_member_revisions
+           WHERE candidate_knowledge_base_id = ?
+           ORDER BY directory_id, source_id, revision`,
+        )
+        .all(knowledgeBaseId),
+      retentionPolicies: this.database
+        .prepare(
+          `SELECT knowledge_base_id, revision, retention_class, rule,
+                  expire_after_days, updated_at
+           FROM candidate_knowledge_retention_policy_events
+           WHERE knowledge_base_id = ?
+           ORDER BY revision, retention_class`,
+        )
+        .all(knowledgeBaseId),
+      retentionOverrides: this.database
+        .prepare(
+          `SELECT knowledge_base_id, retention_class, override_kind, sequence,
+                  state, override_revision, policy_revision, changed_at
+           FROM candidate_knowledge_retention_override_events
+           WHERE knowledge_base_id = ?
+           ORDER BY retention_class, override_kind, sequence`,
+        )
+        .all(knowledgeBaseId),
+      retentionOverrideSnapshots: this.database
+        .prepare(
+          `SELECT knowledge_base_id, override_revision
+           FROM candidate_knowledge_retention_override_revision_snapshots
+           WHERE knowledge_base_id = ?`,
+        )
+        .all(knowledgeBaseId),
+    };
+    const graphDigest = checksum(serialize(recordToJson(graph)));
+    const managedArtifacts = managedVersions
+      .filter((row) => rowString(row, "kind") === "file")
+      .map((row) => ({
+        sourceId: rowString(row, "source_id"),
+        versionId: rowString(row, "version_id"),
+        checksum: rowString(row, "checksum"),
+        sizeBytes: rowNumber(row, "size_bytes"),
+      }));
+    return Object.freeze({
+      knowledgeBaseId,
+      state: knowledgeBase.state,
+      isDefault: knowledgeBase.isDefault,
+      createdAt: knowledgeBase.createdAt,
+      updatedAt: knowledgeBase.updatedAt,
+      archivedAt: knowledgeBase.archivedAt,
+      policy,
+      graphDigest,
+      sourceCount: sources.length,
+      versionCount: versions.length,
+      managedArtifacts: Object.freeze(managedArtifacts.map((artifact) => Object.freeze(artifact))),
+      unmanagedSourceCount,
+      unmanagedVersionCount,
+      pendingOperationCount: Number(pendingOperationRow?.count ?? 0),
+    });
+  }
+
+  public async beginCandidateKnowledgeDeletion(
+    input: CandidateKnowledgeDeletionOperationInput,
+  ): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireSha256(
+      input.operationId,
+      "candidate knowledge deletion operation id",
+    );
+    const knowledgeBaseId = requireNonEmpty(
+      input.knowledgeBaseId,
+      "candidate knowledge deletion knowledge base id",
+    ).trim();
+    const confirmationToken = requireSha256(
+      input.confirmationToken,
+      "candidate knowledge deletion confirmation token",
+    );
+    const graphDigest = requireSha256(
+      input.graphDigest,
+      "candidate knowledge deletion graph digest",
+    );
+    const createdAt = requireTimestamp(input.createdAt, "candidate knowledge deletion createdAt");
+    const managedArtifactCount = requireBoundedDeletionCount(
+      input.managedArtifactCount,
+      "candidate knowledge deletion managed artifact count",
+    );
+    const managedArtifactBytes = requireNonNegativeInteger(
+      input.managedArtifactBytes,
+      "candidate knowledge deletion managed artifact bytes",
+    );
+    const preservedUnknownCount = requireBoundedDeletionCount(
+      input.preservedUnknownCount,
+      "candidate knowledge deletion preserved unknown count",
+    );
+    const preservedUnmanagedCount = requireBoundedDeletionCount(
+      input.preservedUnmanagedCount,
+      "candidate knowledge deletion preserved unmanaged count",
+    );
+    if (typeof input.countCapped !== "boolean") {
+      throw new StorageValidationError("candidate knowledge deletion count capped is invalid");
+    }
+    if (!Array.isArray(input.artifacts)) {
+      throw new StorageValidationError("candidate knowledge deletion artifacts are required");
+    }
+    const artifacts = input.artifacts.map((artifact) => ({
+      sourceId: requireNonEmpty(artifact.sourceId, "candidate knowledge deletion source id").trim(),
+      versionId: requireNonEmpty(
+        artifact.versionId,
+        "candidate knowledge deletion version id",
+      ).trim(),
+      checksum: requireSha256(artifact.checksum, "candidate knowledge deletion artifact checksum"),
+      sizeBytes: requireNonNegativeInteger(
+        artifact.sizeBytes,
+        "candidate knowledge deletion artifact size",
+      ),
+      device: requireNonNegativeInteger(
+        artifact.device,
+        "candidate knowledge deletion artifact device",
+      ),
+      inode: requireNonNegativeInteger(
+        artifact.inode,
+        "candidate knowledge deletion artifact inode",
+      ),
+    }));
+    if (artifacts.length !== managedArtifactCount) {
+      throw new StorageConflictError("candidate knowledge deletion artifact count changed");
+    }
+    const artifactBytes = artifacts.reduce((total, artifact) => total + artifact.sizeBytes, 0);
+    if (artifactBytes !== managedArtifactBytes) {
+      throw new StorageConflictError("candidate knowledge deletion artifact sizes changed");
+    }
+    const artifactKeys = new Set<string>();
+    for (const artifact of artifacts) {
+      const key = `${artifact.sourceId}\u0000${artifact.versionId}`;
+      if (artifactKeys.has(key)) {
+        throw new StorageConflictError("candidate knowledge deletion artifacts are not unique");
+      }
+      artifactKeys.add(key);
+    }
+    this.database.transaction(() => {
+      const snapshot = this.getCandidateKnowledgeDeletionDatabaseSnapshot(knowledgeBaseId);
+      if (snapshot.state !== "archived" || snapshot.isDefault) {
+        throw new StorageConflictError(
+          "candidate knowledge base is not an archived non-default target",
+        );
+      }
+      if (
+        snapshot.policy.activeOverrides.some(
+          (override) => override.kind === "legal-hold" || override.kind === "manual-preservation",
+        )
+      ) {
+        throw new StorageConflictError(
+          "candidate knowledge deletion is blocked by an active preservation override",
+        );
+      }
+      if (snapshot.graphDigest !== graphDigest) {
+        throw new StorageConflictError("candidate knowledge deletion confirmation is stale");
+      }
+      if (snapshot.pendingOperationCount > 0) {
+        throw new StorageConflictError(
+          "candidate knowledge deletion has an unfinished managed write",
+        );
+      }
+      if (
+        snapshot.unmanagedSourceCount > 0 ||
+        snapshot.unmanagedVersionCount > 0 ||
+        snapshot.managedArtifacts.length !== artifacts.length
+      ) {
+        throw new StorageConflictError(
+          "candidate knowledge deletion contains unmanaged database records",
+        );
+      }
+      const expectedArtifacts = new Map(
+        snapshot.managedArtifacts.map((artifact) => [
+          `${artifact.sourceId}\u0000${artifact.versionId}`,
+          artifact,
+        ]),
+      );
+      for (const artifact of artifacts) {
+        const expected = expectedArtifacts.get(`${artifact.sourceId}\u0000${artifact.versionId}`);
+        if (
+          expected === undefined ||
+          expected.checksum !== artifact.checksum ||
+          expected.sizeBytes !== artifact.sizeBytes
+        ) {
+          throw new StorageConflictError("candidate knowledge deletion artifact inventory changed");
+        }
+      }
+      const existingRow = this.database
+        .prepare(
+          `SELECT operation_id, knowledge_base_id, confirmation_token, graph_digest, phase,
+                  created_at, committed_at, completed_at, staging_device, staging_inode,
+                  managed_artifact_count, managed_artifact_bytes, preserved_unknown_count,
+                  preserved_unmanaged_count, count_capped
+           FROM candidate_knowledge_deletion_operations
+           WHERE operation_id = ? OR confirmation_token = ?`,
+        )
+        .get(operationId, confirmationToken);
+      if (existingRow !== undefined) {
+        const existingOperation = this.requireCandidateKnowledgeDeletionOperation(
+          rowString(existingRow, "operation_id"),
+        );
+        if (
+          existingOperation.operationId !== operationId ||
+          existingOperation.knowledgeBaseId !== knowledgeBaseId ||
+          existingOperation.confirmationToken !== confirmationToken ||
+          existingOperation.graphDigest !== graphDigest ||
+          existingOperation.managedArtifactCount !== managedArtifactCount ||
+          existingOperation.managedArtifactBytes !== managedArtifactBytes ||
+          existingOperation.preservedUnknownCount !== preservedUnknownCount ||
+          existingOperation.preservedUnmanagedCount !== preservedUnmanagedCount ||
+          existingOperation.countCapped !== input.countCapped ||
+          existingOperation.artifacts.length !== artifacts.length ||
+          existingOperation.artifacts.some((artifact, index) => {
+            const current = artifacts[index];
+            return (
+              current === undefined ||
+              artifact.sourceId !== current.sourceId ||
+              artifact.versionId !== current.versionId ||
+              artifact.checksum !== current.checksum ||
+              artifact.sizeBytes !== current.sizeBytes ||
+              artifact.device !== current.device ||
+              artifact.inode !== current.inode
+            );
+          })
+        ) {
+          throw new StorageConflictError("candidate knowledge deletion operation is mismatched");
+        }
+        if (existingOperation.phase !== "aborted") {
+          throw new StorageConflictError("candidate knowledge deletion operation already exists");
+        }
+        this.database
+          .prepare(
+            `UPDATE candidate_knowledge_deletion_operations
+             SET phase = 'prepared', staging_device = NULL, staging_inode = NULL
+             WHERE operation_id = ? AND phase = 'aborted'`,
+          )
+          .run(operationId);
+        return;
+      }
+      this.database
+        .prepare(
+          `INSERT INTO candidate_knowledge_deletion_operations
+           (operation_id, knowledge_base_id, confirmation_token, graph_digest, phase,
+            created_at, committed_at, completed_at, staging_device, staging_inode,
+            managed_artifact_count, managed_artifact_bytes, preserved_unknown_count,
+            preserved_unmanaged_count, count_capped)
+           VALUES (?, ?, ?, ?, 'prepared', ?, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          operationId,
+          knowledgeBaseId,
+          confirmationToken,
+          graphDigest,
+          createdAt,
+          managedArtifactCount,
+          managedArtifactBytes,
+          preservedUnknownCount,
+          preservedUnmanagedCount,
+          input.countCapped ? 1 : 0,
+        );
+      const insertArtifact = this.database.prepare(
+        `INSERT INTO candidate_knowledge_deletion_artifacts
+         (operation_id, source_id, version_id, checksum, size_bytes, device, inode)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      );
+      for (const artifact of artifacts) {
+        insertArtifact.run(
+          operationId,
+          artifact.sourceId,
+          artifact.versionId,
+          artifact.checksum,
+          artifact.sizeBytes,
+          artifact.device,
+          artifact.inode,
+        );
+      }
+    })();
+  }
+
+  public async stageCandidateKnowledgeDeletion(
+    operationIdInput: string,
+    stagingDeviceInput: number,
+    stagingInodeInput: number,
+  ): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireSha256(
+      operationIdInput,
+      "candidate knowledge deletion operation id",
+    );
+    const stagingDevice = requireNonNegativeInteger(
+      stagingDeviceInput,
+      "candidate knowledge deletion staging device",
+    );
+    const stagingInode = requireNonNegativeInteger(
+      stagingInodeInput,
+      "candidate knowledge deletion staging inode",
+    );
+    this.database.transaction(() => {
+      const operation = this.requireCandidateKnowledgeDeletionOperation(operationId);
+      if (operation.phase !== "prepared") {
+        throw new StorageConflictError("candidate knowledge deletion is not prepared for staging");
+      }
+      this.database
+        .prepare(
+          `UPDATE candidate_knowledge_deletion_operations
+           SET phase = 'staging', staging_device = ?, staging_inode = ?
+           WHERE operation_id = ? AND phase = 'prepared'`,
+        )
+        .run(stagingDevice, stagingInode, operationId);
+    })();
+  }
+
+  public async listCandidateKnowledgeDeletionOperations(): Promise<
+    readonly CandidateKnowledgeDeletionOperationRecord[]
+  > {
+    this.ensureOpen();
+    const rows = this.database
+      .prepare(
+        `SELECT operation_id, knowledge_base_id, confirmation_token, graph_digest, phase,
+                created_at, committed_at, completed_at, staging_device, staging_inode,
+                managed_artifact_count, managed_artifact_bytes, preserved_unknown_count,
+                preserved_unmanaged_count, count_capped
+         FROM candidate_knowledge_deletion_operations
+         ORDER BY operation_id`,
+      )
+      .all();
+    const artifacts = this.database.prepare(
+      `SELECT operation_id, source_id, version_id, checksum, size_bytes, device, inode
+       FROM candidate_knowledge_deletion_artifacts
+       WHERE operation_id = ?
+       ORDER BY source_id, version_id`,
+    );
+    return rows.map((row) =>
+      candidateKnowledgeDeletionOperationFromRow(
+        row,
+        artifacts.all(rowString(row, "operation_id")),
+      ),
+    );
+  }
+
+  public async commitCandidateKnowledgeDeletion(
+    input: CandidateKnowledgeDeletionCommitInput,
+  ): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireSha256(
+      input.operationId,
+      "candidate knowledge deletion operation id",
+    );
+    const knowledgeBaseId = requireNonEmpty(
+      input.knowledgeBaseId,
+      "candidate knowledge deletion knowledge base id",
+    ).trim();
+    const confirmationToken = requireSha256(
+      input.confirmationToken,
+      "candidate knowledge deletion confirmation token",
+    );
+    const graphDigest = requireSha256(
+      input.graphDigest,
+      "candidate knowledge deletion graph digest",
+    );
+    const committedAt = requireTimestamp(
+      input.committedAt,
+      "candidate knowledge deletion committedAt",
+    );
+    this.database.transaction(() => {
+      const operation = this.requireCandidateKnowledgeDeletionOperation(operationId);
+      if (
+        operation.knowledgeBaseId !== knowledgeBaseId ||
+        operation.confirmationToken !== confirmationToken ||
+        operation.graphDigest !== graphDigest
+      ) {
+        throw new StorageConflictError("candidate knowledge deletion confirmation is mismatched");
+      }
+      if (operation.phase !== "staging") {
+        throw new StorageConflictError("candidate knowledge deletion is not staged");
+      }
+      const snapshot = this.getCandidateKnowledgeDeletionDatabaseSnapshot(knowledgeBaseId);
+      if (snapshot.state !== "archived" || snapshot.isDefault) {
+        throw new StorageConflictError(
+          "candidate knowledge base lifecycle changed during deletion",
+        );
+      }
+      if (
+        snapshot.policy.activeOverrides.some(
+          (override) => override.kind === "legal-hold" || override.kind === "manual-preservation",
+        )
+      ) {
+        throw new StorageConflictError(
+          "candidate knowledge deletion is blocked by an active preservation override",
+        );
+      }
+      if (snapshot.graphDigest !== graphDigest) {
+        throw new StorageConflictError("candidate knowledge deletion confirmation is stale");
+      }
+      if (snapshot.pendingOperationCount > 0) {
+        throw new StorageConflictError(
+          "candidate knowledge deletion has an unfinished managed write",
+        );
+      }
+      if (snapshot.unmanagedSourceCount > 0 || snapshot.unmanagedVersionCount > 0) {
+        throw new StorageConflictError(
+          "candidate knowledge deletion contains unmanaged database records",
+        );
+      }
+      dropCandidateKnowledgeDeletionImmutableDeleteTriggers(this.database);
+      try {
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_directory_member_revisions
+             WHERE candidate_knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_directory_members
+             WHERE candidate_knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_directory_root_revisions
+             WHERE candidate_knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_directory_bindings
+             WHERE candidate_knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_source_refresh_observations
+             WHERE source_id IN (
+               SELECT id FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_source_retirements
+             WHERE source_id IN (
+               SELECT id FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_source_origin_bindings
+             WHERE source_id IN (
+               SELECT id FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_source_url_provenance
+             WHERE source_id IN (
+               SELECT id FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_source_restored_url_provenance
+             WHERE source_id IN (
+               SELECT id FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_managed_write_recovery_claims
+             WHERE operation_id IN (
+               SELECT operation_id FROM candidate_knowledge_managed_write_operations
+               WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_managed_write_staging_identities
+             WHERE operation_id IN (
+               SELECT operation_id FROM candidate_knowledge_managed_write_operations
+               WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_managed_write_events
+             WHERE operation_id IN (
+               SELECT operation_id FROM candidate_knowledge_managed_write_operations
+               WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_managed_write_operations
+             WHERE candidate_knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_managed_source_versions
+             WHERE version_id IN (
+               SELECT version.id
+               FROM candidate_knowledge_source_versions AS version
+               JOIN candidate_knowledge_sources AS source ON source.id = version.source_id
+               WHERE source.candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_source_versions
+             WHERE source_id IN (
+               SELECT id FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ?
+             )`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(`DELETE FROM candidate_knowledge_sources WHERE candidate_knowledge_base_id = ?`)
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_retention_override_events
+             WHERE knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_retention_override_revision_snapshots
+             WHERE knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        this.database
+          .prepare(
+            `DELETE FROM candidate_knowledge_retention_policy_events
+             WHERE knowledge_base_id = ?`,
+          )
+          .run(knowledgeBaseId);
+        const removed = this.database
+          .prepare("DELETE FROM candidate_knowledge_bases WHERE id = ?")
+          .run(knowledgeBaseId);
+        if (removed.changes !== 1) {
+          throw new StorageConflictError("candidate knowledge base disappeared during deletion");
+        }
+        this.database
+          .prepare(
+            `UPDATE candidate_knowledge_deletion_operations
+             SET phase = 'committed', committed_at = ?
+             WHERE operation_id = ? AND phase = 'staging'`,
+          )
+          .run(committedAt, operationId);
+      } finally {
+        recreateCandidateKnowledgeDeletionImmutableDeleteTriggers(this.database);
+      }
+    })();
+  }
+
+  public async completeCandidateKnowledgeDeletion(
+    operationIdInput: string,
+    completedAtInput: string,
+  ): Promise<CandidateKnowledgeDeletionAuditRecord> {
+    this.ensureOpen();
+    const operationId = requireSha256(
+      operationIdInput,
+      "candidate knowledge deletion operation id",
+    );
+    const completedAt = requireTimestamp(
+      completedAtInput,
+      "candidate knowledge deletion completedAt",
+    );
+    let result: CandidateKnowledgeDeletionAuditRecord | undefined;
+    this.database.transaction(() => {
+      const operation = this.requireCandidateKnowledgeDeletionOperation(operationId);
+      if (operation.phase === "completed") {
+        const existing = this.database
+          .prepare(
+            `SELECT audit_id, operation_id, knowledge_base_id, confirmation_token, status,
+                    created_at, completed_at, managed_artifact_count, managed_artifact_bytes,
+                    preserved_unknown_count, preserved_unmanaged_count, count_capped
+             FROM candidate_knowledge_deletion_audits WHERE operation_id = ?`,
+          )
+          .get(operationId);
+        if (existing === undefined) {
+          throw new StorageConflictError("candidate knowledge deletion audit is missing");
+        }
+        result = candidateKnowledgeDeletionAuditFromRow(existing);
+        return;
+      }
+      if (operation.phase !== "committed") {
+        throw new StorageConflictError("candidate knowledge deletion is not logically committed");
+      }
+      this.database
+        .prepare(
+          `UPDATE candidate_knowledge_deletion_operations
+           SET phase = 'completed', completed_at = ?
+           WHERE operation_id = ? AND phase = 'committed'`,
+        )
+        .run(completedAt, operationId);
+      const auditId = checksum(`${operation.operationId}\u0000${operation.confirmationToken}`);
+      this.database
+        .prepare(
+          `INSERT INTO candidate_knowledge_deletion_audits
+           (audit_id, operation_id, knowledge_base_id, confirmation_token, status,
+            created_at, completed_at, managed_artifact_count, managed_artifact_bytes,
+            preserved_unknown_count, preserved_unmanaged_count, count_capped)
+           VALUES (?, ?, ?, ?, 'completed', ?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .run(
+          auditId,
+          operation.operationId,
+          operation.knowledgeBaseId,
+          operation.confirmationToken,
+          operation.createdAt,
+          completedAt,
+          operation.managedArtifactCount,
+          operation.managedArtifactBytes,
+          operation.preservedUnknownCount,
+          operation.preservedUnmanagedCount,
+          operation.countCapped ? 1 : 0,
+        );
+      const inserted = this.database
+        .prepare(
+          `SELECT audit_id, operation_id, knowledge_base_id, confirmation_token, status,
+                  created_at, completed_at, managed_artifact_count, managed_artifact_bytes,
+                  preserved_unknown_count, preserved_unmanaged_count, count_capped
+           FROM candidate_knowledge_deletion_audits WHERE operation_id = ?`,
+        )
+        .get(operationId);
+      if (inserted === undefined) {
+        throw new StorageConflictError("candidate knowledge deletion audit could not be retained");
+      }
+      result = candidateKnowledgeDeletionAuditFromRow(inserted);
+    })();
+    return result as CandidateKnowledgeDeletionAuditRecord;
+  }
+
+  public async abortCandidateKnowledgeDeletion(operationIdInput: string): Promise<void> {
+    this.ensureOpen();
+    const operationId = requireSha256(
+      operationIdInput,
+      "candidate knowledge deletion operation id",
+    );
+    this.database.transaction(() => {
+      const operation = this.requireCandidateKnowledgeDeletionOperation(operationId);
+      if (operation.phase === "aborted") return;
+      if (operation.phase !== "prepared" && operation.phase !== "staging") {
+        throw new StorageConflictError("candidate knowledge deletion cannot be aborted");
+      }
+      this.database
+        .prepare(
+          `UPDATE candidate_knowledge_deletion_operations
+           SET phase = 'aborted', staging_device = NULL, staging_inode = NULL
+           WHERE operation_id = ?`,
+        )
+        .run(operationId);
+    })();
+  }
+
+  public async getCandidateKnowledgeDeletionAuditByToken(
+    confirmationTokenInput: string,
+  ): Promise<CandidateKnowledgeDeletionAuditRecord | undefined> {
+    this.ensureOpen();
+    const confirmationToken = requireSha256(
+      confirmationTokenInput,
+      "candidate knowledge deletion confirmation token",
+    );
+    const row = this.database
+      .prepare(
+        `SELECT audit_id, operation_id, knowledge_base_id, confirmation_token, status,
+                created_at, completed_at, managed_artifact_count, managed_artifact_bytes,
+                preserved_unknown_count, preserved_unmanaged_count, count_capped
+         FROM candidate_knowledge_deletion_audits
+         WHERE confirmation_token = ?`,
+      )
+      .get(confirmationToken);
+    return row === undefined ? undefined : candidateKnowledgeDeletionAuditFromRow(row);
   }
 
   public async getCandidateKnowledgeRetentionPolicy(
@@ -9662,6 +10932,35 @@ export class SqliteStorage
     return managedCandidateKnowledgeWriteOperationFromRow(row);
   }
 
+  private requireCandidateKnowledgeDeletionOperation(
+    operationId: string,
+  ): CandidateKnowledgeDeletionOperationRecord {
+    const row = this.database
+      .prepare(
+        `SELECT operation_id, knowledge_base_id, confirmation_token, graph_digest, phase,
+                created_at, committed_at, completed_at, staging_device, staging_inode,
+                managed_artifact_count, managed_artifact_bytes, preserved_unknown_count,
+                preserved_unmanaged_count, count_capped
+         FROM candidate_knowledge_deletion_operations
+         WHERE operation_id = ?`,
+      )
+      .get(operationId);
+    if (row === undefined) {
+      throw new StorageValidationError(
+        `candidate knowledge deletion operation ${operationId} was not found`,
+      );
+    }
+    const artifacts = this.database
+      .prepare(
+        `SELECT operation_id, source_id, version_id, checksum, size_bytes, device, inode
+         FROM candidate_knowledge_deletion_artifacts
+         WHERE operation_id = ?
+         ORDER BY source_id, version_id`,
+      )
+      .all(operationId);
+    return candidateKnowledgeDeletionOperationFromRow(row, artifacts);
+  }
+
   private requireManagedCandidateKnowledgeWriteMutationOwner(
     operation: ManagedCandidateKnowledgeWriteOperationRecord,
     expectedOwnerGeneration: number | undefined,
@@ -11299,6 +12598,73 @@ function candidateKnowledgeSourceVersionFromRow(
     sizeBytes: rowNumber(row, "size_bytes"),
     createdAt: rowString(row, "created_at"),
   };
+}
+
+function candidateKnowledgeDeletionOperationFromRow(
+  row: Record<string, unknown>,
+  artifactRows: readonly Record<string, unknown>[],
+): CandidateKnowledgeDeletionOperationRecord {
+  const phase = rowString(row, "phase");
+  if (
+    phase !== "prepared" &&
+    phase !== "staging" &&
+    phase !== "committed" &&
+    phase !== "completed" &&
+    phase !== "aborted"
+  ) {
+    throw new StorageValidationError("candidate knowledge deletion operation phase is invalid");
+  }
+  const artifacts = artifactRows.map((artifact) => ({
+    operationId: rowString(artifact, "operation_id"),
+    sourceId: rowString(artifact, "source_id"),
+    versionId: rowString(artifact, "version_id"),
+    checksum: rowString(artifact, "checksum"),
+    sizeBytes: rowNumber(artifact, "size_bytes"),
+    device: rowNumber(artifact, "device"),
+    inode: rowNumber(artifact, "inode"),
+  }));
+  return Object.freeze({
+    operationId: rowString(row, "operation_id"),
+    knowledgeBaseId: rowString(row, "knowledge_base_id"),
+    confirmationToken: rowString(row, "confirmation_token"),
+    graphDigest: rowString(row, "graph_digest"),
+    phase,
+    createdAt: rowString(row, "created_at"),
+    committedAt: rowNullableString(row, "committed_at"),
+    completedAt: rowNullableString(row, "completed_at"),
+    stagingDevice: rowNullableNumber(row, "staging_device"),
+    stagingInode: rowNullableNumber(row, "staging_inode"),
+    managedArtifactCount: rowNumber(row, "managed_artifact_count"),
+    managedArtifactBytes: rowNumber(row, "managed_artifact_bytes"),
+    preservedUnknownCount: rowNumber(row, "preserved_unknown_count"),
+    preservedUnmanagedCount: rowNumber(row, "preserved_unmanaged_count"),
+    countCapped: rowNumber(row, "count_capped") === 1,
+    artifacts: Object.freeze(artifacts.map((artifact) => Object.freeze(artifact))),
+  });
+}
+
+function candidateKnowledgeDeletionAuditFromRow(
+  row: Record<string, unknown>,
+): CandidateKnowledgeDeletionAuditRecord {
+  if (rowString(row, "status") !== "completed") {
+    throw new StorageValidationError("candidate knowledge deletion audit status is invalid");
+  }
+  return Object.freeze({
+    auditId: rowString(row, "audit_id"),
+    operationId: rowString(row, "operation_id"),
+    knowledgeBaseId: rowString(row, "knowledge_base_id"),
+    confirmationToken: rowString(row, "confirmation_token"),
+    status: "completed",
+    createdAt: rowString(row, "created_at"),
+    completedAt: rowString(row, "completed_at"),
+    counts: Object.freeze({
+      managedArtifactCount: rowNumber(row, "managed_artifact_count"),
+      managedArtifactBytes: rowNumber(row, "managed_artifact_bytes"),
+      preservedUnknownCount: rowNumber(row, "preserved_unknown_count"),
+      preservedUnmanagedCount: rowNumber(row, "preserved_unmanaged_count"),
+      countCapped: rowNumber(row, "count_capped") === 1,
+    }),
+  });
 }
 
 function isValidCandidateKnowledgeBaseLifecycleState(
