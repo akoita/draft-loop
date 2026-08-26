@@ -7,7 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type { CredentialStatus } from "./bridge.js";
+import type { CredentialStatus, ProviderAuthMode, ProviderAuthModeStatus } from "./bridge.js";
 import { type DiffOp, diffWords } from "./diff.js";
 import {
   type DesktopReviewState,
@@ -38,6 +38,13 @@ interface ReviewWorkspaceProps {
   readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
   readonly onSetCredential?: (provider: "anthropic" | "openai", apiKey: string) => Promise<void>;
   readonly onRemoveCredential?: (provider: "anthropic" | "openai") => Promise<void>;
+  readonly getProviderAuthModeStatus?: (
+    provider: "anthropic" | "openai",
+  ) => Promise<ProviderAuthModeStatus>;
+  readonly onSetProviderAuthMode?: (
+    provider: "anthropic" | "openai",
+    mode: ProviderAuthMode,
+  ) => Promise<ProviderAuthModeStatus>;
 }
 
 const decisionLabels: Readonly<Record<FindingDecision, string>> = {
@@ -403,10 +410,10 @@ function SideRail({
       <button
         className="rail-button"
         type="button"
-        title="Keys — provider API keys"
+        title="Provider authentication"
         onClick={onOpenSettings}
       >
-        <span className="sr-only">Keys — provider API keys</span>
+        <span className="sr-only">Provider authentication</span>
         <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
           <circle cx="8" cy="12" r="3.6" stroke="currentColor" strokeWidth="1.6" />
           <path
@@ -653,6 +660,92 @@ function CredentialRow({
         ) : null}
       </div>
     </section>
+  );
+}
+
+export const providerAuthModeLabels: Readonly<Record<ProviderAuthMode, string>> = {
+  "api-key": "Provider API key",
+  "user-session": "Authenticated Codex / ChatGPT subscription",
+};
+
+interface ProviderAuthenticationModeProps {
+  readonly status: ProviderAuthModeStatus;
+  readonly credentialStatus: CredentialStatus;
+  readonly onChange?: ((mode: ProviderAuthMode) => void) | undefined;
+}
+
+/**
+ * The OpenAI mode choice is kept separate from the key editor so an active
+ * user-session never renders an actionable API-key control.
+ */
+export function ProviderAuthenticationMode({
+  status,
+  credentialStatus,
+  onChange,
+}: ProviderAuthenticationModeProps) {
+  const modeLabel = providerAuthModeLabels[status.activeMode];
+  const modeChoiceDisabled = status.environmentOverride || onChange === undefined;
+  return (
+    <fieldset className="provider-auth-mode" aria-describedby="provider-auth-mode-copy">
+      <legend>OpenAI authentication</legend>
+      <p className="credential-mode-copy" id="provider-auth-mode-copy">
+        Choose which OpenAI account DraftLoop uses. This preference is saved for the next launch; it
+        does not change the current host.
+      </p>
+      <label className="provider-auth-choice">
+        <input
+          type="radio"
+          name="openai-provider-auth-mode"
+          value="api-key"
+          checked={status.preferredMode === "api-key"}
+          disabled={modeChoiceDisabled}
+          onChange={() => onChange?.("api-key")}
+        />
+        <span>
+          <strong>{providerAuthModeLabels["api-key"]}</strong>
+          <small>Use an OpenAI API key with direct API billing.</small>
+        </span>
+      </label>
+      <label className="provider-auth-choice">
+        <input
+          type="radio"
+          name="openai-provider-auth-mode"
+          value="user-session"
+          checked={status.preferredMode === "user-session"}
+          disabled={modeChoiceDisabled}
+          onChange={() => onChange?.("user-session")}
+        />
+        <span>
+          <strong>{providerAuthModeLabels["user-session"]}</strong>
+          <small>Use the local Codex CLI session with subscription billing.</small>
+        </span>
+      </label>
+      <p className="credential-mode-status" role="status">
+        Active now: {modeLabel}. Saved preference: {providerAuthModeLabels[status.preferredMode]}.
+      </p>
+      {status.restartRequired ? (
+        <p className="credential-mode-pending" role="status">
+          Close and reopen DraftLoop to apply it; the active host remains unchanged until then.
+        </p>
+      ) : null}
+      {status.environmentOverride ? (
+        <p className="credential-mode-warning" role="alert">
+          An environment override controls this mode. Unset the provider auth override and restart
+          DraftLoop before changing the saved preference.
+        </p>
+      ) : null}
+      {status.activeMode === "user-session" ? (
+        <div className="credential-session-guidance">
+          <strong>
+            Codex session: {credentialStatus.configured ? "available" : "not detected"}
+          </strong>
+          <p>
+            Install the Codex CLI, run <code>codex login</code>, then close and reopen DraftLoop.
+            DraftLoop does not copy subscription credentials into an API key.
+          </p>
+        </div>
+      ) : null}
+    </fieldset>
   );
 }
 
@@ -1121,6 +1214,8 @@ export function ReviewWorkspace({
   getCredentialStatus,
   onSetCredential,
   onRemoveCredential,
+  getProviderAuthModeStatus,
+  onSetProviderAuthMode,
 }: ReviewWorkspaceProps) {
   const findingSummary = reviewFindingSummary(state);
   const { blocking: blockingFindings, warnings } = findingSummary;
@@ -1228,6 +1323,13 @@ export function ReviewWorkspace({
   const [openaiStatus, setOpenaiStatus] = useState<CredentialStatus>(() =>
     emptyCredentialStatus("openai"),
   );
+  const [openaiAuthModeStatus, setOpenaiAuthModeStatus] = useState<ProviderAuthModeStatus>(() => ({
+    provider: "openai",
+    activeMode: "api-key",
+    preferredMode: "api-key",
+    restartRequired: false,
+    environmentOverride: false,
+  }));
   const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
   const [openaiKeyInput, setOpenaiKeyInput] = useState("");
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
@@ -1470,6 +1572,17 @@ export function ReviewWorkspace({
     refreshCredentials();
   }, [refreshCredentials]);
 
+  const refreshProviderAuthMode = useCallback(() => {
+    if (getProviderAuthModeStatus === undefined) return;
+    void getProviderAuthModeStatus("openai")
+      .then(setOpenaiAuthModeStatus)
+      .catch(() => undefined);
+  }, [getProviderAuthModeStatus]);
+
+  useEffect(() => {
+    refreshProviderAuthMode();
+  }, [refreshProviderAuthMode]);
+
   const handleSaveCredential = async (provider: "anthropic" | "openai", key: string) => {
     if (onSetCredential === undefined || key.trim() === "") return;
     try {
@@ -1495,6 +1608,24 @@ export function ReviewWorkspace({
       refreshCredentials();
     } catch {
       setCredentialFeedback("Failed to remove API key.");
+    }
+  };
+
+  const handleSetProviderAuthMode = async (mode: ProviderAuthMode) => {
+    if (onSetProviderAuthMode === undefined) return;
+    try {
+      const status = await onSetProviderAuthMode("openai", mode);
+      setOpenaiAuthModeStatus(status);
+      setCredentialFeedback(
+        status.restartRequired
+          ? `${providerAuthModeLabels[mode]} selected for OpenAI. Close and reopen DraftLoop to apply it.`
+          : `${providerAuthModeLabels[mode]} is active for OpenAI.`,
+      );
+      refreshCredentials();
+    } catch (error: unknown) {
+      setCredentialFeedback(
+        error instanceof Error ? error.message : "Failed to save provider authentication mode.",
+      );
     }
   };
 
@@ -1860,8 +1991,8 @@ export function ReviewWorkspace({
     },
     {
       id: "keys",
-      label: "Open provider API keys",
-      note: "Manage the Anthropic and OpenAI credentials",
+      label: "Open provider authentication",
+      note: "Choose API keys or an authenticated OpenAI Codex session",
       disabledReason: null,
       run: () => setSettingsOpen(true),
     },
@@ -2108,8 +2239,8 @@ export function ReviewWorkspace({
         >
           <div className="modal-header">
             <div>
-              <p className="eyebrow">DraftLoop / Credentials</p>
-              <h2 id="settings-dialog-title">Provider API keys</h2>
+              <p className="eyebrow">DraftLoop / Provider authentication</p>
+              <h2 id="settings-dialog-title">Provider authentication</h2>
             </div>
             <button
               className="button button-quiet"
@@ -2121,8 +2252,8 @@ export function ReviewWorkspace({
             </button>
           </div>
           <p className="modal-copy" id="settings-dialog-copy">
-            App-managed keys override environment variables. Storage protection depends on this
-            operating system and is reported for each key below.
+            Choose how each hosted provider authenticates. App-managed API keys override provider
+            API-key environment variables; the selected mode changes after you restart DraftLoop.
           </p>
           {credentialFeedback ? (
             <div className="feedback-banner" role="status">
@@ -2141,17 +2272,28 @@ export function ReviewWorkspace({
               onSave={() => void handleSaveCredential("anthropic", anthropicKeyInput)}
               onRemove={() => void handleRemoveCredential("anthropic")}
             />
-            <CredentialRow
-              title="OpenAI API key (GPT)"
-              placeholder="sk-proj-…"
-              status={openaiStatus}
-              value={openaiKeyInput}
-              revealed={showOpenaiKey}
-              onReveal={setShowOpenaiKey}
-              onChange={setOpenaiKeyInput}
-              onSave={() => void handleSaveCredential("openai", openaiKeyInput)}
-              onRemove={() => void handleRemoveCredential("openai")}
+            <ProviderAuthenticationMode
+              status={openaiAuthModeStatus}
+              credentialStatus={openaiStatus}
+              onChange={
+                onSetProviderAuthMode === undefined
+                  ? undefined
+                  : (mode) => void handleSetProviderAuthMode(mode)
+              }
             />
+            {openaiAuthModeStatus.activeMode === "api-key" ? (
+              <CredentialRow
+                title="OpenAI API key (GPT)"
+                placeholder="sk-proj-…"
+                status={openaiStatus}
+                value={openaiKeyInput}
+                revealed={showOpenaiKey}
+                onReveal={setShowOpenaiKey}
+                onChange={setOpenaiKeyInput}
+                onSave={() => void handleSaveCredential("openai", openaiKeyInput)}
+                onRemove={() => void handleRemoveCredential("openai")}
+              />
+            ) : null}
           </div>
         </div>
       </div>
@@ -2548,20 +2690,22 @@ export function ReviewWorkspace({
                           : "Required"}
                     </span>
                   </div>
-                  <strong>Model API keys</strong>
+                  <strong>Provider authentication</strong>
                   <span>
                     {state.setup.fixtureMode
-                      ? "Demo mode (no keys required)"
+                      ? "Demo mode (no provider authentication required)"
                       : anthropicStatus.configured && openaiStatus.configured
-                        ? "Anthropic & OpenAI configured"
-                        : "Configure keys for live review"}
+                        ? openaiAuthModeStatus.activeMode === "user-session"
+                          ? "Anthropic API key & OpenAI Codex session configured"
+                          : "Anthropic & OpenAI API keys configured"
+                        : "Configure provider authentication for live review"}
                   </span>
                   <button
                     className="button button-quiet"
                     type="button"
                     onClick={() => setSettingsOpen(true)}
                   >
-                    Manage API keys
+                    Manage provider authentication
                   </button>
                 </article>
               </div>

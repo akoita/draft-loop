@@ -43,13 +43,28 @@ override it for mixed runs. This allows, for example, an Anthropic API key with
 an OpenAI user session when only one subscription allowance is unavailable,
 without retrying against a differently billed transport automatically.
 
+The packaged desktop stores a separate non-secret preferred mode for each
+hosted provider under Electron's application data. At startup, a
+provider-specific environment override takes precedence over the shared
+environment setting, then that provider's saved preference, and finally the
+`api-key` default. The desktop reports whether an environment override controls
+the active mode and refuses to pretend that a saved change is active; a mode
+change takes effect only after the user closes and reopens DraftLoop.
+
+The OpenAI credentials screen offers the API-key mode and the authenticated
+Codex/ChatGPT subscription mode. While a user session is active, it shows the
+Codex login probe and setup guidance instead of an actionable OpenAI API-key
+editor. DraftLoop does not silently switch billing modes when a probe or key is
+unavailable.
+
 The first user-session slice is experimental and local-only. It uses an empty
 temporary working directory, disables tools, extensions, repository rules,
 MCP servers, web search, and session persistence where the runtime supports
 those controls, applies a host timeout and cancellation, bounds process output,
 scrubs provider API credential and endpoint override variables case-insensitively
-before spawning local runtimes, and validates the final JSON locally. Any
-observed tool event fails the call.
+before spawning local runtimes, and validates the final JSON locally. Normal
+Codex reasoning lifecycle events are accepted but their content is ignored
+rather than exposed or retained. Any observed tool event fails the call.
 Raw process output and provider errors never enter history or renderer IPC.
 
 The transmission preflight identifies each provider's actual endpoint. If any

@@ -3062,6 +3062,82 @@ input[type="checkbox"] {
   font-size: var(--text-xs);
 }
 
+.provider-auth-mode {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-2);
+}
+
+.provider-auth-mode legend {
+  padding: 0 var(--space-2);
+  color: var(--text-1);
+  font-size: var(--text-base);
+  font-weight: 650;
+}
+
+.credential-mode-copy,
+.credential-mode-status,
+.credential-mode-pending,
+.credential-mode-warning,
+.credential-session-guidance p {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.provider-auth-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--text-2);
+  cursor: pointer;
+}
+
+.provider-auth-choice input {
+  margin-top: 3px;
+}
+
+.provider-auth-choice span {
+  display: grid;
+  gap: 2px;
+}
+
+.provider-auth-choice strong {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.provider-auth-choice small {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.credential-mode-pending {
+  color: var(--amber);
+}
+
+.credential-mode-warning {
+  color: var(--red);
+}
+
+.credential-session-guidance {
+  display: grid;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.credential-session-guidance strong {
+  color: var(--text-1);
+  font-size: var(--text-sm);
+}
+
 /* =========================================================================
    Command palette
 

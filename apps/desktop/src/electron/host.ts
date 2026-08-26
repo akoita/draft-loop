@@ -86,6 +86,7 @@ import {
   type ModelsListResult,
   type ModelsPreviewIndependenceInput,
   type ModelsPreviewIndependenceResult,
+  type ProviderAuthModeStatus,
   type ReviewDispatchInput,
   type SelectedFile,
   type SourceAddUrlInput,
@@ -113,6 +114,10 @@ import type {
   WorkspaceReadiness,
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
+import {
+  createMemoryProviderAuthModePreferenceStore,
+  type ProviderAuthModePreferenceStore,
+} from "./provider-auth-mode.js";
 
 const configDirectory = ".draft-loop";
 const maximumKnowledgeInspectionEntries = 256;
@@ -253,6 +258,8 @@ export interface NativeHostOptions {
   readonly modelDiscovery?: NativeModelDiscoveryOptions;
   readonly providerAuthMode?: ProviderAuthMode;
   readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
+  readonly providerAuthModePreference?: ProviderAuthModePreferenceStore;
+  readonly providerAuthModeEnvironmentOverrides?: Readonly<Record<CredentialProvider, boolean>>;
   readonly userSessionRunners?: ProviderUserSessionRunners;
   readonly userSessionProbes?: Partial<
     Readonly<Record<CredentialProvider, () => Promise<UserSessionLoginStatus>>>
@@ -1228,8 +1235,14 @@ export interface NativeHost {
 
 export function createNativeHost(options: NativeHostOptions): NativeHost {
   const credentials = options.credentials ?? createMemoryCredentialStore();
+  const providerAuthModePreference =
+    options.providerAuthModePreference ?? createMemoryProviderAuthModePreferenceStore();
   const providerAuthModeConfiguration =
     options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
+  const providerAuthModeEnvironmentOverrides = options.providerAuthModeEnvironmentOverrides ?? {
+    anthropic: false,
+    openai: false,
+  };
   const requireProviderPreflight = options.requireProviderPreflight === true;
   const service =
     options.applicationService ??
@@ -1403,6 +1416,35 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       return fail("not-found", "The requested workspace is not open.");
     }
     return active;
+  }
+
+  async function providerAuthModeStatus(
+    provider: CredentialProvider,
+  ): Promise<ProviderAuthModeStatus> {
+    const preferredMode = (await providerAuthModePreference.get(provider)) ?? "api-key";
+    const activeMode = providerAuthModeConfiguration[provider];
+    const environmentOverride = providerAuthModeEnvironmentOverrides[provider];
+    return {
+      provider,
+      activeMode,
+      preferredMode,
+      restartRequired: !environmentOverride && activeMode !== preferredMode,
+      environmentOverride,
+    };
+  }
+
+  async function setProviderAuthMode(
+    provider: CredentialProvider,
+    mode: ProviderAuthMode,
+  ): Promise<ProviderAuthModeStatus> {
+    if (providerAuthModeEnvironmentOverrides[provider]) {
+      return fail(
+        "operation-failed",
+        `The ${provider} provider authentication mode is controlled by an environment variable. Unset the provider auth override and restart DraftLoop before changing it.`,
+      );
+    }
+    await providerAuthModePreference.set(provider, mode);
+    return providerAuthModeStatus(provider);
   }
 
   function knowledgeStoreRoot(storeId: string): string {
@@ -3538,6 +3580,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             },
           };
         }
+        case "provider-auth.status":
+          return {
+            ok: true,
+            value: await providerAuthModeStatus(command.input.provider),
+          };
+        case "provider-auth.set":
+          return {
+            ok: true,
+            value: await setProviderAuthMode(command.input.provider, command.input.mode),
+          };
         case "models.list":
           return { ok: true, value: await listModels(command.input) };
         case "models.preview-independence":

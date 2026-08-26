@@ -41,6 +41,7 @@ import {
   findingQueueCounts,
   initialFindingQueueState,
   isOverrideEditorVisible,
+  ProviderAuthenticationMode,
   ReviewWorkspace,
 } from "./review.js";
 import { createReviewActionDispatcher } from "./review-dispatch.js";
@@ -57,6 +58,59 @@ const collectingState = () => ({
 });
 
 describe("desktop trust-centered review", () => {
+  it("offers OpenAI subscription authentication without exposing an API-key editor in session mode", () => {
+    const html = renderToStaticMarkup(
+      <ProviderAuthenticationMode
+        status={{
+          provider: "openai",
+          activeMode: "user-session",
+          preferredMode: "user-session",
+          restartRequired: false,
+          environmentOverride: false,
+        }}
+        credentialStatus={{
+          provider: "openai",
+          configured: false,
+          source: "user-session",
+          protection: "provider-managed-session",
+        }}
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("Authenticated Codex / ChatGPT subscription");
+    expect(html).toContain("Active now: Authenticated Codex / ChatGPT subscription.");
+    expect(html).toContain("Codex session: not detected");
+    expect(html).toContain("codex login");
+    expect(html).not.toContain("OpenAI API key (GPT)");
+    expect(html).not.toContain('type="password"');
+  });
+
+  it("makes a saved authentication change visibly pending restart", () => {
+    const html = renderToStaticMarkup(
+      <ProviderAuthenticationMode
+        status={{
+          provider: "openai",
+          activeMode: "api-key",
+          preferredMode: "user-session",
+          restartRequired: true,
+          environmentOverride: false,
+        }}
+        credentialStatus={{
+          provider: "openai",
+          configured: true,
+          source: "app",
+          protection: "os-backed",
+        }}
+        onChange={() => undefined}
+      />,
+    );
+
+    expect(html).toContain("Active now: Provider API key.");
+    expect(html).toContain("Saved preference: Authenticated Codex / ChatGPT subscription.");
+    expect(html).toContain("Close and reopen DraftLoop to apply it");
+  });
+
   it("shows live execution details and a stop control", () => {
     const state = {
       ...createFixtureReviewState(),

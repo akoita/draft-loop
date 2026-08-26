@@ -492,6 +492,124 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
+  it("strictly validates and normalizes provider authentication mode commands", async () => {
+    expect(
+      validateBridgeCommand({
+        type: "provider-auth.status",
+        input: { provider: "openai" },
+      }),
+    ).toEqual({ type: "provider-auth.status", input: { provider: "openai" } });
+    expect(
+      validateBridgeCommand({
+        type: "provider-auth.set",
+        input: { provider: "openai", mode: "user-session" },
+      }),
+    ).toEqual({
+      type: "provider-auth.set",
+      input: { provider: "openai", mode: "user-session" },
+    });
+    for (const input of [
+      { provider: "openai", mode: "oauth" },
+      { provider: "openai", mode: "user-session", extra: true },
+      { provider: "local", mode: "api-key" },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "provider-auth.set", input })).toThrow("invalid");
+    }
+
+    const port = createCapabilityPort(
+      bridge(
+        async (command) => ({
+          ok: true,
+          value:
+            command.type === "provider-auth.set"
+              ? {
+                  provider: "openai",
+                  activeMode: "api-key",
+                  preferredMode: "user-session",
+                  restartRequired: true,
+                  environmentOverride: false,
+                }
+              : {
+                  provider: "openai",
+                  activeMode: "api-key",
+                  preferredMode: "api-key",
+                  restartRequired: false,
+                  environmentOverride: false,
+                },
+        }),
+        ["provider-auth.status", "provider-auth.set"],
+      ),
+    );
+    await expect(
+      port.execute({ type: "provider-auth.status", input: { provider: "openai" } }),
+    ).resolves.toEqual({
+      ok: true,
+      value: {
+        provider: "openai",
+        activeMode: "api-key",
+        preferredMode: "api-key",
+        restartRequired: false,
+        environmentOverride: false,
+      },
+    });
+    await expect(
+      port.execute({
+        type: "provider-auth.set",
+        input: { provider: "openai", mode: "user-session" },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { activeMode: "api-key", preferredMode: "user-session", restartRequired: true },
+    });
+
+    const reviewPort = createBridgeReviewPort(
+      createCapabilityPort(
+        bridge(
+          async (command) => ({
+            ok: true,
+            value: {
+              provider: "openai",
+              activeMode: "api-key",
+              preferredMode: command.type === "provider-auth.set" ? "user-session" : "api-key",
+              restartRequired: command.type === "provider-auth.set",
+              environmentOverride: false,
+            },
+          }),
+          ["provider-auth.status", "provider-auth.set"],
+        ),
+      ),
+    );
+    await expect(reviewPort.getProviderAuthModeStatus?.("openai")).resolves.toMatchObject({
+      activeMode: "api-key",
+    });
+    await expect(reviewPort.setProviderAuthMode?.("openai", "user-session")).resolves.toMatchObject(
+      {
+        preferredMode: "user-session",
+        restartRequired: true,
+      },
+    );
+
+    const hostile = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            provider: "openai",
+            activeMode: "api-key",
+            preferredMode: "api-key",
+            restartRequired: false,
+            environmentOverride: false,
+            secret: "must not cross",
+          },
+        }),
+        ["provider-auth.status"],
+      ),
+    );
+    await expect(
+      hostile.execute({ type: "provider-auth.status", input: { provider: "openai" } }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("reports unavailable browser capabilities without filesystem access", async () => {
     const result = await createBrowserCapabilityPort().execute({
       type: "file.select",

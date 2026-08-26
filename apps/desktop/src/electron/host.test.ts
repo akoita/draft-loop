@@ -21,6 +21,7 @@ import {
   resolveCredential,
   type SafeStorageAdapter,
 } from "./host.js";
+import { createMemoryProviderAuthModePreferenceStore } from "./provider-auth-mode.js";
 
 function descriptor(root: string): WorkspaceDescriptor {
   return {
@@ -2211,6 +2212,120 @@ describe("native host", () => {
         host.invoke({ type: "credential.status", input: { provider: "openai" } }),
       ).resolves.toMatchObject({ ok: true, value: { configured: false } });
       expect(status).not.toHaveBeenCalled();
+    });
+
+    it("saves a preferred provider authentication mode without changing the active host", async () => {
+      const preference = createMemoryProviderAuthModePreferenceStore({
+        anthropic: "api-key",
+        openai: "api-key",
+      });
+      const host = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => undefined,
+          chooseFiles: async () => [],
+        },
+        providerAuthModeConfiguration: { anthropic: "api-key", openai: "api-key" },
+        providerAuthModePreference: preference,
+      });
+
+      await expect(
+        host.invoke({ type: "provider-auth.status", input: { provider: "openai" } }),
+      ).resolves.toEqual({
+        ok: true,
+        value: {
+          provider: "openai",
+          activeMode: "api-key",
+          preferredMode: "api-key",
+          restartRequired: false,
+          environmentOverride: false,
+        },
+      });
+      await expect(
+        host.invoke({
+          type: "provider-auth.set",
+          input: { provider: "openai", mode: "user-session" },
+        }),
+      ).resolves.toEqual({
+        ok: true,
+        value: {
+          provider: "openai",
+          activeMode: "api-key",
+          preferredMode: "user-session",
+          restartRequired: true,
+          environmentOverride: false,
+        },
+      });
+      expect(await preference.get("openai")).toBe("user-session");
+      expect(await preference.get("anthropic")).toBe("api-key");
+      await expect(
+        host.invoke({ type: "provider-auth.status", input: { provider: "openai" } }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { activeMode: "api-key", preferredMode: "user-session", restartRequired: true },
+      });
+      await expect(
+        host.invoke({ type: "provider-auth.status", input: { provider: "anthropic" } }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { activeMode: "api-key", preferredMode: "api-key", restartRequired: false },
+      });
+
+      await expect(
+        host.invoke({
+          type: "provider-auth.set",
+          input: { provider: "anthropic", mode: "user-session" },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { activeMode: "api-key", preferredMode: "user-session", restartRequired: true },
+      });
+      await expect(
+        host.invoke({ type: "provider-auth.status", input: { provider: "openai" } }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { preferredMode: "user-session" },
+      });
+    });
+
+    it("rejects provider authentication changes controlled by an environment override", async () => {
+      const preference = createMemoryProviderAuthModePreferenceStore({
+        anthropic: "api-key",
+        openai: "api-key",
+      });
+      const host = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => undefined,
+          chooseFiles: async () => [],
+        },
+        providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
+        providerAuthModeEnvironmentOverrides: { anthropic: false, openai: true },
+        providerAuthModePreference: preference,
+      });
+
+      await expect(
+        host.invoke({
+          type: "provider-auth.set",
+          input: { provider: "openai", mode: "api-key" },
+        }),
+      ).resolves.toMatchObject({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          message: expect.stringContaining("controlled by an environment variable"),
+        },
+      });
+      expect(await preference.get("openai")).toBe("api-key");
+      await expect(
+        host.invoke({ type: "provider-auth.status", input: { provider: "openai" } }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: {
+          activeMode: "user-session",
+          preferredMode: "api-key",
+          restartRequired: false,
+          environmentOverride: true,
+        },
+      });
     });
   });
   describe("model discovery", () => {

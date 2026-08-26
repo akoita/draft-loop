@@ -68,6 +68,8 @@ export const bridgeCapabilities = [
   "credential.status",
   "credential.set",
   "credential.remove",
+  "provider-auth.status",
+  "provider-auth.set",
   "models.list",
   "models.preview-independence",
 ] as const;
@@ -102,6 +104,9 @@ export type ExportFormat = (typeof exportFormats)[number];
 
 export const credentialProviders = ["anthropic", "openai"] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
+
+export const providerAuthModes = ["api-key", "user-session"] as const;
+export type ProviderAuthMode = (typeof providerAuthModes)[number];
 
 /**
  * The provider companies a workspace can be configured to use.
@@ -731,11 +736,23 @@ export interface CredentialRemoveInput {
   readonly provider: CredentialProvider;
 }
 
+export interface ProviderAuthModeStatusInput {
+  readonly provider: CredentialProvider;
+}
+
+export interface ProviderAuthModeSetInput {
+  readonly provider: CredentialProvider;
+  readonly mode: ProviderAuthMode;
+}
+
 /**
  * credential.status and credential.remove share one validator, so the guard
  * covers both interfaces: either one gaining a key breaks the build.
  */
 const credentialKeys = inputKeys<CredentialStatusInput & CredentialRemoveInput>()(["provider"]);
+
+const providerAuthModeStatusKeys = inputKeys<ProviderAuthModeStatusInput>()(["provider"]);
+const providerAuthModeSetKeys = inputKeys<ProviderAuthModeSetInput>()(["provider", "mode"]);
 
 export interface ModelsListInput {
   readonly provider: ModelDiscoveryProvider;
@@ -1719,6 +1736,24 @@ const credentialResultKeys = resultKeys<CredentialResult>()([
   "protection",
 ]);
 
+export interface ProviderAuthModeStatus {
+  readonly provider: CredentialProvider;
+  readonly activeMode: ProviderAuthMode;
+  readonly preferredMode: ProviderAuthMode;
+  readonly restartRequired: boolean;
+  readonly environmentOverride: boolean;
+}
+
+export type ProviderAuthModeResult = ProviderAuthModeStatus;
+
+const providerAuthModeResultKeys = resultKeys<ProviderAuthModeResult>()([
+  "provider",
+  "activeMode",
+  "preferredMode",
+  "restartRequired",
+  "environmentOverride",
+]);
+
 /**
  * A model id the provider says the configured credential can reach.
  *
@@ -1832,6 +1867,8 @@ export interface BridgeCommandInputMap {
   "credential.status": CredentialStatusInput;
   "credential.set": CredentialSetInput;
   "credential.remove": CredentialRemoveInput;
+  "provider-auth.status": ProviderAuthModeStatusInput;
+  "provider-auth.set": ProviderAuthModeSetInput;
   "models.list": ModelsListInput;
   "models.preview-independence": ModelsPreviewIndependenceInput;
 }
@@ -1889,6 +1926,8 @@ export interface BridgeCommandOutputMap {
   "credential.status": CredentialStatus;
   "credential.set": CredentialResult;
   "credential.remove": CredentialResult;
+  "provider-auth.status": ProviderAuthModeStatus;
+  "provider-auth.set": ProviderAuthModeResult;
   "models.list": ModelsListResult;
   "models.preview-independence": ModelsPreviewIndependenceResult;
 }
@@ -2958,6 +2997,21 @@ function validateCredentialSetInput(value: unknown): CredentialSetInput {
   return { provider, apiKey: input.apiKey.trim() };
 }
 
+function validateProviderAuthModeStatusInput(value: unknown): ProviderAuthModeStatusInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, providerAuthModeStatusKeys)) return invalidInput();
+  return { provider: enumValue(input.provider, credentialProviders) };
+}
+
+function validateProviderAuthModeSetInput(value: unknown): ProviderAuthModeSetInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, providerAuthModeSetKeys)) return invalidInput();
+  return {
+    provider: enumValue(input.provider, credentialProviders),
+    mode: enumValue(input.mode, providerAuthModes),
+  };
+}
+
 function validateModelsListInput(value: unknown): ModelsListInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, modelsListKeys)) return invalidInput();
@@ -3194,6 +3248,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "credential.set", input: validateCredentialSetInput(command.input) };
     case "credential.remove":
       return { type: "credential.remove", input: validateCredentialInput(command.input) };
+    case "provider-auth.status":
+      return {
+        type: "provider-auth.status",
+        input: validateProviderAuthModeStatusInput(command.input),
+      };
+    case "provider-auth.set":
+      return {
+        type: "provider-auth.set",
+        input: validateProviderAuthModeSetInput(command.input),
+      };
     case "models.list":
       return { type: "models.list", input: validateModelsListInput(command.input) };
     case "models.preview-independence":
@@ -4511,6 +4575,18 @@ function normalizeCredentialResult(value: unknown): CredentialResult {
   };
 }
 
+function normalizeProviderAuthModeResult(value: unknown): ProviderAuthModeResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, providerAuthModeResultKeys)) return invalidInput();
+  return {
+    provider: enumValue(result.provider, credentialProviders),
+    activeMode: enumValue(result.activeMode, providerAuthModes),
+    preferredMode: enumValue(result.preferredMode, providerAuthModes),
+    restartRequired: booleanValue(result.restartRequired),
+    environmentOverride: booleanValue(result.environmentOverride),
+  };
+}
+
 /**
  * Polices a catalogue on its way to the renderer.
  *
@@ -4652,6 +4728,9 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
     case "credential.set":
     case "credential.remove":
       return normalizeCredentialResult(value);
+    case "provider-auth.status":
+    case "provider-auth.set":
+      return normalizeProviderAuthModeResult(value);
     case "models.list":
       return normalizeModelsListResult(value);
     case "models.preview-independence":

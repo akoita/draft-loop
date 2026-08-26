@@ -1,5 +1,4 @@
 import { dirname, join, resolve } from "node:path";
-import { resolveProviderAuthModes } from "@draft-loop/application";
 import {
   app,
   BrowserWindow,
@@ -18,6 +17,11 @@ import {
 import { chooseMarkdownExportPath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type LiveProviderE2EOptions, runLiveProviderE2E } from "./live-e2e.js";
+import {
+  createProviderAuthModePreferenceStore,
+  providerAuthModePreferenceFilename,
+  resolveProviderAuthModeStartup,
+} from "./provider-auth-mode.js";
 import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -106,12 +110,23 @@ function createWindow(): BrowserWindow {
   return window;
 }
 
-app.whenReady().then(() => {
-  const providerAuthModeConfiguration = resolveProviderAuthModes(
-    process.env.DRAFT_LOOP_PROVIDER_AUTH_MODE,
-    process.env.DRAFT_LOOP_ANTHROPIC_AUTH_MODE,
-    process.env.DRAFT_LOOP_OPENAI_AUTH_MODE,
+app.whenReady().then(async () => {
+  const providerAuthModePreference = createProviderAuthModePreferenceStore(
+    join(app.getPath("userData"), providerAuthModePreferenceFilename),
   );
+  const providerAuthModeResolution = resolveProviderAuthModeStartup(
+    {
+      shared: process.env.DRAFT_LOOP_PROVIDER_AUTH_MODE,
+      anthropic: process.env.DRAFT_LOOP_ANTHROPIC_AUTH_MODE,
+      openai: process.env.DRAFT_LOOP_OPENAI_AUTH_MODE,
+    },
+    {
+      anthropic: await providerAuthModePreference.get("anthropic"),
+      openai: await providerAuthModePreference.get("openai"),
+    },
+  );
+  const { configuration: providerAuthModeConfiguration, environmentOverrides } =
+    providerAuthModeResolution;
   const acceptanceEnabled = process.env.DRAFT_LOOP_ACCEPTANCE === "1";
   const acceptanceRoot = process.env.DRAFT_LOOP_ACCEPTANCE_WORKSPACE;
   const acceptanceCandidate = process.env.DRAFT_LOOP_ACCEPTANCE_CANDIDATE;
@@ -249,6 +264,8 @@ app.whenReady().then(() => {
   const acceptanceUrlHostnameResolver = async (): Promise<readonly string[]> => ["93.184.216.34"];
   const host = createNativeHost({
     providerAuthModeConfiguration,
+    providerAuthModeEnvironmentOverrides: environmentOverrides,
+    providerAuthModePreference,
     dialogs:
       acceptanceEnabled && acceptanceWorkspace !== undefined && acceptanceCandidate !== undefined
         ? {
