@@ -1,6 +1,6 @@
 {
   "name": "@draft-loop/artifacts",
-  "version": "0.7.0-alpha.4",
+  "version": "0.7.0-alpha.5",
   "type": "module",
   "exports": {
     ".": {

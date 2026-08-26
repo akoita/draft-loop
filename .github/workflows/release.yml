@@ -243,12 +243,12 @@ jobs:
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             `Stage issue: https://github.com/${repository}/issues/${process.env.RELEASE_STAGE_ISSUE}`,
             "SBOM: CycloneDX JSON is attached to the release.",
-            "Checkpoint status: this alpha.4 checkpoint adds packaged-desktop OpenAI authentication selection (API key or authenticated Codex/ChatGPT session), independent per-provider persisted preferences, strict environment precedence, restart-required/no-silent-fallback behavior, inherited Windows user-session environment hardening, and Codex reasoning lifecycle compatibility while rejecting tool events and ignoring reasoning content; it does not validate or complete the v0.7 drafting outcome.",
+            "Checkpoint status: this alpha.5 checkpoint carries forward alpha.4 packaged-desktop OpenAI authentication selection (API key or authenticated Codex/ChatGPT session), independent per-provider persisted preferences, strict environment precedence, restart-required/no-silent-fallback behavior, and inherited Windows user-session environment hardening, and fixes Windows/session critic compatibility by accepting and discarding passive todo_list and item.updated lifecycle output while commands, mutations, search, tool, error, and unknown event/item types remain fail-closed; it does not validate or complete the v0.7 drafting outcome.",
             ...(process.env.ATTEST_PROVENANCE === "true"
               ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]
               : ["Provenance: not requested for this run."]),
             "",
-            "Known limitations: profile, opportunity, CKB retrieval/reactivation, planning, complete-CV, writing-policy, runtime review/readiness/rendering integration, and representative validation remain incomplete; signing and automatic updates remain incomplete; CLI remains source-distributed.",
+            "Known limitations: this alpha.5 checkpoint does not validate or complete v0.7; profile, opportunity, CKB retrieval/reactivation, planning, complete-CV, writing-policy, runtime review/readiness/rendering integration, and representative validation remain incomplete; signing and automatic updates remain incomplete; CLI remains source-distributed.",
           ].join("\n");
           fs.writeFileSync("release-output/release-notes.md", `${notes}\n`, "utf8");
           NODE
