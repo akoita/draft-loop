@@ -620,14 +620,16 @@ const permittedCodexEventTypes = new Set([
   "thread.started",
   "turn.started",
   "item.started",
+  "item.updated",
   "item.completed",
   "turn.completed",
 ]);
 
-// Codex may report its internal reasoning lifecycle before the final message.
-// Accept the event type so normal generation can complete, but deliberately do
-// not read, retain, or return its content. Tool-bearing items remain prohibited.
-const permittedCodexItemTypes = new Set(["agent_message", "reasoning"]);
+// Codex may report passive reasoning and todo-list lifecycle events before the
+// final message. Accept them so normal generation can complete, but deliberately
+// discard all passive item content. Tool-bearing, mutation, search, error, and
+// unknown event/item types remain prohibited.
+const permittedCodexItemTypes = new Set(["agent_message", "reasoning", "todo_list"]);
 
 function parseCodexEvents(text: string): {
   readonly inputTokens: number;
@@ -683,7 +685,11 @@ function parseCodexEvents(text: string): {
       }
       threadId = event.thread_id;
     }
-    if (event.type === "item.started" || event.type === "item.completed") {
+    if (
+      event.type === "item.started" ||
+      event.type === "item.updated" ||
+      event.type === "item.completed"
+    ) {
       const item = event.item as { readonly type?: unknown } | undefined;
       if (typeof item?.type !== "string" || !permittedCodexItemTypes.has(item.type)) {
         throw new ProviderAdapterError(
