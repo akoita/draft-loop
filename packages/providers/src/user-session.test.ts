@@ -27,6 +27,16 @@ const openAIModel: ModelSelection = {
   role: "critic",
   promptTemplateVersion: "critic-v1",
 };
+const anthropicSecretEnvironmentNames = [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_BASE_URL",
+] as const;
+const openAISecretEnvironmentNames = [
+  "OPENAI_API_KEY",
+  "CODEX_API_KEY",
+  "OPENAI_BASE_URL",
+] as const;
 const outputSchema = {
   type: "object",
   properties: { answer: { type: "string" } },
@@ -52,6 +62,16 @@ function request(model: ModelSelection, overrides: Partial<ModelRequest> = {}): 
     dataPolicy: policy,
     ...overrides,
   };
+}
+
+function expectEnvironmentWithoutNames(
+  environment: Readonly<Record<string, string | undefined>>,
+  names: readonly string[],
+): void {
+  const forbiddenNames = new Set(names.map((name) => name.toLowerCase()));
+  expect(Object.keys(environment).filter((name) => forbiddenNames.has(name.toLowerCase()))).toEqual(
+    [],
+  );
 }
 
 describe("AnthropicClaudeUserSessionAdapter", () => {
@@ -84,12 +104,10 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       ]);
       expect(options.stdin).toBe('{"question":"answer?"}');
       expect(options.env).toMatchObject({ HOME: "/login-store", KEEP: "yes" });
-      expect(options.env.ANTHROPIC_API_KEY).toBeUndefined();
+      expectEnvironmentWithoutNames(options.env, anthropicSecretEnvironmentNames);
       expect(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("20");
       expect(options.env.CLAUDE_CODE_MAX_RETRIES).toBe("0");
       expect(options.env.MAX_STRUCTURED_OUTPUT_RETRIES).toBe("0");
-      expect(options.env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
-      expect(options.env.ANTHROPIC_BASE_URL).toBeUndefined();
       expect((await stat(options.cwd)).mode & 0o777).toBe(0o700);
       expect(await import("node:fs/promises").then((fs) => fs.readdir(options.cwd))).toEqual([]);
       return {
@@ -114,8 +132,11 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
         HOME: "/login-store",
         KEEP: "yes",
         ANTHROPIC_API_KEY: "secret",
+        anthropic_api_key: "mixed-case-secret",
         ANTHROPIC_AUTH_TOKEN: "secret",
+        Anthropic_Auth_Token: "mixed-case-secret",
         ANTHROPIC_BASE_URL: "https://override.invalid",
+        aNtHrOpIc_BaSe_Url: "https://mixed-case-override.invalid",
       },
     });
 
@@ -198,9 +219,7 @@ describe("OpenAICodexUserSessionAdapter", () => {
       expect((await stat(schemaPath)).mode & 0o777).toBe(0o600);
       expect((await stat(outputPath)).mode & 0o777).toBe(0o600);
       expect(options.env).toMatchObject({ HOME: "/login-store", KEEP: "yes" });
-      expect(options.env.OPENAI_API_KEY).toBeUndefined();
-      expect(options.env.CODEX_API_KEY).toBeUndefined();
-      expect(options.env.OPENAI_BASE_URL).toBeUndefined();
+      expectEnvironmentWithoutNames(options.env, openAISecretEnvironmentNames);
       expect(options.stdin).toBe(
         'System instructions:\nReturn JSON only.\n\nInput JSON:\n{"question":"answer?"}',
       );
@@ -276,8 +295,11 @@ describe("OpenAICodexUserSessionAdapter", () => {
         HOME: "/login-store",
         KEEP: "yes",
         OPENAI_API_KEY: "secret",
+        openai_api_key: "mixed-case-secret",
         CODEX_API_KEY: "secret",
+        CoDeX_ApI_KeY: "mixed-case-secret",
         OPENAI_BASE_URL: "https://override.invalid",
+        oPeNaI_bAsE_uRl: "https://mixed-case-override.invalid",
       },
     });
 
@@ -422,21 +444,32 @@ describe("user-session error normalization and login probes", () => {
     const calls: { readonly command: string; readonly args: readonly string[] }[] = [];
     const runner: UserSessionProcessRunner = async (command, args, options) => {
       calls.push({ command, args });
-      expect(options.env.OPENAI_API_KEY ?? options.env.ANTHROPIC_API_KEY).toBeUndefined();
+      expectEnvironmentWithoutNames(options.env, [
+        ...anthropicSecretEnvironmentNames,
+        ...openAISecretEnvironmentNames,
+      ]);
       return { exitCode: command === "claude-custom" ? 0 : 1, stdout: "identity", stderr: "token" };
     };
     await expect(
       probeAnthropicClaudeUserSession({
         command: "claude-custom",
         runner,
-        environment: { ANTHROPIC_API_KEY: "secret" },
+        environment: {
+          anthropic_api_key: "mixed-case-secret",
+          Anthropic_Auth_Token: "mixed-case-secret",
+          aNtHrOpIc_BaSe_Url: "https://mixed-case-override.invalid",
+        },
       }),
     ).resolves.toEqual({ available: true, authenticated: true });
     await expect(
       probeOpenAICodexUserSession({
         command: "codex-custom",
         runner,
-        environment: { OPENAI_API_KEY: "secret" },
+        environment: {
+          openai_api_key: "mixed-case-secret",
+          CoDeX_ApI_KeY: "mixed-case-secret",
+          oPeNaI_bAsE_uRl: "https://mixed-case-override.invalid",
+        },
       }),
     ).resolves.toEqual({ available: true, authenticated: false });
     expect(calls).toEqual([
