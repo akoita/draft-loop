@@ -170,8 +170,11 @@ approval as drafting. Only sanitized opportunity source records cross that
 boundary; candidate inputs, URLs, paths, and provenance remain local. Provider
 output is schema-checked and citation-checked before application-owned IDs are
 created, while failures become fixed content-free draft issues. Shared
-CLI/desktop adapters and binding one exact reviewed version into planning remain
-later #67 slices.
+application operations now create, reload, list, edit, and review durable
+versions. The CLI accepts runtime-only JSON manifests; the desktop host owns
+native file selection and returns a bounded path- and URL-free projection
+through its strict capability bridge. Binding one exact reviewed version into
+planning remains the final #67 slice.
 
 ## Writing policy enforcement
 
@@ -627,6 +630,13 @@ Across CKB commands, the adapters differ only at the user-interaction edge:
 - **Shared application boundary:** applies the same approvals, lifecycle guards,
   network policy, deterministic ordering, and complete-or-partial result
   contracts to both adapters.
+
+Opportunity commands follow the same split. The CLI reads source manifests and
+edit patches from intentional runtime-only JSON files. The desktop renderer can
+provide approved URLs, pasted text, and typed candidate instructions, but asks
+the host to resolve every local file through a native picker. Both adapters use
+the same immutable application operations; provider extraction is enabled only
+by an explicit per-create approval.
 
 Store setup, selection, inspection, intake, refresh, rebind, retirement, and
 directory maintenance all follow this split. Read-only inspection calls are

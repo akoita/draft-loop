@@ -55,6 +55,11 @@ export const bridgeCapabilities = [
   "knowledge.archive-base",
   "knowledge.delete-base-preview",
   "knowledge.delete-base",
+  "opportunity.create",
+  "opportunity.get",
+  "opportunity.list",
+  "opportunity.edit",
+  "opportunity.review",
   "run.status",
   "run.start",
   "run.pause",
@@ -1703,6 +1708,402 @@ const sourceAddUrlResultKeys = resultKeys<SourceAddUrlResult>()([
   "mediaType",
 ]);
 
+/**
+ * Renderer-facing opportunity intake descriptors.
+ *
+ * These descriptors deliberately carry no local path. The renderer can ask
+ * the host to open a native picker, but only the host may resolve the selected
+ * path and pass it to the application service. URL and pasted material are
+ * explicit user inputs; the provider-transmission approval on the enclosing
+ * command is a separate gate.
+ */
+export const opportunitySourceKinds = [
+  "approved-url",
+  "local-file",
+  "pasted-content",
+  "candidate-input",
+] as const;
+export type OpportunitySourceKind = (typeof opportunitySourceKinds)[number];
+
+export const opportunitySourceClassifications = [
+  "job-posting",
+  "social-announcement",
+  "company-context",
+] as const;
+export type OpportunitySourceClassification = (typeof opportunitySourceClassifications)[number];
+
+export interface OpportunityCreateSourceBase {
+  readonly id: string;
+  readonly classification: OpportunitySourceClassification;
+  readonly capturedAt?: string;
+}
+
+export interface OpportunityCreateUrlSource extends OpportunityCreateSourceBase {
+  readonly kind: "approved-url";
+  readonly url: string;
+  readonly approved: true;
+}
+
+export interface OpportunityCreateLocalFileSource extends OpportunityCreateSourceBase {
+  readonly kind: "local-file";
+  /** The native host owns the file picker; no path crosses this API. */
+  readonly selection: "native-dialog";
+}
+
+export interface OpportunityCreatePastedSource extends OpportunityCreateSourceBase {
+  readonly kind: "pasted-content";
+  readonly content: string;
+}
+
+export interface OpportunityCandidateInstructionsInput {
+  readonly tone?: string;
+  readonly applicationGoal?: string;
+  readonly forbiddenLanguage?: readonly string[];
+  readonly focusAreas?: readonly string[];
+}
+
+export interface OpportunityCreateCandidateSource {
+  readonly id: string;
+  readonly kind: "candidate-input";
+  readonly classification: "candidate-instruction";
+  readonly capturedAt?: string;
+  readonly content: string;
+  readonly instructions?: OpportunityCandidateInstructionsInput;
+}
+
+export type OpportunityCreateSource =
+  | OpportunityCreateUrlSource
+  | OpportunityCreateLocalFileSource
+  | OpportunityCreatePastedSource
+  | OpportunityCreateCandidateSource;
+
+export interface OpportunityCreateInput {
+  readonly workspaceId: string;
+  readonly sources: readonly OpportunityCreateSource[];
+  /** Enables provider transmission only when explicitly set to true. */
+  readonly providerTransmissionApproved?: boolean;
+}
+
+const opportunityCreateUrlSourceKeys = inputKeys<OpportunityCreateUrlSource>()([
+  "id",
+  "classification",
+  "capturedAt",
+  "kind",
+  "url",
+  "approved",
+]);
+const opportunityCreateLocalFileSourceKeys = inputKeys<OpportunityCreateLocalFileSource>()([
+  "id",
+  "classification",
+  "capturedAt",
+  "kind",
+  "selection",
+]);
+const opportunityCreatePastedSourceKeys = inputKeys<OpportunityCreatePastedSource>()([
+  "id",
+  "classification",
+  "capturedAt",
+  "kind",
+  "content",
+]);
+const opportunityCandidateInstructionsKeys = inputKeys<OpportunityCandidateInstructionsInput>()([
+  "tone",
+  "applicationGoal",
+  "forbiddenLanguage",
+  "focusAreas",
+]);
+const opportunityCreateCandidateSourceKeys = inputKeys<OpportunityCreateCandidateSource>()([
+  "id",
+  "kind",
+  "classification",
+  "capturedAt",
+  "content",
+  "instructions",
+]);
+const opportunityCreateKeys = inputKeys<OpportunityCreateInput>()([
+  "workspaceId",
+  "sources",
+  "providerTransmissionApproved",
+]);
+
+export interface OpportunityGetInput {
+  readonly workspaceId: string;
+  readonly briefId: string;
+  /** Omit to reload the latest durable version. */
+  readonly version?: number;
+}
+
+export interface OpportunityListInput {
+  readonly workspaceId: string;
+  readonly briefId: string;
+}
+
+export interface OpportunitySourcedTextInput {
+  readonly value: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityResponsibilityInput {
+  readonly id: string;
+  readonly text: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityRequirementInput {
+  readonly id: string;
+  readonly text: string;
+  readonly sourceIds: readonly string[];
+  readonly priority: "critical" | "high" | "medium" | "low";
+}
+
+export interface OpportunityPriorityInput {
+  readonly id: string;
+  readonly text: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityCandidateInstructionsPatch {
+  readonly tone: OpportunitySourcedTextInput | null;
+  readonly applicationGoal: OpportunitySourcedTextInput | null;
+  readonly forbiddenLanguage: readonly OpportunitySourcedTextInput[];
+  readonly focusAreas: readonly OpportunitySourcedTextInput[];
+}
+
+export interface OpportunityIssueInput {
+  readonly id: string;
+  readonly code:
+    | "inaccessible-source"
+    | "unsupported-source"
+    | "fetch-failure"
+    | "extraction-failure"
+    | "duplicate-source"
+    | "contradiction"
+    | "stale-source"
+    | "partial-fetch";
+  readonly status: "open" | "acknowledged" | "resolved";
+  readonly severity: "error" | "warning";
+  readonly message: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityEditPatch {
+  readonly role?: OpportunitySourcedTextInput | null;
+  readonly employer?: OpportunitySourcedTextInput | null;
+  readonly responsibilities?: readonly OpportunityResponsibilityInput[];
+  readonly requirements?: readonly OpportunityRequirementInput[];
+  readonly priorities?: readonly OpportunityPriorityInput[];
+  readonly candidateInstructions?: OpportunityCandidateInstructionsPatch;
+  readonly issues?: readonly OpportunityIssueInput[];
+}
+
+export interface OpportunityEditInput {
+  readonly workspaceId: string;
+  readonly briefId: string;
+  /** The latest version the editor read; stale writes are rejected by the app. */
+  readonly expectedVersion: number;
+  readonly patch: OpportunityEditPatch;
+}
+
+export interface OpportunityReviewInput {
+  readonly workspaceId: string;
+  readonly briefId: string;
+  /** The latest version the reviewer read; stale reviews are rejected by the app. */
+  readonly expectedVersion: number;
+}
+
+const opportunityGetKeys = inputKeys<OpportunityGetInput>()(["workspaceId", "briefId", "version"]);
+const opportunityListKeys = inputKeys<OpportunityListInput>()(["workspaceId", "briefId"]);
+const opportunitySourcedTextKeys = inputKeys<OpportunitySourcedTextInput>()(["value", "sourceIds"]);
+const opportunityResponsibilityKeys = inputKeys<OpportunityResponsibilityInput>()([
+  "id",
+  "text",
+  "sourceIds",
+]);
+const opportunityRequirementKeys = inputKeys<OpportunityRequirementInput>()([
+  "id",
+  "text",
+  "sourceIds",
+  "priority",
+]);
+const opportunityPriorityKeys = inputKeys<OpportunityPriorityInput>()(["id", "text", "sourceIds"]);
+const opportunityCandidateInstructionsPatchKeys =
+  inputKeys<OpportunityCandidateInstructionsPatch>()([
+    "tone",
+    "applicationGoal",
+    "forbiddenLanguage",
+    "focusAreas",
+  ]);
+const opportunityIssueKeys = inputKeys<OpportunityIssueInput>()([
+  "id",
+  "code",
+  "status",
+  "severity",
+  "message",
+  "sourceIds",
+]);
+const opportunityEditPatchKeys = inputKeys<OpportunityEditPatch>()([
+  "role",
+  "employer",
+  "responsibilities",
+  "requirements",
+  "priorities",
+  "candidateInstructions",
+  "issues",
+]);
+const opportunityEditKeys = inputKeys<OpportunityEditInput>()([
+  "workspaceId",
+  "briefId",
+  "expectedVersion",
+  "patch",
+]);
+const opportunityReviewKeys = inputKeys<OpportunityReviewInput>()([
+  "workspaceId",
+  "briefId",
+  "expectedVersion",
+]);
+
+export interface OpportunitySourceResult {
+  readonly id: string;
+  readonly kind: OpportunitySourceKind;
+  readonly classification: OpportunitySourceClassification | "candidate-instruction";
+  readonly status: "available" | "inaccessible" | "unsupported" | "failed" | "partial" | "stale";
+  readonly checksum: string | null;
+  readonly capturedAt: string;
+}
+
+export interface OpportunitySourcedTextResult {
+  readonly value: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityResponsibilityResult {
+  readonly id: string;
+  readonly text: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityRequirementResult {
+  readonly id: string;
+  readonly text: string;
+  readonly sourceIds: readonly string[];
+  readonly priority: "critical" | "high" | "medium" | "low";
+}
+
+export interface OpportunityPriorityResult {
+  readonly id: string;
+  readonly text: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityCandidateInstructionsResult {
+  readonly tone: OpportunitySourcedTextResult | null;
+  readonly applicationGoal: OpportunitySourcedTextResult | null;
+  readonly forbiddenLanguage: readonly OpportunitySourcedTextResult[];
+  readonly focusAreas: readonly OpportunitySourcedTextResult[];
+}
+
+export interface OpportunityIssueResult {
+  readonly id: string;
+  readonly code: OpportunityIssueInput["code"];
+  readonly status: OpportunityIssueInput["status"];
+  readonly severity: OpportunityIssueInput["severity"];
+  readonly message: string;
+  readonly sourceIds: readonly string[];
+}
+
+export interface OpportunityRecordResult {
+  readonly workspaceId: string;
+  readonly briefId: string;
+  readonly version: number;
+  readonly priorVersion: number | null;
+  readonly status: "draft" | "reviewed";
+  readonly createdAt: string;
+  readonly reviewedAt: string | null;
+  /** Durable record checksum; source checksums live on each safe source entry. */
+  readonly checksum: string | null;
+  readonly sources: readonly OpportunitySourceResult[];
+  readonly role: OpportunitySourcedTextResult | null;
+  readonly employer: OpportunitySourcedTextResult | null;
+  readonly responsibilities: readonly OpportunityResponsibilityResult[];
+  readonly requirements: readonly OpportunityRequirementResult[];
+  readonly priorities: readonly OpportunityPriorityResult[];
+  readonly candidateInstructions: OpportunityCandidateInstructionsResult;
+  readonly issues: readonly OpportunityIssueResult[];
+}
+
+export interface OpportunityListResult {
+  readonly workspaceId: string;
+  readonly briefId: string;
+  readonly versions: readonly OpportunityRecordResult[];
+}
+
+const opportunitySourceResultKeys = resultKeys<OpportunitySourceResult>()([
+  "id",
+  "kind",
+  "classification",
+  "status",
+  "checksum",
+  "capturedAt",
+]);
+const opportunitySourcedTextResultKeys = resultKeys<OpportunitySourcedTextResult>()([
+  "value",
+  "sourceIds",
+]);
+const opportunityResponsibilityResultKeys = resultKeys<OpportunityResponsibilityResult>()([
+  "id",
+  "text",
+  "sourceIds",
+]);
+const opportunityRequirementResultKeys = resultKeys<OpportunityRequirementResult>()([
+  "id",
+  "text",
+  "sourceIds",
+  "priority",
+]);
+const opportunityPriorityResultKeys = resultKeys<OpportunityPriorityResult>()([
+  "id",
+  "text",
+  "sourceIds",
+]);
+const opportunityCandidateInstructionsResultKeys =
+  resultKeys<OpportunityCandidateInstructionsResult>()([
+    "tone",
+    "applicationGoal",
+    "forbiddenLanguage",
+    "focusAreas",
+  ]);
+const opportunityIssueResultKeys = resultKeys<OpportunityIssueResult>()([
+  "id",
+  "code",
+  "status",
+  "severity",
+  "message",
+  "sourceIds",
+]);
+const opportunityRecordResultKeys = resultKeys<OpportunityRecordResult>()([
+  "workspaceId",
+  "briefId",
+  "version",
+  "priorVersion",
+  "status",
+  "createdAt",
+  "reviewedAt",
+  "checksum",
+  "sources",
+  "role",
+  "employer",
+  "responsibilities",
+  "requirements",
+  "priorities",
+  "candidateInstructions",
+  "issues",
+]);
+const opportunityListResultKeys = resultKeys<OpportunityListResult>()([
+  "workspaceId",
+  "briefId",
+  "versions",
+]);
+
 export interface ExportResult {
   readonly exportId: string;
   readonly workspaceId: string;
@@ -1854,6 +2255,11 @@ export interface BridgeCommandInputMap {
   "knowledge.archive-base": KnowledgeBaseArchiveInput;
   "knowledge.delete-base-preview": KnowledgeBaseDeletionPreviewInput;
   "knowledge.delete-base": KnowledgeBaseDeletionInput;
+  "opportunity.create": OpportunityCreateInput;
+  "opportunity.get": OpportunityGetInput;
+  "opportunity.list": OpportunityListInput;
+  "opportunity.edit": OpportunityEditInput;
+  "opportunity.review": OpportunityReviewInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -1913,6 +2319,11 @@ export interface BridgeCommandOutputMap {
   "knowledge.archive-base": KnowledgeStoreResult;
   "knowledge.delete-base-preview": KnowledgeBaseDeletionPlanResult;
   "knowledge.delete-base": KnowledgeBaseDeletionResult;
+  "opportunity.create": OpportunityRecordResult;
+  "opportunity.get": OpportunityRecordResult;
+  "opportunity.list": OpportunityListResult;
+  "opportunity.edit": OpportunityRecordResult;
+  "opportunity.review": OpportunityRecordResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -2966,6 +3377,333 @@ function validateSourceAddUrlInput(value: unknown): SourceAddUrlInput {
   };
 }
 
+const maximumOpportunitySourceCount = 128;
+const maximumOpportunityCollectionEntries = 256;
+const maximumOpportunitySourceIds = 64;
+const maximumOpportunityTextLength = 2_000;
+const maximumOpportunityContentLength = 64 * 1024;
+const maximumOpportunityMessageLength = 400;
+
+function opportunityTextValue(value: unknown, maxLength = maximumOpportunityTextLength): string {
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > maxLength) {
+    return invalidInput();
+  }
+  if (
+    [...value].some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return (
+        (codePoint < 0x20 && character !== "\n" && character !== "\r" && character !== "\t") ||
+        codePoint === 0x7f ||
+        (codePoint >= 0x80 && codePoint <= 0x9f)
+      );
+    })
+  ) {
+    return invalidInput();
+  }
+  return value.trim();
+}
+
+function opportunityContentValue(value: unknown): string {
+  return opportunityTextValue(value, maximumOpportunityContentLength);
+}
+
+function opportunityChecksum(value: unknown): string | null {
+  if (value === null) return null;
+  const checksum = stringValue(value, 64).toLowerCase();
+  if (!/^[a-f0-9]{64}$/u.test(checksum)) return invalidInput();
+  return checksum;
+}
+
+function opportunitySourceIds(value: unknown): readonly string[] {
+  if (!Array.isArray(value) || value.length === 0 || value.length > maximumOpportunitySourceIds) {
+    return invalidInput();
+  }
+  const sourceIds = value.map((sourceId) => identifier(sourceId));
+  if (new Set(sourceIds).size !== sourceIds.length) return invalidInput();
+  return sourceIds;
+}
+
+function optionalOpportunityTimestamp(value: unknown): string | undefined {
+  return value === undefined ? undefined : timestampValue(value);
+}
+
+function validateOpportunityCandidateInstructionsInput(
+  value: unknown,
+): OpportunityCandidateInstructionsInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityCandidateInstructionsKeys)) return invalidInput();
+  const normalizeList = (candidate: unknown): readonly string[] | undefined => {
+    if (candidate === undefined) return undefined;
+    if (!Array.isArray(candidate) || candidate.length > maximumOpportunityCollectionEntries) {
+      return invalidInput();
+    }
+    return candidate.map((entry) => opportunityTextValue(entry));
+  };
+  const tone = input.tone === undefined ? undefined : opportunityTextValue(input.tone);
+  const applicationGoal =
+    input.applicationGoal === undefined ? undefined : opportunityTextValue(input.applicationGoal);
+  const forbiddenLanguage = normalizeList(input.forbiddenLanguage);
+  const focusAreas = normalizeList(input.focusAreas);
+  return {
+    ...(tone === undefined ? {} : { tone }),
+    ...(applicationGoal === undefined ? {} : { applicationGoal }),
+    ...(forbiddenLanguage === undefined ? {} : { forbiddenLanguage }),
+    ...(focusAreas === undefined ? {} : { focusAreas }),
+  };
+}
+
+function validateOpportunityCreateSource(value: unknown): OpportunityCreateSource {
+  const source = requireRecord(value);
+  if (typeof source.kind !== "string") return invalidInput();
+  const id = identifier(source.id);
+  const capturedAt = optionalOpportunityTimestamp(source.capturedAt);
+  switch (source.kind as OpportunitySourceKind) {
+    case "approved-url":
+      if (!hasOnlyKeys(source, opportunityCreateUrlSourceKeys)) return invalidInput();
+      if (source.approved !== true) return invalidInput();
+      return {
+        id,
+        kind: "approved-url",
+        classification: enumValue(source.classification, opportunitySourceClassifications),
+        url: urlValue(source.url),
+        approved: true,
+        ...(capturedAt === undefined ? {} : { capturedAt }),
+      };
+    case "local-file":
+      if (!hasOnlyKeys(source, opportunityCreateLocalFileSourceKeys)) return invalidInput();
+      if (source.selection !== "native-dialog") return invalidInput();
+      return {
+        id,
+        kind: "local-file",
+        classification: enumValue(source.classification, opportunitySourceClassifications),
+        selection: "native-dialog",
+        ...(capturedAt === undefined ? {} : { capturedAt }),
+      };
+    case "pasted-content":
+      if (!hasOnlyKeys(source, opportunityCreatePastedSourceKeys)) return invalidInput();
+      return {
+        id,
+        kind: "pasted-content",
+        classification: enumValue(source.classification, opportunitySourceClassifications),
+        content: opportunityContentValue(source.content),
+        ...(capturedAt === undefined ? {} : { capturedAt }),
+      };
+    case "candidate-input": {
+      if (!hasOnlyKeys(source, opportunityCreateCandidateSourceKeys)) return invalidInput();
+      if (source.classification !== "candidate-instruction") return invalidInput();
+      const instructions =
+        source.instructions === undefined
+          ? undefined
+          : validateOpportunityCandidateInstructionsInput(source.instructions);
+      return {
+        id,
+        kind: "candidate-input",
+        classification: "candidate-instruction",
+        content: opportunityContentValue(source.content),
+        ...(capturedAt === undefined ? {} : { capturedAt }),
+        ...(instructions === undefined ? {} : { instructions }),
+      };
+    }
+    default:
+      return invalidInput();
+  }
+}
+
+function validateOpportunityCreateInput(value: unknown): OpportunityCreateInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityCreateKeys)) return invalidInput();
+  if (
+    !Array.isArray(input.sources) ||
+    input.sources.length === 0 ||
+    input.sources.length > maximumOpportunitySourceCount
+  ) {
+    return invalidInput();
+  }
+  const providerTransmissionApproved = optionalBooleanValue(input.providerTransmissionApproved);
+  const sources = input.sources.map(validateOpportunityCreateSource);
+  if (new Set(sources.map((source) => source.id)).size !== sources.length) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    sources,
+    ...(providerTransmissionApproved === undefined ? {} : { providerTransmissionApproved }),
+  };
+}
+
+function validateOpportunitySourcedTextInput(value: unknown): OpportunitySourcedTextInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunitySourcedTextKeys)) return invalidInput();
+  return {
+    value: opportunityTextValue(input.value),
+    sourceIds: opportunitySourceIds(input.sourceIds),
+  };
+}
+
+function validateOpportunityResponsibilityInput(value: unknown): OpportunityResponsibilityInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityResponsibilityKeys)) return invalidInput();
+  return {
+    id: identifier(input.id),
+    text: opportunityTextValue(input.text),
+    sourceIds: opportunitySourceIds(input.sourceIds),
+  };
+}
+
+function validateOpportunityRequirementInput(value: unknown): OpportunityRequirementInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityRequirementKeys)) return invalidInput();
+  return {
+    id: identifier(input.id),
+    text: opportunityTextValue(input.text),
+    priority: enumValue(input.priority, ["critical", "high", "medium", "low"] as const),
+    sourceIds: opportunitySourceIds(input.sourceIds),
+  };
+}
+
+function validateOpportunityPriorityInput(value: unknown): OpportunityPriorityInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityPriorityKeys)) return invalidInput();
+  return {
+    id: identifier(input.id),
+    text: opportunityTextValue(input.text),
+    sourceIds: opportunitySourceIds(input.sourceIds),
+  };
+}
+
+function validateOpportunityCandidateInstructionsPatch(
+  value: unknown,
+): OpportunityCandidateInstructionsPatch {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityCandidateInstructionsPatchKeys)) return invalidInput();
+  const normalizeSourcedText = (candidate: unknown): OpportunitySourcedTextInput | null =>
+    candidate === null ? null : validateOpportunitySourcedTextInput(candidate);
+  const normalizeList = (candidate: unknown): readonly OpportunitySourcedTextInput[] => {
+    if (!Array.isArray(candidate) || candidate.length > maximumOpportunityCollectionEntries) {
+      return invalidInput();
+    }
+    return candidate.map(validateOpportunitySourcedTextInput);
+  };
+  return {
+    tone: normalizeSourcedText(input.tone),
+    applicationGoal: normalizeSourcedText(input.applicationGoal),
+    forbiddenLanguage: normalizeList(input.forbiddenLanguage),
+    focusAreas: normalizeList(input.focusAreas),
+  };
+}
+
+function validateOpportunityIssueInput(value: unknown): OpportunityIssueInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityIssueKeys)) return invalidInput();
+  return {
+    id: identifier(input.id),
+    code: enumValue(input.code, [
+      "inaccessible-source",
+      "unsupported-source",
+      "fetch-failure",
+      "extraction-failure",
+      "duplicate-source",
+      "contradiction",
+      "stale-source",
+      "partial-fetch",
+    ] as const),
+    status: enumValue(input.status, ["open", "acknowledged", "resolved"] as const),
+    severity: enumValue(input.severity, ["error", "warning"] as const),
+    message: opportunityTextValue(input.message, maximumOpportunityMessageLength),
+    sourceIds: opportunitySourceIds(input.sourceIds),
+  };
+}
+
+function validateOpportunityEditPatch(value: unknown): OpportunityEditPatch {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityEditPatchKeys)) return invalidInput();
+  const normalizeCollection = <Value>(
+    candidate: unknown,
+    validator: (value: unknown) => Value,
+  ): readonly Value[] | undefined => {
+    if (candidate === undefined) return undefined;
+    if (!Array.isArray(candidate) || candidate.length > maximumOpportunityCollectionEntries) {
+      return invalidInput();
+    }
+    return candidate.map(validator);
+  };
+  const role =
+    input.role === undefined
+      ? undefined
+      : input.role === null
+        ? null
+        : validateOpportunitySourcedTextInput(input.role);
+  const employer =
+    input.employer === undefined
+      ? undefined
+      : input.employer === null
+        ? null
+        : validateOpportunitySourcedTextInput(input.employer);
+  const responsibilities = normalizeCollection(
+    input.responsibilities,
+    validateOpportunityResponsibilityInput,
+  );
+  const requirements = normalizeCollection(input.requirements, validateOpportunityRequirementInput);
+  const priorities = normalizeCollection(input.priorities, validateOpportunityPriorityInput);
+  const candidateInstructions =
+    input.candidateInstructions === undefined
+      ? undefined
+      : validateOpportunityCandidateInstructionsPatch(input.candidateInstructions);
+  const issues = normalizeCollection(input.issues, validateOpportunityIssueInput);
+  return {
+    ...(role === undefined ? {} : { role }),
+    ...(employer === undefined ? {} : { employer }),
+    ...(responsibilities === undefined ? {} : { responsibilities }),
+    ...(requirements === undefined ? {} : { requirements }),
+    ...(priorities === undefined ? {} : { priorities }),
+    ...(candidateInstructions === undefined ? {} : { candidateInstructions }),
+    ...(issues === undefined ? {} : { issues }),
+  };
+}
+
+function opportunityVersion(value: unknown): number {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1) {
+    return invalidInput();
+  }
+  return value;
+}
+
+function validateOpportunityGetInput(value: unknown): OpportunityGetInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityGetKeys)) return invalidInput();
+  const version = input.version === undefined ? undefined : opportunityVersion(input.version);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    briefId: identifier(input.briefId),
+    ...(version === undefined ? {} : { version }),
+  };
+}
+
+function validateOpportunityListInput(value: unknown): OpportunityListInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityListKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId), briefId: identifier(input.briefId) };
+}
+
+function validateOpportunityEditInput(value: unknown): OpportunityEditInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityEditKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    briefId: identifier(input.briefId),
+    expectedVersion: opportunityVersion(input.expectedVersion),
+    patch: validateOpportunityEditPatch(input.patch),
+  };
+}
+
+function validateOpportunityReviewInput(value: unknown): OpportunityReviewInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityReviewKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    briefId: identifier(input.briefId),
+    expectedVersion: opportunityVersion(input.expectedVersion),
+  };
+}
+
 function validateExportWriteInput(value: unknown): ExportWriteInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, exportWriteKeys)) return invalidInput();
@@ -3221,6 +3959,22 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.delete-base",
         input: validateKnowledgeBaseDeletionInput(command.input),
+      };
+    case "opportunity.create":
+      return {
+        type: "opportunity.create",
+        input: validateOpportunityCreateInput(command.input),
+      };
+    case "opportunity.get":
+      return { type: "opportunity.get", input: validateOpportunityGetInput(command.input) };
+    case "opportunity.list":
+      return { type: "opportunity.list", input: validateOpportunityListInput(command.input) };
+    case "opportunity.edit":
+      return { type: "opportunity.edit", input: validateOpportunityEditInput(command.input) };
+    case "opportunity.review":
+      return {
+        type: "opportunity.review",
+        input: validateOpportunityReviewInput(command.input),
       };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
@@ -4544,6 +5298,233 @@ function normalizeSourceAddUrlResult(value: unknown): SourceAddUrlResult {
   };
 }
 
+function normalizeOpportunitySourcedTextResult(value: unknown): OpportunitySourcedTextResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunitySourcedTextResultKeys)) return invalidInput();
+  return {
+    value: opportunityTextValue(result.value),
+    sourceIds: opportunitySourceIds(result.sourceIds),
+  };
+}
+
+function normalizeOpportunityResponsibilityResult(value: unknown): OpportunityResponsibilityResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityResponsibilityResultKeys)) return invalidInput();
+  return {
+    id: identifier(result.id),
+    text: opportunityTextValue(result.text),
+    sourceIds: opportunitySourceIds(result.sourceIds),
+  };
+}
+
+function normalizeOpportunityRequirementResult(value: unknown): OpportunityRequirementResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityRequirementResultKeys)) return invalidInput();
+  return {
+    id: identifier(result.id),
+    text: opportunityTextValue(result.text),
+    priority: enumValue(result.priority, ["critical", "high", "medium", "low"] as const),
+    sourceIds: opportunitySourceIds(result.sourceIds),
+  };
+}
+
+function normalizeOpportunityPriorityResult(value: unknown): OpportunityPriorityResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityPriorityResultKeys)) return invalidInput();
+  return {
+    id: identifier(result.id),
+    text: opportunityTextValue(result.text),
+    sourceIds: opportunitySourceIds(result.sourceIds),
+  };
+}
+
+function normalizeOpportunityCandidateInstructionsResult(
+  value: unknown,
+): OpportunityCandidateInstructionsResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityCandidateInstructionsResultKeys)) return invalidInput();
+  const normalizeOptionalSourcedText = (candidate: unknown): OpportunitySourcedTextResult | null =>
+    candidate === null ? null : normalizeOpportunitySourcedTextResult(candidate);
+  const normalizeList = (candidate: unknown): readonly OpportunitySourcedTextResult[] => {
+    if (!Array.isArray(candidate) || candidate.length > maximumOpportunityCollectionEntries) {
+      return invalidInput();
+    }
+    return candidate.map(normalizeOpportunitySourcedTextResult);
+  };
+  return {
+    tone: normalizeOptionalSourcedText(result.tone),
+    applicationGoal: normalizeOptionalSourcedText(result.applicationGoal),
+    forbiddenLanguage: normalizeList(result.forbiddenLanguage),
+    focusAreas: normalizeList(result.focusAreas),
+  };
+}
+
+function normalizeOpportunityIssueResult(value: unknown): OpportunityIssueResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityIssueResultKeys)) return invalidInput();
+  return {
+    id: identifier(result.id),
+    code: enumValue(result.code, [
+      "inaccessible-source",
+      "unsupported-source",
+      "fetch-failure",
+      "extraction-failure",
+      "duplicate-source",
+      "contradiction",
+      "stale-source",
+      "partial-fetch",
+    ] as const),
+    status: enumValue(result.status, ["open", "acknowledged", "resolved"] as const),
+    severity: enumValue(result.severity, ["error", "warning"] as const),
+    message: opportunityTextValue(result.message, maximumOpportunityMessageLength),
+    sourceIds: opportunitySourceIds(result.sourceIds),
+  };
+}
+
+function normalizeOpportunitySourceResult(value: unknown): OpportunitySourceResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunitySourceResultKeys)) return invalidInput();
+  return {
+    id: identifier(result.id),
+    kind: enumValue(result.kind, opportunitySourceKinds),
+    classification:
+      result.classification === "candidate-instruction"
+        ? "candidate-instruction"
+        : enumValue(result.classification, opportunitySourceClassifications),
+    status: enumValue(result.status, [
+      "available",
+      "inaccessible",
+      "unsupported",
+      "failed",
+      "partial",
+      "stale",
+    ] as const),
+    checksum: opportunityChecksum(result.checksum),
+    capturedAt: timestampValue(result.capturedAt),
+  };
+}
+
+function normalizeOpportunityRecordResult(value: unknown): OpportunityRecordResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, opportunityRecordResultKeys)) return invalidInput();
+  if (
+    !Array.isArray(result.sources) ||
+    result.sources.length === 0 ||
+    result.sources.length > maximumOpportunitySourceCount
+  ) {
+    return invalidInput();
+  }
+  if (
+    !Array.isArray(result.responsibilities) ||
+    result.responsibilities.length > maximumOpportunityCollectionEntries ||
+    !Array.isArray(result.requirements) ||
+    result.requirements.length > maximumOpportunityCollectionEntries ||
+    !Array.isArray(result.priorities) ||
+    result.priorities.length > maximumOpportunityCollectionEntries ||
+    !Array.isArray(result.issues) ||
+    result.issues.length > maximumOpportunityCollectionEntries
+  ) {
+    return invalidInput();
+  }
+  const sources = result.sources.map(normalizeOpportunitySourceResult);
+  const sourceIds = new Set(sources.map((source) => source.id));
+  if (sourceIds.size !== sources.length) return invalidInput();
+  const role = result.role === null ? null : normalizeOpportunitySourcedTextResult(result.role);
+  const employer =
+    result.employer === null ? null : normalizeOpportunitySourcedTextResult(result.employer);
+  const responsibilities = result.responsibilities.map(normalizeOpportunityResponsibilityResult);
+  const requirements = result.requirements.map(normalizeOpportunityRequirementResult);
+  const priorities = result.priorities.map(normalizeOpportunityPriorityResult);
+  const candidateInstructions = normalizeOpportunityCandidateInstructionsResult(
+    result.candidateInstructions,
+  );
+  const issues = result.issues.map(normalizeOpportunityIssueResult);
+  const assertSourceReferences = (references: readonly string[]): void => {
+    if (references.some((sourceId) => !sourceIds.has(sourceId))) {
+      invalidInput();
+    }
+  };
+  const assertUniqueIds = (values: readonly { readonly id: string }[]): void => {
+    if (new Set(values.map((value) => value.id)).size !== values.length) {
+      invalidInput();
+    }
+  };
+  if (role !== null) assertSourceReferences(role.sourceIds);
+  if (employer !== null) assertSourceReferences(employer.sourceIds);
+  for (const responsibility of responsibilities) assertSourceReferences(responsibility.sourceIds);
+  for (const requirement of requirements) assertSourceReferences(requirement.sourceIds);
+  for (const priority of priorities) assertSourceReferences(priority.sourceIds);
+  for (const issue of issues) assertSourceReferences(issue.sourceIds);
+  for (const instruction of [
+    candidateInstructions.tone,
+    candidateInstructions.applicationGoal,
+    ...candidateInstructions.forbiddenLanguage,
+    ...candidateInstructions.focusAreas,
+  ]) {
+    if (instruction !== null) assertSourceReferences(instruction.sourceIds);
+  }
+  assertUniqueIds(responsibilities);
+  assertUniqueIds(requirements);
+  assertUniqueIds(priorities);
+  assertUniqueIds(issues);
+  const version = opportunityVersion(result.version);
+  const priorVersion =
+    result.priorVersion === null ? null : opportunityVersion(result.priorVersion);
+  if (
+    (version === 1) !== (priorVersion === null) ||
+    (priorVersion !== null && priorVersion !== version - 1)
+  ) {
+    return invalidInput();
+  }
+  const status = enumValue(result.status, ["draft", "reviewed"] as const);
+  const reviewedAt = result.reviewedAt === null ? null : timestampValue(result.reviewedAt);
+  if ((status === "draft") !== (reviewedAt === null)) return invalidInput();
+  return {
+    workspaceId: identifier(result.workspaceId),
+    briefId: identifier(result.briefId),
+    version,
+    priorVersion,
+    status,
+    createdAt: timestampValue(result.createdAt),
+    reviewedAt,
+    checksum: opportunityChecksum(result.checksum),
+    sources,
+    role,
+    employer,
+    responsibilities,
+    requirements,
+    priorities,
+    candidateInstructions,
+    issues,
+  };
+}
+
+function normalizeOpportunityListResult(value: unknown): OpportunityListResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, opportunityListResultKeys) ||
+    !Array.isArray(result.versions) ||
+    result.versions.length > maximumOpportunityCollectionEntries
+  ) {
+    return invalidInput();
+  }
+  const workspaceId = identifier(result.workspaceId);
+  const briefId = identifier(result.briefId);
+  const versions = result.versions.map(normalizeOpportunityRecordResult);
+  let previousVersion = 0;
+  for (const version of versions) {
+    if (
+      version.workspaceId !== workspaceId ||
+      version.briefId !== briefId ||
+      version.version <= previousVersion
+    ) {
+      return invalidInput();
+    }
+    previousVersion = version.version;
+  }
+  return { workspaceId, briefId, versions };
+}
+
 function normalizeExportResult(value: unknown): ExportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, exportResultKeys)) return invalidInput();
@@ -4657,6 +5638,13 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeKnowledgeBaseDeletionPlanResult(value);
     case "knowledge.delete-base":
       return normalizeKnowledgeBaseDeletionResult(value);
+    case "opportunity.create":
+    case "opportunity.get":
+    case "opportunity.edit":
+    case "opportunity.review":
+      return normalizeOpportunityRecordResult(value);
+    case "opportunity.list":
+      return normalizeOpportunityListResult(value);
     case "knowledge.readiness":
       return normalizeKnowledgeReadinessResult(value);
     case "knowledge.sources":

@@ -86,6 +86,79 @@ function artifact(id = "artifact-native", version = 1) {
   };
 }
 
+function opportunityRecord(version = 1, status: "draft" | "reviewed" = "draft"): unknown {
+  const capturedAt = "2026-08-28T10:00:00.000Z";
+  return {
+    workspaceId: "workspace-native",
+    checksum: "d".repeat(64),
+    brief: {
+      schemaVersion: 1,
+      id: "brief-native",
+      version,
+      priorVersion: version === 1 ? null : version - 1,
+      status,
+      createdAt: capturedAt,
+      reviewedAt: status === "reviewed" ? capturedAt : null,
+      sources: [
+        {
+          id: "job-url",
+          classification: "job-posting",
+          status: "available",
+          provenance: {
+            kind: "approved-url",
+            originalUrl: "https://private.example.test/job",
+            finalUrl: "https://private.example.test/job/final",
+            capturedAt,
+            contentChecksum: "a".repeat(64),
+          },
+        },
+        {
+          id: "local-source",
+          classification: "company-context",
+          status: "available",
+          provenance: {
+            kind: "local-file",
+            displayName: "private-resume.md",
+            capturedAt,
+            checksum: "b".repeat(64),
+          },
+        },
+        {
+          id: "candidate-source",
+          classification: "candidate-instruction",
+          status: "available",
+          provenance: {
+            kind: "candidate-input",
+            capturedAt,
+            checksum: "c".repeat(64),
+          },
+        },
+      ],
+      role: { value: "Senior platform engineer", sourceIds: ["job-url"] },
+      employer: { value: "Example Corp", sourceIds: ["job-url"] },
+      responsibilities: [
+        { id: "responsibility-1", text: "Build platform services", sourceIds: ["job-url"] },
+      ],
+      requirements: [
+        {
+          id: "requirement-1",
+          text: "Experience with TypeScript",
+          priority: "high",
+          sourceIds: ["job-url"],
+        },
+      ],
+      priorities: [{ id: "priority-1", text: "Reliability", sourceIds: ["job-url"] }],
+      candidateInstructions: {
+        tone: { value: "direct", sourceIds: ["candidate-source"] },
+        applicationGoal: null,
+        forbiddenLanguage: [],
+        focusAreas: [],
+      },
+      issues: [],
+    },
+  };
+}
+
 function service(
   root: string,
   snapshotOverrides: Readonly<Record<string, unknown>> = {},
@@ -138,6 +211,17 @@ function service(
       resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),
       lifecycle: vi.fn(async () => snapshot),
       status: vi.fn(async () => snapshot),
+      createOpportunity: vi.fn<ApplicationService["createOpportunity"]>(async () => {
+        throw new Error("opportunity fixture method was not configured");
+      }),
+      getOpportunity: vi.fn(async () => undefined),
+      listOpportunityVersions: vi.fn(async () => []),
+      editOpportunity: vi.fn(async () => {
+        throw new Error("opportunity fixture method was not configured");
+      }),
+      reviewOpportunity: vi.fn(async () => {
+        throw new Error("opportunity fixture method was not configured");
+      }),
       export: vi.fn(
         async (command) => command.outputPath ?? join(root, "exports", "run-native.md"),
       ),
@@ -4338,5 +4422,293 @@ describe("candidate knowledge native controls", () => {
       combinationApproved: true,
     });
     expect(JSON.stringify(approved)).not.toContain("/local/");
+  });
+
+  it("creates opportunities through the shared service without returning paths or URLs", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-opportunity-"));
+    const root = join(parent, "workspace");
+    const fixture = service(root);
+    const selectedPath = join(parent, "private-resume.md");
+    const chooseFiles = vi.fn(async () => [selectedPath]);
+    fixture.service.createOpportunity.mockImplementation(
+      async (command: Parameters<ApplicationService["createOpportunity"]>[0]) => {
+        expect(command.root).toBe(root);
+        expect(command.allowProviderData).toBe(true);
+        expect(command.sources).toEqual([
+          {
+            id: "job-url",
+            kind: "approved-url",
+            classification: "job-posting",
+            url: "https://private.example.test/job",
+            approved: true,
+          },
+          {
+            id: "pasted-job",
+            kind: "pasted-content",
+            classification: "company-context",
+            content: "The role requires TypeScript.",
+          },
+          {
+            id: "candidate-notes",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Use a direct tone.",
+            instructions: { tone: "direct" },
+          },
+          {
+            id: "local-resume",
+            kind: "local-file",
+            classification: "job-posting",
+            path: selectedPath,
+          },
+        ]);
+        return opportunityRecord() as never;
+      },
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: {
+        chooseDirectory: async () => root,
+        chooseFiles,
+      },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const created = await host.invoke({
+        type: "opportunity.create",
+        input: {
+          workspaceId: "workspace-native",
+          providerTransmissionApproved: true,
+          sources: [
+            {
+              id: "job-url",
+              kind: "approved-url",
+              classification: "job-posting",
+              url: "https://private.example.test/job",
+              approved: true,
+            },
+            {
+              id: "pasted-job",
+              kind: "pasted-content",
+              classification: "company-context",
+              content: "The role requires TypeScript.",
+            },
+            {
+              id: "candidate-notes",
+              kind: "candidate-input",
+              classification: "candidate-instruction",
+              content: "Use a direct tone.",
+              instructions: { tone: "direct" },
+            },
+            {
+              id: "local-resume",
+              kind: "local-file",
+              classification: "job-posting",
+              selection: "native-dialog",
+            },
+          ],
+        },
+      });
+
+      expect(created).toMatchObject({
+        ok: true,
+        value: {
+          workspaceId: "workspace-native",
+          briefId: "brief-native",
+        },
+      });
+      if (created.ok) {
+        const createdValue = created.value as { readonly sources: readonly unknown[] };
+        expect(createdValue.sources).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              id: "job-url",
+              kind: "approved-url",
+              classification: "job-posting",
+              status: "available",
+              checksum: "a".repeat(64),
+            }),
+          ]),
+        );
+      }
+      expect(JSON.stringify(created)).not.toContain("private.example.test");
+      expect(JSON.stringify(created)).not.toContain(selectedPath);
+      expect(JSON.stringify(created)).not.toContain("private-resume.md");
+      expect(chooseFiles).toHaveBeenCalledWith({
+        workspaceId: "workspace-native",
+        multiple: false,
+        target: "evidence",
+      });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps opportunity reads, edits, and reviews dialog-free and reloads latest on restart", async () => {
+    const root = "/local/opportunity-workspace";
+    const fixture = service(root);
+    const chooseFiles = vi.fn(async () => {
+      throw new Error("opportunity reads must not open a dialog");
+    });
+    fixture.service.getOpportunity.mockResolvedValue(opportunityRecord() as never);
+    fixture.service.listOpportunityVersions.mockResolvedValue([opportunityRecord()] as never);
+    fixture.service.editOpportunity.mockResolvedValue(opportunityRecord(2) as never);
+    fixture.service.reviewOpportunity.mockResolvedValue(opportunityRecord(3, "reviewed") as never);
+    const dialogs = {
+      chooseDirectory: async () => root,
+      chooseFiles,
+    };
+    const firstHost = createNativeHost({ applicationService: fixture.service, dialogs });
+    await firstHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    await expect(
+      firstHost.invoke({
+        type: "opportunity.get",
+        input: { workspaceId: "workspace-native", briefId: "brief-native" },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { version: 1 } });
+    await expect(
+      firstHost.invoke({
+        type: "opportunity.list",
+        input: { workspaceId: "workspace-native", briefId: "brief-native" },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { versions: [{ version: 1 }] } });
+    await expect(
+      firstHost.invoke({
+        type: "opportunity.edit",
+        input: {
+          workspaceId: "workspace-native",
+          briefId: "brief-native",
+          expectedVersion: 1,
+          patch: { role: { value: "Updated role", sourceIds: ["job-url"] } },
+        },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { version: 2 } });
+    await expect(
+      firstHost.invoke({
+        type: "opportunity.review",
+        input: {
+          workspaceId: "workspace-native",
+          briefId: "brief-native",
+          expectedVersion: 2,
+        },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { version: 3, status: "reviewed" } });
+
+    const restarted = createNativeHost({ applicationService: fixture.service, dialogs });
+    await restarted.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+    await expect(
+      restarted.invoke({
+        type: "opportunity.get",
+        input: { workspaceId: "workspace-native", briefId: "brief-native" },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { version: 1 } });
+    expect(fixture.service.getOpportunity).toHaveBeenCalledWith({
+      root,
+      briefId: "brief-native",
+    });
+    expect(fixture.service.listOpportunityVersions).toHaveBeenCalledWith({
+      root,
+      briefId: "brief-native",
+    });
+    expect(fixture.service.editOpportunity).toHaveBeenCalledWith({
+      root,
+      briefId: "brief-native",
+      expectedVersion: 1,
+      patch: { role: { value: "Updated role", sourceIds: ["job-url"] } },
+    });
+    expect(fixture.service.reviewOpportunity).toHaveBeenCalledWith({
+      root,
+      briefId: "brief-native",
+      expectedVersion: 2,
+    });
+    expect(chooseFiles).not.toHaveBeenCalled();
+  });
+
+  it("creates locally without provider approval and reports stale edits safely", async () => {
+    const root = "/local/opportunity-approval";
+    const fixture = service(root);
+    fixture.service.createOpportunity.mockResolvedValue(opportunityRecord() as never);
+    fixture.service.editOpportunity.mockRejectedValueOnce(
+      new Error("private stale version and candidate content"),
+    );
+    const chooseFiles = vi.fn(async () => {
+      throw new Error("pasted opportunity creation must not open a dialog");
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const unapproved = await host.invoke({
+      type: "opportunity.create",
+      input: {
+        workspaceId: "workspace-native",
+        sources: [
+          {
+            id: "pasted-local",
+            kind: "pasted-content",
+            classification: "company-context",
+            content: "Keep this draft local.",
+          },
+        ],
+      },
+    });
+    expect(unapproved).toMatchObject({ ok: true, value: { briefId: "brief-native" } });
+    expect(fixture.service.createOpportunity).toHaveBeenCalledWith({
+      root,
+      sources: [
+        {
+          id: "pasted-local",
+          kind: "pasted-content",
+          classification: "company-context",
+          content: "Keep this draft local.",
+        },
+      ],
+      allowProviderData: false,
+    });
+
+    const explicitlyUnapproved = await host.invoke({
+      type: "opportunity.create",
+      input: {
+        workspaceId: "workspace-native",
+        providerTransmissionApproved: false,
+        sources: [
+          {
+            id: "pasted-local-explicit",
+            kind: "pasted-content",
+            classification: "company-context",
+            content: "Keep this draft local too.",
+          },
+        ],
+      },
+    });
+    expect(explicitlyUnapproved).toMatchObject({ ok: true, value: { briefId: "brief-native" } });
+    expect(fixture.service.createOpportunity).toHaveBeenLastCalledWith({
+      root,
+      sources: [
+        {
+          id: "pasted-local-explicit",
+          kind: "pasted-content",
+          classification: "company-context",
+          content: "Keep this draft local too.",
+        },
+      ],
+      allowProviderData: false,
+    });
+    expect(chooseFiles).not.toHaveBeenCalled();
+
+    const stale = await host.invoke({
+      type: "opportunity.edit",
+      input: {
+        workspaceId: "workspace-native",
+        briefId: "brief-native",
+        expectedVersion: 1,
+        patch: { role: { value: "Updated role", sourceIds: ["job-url"] } },
+      },
+    });
+    expect(stale).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    expect(JSON.stringify(stale)).not.toContain("private stale");
   });
 });

@@ -13,6 +13,8 @@ import {
   defaultLocalModelEndpoint,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
+  type OpportunityDraftPatch,
+  type OpportunitySourceInput,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
   type ProviderAuthMode,
   type ProviderAuthModeConfiguration,
@@ -86,6 +88,9 @@ import {
   type ModelsListResult,
   type ModelsPreviewIndependenceInput,
   type ModelsPreviewIndependenceResult,
+  type OpportunityCreateInput,
+  type OpportunityCreateSource,
+  type OpportunityRecordResult,
   type ProviderAuthModeStatus,
   type ReviewDispatchInput,
   type SelectedFile,
@@ -1170,6 +1175,161 @@ function workspaceResult(descriptor: WorkspaceDescriptor): {
   return { workspace: { id: descriptor.id, name: workspaceName(descriptor.root) } };
 }
 
+function opportunityRecordObject(value: unknown): {
+  readonly brief: Record<string, unknown>;
+  readonly checksum: string | null;
+} {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return fail("operation-failed", "The opportunity service returned an invalid record.");
+  }
+  const record = value as Record<string, unknown>;
+  const brief = record.brief;
+  if (typeof brief === "object" && brief !== null && !Array.isArray(brief)) {
+    return {
+      brief: brief as Record<string, unknown>,
+      checksum: typeof record.checksum === "string" ? record.checksum : null,
+    };
+  }
+  return { brief: record, checksum: null };
+}
+
+function opportunitySourcedText(value: unknown): OpportunityRecordResult["role"] {
+  if (value === null) return null;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return fail("operation-failed", "The opportunity service returned an invalid fact.");
+  }
+  const fact = value as Record<string, unknown>;
+  return { value: fact.value, sourceIds: fact.sourceIds } as OpportunityRecordResult["role"];
+}
+
+function opportunitySource(value: unknown): OpportunityRecordResult["sources"][number] {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return fail("operation-failed", "The opportunity service returned an invalid source.");
+  }
+  const source = value as Record<string, unknown>;
+  const provenance = source.provenance;
+  if (typeof provenance !== "object" || provenance === null || Array.isArray(provenance)) {
+    return fail("operation-failed", "The opportunity service returned an invalid source.");
+  }
+  const provenanceRecord = provenance as Record<string, unknown>;
+  const kind = provenanceRecord.kind;
+  const checksum =
+    kind === "approved-url" ? provenanceRecord.contentChecksum : provenanceRecord.checksum;
+  if (typeof kind !== "string" || typeof source.id !== "string") {
+    return fail("operation-failed", "The opportunity service returned an invalid source.");
+  }
+  return {
+    id: source.id,
+    kind,
+    classification: source.classification,
+    status: source.status,
+    checksum: checksum === null || typeof checksum === "string" ? checksum : null,
+    capturedAt: provenanceRecord.capturedAt,
+  } as OpportunityRecordResult["sources"][number];
+}
+
+function opportunityFactCollection<
+  Value extends "responsibilities" | "requirements" | "priorities",
+>(value: unknown, field: Value): OpportunityRecordResult[Value] {
+  if (!Array.isArray(value)) {
+    return fail("operation-failed", "The opportunity service returned invalid facts.");
+  }
+  return value.map((entry) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return fail("operation-failed", "The opportunity service returned invalid facts.");
+    }
+    const fact = entry as Record<string, unknown>;
+    return {
+      id: fact.id,
+      text: fact.text,
+      sourceIds: fact.sourceIds,
+      ...(field === "requirements" ? { priority: fact.priority } : {}),
+    } as OpportunityRecordResult[Value][number];
+  }) as OpportunityRecordResult[Value];
+}
+
+function opportunityInstructions(value: unknown): OpportunityRecordResult["candidateInstructions"] {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return fail("operation-failed", "The opportunity service returned invalid instructions.");
+  }
+  const instructions = value as Record<string, unknown>;
+  const list = (candidate: unknown): readonly unknown[] => {
+    if (!Array.isArray(candidate)) {
+      return fail("operation-failed", "The opportunity service returned invalid instructions.");
+    }
+    return candidate;
+  };
+  return {
+    tone: opportunitySourcedText(instructions.tone),
+    applicationGoal: opportunitySourcedText(instructions.applicationGoal),
+    forbiddenLanguage: list(instructions.forbiddenLanguage).map(opportunitySourcedText),
+    focusAreas: list(instructions.focusAreas).map(opportunitySourcedText),
+  } as OpportunityRecordResult["candidateInstructions"];
+}
+
+function opportunityIssues(value: unknown): OpportunityRecordResult["issues"] {
+  if (!Array.isArray(value)) {
+    return fail("operation-failed", "The opportunity service returned invalid issues.");
+  }
+  return value.map((entry) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      return fail("operation-failed", "The opportunity service returned invalid issues.");
+    }
+    const issue = entry as Record<string, unknown>;
+    return {
+      id: issue.id,
+      code: issue.code,
+      status: issue.status,
+      severity: issue.severity,
+      message: issue.message,
+      sourceIds: issue.sourceIds,
+    };
+  }) as OpportunityRecordResult["issues"];
+}
+
+/**
+ * Projects a persisted opportunity record before it reaches the renderer.
+ *
+ * In particular, URL provenance (originalUrl/finalUrl) and local file
+ * paths/display names are intentionally not copied. This projection is kept
+ * separate from bridge validation so a future application/storage field cannot
+ * accidentally become renderer-visible merely by being added to a brief.
+ */
+function projectOpportunityRecord(workspaceId: string, value: unknown): OpportunityRecordResult {
+  const { brief, checksum } = opportunityRecordObject(value);
+  if (
+    typeof brief.id !== "string" ||
+    typeof brief.version !== "number" ||
+    (brief.priorVersion !== null && typeof brief.priorVersion !== "number") ||
+    (brief.reviewedAt !== null && typeof brief.reviewedAt !== "string") ||
+    typeof brief.createdAt !== "string" ||
+    typeof brief.status !== "string"
+  ) {
+    return fail("operation-failed", "The opportunity service returned an invalid record.");
+  }
+  const sources = Array.isArray(brief.sources)
+    ? brief.sources.map(opportunitySource)
+    : fail("operation-failed", "The opportunity service returned invalid sources.");
+  return {
+    workspaceId,
+    briefId: brief.id,
+    version: brief.version,
+    priorVersion: brief.priorVersion,
+    status: brief.status as OpportunityRecordResult["status"],
+    createdAt: brief.createdAt,
+    reviewedAt: brief.reviewedAt,
+    checksum,
+    sources,
+    role: opportunitySourcedText(brief.role),
+    employer: opportunitySourcedText(brief.employer),
+    responsibilities: opportunityFactCollection(brief.responsibilities, "responsibilities"),
+    requirements: opportunityFactCollection(brief.requirements, "requirements"),
+    priorities: opportunityFactCollection(brief.priorities, "priorities"),
+    candidateInstructions: opportunityInstructions(brief.candidateInstructions),
+    issues: opportunityIssues(brief.issues),
+  };
+}
+
 function statusResult(
   workspaceId: string,
   snapshot: RunSnapshot | undefined,
@@ -1654,6 +1814,141 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     const descriptor = await service.readWorkspace(resolve(root));
     active = { descriptor, root: resolve(root) };
     return workspaceResult(descriptor);
+  }
+
+  async function resolveOpportunitySources(
+    workspaceId: string,
+    inputs: readonly OpportunityCreateSource[],
+  ): Promise<readonly OpportunitySourceInput[]> {
+    const sources: OpportunitySourceInput[] = [];
+    for (const source of inputs) {
+      const capturedAt = source.capturedAt === undefined ? {} : { capturedAt: source.capturedAt };
+      switch (source.kind) {
+        case "approved-url":
+          sources.push({
+            id: source.id,
+            kind: "approved-url",
+            classification: source.classification,
+            url: source.url,
+            approved: true,
+            ...capturedAt,
+          });
+          break;
+        case "pasted-content":
+          sources.push({
+            id: source.id,
+            kind: "pasted-content",
+            classification: source.classification,
+            content: source.content,
+            ...capturedAt,
+          });
+          break;
+        case "candidate-input":
+          sources.push({
+            id: source.id,
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: source.content,
+            ...(source.instructions === undefined ? {} : { instructions: source.instructions }),
+            ...capturedAt,
+          });
+          break;
+        case "local-file": {
+          const selected = await options.dialogs.chooseFiles({
+            workspaceId,
+            multiple: false,
+            target: "evidence",
+          });
+          const selectedPath = selected[0];
+          if (
+            selectedPath === undefined ||
+            typeof selectedPath !== "string" ||
+            selectedPath === ""
+          ) {
+            return fail("permission-denied", "Opportunity source file selection was cancelled.");
+          }
+          sources.push({
+            id: source.id,
+            kind: "local-file",
+            classification: source.classification,
+            path: resolve(selectedPath),
+            ...capturedAt,
+          });
+          break;
+        }
+      }
+    }
+    return sources;
+  }
+
+  async function createOpportunity(
+    input: OpportunityCreateInput,
+  ): Promise<OpportunityRecordResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const sources = await resolveOpportunitySources(input.workspaceId, input.sources);
+    const record = await service.createOpportunity({
+      root: workspace.root,
+      sources,
+      allowProviderData: input.providerTransmissionApproved === true,
+    });
+    return projectOpportunityRecord(workspace.descriptor.id, record);
+  }
+
+  async function getOpportunity(
+    input: Extract<BridgeCommand, { type: "opportunity.get" }>["input"],
+  ): Promise<OpportunityRecordResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const record = await service.getOpportunity({
+      root: workspace.root,
+      briefId: input.briefId,
+      ...(input.version === undefined ? {} : { version: input.version }),
+    });
+    if (record === undefined) return fail("not-found", "The requested opportunity was not found.");
+    return projectOpportunityRecord(workspace.descriptor.id, record);
+  }
+
+  async function listOpportunityVersions(
+    input: Extract<BridgeCommand, { type: "opportunity.list" }>["input"],
+  ): Promise<{
+    readonly workspaceId: string;
+    readonly briefId: string;
+    readonly versions: readonly OpportunityRecordResult[];
+  }> {
+    const workspace = workspaceFor(input.workspaceId);
+    const records = await service.listOpportunityVersions({
+      root: workspace.root,
+      briefId: input.briefId,
+    });
+    return {
+      workspaceId: workspace.descriptor.id,
+      briefId: input.briefId,
+      versions: records.map((record) => projectOpportunityRecord(workspace.descriptor.id, record)),
+    };
+  }
+
+  async function editOpportunity(
+    input: Extract<BridgeCommand, { type: "opportunity.edit" }>["input"],
+  ): Promise<OpportunityRecordResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const record = await service.editOpportunity({
+      root: workspace.root,
+      briefId: input.briefId,
+      expectedVersion: input.expectedVersion,
+      patch: input.patch as OpportunityDraftPatch,
+    });
+    return projectOpportunityRecord(workspace.descriptor.id, record);
+  }
+
+  async function reviewOpportunity(
+    input: Extract<BridgeCommand, { type: "opportunity.review" }>["input"],
+  ): Promise<OpportunityRecordResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const record = await service.reviewOpportunity({
+      root: workspace.root,
+      briefId: input.briefId,
+      expectedVersion: input.expectedVersion,
+    });
+    return projectOpportunityRecord(workspace.descriptor.id, record);
   }
 
   async function selectFiles(input: FileSelectInput): Promise<FileSelectResult> {
@@ -3396,6 +3691,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           };
           return { ok: true, value: result };
         }
+        case "opportunity.create":
+          return { ok: true, value: await createOpportunity(command.input) };
+        case "opportunity.get":
+          return { ok: true, value: await getOpportunity(command.input) };
+        case "opportunity.list":
+          return { ok: true, value: await listOpportunityVersions(command.input) };
+        case "opportunity.edit":
+          return { ok: true, value: await editOpportunity(command.input) };
+        case "opportunity.review":
+          return { ok: true, value: await reviewOpportunity(command.input) };
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);
           return {

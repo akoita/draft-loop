@@ -5,6 +5,8 @@ import type {
 } from "@draft-loop/domain";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OutputFormat } from "@draft-loop/rendering";
+import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
+import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 
 export type { EvidenceRetrievalInspection, IndependentReviewRecord, ScoredEvidenceChunk };
 
@@ -146,6 +148,41 @@ export interface StatusCommand {
   readonly runId?: string;
 }
 
+export interface CreateOpportunityCommand {
+  readonly root: string;
+  readonly id?: string;
+  readonly sources: readonly OpportunitySourceInput[];
+  readonly allowProviderData?: boolean;
+  readonly createdAt?: string;
+}
+
+export interface GetOpportunityCommand {
+  readonly root: string;
+  readonly briefId: string;
+  /** Omit to load the latest persisted version. */
+  readonly version?: number;
+}
+
+export interface ListOpportunityVersionsCommand {
+  readonly root: string;
+  readonly briefId: string;
+}
+
+export interface EditOpportunityCommand {
+  readonly root: string;
+  readonly briefId: string;
+  readonly expectedVersion: number;
+  readonly patch: OpportunityDraftPatch;
+  readonly createdAt?: string;
+}
+
+export interface ReviewOpportunityCommand {
+  readonly root: string;
+  readonly briefId: string;
+  readonly expectedVersion: number;
+  readonly reviewedAt?: string;
+}
+
 export interface ExportCommand {
   readonly root: string;
   readonly runId?: string;
@@ -218,6 +255,21 @@ export interface ApplicationDriver {
   readonly resume: (command: ResumeRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly lifecycle: (command: LifecycleCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly status: (command: StatusCommand, io?: ApplicationIo) => Promise<RunSnapshot | undefined>;
+  readonly createOpportunity: (
+    command: CreateOpportunityCommand,
+  ) => Promise<OpportunityBriefVersionRecord>;
+  readonly getOpportunity: (
+    command: GetOpportunityCommand,
+  ) => Promise<OpportunityBriefVersionRecord | undefined>;
+  readonly listOpportunityVersions: (
+    command: ListOpportunityVersionsCommand,
+  ) => Promise<readonly OpportunityBriefVersionRecord[]>;
+  readonly editOpportunity: (
+    command: EditOpportunityCommand,
+  ) => Promise<OpportunityBriefVersionRecord>;
+  readonly reviewOpportunity: (
+    command: ReviewOpportunityCommand,
+  ) => Promise<OpportunityBriefVersionRecord>;
   readonly export: (command: ExportCommand, io?: ApplicationIo) => Promise<string>;
   readonly latestExportPath: (command: LatestExportPathCommand) => Promise<string | null>;
   readonly queryEvidence: (
@@ -287,6 +339,16 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.lifecycle({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     status: async (command, io) =>
       driver.status({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    createOpportunity: async (command) =>
+      driver.createOpportunity({ ...command, root: requireRoot(command.root) }),
+    getOpportunity: async (command) =>
+      driver.getOpportunity({ ...command, root: requireRoot(command.root) }),
+    listOpportunityVersions: async (command) =>
+      driver.listOpportunityVersions({ ...command, root: requireRoot(command.root) }),
+    editOpportunity: async (command) =>
+      driver.editOpportunity({ ...command, root: requireRoot(command.root) }),
+    reviewOpportunity: async (command) =>
+      driver.reviewOpportunity({ ...command, root: requireRoot(command.root) }),
     export: async (command, io) =>
       driver.export({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     latestExportPath: async (command) =>

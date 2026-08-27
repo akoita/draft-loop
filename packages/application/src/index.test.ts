@@ -4,6 +4,11 @@ import { type ApplicationDriver, createApplicationService } from "./index.js";
 
 function driver(): ApplicationDriver {
   const snapshot = { runId: "run-1" } as never;
+  const opportunityRecord = {
+    workspaceId: "workspace-1",
+    brief: { id: "brief-1", version: 1 },
+    checksum: "a".repeat(64),
+  } as never;
   return {
     initialize: vi.fn(async (command) => ({
       id: "workspace-1",
@@ -78,6 +83,11 @@ function driver(): ApplicationDriver {
     resume: vi.fn(async () => snapshot),
     lifecycle: vi.fn(async () => snapshot),
     status: vi.fn(async () => snapshot),
+    createOpportunity: vi.fn(async () => opportunityRecord),
+    getOpportunity: vi.fn(async () => opportunityRecord),
+    listOpportunityVersions: vi.fn(async () => [opportunityRecord]),
+    editOpportunity: vi.fn(async () => opportunityRecord),
+    reviewOpportunity: vi.fn(async () => opportunityRecord),
     export: vi.fn(async () => "exports/run-1.md"),
     latestExportPath: vi.fn(async () => null),
     queryEvidence: vi.fn(async () => []),
@@ -146,6 +156,63 @@ describe("application service contract", () => {
       { root: "workspace", query: "typescript" },
       expect.objectContaining({ write: expect.any(Function) }),
     );
+  });
+
+  it("forwards opportunity version commands and validates their roots", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+    const source = {
+      id: "source-1",
+      kind: "pasted-content" as const,
+      classification: "job-posting" as const,
+      content: "A bounded source.",
+    };
+
+    await service.createOpportunity({ root: "workspace", id: "brief-1", sources: [source] });
+    await service.getOpportunity({ root: "workspace", briefId: "brief-1" });
+    await service.getOpportunity({ root: "workspace", briefId: "brief-1", version: 1 });
+    await service.listOpportunityVersions({ root: "workspace", briefId: "brief-1" });
+    await service.editOpportunity({
+      root: "workspace",
+      briefId: "brief-1",
+      expectedVersion: 1,
+      patch: {},
+      createdAt: "2026-08-28T10:00:00.000Z",
+    });
+    await service.reviewOpportunity({
+      root: "workspace",
+      briefId: "brief-1",
+      expectedVersion: 2,
+      reviewedAt: "2026-08-28T10:01:00.000Z",
+    });
+
+    expect(underlying.createOpportunity).toHaveBeenCalledWith(
+      expect.objectContaining({ root: "workspace", id: "brief-1", sources: [source] }),
+    );
+    expect(underlying.getOpportunity).toHaveBeenNthCalledWith(1, {
+      root: "workspace",
+      briefId: "brief-1",
+    });
+    expect(underlying.getOpportunity).toHaveBeenNthCalledWith(2, {
+      root: "workspace",
+      briefId: "brief-1",
+      version: 1,
+    });
+    expect(underlying.listOpportunityVersions).toHaveBeenCalledWith({
+      root: "workspace",
+      briefId: "brief-1",
+    });
+    expect(underlying.editOpportunity).toHaveBeenCalledWith(
+      expect.objectContaining({ root: "workspace", expectedVersion: 1 }),
+    );
+    expect(underlying.reviewOpportunity).toHaveBeenCalledWith(
+      expect.objectContaining({ root: "workspace", expectedVersion: 2 }),
+    );
+
+    await expect(
+      service.getOpportunity({ root: "   ", briefId: "private-brief-id" }),
+    ).rejects.toThrow("workspace root is required");
+    expect(underlying.getOpportunity).toHaveBeenCalledTimes(2);
   });
 
   it("forwards the durable latest export path query with normalized root", async () => {

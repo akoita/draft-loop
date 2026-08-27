@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { defaultRequiredSections } from "@draft-loop/application";
 import { Command } from "commander";
 import packageJson from "../package.json";
@@ -26,6 +28,8 @@ import {
   type KnowledgeSourceRefreshStateResult,
   type KnowledgeSourceRetirementResult,
   knowledgeService,
+  type OpportunityDraftPatch,
+  type OpportunitySourceInput,
   type PreviewKnowledgeSourceDirectoryMovedCandidatesResult,
   type PreviewKnowledgeSourceDirectoryReconciliationResult,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
@@ -148,6 +152,19 @@ function lexicalCompare(left: string, right: string): number {
 
 function writeJson(io: ApplicationIo, value: unknown): void {
   io.write(JSON.stringify(value));
+}
+
+async function readJsonObject(path: string, label: string): Promise<Record<string, unknown>> {
+  let value: unknown;
+  try {
+    value = JSON.parse(await readFile(path, "utf8"));
+  } catch {
+    throw new Error(`${label} must be a readable JSON file.`);
+  }
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} must contain one JSON object.`);
+  }
+  return value as Record<string, unknown>;
 }
 
 function writeKnowledgeSourceManifests(
@@ -1430,6 +1447,98 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         ...(options.output === undefined ? {} : { outputPath: options.output as string }),
         format: options.format as "markdown" | "pdf" | "docx",
       });
+    });
+
+  const opportunity = command
+    .command("opportunity")
+    .description("Create and review a versioned opportunity brief");
+
+  opportunity
+    .command("create")
+    .description("Create one opportunity from approved source descriptors in a JSON file")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--input <path>", "JSON file containing id and sources")
+    .option("--allow-provider-data", "explicitly approve structured provider extraction")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const input = await readJsonObject(options.input as string, "Opportunity input");
+      if (typeof input.id !== "string" || !Array.isArray(input.sources)) {
+        throw new Error("Opportunity input requires an id and sources array.");
+      }
+      const record = await service.createOpportunity({
+        root: workspaceRoot(workspace),
+        id: input.id,
+        sources: input.sources as OpportunitySourceInput[],
+        ...(typeof input.createdAt === "string" ? { createdAt: input.createdAt } : {}),
+        allowProviderData: boolOption(options, "allowProviderData"),
+      });
+      writeJson(io, record);
+    });
+
+  opportunity
+    .command("get")
+    .description("Read the latest or an exact opportunity version")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--brief-id <id>", "opportunity brief id")
+    .option("--version <number>", "exact version; omit to reload latest", integerOption)
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const record = await service.getOpportunity({
+        root: workspaceRoot(workspace),
+        briefId: options.briefId as string,
+        ...(options.version === undefined ? {} : { version: options.version as number }),
+      });
+      writeJson(io, record ?? null);
+    });
+
+  opportunity
+    .command("list")
+    .description("List immutable versions of an opportunity brief")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--brief-id <id>", "opportunity brief id")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      writeJson(
+        io,
+        await service.listOpportunityVersions({
+          root: workspaceRoot(workspace),
+          briefId: options.briefId as string,
+        }),
+      );
+    });
+
+  opportunity
+    .command("edit")
+    .description("Create an immutable edited draft version from the current latest version")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--brief-id <id>", "opportunity brief id")
+    .requiredOption("--expected-version <number>", "latest version being edited", integerOption)
+    .requiredOption("--patch <path>", "JSON file containing editable brief fields")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const patch = await readJsonObject(options.patch as string, "Opportunity patch");
+      const record = await service.editOpportunity({
+        root: workspaceRoot(workspace),
+        briefId: options.briefId as string,
+        expectedVersion: options.expectedVersion as number,
+        patch: patch as OpportunityDraftPatch,
+      });
+      writeJson(io, record);
+    });
+
+  opportunity
+    .command("review")
+    .description("Create a reviewed version from the current complete draft")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--brief-id <id>", "opportunity brief id")
+    .requiredOption(
+      "--expected-version <number>",
+      "latest draft version being reviewed",
+      integerOption,
+    )
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const record = await service.reviewOpportunity({
+        root: workspaceRoot(workspace),
+        briefId: options.briefId as string,
+        expectedVersion: options.expectedVersion as number,
+      });
+      writeJson(io, record);
     });
 
   const knowledge = command

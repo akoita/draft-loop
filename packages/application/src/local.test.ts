@@ -24,6 +24,10 @@ import {
   SourceIngestionUserError,
 } from "./local.js";
 import { defaultLocalModelEndpoint } from "./local-endpoint.js";
+import {
+  opportunityBriefNotFoundErrorMessage,
+  opportunityBriefVersionStaleErrorMessage,
+} from "./opportunity-persistence.js";
 
 interface JsonRecord {
   readonly [key: string]: unknown;
@@ -941,6 +945,211 @@ describe("local application driver", () => {
       });
       await expect(denied.extract(request)).rejects.toMatchObject({ code: "policy" });
       expect(transport).toHaveBeenCalledOnce();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("persists opportunity versions across restart without refetching or using providers", async () => {
+    const root = await providerWorkspace("draft-loop-opportunity-driver-persistence-");
+    const sourcePath = join(root, "opportunity.md");
+    await writeFile(sourcePath, "Example Systems seeks a Platform Engineer.\n", "utf8");
+    const resolveCredential = vi.fn(async () => {
+      throw new Error("Provider credentials must not be resolved.");
+    });
+    const providerClientFactories: ProviderClientFactories = {
+      anthropic: vi.fn(() => {
+        throw new Error("Providers must not be called.");
+      }),
+      openai: vi.fn(() => {
+        throw new Error("Providers must not be called.");
+      }),
+      local: vi.fn(() => {
+        throw new Error("Providers must not be called.");
+      }),
+    };
+    const driver = createLocalApplicationDriver({ resolveCredential, providerClientFactories });
+    const createdAt = "2026-08-28T10:00:00.000Z";
+    const editedAt = "2026-08-28T10:01:00.000Z";
+    const reviewedAt = "2026-08-28T10:02:00.000Z";
+
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence" },
+        { write: () => undefined },
+      );
+      const created = await driver.createOpportunity({
+        root,
+        id: "brief-driver-persistence",
+        createdAt,
+        sources: [
+          {
+            id: "job-source",
+            kind: "local-file",
+            classification: "job-posting",
+            path: sourcePath,
+          },
+        ],
+      });
+      expect(created.brief).toMatchObject({
+        id: "brief-driver-persistence",
+        version: 1,
+        priorVersion: null,
+        status: "draft",
+      });
+
+      await rm(sourcePath);
+      const restarted = createLocalApplicationDriver({
+        resolveCredential,
+        providerClientFactories,
+      });
+      await expect(
+        restarted.getOpportunity({ root, briefId: created.brief.id, version: 1 }),
+      ).resolves.toEqual(created);
+      await expect(restarted.getOpportunity({ root, briefId: created.brief.id })).resolves.toEqual(
+        created,
+      );
+
+      const edited = await restarted.editOpportunity({
+        root,
+        briefId: created.brief.id,
+        expectedVersion: 1,
+        createdAt: editedAt,
+        patch: {
+          role: { value: "Platform Engineer", sourceIds: ["job-source"] },
+          employer: { value: "Example Systems", sourceIds: ["job-source"] },
+          requirements: [
+            {
+              id: "requirement-driver",
+              text: "Production systems experience",
+              priority: "critical",
+              sourceIds: ["job-source"],
+            },
+          ],
+        },
+      });
+      expect(edited.brief).toMatchObject({ version: 2, priorVersion: 1, status: "draft" });
+
+      await expect(
+        restarted.editOpportunity({
+          root,
+          briefId: created.brief.id,
+          expectedVersion: 1,
+          patch: {},
+          createdAt: reviewedAt,
+        }),
+      ).rejects.toThrow(opportunityBriefVersionStaleErrorMessage);
+
+      const reviewed = await restarted.reviewOpportunity({
+        root,
+        briefId: created.brief.id,
+        expectedVersion: 2,
+        reviewedAt,
+      });
+      expect(reviewed.brief).toMatchObject({
+        version: 3,
+        priorVersion: 2,
+        status: "reviewed",
+        createdAt: reviewedAt,
+        reviewedAt,
+      });
+      await expect(
+        restarted.reviewOpportunity({
+          root,
+          briefId: created.brief.id,
+          expectedVersion: 2,
+          reviewedAt,
+        }),
+      ).rejects.toThrow(opportunityBriefVersionStaleErrorMessage);
+
+      await expect(
+        restarted.getOpportunity({ root, briefId: created.brief.id, version: 2 }),
+      ).resolves.toEqual(edited);
+      await expect(restarted.getOpportunity({ root, briefId: created.brief.id })).resolves.toEqual(
+        reviewed,
+      );
+      await expect(
+        restarted.listOpportunityVersions({ root, briefId: created.brief.id }),
+      ).resolves.toEqual([created, edited, reviewed]);
+      await expect(
+        restarted.editOpportunity({
+          root,
+          briefId: "missing-brief",
+          expectedVersion: 1,
+          patch: {},
+          createdAt: reviewedAt,
+        }),
+      ).rejects.toThrow(opportunityBriefNotFoundErrorMessage);
+      expect(resolveCredential).not.toHaveBeenCalled();
+      expect(providerClientFactories.anthropic).not.toHaveBeenCalled();
+      expect(providerClientFactories.openai).not.toHaveBeenCalled();
+      expect(providerClientFactories.local).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("gates driver extraction on explicit provider-data approval and persists approved facts", async () => {
+    const root = await providerWorkspace("draft-loop-opportunity-driver-provider-");
+    const transport = vi.fn(async (_url: string, _init: RequestInit) =>
+      localCompletion(opportunityExtractionProposal(), "driver-extraction"),
+    );
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: transport as unknown as typeof fetch }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "qwen-opportunity-extractor",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        { write: () => undefined },
+      );
+      const source = {
+        id: "job-source",
+        kind: "pasted-content" as const,
+        classification: "job-posting" as const,
+        content: "Example Systems seeks a Platform Engineer.",
+      };
+      const denied = await driver.createOpportunity({
+        root,
+        id: "brief-driver-denied",
+        sources: [source],
+        allowProviderData: false,
+      });
+      expect(denied.brief.role).toBeNull();
+      expect(transport).not.toHaveBeenCalled();
+
+      const approved = await driver.createOpportunity({
+        root,
+        id: "brief-driver-approved",
+        sources: [source],
+        allowProviderData: true,
+      });
+      expect(approved.brief.role).toEqual({
+        value: "Platform Engineer",
+        sourceIds: ["job-source"],
+      });
+      expect(transport).toHaveBeenCalledOnce();
+
+      const restarted = createLocalApplicationDriver({
+        providerClientFactories: {
+          local: () => {
+            throw new Error("Reads must not invoke the provider.");
+          },
+        },
+      });
+      await expect(restarted.getOpportunity({ root, briefId: approved.brief.id })).resolves.toEqual(
+        approved,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }
