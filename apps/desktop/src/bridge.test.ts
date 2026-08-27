@@ -58,6 +58,282 @@ describe("workspace model reconfiguration", () => {
       expect(() => configure(input)).toThrow();
     }
   });
+
+  it("keeps opportunity intake strict and path-free while preserving approval intent", () => {
+    const command = validateBridgeCommand({
+      type: "opportunity.create",
+      input: {
+        workspaceId: "workspace-1",
+        providerTransmissionApproved: true,
+        sources: [
+          {
+            id: "job-url",
+            kind: "approved-url",
+            classification: "job-posting",
+            url: "https://jobs.example.test/roles/1",
+            approved: true,
+          },
+          {
+            id: "candidate-notes",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Use a direct tone.\nDo not claim production experience.",
+            instructions: {
+              tone: "direct",
+              forbiddenLanguage: ["world-class"],
+            },
+          },
+          {
+            id: "local-job",
+            kind: "local-file",
+            classification: "company-context",
+            selection: "native-dialog",
+          },
+        ],
+      },
+    });
+    expect(command).toEqual({
+      type: "opportunity.create",
+      input: {
+        workspaceId: "workspace-1",
+        providerTransmissionApproved: true,
+        sources: [
+          {
+            id: "job-url",
+            kind: "approved-url",
+            classification: "job-posting",
+            url: "https://jobs.example.test/roles/1",
+            approved: true,
+          },
+          {
+            id: "candidate-notes",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Use a direct tone.\nDo not claim production experience.",
+            instructions: {
+              tone: "direct",
+              forbiddenLanguage: ["world-class"],
+            },
+          },
+          {
+            id: "local-job",
+            kind: "local-file",
+            classification: "company-context",
+            selection: "native-dialog",
+          },
+        ],
+      },
+    });
+
+    expect(
+      validateBridgeCommand({
+        type: "opportunity.create",
+        input: {
+          workspaceId: "workspace-1",
+          sources: [
+            {
+              id: "pasted-job",
+              kind: "pasted-content",
+              classification: "company-context",
+              content: "Local draft only.",
+            },
+          ],
+        },
+      }),
+    ).toEqual({
+      type: "opportunity.create",
+      input: {
+        workspaceId: "workspace-1",
+        sources: [
+          {
+            id: "pasted-job",
+            kind: "pasted-content",
+            classification: "company-context",
+            content: "Local draft only.",
+          },
+        ],
+      },
+    });
+    expect(
+      validateBridgeCommand({
+        type: "opportunity.create",
+        input: {
+          workspaceId: "workspace-1",
+          providerTransmissionApproved: false,
+          sources: [
+            {
+              id: "pasted-job",
+              kind: "pasted-content",
+              classification: "company-context",
+              content: "Local draft only.",
+            },
+          ],
+        },
+      }),
+    ).toMatchObject({
+      type: "opportunity.create",
+      input: { providerTransmissionApproved: false },
+    });
+
+    for (const input of [
+      {
+        workspaceId: "workspace-1",
+        sources: [],
+      },
+      {
+        workspaceId: "workspace-1",
+        providerTransmissionApproved: true,
+        sources: [
+          {
+            id: "local-job",
+            kind: "local-file",
+            classification: "job-posting",
+            selection: "native-dialog",
+            path: "/private/should-not-cross",
+          },
+        ],
+      },
+      {
+        workspaceId: "workspace-1",
+        providerTransmissionApproved: true,
+        sources: [
+          {
+            id: "job-url",
+            kind: "approved-url",
+            classification: "job-posting",
+            url: "https://jobs.example.test/roles/1",
+            approved: false,
+          },
+        ],
+      },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "opportunity.create", input })).toThrow("invalid");
+    }
+  });
+
+  it("validates bounded opportunity edits and requires an expected version", () => {
+    expect(
+      validateBridgeCommand({
+        type: "opportunity.edit",
+        input: {
+          workspaceId: "workspace-1",
+          briefId: "brief-1",
+          expectedVersion: 1,
+          patch: {
+            role: { value: "Senior platform engineer", sourceIds: ["job-1"] },
+            requirements: [
+              {
+                id: "req-1",
+                text: "Experience with TypeScript",
+                priority: "high",
+                sourceIds: ["job-1"],
+              },
+            ],
+          },
+        },
+      }),
+    ).toMatchObject({
+      type: "opportunity.edit",
+      input: { expectedVersion: 1, patch: { role: { value: "Senior platform engineer" } } },
+    });
+
+    for (const input of [
+      { workspaceId: "workspace-1", briefId: "brief-1", patch: {} },
+      {
+        workspaceId: "workspace-1",
+        briefId: "brief-1",
+        expectedVersion: 1,
+        patch: { role: { value: "x", sourceIds: ["missing"] }, unknown: true },
+      },
+      {
+        workspaceId: "workspace-1",
+        briefId: "brief-1",
+        expectedVersion: 0,
+        patch: {},
+      },
+    ]) {
+      expect(() => validateBridgeCommand({ type: "opportunity.edit", input })).toThrow("invalid");
+    }
+    expect(() =>
+      validateBridgeCommand({
+        type: "opportunity.review",
+        input: { workspaceId: "workspace-1", briefId: "brief-1" },
+      }),
+    ).toThrow("invalid");
+  });
+
+  it("dispatches and normalizes only bounded opportunity metadata", async () => {
+    const value = {
+      workspaceId: "workspace-1",
+      briefId: "brief-1",
+      version: 1,
+      priorVersion: null,
+      status: "draft",
+      createdAt: "2026-08-28T10:00:00.000Z",
+      reviewedAt: null,
+      checksum: null,
+      sources: [
+        {
+          id: "job-1",
+          kind: "approved-url",
+          classification: "job-posting",
+          status: "available",
+          checksum: "a".repeat(64),
+          capturedAt: "2026-08-28T10:00:00.000Z",
+        },
+      ],
+      role: { value: "Senior platform engineer", sourceIds: ["job-1"] },
+      employer: { value: "Example Corp", sourceIds: ["job-1"] },
+      responsibilities: [{ id: "resp-1", text: "Build platform services", sourceIds: ["job-1"] }],
+      requirements: [
+        {
+          id: "req-1",
+          text: "Experience with TypeScript",
+          priority: "high",
+          sourceIds: ["job-1"],
+        },
+      ],
+      priorities: [{ id: "priority-1", text: "Reliability", sourceIds: ["job-1"] }],
+      candidateInstructions: {
+        tone: null,
+        applicationGoal: null,
+        forbiddenLanguage: [],
+        focusAreas: [],
+      },
+      issues: [],
+    };
+    const invoke = vi.fn(async () => ({ ok: true as const, value }));
+    const port = createCapabilityPort(bridge(invoke, ["opportunity.get"]));
+    await expect(
+      port.execute({
+        type: "opportunity.get",
+        input: { workspaceId: "workspace-1", briefId: "brief-1" },
+      }),
+    ).resolves.toEqual({ ok: true, value });
+    expect(invoke).toHaveBeenCalledWith({
+      type: "opportunity.get",
+      input: { workspaceId: "workspace-1", briefId: "brief-1" },
+    });
+
+    const leaking = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true as const,
+          value: {
+            ...value,
+            sources: [{ ...value.sources[0], originalUrl: "https://private.example.test" }],
+          },
+        }),
+        ["opportunity.get"],
+      ),
+    );
+    await expect(
+      leaking.execute({
+        type: "opportunity.get",
+        input: { workspaceId: "workspace-1", briefId: "brief-1" },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
 });
 
 describe("desktop capability bridge", () => {
@@ -767,6 +1043,128 @@ describe("desktop capability bridge", () => {
       state: "approved",
     });
     expect(invoke).toHaveBeenCalledTimes(2);
+  });
+
+  it("adapts opportunity capabilities with the active workspace identity", async () => {
+    const state = createFixtureReviewState();
+    const record = {
+      workspaceId: state.workspaceId,
+      briefId: "brief-1",
+      version: 1,
+      priorVersion: null,
+      status: "draft",
+      createdAt: "2026-08-28T10:00:00.000Z",
+      reviewedAt: null,
+      checksum: null,
+      sources: [
+        {
+          id: "candidate-guidance",
+          kind: "candidate-input",
+          classification: "candidate-instruction",
+          status: "available",
+          checksum: "a".repeat(64),
+          capturedAt: "2026-08-28T10:00:00.000Z",
+        },
+      ],
+      role: null,
+      employer: null,
+      responsibilities: [],
+      requirements: [],
+      priorities: [],
+      candidateInstructions: {
+        tone: null,
+        applicationGoal: null,
+        forbiddenLanguage: [],
+        focusAreas: [],
+      },
+      issues: [],
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
+      if (command.type === "review.load") return { ok: true, value: state };
+      if (command.type === "opportunity.list") {
+        return {
+          ok: true,
+          value: { workspaceId: state.workspaceId, briefId: "brief-1", versions: [record] },
+        };
+      }
+      return { ok: true, value: record };
+    });
+    const port = createBridgeReviewPort(
+      createCapabilityPort(
+        bridge(invoke, [
+          "review.load",
+          "opportunity.create",
+          "opportunity.get",
+          "opportunity.list",
+          "opportunity.edit",
+          "opportunity.review",
+        ]),
+      ),
+    );
+
+    await expect(
+      port.createOpportunity?.({
+        sources: [
+          {
+            id: "candidate-guidance",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Use a direct tone.",
+          },
+        ],
+        providerTransmissionApproved: false,
+      }),
+    ).resolves.toEqual(record);
+    await expect(port.getOpportunity?.("brief-1")).resolves.toEqual(record);
+    await expect(port.listOpportunityVersions?.("brief-1")).resolves.toMatchObject({
+      versions: [record],
+    });
+    await expect(
+      port.editOpportunity?.({ briefId: "brief-1", expectedVersion: 1, patch: {} }),
+    ).resolves.toEqual(record);
+    await expect(port.reviewOpportunity?.("brief-1", 1)).resolves.toEqual(record);
+
+    const operationCalls = invoke.mock.calls
+      .map(([command]) => command)
+      .filter((command) => command.type.startsWith("opportunity."));
+    expect(operationCalls).toEqual([
+      {
+        type: "opportunity.create",
+        input: {
+          workspaceId: state.workspaceId,
+          sources: [
+            {
+              id: "candidate-guidance",
+              kind: "candidate-input",
+              classification: "candidate-instruction",
+              content: "Use a direct tone.",
+            },
+          ],
+          providerTransmissionApproved: false,
+        },
+      },
+      {
+        type: "opportunity.get",
+        input: { workspaceId: state.workspaceId, briefId: "brief-1" },
+      },
+      {
+        type: "opportunity.list",
+        input: { workspaceId: state.workspaceId, briefId: "brief-1" },
+      },
+      {
+        type: "opportunity.edit",
+        input: {
+          workspaceId: state.workspaceId,
+          briefId: "brief-1",
+          expectedVersion: 1,
+          patch: {},
+        },
+      },
+      {
+        type: "opportunity.review",
+        input: { workspaceId: state.workspaceId, briefId: "brief-1", expectedVersion: 1 },
+      },
+    ]);
   });
 
   it("carries the recorded independence claim, rationale included, back to the renderer", async () => {

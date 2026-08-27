@@ -1,4 +1,6 @@
-import { resolve } from "node:path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 import { describe, expect, it, vi } from "vitest";
 
@@ -86,6 +88,11 @@ function harness(record?: IndependentReviewRecord): Harness {
       io?.write("workspace workspace-test");
       return undefined;
     },
+    createOpportunity: unreachable("createOpportunity"),
+    getOpportunity: unreachable("getOpportunity"),
+    listOpportunityVersions: unreachable("listOpportunityVersions"),
+    editOpportunity: unreachable("editOpportunity"),
+    reviewOpportunity: unreachable("reviewOpportunity"),
     export: unreachable("export"),
     latestExportPath: unreachable("latestExportPath"),
     queryEvidence: unreachable("queryEvidence"),
@@ -511,6 +518,130 @@ async function run(dependencies: Harness, ...argv: readonly string[]): Promise<v
     ...argv,
   ]);
 }
+
+describe("draft-loop opportunity commands", () => {
+  it("delegates create, reload, list, edit, and review through the shared service", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-cli-opportunity-"));
+    const inputPath = join(directory, "opportunity.json");
+    const patchPath = join(directory, "patch.json");
+    await writeFile(
+      inputPath,
+      JSON.stringify({
+        id: "opportunity-one",
+        sources: [
+          {
+            id: "candidate-guidance",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Use a direct tone.",
+            instructions: { tone: "direct" },
+          },
+        ],
+      }),
+      "utf8",
+    );
+    await writeFile(patchPath, JSON.stringify({ issues: [] }), "utf8");
+    const dependencies = harness();
+    const createCommands: Parameters<ApplicationService["createOpportunity"]>[0][] = [];
+    const getCommands: Parameters<ApplicationService["getOpportunity"]>[0][] = [];
+    const listCommands: Parameters<ApplicationService["listOpportunityVersions"]>[0][] = [];
+    const editCommands: Parameters<ApplicationService["editOpportunity"]>[0][] = [];
+    const reviewCommands: Parameters<ApplicationService["reviewOpportunity"]>[0][] = [];
+    const record = {
+      workspaceId: "workspace-test",
+      briefId: "opportunity-one",
+      version: 1,
+      status: "draft",
+      checksum: "a".repeat(64),
+      createdAt: "2026-08-28T00:00:00.000Z",
+      brief: { id: "opportunity-one", version: 1, status: "draft" },
+    } as unknown as Awaited<ReturnType<ApplicationService["createOpportunity"]>>;
+    const service: ApplicationService = {
+      ...dependencies.service,
+      createOpportunity: async (command) => {
+        createCommands.push(command);
+        return record;
+      },
+      getOpportunity: async (command) => {
+        getCommands.push(command);
+        return record;
+      },
+      listOpportunityVersions: async (command) => {
+        listCommands.push(command);
+        return [record];
+      },
+      editOpportunity: async (command) => {
+        editCommands.push(command);
+        return record;
+      },
+      reviewOpportunity: async (command) => {
+        reviewCommands.push(command);
+        return record;
+      },
+    };
+    const invoke = async (...arguments_: readonly string[]) =>
+      createCli({ service, io: dependencies.io }).parseAsync(["node", "draft-loop", ...arguments_]);
+
+    try {
+      await invoke("opportunity", "create", directory, "--input", inputPath);
+      await invoke("opportunity", "get", directory, "--brief-id", "opportunity-one");
+      await invoke("opportunity", "list", directory, "--brief-id", "opportunity-one");
+      await invoke(
+        "opportunity",
+        "edit",
+        directory,
+        "--brief-id",
+        "opportunity-one",
+        "--expected-version",
+        "1",
+        "--patch",
+        patchPath,
+      );
+      await invoke(
+        "opportunity",
+        "review",
+        directory,
+        "--brief-id",
+        "opportunity-one",
+        "--expected-version",
+        "2",
+      );
+
+      expect(createCommands).toEqual([
+        {
+          root: resolve(directory),
+          id: "opportunity-one",
+          sources: [
+            {
+              id: "candidate-guidance",
+              kind: "candidate-input",
+              classification: "candidate-instruction",
+              content: "Use a direct tone.",
+              instructions: { tone: "direct" },
+            },
+          ],
+          allowProviderData: false,
+        },
+      ]);
+      expect(getCommands).toEqual([{ root: resolve(directory), briefId: "opportunity-one" }]);
+      expect(listCommands).toEqual([{ root: resolve(directory), briefId: "opportunity-one" }]);
+      expect(editCommands).toEqual([
+        {
+          root: resolve(directory),
+          briefId: "opportunity-one",
+          expectedVersion: 1,
+          patch: { issues: [] },
+        },
+      ]);
+      expect(reviewCommands).toEqual([
+        { root: resolve(directory), briefId: "opportunity-one", expectedVersion: 2 },
+      ]);
+      expect(dependencies.lines).toHaveLength(5);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("draft-loop init independence flags", () => {
   it("carries both lineage claims and an override rationale into the application", async () => {

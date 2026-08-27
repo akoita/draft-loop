@@ -53,6 +53,13 @@ research are unavailable, citations are allowlisted, malformed output fails
 closed into a content-free issue, and extraction cannot alter provider policy,
 permissions, or model selection.
 
+Shared opportunity commands keep CLI file paths in runtime-only manifests and
+resolve desktop files inside the native host. The strict renderer bridge
+allowlists source descriptors, edit fields, versions, and approval intent; its
+result projection omits paths, URLs, raw source text, and provenance objects.
+Reload, list, edit, and review operate on durable versions without refetching
+sources or invoking providers, and stale expected versions fail closed.
+
 ### Current writing-policy scope
 
 The workspace writing policy is candidate-authored, untrusted style data. Its

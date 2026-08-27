@@ -11,6 +11,10 @@ import {
   type ModelsListResult,
   type ModelsPreviewIndependenceResult,
   type NativeBridge,
+  type OpportunityCreateInput,
+  type OpportunityEditInput,
+  type OpportunityListResult,
+  type OpportunityRecordResult,
   type ProviderAuthMode,
   type ProviderAuthModeResult,
   type ProviderAuthModeStatus,
@@ -65,8 +69,24 @@ export interface WorkspaceSetupCapabilities {
   ) => Promise<ModelsPreviewIndependenceResult>;
 }
 
+export interface DesktopOpportunityCapabilities {
+  readonly createOpportunity?: (
+    input: Omit<OpportunityCreateInput, "workspaceId">,
+  ) => Promise<OpportunityRecordResult>;
+  readonly getOpportunity?: (briefId: string, version?: number) => Promise<OpportunityRecordResult>;
+  readonly listOpportunityVersions?: (briefId: string) => Promise<OpportunityListResult>;
+  readonly editOpportunity?: (
+    input: Omit<OpportunityEditInput, "workspaceId">,
+  ) => Promise<OpportunityRecordResult>;
+  readonly reviewOpportunity?: (
+    briefId: string,
+    expectedVersion: number,
+  ) => Promise<OpportunityRecordResult>;
+}
+
 export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
-  WorkspaceSetupCapabilities & {
+  WorkspaceSetupCapabilities &
+  DesktopOpportunityCapabilities & {
     readonly getProviderAuthModeStatus?: (
       provider: "anthropic" | "openai",
     ) => Promise<ProviderAuthModeStatus>;
@@ -282,6 +302,75 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: { author, critic },
               }),
             ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("opportunity.create")
+      ? {
+          createOpportunity: async (input: Omit<OpportunityCreateInput, "workspaceId">) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "opportunity.create",
+                input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("opportunity.get")
+      ? {
+          getOpportunity: async (briefId: string, version?: number) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "opportunity.get",
+                input: {
+                  workspaceId: state.workspaceId,
+                  briefId,
+                  ...(version === undefined ? {} : { version }),
+                },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("opportunity.list")
+      ? {
+          listOpportunityVersions: async (briefId: string) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "opportunity.list",
+                input: { workspaceId: state.workspaceId, briefId },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("opportunity.edit")
+      ? {
+          editOpportunity: async (input: Omit<OpportunityEditInput, "workspaceId">) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "opportunity.edit",
+                input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("opportunity.review")
+      ? {
+          reviewOpportunity: async (briefId: string, expectedVersion: number) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "opportunity.review",
+                input: { workspaceId: state.workspaceId, briefId, expectedVersion },
+              }),
+            );
+          },
         }
       : {}),
   };

@@ -63,9 +63,12 @@ erase the limitation. Immutable versions are stored in the local workspace
 database with canonical checksums and can be reloaded after restart without
 refetching any source. Append-only audit records contain only opaque identity,
 version, status, and checksum metadata; they do not duplicate brief content or
-source provenance. No current run, CLI command, or desktop flow consumes the
-repository. Later #67 slices must bind only an exact reviewed brief version
-into planning.
+source provenance. Shared CLI commands and packaged-desktop host capabilities
+can now create, reload, list, edit, and review these versions. CLI file paths
+remain runtime-only; desktop file paths stay behind native pickers, and
+renderer results omit paths, URLs, raw source text, and provenance objects. No
+current run consumes the repository. The final #67 slice must bind only an
+exact reviewed brief version into planning.
 
 ## Candidate writing policy handling
 

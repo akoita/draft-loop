@@ -98,6 +98,24 @@ CLI:
 pnpm --filter @draft-loop/cli start --help
 ```
 
+The `opportunity` command group creates and reloads one durable brief, lists
+its immutable versions, and creates edited or reviewed successors. Creation
+reads a JSON manifest containing an `id` and ordered `sources`; local-file
+paths exist only in that runtime input. Add `--allow-provider-data` only when
+the source text may be sent to the configured author model for structured
+extraction.
+
+```sh
+pnpm --filter @draft-loop/cli start opportunity create ./workspace \
+  --input ./opportunity.json --allow-provider-data
+pnpm --filter @draft-loop/cli start opportunity get ./workspace \
+  --brief-id target-role
+pnpm --filter @draft-loop/cli start opportunity edit ./workspace \
+  --brief-id target-role --expected-version 1 --patch ./opportunity-patch.json
+pnpm --filter @draft-loop/cli start opportunity review ./workspace \
+  --brief-id target-role --expected-version 2
+```
+
 The CLI exposes shared CKB controls through `knowledge`: initialize a portable
 store with its default CKB, open or list a store, inspect path-free lifecycle
 readiness, list path-free source/version identities, report duplicate groups,

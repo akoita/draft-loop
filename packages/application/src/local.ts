@@ -76,6 +76,7 @@ import {
   type EvidenceSourceRecord,
   openSqliteStorage,
   type SqliteStorage,
+  type WorkspaceRecord,
 } from "@draft-loop/storage";
 import OpenAI from "openai";
 import { buildAuthorArtifact } from "./author-output.js";
@@ -96,6 +97,8 @@ import type {
   OpportunityExtractionPort,
   OpportunityExtractionRequest,
 } from "./opportunity-extraction.js";
+import { createOpportunityDraft } from "./opportunity-intake.js";
+import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -1984,6 +1987,22 @@ async function openStorage(root: string): Promise<SqliteStorage> {
   return openSqliteStorage(databasePath(root));
 }
 
+/** Ensure an initialized workspace has a durable parent row for opportunity records. */
+async function ensureOpportunityWorkspaceRecord(
+  storage: SqliteStorage,
+  workspaceId: string,
+): Promise<void> {
+  if ((await storage.getWorkspace(workspaceId)) !== undefined) return;
+  const now = timestamp();
+  const record: WorkspaceRecord = {
+    id: workspaceId,
+    state: "collecting",
+    createdAt: now,
+    updatedAt: now,
+  };
+  await storage.saveWorkspace(record);
+}
+
 async function saveTypedHistory(
   storage: SqliteStorage,
   config: WorkspaceConfig,
@@ -2778,6 +2797,11 @@ export function createLocalApplicationDriver(
       ? {}
       : { userSessionRunners: options.userSessionRunners }),
   };
+  const providerOpportunityOptions = {
+    ...credentialOptions,
+    ...providerClientOptions,
+    ...authOptions,
+  };
   return {
     initialize: async (command, io) =>
       workspaceDescriptor(resolve(command.root), await initWorkspace(command, io)),
@@ -2840,6 +2864,93 @@ export function createLocalApplicationDriver(
       ),
     lifecycle: async (command, io) => lifecycleRun(command.root, command.action, command.runId, io),
     status: async (command, io) => statusRun(command.root, command.runId, io),
+    createOpportunity: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        await ensureOpportunityWorkspaceRecord(storage, config.id);
+        const draft = await createOpportunityDraft(
+          {
+            ...(command.id === undefined ? {} : { id: command.id }),
+            ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
+            sources: command.sources,
+          },
+          command.allowProviderData === true
+            ? {
+                now: timestamp,
+                extractor: createProviderOpportunityExtractionPort(config, {
+                  ...providerOpportunityOptions,
+                  allowProviderData: true,
+                }),
+              }
+            : { now: timestamp },
+        );
+        return await createOpportunityPersistenceService(storage).saveOpportunityBrief(
+          config.id,
+          draft,
+        );
+      } finally {
+        await storage.close();
+      }
+    },
+    getOpportunity: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        const persistence = createOpportunityPersistenceService(storage);
+        return await (command.version === undefined
+          ? persistence.getLatestOpportunityBrief(config.id, command.briefId)
+          : persistence.getOpportunityBrief(config.id, command.briefId, command.version));
+      } finally {
+        await storage.close();
+      }
+    },
+    listOpportunityVersions: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createOpportunityPersistenceService(storage).listOpportunityBriefVersions(
+          config.id,
+          command.briefId,
+        );
+      } finally {
+        await storage.close();
+      }
+    },
+    editOpportunity: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createOpportunityPersistenceService(storage).editLatestOpportunityBrief({
+          workspaceId: config.id,
+          briefId: command.briefId,
+          expectedVersion: command.expectedVersion,
+          patch: command.patch,
+          createdAt: command.createdAt ?? timestamp(),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
+    reviewOpportunity: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createOpportunityPersistenceService(storage).reviewLatestOpportunityBrief({
+          workspaceId: config.id,
+          briefId: command.briefId,
+          expectedVersion: command.expectedVersion,
+          reviewedAt: command.reviewedAt ?? timestamp(),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
     export: async (command, io) =>
       exportRun(command.root, command.runId, command.outputPath, io, command.format ?? "markdown"),
     latestExportPath: async (command) =>
