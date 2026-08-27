@@ -3179,9 +3179,12 @@ input[type="checkbox"] {
   list-style: none;
 }
 
+/* The label track is sized from its own text and the note takes what is left:
+   an intrinsic note track would refuse to shrink and starve the label to zero,
+   which breaks a long command name one character per line. */
 .palette-command {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(min-content, max-content) minmax(0, 1fr);
   align-items: baseline;
   gap: var(--space-3);
   width: 100%;
@@ -3205,15 +3208,19 @@ input[type="checkbox"] {
 
 .palette-command-label {
   min-width: 0;
+  overflow: hidden;
   color: var(--text-1);
   font-size: var(--text-sm);
   font-weight: 600;
-  overflow-wrap: anywhere;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .palette-command-note {
+  min-width: 0;
   color: var(--text-4);
   font-size: var(--text-xs);
+  overflow-wrap: break-word;
   text-align: right;
 }
 
