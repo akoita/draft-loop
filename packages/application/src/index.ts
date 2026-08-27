@@ -309,3 +309,4 @@ export function createApplicationService(driver: ApplicationDriver): Application
 export * from "./knowledge-base.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
+export * from "./opportunity-brief.js";

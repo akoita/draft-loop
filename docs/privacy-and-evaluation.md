@@ -13,6 +13,7 @@ provider transmission.
 | Public material                         | Local application workspace                                                                                           | Only through an explicit request policy                                                               | Until the user deletes it                                                             |
 | Personal material                       | Local application workspace                                                                                           | Explicit approval and provider allowlist required                                                     | Until the user deletes it                                                             |
 | Confidential employer material          | Local application workspace                                                                                           | Explicit approval, acknowledgement, and provider allowlist required; user redaction rules recommended | Until the user deletes it                                                             |
+| Structured opportunity brief            | Local application workspace once persistence is integrated                                                            | Only an exact reviewed version may enter a future planning request; not integrated yet                 | Until the user deletes it                                                             |
 | Portable CKB metadata and managed bytes | User-selected, separate local plaintext store                                                                         | Not provider data; paths, URLs, labels, checksums, membership, and journal data stay local            | All six policy classes default to retention until explicit deletion                    |
 | Secrets embedded in candidate material  | Never place in application content or fixtures                                                                        | Prohibited                                                                                            | Do not retain                                                                         |
 | Provider credentials                    | OS credential store, desktop user-data store, SDK environment, or provider-managed local session; never the workspace | Used only to authenticate an explicitly approved request                                              | Until the user removes it, changes environment, ends the session, or deletes app data |
@@ -30,6 +31,23 @@ local source: until deleted
 run history: until deleted
 provider retention: not allowed unless explicitly configured
 ```
+
+## Opportunity brief handling
+
+The first opportunity component is a strict local data contract, not a new
+provider or network boundary. It stores bounded structured fields and
+source-linked provenance metadata without raw source content or host paths.
+Approved-URL provenance can contain confidential URLs and therefore remains
+sensitive local state. Candidate instructions are typed separately from
+opportunity facts and cannot establish role, employer, responsibility,
+requirement, or priority fields.
+
+Drafts keep source failures, staleness, partial results, duplicates, and
+contradictions visible. Review requires explicit acknowledgement or resolution
+of open issues, but acknowledgement does not erase the limitation. No current
+run, provider request, CLI command, or desktop flow consumes this contract;
+later #67 slices must preserve the existing transmission approval boundary and
+bind only an exact reviewed brief version into planning.
 
 ## Local Candidate Knowledge Base handling
 
