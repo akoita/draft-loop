@@ -28,9 +28,12 @@ import {
   modelConfigurationSchema,
   parseContextSnapshot,
   serializeContextSnapshot,
+  writingPolicySchema,
 } from "./index.js";
 
 const checksum = "a".repeat(64);
+const writingPolicyTermRuleId = `writing-policy-${"a".repeat(24)}`;
+const writingPolicyPunctuationRuleId = `writing-policy-${"b".repeat(24)}`;
 
 const retentionClasses = [
   "raw-sources",
@@ -219,6 +222,20 @@ describe("canonical context snapshot schemas", () => {
         content: "Use ASCII punctuation.",
         checksum: "b".repeat(64),
         version: "sha256:bbbbbbbbbbbb",
+        rules: [
+          {
+            id: writingPolicyTermRuleId,
+            kind: "forbidden-term",
+            term: "secret sauce",
+            caseSensitive: false,
+            wholeWord: true,
+          },
+          {
+            id: writingPolicyPunctuationRuleId,
+            kind: "forbidden-characters",
+            characters: "—–",
+          },
+        ],
       },
     });
 
@@ -231,6 +248,72 @@ describe("canonical context snapshot schemas", () => {
         writingPolicy: { ...snapshot.writingPolicy, checksum: "invalid" },
       }),
     ).toThrow(/SHA-256 checksum/i);
+  });
+
+  it("keeps legacy writing policies valid and rejects malformed structured rules", () => {
+    expect(
+      writingPolicySchema.parse({
+        content: "Legacy policy",
+        checksum: "a".repeat(64),
+        version: "sha256:aaaaaaaaaaaa",
+      }),
+    ).toEqual({
+      content: "Legacy policy",
+      checksum: "a".repeat(64),
+      version: "sha256:aaaaaaaaaaaa",
+    });
+    const valid = {
+      content: "Structured policy",
+      checksum: "a".repeat(64),
+      version: "sha256:aaaaaaaaaaaa",
+      rules: [
+        {
+          id: writingPolicyTermRuleId,
+          kind: "forbidden-term" as const,
+          term: "secret sauce",
+          caseSensitive: false,
+          wholeWord: true,
+        },
+      ],
+    };
+    expect(writingPolicySchema.parse(valid)).toEqual(valid);
+    expect(() => writingPolicySchema.parse({ ...valid, unexpected: true })).toThrow();
+    expect(() =>
+      writingPolicySchema.parse({
+        ...valid,
+        rules: [{ ...valid.rules[0], id: "human-readable-rule" }],
+      }),
+    ).toThrow(/opaque compiler rule id/i);
+    expect(() =>
+      writingPolicySchema.parse({
+        ...valid,
+        rules: [valid.rules[0], { ...valid.rules[0] }],
+      }),
+    ).toThrow(/rule ids must be unique/i);
+    expect(() =>
+      writingPolicySchema.parse({
+        ...valid,
+        rules: [
+          {
+            id: `writing-policy-${"c".repeat(24)}`,
+            kind: "forbidden-characters",
+            characters: "a",
+          },
+        ],
+      }),
+    ).toThrow();
+    expect(() =>
+      writingPolicySchema.parse({
+        ...valid,
+        rules: Array.from({ length: 65 }, (_, index) => ({
+          id: `writing-policy-${index.toString(16).padStart(24, "0")}`,
+          kind: "forbidden-term" as const,
+          term: "secret",
+          caseSensitive: false,
+          wholeWord: true,
+        })),
+      }),
+    ).toThrow();
   });
 
   it("normalizes the description alias in requirement input", () => {

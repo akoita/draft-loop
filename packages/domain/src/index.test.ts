@@ -29,6 +29,8 @@ import {
 } from "./index.js";
 
 const checksum = "a".repeat(64);
+const writingPolicyTermRuleId = `writing-policy-${"a".repeat(24)}`;
+const writingPolicyPunctuationRuleId = `writing-policy-${"b".repeat(24)}`;
 
 function validInput(
   overrides: { [Key in keyof ContextSnapshotInput]?: ContextSnapshotInput[Key] | undefined } = {},
@@ -285,6 +287,20 @@ describe("domain workspace and context snapshots", () => {
           content: "  Use ASCII punctuation.  ",
           checksum: "B".repeat(64),
           version: " sha256:bbbbbbbbbbbb ",
+          rules: [
+            {
+              id: `  ${writingPolicyTermRuleId}  `,
+              kind: "forbidden-term" as const,
+              term: "  secret sauce  ",
+              caseSensitive: false,
+              wholeWord: true,
+            },
+            {
+              id: writingPolicyPunctuationRuleId,
+              kind: "forbidden-characters" as const,
+              characters: "—–",
+            },
+          ],
         },
       }),
     );
@@ -293,8 +309,24 @@ describe("domain workspace and context snapshots", () => {
       content: "Use ASCII punctuation.",
       checksum: "b".repeat(64),
       version: "sha256:bbbbbbbbbbbb",
+      rules: [
+        {
+          id: writingPolicyTermRuleId,
+          kind: "forbidden-term",
+          term: "secret sauce",
+          caseSensitive: false,
+          wholeWord: true,
+        },
+        {
+          id: writingPolicyPunctuationRuleId,
+          kind: "forbidden-characters",
+          characters: "—–",
+        },
+      ],
     });
     expect(snapshot.evidenceManifest).toHaveLength(1);
+    expect(Object.isFrozen(snapshot.writingPolicy?.rules)).toBe(true);
+    expect(Object.isFrozen(snapshot.writingPolicy?.rules?.[0])).toBe(true);
     expect(() =>
       createContextSnapshot(
         validInput({
@@ -302,6 +334,78 @@ describe("domain workspace and context snapshots", () => {
         }),
       ),
     ).toThrow(/writingPolicy\.checksum/i);
+  });
+
+  it("validates structured writing policy rule ids, kinds, and bounds", () => {
+    const basePolicy = {
+      content: "Rules",
+      checksum,
+      version: "sha256:aaaaaaaaaaaa",
+      rules: [
+        {
+          id: `writing-policy-${"c".repeat(24)}`,
+          kind: "forbidden-term" as const,
+          term: "secret",
+          caseSensitive: false,
+          wholeWord: true,
+        },
+      ],
+    };
+    const baseRule = basePolicy.rules[0];
+    if (baseRule === undefined) throw new Error("the policy fixture is incomplete");
+    expect(() => createContextSnapshot(validInput({ writingPolicy: basePolicy }))).not.toThrow();
+    expect(() =>
+      createContextSnapshot(
+        validInput({
+          writingPolicy: {
+            ...basePolicy,
+            rules: [{ ...baseRule, id: "rule-readable" }],
+          },
+        }),
+      ),
+    ).toThrow(/opaque compiler rule id/i);
+    expect(() =>
+      createContextSnapshot(
+        validInput({
+          writingPolicy: {
+            ...basePolicy,
+            rules: [baseRule, { ...baseRule }],
+          },
+        }),
+      ),
+    ).toThrow(/writingPolicy\.rules\[1\]\.id/i);
+    expect(() =>
+      createContextSnapshot(
+        validInput({
+          writingPolicy: {
+            ...basePolicy,
+            rules: [
+              {
+                id: `writing-policy-${"d".repeat(24)}`,
+                kind: "forbidden-characters",
+                characters: "a",
+              },
+            ],
+          },
+        }),
+      ),
+    ).toThrow(/writingPolicy\.rules\[0\]\.characters/i);
+    expect(() =>
+      createContextSnapshot(
+        validInput({
+          writingPolicy: {
+            ...basePolicy,
+            rules: Array.from({ length: 65 }, (_, index) => ({
+              id: `writing-policy-${index.toString(16).padStart(24, "0")}`,
+              kind: "forbidden-term" as const,
+              term: "secret",
+              caseSensitive: false,
+              wholeWord: true,
+            })),
+          },
+        }),
+      ),
+    ).toThrow(/writingPolicy\.rules/i);
   });
 
   it("deeply freezes the snapshot and does not mutate from input changes", () => {

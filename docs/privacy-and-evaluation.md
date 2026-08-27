@@ -14,6 +14,7 @@ provider transmission.
 | Personal material                       | Local application workspace                                                                                           | Explicit approval and provider allowlist required                                                     | Until the user deletes it                                                             |
 | Confidential employer material          | Local application workspace                                                                                           | Explicit approval, acknowledgement, and provider allowlist required; user redaction rules recommended | Until the user deletes it                                                             |
 | Structured opportunity brief            | Local application workspace once persistence is integrated                                                            | Only an exact reviewed version may enter a future planning request; not integrated yet                 | Until the user deletes it                                                             |
+| Candidate writing policy                 | Explicitly selected local workspace file and immutable run context                                                     | Included with author and critic context only after the existing provider approval boundary             | Workspace copy and run history remain until the user deletes them                     |
 | Portable CKB metadata and managed bytes | User-selected, separate local plaintext store                                                                         | Not provider data; paths, URLs, labels, checksums, membership, and journal data stay local            | All six policy classes default to retention until explicit deletion                    |
 | Secrets embedded in candidate material  | Never place in application content or fixtures                                                                        | Prohibited                                                                                            | Do not retain                                                                         |
 | Provider credentials                    | OS credential store, desktop user-data store, SDK environment, or provider-managed local session; never the workspace | Used only to authenticate an explicitly approved request                                              | Until the user removes it, changes environment, ends the session, or deletes app data |
@@ -48,6 +49,21 @@ of open issues, but acknowledgement does not erase the limitation. No current
 run, provider request, CLI command, or desktop flow consumes this contract;
 later #67 slices must preserve the existing transmission approval boundary and
 bind only an exact reviewed brief version into planning.
+
+## Candidate writing policy handling
+
+The candidate explicitly selects the current local policy file. DraftLoop
+stores its bounded content in the managed workspace and records the exact
+checksum-derived version in each run context. Deterministically compiled
+forbidden-term and punctuation rules travel with that same context to author
+and critic only when the user approves provider transmission.
+
+Local validation reports rule identity and section/block coordinates without
+copying the forbidden value, matched artifact text, nearby text, or source
+paths into diagnostics. Policy instructions remain style data: they cannot
+authorize provider access, select models, enable tools, create candidate facts,
+or relax truthfulness and evidence controls. Dedicated policy history,
+opportunity overrides, and shared editing controls are not implemented yet.
 
 ## Local Candidate Knowledge Base handling
 

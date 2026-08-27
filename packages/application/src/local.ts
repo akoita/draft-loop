@@ -21,6 +21,7 @@ import {
   maximumModelLineageLength,
   type ScoredEvidenceChunk,
   SemanticValidationError,
+  type WritingPolicyRule,
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
@@ -91,6 +92,78 @@ const databaseFilename = "history.sqlite";
 const writingPolicyFilename = "writing-policy.md";
 const maximumWritingPolicyBytes = 64 * 1024;
 const timestamp = (): string => new Date().toISOString();
+
+const recognizedWritingPolicyPunctuation = "‐‑‒–—―‘’“”";
+
+type WithoutWritingPolicyRuleId<T> = T extends unknown ? Omit<T, "id"> : never;
+type UnidentifiedWritingPolicyRule = WithoutWritingPolicyRuleId<WritingPolicyRule>;
+
+function compareWritingPolicySemantics(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
+}
+
+function writingPolicyRuleId(rule: UnidentifiedWritingPolicyRule): string {
+  const semantics =
+    rule.kind === "forbidden-term"
+      ? `forbidden-term\u0000${
+          rule.caseSensitive ? rule.term : rule.term.normalize("NFKC").toLowerCase()
+        }\u0000${String(rule.caseSensitive)}\u0000${String(rule.wholeWord)}`
+      : `forbidden-characters\u0000${rule.characters}`;
+  const digest = createHash("sha256").update(semantics, "utf8").digest("hex").slice(0, 24);
+  return `writing-policy-${digest}`;
+}
+
+function compileWritingPolicyRules(content: string): readonly WritingPolicyRule[] {
+  const candidates: UnidentifiedWritingPolicyRule[] = [];
+  const characters = new Set<string>();
+  if (/plain\s+ascii\s+punctuation/iu.test(content)) {
+    for (const character of recognizedWritingPolicyPunctuation) characters.add(character);
+  }
+  if (/no\s+em\s+dashes?/iu.test(content)) characters.add("—");
+  if (/no\s+en\s+dashes?/iu.test(content)) characters.add("–");
+  if (characters.size > 0) {
+    candidates.push({
+      kind: "forbidden-characters",
+      characters: [...recognizedWritingPolicyPunctuation]
+        .filter((character) => characters.has(character))
+        .join(""),
+    });
+  }
+
+  const terms = new Map<string, string>();
+  for (const line of content.split(/\r?\n/u)) {
+    const match = line.match(
+      /^\s*(?:[-*+]\s+)?Forbidden\s+(?:term|phrase)\s*:\s*(\S(?:.*?\S)?)\s*$/iu,
+    );
+    const term = match?.[1]?.trim();
+    if (term === undefined || term === "") continue;
+    const semanticKey = term.normalize("NFKC").toLowerCase();
+    if (!terms.has(semanticKey)) terms.set(semanticKey, term);
+  }
+  for (const [, term] of [...terms.entries()].sort(([left], [right]) =>
+    compareWritingPolicySemantics(left, right),
+  )) {
+    candidates.push({
+      kind: "forbidden-term",
+      term,
+      caseSensitive: false,
+      wholeWord: true,
+    });
+  }
+
+  const ordered = [...candidates].sort((left, right) => {
+    const leftKey =
+      left.kind === "forbidden-term"
+        ? `forbidden-term\u0000${left.term.normalize("NFKC").toLowerCase()}\u0000false\u0000true`
+        : `forbidden-characters\u0000${left.characters}`;
+    const rightKey =
+      right.kind === "forbidden-term"
+        ? `forbidden-term\u0000${right.term.normalize("NFKC").toLowerCase()}\u0000false\u0000true`
+        : `forbidden-characters\u0000${right.characters}`;
+    return compareWritingPolicySemantics(leftKey, rightKey);
+  });
+  return ordered.map((rule) => ({ id: writingPolicyRuleId(rule), ...rule }));
+}
 
 /**
  * The sections a workspace requires unless the candidate chooses otherwise.
@@ -762,7 +835,13 @@ async function writingPolicyFromPath(
   if (content === "") throw new CliUserError("The writing policy is empty.");
   if (content.includes("\0")) throw new CliUserError("The writing policy is not valid text.");
   const checksum = createHash("sha256").update(content, "utf8").digest("hex");
-  return Object.freeze({ content, checksum, version: `sha256:${checksum.slice(0, 12)}` });
+  const rules = compileWritingPolicyRules(content);
+  return Object.freeze({
+    content,
+    checksum,
+    version: `sha256:${checksum.slice(0, 12)}`,
+    rules: Object.freeze(rules.map((rule) => Object.freeze(rule))),
+  });
 }
 
 export async function configureWorkspaceWritingPolicy(

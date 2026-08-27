@@ -1344,6 +1344,7 @@ export function createOrchestrationEngine(
           ...context.outputConstraints,
           requiredSections: [...context.outputConstraints.requiredSections],
         },
+        ...(context.writingPolicy === undefined ? {} : { writingPolicy: context.writingPolicy }),
       });
       const updated = {
         ...snapshot,

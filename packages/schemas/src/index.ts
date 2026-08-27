@@ -32,6 +32,9 @@ import {
   independentReadinessReportTargetKinds,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
+  maximumWritingPolicyCharactersLength,
+  maximumWritingPolicyRules,
+  maximumWritingPolicyTermLength,
   opportunityBriefIssueCodes,
   opportunityBriefIssueSeverities,
   opportunityBriefIssueStatuses,
@@ -55,6 +58,8 @@ import {
   renderingQaReportSchemaVersion,
   renderingQaVisibleContentOrderSignals,
   requirementPriorities,
+  writingPolicyRuleIdPattern,
+  writingPolicyRuleKinds,
 } from "@draft-loop/domain";
 import { z } from "zod";
 
@@ -574,12 +579,72 @@ export const evidenceSourceSchema = z.object({
 
 export type EvidenceSource = z.infer<typeof evidenceSourceSchema>;
 
-export const writingPolicySchema = z.object({
+const writingPolicyRuleIdSchema = nonEmptyString.regex(
+  writingPolicyRuleIdPattern,
+  "must be an opaque compiler rule id",
+);
+
+const writingPolicyForbiddenTermRuleSchema = z.strictObject({
+  id: writingPolicyRuleIdSchema,
+  kind: z.literal("forbidden-term"),
+  term: nonEmptyString.max(maximumWritingPolicyTermLength),
+  caseSensitive: z.boolean(),
+  wholeWord: z.boolean(),
+});
+
+const writingPolicyForbiddenCharactersSchema = z
+  .string()
+  .min(1, "must not be empty")
+  .refine(
+    (value) => [...value].length <= maximumWritingPolicyCharactersLength,
+    `must contain at most ${maximumWritingPolicyCharactersLength} characters`,
+  )
+  .refine((value) => {
+    const characters = [...value];
+    return (
+      new Set(characters).size === characters.length &&
+      characters.every((character) => !/[\p{L}\p{N}\s]/u.test(character))
+    );
+  }, "must contain unique non-alphanumeric, non-whitespace characters");
+
+const writingPolicyForbiddenCharactersRuleSchema = z.strictObject({
+  id: writingPolicyRuleIdSchema,
+  kind: z.literal("forbidden-characters"),
+  characters: writingPolicyForbiddenCharactersSchema,
+});
+
+export const writingPolicyRuleKindSchema = z.enum(writingPolicyRuleKinds);
+
+export const writingPolicyRuleSchema = z.discriminatedUnion("kind", [
+  writingPolicyForbiddenTermRuleSchema,
+  writingPolicyForbiddenCharactersRuleSchema,
+]);
+
+export const writingPolicyRulesSchema = z
+  .array(writingPolicyRuleSchema)
+  .max(maximumWritingPolicyRules)
+  .superRefine((rules, context) => {
+    const ids = new Set<string>();
+    for (const [index, rule] of rules.entries()) {
+      if (ids.has(rule.id)) {
+        context.addIssue({
+          code: "custom",
+          path: [index, "id"],
+          message: "rule ids must be unique",
+        });
+      }
+      ids.add(rule.id);
+    }
+  });
+
+export const writingPolicySchema = z.strictObject({
   content: nonEmptyString,
   checksum: z.string().regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum"),
   version: nonEmptyString,
+  rules: writingPolicyRulesSchema.optional(),
 });
 
+export type WritingPolicyRule = z.infer<typeof writingPolicyRuleSchema>;
 export type WritingPolicy = z.infer<typeof writingPolicySchema>;
 
 export const candidateProfileSchema = z.object({

@@ -148,6 +148,29 @@ does not alter the current run context. Storage, ingestion orchestration,
 shared CLI/desktop editing and review, and binding one exact reviewed brief
 version into planning remain later #67 slices.
 
+## Writing policy enforcement
+
+The current workspace policy remains an explicitly selected local Markdown or
+text file. Its exact content, checksum-derived version, and deterministic
+structured rules are frozen into the run context and supplied to both author
+and critic as candidate-authored style guidance. Policy text and rules cannot
+change provider selection, transmission approval, permissions, tools, factual
+evidence, or workflow state.
+
+The first structured #70 enforcement slice recognizes bounded forbidden-term
+and forbidden-punctuation rules while retaining compatibility with earlier
+content-only policy snapshots. `packages/validation` evaluates those rules in
+artifact section and block order. Each finding carries a stable rule identity
+and content-free block location; messages do not copy the forbidden term,
+matched draft text, source paths, or surrounding content. The orchestrator
+applies the exact policy from the immutable context during normal draft
+validation before independent critique.
+
+This slice does not add a policy-history table, storage migration, global
+policy editor, shared CLI command, or opportunity-specific override. Those
+remain later #70 work, and an override must eventually bind an immutable base
+policy version without silently replacing the workspace policy.
+
 ## Portable Candidate Knowledge Base
 
 ### Workspace versus portable CKB
