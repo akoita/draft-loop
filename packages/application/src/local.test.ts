@@ -14,6 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import {
   CliUserError,
+  configureWorkspaceWritingPolicy,
   createLocalApplicationDriver,
   defaultRequiredSections,
   type ProviderClientFactories,
@@ -579,6 +580,10 @@ describe("local application driver", () => {
     const sourcePath = join(root, "AGENTS.md");
     const policyText = [
       "No em dashes.",
+      "Tone: WARM",
+      "- Spelling locale: EN-latn-us",
+      "Verbosity: DETAILED",
+      "This prose mentions Tone: direct but is not a directive.",
       "Forbidden term: unicorn",
       "- Forbidden phrase: secret sauce",
       "Forbidden phrase: UNICORN",
@@ -586,6 +591,7 @@ describe("local application driver", () => {
     await writeFile(sourcePath, policyText, "utf8");
     const authorInputs: string[] = [];
     const criticInputs: string[] = [];
+    const expectedChecksum = createHash("sha256").update(policyText, "utf8").digest("hex");
     const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(String(init.body)) as {
         readonly messages: readonly { readonly content: string }[];
@@ -642,6 +648,7 @@ describe("local application driver", () => {
       expect(snapshot.state).toBe("awaiting-approval");
       expect(authorInputs).toHaveLength(1);
       expect(criticInputs).toHaveLength(1);
+      const visiblePreferences: unknown[] = [];
       for (const serialized of [...authorInputs, ...criticInputs]) {
         const parsed = JSON.parse(serialized) as {
           readonly context: {
@@ -653,6 +660,11 @@ describe("local application driver", () => {
                 readonly caseSensitive?: boolean;
                 readonly wholeWord?: boolean;
               }[];
+              readonly preferences?: {
+                readonly tone?: string;
+                readonly spellingLocale?: string;
+                readonly verbosity?: string;
+              };
             };
           };
         };
@@ -660,8 +672,13 @@ describe("local application driver", () => {
           context: {
             writingPolicy: {
               content: policyText,
-              checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
-              version: expect.stringMatching(/^sha256:[a-f0-9]{12}$/u),
+              checksum: expectedChecksum,
+              version: `sha256:${expectedChecksum.slice(0, 12)}`,
+              preferences: {
+                tone: "warm",
+                spellingLocale: "en-Latn-US",
+                verbosity: "detailed",
+              },
               rules: [
                 {
                   kind: "forbidden-characters",
@@ -684,12 +701,17 @@ describe("local application driver", () => {
             evidenceManifest: [{ path: join(root, "evidence", "resume.md") }],
           },
         });
+        visiblePreferences.push(parsed.context.writingPolicy?.preferences);
         expect(
           parsed.context.writingPolicy?.rules?.every((rule) =>
             /^writing-policy-[a-f0-9]{24}$/u.test(rule.id),
           ),
         ).toBe(true);
       }
+      expect(visiblePreferences).toEqual([
+        { tone: "warm", spellingLocale: "en-Latn-US", verbosity: "detailed" },
+        { tone: "warm", spellingLocale: "en-Latn-US", verbosity: "detailed" },
+      ]);
 
       const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
       try {
@@ -697,8 +719,13 @@ describe("local application driver", () => {
         expect(record?.payload).toMatchObject({
           writingPolicy: {
             content: policyText,
-            checksum: expect.any(String),
-            version: expect.any(String),
+            checksum: expectedChecksum,
+            version: `sha256:${expectedChecksum.slice(0, 12)}`,
+            preferences: {
+              tone: "warm",
+              spellingLocale: "en-Latn-US",
+              verbosity: "detailed",
+            },
             rules: expect.arrayContaining([
               expect.objectContaining({ kind: "forbidden-term", term: "secret sauce" }),
               expect.objectContaining({ kind: "forbidden-term", term: "unicorn" }),
@@ -717,6 +744,41 @@ describe("local application driver", () => {
         "utf8",
       );
       await expect(driver.readWorkspace(root)).rejects.toThrow(/managed policy file/i);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects malformed and duplicate writing preference directives without echoing values", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-writing-preferences-"));
+    const sourcePath = join(root, "policy.md");
+    const cases = [
+      { content: "Tone: formal", key: /Tone/u, secret: "formal" },
+      { content: "Tone:", key: /Tone/u, secret: "" },
+      {
+        content: "Tone: warm\n- tone: direct",
+        key: /Tone/u,
+        secret: "warm",
+      },
+      { content: "Spelling locale: en_US", key: /Spelling locale/u, secret: "en_US" },
+      { content: "Verbosity: exhaustive", key: /Verbosity/u, secret: "exhaustive" },
+    ];
+
+    try {
+      for (const testCase of cases) {
+        await writeFile(sourcePath, testCase.content, "utf8");
+        const error = await configureWorkspaceWritingPolicy(
+          { root, sourcePath },
+          { write: () => undefined },
+        ).then(
+          () => new Error("did not reject"),
+          (caught: unknown) => caught,
+        );
+        expect(error).toBeInstanceOf(CliUserError);
+        expect(String(error)).toMatch(testCase.key);
+        if (testCase.secret !== "") expect(String(error)).not.toContain(testCase.secret);
+        expect(String(error)).not.toContain(testCase.content);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }

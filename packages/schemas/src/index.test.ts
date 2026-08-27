@@ -2,6 +2,7 @@ import {
   type ContextSnapshotInput,
   createContextSnapshot,
   type ModelConfigurationInput,
+  maximumWritingPolicySpellingLocaleLength,
 } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 
@@ -314,6 +315,57 @@ describe("canonical context snapshot schemas", () => {
         })),
       }),
     ).toThrow();
+  });
+
+  it("normalizes optional writing policy preferences and keeps them strict", () => {
+    const legacy = writingPolicySchema.parse({
+      content: "Legacy policy",
+      checksum: "a".repeat(64),
+      version: "sha256:aaaaaaaaaaaa",
+    });
+    expect(legacy).not.toHaveProperty("preferences");
+
+    const structured = writingPolicySchema.parse({
+      content: "Structured policy",
+      checksum: "a".repeat(64),
+      version: "sha256:aaaaaaaaaaaa",
+      rules: [
+        {
+          id: writingPolicyTermRuleId,
+          kind: "forbidden-term" as const,
+          term: "secret",
+          caseSensitive: false,
+          wholeWord: true,
+        },
+      ],
+      preferences: {
+        tone: " WARM ",
+        spellingLocale: "EN-latn-us",
+        verbosity: " DETAILED ",
+      },
+    });
+    expect(structured.preferences).toEqual({
+      tone: "warm",
+      spellingLocale: "en-Latn-US",
+      verbosity: "detailed",
+    });
+
+    for (const preferences of [
+      { tone: "formal" },
+      { spellingLocale: "en_US" },
+      { spellingLocale: "a".repeat(maximumWritingPolicySpellingLocaleLength + 1) },
+      { verbosity: "verbose" },
+      { tone: "warm", unexpected: true },
+    ]) {
+      expect(() =>
+        writingPolicySchema.parse({
+          content: "Structured policy",
+          checksum: "a".repeat(64),
+          version: "sha256:aaaaaaaaaaaa",
+          preferences,
+        }),
+      ).toThrow();
+    }
   });
 
   it("normalizes the description alias in requirement input", () => {

@@ -336,6 +336,53 @@ describe("domain workspace and context snapshots", () => {
     ).toThrow(/writingPolicy\.checksum/i);
   });
 
+  it("normalizes, validates, and freezes optional writing policy preferences", () => {
+    const baseWritingPolicy = {
+      content: "Preferences",
+      checksum,
+      version: "sha256:aaaaaaaaaaaa",
+    };
+    const preferences = {
+      tone: " WARM ",
+      spellingLocale: "EN-latn-us",
+      verbosity: " DETAILED ",
+    };
+    const snapshot = createContextSnapshot(
+      validInput({
+        writingPolicy: { ...baseWritingPolicy, preferences } as never,
+      }),
+    );
+
+    expect(snapshot.writingPolicy?.preferences).toEqual({
+      tone: "warm",
+      spellingLocale: "en-Latn-US",
+      verbosity: "detailed",
+    });
+    expect(Object.isFrozen(snapshot.writingPolicy?.preferences)).toBe(true);
+    preferences.tone = "direct";
+    expect(snapshot.writingPolicy?.preferences?.tone).toBe("warm");
+
+    const legacy = createContextSnapshot(validInput({ writingPolicy: baseWritingPolicy }));
+    expect(legacy.writingPolicy).toEqual(baseWritingPolicy);
+    expect(legacy.writingPolicy).not.toHaveProperty("preferences");
+
+    for (const invalidPreferences of [
+      { tone: "formal" },
+      { spellingLocale: "en_US" },
+      { spellingLocale: "a".repeat(17) },
+      { verbosity: "verbose" },
+      { tone: "warm", unknown: "value" },
+    ]) {
+      expect(() =>
+        createContextSnapshot(
+          validInput({
+            writingPolicy: { ...baseWritingPolicy, preferences: invalidPreferences } as never,
+          }),
+        ),
+      ).toThrow(/writingPolicy\.preferences/i);
+    }
+  });
+
   it("validates structured writing policy rule ids, kinds, and bounds", () => {
     const basePolicy = {
       content: "Rules",

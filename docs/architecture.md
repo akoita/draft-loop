@@ -167,16 +167,23 @@ and critic as candidate-authored style guidance. Policy text and rules cannot
 change provider selection, transmission approval, permissions, tools, factual
 evidence, or workflow state.
 
-The first structured #70 enforcement slice recognizes bounded forbidden-term
-and forbidden-punctuation rules while retaining compatibility with earlier
-content-only policy snapshots. `packages/validation` evaluates those rules in
-artifact section and block order. Each finding carries a stable rule identity
-and content-free block location; messages do not copy the forbidden term,
-matched draft text, source paths, or surrounding content. The orchestrator
-applies the exact policy from the immutable context during normal draft
-validation before independent critique.
+The structured #70 policy components recognize bounded forbidden-term and
+forbidden-punctuation rules plus optional tone, spelling-locale, and verbosity
+preferences while retaining compatibility with earlier content-only policy
+snapshots. The preferences are compiled from explicit directives in the
+candidate-selected file and travel to both model roles in the immutable run
+context. They are advisory: locale does not imply spell checking, verbosity
+does not derive a numeric length limit, and none selects a rendering profile.
 
-This slice does not add a policy-history table, storage migration, global
+`packages/validation` evaluates the deterministic rules in artifact section
+and block order. Each finding carries a stable rule identity and content-free
+block location; messages do not copy the forbidden term, matched draft text,
+source paths, or surrounding content. The orchestrator applies the exact policy
+from the immutable context during normal draft validation before independent
+critique.
+
+These components do not add anti-formulaic defaults, page targets, section
+ordering, emphasis rules, a policy-history table, storage migration, global
 policy editor, shared CLI command, or opportunity-specific override. Those
 remain later #70 work, and an override must eventually bind an immutable base
 policy version without silently replacing the workspace policy.

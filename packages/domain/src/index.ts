@@ -901,6 +901,19 @@ export const maximumWritingPolicyRuleIdLength =
 export const writingPolicyRuleIdPattern = /^writing-policy-[a-f0-9]{24}$/u;
 export const maximumWritingPolicyTermLength = 200;
 export const maximumWritingPolicyCharactersLength = 32;
+export const writingPolicyTones = ["professional", "warm", "direct", "conversational"] as const;
+export type WritingPolicyTone = (typeof writingPolicyTones)[number];
+export const writingPolicyVerbosityLevels = ["concise", "balanced", "detailed"] as const;
+export type WritingPolicyVerbosity = (typeof writingPolicyVerbosityLevels)[number];
+/**
+ * Conservative BCP-47-shaped syntax for spelling preferences. This is not a
+ * locale registry or spell-checking claim; it only bounds and normalizes the
+ * syntax accepted at the policy boundary.
+ */
+export const writingPolicySpellingLocalePattern =
+  /^[A-Za-z]{2,8}(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?$/u;
+export const maximumWritingPolicySpellingLocaleLength = 16;
+const writingPolicyPreferenceKeys = ["tone", "spellingLocale", "verbosity"] as const;
 
 export interface WritingPolicyForbiddenTermRule {
   readonly id: string;
@@ -920,6 +933,12 @@ export type WritingPolicyRule =
   | WritingPolicyForbiddenTermRule
   | WritingPolicyForbiddenCharactersRule;
 
+export interface WritingPolicyPreferences {
+  readonly tone?: WritingPolicyTone;
+  readonly spellingLocale?: string;
+  readonly verbosity?: WritingPolicyVerbosity;
+}
+
 export interface WritingPolicy {
   /** Exact policy text applied to this run. */
   readonly content: string;
@@ -929,6 +948,8 @@ export interface WritingPolicy {
   readonly version: string;
   /** Optional structured rules; absent on legacy snapshots. */
   readonly rules?: readonly WritingPolicyRule[];
+  /** Optional advisory style preferences; absent on legacy snapshots. */
+  readonly preferences?: WritingPolicyPreferences;
 }
 
 export interface ContextSnapshotInput {
@@ -1724,6 +1745,86 @@ function isForbiddenWritingPolicyCharacter(value: string): boolean {
   return !/[\p{L}\p{N}\s]/u.test(value);
 }
 
+function isWritingPolicyTone(value: unknown): value is WritingPolicyTone {
+  return (
+    typeof value === "string" &&
+    writingPolicyTones.includes(value.trim().toLowerCase() as WritingPolicyTone)
+  );
+}
+
+function isWritingPolicyVerbosity(value: unknown): value is WritingPolicyVerbosity {
+  return (
+    typeof value === "string" &&
+    writingPolicyVerbosityLevels.includes(value.trim().toLowerCase() as WritingPolicyVerbosity)
+  );
+}
+
+function isWritingPolicySpellingLocale(value: unknown): value is string {
+  return (
+    isNonEmptyString(value) &&
+    [...value.trim()].length <= maximumWritingPolicySpellingLocaleLength &&
+    writingPolicySpellingLocalePattern.test(value.trim())
+  );
+}
+
+/** Normalize the conservative locale syntax without consulting a registry. */
+export function normalizeWritingPolicySpellingLocale(value: string): string {
+  return value
+    .trim()
+    .split("-")
+    .map((part, index) => {
+      if (index === 0) return part.toLowerCase();
+      if (part.length === 4) {
+        return `${part[0]?.toUpperCase() ?? ""}${part.slice(1).toLowerCase()}`;
+      }
+      if (part.length === 2) return part.toUpperCase();
+      return part;
+    })
+    .join("-");
+}
+
+function validateWritingPolicyPreferences(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is WritingPolicyPreferences {
+  if (!isRecord(value)) {
+    addIssue(issues, "invalid-value", field, "must be a writing policy preferences object.");
+    return false;
+  }
+  const preferences = value as Partial<WritingPolicyPreferences>;
+  for (const key of Object.keys(preferences)) {
+    if (
+      !writingPolicyPreferenceKeys.includes(key as (typeof writingPolicyPreferenceKeys)[number])
+    ) {
+      addIssue(issues, "invalid-value", `${field}.${key}`, "is not a supported preference.");
+    }
+  }
+  if (preferences.tone !== undefined && !isWritingPolicyTone(preferences.tone)) {
+    addIssue(issues, "invalid-value", `${field}.tone`, "must be a supported writing policy tone.");
+  }
+  if (
+    preferences.spellingLocale !== undefined &&
+    !isWritingPolicySpellingLocale(preferences.spellingLocale)
+  ) {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.spellingLocale`,
+      "must be a bounded BCP-47-shaped spelling locale.",
+    );
+  }
+  if (preferences.verbosity !== undefined && !isWritingPolicyVerbosity(preferences.verbosity)) {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.verbosity`,
+      "must be a supported writing policy verbosity.",
+    );
+  }
+  return true;
+}
+
 function validateWritingPolicy(
   value: unknown,
   field: string,
@@ -1742,6 +1843,9 @@ function validateWritingPolicy(
   }
   if (!isNonEmptyString(policy.version)) {
     addIssue(issues, "invalid-value", `${field}.version`, "must not be empty.");
+  }
+  if (policy.preferences !== undefined) {
+    validateWritingPolicyPreferences(policy.preferences, `${field}.preferences`, issues);
   }
   if (policy.rules === undefined) return true;
   if (!Array.isArray(policy.rules)) {
@@ -1933,6 +2037,22 @@ function normalizeWritingPolicyRule(rule: WritingPolicyRule): WritingPolicyRule 
     id: rule.id.trim(),
     kind: rule.kind,
     characters: rule.characters,
+  };
+}
+
+function normalizeWritingPolicyPreferences(
+  preferences: WritingPolicyPreferences,
+): WritingPolicyPreferences {
+  return {
+    ...(preferences.tone === undefined
+      ? {}
+      : { tone: preferences.tone.trim().toLowerCase() as WritingPolicyTone }),
+    ...(preferences.spellingLocale === undefined
+      ? {}
+      : { spellingLocale: normalizeWritingPolicySpellingLocale(preferences.spellingLocale) }),
+    ...(preferences.verbosity === undefined
+      ? {}
+      : { verbosity: preferences.verbosity.trim().toLowerCase() as WritingPolicyVerbosity }),
   };
 }
 
@@ -2432,6 +2552,11 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
             ...(input.writingPolicy.rules === undefined
               ? {}
               : { rules: input.writingPolicy.rules.map(normalizeWritingPolicyRule) }),
+            ...(input.writingPolicy.preferences === undefined
+              ? {}
+              : {
+                  preferences: normalizeWritingPolicyPreferences(input.writingPolicy.preferences),
+                }),
           },
         }),
     readinessRubric: {

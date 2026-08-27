@@ -34,7 +34,9 @@ import {
   maximumModelLineageLength,
   maximumWritingPolicyCharactersLength,
   maximumWritingPolicyRules,
+  maximumWritingPolicySpellingLocaleLength,
   maximumWritingPolicyTermLength,
+  normalizeWritingPolicySpellingLocale,
   opportunityBriefIssueCodes,
   opportunityBriefIssueSeverities,
   opportunityBriefIssueStatuses,
@@ -60,6 +62,9 @@ import {
   requirementPriorities,
   writingPolicyRuleIdPattern,
   writingPolicyRuleKinds,
+  writingPolicySpellingLocalePattern,
+  writingPolicyTones,
+  writingPolicyVerbosityLevels,
 } from "@draft-loop/domain";
 import { z } from "zod";
 
@@ -661,14 +666,55 @@ export const writingPolicyRulesSchema = z
     }
   });
 
+export const writingPolicyToneSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      writingPolicyTones.includes(value.toLowerCase() as (typeof writingPolicyTones)[number]),
+    "must be a supported writing policy tone",
+  )
+  .transform((value) => value.toLowerCase() as (typeof writingPolicyTones)[number]);
+
+export const writingPolicySpellingLocaleSchema = z
+  .string()
+  .trim()
+  .min(1, "must not be empty")
+  .max(maximumWritingPolicySpellingLocaleLength)
+  .refine(
+    (value) => writingPolicySpellingLocalePattern.test(value),
+    "must be a bounded BCP-47-shaped spelling locale",
+  )
+  .transform(normalizeWritingPolicySpellingLocale);
+
+export const writingPolicyVerbositySchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      writingPolicyVerbosityLevels.includes(
+        value.toLowerCase() as (typeof writingPolicyVerbosityLevels)[number],
+      ),
+    "must be a supported writing policy verbosity",
+  )
+  .transform((value) => value.toLowerCase() as (typeof writingPolicyVerbosityLevels)[number]);
+
+export const writingPolicyPreferencesSchema = z.strictObject({
+  tone: writingPolicyToneSchema.optional(),
+  spellingLocale: writingPolicySpellingLocaleSchema.optional(),
+  verbosity: writingPolicyVerbositySchema.optional(),
+});
+
 export const writingPolicySchema = z.strictObject({
   content: nonEmptyString,
   checksum: z.string().regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum"),
   version: nonEmptyString,
   rules: writingPolicyRulesSchema.optional(),
+  preferences: writingPolicyPreferencesSchema.optional(),
 });
 
 export type WritingPolicyRule = z.infer<typeof writingPolicyRuleSchema>;
+export type WritingPolicyPreferences = z.infer<typeof writingPolicyPreferencesSchema>;
 export type WritingPolicy = z.infer<typeof writingPolicySchema>;
 
 export const candidateProfileSchema = z.object({
