@@ -2940,6 +2940,25 @@ function duplicateIndices(values: readonly { id: string }[]): number[] {
   return duplicates;
 }
 
+/** The exact reviewed opportunity brief version bound to a run context. */
+const opportunityBriefReferenceChecksumSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/u, "must be a lowercase SHA-256 checksum");
+
+export const opportunityBriefReferenceSchema = z.strictObject({
+  briefId: opportunityBriefIdSchema,
+  version: z
+    .number()
+    .finite()
+    .int()
+    .positive()
+    .refine(Number.isSafeInteger, "must be a safe integer"),
+  checksum: opportunityBriefReferenceChecksumSchema,
+});
+
+export type OpportunityBriefReference = z.infer<typeof opportunityBriefReferenceSchema>;
+export type OpportunityBriefReferenceInput = z.input<typeof opportunityBriefReferenceSchema>;
+
 const contextSnapshotShape = z.object({
   schemaVersion: z.literal(contextSchemaVersion),
   id: nonEmptyString,
@@ -2956,6 +2975,7 @@ const contextSnapshotShape = z.object({
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,
   candidateKnowledgeSelection: candidateKnowledgeSelectionSnapshotSchema.optional(),
+  opportunityBriefReference: opportunityBriefReferenceSchema.optional(),
   profileId: nonEmptyString.optional(),
 });
 
@@ -2998,6 +3018,7 @@ const contextSnapshotInputShape = z.object({
   evidenceManifest: z.array(evidenceSourceSchema).min(1),
   modelConfiguration: modelConfigurationSchema,
   candidateKnowledgeSelection: candidateKnowledgeSelectionSnapshotSchema.optional(),
+  opportunityBriefReference: opportunityBriefReferenceSchema.optional(),
   profileId: nonEmptyString.optional(),
 });
 

@@ -207,7 +207,7 @@ function service(
         async () => workspace,
       ),
       begin: vi.fn(async () => snapshot),
-      start: vi.fn(async () => snapshot),
+      start: vi.fn<ApplicationService["start"]>(async () => snapshot),
       resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),
       lifecycle: vi.fn(async () => snapshot),
       status: vi.fn(async () => snapshot),
@@ -282,6 +282,45 @@ describe("native host", () => {
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
+  });
+
+  it("forwards an exact reviewed opportunity selection only when starting a run", async () => {
+    const root = "/local/opportunity-selection";
+    const fixture = service(root);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    await expect(
+      host.invoke({
+        type: "run.start",
+        input: {
+          workspaceId: "workspace-native",
+          opportunityBrief: { briefId: "brief-native", version: 4 },
+        },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { runId: "run-native" } });
+    expect(fixture.service.start).toHaveBeenCalledWith(
+      {
+        root,
+        allowProviderData: false,
+        opportunityBrief: { briefId: "brief-native", version: 4 },
+      },
+      expect.anything(),
+    );
+
+    await expect(
+      host.invoke({
+        type: "run.resume",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { runId: "run-native" } });
+    expect(fixture.service.resume).toHaveBeenCalledWith(
+      { root, runId: "run-native", allowProviderData: false },
+      expect.anything(),
+    );
   });
 
   it("keeps other application user errors behind the generic bridge boundary", async () => {

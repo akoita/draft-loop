@@ -114,7 +114,14 @@ pnpm --filter @draft-loop/cli start opportunity edit ./workspace \
   --brief-id target-role --expected-version 1 --patch ./opportunity-patch.json
 pnpm --filter @draft-loop/cli start opportunity review ./workspace \
   --brief-id target-role --expected-version 2
+pnpm --filter @draft-loop/cli start start ./workspace \
+  --opportunity-brief-id target-role --opportunity-version 3 \
+  --allow-provider-data
 ```
+
+`start` accepts the brief ID and version only as a pair. The selected version
+must already be reviewed. DraftLoop verifies and pins that exact immutable
+version in run context; later edits do not change a started or resumed run.
 
 The CLI exposes shared CKB controls through `knowledge`: initialize a portable
 store with its default CKB, open or list a store, inspect path-free lifecycle

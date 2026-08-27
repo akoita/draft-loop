@@ -13,7 +13,7 @@ provider transmission.
 | Public material                         | Local application workspace                                                                                           | Only through an explicit request policy                                                               | Until the user deletes it                                                             |
 | Personal material                       | Local application workspace                                                                                           | Explicit approval and provider allowlist required                                                     | Until the user deletes it                                                             |
 | Confidential employer material          | Local application workspace                                                                                           | Explicit approval, acknowledgement, and provider allowlist required; user redaction rules recommended | Until the user deletes it                                                             |
-| Structured opportunity brief            | Local application workspace once persistence is integrated                                                            | Only an exact reviewed version may enter a future planning request; not integrated yet                 | Until the user deletes it                                                             |
+| Structured opportunity brief            | Local application workspace and immutable run context reference                                                        | Only an explicitly selected, checksum-verified reviewed version may enter provider-facing run context  | Until the user deletes it                                                             |
 | Candidate writing policy                 | Explicitly selected local workspace file and immutable run context                                                     | Included with author and critic context only after the existing provider approval boundary             | Workspace copy and run history remain until the user deletes them                     |
 | Portable CKB metadata and managed bytes | User-selected, separate local plaintext store                                                                         | Not provider data; paths, URLs, labels, checksums, membership, and journal data stay local            | All six policy classes default to retention until explicit deletion                    |
 | Secrets embedded in candidate material  | Never place in application content or fixtures                                                                        | Prohibited                                                                                            | Do not retain                                                                         |
@@ -67,8 +67,10 @@ source provenance. Shared CLI commands and packaged-desktop host capabilities
 can now create, reload, list, edit, and review these versions. CLI file paths
 remain runtime-only; desktop file paths stay behind native pickers, and
 renderer results omit paths, URLs, raw source text, and provenance objects. No
-current run consumes the repository. The final #67 slice must bind only an
-exact reviewed brief version into planning.
+run implicitly selects the latest brief. `start` can bind one explicit reviewed
+brief ID and version after verifying its checksum; the immutable run context
+stores only the safe ID/version/checksum reference and reviewed structured
+content. Resume reuses that snapshot, so later edits cannot change the run.
 
 ## Candidate writing policy handling
 

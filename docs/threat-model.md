@@ -60,6 +60,13 @@ result projection omits paths, URLs, raw source text, and provenance objects.
 Reload, list, edit, and review operate on durable versions without refetching
 sources or invoking providers, and stale expected versions fail closed.
 
+Run start accepts only an exact brief ID/version pair and requires the stored
+record to be reviewed with a valid checksum. It derives opportunity context
+only from that immutable record and retains a path- and URL-free reference in
+the run snapshot. Resume cannot replace the selection, and later brief versions
+do not mutate the pinned context. The existing explicit provider-transmission
+approval remains independently required.
+
 ### Current writing-policy scope
 
 The workspace writing policy is candidate-authored, untrusted style data. Its

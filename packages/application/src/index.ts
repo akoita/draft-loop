@@ -120,12 +120,21 @@ export interface WorkspaceDescriptor {
 export interface StartRunCommand {
   readonly root: string;
   readonly allowProviderData?: boolean;
+  /** Exact immutable reviewed opportunity version to bind to the new run. */
+  readonly opportunityBrief?: OpportunityBriefSelection;
 }
 
 export type BeginRunCommand = StartRunCommand;
 
-export interface ResumeRunCommand extends StartRunCommand {
+export interface OpportunityBriefSelection {
+  readonly briefId: string;
+  readonly version: number;
+}
+
+export interface ResumeRunCommand {
+  readonly root: string;
   readonly runId?: string;
+  readonly allowProviderData?: boolean;
   readonly signal?: AbortSignal;
 }
 

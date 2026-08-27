@@ -463,6 +463,70 @@ describe("desktop capability bridge", () => {
     ).toThrow("invalid");
   });
 
+  it("validates an optional exact reviewed opportunity selection only on run.start", () => {
+    expect(
+      validateBridgeCommand({
+        type: "run.start",
+        input: { workspaceId: "workspace-1" },
+      }),
+    ).toEqual({ type: "run.start", input: { workspaceId: "workspace-1" } });
+
+    expect(
+      validateBridgeCommand({
+        type: "run.start",
+        input: {
+          workspaceId: "workspace-1",
+          opportunityBrief: { briefId: "brief-1", version: 3 },
+        },
+      }),
+    ).toEqual({
+      type: "run.start",
+      input: {
+        workspaceId: "workspace-1",
+        opportunityBrief: { briefId: "brief-1", version: 3 },
+      },
+    });
+
+    for (const opportunityBrief of [
+      null,
+      {},
+      { briefId: "brief-1" },
+      { version: 1 },
+      { briefId: "brief-1", version: 0 },
+      { briefId: "brief-1", version: -1 },
+      { briefId: "brief-1", version: 1.5 },
+      { briefId: "brief-1", version: "1" },
+      { briefId: "brief-1", version: 1, path: "/private/brief" },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "run.start",
+          input: { workspaceId: "workspace-1", opportunityBrief },
+        }),
+      ).toThrow("invalid");
+    }
+
+    expect(() =>
+      validateBridgeCommand({
+        type: "run.start",
+        input: {
+          workspaceId: "workspace-1",
+          opportunityBrief: { briefId: "../private", version: 1 },
+        },
+      }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "run.resume",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "run-1",
+          opportunityBrief: { briefId: "brief-1", version: 1 },
+        },
+      }),
+    ).toThrow("invalid");
+  });
+
   it("accepts the workspace.create shape the live provider E2E gate sends", () => {
     // Regression: `authorModel`/`criticModel` were added to WorkspaceCreateInput and
     // to the host handler without being added to the validator allowlist, so the

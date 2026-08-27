@@ -27,6 +27,7 @@ import {
   draftArtifactSchema,
   jobRequirementInputSchema,
   modelConfigurationSchema,
+  opportunityBriefReferenceSchema,
   parseContextSnapshot,
   serializeContextSnapshot,
   writingPolicySchema,
@@ -161,6 +162,53 @@ describe("canonical context snapshot schemas", () => {
         entries: [...validSelection().entries].reverse(),
       }).entries[0]?.storeId,
     ).toBe("store-z");
+  });
+
+  it("accepts and normalizes an exact reviewed opportunity reference", () => {
+    const reference = opportunityBriefReferenceSchema.parse({
+      briefId: "  brief-reviewed  ",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+    const snapshot = createContextSnapshot({
+      ...validInput(),
+      opportunityBriefReference: reference,
+    } as ContextSnapshotInput);
+    const parsed = contextSnapshotSchema.parse(snapshot);
+
+    expect(reference).toEqual({
+      briefId: "brief-reviewed",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+    expect(parsed.opportunityBriefReference).toEqual(reference);
+    expect(
+      parseContextSnapshot(serializeContextSnapshot(snapshot)).opportunityBriefReference,
+    ).toEqual(reference);
+  });
+
+  it("rejects malformed reviewed opportunity references and preserves legacy absence", () => {
+    const valid = {
+      briefId: "brief-1",
+      version: 1,
+      checksum: "a".repeat(64),
+    };
+    for (const opportunityBriefReference of [
+      null,
+      {},
+      { briefId: " ", version: 1, checksum: valid.checksum },
+      { briefId: valid.briefId, version: 0, checksum: valid.checksum },
+      { briefId: valid.briefId, version: 1.5, checksum: valid.checksum },
+      { briefId: valid.briefId, version: Number.MAX_SAFE_INTEGER + 1, checksum: valid.checksum },
+      { briefId: valid.briefId, version: 1, checksum: "A".repeat(64) },
+      { ...valid, path: "/private/brief" },
+    ]) {
+      expect(() => opportunityBriefReferenceSchema.parse(opportunityBriefReference)).toThrow();
+    }
+
+    expect(contextSnapshotSchema.parse(createContextSnapshot(validInput()))).not.toHaveProperty(
+      "opportunityBriefReference",
+    );
   });
 
   it("rejects ineligible serialized or contextual selection evidence", () => {

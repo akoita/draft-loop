@@ -883,6 +883,25 @@ export interface ModelConfigurationInput {
   readonly independentReview?: IndependentReviewRecord;
 }
 
+/**
+ * The exact reviewed opportunity brief version bound to a run.
+ *
+ * The reference carries identity and integrity metadata only. The brief's
+ * raw sources and provenance remain local to the opportunity store and are
+ * never part of a context snapshot.
+ */
+export interface OpportunityBriefReference {
+  readonly briefId: string;
+  readonly version: number;
+  readonly checksum: string;
+}
+
+export interface OpportunityBriefReferenceInput {
+  readonly briefId: string;
+  readonly version: number;
+  readonly checksum: string;
+}
+
 export interface ContextSnapshot {
   readonly schemaVersion: ContextSchemaVersion;
   readonly id: ContextSnapshotId;
@@ -901,6 +920,8 @@ export interface ContextSnapshot {
   readonly modelConfiguration: ModelConfiguration;
   /** Optional immutable evidence of the CKBs selected for this run. */
   readonly candidateKnowledgeSelection?: CandidateKnowledgeSelectionSnapshot;
+  /** Optional exact reviewed opportunity brief version bound to this run. */
+  readonly opportunityBriefReference?: OpportunityBriefReference;
   readonly profileId?: ProfileId;
 }
 
@@ -987,6 +1008,8 @@ export interface ContextSnapshotInput {
   readonly evidenceManifest?: readonly EvidenceSourceInput[];
   readonly modelConfiguration?: ModelConfigurationInput;
   readonly candidateKnowledgeSelection?: CandidateKnowledgeSelectionSnapshotInput;
+  /** Optional exact reviewed opportunity brief version to bind to this run. */
+  readonly opportunityBriefReference?: OpportunityBriefReferenceInput;
   readonly profileId?: string;
 }
 
@@ -1407,6 +1430,42 @@ export function validateCandidateKnowledgeSelectionSnapshot(
   const issues: SemanticValidationIssue[] = [];
   validateCandidateKnowledgeSelectionSnapshotInput(value, issues);
   return { valid: issues.length === 0, issues };
+}
+
+const opportunityBriefReferenceKeys = new Set(["briefId", "version", "checksum"]);
+
+function validateOpportunityBriefReference(
+  value: unknown,
+  issues: SemanticValidationIssue[],
+): value is OpportunityBriefReferenceInput {
+  const field = "opportunityBriefReference";
+  if (!isRecord(value)) {
+    addIssue(issues, "invalid-value", field, "must be an object when provided.");
+    return false;
+  }
+  for (const key of Object.keys(value)) {
+    if (!opportunityBriefReferenceKeys.has(key)) {
+      addIssue(issues, "invalid-value", `${field}.${key}`, "is not supported.");
+    }
+  }
+  const reference = value as Partial<OpportunityBriefReferenceInput>;
+  if (!isNonEmptyString(reference.briefId)) {
+    addIssue(issues, "invalid-value", `${field}.briefId`, "must be a non-empty id.");
+  } else if (reference.briefId.trim().length > opportunityBriefMaximumIdLength) {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.briefId`,
+      `must be at most ${opportunityBriefMaximumIdLength} characters.`,
+    );
+  }
+  if (!isSafePositiveInteger(reference.version)) {
+    addIssue(issues, "invalid-value", `${field}.version`, "must be a positive safe integer.");
+  }
+  if (typeof reference.checksum !== "string" || !/^[a-f0-9]{64}$/u.test(reference.checksum)) {
+    addIssue(issues, "invalid-value", `${field}.checksum`, "must be a SHA-256 checksum.");
+  }
+  return true;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -2019,6 +2078,9 @@ export function validateContextSnapshotInput(input: unknown): SemanticValidation
       addIssue(issues, issue.code, issue.field, issue.message);
     }
   }
+  if (candidate.opportunityBriefReference !== undefined) {
+    validateOpportunityBriefReference(candidate.opportunityBriefReference, issues);
+  }
 
   return { valid: issues.length === 0, issues };
 }
@@ -2119,6 +2181,16 @@ function normalizeSelectionLifecycleRevision(
             memberRevision: revision.directory.memberRevision,
             memberBoundAt: revision.directory.memberBoundAt.trim(),
           },
+  };
+}
+
+function normalizeOpportunityBriefReference(
+  reference: OpportunityBriefReferenceInput,
+): OpportunityBriefReference {
+  return {
+    briefId: reference.briefId.trim(),
+    version: reference.version,
+    checksum: reference.checksum.toLowerCase(),
   };
 }
 
@@ -2590,6 +2662,13 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
       : {
           candidateKnowledgeSelection: createCandidateKnowledgeSelectionSnapshot(
             input.candidateKnowledgeSelection,
+          ),
+        }),
+    ...(input.opportunityBriefReference === undefined
+      ? {}
+      : {
+          opportunityBriefReference: normalizeOpportunityBriefReference(
+            input.opportunityBriefReference,
           ),
         }),
     ...(input.profileId ? { profileId: input.profileId.trim() as ProfileId } : {}),

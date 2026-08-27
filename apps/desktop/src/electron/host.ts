@@ -3716,10 +3716,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         }
         case "run.start": {
           const workspace = workspaceFor(command.input.workspaceId);
-          const snapshot = await service.start(
-            { root: workspace.root, allowProviderData: false },
-            io(),
-          );
+          const startCommand = {
+            root: workspace.root,
+            allowProviderData: false,
+            ...(command.input.opportunityBrief === undefined
+              ? {}
+              : { opportunityBrief: command.input.opportunityBrief }),
+          };
+          const snapshot = await service.start(startCommand, io());
           return { ok: true, value: statusResult(workspace.descriptor.id, snapshot) };
         }
         case "run.pause":

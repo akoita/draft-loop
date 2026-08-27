@@ -134,6 +134,24 @@ describe("application service contract", () => {
     expect(underlying.start).not.toHaveBeenCalled();
   });
 
+  it("forwards an exact reviewed opportunity only when creating a run", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.start({
+      root: "workspace",
+      opportunityBrief: { briefId: "brief-1", version: 3 },
+    });
+
+    expect(underlying.start).toHaveBeenCalledWith(
+      {
+        root: "workspace",
+        opportunityBrief: { briefId: "brief-1", version: 3 },
+      },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+  });
+
   it("forwards queryEvidence with normalized root", async () => {
     const underlying = driver();
     const service = createApplicationService(underlying);

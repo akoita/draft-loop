@@ -656,9 +656,20 @@ const runStatusKeys = inputKeys<RunStatusInput>()(["workspaceId", "runId"]);
 
 export interface RunStartInput {
   readonly workspaceId: string;
+  /** Optional exact reviewed opportunity version to bind to this run. */
+  readonly opportunityBrief?: OpportunityBriefSelectionInput;
 }
 
-const runStartKeys = inputKeys<RunStartInput>()(["workspaceId"]);
+export interface OpportunityBriefSelectionInput {
+  readonly briefId: string;
+  readonly version: number;
+}
+
+const opportunityBriefSelectionKeys = inputKeys<OpportunityBriefSelectionInput>()([
+  "briefId",
+  "version",
+]);
+const runStartKeys = inputKeys<RunStartInput>()(["workspaceId", "opportunityBrief"]);
 
 export interface RunLifecycleInput {
   readonly workspaceId: string;
@@ -3250,10 +3261,26 @@ function validateRunStatusInput(value: unknown): RunStatusInput {
   };
 }
 
+function validateOpportunityBriefSelectionInput(value: unknown): OpportunityBriefSelectionInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, opportunityBriefSelectionKeys)) return invalidInput();
+  return {
+    briefId: identifier(input.briefId),
+    version: opportunityVersion(input.version),
+  };
+}
+
 function validateRunStartInput(value: unknown): RunStartInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, runStartKeys)) return invalidInput();
-  return { workspaceId: identifier(input.workspaceId) };
+  const opportunityBrief =
+    input.opportunityBrief === undefined
+      ? undefined
+      : validateOpportunityBriefSelectionInput(input.opportunityBrief);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    ...(opportunityBrief === undefined ? {} : { opportunityBrief }),
+  };
 }
 
 function validateRunLifecycleInput(value: unknown): RunLifecycleInput {

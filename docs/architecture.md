@@ -173,8 +173,12 @@ created, while failures become fixed content-free draft issues. Shared
 application operations now create, reload, list, edit, and review durable
 versions. The CLI accepts runtime-only JSON manifests; the desktop host owns
 native file selection and returns a bounded path- and URL-free projection
-through its strict capability bridge. Binding one exact reviewed version into
-planning remains the final #67 slice.
+through its strict capability bridge. A new run may select one exact reviewed
+brief ID and version. The application verifies its stored checksum, derives the
+opportunity context only from that reviewed record, and persists a safe
+ID/version/checksum reference in the immutable run context. Resume reuses that
+snapshot; it cannot select a different opportunity version. Source URLs, paths,
+raw text, and provenance remain outside provider-facing context.
 
 ## Writing policy enforcement
 
