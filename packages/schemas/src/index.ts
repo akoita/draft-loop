@@ -187,7 +187,7 @@ const opportunityBriefApprovedUrlProvenanceSchema = z.strictObject({
   originalUrl: opportunityBriefUrlSchema,
   finalUrl: opportunityBriefUrlSchema.optional(),
   capturedAt: strictTimestampSchema,
-  contentChecksum: opportunityBriefChecksumSchema,
+  contentChecksum: opportunityBriefChecksumSchema.nullable(),
 });
 
 const opportunityBriefLocalFileProvenanceSchema = z.strictObject({
@@ -203,19 +203,19 @@ const opportunityBriefLocalFileProvenanceSchema = z.strictObject({
       "must be a display name, not a host path",
     ),
   capturedAt: strictTimestampSchema,
-  checksum: opportunityBriefChecksumSchema,
+  checksum: opportunityBriefChecksumSchema.nullable(),
 });
 
 const opportunityBriefPastedContentProvenanceSchema = z.strictObject({
   kind: z.literal("pasted-content"),
   capturedAt: strictTimestampSchema,
-  checksum: opportunityBriefChecksumSchema,
+  checksum: opportunityBriefChecksumSchema.nullable(),
 });
 
 const opportunityBriefCandidateInputProvenanceSchema = z.strictObject({
   kind: z.literal("candidate-input"),
   capturedAt: strictTimestampSchema,
-  checksum: opportunityBriefChecksumSchema,
+  checksum: opportunityBriefChecksumSchema.nullable(),
 });
 
 export const opportunityBriefStatusSchema = z.enum(opportunityBriefStatuses);
@@ -236,12 +236,36 @@ export const opportunityBriefProvenanceSchema = z.discriminatedUnion("kind", [
 ]);
 export type OpportunityBriefProvenance = z.infer<typeof opportunityBriefProvenanceSchema>;
 
-export const opportunityBriefSourceSchema = z.strictObject({
-  id: opportunityBriefIdSchema,
-  classification: opportunityBriefSourceClassificationSchema,
-  status: opportunityBriefSourceStatusSchema,
-  provenance: opportunityBriefProvenanceSchema,
-});
+export const opportunityBriefSourceSchema = z
+  .strictObject({
+    id: opportunityBriefIdSchema,
+    classification: opportunityBriefSourceClassificationSchema,
+    status: opportunityBriefSourceStatusSchema,
+    provenance: opportunityBriefProvenanceSchema,
+  })
+  .superRefine((source, context) => {
+    const checksumField =
+      source.provenance.kind === "approved-url" ? "contentChecksum" : "checksum";
+    const checksum =
+      source.provenance.kind === "approved-url"
+        ? source.provenance.contentChecksum
+        : source.provenance.checksum;
+    const requiresChecksum = ["available", "partial", "stale"].includes(source.status);
+    if (requiresChecksum && checksum === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["provenance", checksumField],
+        message: `${source.status} sources require a captured content checksum`,
+      });
+    }
+    if (!requiresChecksum && checksum !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["provenance", checksumField],
+        message: `${source.status} sources must not claim a captured content checksum`,
+      });
+    }
+  });
 export type OpportunityBriefSource = z.infer<typeof opportunityBriefSourceSchema>;
 
 export const opportunityBriefSourcedTextSchema = z.strictObject({
