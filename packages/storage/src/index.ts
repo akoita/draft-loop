@@ -22,6 +22,8 @@ import {
   candidateKnowledgePortableBackupManifestSchema,
   candidateKnowledgeRetentionOverrideInputSchema,
   candidateKnowledgeRetentionPolicyUpdateSchema,
+  type OpportunityBrief,
+  opportunityBriefSchema,
 } from "@draft-loop/schemas";
 
 export type {
@@ -752,6 +754,32 @@ export interface ContextSnapshotRecord extends ContextSnapshotInput {
   readonly checksum: string;
 }
 
+export interface OpportunityBriefVersionRecord {
+  readonly workspaceId: string;
+  readonly brief: OpportunityBrief;
+  readonly checksum: string;
+}
+
+export interface OpportunityBriefStoragePort {
+  readonly saveOpportunityBrief: (
+    workspaceId: string,
+    brief: OpportunityBrief,
+  ) => Promise<OpportunityBriefVersionRecord>;
+  readonly getOpportunityBrief: (
+    workspaceId: string,
+    briefId: string,
+    version: number,
+  ) => Promise<OpportunityBriefVersionRecord | undefined>;
+  readonly getLatestOpportunityBrief: (
+    workspaceId: string,
+    briefId: string,
+  ) => Promise<OpportunityBriefVersionRecord | undefined>;
+  readonly listOpportunityBriefVersions: (
+    workspaceId: string,
+    briefId: string,
+  ) => Promise<readonly OpportunityBriefVersionRecord[]>;
+}
+
 export interface EvidenceSourceRecord {
   readonly id: string;
   readonly workspaceId: string;
@@ -1229,7 +1257,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 21 as const;
+export const storageSchemaVersion = 22 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -2953,6 +2981,47 @@ const migrationTwentyOne: Migration = {
   `.trim(),
 };
 
+const migrationTwentyTwo: Migration = {
+  version: 22,
+  sql: `
+    CREATE TABLE IF NOT EXISTS opportunity_brief_versions (
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+      brief_id TEXT NOT NULL CHECK (length(trim(brief_id)) > 0),
+      version INTEGER NOT NULL CHECK (typeof(version) = 'integer' AND version >= 1),
+      schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+      prior_version INTEGER,
+      status TEXT NOT NULL CHECK (status IN ('draft', 'reviewed')),
+      created_at TEXT NOT NULL CHECK (julianday(created_at) IS NOT NULL),
+      reviewed_at TEXT CHECK (reviewed_at IS NULL OR julianday(reviewed_at) IS NOT NULL),
+      payload_json TEXT NOT NULL,
+      payload_checksum TEXT NOT NULL CHECK (
+        length(payload_checksum) = 64 AND payload_checksum NOT GLOB '*[^0-9a-f]*'
+      ),
+      PRIMARY KEY (workspace_id, brief_id, version),
+      FOREIGN KEY (workspace_id, brief_id, prior_version)
+        REFERENCES opportunity_brief_versions(workspace_id, brief_id, version),
+      CHECK (
+        (version = 1 AND prior_version IS NULL)
+        OR (version > 1 AND prior_version = version - 1)
+      ),
+      CHECK (
+        (status = 'draft' AND reviewed_at IS NULL)
+        OR (status = 'reviewed' AND reviewed_at IS NOT NULL)
+      )
+    );
+
+    CREATE INDEX IF NOT EXISTS opportunity_brief_versions_latest_idx
+      ON opportunity_brief_versions(workspace_id, brief_id, version DESC);
+
+    CREATE TRIGGER IF NOT EXISTS opportunity_brief_versions_immutable_update
+      BEFORE UPDATE ON opportunity_brief_versions
+      BEGIN SELECT RAISE(ABORT, 'opportunity brief versions are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS opportunity_brief_versions_immutable_delete
+      BEFORE DELETE ON opportunity_brief_versions
+      BEGIN SELECT RAISE(ABORT, 'opportunity brief versions are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -2975,6 +3044,7 @@ const migrations: readonly Migration[] = [
   migrationNineteen,
   migrationTwenty,
   migrationTwentyOne,
+  migrationTwentyTwo,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3033,6 +3103,14 @@ function parse(value: string): JsonValue {
 function payloadChecksum(payload: JsonValue): string {
   assertSafePayload(payload);
   return checksum(serialize(payload));
+}
+
+function validatedOpportunityBrief(value: unknown): OpportunityBrief {
+  const parsed = opportunityBriefSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new StorageValidationError("Opportunity brief data is invalid.");
+  }
+  return parsed.data;
 }
 
 function requireNonEmpty(value: string, field: string): string {
@@ -3382,7 +3460,12 @@ function requireStoredStep(step: StoredRunStep, field: string): void {
 }
 
 export class SqliteStorage
-  implements StoragePort, HistoryStoragePort, RetrievalPort, CandidateKnowledgeBaseStoragePort
+  implements
+    StoragePort,
+    HistoryStoragePort,
+    RetrievalPort,
+    CandidateKnowledgeBaseStoragePort,
+    OpportunityBriefStoragePort
 {
   private readonly database: SqliteHandle;
   private closed = false;
@@ -9709,6 +9792,150 @@ export class SqliteStorage
     return row === undefined ? undefined : contextFromRow(row);
   }
 
+  public async saveOpportunityBrief(
+    workspaceId: string,
+    brief: OpportunityBrief,
+  ): Promise<OpportunityBriefVersionRecord> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(workspaceId, "opportunity workspaceId").trim();
+    const normalizedBrief = validatedOpportunityBrief(brief);
+    const payload = recordToJson(normalizedBrief);
+    const checksumValue = payloadChecksum(payload);
+    let result: OpportunityBriefVersionRecord | undefined;
+    this.database.transaction(() => {
+      const workspace = this.database
+        .prepare("SELECT id FROM workspaces WHERE id = ?")
+        .get(normalizedWorkspaceId);
+      if (workspace === undefined) {
+        throw new StorageValidationError("The opportunity workspace was not found.");
+      }
+
+      const existing = this.database
+        .prepare(
+          "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions WHERE workspace_id = ? AND brief_id = ? AND version = ?",
+        )
+        .get(normalizedWorkspaceId, normalizedBrief.id, normalizedBrief.version);
+      if (existing !== undefined) {
+        const existingRecord = opportunityBriefFromRow(existing);
+        if (existingRecord.checksum !== checksumValue) {
+          throw new StorageConflictError("The opportunity brief version is immutable.");
+        }
+        result = existingRecord;
+        return;
+      }
+
+      if (normalizedBrief.version > 1) {
+        const parentRow = this.database
+          .prepare(
+            "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions WHERE workspace_id = ? AND brief_id = ? AND version = ?",
+          )
+          .get(normalizedWorkspaceId, normalizedBrief.id, normalizedBrief.version - 1);
+        if (parentRow === undefined) {
+          throw new StorageConflictError("The opportunity brief parent version is missing.");
+        }
+        const parent = opportunityBriefFromRow(parentRow).brief;
+        if (Date.parse(normalizedBrief.createdAt) < Date.parse(parent.createdAt)) {
+          throw new StorageConflictError(
+            "The opportunity brief timestamp precedes its parent version.",
+          );
+        }
+        if (parent.status === "reviewed" && normalizedBrief.status === "reviewed") {
+          throw new StorageConflictError(
+            "A reviewed opportunity brief cannot transition directly to reviewed.",
+          );
+        }
+      }
+
+      this.database
+        .prepare(
+          "INSERT INTO opportunity_brief_versions (workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          normalizedWorkspaceId,
+          normalizedBrief.id,
+          normalizedBrief.version,
+          normalizedBrief.schemaVersion,
+          normalizedBrief.priorVersion,
+          normalizedBrief.status,
+          normalizedBrief.createdAt,
+          normalizedBrief.reviewedAt,
+          serialize(payload),
+          checksumValue,
+        );
+      const opaqueEntityId = checksum(`${normalizedWorkspaceId}\u0000${normalizedBrief.id}`).slice(
+        0,
+        32,
+      );
+      this.insertAuditEvent({
+        id: `opportunity-brief-version:${opaqueEntityId}:${normalizedBrief.version}:${checksumValue}`,
+        workspaceId: normalizedWorkspaceId,
+        eventType: "opportunity-brief-version.appended",
+        entityType: "opportunity-brief",
+        entityId: opaqueEntityId,
+        payload: {
+          checksum: checksumValue,
+          schemaVersion: normalizedBrief.schemaVersion,
+          status: normalizedBrief.status,
+          version: normalizedBrief.version,
+        },
+        createdAt: normalizedBrief.createdAt,
+      });
+      result = {
+        workspaceId: normalizedWorkspaceId,
+        brief: normalizedBrief,
+        checksum: checksumValue,
+      };
+    })();
+    return result as OpportunityBriefVersionRecord;
+  }
+
+  public async getOpportunityBrief(
+    workspaceId: string,
+    briefId: string,
+    version: number,
+  ): Promise<OpportunityBriefVersionRecord | undefined> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(workspaceId, "opportunity workspaceId").trim();
+    const normalizedBriefId = requireNonEmpty(briefId, "opportunity briefId").trim();
+    requirePositive(version, "opportunity brief version");
+    const row = this.database
+      .prepare(
+        "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions WHERE workspace_id = ? AND brief_id = ? AND version = ?",
+      )
+      .get(normalizedWorkspaceId, normalizedBriefId, version);
+    return row === undefined ? undefined : opportunityBriefFromRow(row);
+  }
+
+  public async getLatestOpportunityBrief(
+    workspaceId: string,
+    briefId: string,
+  ): Promise<OpportunityBriefVersionRecord | undefined> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(workspaceId, "opportunity workspaceId").trim();
+    const normalizedBriefId = requireNonEmpty(briefId, "opportunity briefId").trim();
+    const row = this.database
+      .prepare(
+        "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions WHERE workspace_id = ? AND brief_id = ? ORDER BY version DESC LIMIT 1",
+      )
+      .get(normalizedWorkspaceId, normalizedBriefId);
+    return row === undefined ? undefined : opportunityBriefFromRow(row);
+  }
+
+  public async listOpportunityBriefVersions(
+    workspaceId: string,
+    briefId: string,
+  ): Promise<readonly OpportunityBriefVersionRecord[]> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(workspaceId, "opportunity workspaceId").trim();
+    const normalizedBriefId = requireNonEmpty(briefId, "opportunity briefId").trim();
+    return this.database
+      .prepare(
+        "SELECT workspace_id, brief_id, version, schema_version, prior_version, status, created_at, reviewed_at, payload_json, payload_checksum FROM opportunity_brief_versions WHERE workspace_id = ? AND brief_id = ? ORDER BY version",
+      )
+      .all(normalizedWorkspaceId, normalizedBriefId)
+      .map((row) => opportunityBriefFromRow(row));
+  }
+
   public async saveEvidenceSource(record: EvidenceSourceRecord): Promise<void> {
     this.ensureOpen();
     requireNonEmpty(record.id, "evidence source id");
@@ -12742,6 +12969,38 @@ function contextFromRow(row: Record<string, unknown>): ContextSnapshotRecord {
     payload: parse(rowString(row, "payload_json")),
     checksum: rowString(row, "payload_checksum"),
   };
+}
+
+function opportunityBriefFromRow(row: Record<string, unknown>): OpportunityBriefVersionRecord {
+  try {
+    const payload = parse(rowString(row, "payload_json"));
+    const checksumValue = rowString(row, "payload_checksum");
+    if (payloadChecksum(payload) !== checksumValue) {
+      throw new StorageValidationError("The stored opportunity brief checksum is invalid.");
+    }
+    const brief = validatedOpportunityBrief(payload);
+    if (
+      brief.id !== rowString(row, "brief_id") ||
+      brief.version !== rowNumber(row, "version") ||
+      brief.schemaVersion !== rowNumber(row, "schema_version") ||
+      brief.priorVersion !== rowNullableNumber(row, "prior_version") ||
+      brief.status !== rowString(row, "status") ||
+      brief.createdAt !== rowString(row, "created_at") ||
+      brief.reviewedAt !== rowNullableString(row, "reviewed_at")
+    ) {
+      throw new StorageValidationError("The stored opportunity brief metadata is inconsistent.");
+    }
+    return {
+      workspaceId: rowString(row, "workspace_id"),
+      brief,
+      checksum: checksumValue,
+    };
+  } catch (error) {
+    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
+      throw error;
+    }
+    throw new StorageValidationError("The stored opportunity brief could not be read.");
+  }
 }
 
 function evidenceSourceFromRow(row: Record<string, unknown>): EvidenceSourceRecord {

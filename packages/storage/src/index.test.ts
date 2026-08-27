@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-
+import type { OpportunityBrief } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -34,6 +34,42 @@ const workspace: WorkspaceRecord = {
   createdAt: "2026-08-12T10:00:00.000Z",
   updatedAt: "2026-08-12T10:00:00.000Z",
 };
+
+const opportunityBrief = (overrides: Partial<OpportunityBrief> = {}): OpportunityBrief => ({
+  schemaVersion: 1,
+  id: "brief-1",
+  version: 1,
+  priorVersion: null,
+  status: "draft",
+  createdAt: "2026-08-12T10:00:00.000Z",
+  reviewedAt: null,
+  sources: [
+    {
+      id: "opportunity-source-1",
+      classification: "job-posting",
+      status: "available",
+      provenance: {
+        kind: "approved-url",
+        originalUrl: "https://example.com/private-role",
+        capturedAt: "2026-08-12T09:59:00.000Z",
+        contentChecksum: "d".repeat(64),
+      },
+    },
+  ],
+  role: null,
+  employer: null,
+  responsibilities: [],
+  requirements: [],
+  priorities: [],
+  candidateInstructions: {
+    tone: null,
+    applicationGoal: null,
+    forbiddenLanguage: [],
+    focusAreas: [],
+  },
+  issues: [],
+  ...overrides,
+});
 
 const contextSnapshot = (payload: ContextSnapshotInput["payload"]): ContextSnapshotInput => ({
   id: "context-1",
@@ -311,11 +347,11 @@ describe("SQLite storage", () => {
     const storage = openSqliteStorage(":memory:");
 
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     storage.migrate();
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
 
     await storage.set("ui.language", "en");
@@ -329,6 +365,182 @@ describe("SQLite storage", () => {
       storage.saveContextSnapshot(contextSnapshot({ apiKey: "not-persisted" })),
     ).rejects.toThrow(StorageSecurityError);
     await storage.close();
+  });
+
+  it("persists immutable opportunity brief versions across restart with content-free audits", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-opportunity-storage-"));
+    const filename = join(directory, "history.sqlite");
+    const first = openSqliteStorage(filename);
+    await first.saveWorkspace(workspace);
+    const versionOne = opportunityBrief();
+    const versionTwo = opportunityBrief({
+      version: 2,
+      priorVersion: 1,
+      createdAt: "2026-08-12T10:01:00.000Z",
+      role: { value: "Private role title", sourceIds: ["opportunity-source-1"] },
+    });
+
+    const savedOne = await first.saveOpportunityBrief(workspace.id, versionOne);
+    const savedTwo = await first.saveOpportunityBrief(workspace.id, versionTwo);
+    await expect(first.saveOpportunityBrief(workspace.id, versionTwo)).resolves.toEqual(savedTwo);
+    expect(savedOne.checksum).toMatch(/^[a-f0-9]{64}$/u);
+    expect(await first.listOpportunityBriefVersions(workspace.id, versionOne.id)).toEqual([
+      savedOne,
+      savedTwo,
+    ]);
+    expect(await first.getLatestOpportunityBrief(workspace.id, versionOne.id)).toEqual(savedTwo);
+
+    const auditEvents = (await first.listAuditEvents(workspace.id)).filter(
+      (event) => event.eventType === "opportunity-brief-version.appended",
+    );
+    expect(auditEvents).toHaveLength(2);
+    expect(auditEvents[1]?.payload).toEqual({
+      checksum: savedTwo.checksum,
+      schemaVersion: 1,
+      status: "draft",
+      version: 2,
+    });
+    expect(JSON.stringify(auditEvents)).not.toContain("Private role title");
+    expect(JSON.stringify(auditEvents)).not.toContain("https://example.com/private-role");
+    await first.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(reopened.getOpportunityBrief(workspace.id, versionOne.id, 1)).resolves.toEqual(
+      savedOne,
+    );
+    await expect(reopened.getLatestOpportunityBrief(workspace.id, versionOne.id)).resolves.toEqual(
+      savedTwo,
+    );
+    await reopened.close();
+
+    const raw = openRawDatabase(filename);
+    expect(() =>
+      raw.exec("UPDATE opportunity_brief_versions SET status = 'reviewed' WHERE version = 1"),
+    ).toThrow(/immutable/iu);
+    expect(() => raw.exec("DELETE FROM opportunity_brief_versions WHERE version = 1")).toThrow(
+      /immutable/iu,
+    );
+    raw.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("enforces opportunity workspace, lineage, timestamps, transitions, and isolation", async () => {
+    const storage = openSqliteStorage(":memory:");
+    const otherWorkspace: WorkspaceRecord = { ...workspace, id: "workspace-2" };
+    await storage.saveWorkspace(workspace);
+    await storage.saveWorkspace(otherWorkspace);
+    const versionOne = opportunityBrief();
+    const versionTwo = opportunityBrief({
+      version: 2,
+      priorVersion: 1,
+      createdAt: "2026-08-12T10:01:00.000Z",
+    });
+
+    await expect(storage.saveOpportunityBrief("missing-workspace", versionOne)).rejects.toThrow(
+      "The opportunity workspace was not found.",
+    );
+    await expect(storage.saveOpportunityBrief(workspace.id, versionTwo)).rejects.toThrow(
+      "The opportunity brief parent version is missing.",
+    );
+    await storage.saveOpportunityBrief(workspace.id, versionOne);
+    await expect(
+      storage.saveOpportunityBrief(
+        workspace.id,
+        opportunityBrief({
+          role: { value: "Conflicting title", sourceIds: ["opportunity-source-1"] },
+        }),
+      ),
+    ).rejects.toThrow("The opportunity brief version is immutable.");
+    await expect(
+      storage.saveOpportunityBrief(
+        workspace.id,
+        opportunityBrief({
+          version: 2,
+          priorVersion: 1,
+          createdAt: "2026-08-12T09:59:59.000Z",
+        }),
+      ),
+    ).rejects.toThrow("The opportunity brief timestamp precedes its parent version.");
+
+    const reviewed = opportunityBrief({
+      version: 2,
+      priorVersion: 1,
+      status: "reviewed",
+      createdAt: "2026-08-12T10:02:00.000Z",
+      reviewedAt: "2026-08-12T10:02:00.000Z",
+      role: { value: "Role", sourceIds: ["opportunity-source-1"] },
+      employer: { value: "Employer", sourceIds: ["opportunity-source-1"] },
+      requirements: [
+        {
+          id: "requirement-1",
+          text: "Requirement",
+          priority: "critical",
+          sourceIds: ["opportunity-source-1"],
+        },
+      ],
+    });
+    await storage.saveOpportunityBrief(workspace.id, reviewed);
+    await expect(
+      storage.saveOpportunityBrief(workspace.id, {
+        ...reviewed,
+        version: 3,
+        priorVersion: 2,
+        createdAt: "2026-08-12T10:03:00.000Z",
+        reviewedAt: "2026-08-12T10:03:00.000Z",
+      }),
+    ).rejects.toThrow("A reviewed opportunity brief cannot transition directly to reviewed.");
+
+    await storage.saveOpportunityBrief(otherWorkspace.id, versionOne);
+    expect(
+      await storage.listOpportunityBriefVersions(otherWorkspace.id, versionOne.id),
+    ).toHaveLength(1);
+    expect(await storage.listOpportunityBriefVersions(workspace.id, versionOne.id)).toHaveLength(2);
+    await storage.close();
+  });
+
+  it("migrates v21 opportunity storage and rejects corrupted rows after restart", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-opportunity-migration-"));
+    const filename = join(directory, "history.sqlite");
+    const initial = openSqliteStorage(filename);
+    await initial.saveWorkspace(workspace);
+    await initial.close();
+
+    const legacy = openRawDatabase(filename);
+    legacy.exec(
+      "DROP TABLE opportunity_brief_versions; DELETE FROM schema_migrations WHERE version = 22;",
+    );
+    legacy.close();
+
+    const migrated = openSqliteStorage(filename);
+    expect(migrated.appliedMigrationVersions().at(-1)).toBe(22);
+    expect(await migrated.getWorkspace(workspace.id)).toEqual(workspace);
+    const saved = await migrated.saveOpportunityBrief(workspace.id, opportunityBrief());
+    await migrated.close();
+
+    const corrupted = openRawDatabase(filename);
+    corrupted.exec(
+      "DROP TRIGGER opportunity_brief_versions_immutable_update; UPDATE opportunity_brief_versions SET created_at = '2026-08-12T10:01:00.000Z';",
+    );
+    corrupted.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(reopened.getOpportunityBrief(workspace.id, saved.brief.id, 1)).rejects.toThrow(
+      "The stored opportunity brief metadata is inconsistent.",
+    );
+    await reopened.close();
+
+    const checksumCorrupted = openRawDatabase(filename);
+    checksumCorrupted.exec(
+      "UPDATE opportunity_brief_versions SET created_at = '2026-08-12T10:00:00.000Z', payload_checksum = '0000000000000000000000000000000000000000000000000000000000000000';",
+    );
+    checksumCorrupted.close();
+
+    const checksumReopened = openSqliteStorage(filename);
+    await expect(
+      checksumReopened.getOpportunityBrief(workspace.id, saved.brief.id, 1),
+    ).rejects.toThrow("The stored opportunity brief checksum is invalid.");
+    await checksumReopened.close();
+    await rm(directory, { recursive: true, force: true });
   });
 
   it("migrates v12 to v13 without backfilling directory membership", async () => {
@@ -346,7 +558,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     const raw = openRawDatabase(filename);
     expect(
@@ -386,7 +598,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     expect(
       queryRawDatabase(
@@ -404,7 +616,7 @@ describe("SQLite storage", () => {
       },
     ]);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -454,7 +666,7 @@ describe("SQLite storage", () => {
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     const migratedContext = await upgraded.getContextSnapshot(legacyContext.id);
@@ -462,7 +674,7 @@ describe("SQLite storage", () => {
     expect(migratedContext?.payload).not.toHaveProperty("candidateKnowledgeSelection");
     upgraded.migrate();
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -478,7 +690,7 @@ describe("SQLite storage", () => {
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
@@ -498,7 +710,7 @@ describe("SQLite storage", () => {
     removeMigrationFive(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
       savedKnowledgeBase,
@@ -524,7 +736,7 @@ describe("SQLite storage", () => {
     removeMigrationSix(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
@@ -592,7 +804,7 @@ describe("SQLite storage", () => {
     removeMigrationSeven(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged(
@@ -665,7 +877,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceOriginBinding("ckb-1", "ckb-source-1"),
@@ -738,7 +950,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRefreshObservation("ckb-1", "ckb-source-1"),
@@ -853,7 +1065,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRetirement("ckb-1", "ckb-source-1"),
@@ -913,7 +1125,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
     ]);
     const raw = openRawDatabase(filename);
     expect(() =>

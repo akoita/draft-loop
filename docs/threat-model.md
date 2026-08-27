@@ -40,10 +40,13 @@ captured-content checksums, but no raw source content or host paths. Failed or
 inaccessible sources remain visible without fabricated checksums, and their
 diagnostics omit paths, URL queries, source content, ingestion messages, and OS
 errors. Duplicate captured bytes and partial results remain explicit review
-issues. Editing and review create immutable process-local versions; the
-component does not persist, render, transmit, or alter run context, provider
-policy, permissions, or model selection. Later storage and adapter slices must
-keep exact URLs in sensitive host-owned state and retain content-free outputs.
+issues. Editing and review create immutable versions in the local workspace
+database. Composite workspace/brief/version identity, parent enforcement,
+canonical checksums, and update/delete guards detect stale, conflicting, or
+corrupted state; reload never refetches a source. Audit events use opaque brief
+identity and content-free version/status/checksum metadata rather than copying
+the sensitive payload. No current adapter renders, transmits, or alters run
+context, provider policy, permissions, or model selection from this repository.
 
 ### Current writing-policy scope
 
