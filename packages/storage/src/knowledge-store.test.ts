@@ -7569,7 +7569,7 @@ describe("portable candidate knowledge store", () => {
     await store.close();
   });
 
-  it("deletes managed URL records without treating them as filesystem blobs", async () => {
+  it("deletes managed URL response bytes while preserving unknown artifacts", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");
     const store = await initializeCandidateKnowledgeStore(initialization(root));
@@ -7579,6 +7579,7 @@ describe("portable candidate knowledge store", () => {
       isDefault: false,
       createdAt,
     });
+    const responseBytes = new TextEncoder().encode("URL response");
     await store.createManagedCandidateKnowledgeUrlSource(
       {
         id: "url-source",
@@ -7587,23 +7588,41 @@ describe("portable candidate knowledge store", () => {
         displayName: "URL evidence",
         createdAt,
       },
-      managedUrlVersion(new TextEncoder().encode("URL response"), {
+      managedUrlVersion(responseBytes, {
         id: "url-version",
         createdAt: "2026-08-21T14:01:00.000Z",
       }),
     );
+    const managedPath = join(
+      root,
+      "sources",
+      digestSegment("url-source"),
+      digestSegment("url-version"),
+    );
+    const unknownPath = join(root, "sources", "unknown-artifact.bin");
+    await writeFile(unknownPath, "preserve", "utf8");
+    expect((await lstat(managedPath)).isFile()).toBe(true);
+    await expect(readFile(managedPath)).resolves.toEqual(Buffer.from(responseBytes));
     await store.archiveCandidateKnowledgeBase("ckb-url", "2026-08-21T14:02:00.000Z");
     const plan = await store.planCandidateKnowledgeBaseDeletion("ckb-url");
     expect(plan).toMatchObject({
       status: "ready",
       sourceCount: 1,
       versionCount: 1,
-      managedArtifactCount: 0,
-      managedArtifactBytes: 0,
+      managedArtifactCount: 1,
+      managedArtifactBytes: responseBytes.byteLength,
+      preservedUnknownCount: 1,
     });
     await expect(
       store.deleteCandidateKnowledgeBase("ckb-url", plan.confirmationToken),
-    ).resolves.toMatchObject({ status: "deleted", managedArtifactCount: 0 });
+    ).resolves.toMatchObject({
+      status: "deleted",
+      managedArtifactCount: 1,
+      managedArtifactBytes: responseBytes.byteLength,
+      preservedUnknownCount: 1,
+    });
+    await expect(lstat(managedPath)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(readFile(unknownPath, "utf8")).resolves.toBe("preserve");
     await store.close();
   });
 
