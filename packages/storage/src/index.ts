@@ -5046,14 +5046,12 @@ export class SqliteStorage
         .all(knowledgeBaseId),
     };
     const graphDigest = checksum(serialize(recordToJson(graph)));
-    const managedArtifacts = managedVersions
-      .filter((row) => rowString(row, "kind") === "file")
-      .map((row) => ({
-        sourceId: rowString(row, "source_id"),
-        versionId: rowString(row, "version_id"),
-        checksum: rowString(row, "checksum"),
-        sizeBytes: rowNumber(row, "size_bytes"),
-      }));
+    const managedArtifacts = managedVersions.map((row) => ({
+      sourceId: rowString(row, "source_id"),
+      versionId: rowString(row, "version_id"),
+      checksum: rowString(row, "checksum"),
+      sizeBytes: rowNumber(row, "size_bytes"),
+    }));
     return Object.freeze({
       knowledgeBaseId,
       state: knowledgeBase.state,
