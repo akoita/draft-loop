@@ -143,10 +143,20 @@ instruction fields, while opportunity facts may not cite them. The contract
 stores bounded structured fields and checksums, not raw source content or host
 paths, and preserves human-authored ordering.
 
-This component does not fetch, persist, edit, or transmit an opportunity and
-does not alter the current run context. Storage, ingestion orchestration,
-shared CLI/desktop editing and review, and binding one exact reviewed brief
-version into planning remain later #67 slices.
+The next #67 component connects that contract to application-level source
+intake. One draft may include explicitly approved HTTPS URLs, selected local
+files, pasted content, and direct candidate instructions. Existing bounded
+ingestion controls remain authoritative. Captured sources retain checksums;
+failed or inaccessible sources retain a visible status and issue without a
+fabricated checksum. The draft contains provenance metadata, not raw intake
+content or host paths. Duplicate captured bytes remain visible for review.
+
+Edits and review create immutable successive brief versions. Review still
+requires the minimum structured opportunity fields and no open issue; editing
+a reviewed brief creates a new draft rather than changing the reviewed value.
+This application contract remains process-local. Persistence/restart recovery,
+provider extraction, shared CLI/desktop adapters, and binding one exact
+reviewed version into planning remain later #67 slices.
 
 ## Writing policy enforcement
 

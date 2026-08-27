@@ -35,20 +35,25 @@ provider retention: not allowed unless explicitly configured
 
 ## Opportunity brief handling
 
-The first opportunity component is a strict local data contract, not a new
-provider or network boundary. It stores bounded structured fields and
-source-linked provenance metadata without raw source content or host paths.
-Approved-URL provenance can contain confidential URLs and therefore remains
-sensitive local state. Candidate instructions are typed separately from
-opportunity facts and cannot establish role, employer, responsibility,
-requirement, or priority fields.
+The opportunity components define a strict local data contract and an
+application-level intake boundary. One draft can ingest explicitly approved
+HTTPS URLs, selected local files, pasted content, and direct candidate
+instructions through existing bounded controls. The resulting brief stores
+structured fields, source-linked provenance metadata, and captured-content
+checksums without raw source content or host paths. Approved-URL provenance can
+contain confidential URLs and therefore remains sensitive local state.
+Candidate instructions are typed separately from opportunity facts and cannot
+establish role, employer, responsibility, requirement, or priority fields.
 
 Drafts keep source failures, staleness, partial results, duplicates, and
-contradictions visible. Review requires explicit acknowledgement or resolution
-of open issues, but acknowledgement does not erase the limitation. No current
-run, provider request, CLI command, or desktop flow consumes this contract;
-later #67 slices must preserve the existing transmission approval boundary and
-bind only an exact reviewed brief version into planning.
+contradictions visible. An unavailable source has no fabricated content
+checksum, and content-free diagnostics do not repeat a path, URL query, raw
+content, ingestion message, or operating-system error. Review requires explicit
+acknowledgement or resolution of open issues, but acknowledgement does not
+erase the limitation. Draft versions are process-local: no current run,
+provider request, CLI command, or desktop flow consumes them. Later #67 slices
+must preserve the existing transmission approval boundary and bind only an
+exact reviewed brief version into planning.
 
 ## Candidate writing policy handling
 

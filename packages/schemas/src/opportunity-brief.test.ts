@@ -5,6 +5,7 @@ import {
   opportunityBriefMaximumCollectionEntries,
   opportunityBriefMaximumTextLength,
   opportunityBriefSchema,
+  opportunityBriefSourceSchema,
 } from "./index.js";
 
 const createdAt = "2026-08-27T10:00:00.000Z";
@@ -166,7 +167,7 @@ describe("opportunity brief schemas", () => {
             kind: "approved-url",
             originalUrl: "https://jobs.example.test/unavailable",
             capturedAt: createdAt,
-            contentChecksum: checksum,
+            contentChecksum: null,
           },
         },
         {
@@ -218,6 +219,41 @@ describe("opportunity brief schemas", () => {
     });
 
     expect(opportunityBriefSchema.parse(draft)).toEqual(draft);
+  });
+
+  it("requires provenance checksums only when content was captured", () => {
+    for (const status of ["available", "partial", "stale"] as const) {
+      expect(
+        opportunityBriefSourceSchema.safeParse({
+          ...sourceAt(0),
+          status,
+          provenance: { ...sourceAt(0).provenance, contentChecksum: checksum },
+        }).success,
+      ).toBe(true);
+    }
+    for (const status of ["inaccessible", "unsupported", "failed"] as const) {
+      expect(
+        opportunityBriefSourceSchema.safeParse({
+          ...sourceAt(0),
+          status,
+          provenance: { ...sourceAt(0).provenance, contentChecksum: null },
+        }).success,
+      ).toBe(true);
+    }
+    expect(
+      opportunityBriefSourceSchema.safeParse({
+        ...sourceAt(0),
+        status: "failed",
+        provenance: { ...sourceAt(0).provenance, contentChecksum: checksum },
+      }).success,
+    ).toBe(false);
+    expect(
+      opportunityBriefSourceSchema.safeParse({
+        ...sourceAt(0),
+        status: "partial",
+        provenance: { ...sourceAt(0).provenance, contentChecksum: null },
+      }).success,
+    ).toBe(false);
   });
 
   it("requires provenance and matches each provenance variant strictly", () => {

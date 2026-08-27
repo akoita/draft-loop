@@ -28,18 +28,22 @@ data, not as application policy or executable instructions.
 
 ### Current opportunity-brief scope
 
-The first #67 component is a provider-independent contract only. It separates
-opportunity facts from candidate instructions, requires every structured field
-to cite known source identities, and prevents candidate-instruction sources
-from establishing employer requirements or other opportunity facts. Draft
-records preserve source failures, partial results, staleness, duplicates, and
-contradictions; review cannot complete while an issue remains open.
+The #67 contract separates opportunity facts from candidate instructions,
+requires every structured field to cite known source identities, and prevents
+candidate-instruction sources from establishing employer requirements or other
+opportunity facts. Application-level intake reuses the existing approval,
+HTTPS/SSRF, redirect, size, timeout, content-type, and stable-file controls for
+approved URLs and selected files. It does not perform uncontrolled research.
 
-The contract retains bounded provenance, including sensitive approved URLs,
-but no raw source content or host paths. It does not fetch, persist, render, or
-transmit data and cannot yet affect run context, provider policy, permissions,
-or model selection. Later storage and adapter slices must keep exact URLs in
-sensitive host-owned state and expose path-free, content-free diagnostics.
+The brief retains bounded provenance, including sensitive approved URLs and
+captured-content checksums, but no raw source content or host paths. Failed or
+inaccessible sources remain visible without fabricated checksums, and their
+diagnostics omit paths, URL queries, source content, ingestion messages, and OS
+errors. Duplicate captured bytes and partial results remain explicit review
+issues. Editing and review create immutable process-local versions; the
+component does not persist, render, transmit, or alter run context, provider
+policy, permissions, or model selection. Later storage and adapter slices must
+keep exact URLs in sensitive host-owned state and retain content-free outputs.
 
 ### Current writing-policy scope
 
