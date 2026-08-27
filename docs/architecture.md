@@ -154,9 +154,18 @@ content or host paths. Duplicate captured bytes remain visible for review.
 Edits and review create immutable successive brief versions. Review still
 requires the minimum structured opportunity fields and no open issue; editing
 a reviewed brief creates a new draft rather than changing the reviewed value.
-This application contract remains process-local. Persistence/restart recovery,
-provider extraction, shared CLI/desktop adapters, and binding one exact
-reviewed version into planning remain later #67 slices.
+SQLite schema v22 persists those versions under a workspace-scoped composite
+identity with canonical payload checksums, immediate-parent enforcement, and
+immutable update/delete guards. Identical writes are idempotent; latest-version
+lookup does not create a mutable current pointer. Audit events retain only an
+opaque brief identity, version, status, and checksum rather than brief content
+or source provenance.
+
+An adapter-neutral application service reloads validated, deeply frozen
+versions after restart and applies edits or review only to an explicitly
+expected latest version. Reload never refetches URLs or local files. Provider
+extraction, shared CLI/desktop adapters, and binding one exact reviewed version
+into planning remain later #67 slices.
 
 ## Writing policy enforcement
 

@@ -50,10 +50,14 @@ contradictions visible. An unavailable source has no fabricated content
 checksum, and content-free diagnostics do not repeat a path, URL query, raw
 content, ingestion message, or operating-system error. Review requires explicit
 acknowledgement or resolution of open issues, but acknowledgement does not
-erase the limitation. Draft versions are process-local: no current run,
-provider request, CLI command, or desktop flow consumes them. Later #67 slices
-must preserve the existing transmission approval boundary and bind only an
-exact reviewed brief version into planning.
+erase the limitation. Immutable versions are stored in the local workspace
+database with canonical checksums and can be reloaded after restart without
+refetching any source. Append-only audit records contain only opaque identity,
+version, status, and checksum metadata; they do not duplicate brief content or
+source provenance. No current run, provider request, CLI command, or desktop
+flow consumes the repository. Later #67 slices must preserve the existing
+transmission approval boundary and bind only an exact reviewed brief version
+into planning.
 
 ## Candidate writing policy handling
 
