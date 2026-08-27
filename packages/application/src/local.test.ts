@@ -577,7 +577,12 @@ describe("local application driver", () => {
   it("records an explicitly selected writing policy and applies it to both model roles", async () => {
     const root = await providerWorkspace("draft-loop-writing-policy-");
     const sourcePath = join(root, "AGENTS.md");
-    const policyText = "Use plain ASCII punctuation. Never round candidate metrics upward.";
+    const policyText = [
+      "No em dashes.",
+      "Forbidden term: unicorn",
+      "- Forbidden phrase: secret sauce",
+      "Forbidden phrase: UNICORN",
+    ].join("\n");
     await writeFile(sourcePath, policyText, "utf8");
     const authorInputs: string[] = [];
     const criticInputs: string[] = [];
@@ -638,16 +643,52 @@ describe("local application driver", () => {
       expect(authorInputs).toHaveLength(1);
       expect(criticInputs).toHaveLength(1);
       for (const serialized of [...authorInputs, ...criticInputs]) {
-        expect(JSON.parse(serialized)).toMatchObject({
+        const parsed = JSON.parse(serialized) as {
+          readonly context: {
+            readonly writingPolicy?: {
+              readonly rules?: readonly {
+                readonly id: string;
+                readonly kind: string;
+                readonly term?: string;
+                readonly caseSensitive?: boolean;
+                readonly wholeWord?: boolean;
+              }[];
+            };
+          };
+        };
+        expect(parsed).toMatchObject({
           context: {
             writingPolicy: {
               content: policyText,
               checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
               version: expect.stringMatching(/^sha256:[a-f0-9]{12}$/u),
+              rules: [
+                {
+                  kind: "forbidden-characters",
+                  characters: "—",
+                },
+                {
+                  kind: "forbidden-term",
+                  term: "secret sauce",
+                  caseSensitive: false,
+                  wholeWord: true,
+                },
+                {
+                  kind: "forbidden-term",
+                  term: "unicorn",
+                  caseSensitive: false,
+                  wholeWord: true,
+                },
+              ],
             },
             evidenceManifest: [{ path: join(root, "evidence", "resume.md") }],
           },
         });
+        expect(
+          parsed.context.writingPolicy?.rules?.every((rule) =>
+            /^writing-policy-[a-f0-9]{24}$/u.test(rule.id),
+          ),
+        ).toBe(true);
       }
 
       const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
@@ -658,6 +699,10 @@ describe("local application driver", () => {
             content: policyText,
             checksum: expect.any(String),
             version: expect.any(String),
+            rules: expect.arrayContaining([
+              expect.objectContaining({ kind: "forbidden-term", term: "secret sauce" }),
+              expect.objectContaining({ kind: "forbidden-term", term: "unicorn" }),
+            ]),
           },
           evidenceManifest: [{ path: join(root, "evidence", "resume.md") }],
         });

@@ -4,6 +4,7 @@ import type {
   JobRequirement,
   OutputConstraints,
   WritingPolicy,
+  WritingPolicyRule,
 } from "@draft-loop/schemas";
 
 export type ValidationSeverity = "error" | "warning";
@@ -32,6 +33,8 @@ export type DeterministicValidationCode =
   | "unsupported-quantification"
   | "inconsistent-date"
   | "writing-policy-ascii-punctuation"
+  | "writing-policy-forbidden-character"
+  | "writing-policy-forbidden-term"
   | "uncovered-requirement"
   | "explicit-gap";
 
@@ -44,6 +47,14 @@ export interface ValidationIssue {
   readonly claimId?: string;
   readonly sectionId?: string;
   readonly requirementId?: string;
+  readonly ruleId?: string;
+  readonly blockId?: string;
+  readonly location?: {
+    readonly start: number;
+    readonly end: number;
+    readonly line: number;
+    readonly column: number;
+  };
 }
 
 export type ValidationFinding = ValidationIssue;
@@ -53,13 +64,17 @@ export interface ValidationResult {
   readonly valid: boolean;
 }
 
+type DeterministicWritingPolicy = Pick<WritingPolicy, "content" | "version"> & {
+  readonly rules?: readonly WritingPolicyRule[];
+};
+
 export interface DeterministicValidationContext {
   readonly requirements: readonly Pick<JobRequirement, "id" | "text" | "priority">[];
   readonly outputConstraints: Pick<
     OutputConstraints,
     "requiredSections" | "maxWords" | "maxCharacters" | "maxLength"
   >;
-  readonly writingPolicy?: Pick<WritingPolicy, "content" | "version">;
+  readonly writingPolicy?: DeterministicWritingPolicy;
 }
 
 export interface DeterministicValidationOptions {
@@ -100,6 +115,100 @@ function artifactText(artifact: DraftArtifact): string {
   return artifact.sections
     .flatMap((section) => section.blocks.map((block) => block.text))
     .join("\n");
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+function writingPolicyRulePattern(rule: WritingPolicyRule): RegExp {
+  if (rule.kind === "forbidden-characters") {
+    return new RegExp(
+      `(?:${[...rule.characters].map((character) => escapeRegExp(character)).join("|")})`,
+      "gu",
+    );
+  }
+  const prefix = rule.wholeWord ? "(?<![\\p{L}\\p{N}_])" : "";
+  const suffix = rule.wholeWord ? "(?![\\p{L}\\p{N}_])" : "";
+  const flags = rule.caseSensitive ? "gu" : "giu";
+  return new RegExp(`${prefix}${escapeRegExp(rule.term)}${suffix}`, flags);
+}
+
+function writingPolicyLocation(
+  text: string,
+  start: number,
+  end: number,
+): NonNullable<ValidationIssue["location"]> {
+  const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+  const line = text.slice(0, start).split("\n").length;
+  return { start, end, line, column: start - lineStart + 1 };
+}
+
+interface WritingPolicyMatch {
+  readonly sectionIndex: number;
+  readonly blockIndex: number;
+  readonly ruleIndex: number;
+  readonly sectionId: string;
+  readonly blockId: string;
+  readonly rule: WritingPolicyRule;
+  readonly location: NonNullable<ValidationIssue["location"]>;
+}
+
+function structuredWritingPolicyMatches(
+  artifact: DraftArtifact,
+  rules: readonly WritingPolicyRule[],
+): readonly WritingPolicyMatch[] {
+  const matches: WritingPolicyMatch[] = [];
+  artifact.sections.forEach((section, sectionIndex) => {
+    section.blocks.forEach((block, blockIndex) => {
+      rules.forEach((rule, ruleIndex) => {
+        for (const match of block.text.matchAll(writingPolicyRulePattern(rule))) {
+          const matched = match[0];
+          const start = match.index;
+          if (matched === undefined || start === undefined) continue;
+          matches.push({
+            sectionIndex,
+            blockIndex,
+            ruleIndex,
+            sectionId: section.id,
+            blockId: block.id,
+            rule,
+            location: writingPolicyLocation(block.text, start, start + matched.length),
+          });
+        }
+      });
+    });
+  });
+  return matches.sort(
+    (left, right) =>
+      left.sectionIndex - right.sectionIndex ||
+      left.blockIndex - right.blockIndex ||
+      left.location.start - right.location.start ||
+      left.ruleIndex - right.ruleIndex,
+  );
+}
+
+function addStructuredWritingPolicyFindings(
+  artifact: DraftArtifact,
+  policy: Pick<DeterministicWritingPolicy, "version" | "rules">,
+  issues: ValidationIssue[],
+): void {
+  if (policy.rules === undefined) return;
+  for (const match of structuredWritingPolicyMatches(artifact, policy.rules)) {
+    addIssue(issues, {
+      code:
+        match.rule.kind === "forbidden-term"
+          ? "writing-policy-forbidden-term"
+          : "writing-policy-forbidden-character",
+      category: "format",
+      severity: "warning",
+      message: `draft violates writing policy ${policy.version} rule ${match.rule.id}`,
+      sectionId: match.sectionId,
+      ruleId: match.rule.id,
+      blockId: match.blockId,
+      location: match.location,
+    });
+  }
 }
 
 function wordCount(value: string): number {
@@ -204,7 +313,12 @@ function isRequirementCovered(requirement: Pick<JobRequirement, "text">, text: s
 
 function freezeResult(issues: readonly ValidationIssue[]): ValidationResult {
   const frozenIssues = Object.freeze(
-    issues.map((issue) => Object.freeze({ ...issue })),
+    issues.map((issue) =>
+      Object.freeze({
+        ...issue,
+        ...(issue.location === undefined ? {} : { location: Object.freeze({ ...issue.location }) }),
+      }),
+    ),
   ) as readonly ValidationIssue[];
   return Object.freeze({
     issues: frozenIssues,
@@ -230,19 +344,24 @@ export function validateDraftArtifact(
   const issues: ValidationIssue[] = [];
   const text = artifactText(artifact);
   const constraints = context.outputConstraints;
-  if (
-    context.writingPolicy !== undefined &&
-    /(?:plain\s+ascii\s+punctuation|no\s+em\s+dashes|no\s+en\s+dashes)/iu.test(
-      context.writingPolicy.content,
-    ) &&
-    /[‐‑‒–—―‘’“”]/u.test(text)
-  ) {
-    addIssue(issues, {
-      code: "writing-policy-ascii-punctuation",
-      category: "format",
-      severity: "warning",
-      message: `draft violates writing policy ${context.writingPolicy.version}: use plain ASCII punctuation`,
-    });
+  if (context.writingPolicy !== undefined) {
+    if (context.writingPolicy.rules === undefined) {
+      if (
+        /(?:plain\s+ascii\s+punctuation|no\s+em\s+dashes?|no\s+en\s+dashes?)/iu.test(
+          context.writingPolicy.content,
+        ) &&
+        /[‐‑‒–—―‘’“”]/u.test(text)
+      ) {
+        addIssue(issues, {
+          code: "writing-policy-ascii-punctuation",
+          category: "format",
+          severity: "warning",
+          message: `draft violates writing policy ${context.writingPolicy.version}: use plain ASCII punctuation`,
+        });
+      }
+    } else {
+      addStructuredWritingPolicyFindings(artifact, context.writingPolicy, issues);
+    }
   }
   for (const requiredSection of constraints.requiredSections ?? []) {
     if (!hasRequiredArtifactSection(artifact, requiredSection)) {

@@ -7,6 +7,8 @@ const evidence = (excerpt: string) => ({
   sourcePath: "/local/evidence.txt",
   excerpt,
 });
+const writingPolicyTermRuleId = `writing-policy-${"a".repeat(24)}`;
+const writingPolicyCharacterRuleId = `writing-policy-${"b".repeat(24)}`;
 
 function artifactWithClaim(
   claimText: string,
@@ -122,6 +124,126 @@ describe("deterministic artifact validation", () => {
       severity: "warning",
       message: "draft violates writing policy sha256:bbbbbbbbbbbb: use plain ASCII punctuation",
     });
+  });
+
+  it("reports structured forbidden terms and characters with ordered locations", () => {
+    const text = "Alpha — alpha alphabet alpha.";
+    const result = validateDraftArtifact(
+      artifactWithClaim(text, [evidence(text)]),
+      context({
+        writingPolicy: {
+          content: "Structured policy",
+          version: "sha256:structured01",
+          rules: [
+            {
+              id: writingPolicyTermRuleId,
+              kind: "forbidden-term",
+              term: "alpha",
+              caseSensitive: false,
+              wholeWord: true,
+            },
+            {
+              id: writingPolicyCharacterRuleId,
+              kind: "forbidden-characters",
+              characters: "—",
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(result.issues).toEqual([
+      {
+        code: "writing-policy-forbidden-term",
+        category: "format",
+        severity: "warning",
+        message: `draft violates writing policy sha256:structured01 rule ${writingPolicyTermRuleId}`,
+        sectionId: "section-summary",
+        blockId: "block-summary",
+        ruleId: writingPolicyTermRuleId,
+        location: { start: 0, end: 5, line: 1, column: 1 },
+      },
+      {
+        code: "writing-policy-forbidden-character",
+        category: "format",
+        severity: "warning",
+        message: `draft violates writing policy sha256:structured01 rule ${writingPolicyCharacterRuleId}`,
+        sectionId: "section-summary",
+        blockId: "block-summary",
+        ruleId: writingPolicyCharacterRuleId,
+        location: { start: 6, end: 7, line: 1, column: 7 },
+      },
+      {
+        code: "writing-policy-forbidden-term",
+        category: "format",
+        severity: "warning",
+        message: `draft violates writing policy sha256:structured01 rule ${writingPolicyTermRuleId}`,
+        sectionId: "section-summary",
+        blockId: "block-summary",
+        ruleId: writingPolicyTermRuleId,
+        location: { start: 8, end: 13, line: 1, column: 9 },
+      },
+      {
+        code: "writing-policy-forbidden-term",
+        category: "format",
+        severity: "warning",
+        message: `draft violates writing policy sha256:structured01 rule ${writingPolicyTermRuleId}`,
+        sectionId: "section-summary",
+        blockId: "block-summary",
+        ruleId: writingPolicyTermRuleId,
+        location: { start: 23, end: 28, line: 1, column: 24 },
+      },
+    ]);
+    for (const issue of result.issues) {
+      expect(issue.message).not.toContain("alpha");
+      expect(issue.message).not.toContain("—");
+      expect(issue.message).not.toContain("/local/evidence.txt");
+    }
+    expect(Object.isFrozen(result.issues[0]?.location)).toBe(true);
+  });
+
+  it("honors case-sensitive and whole-word term matching", () => {
+    const text = "Alpha alpha alphabet Alpha";
+    const result = validateDraftArtifact(
+      artifactWithClaim(text, [evidence(text)]),
+      context({
+        writingPolicy: {
+          content: "Structured policy",
+          version: "v1",
+          rules: [
+            {
+              id: `writing-policy-${"c".repeat(24)}`,
+              kind: "forbidden-term",
+              term: "Alpha",
+              caseSensitive: true,
+              wholeWord: true,
+            },
+          ],
+        },
+      }),
+    );
+
+    expect(result.issues).toHaveLength(2);
+    expect(result.issues.map((issue) => issue.location)).toEqual([
+      { start: 0, end: 5, line: 1, column: 1 },
+      { start: 21, end: 26, line: 1, column: 22 },
+    ]);
+  });
+
+  it("does not emit the legacy punctuation finding for structured policies", () => {
+    const text = "Built reliable systems — locally.";
+    const result = validateDraftArtifact(
+      artifactWithClaim(text, [evidence(text)]),
+      context({
+        writingPolicy: {
+          content: "Plain ASCII punctuation only.",
+          version: "v1",
+          rules: [],
+        },
+      }),
+    );
+
+    expect(result.issues).toEqual([]);
   });
 
   it("accepts a required semantic kind when the display heading is customized", () => {

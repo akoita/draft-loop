@@ -16,8 +16,10 @@ import {
 
 const timestamp = "2026-08-12T10:00:00.000Z";
 const checksum = "a".repeat(64);
+const writingPolicyTermRuleId = `writing-policy-${"a".repeat(24)}`;
+const writingPolicyCharacterRuleId = `writing-policy-${"b".repeat(24)}`;
 
-function context(): ContextSnapshot {
+function context(writingPolicy?: ContextSnapshot["writingPolicy"]): ContextSnapshot {
   return createContextSnapshot({
     id: "context-1",
     workspaceId: "workspace-1",
@@ -67,6 +69,7 @@ function context(): ContextSnapshot {
       },
       requireProviderDiversity: true,
     },
+    ...(writingPolicy === undefined ? {} : { writingPolicy }),
   });
 }
 
@@ -282,6 +285,72 @@ describe("durable orchestration", () => {
     expect(critic).toHaveBeenCalledOnce();
     expect(author.mock.calls[0]?.[0]).toMatchObject({ signal: controller.signal });
     expect(critic.mock.calls[0]?.[0]).toMatchObject({ signal: controller.signal });
+  });
+
+  it("carries structured writing-policy findings through a critic resume", async () => {
+    const policy = {
+      content: "Structured policy",
+      checksum,
+      version: "sha256:structured01",
+      rules: [
+        {
+          id: writingPolicyTermRuleId,
+          kind: "forbidden-term" as const,
+          term: "TypeScript",
+          caseSensitive: false,
+          wholeWord: true,
+        },
+        {
+          id: writingPolicyCharacterRuleId,
+          kind: "forbidden-characters" as const,
+          characters: "—",
+        },
+      ],
+    };
+    const policyContext = context(policy);
+    const drafted = artifact();
+    const summaryBlock = drafted.sections[0]?.blocks[0];
+    const experienceBlock = drafted.sections[1]?.blocks[0];
+    const summaryClaim = drafted.claims[0];
+    if (summaryBlock === undefined || experienceBlock === undefined || summaryClaim === undefined) {
+      throw new Error("the artifact fixture is incomplete");
+    }
+    const draftedText = "TypeScript experience — TypeScript.";
+    summaryBlock.text = draftedText;
+    experienceBlock.text = "Built local-first software with clear communication.";
+    summaryClaim.text = draftedText;
+    let criticAttempts = 0;
+    const { engine } = engineFixture({
+      author: async () => execution(drafted, "anthropic", "author-test"),
+      critic: async () => {
+        criticAttempts += 1;
+        if (criticAttempts === 1) {
+          throw Object.assign(new Error("temporary critic failure"), { code: "timeout" });
+        }
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+
+    const begun = await engine.begin(request({ context: policyContext }));
+    const failed = await engine.resume("run-1", { context: policyContext });
+    expect(begun.state).toBe("drafting");
+    expect(failed.state).toBe("provider-error");
+    expect(failed.findings.map((finding) => finding.code)).toEqual([
+      "writing-policy-forbidden-term",
+      "writing-policy-forbidden-character",
+      "writing-policy-forbidden-term",
+    ]);
+    expect(failed.findings[0]).toMatchObject({
+      sectionId: "summary-1",
+      blockId: "summary-block-1",
+      ruleId: writingPolicyTermRuleId,
+      location: { start: 0, end: 10, line: 1, column: 1 },
+    });
+
+    const resumed = await engine.resume("run-1", { context: policyContext });
+    expect(resumed.state).toBe("awaiting-approval");
+    expect(resumed.findings).toEqual(failed.findings);
+    expect(criticAttempts).toBe(2);
   });
 
   it("records an aborted provider step as a content-free cancellation", async () => {

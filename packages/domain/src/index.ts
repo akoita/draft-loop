@@ -889,6 +889,37 @@ export interface ContextSnapshot {
   readonly profileId?: ProfileId;
 }
 
+/** Structured rule kinds compiled from a candidate-approved writing policy. */
+export const writingPolicyRuleKinds = ["forbidden-term", "forbidden-characters"] as const;
+export type WritingPolicyRuleKind = (typeof writingPolicyRuleKinds)[number];
+
+export const maximumWritingPolicyRules = 64;
+export const writingPolicyRuleIdPrefix = "writing-policy-";
+export const maximumWritingPolicyRuleIdHexLength = 24;
+export const maximumWritingPolicyRuleIdLength =
+  writingPolicyRuleIdPrefix.length + maximumWritingPolicyRuleIdHexLength;
+export const writingPolicyRuleIdPattern = /^writing-policy-[a-f0-9]{24}$/u;
+export const maximumWritingPolicyTermLength = 200;
+export const maximumWritingPolicyCharactersLength = 32;
+
+export interface WritingPolicyForbiddenTermRule {
+  readonly id: string;
+  readonly kind: "forbidden-term";
+  readonly term: string;
+  readonly caseSensitive: boolean;
+  readonly wholeWord: boolean;
+}
+
+export interface WritingPolicyForbiddenCharactersRule {
+  readonly id: string;
+  readonly kind: "forbidden-characters";
+  readonly characters: string;
+}
+
+export type WritingPolicyRule =
+  | WritingPolicyForbiddenTermRule
+  | WritingPolicyForbiddenCharactersRule;
+
 export interface WritingPolicy {
   /** Exact policy text applied to this run. */
   readonly content: string;
@@ -896,6 +927,8 @@ export interface WritingPolicy {
   readonly checksum: string;
   /** Stable human-visible version derived from the checksum. */
   readonly version: string;
+  /** Optional structured rules; absent on legacy snapshots. */
+  readonly rules?: readonly WritingPolicyRule[];
 }
 
 export interface ContextSnapshotInput {
@@ -1687,6 +1720,118 @@ function validateOutputConstraints(
   }
 }
 
+function isForbiddenWritingPolicyCharacter(value: string): boolean {
+  return !/[\p{L}\p{N}\s]/u.test(value);
+}
+
+function validateWritingPolicy(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is WritingPolicy {
+  if (!isRecord(value)) {
+    addIssue(issues, "invalid-value", field, "must be a writing policy object.");
+    return false;
+  }
+  const policy = value as Partial<WritingPolicy>;
+  if (!isNonEmptyString(policy.content)) {
+    addIssue(issues, "invalid-value", `${field}.content`, "must not be empty.");
+  }
+  if (!isNonEmptyString(policy.checksum) || !/^[a-f0-9]{64}$/iu.test(policy.checksum)) {
+    addIssue(issues, "invalid-value", `${field}.checksum`, "must be a SHA-256 checksum.");
+  }
+  if (!isNonEmptyString(policy.version)) {
+    addIssue(issues, "invalid-value", `${field}.version`, "must not be empty.");
+  }
+  if (policy.rules === undefined) return true;
+  if (!Array.isArray(policy.rules)) {
+    addIssue(issues, "invalid-value", `${field}.rules`, "must be an array when provided.");
+    return true;
+  }
+  if (policy.rules.length > maximumWritingPolicyRules) {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.rules`,
+      `must contain at most ${maximumWritingPolicyRules} rules.`,
+    );
+  }
+  const ruleIds = new Set<string>();
+  for (const [index, value] of policy.rules.entries()) {
+    const ruleField = `${field}.rules[${index}]`;
+    if (!isRecord(value)) {
+      addIssue(issues, "invalid-value", ruleField, "must be a rule object.");
+      continue;
+    }
+    const rule = value as Partial<WritingPolicyRule>;
+    if (!isNonEmptyString(rule.id)) {
+      addIssue(issues, "invalid-value", `${ruleField}.id`, "must not be empty.");
+    } else {
+      if (!writingPolicyRuleIdPattern.test(rule.id.trim())) {
+        addIssue(issues, "invalid-value", `${ruleField}.id`, "must be an opaque compiler rule id.");
+      }
+      const normalizedId = rule.id.trim();
+      if (ruleIds.has(normalizedId)) {
+        addIssue(issues, "invalid-value", `${ruleField}.id`, "rule ids must be unique.");
+      }
+      ruleIds.add(normalizedId);
+    }
+    if (!writingPolicyRuleKinds.includes(rule.kind as WritingPolicyRuleKind)) {
+      addIssue(issues, "invalid-value", `${ruleField}.kind`, "must be a recognized rule kind.");
+      continue;
+    }
+    if (rule.kind === "forbidden-term") {
+      if (!isNonEmptyString(rule.term)) {
+        addIssue(issues, "invalid-value", `${ruleField}.term`, "must not be empty.");
+      } else if (rule.term.trim().length > maximumWritingPolicyTermLength) {
+        addIssue(
+          issues,
+          "invalid-value",
+          `${ruleField}.term`,
+          `must be at most ${maximumWritingPolicyTermLength} characters.`,
+        );
+      }
+      if (typeof rule.caseSensitive !== "boolean") {
+        addIssue(issues, "invalid-value", `${ruleField}.caseSensitive`, "must be a boolean.");
+      }
+      if (typeof rule.wholeWord !== "boolean") {
+        addIssue(issues, "invalid-value", `${ruleField}.wholeWord`, "must be a boolean.");
+      }
+    } else if (rule.kind === "forbidden-characters") {
+      if (typeof rule.characters !== "string" || rule.characters.length === 0) {
+        addIssue(issues, "invalid-value", `${ruleField}.characters`, "must not be empty.");
+        continue;
+      }
+      const characters = [...rule.characters];
+      if (characters.length > maximumWritingPolicyCharactersLength) {
+        addIssue(
+          issues,
+          "invalid-value",
+          `${ruleField}.characters`,
+          `must contain at most ${maximumWritingPolicyCharactersLength} characters.`,
+        );
+      }
+      if (new Set(characters).size !== characters.length) {
+        addIssue(
+          issues,
+          "invalid-value",
+          `${ruleField}.characters`,
+          "must contain unique characters.",
+        );
+      }
+      if (characters.some((character) => !isForbiddenWritingPolicyCharacter(character))) {
+        addIssue(
+          issues,
+          "invalid-value",
+          `${ruleField}.characters`,
+          "must contain only non-alphanumeric, non-whitespace characters.",
+        );
+      }
+    }
+  }
+  return true;
+}
+
 export function validateContextSnapshotInput(input: unknown): SemanticValidationResult {
   const issues: SemanticValidationIssue[] = [];
   if (!isRecord(input)) {
@@ -1740,20 +1885,7 @@ export function validateContextSnapshotInput(input: unknown): SemanticValidation
   validateOptionalString(candidate.instructions, "instructions", issues);
   validateOptionalString(candidate.truthfulnessPolicy, "truthfulnessPolicy", issues, true);
   if (candidate.writingPolicy !== undefined) {
-    if (!isRecord(candidate.writingPolicy)) {
-      addIssue(issues, "invalid-value", "writingPolicy", "must be a writing policy object.");
-    } else {
-      const policy = candidate.writingPolicy as Partial<WritingPolicy>;
-      if (!isNonEmptyString(policy.content)) {
-        addIssue(issues, "invalid-value", "writingPolicy.content", "must not be empty.");
-      }
-      if (!isNonEmptyString(policy.checksum) || !/^[a-f0-9]{64}$/iu.test(policy.checksum)) {
-        addIssue(issues, "invalid-value", "writingPolicy.checksum", "must be a SHA-256 checksum.");
-      }
-      if (!isNonEmptyString(policy.version)) {
-        addIssue(issues, "invalid-value", "writingPolicy.version", "must not be empty.");
-      }
-    }
+    validateWritingPolicy(candidate.writingPolicy, "writingPolicy", issues);
   }
   validateRequirements(candidate, issues);
   validateEvidenceManifest(candidate, issues);
@@ -1785,6 +1917,23 @@ function cloneAndFreeze<T>(value: T): T {
     return Object.freeze(clone) as T;
   }
   return value;
+}
+
+function normalizeWritingPolicyRule(rule: WritingPolicyRule): WritingPolicyRule {
+  if (rule.kind === "forbidden-term") {
+    return {
+      id: rule.id.trim(),
+      kind: rule.kind,
+      term: rule.term.trim(),
+      caseSensitive: rule.caseSensitive,
+      wholeWord: rule.wholeWord,
+    };
+  }
+  return {
+    id: rule.id.trim(),
+    kind: rule.kind,
+    characters: rule.characters,
+  };
 }
 
 function normalizeSelectionLifecycleRevision(
@@ -2280,6 +2429,9 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
             content: input.writingPolicy.content.trim(),
             checksum: input.writingPolicy.checksum.toLowerCase(),
             version: input.writingPolicy.version.trim(),
+            ...(input.writingPolicy.rules === undefined
+              ? {}
+              : { rules: input.writingPolicy.rules.map(normalizeWritingPolicyRule) }),
           },
         }),
     readinessRubric: {
