@@ -60,15 +60,19 @@ exact reviewed brief version into planning.
 The candidate explicitly selects the current local policy file. DraftLoop
 stores its bounded content in the managed workspace and records the exact
 checksum-derived version in each run context. Deterministically compiled
-forbidden-term and punctuation rules travel with that same context to author
-and critic only when the user approves provider transmission.
+forbidden-term and punctuation rules, together with optional structured tone,
+spelling-locale, and verbosity preferences, travel with that same context to
+author and critic only when the user approves provider transmission. These
+preferences are advisory model context: they do not perform spell checking,
+derive numeric length limits, or select a layout.
 
 Local validation reports rule identity and section/block coordinates without
 copying the forbidden value, matched artifact text, nearby text, or source
 paths into diagnostics. Policy instructions remain style data: they cannot
 authorize provider access, select models, enable tools, create candidate facts,
-or relax truthfulness and evidence controls. Dedicated policy history,
-opportunity overrides, and shared editing controls are not implemented yet.
+or relax truthfulness and evidence controls. Anti-formulaic defaults, page and
+section-order targets, emphasis rules, dedicated policy history, opportunity
+overrides, and shared editing controls are not implemented yet.
 
 ## Local Candidate Knowledge Base handling
 

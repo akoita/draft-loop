@@ -19,9 +19,15 @@ import {
   type ModelSelection,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
+  maximumWritingPolicySpellingLocaleLength,
+  normalizeWritingPolicySpellingLocale,
   type ScoredEvidenceChunk,
   SemanticValidationError,
+  type WritingPolicyPreferences,
   type WritingPolicyRule,
+  writingPolicySpellingLocalePattern,
+  writingPolicyTones,
+  writingPolicyVerbosityLevels,
 } from "@draft-loop/domain";
 import { ingestSources, type NormalizedSource, supportedMediaTypes } from "@draft-loop/ingestion";
 import {
@@ -163,6 +169,84 @@ function compileWritingPolicyRules(content: string): readonly WritingPolicyRule[
     return compareWritingPolicySemantics(leftKey, rightKey);
   });
   return ordered.map((rule) => ({ id: writingPolicyRuleId(rule), ...rule }));
+}
+
+type WritingPolicyPreferenceKey = keyof WritingPolicyPreferences;
+type MutableWritingPolicyPreferences = {
+  -readonly [Key in keyof WritingPolicyPreferences]?: WritingPolicyPreferences[Key];
+};
+
+const writingPolicyPreferenceDirectives = {
+  tone: "Tone",
+  spellingLocale: "Spelling locale",
+  verbosity: "Verbosity",
+} as const satisfies Record<WritingPolicyPreferenceKey, string>;
+
+function writingPolicyPreferenceError(
+  key: WritingPolicyPreferenceKey,
+  kind: "duplicate" | "invalid",
+): CliUserError {
+  const directive = writingPolicyPreferenceDirectives[key];
+  return new CliUserError(
+    kind === "duplicate"
+      ? `The writing policy contains duplicate ${directive} directives.`
+      : `The writing policy contains an invalid ${directive} directive.`,
+  );
+}
+
+function compileWritingPolicyPreferences(content: string): WritingPolicyPreferences | undefined {
+  const preferences: MutableWritingPolicyPreferences = {};
+  const seen = new Set<WritingPolicyPreferenceKey>();
+  const directivePattern = /^\s*(?:[-*+]\s+)?(Tone|Spelling\s+locale|Verbosity)\s*:\s*(.*)$/iu;
+  for (const line of content.split(/\r?\n/u)) {
+    const match = line.match(directivePattern);
+    if (match === null) continue;
+    const label = match[1]?.toLowerCase().replace(/\s+/gu, " ");
+    const value = match[2]?.trim() ?? "";
+    const key: WritingPolicyPreferenceKey | undefined =
+      label === "tone"
+        ? "tone"
+        : label === "spelling locale"
+          ? "spellingLocale"
+          : label === "verbosity"
+            ? "verbosity"
+            : undefined;
+    if (key === undefined || seen.has(key) || value === "") {
+      throw writingPolicyPreferenceError(
+        key ?? "tone",
+        key !== undefined && seen.has(key) ? "duplicate" : "invalid",
+      );
+    }
+    seen.add(key);
+    if (key === "tone") {
+      const tone = value.toLowerCase() as NonNullable<WritingPolicyPreferences["tone"]>;
+      if (!writingPolicyTones.includes(tone as (typeof writingPolicyTones)[number])) {
+        throw writingPolicyPreferenceError(key, "invalid");
+      }
+      preferences.tone = tone;
+      continue;
+    }
+    if (key === "verbosity") {
+      const verbosity = value.toLowerCase() as NonNullable<WritingPolicyPreferences["verbosity"]>;
+      if (
+        !writingPolicyVerbosityLevels.includes(
+          verbosity as (typeof writingPolicyVerbosityLevels)[number],
+        )
+      ) {
+        throw writingPolicyPreferenceError(key, "invalid");
+      }
+      preferences.verbosity = verbosity;
+      continue;
+    }
+    if (
+      [...value].length > maximumWritingPolicySpellingLocaleLength ||
+      !writingPolicySpellingLocalePattern.test(value)
+    ) {
+      throw writingPolicyPreferenceError(key, "invalid");
+    }
+    preferences.spellingLocale = normalizeWritingPolicySpellingLocale(value);
+  }
+  return Object.keys(preferences).length === 0 ? undefined : preferences;
 }
 
 /**
@@ -836,11 +920,13 @@ async function writingPolicyFromPath(
   if (content.includes("\0")) throw new CliUserError("The writing policy is not valid text.");
   const checksum = createHash("sha256").update(content, "utf8").digest("hex");
   const rules = compileWritingPolicyRules(content);
+  const preferences = compileWritingPolicyPreferences(content);
   return Object.freeze({
     content,
     checksum,
     version: `sha256:${checksum.slice(0, 12)}`,
     rules: Object.freeze(rules.map((rule) => Object.freeze(rule))),
+    ...(preferences === undefined ? {} : { preferences: Object.freeze(preferences) }),
   });
 }
 

@@ -51,9 +51,11 @@ The workspace writing policy is candidate-authored, untrusted style data. Its
 bounded managed content and checksum-derived version are already captured in
 immutable run context and sent to author and critic only through the existing
 provider-approval boundary. Structured forbidden-term and punctuation rules
-now support deterministic artifact checks in normal orchestration, but cannot
-override system instructions, evidence requirements, provider identity,
-transmission policy, permissions, or tools.
+support deterministic artifact checks in normal orchestration. Optional tone,
+spelling-locale, and verbosity directives are bounded advisory context rather
+than spell-checking, numeric-length, or layout controls. Neither rules nor
+preferences can override system instructions, evidence requirements, provider
+identity, transmission policy, permissions, or tools.
 
 Policy findings expose stable rule, section, block, and bounded position data
 without reproducing the forbidden value, matched artifact content, source
@@ -61,7 +63,8 @@ paths, or context. Older content-only snapshots remain readable and retain the
 legacy bounded punctuation check. Policy-history persistence, migration,
 opportunity-specific overrides, and shared editors remain open #70 work; a
 future override must be immutable and must never mutate the global policy as a
-side effect.
+side effect. Anti-formulaic defaults, page targets, section ordering, and
+emphasis rules are also not implemented by the current components.
 
 ### Current CKB scope
 
