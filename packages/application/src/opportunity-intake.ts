@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import {
+  opportunityBriefMaximumCollectionEntries,
   opportunityBriefMaximumIdLength,
   opportunityBriefMaximumSourceCount,
+  opportunityBriefMaximumSourceIds,
   opportunityBriefMaximumTextLength,
 } from "@draft-loop/domain";
 import {
@@ -15,12 +17,19 @@ import {
 } from "@draft-loop/ingestion";
 import type {
   OpportunityBrief,
+  OpportunityBriefCandidateInstructions,
   OpportunityBriefInput,
   OpportunityBriefIssue,
   OpportunityBriefProvenance,
   OpportunityBriefSource,
+  OpportunityBriefSourcedText,
 } from "@draft-loop/schemas";
 import { buildOpportunityBrief } from "./opportunity-brief.js";
+import {
+  type OpportunityExtractionPort,
+  type OpportunityExtractionSource,
+  processOpportunityExtraction,
+} from "./opportunity-extraction.js";
 
 /** Maximum raw text accepted from a pasted or candidate-input source. */
 export const maximumOpportunityIntakeContentBytes = 64 * 1024;
@@ -62,6 +71,14 @@ export interface CandidateInputOpportunitySourceInput {
   readonly classification: "candidate-instruction";
   readonly capturedAt?: string;
   readonly content: string;
+  readonly instructions?: CandidateInputInstructions;
+}
+
+export interface CandidateInputInstructions {
+  readonly tone?: string;
+  readonly applicationGoal?: string;
+  readonly forbiddenLanguage?: readonly string[];
+  readonly focusAreas?: readonly string[];
 }
 
 export type OpportunitySourceInput =
@@ -86,6 +103,8 @@ export interface CreateOpportunityDraftOptions {
   readonly dependencies?: OpportunityIntakeDependencies;
   readonly urlIngestionOptions?: UrlIngestionOptions;
   readonly fileIngestionOptions?: IngestionOptions;
+  readonly extractor?: OpportunityExtractionPort;
+  readonly signal?: AbortSignal;
 }
 
 export type OpportunityDraftPatch = Partial<
@@ -112,6 +131,12 @@ const editableOpportunityDraftFields = new Set([
 ]);
 
 const opportunityIntakeIdentifierPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
+const candidateInstructionFields = new Set([
+  "tone",
+  "applicationGoal",
+  "forbiddenLanguage",
+  "focusAreas",
+]);
 
 const inaccessibleIngestionCodes = new Set<IngestionIssue["code"]>([
   "approval-required",
@@ -150,6 +175,52 @@ function assertRawContent(content: unknown): asserts content is string {
   if (Buffer.byteLength(content, "utf8") > maximumOpportunityIntakeContentBytes) {
     throw new Error("Opportunity source content exceeds the size limit.");
   }
+}
+
+function normalizeInstructionText(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.trim() === "" ||
+    value.includes("\0") ||
+    value.length > opportunityBriefMaximumTextLength
+  ) {
+    throw new Error("Candidate instruction text is invalid or exceeds the size limit.");
+  }
+  return value.trim();
+}
+
+function normalizeInstructionList(value: unknown): readonly string[] {
+  if (!Array.isArray(value) || value.length > opportunityBriefMaximumCollectionEntries) {
+    throw new Error("Candidate instruction values are invalid or exceed the size limit.");
+  }
+  return value.map((entry) => normalizeInstructionText(entry));
+}
+
+function normalizeCandidateInstructions(value: unknown): CandidateInputInstructions | undefined {
+  if (value === undefined) return undefined;
+  if (!isRecord(value)) throw new Error("Candidate input instructions must be an object.");
+  for (const key of Object.keys(value)) {
+    if (!candidateInstructionFields.has(key)) {
+      throw new Error("Candidate input instructions contain an unsupported field.");
+    }
+  }
+  const tone = value.tone === undefined ? undefined : normalizeInstructionText(value.tone);
+  const applicationGoal =
+    value.applicationGoal === undefined
+      ? undefined
+      : normalizeInstructionText(value.applicationGoal);
+  const forbiddenLanguage =
+    value.forbiddenLanguage === undefined
+      ? undefined
+      : normalizeInstructionList(value.forbiddenLanguage);
+  const focusAreas =
+    value.focusAreas === undefined ? undefined : normalizeInstructionList(value.focusAreas);
+  return {
+    ...(tone === undefined ? {} : { tone }),
+    ...(applicationGoal === undefined ? {} : { applicationGoal }),
+    ...(forbiddenLanguage === undefined ? {} : { forbiddenLanguage }),
+    ...(focusAreas === undefined ? {} : { focusAreas }),
+  };
 }
 
 function assertHttpsUrl(value: unknown): asserts value is string {
@@ -214,7 +285,11 @@ function validateSourceInputs(
         throw new Error("Candidate-input sources must use candidate-instruction classification.");
       }
       assertRawContent(source.content);
+      normalizeCandidateInstructions(source.instructions);
       continue;
+    }
+    if (source.instructions !== undefined) {
+      throw new Error("Only candidate-input sources may include instructions.");
     }
     if (
       !opportunitySourceClassifications.includes(
@@ -321,6 +396,172 @@ function issueForDuplicate(sourceIds: readonly string[]): OpportunityBriefIssue 
   };
 }
 
+function instructionSemantic(value: string): string {
+  return value.normalize("NFKC").trim().replace(/\s+/gu, " ").toLowerCase();
+}
+
+interface CandidateScalarInstruction {
+  value: string;
+  sourceIds: string[];
+  conflictingSourceIds: string[];
+}
+
+function mergeCandidateScalar(
+  current: CandidateScalarInstruction | null,
+  value: string,
+  sourceId: string,
+): CandidateScalarInstruction {
+  if (current === null) {
+    return { value, sourceIds: [sourceId], conflictingSourceIds: [] };
+  }
+  if (instructionSemantic(current.value) === instructionSemantic(value)) {
+    if (!current.sourceIds.includes(sourceId)) current.sourceIds.push(sourceId);
+    return current;
+  }
+  if (!current.conflictingSourceIds.includes(sourceId)) {
+    current.conflictingSourceIds.push(sourceId);
+  }
+  return current;
+}
+
+function candidateConflictIssue(
+  field: "tone" | "applicationGoal",
+  sourceIds: readonly string[],
+): OpportunityBriefIssue {
+  const label = field === "tone" ? "tone" : "application goal";
+  return {
+    id: issueId(`candidate-instruction-${field}-conflict`, sourceIds),
+    code: "contradiction",
+    status: "open",
+    severity: "warning",
+    message: `Candidate instructions contain conflicting ${label} guidance.`,
+    sourceIds: [...sourceIds].slice(0, opportunityBriefMaximumSourceIds),
+  };
+}
+
+function mergeCandidateInstructions(sourceInputs: readonly OpportunitySourceInput[]): {
+  readonly instructions: OpportunityBriefCandidateInstructions;
+  readonly issues: readonly OpportunityBriefIssue[];
+} {
+  let tone: CandidateScalarInstruction | null = null;
+  let applicationGoal: CandidateScalarInstruction | null = null;
+  const listValues = {
+    forbiddenLanguage: new Map<string, { readonly value: string; readonly sourceIds: string[] }>(),
+    focusAreas: new Map<string, { readonly value: string; readonly sourceIds: string[] }>(),
+  };
+
+  for (const source of sourceInputs) {
+    if (source.kind !== "candidate-input") continue;
+    const instructions = normalizeCandidateInstructions(source.instructions);
+    if (instructions === undefined) continue;
+    const sourceId = source.id.trim();
+    if (instructions.tone !== undefined) {
+      tone = mergeCandidateScalar(tone, instructions.tone, sourceId);
+    }
+    if (instructions.applicationGoal !== undefined) {
+      applicationGoal = mergeCandidateScalar(
+        applicationGoal,
+        instructions.applicationGoal,
+        sourceId,
+      );
+    }
+    for (const [field, values] of [
+      ["forbiddenLanguage", instructions.forbiddenLanguage],
+      ["focusAreas", instructions.focusAreas],
+    ] as const) {
+      if (values === undefined) continue;
+      const entries = listValues[field];
+      for (const value of values) {
+        const key = instructionSemantic(value);
+        const existing = entries.get(key);
+        if (existing === undefined) {
+          entries.set(key, { value, sourceIds: [sourceId] });
+        } else if (!existing.sourceIds.includes(sourceId)) {
+          existing.sourceIds.push(sourceId);
+        }
+      }
+    }
+  }
+
+  if (
+    listValues.forbiddenLanguage.size > opportunityBriefMaximumCollectionEntries ||
+    listValues.focusAreas.size > opportunityBriefMaximumCollectionEntries
+  ) {
+    throw new Error("Candidate instruction values exceed the configured size limit.");
+  }
+
+  const issues: OpportunityBriefIssue[] = [];
+  if (tone !== null && tone.conflictingSourceIds.length > 0) {
+    issues.push(
+      candidateConflictIssue("tone", [
+        tone.sourceIds[0] ?? "candidate-source",
+        ...tone.conflictingSourceIds,
+      ]),
+    );
+  }
+  if (applicationGoal !== null && applicationGoal.conflictingSourceIds.length > 0) {
+    issues.push(
+      candidateConflictIssue("applicationGoal", [
+        applicationGoal.sourceIds[0] ?? "candidate-source",
+        ...applicationGoal.conflictingSourceIds,
+      ]),
+    );
+  }
+
+  const toSourcedText = (
+    value: CandidateScalarInstruction | null,
+  ): OpportunityBriefSourcedText | null =>
+    value === null ? null : { value: value.value, sourceIds: [...value.sourceIds] };
+  const toSourcedList = (
+    values: Map<string, { readonly value: string; readonly sourceIds: string[] }>,
+  ): OpportunityBriefSourcedText[] =>
+    [...values.values()].map(({ value, sourceIds }) => ({
+      value,
+      sourceIds: [...sourceIds],
+    }));
+
+  return {
+    instructions: {
+      tone: toSourcedText(tone),
+      applicationGoal: toSourcedText(applicationGoal),
+      forbiddenLanguage: toSourcedList(listValues.forbiddenLanguage),
+      focusAreas: toSourcedList(listValues.focusAreas),
+    },
+    issues,
+  };
+}
+
+function extractionMaterialFor(
+  input: OpportunitySourceInput,
+  result: IngestionResult,
+): OpportunityExtractionSource | null {
+  if (input.kind === "candidate-input" || result.source === null) return null;
+  const status = sourceStatus(result);
+  if (status !== "available" && status !== "partial" && status !== "stale") return null;
+  if (result.source.text.trim() === "") return null;
+  return {
+    id: input.id.trim(),
+    classification: input.classification,
+    status,
+    mediaType: result.source.mediaType,
+    checksum: result.source.checksum,
+    text: result.source.text,
+  };
+}
+
+function extractionOperationId(
+  briefId: string,
+  version: number,
+  sources: readonly OpportunityExtractionSource[],
+): string {
+  return `extraction-${safeDigest([
+    "opportunity-extraction",
+    briefId,
+    String(version),
+    ...sources.map((source) => `${source.id}:${source.checksum}`),
+  ]).slice(0, 32)}`;
+}
+
 function sourceResult(
   input: OpportunitySourceInput,
   result: IngestionResult,
@@ -404,10 +645,11 @@ export async function createOpportunityDraft(
   const sourceResults: Array<{
     readonly source: OpportunityBriefSource;
     readonly issue: OpportunityBriefIssue | null;
+    readonly result: IngestionResult;
   }> = [];
   for (const sourceInput of sourcesInput) {
     const result = await safelyIngest(sourceInput, options);
-    sourceResults.push(sourceResult(sourceInput, result, createdAt));
+    sourceResults.push({ ...sourceResult(sourceInput, result, createdAt), result });
   }
 
   const sources = sourceResults.map(({ source }) => source);
@@ -427,6 +669,21 @@ export async function createOpportunityDraft(
     }
   }
 
+  const candidate = mergeCandidateInstructions(sourcesInput);
+  const extractionSources = sourcesInput.flatMap((sourceInput, index) => {
+    const result = sourceResults[index];
+    return result === undefined ? [] : [extractionMaterialFor(sourceInput, result.result)];
+  });
+  const material = extractionSources.flatMap((source) => (source === null ? [] : [source]));
+  const extracted =
+    options.extractor === undefined || material.length === 0
+      ? null
+      : await processOpportunityExtraction(options.extractor, {
+          operationId: extractionOperationId(id, 1, material),
+          sources: material,
+          ...(options.signal === undefined ? {} : { signal: options.signal }),
+        });
+
   return buildOpportunityBrief({
     schemaVersion: 1,
     id,
@@ -436,18 +693,13 @@ export async function createOpportunityDraft(
     createdAt,
     reviewedAt: null,
     sources,
-    role: null,
-    employer: null,
-    responsibilities: [],
-    requirements: [],
-    priorities: [],
-    candidateInstructions: {
-      tone: null,
-      applicationGoal: null,
-      forbiddenLanguage: [],
-      focusAreas: [],
-    },
-    issues,
+    role: extracted?.role ?? null,
+    employer: extracted?.employer ?? null,
+    responsibilities: extracted?.responsibilities ?? [],
+    requirements: extracted?.requirements ?? [],
+    priorities: extracted?.priorities ?? [],
+    candidateInstructions: candidate.instructions,
+    issues: [...issues, ...candidate.issues, ...(extracted?.issues ?? [])],
   });
 }
 

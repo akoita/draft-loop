@@ -127,8 +127,8 @@ quality are validated for the product path.
 
 ## Opportunity brief contract
 
-The first #67 component defines a provider-independent, versioned opportunity
-brief before any persistence or runtime integration. A brief distinguishes job
+The #67 components define a provider-independent, versioned opportunity brief
+with durable local persistence and application-level intake. A brief distinguishes job
 postings, social announcements, company context, and candidate instructions;
 records approved-URL, local-file, pasted-content, or direct-input provenance;
 and keeps role, employer, responsibilities, requirements, priorities, and
@@ -164,8 +164,14 @@ or source provenance.
 An adapter-neutral application service reloads validated, deeply frozen
 versions after restart and applies edits or review only to an explicitly
 expected latest version. Reload never refetches URLs or local files. Provider
-extraction, shared CLI/desktop adapters, and binding one exact reviewed version
-into planning remain later #67 slices.
+extraction uses the configured author model through the existing
+Anthropic/OpenAI/local adapter boundary and requires the same explicit data
+approval as drafting. Only sanitized opportunity source records cross that
+boundary; candidate inputs, URLs, paths, and provenance remain local. Provider
+output is schema-checked and citation-checked before application-owned IDs are
+created, while failures become fixed content-free draft issues. Shared
+CLI/desktop adapters and binding one exact reviewed version into planning remain
+later #67 slices.
 
 ## Writing policy enforcement
 

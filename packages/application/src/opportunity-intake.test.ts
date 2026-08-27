@@ -11,7 +11,7 @@ import type {
   UrlIngestionOptions,
 } from "@draft-loop/ingestion";
 import { describe, expect, it, vi } from "vitest";
-
+import type { OpportunityExtractionRequest } from "./opportunity-extraction.js";
 import {
   createOpportunityDraft,
   editOpportunityDraft,
@@ -53,6 +53,226 @@ function availableResult(sourcePath: string, sourceChecksum: string): IngestionR
 }
 
 describe("opportunity intake", () => {
+  it("extracts only sanitized opportunity material and preserves candidate instructions locally", async () => {
+    const sensitiveRoot = "/private/opportunity/material";
+    const jobText = "private job source text";
+    const companyText = "private company source text";
+    const candidateText = "private candidate instruction text";
+    const ingestFile = vi.fn(async (source: IngestionSource): Promise<IngestionResult> => {
+      const isPartial = source.path.endsWith("company.md");
+      const text = isPartial ? companyText : jobText;
+      const sourceChecksum = checksum(text);
+      return {
+        source: {
+          source,
+          mediaType: "text/plain",
+          checksum: sourceChecksum,
+          sizeBytes: Buffer.byteLength(text, "utf8"),
+          text,
+          chunks: [],
+          issues: isPartial ? [issue("parse-failure", source.path)] : [],
+        },
+        issues: [],
+      };
+    });
+    const extract = vi.fn(async (request: OpportunityExtractionRequest) => {
+      expect(request.operationId).toMatch(/^extraction-[a-f0-9]{32}$/u);
+      expect(request.sources.map((source) => source.id)).toEqual(["job-source", "company-source"]);
+      expect(request.sources).toMatchObject([
+        {
+          id: "job-source",
+          classification: "job-posting",
+          status: "available",
+          mediaType: "text/plain",
+          checksum: checksum(jobText),
+          text: jobText,
+        },
+        {
+          id: "company-source",
+          classification: "company-context",
+          status: "partial",
+          mediaType: "text/plain",
+          checksum: checksum(companyText),
+          text: companyText,
+        },
+      ]);
+      const serialized = JSON.stringify(request);
+      expect(serialized).not.toContain(sensitiveRoot);
+      expect(serialized).not.toContain(candidateText);
+      return {
+        schemaVersion: 1,
+        role: { value: "Platform Engineer", sourceIds: ["job-source"] },
+        employer: { value: "Example Systems", sourceIds: ["company-source"] },
+        responsibilities: [{ text: "Lead platform reliability", sourceIds: ["job-source"] }],
+        requirements: [
+          {
+            text: "Production systems experience",
+            priority: "critical",
+            sourceIds: ["job-source"],
+          },
+        ],
+        priorities: [{ text: "Operational ownership", sourceIds: ["company-source"] }],
+        contradictions: [],
+      };
+    });
+
+    const draft = await createOpportunityDraft(
+      {
+        id: "brief-extraction",
+        createdAt: capturedAt,
+        sources: [
+          {
+            id: "job-source",
+            kind: "local-file",
+            classification: "job-posting",
+            path: `${sensitiveRoot}/job.md`,
+          },
+          {
+            id: "company-source",
+            kind: "local-file",
+            classification: "company-context",
+            path: `${sensitiveRoot}/company.md`,
+          },
+          {
+            id: "candidate-source",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: candidateText,
+            instructions: {
+              tone: "Warm",
+              applicationGoal: "Emphasize platform leadership",
+              forbiddenLanguage: ["Do not exaggerate"],
+              focusAreas: ["Reliability outcomes"],
+            },
+          },
+        ],
+      },
+      { dependencies: { ingestFile }, extractor: { extract }, now: () => capturedAt },
+    );
+
+    expect(extract).toHaveBeenCalledOnce();
+    expect(draft.sources.map((source) => source.id)).toEqual([
+      "job-source",
+      "company-source",
+      "candidate-source",
+    ]);
+    expect(draft.sources.map((source) => source.status)).toEqual([
+      "available",
+      "partial",
+      "available",
+    ]);
+    expect(draft.role).toEqual({ value: "Platform Engineer", sourceIds: ["job-source"] });
+    expect(draft.employer).toEqual({ value: "Example Systems", sourceIds: ["company-source"] });
+    expect(draft.responsibilities[0]).toMatchObject({
+      id: expect.stringMatching(/^extraction-responsibility-[a-f0-9]{32}$/u),
+    });
+    expect(draft.requirements[0]).toMatchObject({
+      id: expect.stringMatching(/^extraction-requirement-[a-f0-9]{32}$/u),
+    });
+    expect(draft.priorities[0]).toMatchObject({
+      id: expect.stringMatching(/^extraction-priority-[a-f0-9]{32}$/u),
+    });
+    expect(draft.candidateInstructions).toEqual({
+      tone: { value: "Warm", sourceIds: ["candidate-source"] },
+      applicationGoal: { value: "Emphasize platform leadership", sourceIds: ["candidate-source"] },
+      forbiddenLanguage: [{ value: "Do not exaggerate", sourceIds: ["candidate-source"] }],
+      focusAreas: [{ value: "Reliability outcomes", sourceIds: ["candidate-source"] }],
+    });
+    expect(draft.issues.map((entry) => entry.code)).toContain("partial-fetch");
+    const serialized = JSON.stringify(draft);
+    expect(serialized).not.toContain(sensitiveRoot);
+    expect(serialized).not.toContain(jobText);
+    expect(serialized).not.toContain(companyText);
+    expect(serialized).not.toContain(candidateText);
+  });
+
+  it("merges and validates structured candidate instructions without invoking extraction", async () => {
+    const extract = vi.fn(async () => {
+      throw new Error("extractor should not be called for candidate-only material");
+    });
+    const draft = await createOpportunityDraft(
+      {
+        id: "brief-candidate-instructions",
+        createdAt: capturedAt,
+        sources: [
+          {
+            id: "candidate-one",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "private candidate one",
+            instructions: {
+              tone: " Warm ",
+              applicationGoal: "Apply for platform role",
+              forbiddenLanguage: ["Do not exaggerate", "Be concise"],
+              focusAreas: ["Leadership"],
+            },
+          },
+          {
+            id: "candidate-two",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "private candidate two",
+            instructions: {
+              tone: "Direct",
+              applicationGoal: " apply   for PLATFORM role ",
+              forbiddenLanguage: [" do not   exaggerate ", "Be concise"],
+              focusAreas: [" leadership ", "Evidence"],
+            },
+          },
+        ],
+      },
+      { extractor: { extract } },
+    );
+
+    expect(extract).not.toHaveBeenCalled();
+    expect(draft.role).toBeNull();
+    expect(draft.candidateInstructions).toEqual({
+      tone: { value: "Warm", sourceIds: ["candidate-one"] },
+      applicationGoal: {
+        value: "Apply for platform role",
+        sourceIds: ["candidate-one", "candidate-two"],
+      },
+      forbiddenLanguage: [
+        { value: "Do not exaggerate", sourceIds: ["candidate-one", "candidate-two"] },
+        { value: "Be concise", sourceIds: ["candidate-one", "candidate-two"] },
+      ],
+      focusAreas: [
+        { value: "Leadership", sourceIds: ["candidate-one", "candidate-two"] },
+        { value: "Evidence", sourceIds: ["candidate-two"] },
+      ],
+    });
+    expect(draft.issues).toContainEqual(
+      expect.objectContaining({
+        code: "contradiction",
+        status: "open",
+        severity: "warning",
+        message: "Candidate instructions contain conflicting tone guidance.",
+        sourceIds: ["candidate-one", "candidate-two"],
+      }),
+    );
+    const serialized = JSON.stringify(draft);
+    expect(serialized).not.toContain("private candidate one");
+    expect(serialized).not.toContain("private candidate two");
+
+    const invalidValue = "private invalid candidate tone";
+    const invalid = await createOpportunityDraft({
+      id: "brief-invalid-instructions",
+      sources: [
+        {
+          id: "candidate-invalid",
+          kind: "candidate-input",
+          classification: "candidate-instruction",
+          content: "safe content",
+          instructions: { tone: `${invalidValue}\0` },
+        },
+      ],
+    }).then(
+      () => "did not reject",
+      (error: unknown) => String(error),
+    );
+    expect(invalid).not.toContain(invalidValue);
+  });
+
   it("preserves source order while retaining only safe provenance metadata", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-opportunity-"));
     const filePath = join(root, "private-notes.md");
