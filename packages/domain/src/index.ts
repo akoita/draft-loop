@@ -473,6 +473,10 @@ export type RequirementPriority = (typeof requirementPriorities)[number];
 export const opportunityBriefSchemaVersion = 1 as const;
 export type OpportunityBriefSchemaVersion = typeof opportunityBriefSchemaVersion;
 
+/** Version of the provider-independent opportunity extraction proposal. */
+export const opportunityExtractionSchemaVersion = 1 as const;
+export type OpportunityExtractionSchemaVersion = typeof opportunityExtractionSchemaVersion;
+
 export const opportunityBriefStatuses = ["draft", "reviewed"] as const;
 export type OpportunityBriefStatus = (typeof opportunityBriefStatuses)[number];
 
@@ -507,12 +511,23 @@ export const opportunityBriefIssueCodes = [
   "inaccessible-source",
   "unsupported-source",
   "fetch-failure",
+  "extraction-failure",
   "duplicate-source",
   "contradiction",
   "stale-source",
   "partial-fetch",
 ] as const;
 export type OpportunityBriefIssueCode = (typeof opportunityBriefIssueCodes)[number];
+
+export const opportunityExtractionContradictionFields = [
+  "role",
+  "employer",
+  "responsibilities",
+  "requirements",
+  "priorities",
+] as const;
+export type OpportunityExtractionContradictionField =
+  (typeof opportunityExtractionContradictionFields)[number];
 
 export const opportunityBriefIssueStatuses = ["open", "acknowledged", "resolved"] as const;
 export type OpportunityBriefIssueStatus = (typeof opportunityBriefIssueStatuses)[number];

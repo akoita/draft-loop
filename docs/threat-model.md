@@ -45,8 +45,13 @@ database. Composite workspace/brief/version identity, parent enforcement,
 canonical checksums, and update/delete guards detect stale, conflicting, or
 corrupted state; reload never refetches a source. Audit events use opaque brief
 identity and content-free version/status/checksum metadata rather than copying
-the sensitive payload. No current adapter renders, transmits, or alters run
-context, provider policy, permissions, or model selection from this repository.
+the sensitive payload. Explicitly approved extraction sends only sanitized
+opportunity source IDs, classifications, statuses, media types, checksums, and
+text through the configured author-provider adapter. Candidate inputs, URLs,
+paths, and provenance stay local. Source text remains untrusted, tools and
+research are unavailable, citations are allowlisted, malformed output fails
+closed into a content-free issue, and extraction cannot alter provider policy,
+permissions, or model selection.
 
 ### Current writing-policy scope
 

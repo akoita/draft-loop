@@ -51,6 +51,8 @@ import {
   opportunityBriefSourceClassifications,
   opportunityBriefSourceStatuses,
   opportunityBriefStatuses,
+  opportunityExtractionContradictionFields,
+  opportunityExtractionSchemaVersion,
   outputFormats,
   readinessDimensionAgreementStatuses,
   readinessDimensions,
@@ -597,6 +599,68 @@ export const opportunityBriefSchema = z
 
 export type OpportunityBrief = z.infer<typeof opportunityBriefSchema>;
 export type OpportunityBriefInput = z.input<typeof opportunityBriefSchema>;
+
+const opportunityExtractionSourcedTextSchema = z.strictObject({
+  value: opportunityBriefTextSchema,
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+
+const opportunityExtractionResponsibilitySchema = z.strictObject({
+  text: opportunityBriefTextSchema,
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+
+const opportunityExtractionRequirementSchema = z.strictObject({
+  text: opportunityBriefTextSchema,
+  priority: z.enum(requirementPriorities),
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+
+const opportunityExtractionPrioritySchema = z.strictObject({
+  text: opportunityBriefTextSchema,
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+
+const opportunityExtractionContradictionSourceIdsSchema = opportunityBriefSourceIdsSchema.min(2);
+
+const opportunityExtractionContradictionSchema = z.strictObject({
+  field: z.enum(opportunityExtractionContradictionFields),
+  sourceIds: opportunityExtractionContradictionSourceIdsSchema,
+});
+
+/** Provider-facing opportunity extraction output without application-owned metadata. */
+export const opportunityExtractionProposalSchema = z.strictObject({
+  schemaVersion: z.literal(opportunityExtractionSchemaVersion),
+  role: opportunityExtractionSourcedTextSchema.nullable(),
+  employer: opportunityExtractionSourcedTextSchema.nullable(),
+  responsibilities: z
+    .array(opportunityExtractionResponsibilitySchema)
+    .max(opportunityBriefMaximumCollectionEntries),
+  requirements: z
+    .array(opportunityExtractionRequirementSchema)
+    .max(opportunityBriefMaximumCollectionEntries),
+  priorities: z
+    .array(opportunityExtractionPrioritySchema)
+    .max(opportunityBriefMaximumCollectionEntries),
+  contradictions: z
+    .array(opportunityExtractionContradictionSchema)
+    .max(opportunityBriefMaximumCollectionEntries),
+});
+
+export type OpportunityExtractionProposal = z.infer<typeof opportunityExtractionProposalSchema>;
+
+/** Draft-7 JSON schema for the provider-facing opportunity extraction output. */
+const opportunityExtractionProposalJsonSchemaWithMeta = z.toJSONSchema(
+  opportunityExtractionProposalSchema,
+  { target: "draft-7" },
+);
+
+const {
+  $schema: _opportunityExtractionProposalSchemaMetadata,
+  ...opportunityExtractionProposalJsonSchemaValue
+} = opportunityExtractionProposalJsonSchemaWithMeta;
+
+export const opportunityExtractionProposalJsonSchema = opportunityExtractionProposalJsonSchemaValue;
 
 export const evidenceSourceSchema = z.object({
   id: nonEmptyString,

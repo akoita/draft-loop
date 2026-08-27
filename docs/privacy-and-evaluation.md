@@ -44,6 +44,15 @@ checksums without raw source content or host paths. Approved-URL provenance can
 contain confidential URLs and therefore remains sensitive local state.
 Candidate instructions are typed separately from opportunity facts and cannot
 establish role, employer, responsibility, requirement, or priority fields.
+Typed tone, application-goal, forbidden-language, and focus-area values are
+merged locally and are never included in opportunity extraction requests.
+
+When the user explicitly approves provider transmission, normalized text from
+available, partial, or stale opportunity sources may be sent transiently to the
+configured author provider for structured extraction. Requests omit URLs,
+paths, provenance objects, and candidate-input material. DraftLoop validates
+the strict response schema and every cited source ID, assigns deterministic
+application IDs, and stores no raw provider request or response in the brief.
 
 Drafts keep source failures, staleness, partial results, duplicates, and
 contradictions visible. An unavailable source has no fabricated content
@@ -54,9 +63,8 @@ erase the limitation. Immutable versions are stored in the local workspace
 database with canonical checksums and can be reloaded after restart without
 refetching any source. Append-only audit records contain only opaque identity,
 version, status, and checksum metadata; they do not duplicate brief content or
-source provenance. No current run, provider request, CLI command, or desktop
-flow consumes the repository. Later #67 slices must preserve the existing
-transmission approval boundary and bind only an exact reviewed brief version
+source provenance. No current run, CLI command, or desktop flow consumes the
+repository. Later #67 slices must bind only an exact reviewed brief version
 into planning.
 
 ## Candidate writing policy handling
