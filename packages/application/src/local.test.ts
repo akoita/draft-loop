@@ -989,6 +989,13 @@ describe("local application driver", () => {
             classification: "job-posting",
             path: sourcePath,
           },
+          {
+            id: "candidate-guidance",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Use a direct tone and focus on reliability.",
+            instructions: { tone: "direct", focusAreas: ["Reliability"] },
+          },
         ],
       });
       expect(created.brief).toMatchObject({
@@ -1018,6 +1025,13 @@ describe("local application driver", () => {
         patch: {
           role: { value: "Platform Engineer", sourceIds: ["job-source"] },
           employer: { value: "Example Systems", sourceIds: ["job-source"] },
+          responsibilities: [
+            {
+              id: "responsibility-driver",
+              text: "Operate a reliable platform",
+              sourceIds: ["job-source"],
+            },
+          ],
           requirements: [
             {
               id: "requirement-driver",
@@ -1026,9 +1040,29 @@ describe("local application driver", () => {
               sourceIds: ["job-source"],
             },
           ],
+          priorities: [
+            {
+              id: "priority-driver",
+              text: "Service reliability",
+              sourceIds: ["job-source"],
+            },
+          ],
         },
       });
       expect(edited.brief).toMatchObject({ version: 2, priorVersion: 1, status: "draft" });
+
+      await expect(
+        restarted.begin({
+          root,
+          opportunityBrief: { briefId: edited.brief.id, version: edited.brief.version },
+        }),
+      ).rejects.toThrow(/not reviewed/u);
+      await expect(
+        restarted.begin({
+          root,
+          opportunityBrief: { briefId: "missing-brief", version: 1 },
+        }),
+      ).rejects.toThrow(/not found/u);
 
       await expect(
         restarted.editOpportunity({
@@ -1071,6 +1105,45 @@ describe("local application driver", () => {
       await expect(
         restarted.listOpportunityVersions({ root, briefId: created.brief.id }),
       ).resolves.toEqual([created, edited, reviewed]);
+
+      await writeFile(
+        join(root, "job.md"),
+        "Legacy opportunity content must not be used.\n",
+        "utf8",
+      );
+      const begun = await restarted.begin({
+        root,
+        opportunityBrief: { briefId: reviewed.brief.id, version: reviewed.brief.version },
+      });
+      const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        const contextRecord = await storage.getContextSnapshot(begun.contextSnapshotId);
+        expect(contextRecord?.payload).toMatchObject({
+          opportunityBriefReference: {
+            briefId: reviewed.brief.id,
+            version: reviewed.brief.version,
+            checksum: reviewed.checksum,
+          },
+          requirements: [
+            {
+              id: "requirement-driver",
+              text: "Production systems experience",
+              priority: "critical",
+            },
+          ],
+          candidateInstructions: expect.stringContaining("Tone: direct"),
+        });
+        const serialized = JSON.stringify(contextRecord?.payload);
+        expect(serialized).toContain("Role: Platform Engineer");
+        expect(serialized).toContain("Employer: Example Systems");
+        expect(serialized).toContain("Operate a reliable platform");
+        expect(serialized).toContain("Service reliability");
+        expect(serialized).not.toContain("Legacy opportunity content");
+        expect(serialized).not.toContain(sourcePath);
+        expect(serialized).not.toContain("provenance");
+      } finally {
+        await storage.close();
+      }
       await expect(
         restarted.editOpportunity({
           root,

@@ -520,6 +520,66 @@ async function run(dependencies: Harness, ...argv: readonly string[]): Promise<v
 }
 
 describe("draft-loop opportunity commands", () => {
+  it("starts from one exact reviewed opportunity version and preserves legacy start", async () => {
+    const dependencies = harness();
+    const startCommands: Parameters<ApplicationService["start"]>[0][] = [];
+    const service: ApplicationService = {
+      ...dependencies.service,
+      start: async (command) => {
+        startCommands.push(command);
+        return {} as Awaited<ReturnType<ApplicationService["start"]>>;
+      },
+    };
+    const invoke = async (...arguments_: readonly string[]) =>
+      createCli({ service, io: dependencies.io }).parseAsync(["node", "draft-loop", ...arguments_]);
+
+    await invoke(
+      "start",
+      "workspace",
+      "--opportunity-brief-id",
+      "opportunity-one",
+      "--opportunity-version",
+      "3",
+      "--allow-provider-data",
+    );
+    await invoke("start", "legacy-workspace");
+
+    expect(startCommands).toEqual([
+      {
+        root: resolve("workspace"),
+        opportunityBrief: { briefId: "opportunity-one", version: 3 },
+        allowProviderData: true,
+      },
+      { root: resolve("legacy-workspace"), allowProviderData: false },
+    ]);
+  });
+
+  it("rejects incomplete or invalid opportunity selections before starting", async () => {
+    const dependencies = harness();
+    const start = vi.fn();
+    const service: ApplicationService = { ...dependencies.service, start };
+    const invoke = async (...arguments_: readonly string[]) =>
+      createCli({ service, io: dependencies.io }).parseAsync(["node", "draft-loop", ...arguments_]);
+
+    await expect(
+      invoke("start", "workspace", "--opportunity-brief-id", "opportunity-one"),
+    ).rejects.toThrow(/must be provided together/u);
+    await expect(invoke("start", "workspace", "--opportunity-version", "2")).rejects.toThrow(
+      /must be provided together/u,
+    );
+    await expect(
+      invoke(
+        "start",
+        "workspace",
+        "--opportunity-brief-id",
+        "opportunity-one",
+        "--opportunity-version",
+        "0",
+      ),
+    ).rejects.toThrow(/positive integer/u);
+    expect(start).not.toHaveBeenCalled();
+  });
+
   it("delegates create, reload, list, edit, and review through the shared service", async () => {
     const directory = await mkdtemp(join(tmpdir(), "draft-loop-cli-opportunity-"));
     const inputPath = join(directory, "opportunity.json");

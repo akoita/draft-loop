@@ -74,6 +74,7 @@ import { redactText } from "@draft-loop/security";
 import {
   type EvidenceChunkRecord,
   type EvidenceSourceRecord,
+  type OpportunityBriefVersionRecord,
   openSqliteStorage,
   type SqliteStorage,
   type WorkspaceRecord,
@@ -85,6 +86,7 @@ import type {
   ApplicationIo,
   ConfigureKnowledgeSelectionCommand,
   ConfigureWritingPolicyCommand,
+  OpportunityBriefSelection,
   RecordReviewDecisionCommand,
   WorkspaceDescriptor,
 } from "./index.js";
@@ -1191,16 +1193,81 @@ function requirementLines(jobDescription: string): readonly string[] {
   return [jobDescription.trim().slice(0, 240)];
 }
 
-async function prepareInputs(root: string, config: WorkspaceConfig): Promise<PreparedInputs> {
+function reviewedOpportunityContext(record: OpportunityBriefVersionRecord): {
+  readonly jobDescription: string;
+  readonly requirements: readonly {
+    readonly id: string;
+    readonly text: string;
+    readonly priority: "critical" | "high" | "medium" | "low";
+  }[];
+  readonly candidateInstructions: string;
+  readonly opportunityBriefReference: {
+    readonly briefId: string;
+    readonly version: number;
+    readonly checksum: string;
+  };
+} {
+  const brief = record.brief;
+  if (brief.status !== "reviewed") {
+    throw new CliUserError("The selected opportunity brief version is not reviewed.");
+  }
+  const sections = [
+    `Role: ${brief.role?.value ?? ""}`,
+    `Employer: ${brief.employer?.value ?? ""}`,
+    ...(brief.responsibilities.length === 0
+      ? []
+      : ["Responsibilities:", ...brief.responsibilities.map((item) => `- ${item.text}`)]),
+    "Requirements:",
+    ...brief.requirements.map((item) => `- [${item.priority}] ${item.text}`),
+    ...(brief.priorities.length === 0
+      ? []
+      : ["Priorities:", ...brief.priorities.map((item) => `- ${item.text}`)]),
+  ];
+  const instructions = [
+    ...(brief.candidateInstructions.tone === null
+      ? []
+      : [`Tone: ${brief.candidateInstructions.tone.value}`]),
+    ...(brief.candidateInstructions.applicationGoal === null
+      ? []
+      : [`Application goal: ${brief.candidateInstructions.applicationGoal.value}`]),
+    ...brief.candidateInstructions.forbiddenLanguage.map(
+      (item) => `Forbidden language: ${item.value}`,
+    ),
+    ...brief.candidateInstructions.focusAreas.map((item) => `Focus area: ${item.value}`),
+  ];
+  return {
+    jobDescription: sections.join("\n"),
+    requirements: brief.requirements.map(({ id, text, priority }) => ({ id, text, priority })),
+    candidateInstructions: instructions.join("\n"),
+    opportunityBriefReference: {
+      briefId: brief.id,
+      version: brief.version,
+      checksum: record.checksum,
+    },
+  };
+}
+
+async function prepareInputs(
+  root: string,
+  config: WorkspaceConfig,
+  opportunityRecord?: OpportunityBriefVersionRecord,
+): Promise<PreparedInputs> {
   const candidateKnowledgeSelection = await validateConfiguredKnowledgeSelection(
     config.candidateKnowledgeSelection,
   );
-  const jobDescriptionPath = pathFromWorkspace(root, config.jobDescriptionPath);
   const sourceDirectory = pathFromWorkspace(root, config.sourceDirectory);
-  await ensureFile(jobDescriptionPath, "Job description");
   await ensureDirectory(sourceDirectory, "Source directory");
-  const jobDescription = (await readFile(jobDescriptionPath, "utf8")).trim();
-  if (jobDescription === "") throw new CliUserError("The job description is empty.");
+  const reviewedOpportunity =
+    opportunityRecord === undefined ? undefined : reviewedOpportunityContext(opportunityRecord);
+  const jobDescription =
+    reviewedOpportunity?.jobDescription ??
+    (await (async () => {
+      const jobDescriptionPath = pathFromWorkspace(root, config.jobDescriptionPath);
+      await ensureFile(jobDescriptionPath, "Job description");
+      const content = (await readFile(jobDescriptionPath, "utf8")).trim();
+      if (content === "") throw new CliUserError("The job description is empty.");
+      return content;
+    })());
   const files = await collectSourceFiles(sourceDirectory);
   if (files.length === 0) {
     throw new CliUserError("No supported local source files were found in the source directory.");
@@ -1216,12 +1283,14 @@ async function prepareInputs(root: string, config: WorkspaceConfig): Promise<Pre
       ingestion.issues[0]?.sourcePath ?? sourceWithNoChunks?.source.path ?? files[0] ?? "source",
     );
   }
-  const requirements = requirementLines(jobDescription).map((text, index) => ({
-    id: `requirement-${index + 1}`,
-    text,
-    priority:
-      index === 0 ? ("critical" as const) : index < 3 ? ("high" as const) : ("medium" as const),
-  }));
+  const requirements =
+    reviewedOpportunity?.requirements ??
+    requirementLines(jobDescription).map((text, index) => ({
+      id: `requirement-${index + 1}`,
+      text,
+      priority:
+        index === 0 ? ("critical" as const) : index < 3 ? ("high" as const) : ("medium" as const),
+    }));
   const writingPolicy =
     config.writingPolicyPath === undefined
       ? undefined
@@ -1232,7 +1301,7 @@ async function prepareInputs(root: string, config: WorkspaceConfig): Promise<Pre
     createdAt: timestamp(),
     jobDescription,
     requirements,
-    candidateInstructions: config.instructions,
+    candidateInstructions: reviewedOpportunity?.candidateInstructions ?? config.instructions,
     language: config.language,
     outputConstraints: {
       format: config.outputFormat,
@@ -1258,6 +1327,9 @@ async function prepareInputs(root: string, config: WorkspaceConfig): Promise<Pre
       checksum: source.checksum,
     })),
     modelConfiguration: modelConfiguration(config),
+    ...(reviewedOpportunity === undefined
+      ? {}
+      : { opportunityBriefReference: reviewedOpportunity.opportunityBriefReference }),
     ...(candidateKnowledgeSelection === undefined ? {} : { candidateKnowledgeSelection }),
   });
   return { context, sources: ingestion.sources };
@@ -2169,6 +2241,7 @@ async function createRun(
   rootInput: string,
   options: {
     readonly allowProviderData?: boolean;
+    readonly opportunityBrief?: OpportunityBriefSelection;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
     readonly providerAuthMode?: ProviderAuthMode;
@@ -2180,9 +2253,24 @@ async function createRun(
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
   const config = await readWorkspace(root);
-  const inputs = await prepareInputs(root, config);
+  // Preserve the legacy fail-before-persistence boundary when no opportunity
+  // selection requires a database lookup.
+  const legacyInputs =
+    options.opportunityBrief === undefined ? await prepareInputs(root, config) : undefined;
   const storage = await openStorage(root);
   try {
+    const opportunityRecord =
+      options.opportunityBrief === undefined
+        ? undefined
+        : await createOpportunityPersistenceService(storage).getOpportunityBrief(
+            config.id,
+            options.opportunityBrief.briefId,
+            options.opportunityBrief.version,
+          );
+    if (options.opportunityBrief !== undefined && opportunityRecord === undefined) {
+      throw new CliUserError("The selected opportunity brief version was not found.");
+    }
+    const inputs = legacyInputs ?? (await prepareInputs(root, config, opportunityRecord));
     await saveInputs(storage, config, inputs);
     const retrieval = await storage.inspectEvidenceRetrieval(inputs.context.jobDescription, {
       workspaceId: config.id,
@@ -2231,6 +2319,7 @@ export async function beginRun(
   rootInput: string,
   options: {
     readonly allowProviderData?: boolean;
+    readonly opportunityBrief?: OpportunityBriefSelection;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
     readonly providerAuthMode?: ProviderAuthMode;
@@ -2246,6 +2335,7 @@ export async function startRun(
   rootInput: string,
   options: {
     readonly allowProviderData?: boolean;
+    readonly opportunityBrief?: OpportunityBriefSelection;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
     readonly providerAuthMode?: ProviderAuthMode;
@@ -2824,27 +2914,33 @@ export function createLocalApplicationDriver(
     begin: async (command, io) =>
       beginRun(
         command.root,
-        command.allowProviderData === undefined
-          ? { ...credentialOptions, ...providerClientOptions, ...authOptions }
-          : {
-              allowProviderData: command.allowProviderData,
-              ...credentialOptions,
-              ...providerClientOptions,
-              ...authOptions,
-            },
+        {
+          ...(command.allowProviderData === undefined
+            ? {}
+            : { allowProviderData: command.allowProviderData }),
+          ...(command.opportunityBrief === undefined
+            ? {}
+            : { opportunityBrief: command.opportunityBrief }),
+          ...credentialOptions,
+          ...providerClientOptions,
+          ...authOptions,
+        },
         io,
       ),
     start: async (command, io) =>
       startRun(
         command.root,
-        command.allowProviderData === undefined
-          ? { ...credentialOptions, ...providerClientOptions, ...authOptions }
-          : {
-              allowProviderData: command.allowProviderData,
-              ...credentialOptions,
-              ...providerClientOptions,
-              ...authOptions,
-            },
+        {
+          ...(command.allowProviderData === undefined
+            ? {}
+            : { allowProviderData: command.allowProviderData }),
+          ...(command.opportunityBrief === undefined
+            ? {}
+            : { opportunityBrief: command.opportunityBrief }),
+          ...credentialOptions,
+          ...providerClientOptions,
+          ...authOptions,
+        },
         io,
       ),
     resume: async (command, io) =>

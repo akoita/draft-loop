@@ -482,6 +482,54 @@ describe("domain workspace and context snapshots", () => {
     expect(Object.isFrozen(snapshot.candidateKnowledgeSelection?.entries[0])).toBe(true);
   });
 
+  it("normalizes, validates, and freezes an optional opportunity brief reference", () => {
+    const reference = {
+      briefId: "  brief-reviewed  ",
+      version: 2,
+      checksum: "a".repeat(64),
+    };
+    const snapshot = createContextSnapshot(validInput({ opportunityBriefReference: reference }));
+
+    expect(snapshot.opportunityBriefReference).toEqual({
+      briefId: "brief-reviewed",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+    expect(Object.isFrozen(snapshot.opportunityBriefReference)).toBe(true);
+    reference.briefId = "changed";
+    reference.checksum = "b".repeat(64);
+    expect(snapshot.opportunityBriefReference).toEqual({
+      briefId: "brief-reviewed",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+
+    for (const opportunityBriefReference of [
+      null,
+      {},
+      { briefId: " ", version: 1, checksum },
+      { briefId: "brief-1", version: 0, checksum },
+      { briefId: "brief-1", version: 1.5, checksum },
+      { briefId: "brief-1", version: Number.MAX_SAFE_INTEGER + 1, checksum },
+      { briefId: "brief-1", version: 1, checksum: "a".repeat(63) },
+      { briefId: "brief-1", version: 1, checksum: "g".repeat(64) },
+      { briefId: "brief-1", version: 1, checksum: "A".repeat(64) },
+      { briefId: "brief-1", version: 1, checksum, path: "/private/brief" },
+    ]) {
+      expect(() =>
+        createContextSnapshot(
+          validInput({ opportunityBriefReference: opportunityBriefReference as never }),
+        ),
+      ).toThrow(/opportunityBriefReference/i);
+    }
+  });
+
+  it("keeps schema-v1 context snapshots compatible without an opportunity reference", () => {
+    const snapshot = createContextSnapshot(validInput());
+
+    expect(snapshot).not.toHaveProperty("opportunityBriefReference");
+  });
+
   it("creates author and critic references to one snapshot id", () => {
     const snapshot = createContextSnapshot(validInput());
     const author = createAgentContextReference(snapshot, snapshot.modelConfiguration.author);

@@ -66,6 +66,14 @@ function integerOption(value: string): number {
   return parsed;
 }
 
+function positiveIntegerOption(value: string): number {
+  const parsed = integerOption(value);
+  if (parsed < 1) {
+    throw new Error(`Expected a positive integer, received ${value}.`);
+  }
+  return parsed;
+}
+
 function repeatedStringOption(value: string, previous: string[] = []): string[] {
   return [...previous, value];
 }
@@ -1374,12 +1382,33 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   command
     .command("start")
-    .description("Ingest local inputs and start a run")
+    .description("Ingest local inputs and start a run, optionally from one reviewed opportunity")
     .argument("[workspace]", "workspace directory", ".")
+    .option("--opportunity-brief-id <id>", "exact reviewed opportunity brief id")
+    .option(
+      "--opportunity-version <number>",
+      "exact reviewed opportunity version",
+      positiveIntegerOption,
+    )
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .action(async (workspace: string, options: Record<string, unknown>) => {
+      const hasBriefId = options.opportunityBriefId !== undefined;
+      const hasVersion = options.opportunityVersion !== undefined;
+      if (hasBriefId !== hasVersion) {
+        throw new Error(
+          "--opportunity-brief-id and --opportunity-version must be provided together.",
+        );
+      }
       await service.start({
         root: workspaceRoot(workspace),
+        ...(hasBriefId
+          ? {
+              opportunityBrief: {
+                briefId: options.opportunityBriefId as string,
+                version: options.opportunityVersion as number,
+              },
+            }
+          : {}),
         allowProviderData: boolOption(options, "allowProviderData"),
       });
     });
