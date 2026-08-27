@@ -469,6 +469,65 @@ export type ContextSchemaVersion = typeof contextSchemaVersion;
 export const requirementPriorities = ["critical", "high", "medium", "low"] as const;
 export type RequirementPriority = (typeof requirementPriorities)[number];
 
+/** Version of the provider-independent opportunity brief contract. */
+export const opportunityBriefSchemaVersion = 1 as const;
+export type OpportunityBriefSchemaVersion = typeof opportunityBriefSchemaVersion;
+
+export const opportunityBriefStatuses = ["draft", "reviewed"] as const;
+export type OpportunityBriefStatus = (typeof opportunityBriefStatuses)[number];
+
+export const opportunityBriefSourceClassifications = [
+  "job-posting",
+  "social-announcement",
+  "company-context",
+  "candidate-instruction",
+] as const;
+export type OpportunityBriefSourceClassification =
+  (typeof opportunityBriefSourceClassifications)[number];
+
+export const opportunityBriefProvenanceKinds = [
+  "approved-url",
+  "local-file",
+  "pasted-content",
+  "candidate-input",
+] as const;
+export type OpportunityBriefProvenanceKind = (typeof opportunityBriefProvenanceKinds)[number];
+
+export const opportunityBriefSourceStatuses = [
+  "available",
+  "inaccessible",
+  "unsupported",
+  "failed",
+  "partial",
+  "stale",
+] as const;
+export type OpportunityBriefSourceStatus = (typeof opportunityBriefSourceStatuses)[number];
+
+export const opportunityBriefIssueCodes = [
+  "inaccessible-source",
+  "unsupported-source",
+  "fetch-failure",
+  "duplicate-source",
+  "contradiction",
+  "stale-source",
+  "partial-fetch",
+] as const;
+export type OpportunityBriefIssueCode = (typeof opportunityBriefIssueCodes)[number];
+
+export const opportunityBriefIssueStatuses = ["open", "acknowledged", "resolved"] as const;
+export type OpportunityBriefIssueStatus = (typeof opportunityBriefIssueStatuses)[number];
+
+export const opportunityBriefIssueSeverities = ["error", "warning"] as const;
+export type OpportunityBriefIssueSeverity = (typeof opportunityBriefIssueSeverities)[number];
+
+/** Bounds keep persisted opportunity briefs predictable without limiting normal prose. */
+export const opportunityBriefMaximumIdLength = 120 as const;
+export const opportunityBriefMaximumTextLength = 2_000 as const;
+export const opportunityBriefMaximumMessageLength = 400 as const;
+export const opportunityBriefMaximumSourceCount = 128 as const;
+export const opportunityBriefMaximumCollectionEntries = 256 as const;
+export const opportunityBriefMaximumSourceIds = 64 as const;
+
 export interface JobRequirement {
   readonly id: JobRequirementId;
   readonly text: string;

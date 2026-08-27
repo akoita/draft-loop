@@ -125,6 +125,29 @@ author and critic requests. Local vector and hybrid implementations remain
 evaluation components until deletion, retention, isolation, provenance, and
 quality are validated for the product path.
 
+## Opportunity brief contract
+
+The first #67 component defines a provider-independent, versioned opportunity
+brief before any persistence or runtime integration. A brief distinguishes job
+postings, social announcements, company context, and candidate instructions;
+records approved-URL, local-file, pasted-content, or direct-input provenance;
+and keeps role, employer, responsibilities, requirements, priorities, and
+candidate instructions source-linked. Opportunity requirements are employer
+context, never candidate facts.
+
+Draft briefs may retain inaccessible, unsupported, failed, partial, stale,
+duplicate, or contradictory source issues. A reviewed brief requires the
+minimum structured opportunity fields and no open issue; acknowledged source
+limitations remain visible. Candidate-instruction sources may support only the
+instruction fields, while opportunity facts may not cite them. The contract
+stores bounded structured fields and checksums, not raw source content or host
+paths, and preserves human-authored ordering.
+
+This component does not fetch, persist, edit, or transmit an opportunity and
+does not alter the current run context. Storage, ingestion orchestration,
+shared CLI/desktop editing and review, and binding one exact reviewed brief
+version into planning remain later #67 slices.
+
 ## Portable Candidate Knowledge Base
 
 ### Workspace versus portable CKB

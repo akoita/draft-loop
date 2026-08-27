@@ -32,6 +32,20 @@ import {
   independentReadinessReportTargetKinds,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
+  opportunityBriefIssueCodes,
+  opportunityBriefIssueSeverities,
+  opportunityBriefIssueStatuses,
+  opportunityBriefMaximumCollectionEntries,
+  opportunityBriefMaximumIdLength,
+  opportunityBriefMaximumMessageLength,
+  opportunityBriefMaximumSourceCount,
+  opportunityBriefMaximumSourceIds,
+  opportunityBriefMaximumTextLength,
+  opportunityBriefProvenanceKinds,
+  opportunityBriefSchemaVersion,
+  opportunityBriefSourceClassifications,
+  opportunityBriefSourceStatuses,
+  opportunityBriefStatuses,
   outputFormats,
   readinessDimensionAgreementStatuses,
   readinessDimensions,
@@ -122,6 +136,433 @@ export const jobRequirementInputSchema = z
   }));
 
 export type JobRequirementInput = z.input<typeof jobRequirementInputSchema>;
+
+const opportunityBriefNonEmptyString = z.string().trim().min(1, "must not be empty");
+const opportunityBriefIdSchema = opportunityBriefNonEmptyString.max(
+  opportunityBriefMaximumIdLength,
+);
+const opportunityBriefTextSchema = opportunityBriefNonEmptyString.max(
+  opportunityBriefMaximumTextLength,
+);
+const opportunityBriefChecksumSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum")
+  .transform((value) => value.toLowerCase());
+const opportunityBriefUrlSchema = opportunityBriefNonEmptyString
+  .max(opportunityBriefMaximumTextLength)
+  .refine((value) => {
+    try {
+      const parsed = new URL(value);
+      return parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }, "must be a valid HTTPS URL");
+
+const opportunityBriefSourceIdsSchema = z
+  .array(opportunityBriefIdSchema)
+  .min(1)
+  .max(opportunityBriefMaximumSourceIds)
+  .superRefine((sourceIds, context) => {
+    const seen = new Set<string>();
+    for (const [index, sourceId] of sourceIds.entries()) {
+      if (seen.has(sourceId)) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "sourceIds must contain unique source ids",
+        });
+      }
+      seen.add(sourceId);
+    }
+  });
+
+const opportunityBriefApprovedUrlProvenanceSchema = z.strictObject({
+  kind: z.literal("approved-url"),
+  originalUrl: opportunityBriefUrlSchema,
+  finalUrl: opportunityBriefUrlSchema.optional(),
+  capturedAt: strictTimestampSchema,
+  contentChecksum: opportunityBriefChecksumSchema,
+});
+
+const opportunityBriefLocalFileProvenanceSchema = z.strictObject({
+  kind: z.literal("local-file"),
+  displayName: opportunityBriefNonEmptyString
+    .max(opportunityBriefMaximumTextLength)
+    .refine(
+      (value) =>
+        !value.includes("/") &&
+        !value.includes("\\") &&
+        !value.startsWith("~") &&
+        !/^[A-Za-z]:/u.test(value),
+      "must be a display name, not a host path",
+    ),
+  capturedAt: strictTimestampSchema,
+  checksum: opportunityBriefChecksumSchema,
+});
+
+const opportunityBriefPastedContentProvenanceSchema = z.strictObject({
+  kind: z.literal("pasted-content"),
+  capturedAt: strictTimestampSchema,
+  checksum: opportunityBriefChecksumSchema,
+});
+
+const opportunityBriefCandidateInputProvenanceSchema = z.strictObject({
+  kind: z.literal("candidate-input"),
+  capturedAt: strictTimestampSchema,
+  checksum: opportunityBriefChecksumSchema,
+});
+
+export const opportunityBriefStatusSchema = z.enum(opportunityBriefStatuses);
+export const opportunityBriefSourceClassificationSchema = z.enum(
+  opportunityBriefSourceClassifications,
+);
+export const opportunityBriefProvenanceKindSchema = z.enum(opportunityBriefProvenanceKinds);
+export const opportunityBriefSourceStatusSchema = z.enum(opportunityBriefSourceStatuses);
+export const opportunityBriefIssueCodeSchema = z.enum(opportunityBriefIssueCodes);
+export const opportunityBriefIssueStatusSchema = z.enum(opportunityBriefIssueStatuses);
+export const opportunityBriefIssueSeveritySchema = z.enum(opportunityBriefIssueSeverities);
+
+export const opportunityBriefProvenanceSchema = z.discriminatedUnion("kind", [
+  opportunityBriefApprovedUrlProvenanceSchema,
+  opportunityBriefLocalFileProvenanceSchema,
+  opportunityBriefPastedContentProvenanceSchema,
+  opportunityBriefCandidateInputProvenanceSchema,
+]);
+export type OpportunityBriefProvenance = z.infer<typeof opportunityBriefProvenanceSchema>;
+
+export const opportunityBriefSourceSchema = z.strictObject({
+  id: opportunityBriefIdSchema,
+  classification: opportunityBriefSourceClassificationSchema,
+  status: opportunityBriefSourceStatusSchema,
+  provenance: opportunityBriefProvenanceSchema,
+});
+export type OpportunityBriefSource = z.infer<typeof opportunityBriefSourceSchema>;
+
+export const opportunityBriefSourcedTextSchema = z.strictObject({
+  value: opportunityBriefTextSchema,
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+export type OpportunityBriefSourcedText = z.infer<typeof opportunityBriefSourcedTextSchema>;
+
+export const opportunityBriefResponsibilitySchema = z.strictObject({
+  id: opportunityBriefIdSchema,
+  text: opportunityBriefTextSchema,
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+export type OpportunityBriefResponsibility = z.infer<typeof opportunityBriefResponsibilitySchema>;
+
+export const opportunityBriefRequirementSchema = z.strictObject({
+  id: opportunityBriefIdSchema,
+  text: opportunityBriefTextSchema,
+  priority: z.enum(requirementPriorities),
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+export type OpportunityBriefRequirement = z.infer<typeof opportunityBriefRequirementSchema>;
+
+export const opportunityBriefPrioritySchema = z.strictObject({
+  id: opportunityBriefIdSchema,
+  text: opportunityBriefTextSchema,
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+export type OpportunityBriefPriority = z.infer<typeof opportunityBriefPrioritySchema>;
+
+export const opportunityBriefCandidateInstructionsSchema = z.strictObject({
+  tone: opportunityBriefSourcedTextSchema.nullable(),
+  applicationGoal: opportunityBriefSourcedTextSchema.nullable(),
+  forbiddenLanguage: z
+    .array(opportunityBriefSourcedTextSchema)
+    .max(opportunityBriefMaximumCollectionEntries),
+  focusAreas: z
+    .array(opportunityBriefSourcedTextSchema)
+    .max(opportunityBriefMaximumCollectionEntries),
+});
+export type OpportunityBriefCandidateInstructions = z.infer<
+  typeof opportunityBriefCandidateInstructionsSchema
+>;
+
+export const opportunityBriefIssueSchema = z.strictObject({
+  id: opportunityBriefIdSchema,
+  code: opportunityBriefIssueCodeSchema,
+  status: opportunityBriefIssueStatusSchema,
+  severity: opportunityBriefIssueSeveritySchema,
+  message: opportunityBriefNonEmptyString.max(opportunityBriefMaximumMessageLength),
+  sourceIds: opportunityBriefSourceIdsSchema,
+});
+export type OpportunityBriefIssue = z.infer<typeof opportunityBriefIssueSchema>;
+
+const opportunityBriefCollectionSchema = <T extends z.ZodType>(schema: T) =>
+  z.array(schema).max(opportunityBriefMaximumCollectionEntries);
+
+function addOpportunityBriefDuplicateIdIssues(
+  values: readonly { readonly id: string }[],
+  field: string,
+  context: z.RefinementCtx,
+): void {
+  const seen = new Set<string>();
+  for (const [index, value] of values.entries()) {
+    if (seen.has(value.id)) {
+      context.addIssue({
+        code: "custom",
+        path: [field, index, "id"],
+        message: `${field} ids must be unique`,
+      });
+    }
+    seen.add(value.id);
+  }
+}
+
+function addOpportunityBriefSourceReferenceIssues(
+  references: readonly string[],
+  path: readonly PropertyKey[],
+  sourcesById: ReadonlyMap<string, OpportunityBriefSource>,
+  context: z.RefinementCtx,
+  mode: "any" | "extracted" | "candidate-instruction",
+): void {
+  for (const [index, sourceId] of references.entries()) {
+    const source = sourcesById.get(sourceId);
+    const referencePath = [...path, "sourceIds", index];
+    if (source === undefined) {
+      context.addIssue({
+        code: "custom",
+        path: referencePath,
+        message: "sourceId must resolve to a source",
+      });
+      continue;
+    }
+    const isCandidateInstruction = source.classification === "candidate-instruction";
+    if (
+      mode !== "any" &&
+      ((mode === "extracted" && isCandidateInstruction) ||
+        (mode === "candidate-instruction" && !isCandidateInstruction))
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: referencePath,
+        message:
+          mode === "extracted"
+            ? "extracted opportunity facts must not cite candidate-instruction sources"
+            : "candidate instruction fields must cite candidate-instruction sources",
+      });
+    }
+  }
+}
+
+function addOpportunityBriefCandidateInstructionReferences(
+  value: OpportunityBriefSourcedText | null,
+  path: readonly PropertyKey[],
+  sourcesById: ReadonlyMap<string, OpportunityBriefSource>,
+  context: z.RefinementCtx,
+): void {
+  if (value !== null) {
+    addOpportunityBriefSourceReferenceIssues(
+      value.sourceIds,
+      path,
+      sourcesById,
+      context,
+      "candidate-instruction",
+    );
+  }
+}
+
+export const opportunityBriefSchema = z
+  .strictObject({
+    schemaVersion: z.literal(opportunityBriefSchemaVersion),
+    id: opportunityBriefIdSchema,
+    version: z
+      .number()
+      .finite()
+      .int()
+      .positive()
+      .refine(Number.isSafeInteger, "must be a safe integer"),
+    priorVersion: z.number().finite().int().positive().nullable(),
+    status: opportunityBriefStatusSchema,
+    createdAt: strictTimestampSchema,
+    reviewedAt: strictTimestampSchema.nullable(),
+    sources: z.array(opportunityBriefSourceSchema).min(1).max(opportunityBriefMaximumSourceCount),
+    role: opportunityBriefSourcedTextSchema.nullable(),
+    employer: opportunityBriefSourcedTextSchema.nullable(),
+    responsibilities: opportunityBriefCollectionSchema(opportunityBriefResponsibilitySchema),
+    requirements: opportunityBriefCollectionSchema(opportunityBriefRequirementSchema),
+    priorities: opportunityBriefCollectionSchema(opportunityBriefPrioritySchema),
+    candidateInstructions: opportunityBriefCandidateInstructionsSchema,
+    issues: opportunityBriefCollectionSchema(opportunityBriefIssueSchema),
+  })
+  .superRefine((brief, context) => {
+    if (brief.version === 1 && brief.priorVersion !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["priorVersion"],
+        message: "version 1 opportunity briefs must have priorVersion null",
+      });
+    }
+    if (brief.version > 1 && brief.priorVersion !== brief.version - 1) {
+      context.addIssue({
+        code: "custom",
+        path: ["priorVersion"],
+        message: "opportunity brief priorVersion must immediately precede version",
+      });
+    }
+    if (brief.status === "draft" && brief.reviewedAt !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["reviewedAt"],
+        message: "draft opportunity briefs must have reviewedAt null",
+      });
+    }
+    if (brief.status === "reviewed") {
+      if (brief.reviewedAt === null) {
+        context.addIssue({
+          code: "custom",
+          path: ["reviewedAt"],
+          message: "reviewed opportunity briefs require reviewedAt",
+        });
+      } else if (Date.parse(brief.reviewedAt) < Date.parse(brief.createdAt)) {
+        context.addIssue({
+          code: "custom",
+          path: ["reviewedAt"],
+          message: "reviewedAt must not precede createdAt",
+        });
+      }
+      if (brief.role === null) {
+        context.addIssue({
+          code: "custom",
+          path: ["role"],
+          message: "reviewed opportunity briefs require a role",
+        });
+      }
+      if (brief.employer === null) {
+        context.addIssue({
+          code: "custom",
+          path: ["employer"],
+          message: "reviewed opportunity briefs require an employer",
+        });
+      }
+      if (brief.requirements.length === 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["requirements"],
+          message: "reviewed opportunity briefs require at least one requirement",
+        });
+      }
+      if (brief.issues.some((issue) => issue.status === "open")) {
+        context.addIssue({
+          code: "custom",
+          path: ["issues"],
+          message: "reviewed opportunity briefs must not contain open issues",
+        });
+      }
+    }
+
+    addOpportunityBriefDuplicateIdIssues(brief.sources, "sources", context);
+    addOpportunityBriefDuplicateIdIssues(brief.responsibilities, "responsibilities", context);
+    addOpportunityBriefDuplicateIdIssues(brief.requirements, "requirements", context);
+    addOpportunityBriefDuplicateIdIssues(brief.priorities, "priorities", context);
+    addOpportunityBriefDuplicateIdIssues(brief.issues, "issues", context);
+
+    const sourcesById = new Map(brief.sources.map((source) => [source.id, source] as const));
+    const extractedReferences: Array<{
+      readonly value: OpportunityBriefSourcedText;
+      readonly path: readonly PropertyKey[];
+    }> = [];
+    if (brief.role !== null) extractedReferences.push({ value: brief.role, path: ["role"] });
+    if (brief.employer !== null) {
+      extractedReferences.push({ value: brief.employer, path: ["employer"] });
+    }
+    for (const [index, responsibility] of brief.responsibilities.entries()) {
+      extractedReferences.push({
+        value: { value: responsibility.text, sourceIds: responsibility.sourceIds },
+        path: ["responsibilities", index],
+      });
+    }
+    for (const [index, requirement] of brief.requirements.entries()) {
+      extractedReferences.push({
+        value: { value: requirement.text, sourceIds: requirement.sourceIds },
+        path: ["requirements", index],
+      });
+    }
+    for (const [index, priority] of brief.priorities.entries()) {
+      extractedReferences.push({
+        value: { value: priority.text, sourceIds: priority.sourceIds },
+        path: ["priorities", index],
+      });
+    }
+    for (const reference of extractedReferences) {
+      addOpportunityBriefSourceReferenceIssues(
+        reference.value.sourceIds,
+        reference.path,
+        sourcesById,
+        context,
+        "extracted",
+      );
+    }
+
+    addOpportunityBriefCandidateInstructionReferences(
+      brief.candidateInstructions.tone,
+      ["candidateInstructions", "tone"],
+      sourcesById,
+      context,
+    );
+    addOpportunityBriefCandidateInstructionReferences(
+      brief.candidateInstructions.applicationGoal,
+      ["candidateInstructions", "applicationGoal"],
+      sourcesById,
+      context,
+    );
+    for (const [field, values] of [
+      ["forbiddenLanguage", brief.candidateInstructions.forbiddenLanguage],
+      ["focusAreas", brief.candidateInstructions.focusAreas],
+    ] as const) {
+      for (const [index, value] of values.entries()) {
+        addOpportunityBriefCandidateInstructionReferences(
+          value,
+          ["candidateInstructions", field, index],
+          sourcesById,
+          context,
+        );
+      }
+    }
+    for (const [index, issue] of brief.issues.entries()) {
+      addOpportunityBriefSourceReferenceIssues(
+        issue.sourceIds,
+        ["issues", index],
+        sourcesById,
+        context,
+        "any",
+      );
+    }
+
+    const requiredIssueCodeBySourceStatus: Partial<
+      Record<
+        (typeof opportunityBriefSourceStatuses)[number],
+        (typeof opportunityBriefIssueCodes)[number]
+      >
+    > = {
+      inaccessible: "inaccessible-source",
+      unsupported: "unsupported-source",
+      failed: "fetch-failure",
+      partial: "partial-fetch",
+      stale: "stale-source",
+    };
+    for (const [index, source] of brief.sources.entries()) {
+      const requiredCode = requiredIssueCodeBySourceStatus[source.status];
+      if (
+        requiredCode !== undefined &&
+        !brief.issues.some(
+          (issue) => issue.code === requiredCode && issue.sourceIds.includes(source.id),
+        )
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["sources", index, "status"],
+          message: `source status ${source.status} requires a ${requiredCode} issue referencing the source`,
+        });
+      }
+    }
+  });
+
+export type OpportunityBrief = z.infer<typeof opportunityBriefSchema>;
+export type OpportunityBriefInput = z.input<typeof opportunityBriefSchema>;
 
 export const evidenceSourceSchema = z.object({
   id: nonEmptyString,
@@ -2419,6 +2860,20 @@ export {
   independentReadinessReportInputAssessmentStatuses,
   independentReadinessReportSchemaVersion,
   independentReadinessReportTargetKinds,
+  opportunityBriefIssueCodes,
+  opportunityBriefIssueSeverities,
+  opportunityBriefIssueStatuses,
+  opportunityBriefMaximumCollectionEntries,
+  opportunityBriefMaximumIdLength,
+  opportunityBriefMaximumMessageLength,
+  opportunityBriefMaximumSourceCount,
+  opportunityBriefMaximumSourceIds,
+  opportunityBriefMaximumTextLength,
+  opportunityBriefProvenanceKinds,
+  opportunityBriefSchemaVersion,
+  opportunityBriefSourceClassifications,
+  opportunityBriefSourceStatuses,
+  opportunityBriefStatuses,
   outputFormats,
   readinessDimensionAgreementStatuses,
   readinessDimensions,

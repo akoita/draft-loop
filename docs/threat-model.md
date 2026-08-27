@@ -26,6 +26,21 @@ and retrieval indexes are sensitive or untrusted. Models and source material
 may contain errors or indirect instructions. DraftLoop treats source content as
 data, not as application policy or executable instructions.
 
+### Current opportunity-brief scope
+
+The first #67 component is a provider-independent contract only. It separates
+opportunity facts from candidate instructions, requires every structured field
+to cite known source identities, and prevents candidate-instruction sources
+from establishing employer requirements or other opportunity facts. Draft
+records preserve source failures, partial results, staleness, duplicates, and
+contradictions; review cannot complete while an issue remains open.
+
+The contract retains bounded provenance, including sensitive approved URLs,
+but no raw source content or host paths. It does not fetch, persist, render, or
+transmit data and cannot yet affect run context, provider policy, permissions,
+or model selection. Later storage and adapter slices must keep exact URLs in
+sensitive host-owned state and expose path-free, content-free diagnostics.
+
 ### Current CKB scope
 
 The portable Candidate Knowledge Base (CKB) is a separate local plaintext
