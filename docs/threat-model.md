@@ -85,6 +85,22 @@ anti-formulaic defaults remain bounded advisory style data. A reviewed
 opportunity may bind one imported version as a complete override; the run pins
 base and override lineage, and the active workspace policy is not mutated.
 
+### Current canonical-profile scope
+
+Canonical profile facts are sensitive candidate data. Immutable versions are
+stored only in workspace-local SQLite with canonical payload checksums,
+immediate lineage, monotonic update timestamps, and update/delete triggers.
+Every fact points to an exact selected CKB source version and requires
+candidate-provided provenance. Persisted audit events exclude fact values,
+issue messages, raw source content, URLs, and host paths.
+
+The persistence service has no provider, tool, network, run, CLI, or desktop
+integration. It cannot yet derive from managed CKB bytes or invalidate data
+after source retirement or deletion. Because one profile may combine CKBs, it
+is not copied into a single CKB portable backup; whole-workspace database
+backups still preserve it. Retention, deletion, run binding, and adapter
+boundaries remain open #66 work.
+
 ### Current CKB scope
 
 The portable Candidate Knowledge Base (CKB) is a separate local plaintext

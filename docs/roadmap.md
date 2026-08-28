@@ -302,6 +302,15 @@ CKB content derivation, retention and backup integration, run binding, and
 shared CLI/desktop review controls remain open, so #66 and the milestone are
 incomplete.
 
+The second #66 component persists that contract in workspace-local,
+append-only SQLite history through migration 24. Canonical checksums, immediate
+parent lineage, monotonic update timestamps, immutable triggers, corruption
+checks, and content-free audits protect restart-safe versions. A
+provider-independent application service supports optimistic fact/issue edits
+and reviewed successors without reading CKB content. Cross-CKB profiles remain
+outside single-CKB portable backups. Derivation, retention/deletion, run
+binding, and shared adapters remain open, so #66 is still incomplete.
+
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
 activation and import are separate actions. Structured rules and preferences
@@ -440,6 +449,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-28 | Added workspace-local immutable canonical-profile history and provider-independent edit/review transitions. | Migration 24 stores checksum-verified linear versions with content-free audits. Profiles may combine CKBs and therefore remain outside single-CKB portable backups; derivation, retention/deletion, run binding, and adapters remain open #66 work. |
 | 2026-08-28 | Added the first #66 canonical candidate-profile contract. | Profile versions can represent complete normalized career facts with exact selected CKB source-version provenance, visible conflicts and omissions, review blockers, and deterministic immutable round trips. Persistence, derivation, retention/backup behavior, run binding, and adapters remain open. |
 | 2026-08-28 | Integrated immutable writing-policy history and explicit opportunity-bound overrides through shared application, CLI, and desktop contracts. | Candidates can activate or import local versions, inspect safe history, and select one complete imported override for an exact reviewed opportunity. Runs pin base and override lineage without mutating the workspace default; both model roles receive the effective policy. |
 | 2026-08-28 | Bound an exact reviewed opportunity version into immutable run context. | Start requires an explicit brief ID/version pair, verifies reviewed status and checksum, derives opportunity context only from that record, and stores a safe reference. Resume reuses the snapshot; URLs, paths, raw intake, and provenance do not enter provider-facing context. |

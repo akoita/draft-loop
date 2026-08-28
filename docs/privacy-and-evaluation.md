@@ -96,6 +96,23 @@ an imported immutable version bound to one exact reviewed opportunity. The run
 records base and override lineage, while the workspace's active policy remains
 unchanged.
 
+## Canonical candidate profile handling
+
+Canonical profile versions are stored in workspace-local SQLite as immutable,
+checksum-verified payloads bound to exact path-free CKB store, base, source,
+and source-version identities. Every fact requires candidate-provided
+provenance; optional public corroboration remains distinguishable. Storage
+audit events contain only opaque identity, version, status, lineage, schema,
+and checksum metadata rather than fact values or issue messages.
+
+The current application service can persist, reload, edit, and review these
+versions locally. It does not yet read CKB content, derive profile facts, send
+profiles to a provider, bind them to runs, expose them through adapters, or
+materialize profile indexes. Cross-CKB profiles are intentionally absent from
+single-CKB portable backups, while whole-workspace database backups preserve
+them with the rest of the workspace. Retention, invalidation, and deletion
+remain open #66 work.
+
 ## Local Candidate Knowledge Base handling
 
 The portable Candidate Knowledge Base (CKB) is a separate local component. It

@@ -455,6 +455,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
   return Object.freeze(service);
 }
 
+export * from "./candidate-profile.js";
+export * from "./candidate-profile-persistence.js";
 export * from "./knowledge-base.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";
