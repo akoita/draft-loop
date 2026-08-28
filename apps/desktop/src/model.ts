@@ -1,5 +1,52 @@
 import type { CredentialStatus } from "./bridge.js";
 
+/**
+ * Renderer-safe identity for one immutable writing-policy version.
+ *
+ * Policy content and source paths deliberately do not have a type here. The
+ * desktop can show which version is in force without making ordinary review
+ * state a second policy-content transport.
+ */
+export interface WritingPolicyVersionMetadata {
+  readonly checksum: string;
+  readonly version: string;
+  readonly schemaVersion: number;
+  readonly createdAt: string;
+  readonly priorChecksum: string | null;
+}
+
+export interface WritingPolicyIdentity {
+  readonly version: string;
+  readonly checksum: string;
+}
+
+export type WritingPolicyLineage =
+  | { readonly kind: "workspace" }
+  | {
+      readonly kind: "opportunity-override";
+      readonly base: WritingPolicyIdentity;
+      readonly override: WritingPolicyIdentity;
+    };
+
+/** The exact reviewed opportunity a pending override is bound to. */
+export interface OpportunityBriefSelection {
+  readonly briefId: string;
+  readonly version: number;
+}
+
+export interface PendingWritingPolicyOverride {
+  readonly checksum: string;
+  readonly version: string;
+  readonly opportunityBrief: OpportunityBriefSelection;
+}
+
+export interface RunWritingPolicyProjection {
+  readonly effective: WritingPolicyVersionMetadata;
+  readonly lineage: WritingPolicyLineage;
+  readonly base?: WritingPolicyVersionMetadata;
+  readonly override?: WritingPolicyVersionMetadata;
+}
+
 export type ReviewRunState =
   | "collecting"
   | "drafting"
@@ -174,11 +221,14 @@ export interface WorkspaceReadiness {
   readonly jobDescriptionReady: boolean;
   readonly evidenceSourceCount: number;
   readonly writingPolicyStatus: "none" | "active" | "unavailable";
-  readonly writingPolicy: {
-    readonly version: string;
-    readonly checksum: string;
-    readonly preview: string;
-  } | null;
+  /** Active policy identity; policy content is never part of ordinary state. */
+  readonly writingPolicy: WritingPolicyVersionMetadata | null;
+  /** Ordered oldest-to-newest immutable policy identities. */
+  readonly writingPolicyHistory?: readonly WritingPolicyVersionMetadata[];
+  /** Pending local override, only while its reviewed binding remains valid. */
+  readonly pendingWritingPolicyOverride?: PendingWritingPolicyOverride | null;
+  /** Current reviewed opportunity selection, if one exists. */
+  readonly reviewedOpportunity?: OpportunityBriefSelection | null;
   readonly retrievalStatus: "not-indexed" | "matched" | "fallback" | "no-query" | "unavailable";
   readonly indexedEvidenceChunkCount: number;
   readonly selectedEvidenceChunkCount: number;
@@ -225,6 +275,8 @@ export interface DesktopReviewState {
   readonly evaluation: ReviewEvaluation;
   readonly events: readonly ReviewEvent[];
   readonly exportPath: string | null;
+  /** Safe effective/base/override policy projection for this run. */
+  readonly writingPolicy?: RunWritingPolicyProjection | null;
   readonly setup: WorkspaceReadiness;
 }
 
@@ -257,7 +309,7 @@ export interface DesktopReviewPort {
   readonly createWorkspace?: (name: string) => Promise<DesktopReviewState>;
   readonly createDemoWorkspace?: (name: string) => Promise<DesktopReviewState>;
   readonly selectFiles?: (
-    target: "evidence" | "job-description" | "writing-policy",
+    target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
   ) => Promise<DesktopReviewState>;
   readonly addUrl?: (
     target: "evidence" | "job-description",

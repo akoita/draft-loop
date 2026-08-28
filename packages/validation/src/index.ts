@@ -1,4 +1,5 @@
 import { hasRequiredArtifactSection } from "@draft-loop/artifacts";
+import { writingPolicySectionOrderRuleId } from "@draft-loop/domain";
 import type {
   DraftArtifact,
   JobRequirement,
@@ -35,6 +36,7 @@ export type DeterministicValidationCode =
   | "writing-policy-ascii-punctuation"
   | "writing-policy-forbidden-character"
   | "writing-policy-forbidden-term"
+  | "writing-policy-section-order"
   | "uncovered-requirement"
   | "explicit-gap";
 
@@ -66,6 +68,9 @@ export interface ValidationResult {
 
 type DeterministicWritingPolicy = Pick<WritingPolicy, "content" | "version"> & {
   readonly rules?: readonly WritingPolicyRule[];
+  readonly preferences?: {
+    readonly sectionOrder?: readonly string[];
+  };
 };
 
 export interface DeterministicValidationContext {
@@ -112,9 +117,27 @@ function tokens(value: string): readonly string[] {
 }
 
 function artifactText(artifact: DraftArtifact): string {
-  return artifact.sections
+  return orderedArtifactSections(artifact)
     .flatMap((section) => section.blocks.map((block) => block.text))
     .join("\n");
+}
+
+function orderedArtifactSections(
+  artifact: Pick<DraftArtifact, "sections">,
+): readonly DraftArtifact["sections"][number][] {
+  return artifact.sections
+    .map((section, index) => ({ section, index }))
+    .sort((left, right) => left.section.order - right.section.order || left.index - right.index)
+    .map(({ section }) => section);
+}
+
+function sectionIdentity(value: string): string {
+  return value.normalize("NFKC").toLowerCase().replace(/\s+/gu, "").trim();
+}
+
+function sectionMatchesName(section: DraftArtifact["sections"][number], name: string): boolean {
+  const identity = sectionIdentity(name);
+  return sectionIdentity(section.title) === identity || sectionIdentity(section.kind) === identity;
 }
 
 function escapeRegExp(value: string): string {
@@ -208,6 +231,37 @@ function addStructuredWritingPolicyFindings(
       blockId: match.blockId,
       location: match.location,
     });
+  }
+}
+
+function addSectionOrderFinding(
+  artifact: DraftArtifact,
+  policy: Pick<DeterministicWritingPolicy, "version" | "preferences">,
+  issues: ValidationIssue[],
+): void {
+  const sectionOrder = policy.preferences?.sectionOrder;
+  if (sectionOrder === undefined || sectionOrder.length < 2) return;
+
+  const observed = orderedArtifactSections(artifact)
+    .map((section) => ({
+      section,
+      rank: sectionOrder.findIndex((name) => sectionMatchesName(section, name)),
+    }))
+    .filter((entry) => entry.rank >= 0);
+  for (let index = 1; index < observed.length; index += 1) {
+    const previous = observed[index - 1];
+    const current = observed[index];
+    if (previous === undefined || current === undefined || current.rank >= previous.rank) continue;
+    addIssue(issues, {
+      code: "writing-policy-section-order",
+      category: "format",
+      severity: "warning",
+      message: `draft violates writing policy ${policy.version} rule ${writingPolicySectionOrderRuleId}`,
+      sectionId: current.section.id,
+      ...(current.section.blocks[0] === undefined ? {} : { blockId: current.section.blocks[0].id }),
+      ruleId: writingPolicySectionOrderRuleId,
+    });
+    return;
   }
 }
 
@@ -362,6 +416,7 @@ export function validateDraftArtifact(
     } else {
       addStructuredWritingPolicyFindings(artifact, context.writingPolicy, issues);
     }
+    addSectionOrderFinding(artifact, context.writingPolicy, issues);
   }
   for (const requiredSection of constraints.requiredSections ?? []) {
     if (!hasRequiredArtifactSection(artifact, requiredSection)) {

@@ -1,8 +1,9 @@
+import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { OpportunityBrief } from "@draft-loop/schemas";
+import type { OpportunityBrief, WritingPolicyInput } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -68,6 +69,16 @@ const opportunityBrief = (overrides: Partial<OpportunityBrief> = {}): Opportunit
     focusAreas: [],
   },
   issues: [],
+  ...overrides,
+});
+
+const writingPolicy = (
+  content: string,
+  overrides: Partial<WritingPolicyInput> = {},
+): WritingPolicyInput => ({
+  content,
+  checksum: createHash("sha256").update(content, "utf8").digest("hex"),
+  version: "policy-1",
   ...overrides,
 });
 
@@ -347,11 +358,11 @@ describe("SQLite storage", () => {
     const storage = openSqliteStorage(":memory:");
 
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     storage.migrate();
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
 
     await storage.set("ui.language", "en");
@@ -421,6 +432,237 @@ describe("SQLite storage", () => {
       /immutable/iu,
     );
     raw.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("persists append-only writing policy history with canonical payloads and lineage", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-writing-policy-storage-"));
+    const filename = join(directory, "history.sqlite");
+    const first = openSqliteStorage(filename);
+    await first.saveWorkspace(workspace);
+
+    const policyOne = writingPolicy("PRIVATE workspace policy one", {
+      version: "policy-1",
+      preferences: {
+        pageTarget: "one-page",
+        sectionOrder: ["Summary", "Experience"],
+        emphasisAreas: ["Evidence"],
+      },
+      lineage: { kind: "workspace" },
+    });
+    const savedOne = await first.saveWritingPolicyVersion(workspace.id, policyOne, {
+      createdAt: "2026-08-12T10:01:00.000Z",
+      priorChecksum: null,
+    });
+    expect(savedOne).toMatchObject({
+      workspaceId: workspace.id,
+      version: "policy-1",
+      schemaVersion: 1,
+      priorChecksum: null,
+      policy: {
+        content: "PRIVATE workspace policy one",
+        schemaVersion: 1,
+        lineage: { kind: "workspace" },
+      },
+    });
+    expect(savedOne.checksum).toBe(policyOne.checksum);
+    expect(savedOne.payloadChecksum).toMatch(/^[a-f0-9]{64}$/u);
+
+    const policyTwo = writingPolicy("PRIVATE workspace policy two", {
+      version: "policy-2",
+      lineage: { kind: "workspace" },
+    });
+    const savedTwo = await first.saveWritingPolicyVersion({
+      workspaceId: workspace.id,
+      policy: policyTwo,
+      createdAt: "2026-08-12T10:02:00.000Z",
+    });
+    expect(savedTwo.priorChecksum).toBe(savedOne.checksum);
+    await expect(
+      first.saveWritingPolicyVersion(workspace.id, policyTwo, {
+        createdAt: "2026-08-12T10:02:00.000Z",
+      }),
+    ).resolves.toEqual(savedTwo);
+    expect(await first.getWritingPolicyVersion(workspace.id, savedOne.checksum)).toEqual(savedOne);
+    expect(await first.getLatestWritingPolicyVersion(workspace.id)).toEqual(savedTwo);
+    expect(await first.listWritingPolicyVersions(workspace.id)).toEqual([savedOne, savedTwo]);
+
+    await expect(
+      first.saveWritingPolicyVersion(
+        workspace.id,
+        writingPolicy("PRIVATE branch from an older policy", { version: "policy-branch" }),
+        { createdAt: "2026-08-12T10:03:00.000Z", priorChecksum: savedOne.checksum },
+      ),
+    ).rejects.toThrow("The writing policy parent version must be the current leaf.");
+    await expect(
+      first.saveWritingPolicyVersion(
+        workspace.id,
+        writingPolicy("PRIVATE same-time child", { version: "policy-same-time" }),
+        { createdAt: "2026-08-12T10:02:00.000Z", priorChecksum: savedTwo.checksum },
+      ),
+    ).rejects.toThrow("The writing policy timestamp must be later than its parent version.");
+    expect(await first.getLatestWritingPolicyVersion(workspace.id)).toEqual(savedTwo);
+    expect(await first.listWritingPolicyVersions(workspace.id)).toEqual([savedOne, savedTwo]);
+
+    await expect(
+      first.saveWritingPolicyVersion(
+        workspace.id,
+        writingPolicy("PRIVATE workspace policy one", { version: "policy-conflict" }),
+      ),
+    ).rejects.toThrow("The writing policy version is immutable.");
+    await expect(
+      first.saveWritingPolicyVersion(
+        workspace.id,
+        writingPolicy("PRIVATE policy with reused display version", { version: "policy-2" }),
+      ),
+    ).rejects.toThrow("The writing policy display version is already bound.");
+
+    const auditEvents = (await first.listAuditEvents(workspace.id)).filter(
+      (event) => event.eventType === "writing-policy-version.appended",
+    );
+    expect(auditEvents).toHaveLength(2);
+    expect(auditEvents[1]?.payload).toEqual({
+      checksum: savedTwo.checksum,
+      version: "policy-2",
+      schemaVersion: 1,
+      priorChecksum: savedOne.checksum,
+      payloadChecksum: savedTwo.payloadChecksum,
+    });
+    expect(JSON.stringify(auditEvents)).not.toContain("PRIVATE workspace policy");
+    await first.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(reopened.getLatestWritingPolicyVersion(workspace.id)).resolves.toEqual(savedTwo);
+    await reopened.close();
+
+    const raw = openRawDatabase(filename);
+    expect(() =>
+      raw.exec(
+        "UPDATE writing_policy_versions SET version = 'mutated' WHERE policy_checksum = '" +
+          savedOne.checksum +
+          "'",
+      ),
+    ).toThrow(/immutable/iu);
+    expect(() =>
+      raw.exec(
+        `DELETE FROM writing_policy_versions WHERE policy_checksum = '${savedOne.checksum}'`,
+      ),
+    ).toThrow(/immutable/iu);
+    raw.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("rejects malformed writing policy inputs and detects corrupted persisted payloads", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-writing-policy-corruption-"));
+    const filename = join(directory, "history.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.saveWorkspace(workspace);
+    const saved = await storage.saveWritingPolicyVersion(
+      workspace.id,
+      writingPolicy("Stored policy", { version: "policy-corruption" }),
+      { createdAt: "2026-08-12T10:01:00.000Z" },
+    );
+    await expect(
+      storage.saveWritingPolicyVersion(workspace.id, {
+        ...writingPolicy("Stored policy", { version: "policy-corruption" }),
+        checksum: "0".repeat(64),
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await storage.close();
+
+    const corrupted = openRawDatabase(filename);
+    corrupted.exec("DROP TRIGGER writing_policy_versions_immutable_update;");
+    corrupted.exec(
+      "UPDATE writing_policy_versions SET payload_checksum = '" +
+        "0".repeat(64) +
+        "' WHERE policy_checksum = '" +
+        saved.checksum +
+        "'",
+    );
+    corrupted.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(reopened.getWritingPolicyVersion(workspace.id, saved.checksum)).rejects.toThrow(
+      "The stored writing policy payload checksum is invalid.",
+    );
+    await reopened.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("fails closed when persisted policy history has multiple current leaves", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-writing-policy-leaves-"));
+    const filename = join(directory, "history.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.saveWorkspace(workspace);
+    const first = await storage.saveWritingPolicyVersion(
+      workspace.id,
+      writingPolicy("Leaf policy one", { version: "leaf-1" }),
+      { createdAt: "2026-08-12T10:01:00.000Z" },
+    );
+    const second = await storage.saveWritingPolicyVersion(
+      workspace.id,
+      writingPolicy("Leaf policy two", { version: "leaf-2" }),
+      { createdAt: "2026-08-12T10:02:00.000Z" },
+    );
+    await storage.close();
+
+    const corrupted = openRawDatabase(filename);
+    corrupted.exec("DROP TRIGGER writing_policy_versions_immutable_update;");
+    corrupted.exec(
+      `UPDATE writing_policy_versions SET prior_checksum = NULL WHERE policy_checksum = '${second.checksum}'`,
+    );
+    corrupted.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(reopened.getLatestWritingPolicyVersion(workspace.id)).rejects.toThrow(
+      "The writing policy history has multiple current leaves.",
+    );
+    await expect(reopened.listWritingPolicyVersions(workspace.id)).rejects.toThrow(
+      "The writing policy history has multiple current leaves.",
+    );
+    await expect(
+      reopened.saveWritingPolicyVersion(
+        workspace.id,
+        writingPolicy("Leaf policy three", { version: "leaf-3" }),
+        { createdAt: "2026-08-12T10:03:00.000Z", priorChecksum: first.checksum },
+      ),
+    ).rejects.toThrow("The writing policy history has multiple current leaves.");
+    await reopened.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("upgrades a v22 database with empty policy history and preserves legacy policy snapshots", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-writing-policy-migration-"));
+    const filename = join(directory, "history.sqlite");
+    const initial = openSqliteStorage(filename);
+    await initial.saveWorkspace(workspace);
+    const legacyPayload = {
+      job: "legacy fixture",
+      writingPolicy: {
+        content: "Legacy policy snapshot",
+        checksum: "a".repeat(64),
+        version: "sha256:legacy-policy",
+      },
+    };
+    const legacySnapshot = await initial.saveContextSnapshot(contextSnapshot(legacyPayload));
+    await initial.close();
+
+    const legacy = openRawDatabase(filename);
+    legacy.exec(
+      "DROP TABLE writing_policy_versions; DELETE FROM schema_migrations WHERE version = 23;",
+    );
+    legacy.close();
+
+    const upgraded = openSqliteStorage(filename);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(23);
+    expect(await upgraded.getContextSnapshot(legacySnapshot.id)).toEqual(legacySnapshot);
+    expect(await upgraded.getLatestWritingPolicyVersion(workspace.id)).toBeUndefined();
+    expect(
+      queryRawDatabase(filename, "SELECT COUNT(*) AS count FROM writing_policy_versions"),
+    ).toEqual([{ count: 0 }]);
+    upgraded.migrate();
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(23);
+    await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
 
@@ -512,7 +754,7 @@ describe("SQLite storage", () => {
     legacy.close();
 
     const migrated = openSqliteStorage(filename);
-    expect(migrated.appliedMigrationVersions().at(-1)).toBe(22);
+    expect(migrated.appliedMigrationVersions().at(-1)).toBe(23);
     expect(await migrated.getWorkspace(workspace.id)).toEqual(workspace);
     const saved = await migrated.saveOpportunityBrief(workspace.id, opportunityBrief());
     await migrated.close();
@@ -558,7 +800,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     const raw = openRawDatabase(filename);
     expect(
@@ -598,7 +840,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     expect(
       queryRawDatabase(
@@ -616,7 +858,7 @@ describe("SQLite storage", () => {
       },
     ]);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -666,7 +908,7 @@ describe("SQLite storage", () => {
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     const migratedContext = await upgraded.getContextSnapshot(legacyContext.id);
@@ -674,7 +916,7 @@ describe("SQLite storage", () => {
     expect(migratedContext?.payload).not.toHaveProperty("candidateKnowledgeSelection");
     upgraded.migrate();
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -690,7 +932,7 @@ describe("SQLite storage", () => {
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
@@ -710,7 +952,7 @@ describe("SQLite storage", () => {
     removeMigrationFive(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
       savedKnowledgeBase,
@@ -736,7 +978,7 @@ describe("SQLite storage", () => {
     removeMigrationSix(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
@@ -804,7 +1046,7 @@ describe("SQLite storage", () => {
     removeMigrationSeven(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged(
@@ -877,7 +1119,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceOriginBinding("ckb-1", "ckb-source-1"),
@@ -950,7 +1192,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRefreshObservation("ckb-1", "ckb-source-1"),
@@ -1065,7 +1307,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRetirement("ckb-1", "ckb-source-1"),
@@ -1125,7 +1367,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
     ]);
     const raw = openRawDatabase(filename);
     expect(() =>

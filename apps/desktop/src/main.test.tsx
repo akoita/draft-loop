@@ -287,6 +287,36 @@ describe("desktop trust-centered review", () => {
     expect(html.match(/disabled=""/gu)?.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("separates opportunity policy overrides and enables them only for a reviewed brief", () => {
+    const base = createFixtureReviewState();
+    const render = (reviewedOpportunity: { briefId: string; version: number } | null) =>
+      renderToStaticMarkup(
+        <ReviewWorkspace
+          state={{
+            ...base,
+            state: "collecting",
+            runId: "pending",
+            setup: { ...base.setup, reviewedOpportunity },
+          }}
+          onAction={() => undefined}
+          onSelectFiles={() => undefined}
+        />,
+      );
+    const withoutReview = render(null);
+    const withReview = render({ briefId: "brief-1", version: 2 });
+    expect(withoutReview).toContain("Import opportunity override");
+    expect(withoutReview).toContain(
+      "Importing an opportunity override does not change the global policy.",
+    );
+    expect(withoutReview).toMatch(
+      /<button class="button button-outline" type="button" disabled="" title="Review an opportunity before importing an override\."[^>]*>Import opportunity override/s,
+    );
+    expect(withReview).toContain(
+      'title="Import a policy version for this reviewed opportunity without changing the global policy."',
+    );
+    expect(withReview).toContain("Import opportunity override");
+  });
+
   it("distinguishes pending indexing from a bounded no-match fallback", () => {
     const base = collectingState();
     const pendingHtml = renderToStaticMarkup(

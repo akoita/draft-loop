@@ -14,7 +14,9 @@ import {
   type RetrievalOptions,
   type RetrievalPort,
   type ScoredEvidenceChunk,
+  validateWritingPolicyInput,
   type WorkflowState,
+  type WritingPolicy,
   workflowStates,
 } from "@draft-loop/domain";
 import {
@@ -24,6 +26,8 @@ import {
   candidateKnowledgeRetentionPolicyUpdateSchema,
   type OpportunityBrief,
   opportunityBriefSchema,
+  type WritingPolicyInput,
+  writingPolicySchema,
 } from "@draft-loop/schemas";
 
 export type {
@@ -780,6 +784,54 @@ export interface OpportunityBriefStoragePort {
   ) => Promise<readonly OpportunityBriefVersionRecord[]>;
 }
 
+export interface WritingPolicyVersionSaveOptions {
+  /** Creation time for deterministic tests and imported local history. */
+  readonly createdAt?: string;
+  /** Previous policy content checksum; omitted to continue the current chain. */
+  readonly priorChecksum?: string | null;
+}
+
+export interface WritingPolicyVersionInput {
+  readonly workspaceId: string;
+  readonly policy: WritingPolicyInput;
+  readonly createdAt?: string;
+  readonly priorChecksum?: string | null;
+}
+
+/** Immutable policy history row. Policy content remains local to this store. */
+export interface WritingPolicyVersionRecord {
+  readonly workspaceId: string;
+  readonly policy: WritingPolicy;
+  /** Full SHA-256 identity of the policy content. */
+  readonly checksum: string;
+  readonly version: string;
+  readonly schemaVersion: number;
+  readonly createdAt: string;
+  readonly priorChecksum: string | null;
+  readonly payloadChecksum: string;
+}
+
+export interface WritingPolicyStoragePort {
+  readonly saveWritingPolicyVersion: {
+    (
+      workspaceId: string,
+      policy: WritingPolicyInput,
+      options?: WritingPolicyVersionSaveOptions,
+    ): Promise<WritingPolicyVersionRecord>;
+    (input: WritingPolicyVersionInput): Promise<WritingPolicyVersionRecord>;
+  };
+  readonly getWritingPolicyVersion: (
+    workspaceId: string,
+    checksum: string,
+  ) => Promise<WritingPolicyVersionRecord | undefined>;
+  readonly getLatestWritingPolicyVersion: (
+    workspaceId: string,
+  ) => Promise<WritingPolicyVersionRecord | undefined>;
+  readonly listWritingPolicyVersions: (
+    workspaceId: string,
+  ) => Promise<readonly WritingPolicyVersionRecord[]>;
+}
+
 export interface EvidenceSourceRecord {
   readonly id: string;
   readonly workspaceId: string;
@@ -1257,7 +1309,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 22 as const;
+export const storageSchemaVersion = 23 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -3022,6 +3074,43 @@ const migrationTwentyTwo: Migration = {
   `.trim(),
 };
 
+const migrationTwentyThree: Migration = {
+  version: 23,
+  sql: `
+    CREATE TABLE IF NOT EXISTS writing_policy_versions (
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+      policy_checksum TEXT NOT NULL CHECK (
+        length(policy_checksum) = 64 AND policy_checksum NOT GLOB '*[^0-9a-f]*'
+      ),
+      version TEXT NOT NULL CHECK (length(trim(version)) > 0),
+      schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+      created_at TEXT NOT NULL CHECK (julianday(created_at) IS NOT NULL),
+      prior_checksum TEXT,
+      payload_json TEXT NOT NULL,
+      payload_checksum TEXT NOT NULL CHECK (
+        length(payload_checksum) = 64 AND payload_checksum NOT GLOB '*[^0-9a-f]*'
+      ),
+      PRIMARY KEY (workspace_id, policy_checksum),
+      UNIQUE (workspace_id, version),
+      FOREIGN KEY (workspace_id, prior_checksum)
+        REFERENCES writing_policy_versions(workspace_id, policy_checksum),
+      CHECK (prior_checksum IS NULL OR prior_checksum <> policy_checksum)
+    );
+
+    CREATE INDEX IF NOT EXISTS writing_policy_versions_latest_idx
+      ON writing_policy_versions(workspace_id, created_at DESC, policy_checksum DESC);
+    CREATE INDEX IF NOT EXISTS writing_policy_versions_list_idx
+      ON writing_policy_versions(workspace_id, created_at, policy_checksum);
+
+    CREATE TRIGGER IF NOT EXISTS writing_policy_versions_immutable_update
+      BEFORE UPDATE ON writing_policy_versions
+      BEGIN SELECT RAISE(ABORT, 'writing policy versions are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS writing_policy_versions_immutable_delete
+      BEFORE DELETE ON writing_policy_versions
+      BEGIN SELECT RAISE(ABORT, 'writing policy versions are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -3045,6 +3134,7 @@ const migrations: readonly Migration[] = [
   migrationTwenty,
   migrationTwentyOne,
   migrationTwentyTwo,
+  migrationTwentyThree,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3111,6 +3201,89 @@ function validatedOpportunityBrief(value: unknown): OpportunityBrief {
     throw new StorageValidationError("Opportunity brief data is invalid.");
   }
   return parsed.data;
+}
+
+function validatedWritingPolicy(value: unknown): WritingPolicy {
+  const parsed = writingPolicySchema.safeParse(value);
+  if (!parsed.success) {
+    throw new StorageValidationError("Writing policy data is invalid.");
+  }
+  const domainValidation = validateWritingPolicyInput(parsed.data);
+  if (!domainValidation.valid) {
+    throw new StorageValidationError("Writing policy data is invalid.");
+  }
+  const normalizedChecksum = parsed.data.checksum.toLowerCase();
+  if (checksum(parsed.data.content) !== normalizedChecksum) {
+    throw new StorageValidationError("The writing policy content checksum is invalid.");
+  }
+  const preferences = parsed.data.preferences;
+  return {
+    schemaVersion: parsed.data.schemaVersion,
+    content: parsed.data.content,
+    checksum: normalizedChecksum,
+    version: parsed.data.version,
+    ...(parsed.data.rules === undefined ? {} : { rules: parsed.data.rules }),
+    ...(preferences === undefined
+      ? {}
+      : {
+          preferences: {
+            ...(preferences.tone === undefined ? {} : { tone: preferences.tone }),
+            ...(preferences.spellingLocale === undefined
+              ? {}
+              : { spellingLocale: preferences.spellingLocale }),
+            ...(preferences.verbosity === undefined ? {} : { verbosity: preferences.verbosity }),
+            ...(preferences.pageTarget === undefined ? {} : { pageTarget: preferences.pageTarget }),
+            ...(preferences.sectionOrder === undefined
+              ? {}
+              : { sectionOrder: preferences.sectionOrder }),
+            ...(preferences.emphasisAreas === undefined
+              ? {}
+              : { emphasisAreas: preferences.emphasisAreas }),
+          },
+        }),
+    lineage: parsed.data.lineage ?? { kind: "workspace" },
+  };
+}
+
+function writingPolicyVersionSelect(): string {
+  return "SELECT workspace_id, policy_checksum, version, schema_version, created_at, prior_checksum, payload_json, payload_checksum FROM writing_policy_versions";
+}
+
+function writingPolicyVersionLeafSelect(): string {
+  return `SELECT candidate.workspace_id,
+                 candidate.policy_checksum,
+                 candidate.version,
+                 candidate.schema_version,
+                 candidate.created_at,
+                 candidate.prior_checksum,
+                 candidate.payload_json,
+                 candidate.payload_checksum
+          FROM writing_policy_versions AS candidate
+          WHERE candidate.workspace_id = ?
+            AND NOT EXISTS (
+              SELECT 1
+              FROM writing_policy_versions AS child
+              WHERE child.workspace_id = candidate.workspace_id
+                AND child.prior_checksum = candidate.policy_checksum
+            )`;
+}
+
+function currentWritingPolicyLeaf(
+  database: SqliteHandle,
+  workspaceId: string,
+): Record<string, unknown> | undefined {
+  const leaves = database.prepare(writingPolicyVersionLeafSelect()).all(workspaceId);
+  if (leaves.length > 1) {
+    throw new StorageConflictError("The writing policy history has multiple current leaves.");
+  }
+  if (leaves.length === 1) return leaves[0];
+  const history = database
+    .prepare("SELECT 1 FROM writing_policy_versions WHERE workspace_id = ? LIMIT 1")
+    .get(workspaceId);
+  if (history !== undefined) {
+    throw new StorageConflictError("The writing policy history has no current leaf.");
+  }
+  return undefined;
 }
 
 function requireNonEmpty(value: string, field: string): string {
@@ -3465,7 +3638,8 @@ export class SqliteStorage
     HistoryStoragePort,
     RetrievalPort,
     CandidateKnowledgeBaseStoragePort,
-    OpportunityBriefStoragePort
+    OpportunityBriefStoragePort,
+    WritingPolicyStoragePort
 {
   private readonly database: SqliteHandle;
   private closed = false;
@@ -9936,6 +10110,202 @@ export class SqliteStorage
       .map((row) => opportunityBriefFromRow(row));
   }
 
+  public async saveWritingPolicyVersion(
+    workspaceId: string,
+    policy: WritingPolicyInput,
+    options?: WritingPolicyVersionSaveOptions,
+  ): Promise<WritingPolicyVersionRecord>;
+  public async saveWritingPolicyVersion(
+    input: WritingPolicyVersionInput,
+  ): Promise<WritingPolicyVersionRecord>;
+  public async saveWritingPolicyVersion(
+    workspaceOrInput: string | WritingPolicyVersionInput,
+    policyInput?: WritingPolicyInput,
+    options: WritingPolicyVersionSaveOptions = {},
+  ): Promise<WritingPolicyVersionRecord> {
+    this.ensureOpen();
+    const inputOptions =
+      typeof workspaceOrInput === "string"
+        ? options
+        : {
+            createdAt: workspaceOrInput.createdAt,
+            priorChecksum: workspaceOrInput.priorChecksum,
+          };
+    const workspaceId = requireNonEmpty(
+      typeof workspaceOrInput === "string" ? workspaceOrInput : workspaceOrInput.workspaceId,
+      "writing policy workspaceId",
+    ).trim();
+    const policy = typeof workspaceOrInput === "string" ? policyInput : workspaceOrInput.policy;
+    if (policy === undefined) {
+      throw new StorageValidationError("A writing policy is required.");
+    }
+    const normalizedPolicy = validatedWritingPolicy(policy);
+    const createdAt = requireTimestamp(inputOptions.createdAt ?? now(), "writing policy createdAt");
+    const requestedPrior =
+      inputOptions.priorChecksum === undefined
+        ? undefined
+        : inputOptions.priorChecksum === null
+          ? null
+          : requireSha256(inputOptions.priorChecksum, "writing policy priorChecksum");
+    const payload = recordToJson(normalizedPolicy);
+    const payloadJson = serialize(payload);
+    const payloadChecksumValue = payloadChecksum(payload);
+    const policyChecksum = normalizedPolicy.checksum;
+    let result: WritingPolicyVersionRecord | undefined;
+
+    this.database.transaction(() => {
+      const workspace = this.database
+        .prepare("SELECT id FROM workspaces WHERE id = ?")
+        .get(workspaceId);
+      if (workspace === undefined) {
+        throw new StorageValidationError("The writing policy workspace was not found.");
+      }
+
+      const latest = currentWritingPolicyLeaf(this.database, workspaceId);
+
+      const existing = this.database
+        .prepare(`${writingPolicyVersionSelect()} WHERE workspace_id = ? AND policy_checksum = ?`)
+        .get(workspaceId, policyChecksum);
+      if (existing !== undefined) {
+        const existingRecord = writingPolicyVersionFromRow(existing);
+        const priorMatches =
+          requestedPrior === undefined || existingRecord.priorChecksum === requestedPrior;
+        const timestampMatches =
+          inputOptions.createdAt === undefined || existingRecord.createdAt === createdAt;
+        if (
+          existingRecord.policy.version !== normalizedPolicy.version ||
+          existingRecord.policy.schemaVersion !== normalizedPolicy.schemaVersion ||
+          existingRecord.payloadChecksum !== payloadChecksumValue ||
+          !priorMatches ||
+          !timestampMatches
+        ) {
+          throw new StorageConflictError("The writing policy version is immutable.");
+        }
+        result = existingRecord;
+        return;
+      }
+
+      const versionConflict = this.database
+        .prepare(`${writingPolicyVersionSelect()} WHERE workspace_id = ? AND version = ? LIMIT 1`)
+        .get(workspaceId, normalizedPolicy.version);
+      if (versionConflict !== undefined) {
+        throw new StorageConflictError("The writing policy display version is already bound.");
+      }
+
+      const inferredPrior = latest === undefined ? null : rowString(latest, "policy_checksum");
+      const priorChecksum = requestedPrior === undefined ? inferredPrior : requestedPrior;
+      if (latest !== undefined && priorChecksum === null) {
+        throw new StorageConflictError("The writing policy parent version is required.");
+      }
+      if (latest !== undefined && priorChecksum !== inferredPrior) {
+        throw new StorageConflictError(
+          "The writing policy parent version must be the current leaf.",
+        );
+      }
+      if (priorChecksum === policyChecksum) {
+        throw new StorageConflictError("A writing policy version cannot link to itself.");
+      }
+
+      let parentCreatedAt: string | undefined;
+      if (priorChecksum !== null) {
+        const parent = this.database
+          .prepare(`${writingPolicyVersionSelect()} WHERE workspace_id = ? AND policy_checksum = ?`)
+          .get(workspaceId, priorChecksum);
+        if (parent === undefined) {
+          throw new StorageConflictError("The writing policy parent version is missing.");
+        }
+        parentCreatedAt = requireTimestamp(
+          rowString(parent, "created_at"),
+          "writing policy parent createdAt",
+        );
+        if (Date.parse(createdAt) <= Date.parse(parentCreatedAt)) {
+          throw new StorageConflictError(
+            "The writing policy timestamp must be later than its parent version.",
+          );
+        }
+      }
+
+      this.database
+        .prepare(
+          "INSERT INTO writing_policy_versions (workspace_id, policy_checksum, version, schema_version, created_at, prior_checksum, payload_json, payload_checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          workspaceId,
+          policyChecksum,
+          normalizedPolicy.version,
+          normalizedPolicy.schemaVersion,
+          createdAt,
+          priorChecksum,
+          payloadJson,
+          payloadChecksumValue,
+        );
+
+      const opaqueEntityId = checksum(`${workspaceId}\u0000${policyChecksum}`).slice(0, 32);
+      this.insertAuditEvent({
+        id: `writing-policy-version:${opaqueEntityId}:${policyChecksum}`,
+        workspaceId,
+        eventType: "writing-policy-version.appended",
+        entityType: "writing-policy",
+        entityId: opaqueEntityId,
+        payload: {
+          checksum: policyChecksum,
+          version: normalizedPolicy.version,
+          schemaVersion: normalizedPolicy.schemaVersion ?? 1,
+          priorChecksum,
+          payloadChecksum: payloadChecksumValue,
+        },
+        createdAt,
+      });
+      result = {
+        workspaceId,
+        policy: normalizedPolicy,
+        checksum: policyChecksum,
+        version: normalizedPolicy.version,
+        schemaVersion: normalizedPolicy.schemaVersion ?? 1,
+        createdAt,
+        priorChecksum,
+        payloadChecksum: payloadChecksumValue,
+      };
+    })();
+    return result as WritingPolicyVersionRecord;
+  }
+
+  public async getWritingPolicyVersion(
+    workspaceId: string,
+    policyChecksum: string,
+  ): Promise<WritingPolicyVersionRecord | undefined> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(workspaceId, "writing policy workspaceId").trim();
+    const normalizedChecksum = requireSha256(policyChecksum, "writing policy checksum");
+    const row = this.database
+      .prepare(`${writingPolicyVersionSelect()} WHERE workspace_id = ? AND policy_checksum = ?`)
+      .get(normalizedWorkspaceId, normalizedChecksum);
+    return row === undefined ? undefined : writingPolicyVersionFromRow(row);
+  }
+
+  public async getLatestWritingPolicyVersion(
+    workspaceId: string,
+  ): Promise<WritingPolicyVersionRecord | undefined> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(workspaceId, "writing policy workspaceId").trim();
+    const row = currentWritingPolicyLeaf(this.database, normalizedWorkspaceId);
+    return row === undefined ? undefined : writingPolicyVersionFromRow(row);
+  }
+
+  public async listWritingPolicyVersions(
+    workspaceId: string,
+  ): Promise<readonly WritingPolicyVersionRecord[]> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(workspaceId, "writing policy workspaceId").trim();
+    currentWritingPolicyLeaf(this.database, normalizedWorkspaceId);
+    return this.database
+      .prepare(
+        `${writingPolicyVersionSelect()} WHERE workspace_id = ? ORDER BY julianday(created_at), created_at, policy_checksum`,
+      )
+      .all(normalizedWorkspaceId)
+      .map((row) => writingPolicyVersionFromRow(row));
+  }
+
   public async saveEvidenceSource(record: EvidenceSourceRecord): Promise<void> {
     this.ensureOpen();
     requireNonEmpty(record.id, "evidence source id");
@@ -13000,6 +13370,49 @@ function opportunityBriefFromRow(row: Record<string, unknown>): OpportunityBrief
       throw error;
     }
     throw new StorageValidationError("The stored opportunity brief could not be read.");
+  }
+}
+
+function writingPolicyVersionFromRow(row: Record<string, unknown>): WritingPolicyVersionRecord {
+  try {
+    const payloadJson = rowString(row, "payload_json");
+    const payload = parse(payloadJson);
+    if (serialize(payload) !== payloadJson) {
+      throw new StorageValidationError("The stored writing policy payload is not canonical.");
+    }
+    const payloadChecksumValue = rowString(row, "payload_checksum");
+    if (payloadChecksum(payload) !== payloadChecksumValue) {
+      throw new StorageValidationError("The stored writing policy payload checksum is invalid.");
+    }
+    const policy = validatedWritingPolicy(payload);
+    const policyChecksum = rowString(row, "policy_checksum");
+    const version = rowString(row, "version");
+    const schemaVersion = rowNumber(row, "schema_version");
+    const createdAt = requireTimestamp(rowString(row, "created_at"), "writing policy createdAt");
+    const priorChecksum = rowNullableString(row, "prior_checksum");
+    if (
+      policy.checksum !== policyChecksum ||
+      policy.version !== version ||
+      policy.schemaVersion !== schemaVersion ||
+      (priorChecksum !== null && !/^[a-f0-9]{64}$/u.test(priorChecksum))
+    ) {
+      throw new StorageValidationError("The stored writing policy metadata is inconsistent.");
+    }
+    return {
+      workspaceId: rowString(row, "workspace_id"),
+      policy,
+      checksum: policyChecksum,
+      version,
+      schemaVersion,
+      createdAt,
+      priorChecksum,
+      payloadChecksum: payloadChecksumValue,
+    };
+  } catch (error) {
+    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
+      throw error;
+    }
+    throw new StorageValidationError("The stored writing policy could not be read.");
   }
 }
 

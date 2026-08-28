@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-08-27<br>
+**Last reviewed:** 2026-08-28<br>
 **Current stage:** Evidence-backed CV drafting (v0.7)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -79,7 +79,7 @@ The product status is easiest to read by outcome:
 | ---------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Integrated author–critic workspace | Integrated foundation; [Released alpha.4 checkpoint](stage-evidence-v0.7.0-alpha.4.md); [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); v0.7 incomplete/unvalidated | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
 | Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
-| Workspace retrieval and policy     | Partial integration                   | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. Explicitly selected writing policy content, structured tone/locale/verbosity preferences, and forbidden-term/punctuation rules are versioned in run context and supplied to both model roles; deterministic rules are checked with content-free locations. Dedicated policy history/migration, opportunity overrides, shared editors, and application-grade drafting remain open.                                                    |
+| Workspace retrieval and policy     | Policy integrated; retrieval partial  | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. Writing policies have immutable local history, structured preferences and deterministic rules, shared CLI/desktop controls, and explicit reviewed-opportunity overrides. Runs pin effective/base/override lineage and supply the effective policy to both model roles. Application-grade drafting and CKB retrieval integration remain open. |
 | Opportunity brief                  | Integrated reviewed-version handoff      | A strict provider-independent contract and shared CLI/packaged-desktop host workflows assemble approved URLs, selected files, pasted content, and typed local candidate instructions into immutable draft/review versions with honest provenance and visible failures. New runs can pin one exact checksum-verified reviewed version; resume reuses the immutable context. Provider extraction and run transmission each retain explicit approval boundaries.                    |
 | Portable CKB                       | [Released Sprint 2 checkpoint](stage-evidence-v0.7.0-alpha.2.md); [Released alpha.3 checkpoint](stage-evidence-v0.7.0-alpha.3.md); #78 accepted; v0.7 incomplete/unvalidated | The reusable CKB foundation is complete: stable source identity and immutable versions, explicit lifecycle/readiness evidence, isolated application/run selection, shared CLI/desktop controls, coordinated recovery, six-class retention planning, portable backup/restore, and exact-plan deletion. Retrieval/index construction remains #80 scope. |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
@@ -239,12 +239,12 @@ rules (#73), and render a professional ATS-readable DOCX/PDF with visual QA
 (#74).
 
 The milestone executes its dependency graph rather than starting with the final
-review issues. The CKB foundation roll-ups (#111, #113, and #78) are complete;
-next finish the independent opportunity and policy inputs (#67, #70). Then
-deliver the profile, lexical
-retrieval, and planning chain (#66, #80, #68), followed by the complete artifact
-(#69). The remaining outcome order is #72, #73, and #74; #71 is already closed.
-Closed prerequisites such as #60 and #110 remain in their historical milestones.
+review issues. The CKB foundation roll-ups (#111, #113, and #78) and the
+independent opportunity and writing-policy inputs (#67 and #70) are complete.
+Next deliver the profile, lexical retrieval, and planning chain: #66, #80, and
+issue #68, followed by the complete artifact (#69). Then complete issues #72, #73,
+and #74; #71 is already closed. Closed prerequisites such as #60 and #110 remain
+in their historical milestones.
 
 The #71 component is implemented as a strict, provider-independent report
 contract and pure assembler. The first #72 component is implemented as strict
@@ -291,17 +291,19 @@ immutable context. Resume cannot replace that selection, and later edits do
 not alter the run. This completes #67; the milestone remains incomplete pending
 its downstream planning and drafting work.
 
-The #70 components extend the explicitly selected workspace policy with
-backward-compatible structured forbidden-term and punctuation rules plus
-optional tone, spelling-locale, and verbosity preferences. Normal orchestration
-supplies the exact policy frozen into run context to both model roles, and
-deterministic findings identify violated rules and artifact locations without
-copying sensitive terms or draft text. The preferences are advisory and do not
-claim spell-checking, numeric length enforcement, or layout selection.
-Dedicated policy-version history and migration, anti-formulaic defaults, page
-targets, section ordering, emphasis preferences, opportunity-bound overrides,
-and shared CLI/desktop editing remain follow-up work. #70 and the milestone
-remain incomplete.
+The #70 writing-policy outcome is integrated. Local SQLite history stores
+immutable checksum-addressed versions and migrates existing managed policies;
+activation and import are separate actions. Structured rules and preferences
+cover forbidden terms and punctuation, transparent anti-formulaic defaults,
+tone, spelling locale, verbosity, page target, section order, and emphasis.
+The exact effective policy reaches both model roles, while deterministic
+findings and ordinary status views remain content-free.
+
+Shared CLI and desktop controls expose activation, import, history, safe run
+lineage, and explicit content reads. One reviewed opportunity may bind an
+imported policy as a complete run override without mutating the active
+workspace policy. The run pins both base and override versions. This completes
+issue #70; the milestone remains incomplete pending its other drafting outcomes.
 
 The first #74 component is implemented as controlled A4 layout profiles and a
 strict, content-free rendering-QA report builder. It preserves exact visible
@@ -427,6 +429,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-28 | Integrated immutable writing-policy history and explicit opportunity-bound overrides through shared application, CLI, and desktop contracts. | Candidates can activate or import local versions, inspect safe history, and select one complete imported override for an exact reviewed opportunity. Runs pin base and override lineage without mutating the workspace default; both model roles receive the effective policy. |
 | 2026-08-28 | Bound an exact reviewed opportunity version into immutable run context. | Start requires an explicit brief ID/version pair, verifies reviewed status and checksum, derives opportunity context only from that record, and stores a safe reference. Resume reuses the snapshot; URLs, paths, raw intake, and provenance do not enter provider-facing context. |
 | 2026-08-28 | Integrated durable opportunity create, reload, list, edit, and review through the shared application, CLI, and packaged-desktop host contracts. | CLI paths remain runtime-only, desktop files use native pickers, renderer results omit paths and URLs, provider extraction requires explicit per-create approval, and stale edits or reviews fail closed. Exact reviewed planning handoff remains open. |
 | 2026-08-27 | Added provider-backed structured opportunity extraction and typed local candidate instructions. | Approved opportunity text crosses the existing author-provider boundary only after explicit consent; candidate inputs and local provenance stay local, response citations are allowlisted, application IDs are deterministic, and failures remain visible without leaking provider or source content. Shared adapters and exact reviewed planning handoff remain open. |

@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { defaultAntiFormulaicTerms } from "@draft-loop/domain";
 import {
   type AnthropicClient,
   createLocalModelAdapter,
@@ -601,6 +602,7 @@ describe("local application driver", () => {
       "Tone: WARM",
       "- Spelling locale: EN-latn-us",
       "Verbosity: DETAILED",
+      "Anti-formulaic defaults: disabled",
       "This prose mentions Tone: direct but is not a directive.",
       "Forbidden term: unicorn",
       "- Forbidden phrase: secret sauce",
@@ -697,6 +699,7 @@ describe("local application driver", () => {
                 spellingLocale: "en-Latn-US",
                 verbosity: "detailed",
               },
+              lineage: { kind: "workspace" },
               rules: [
                 {
                   kind: "forbidden-characters",
@@ -767,6 +770,511 @@ describe("local application driver", () => {
     }
   });
 
+  it("compiles bounded policy directives and conservative defaults into visible rules", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-directives-");
+    const sourcePath = join(root, "candidate-policy.md");
+    const policyText = [
+      "Tone: direct",
+      "Spelling locale: EN-latn-us",
+      "Verbosity: concise",
+      "Page target: TWO-PAGE",
+      "Section order: Summary, Experience, Skills",
+      "Emphasis areas: Reliability, Platform engineering",
+      "Forbidden term: DYNAMIC PROFESSIONAL",
+    ].join("\n");
+    await writeFile(sourcePath, policyText, "utf8");
+    const driver = createLocalApplicationDriver();
+    const getWritingPolicy = driver.getWritingPolicy;
+    if (getWritingPolicy === undefined) throw new Error("writing-policy read API is unavailable");
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        { write: () => undefined },
+      );
+      const configured = await driver.configureWritingPolicy(
+        { root, sourcePath },
+        { write: () => undefined },
+      );
+      const checksum = createHash("sha256").update(policyText, "utf8").digest("hex");
+      expect(configured.writingPolicyChecksum).toBe(checksum);
+      expect(configured.activeWritingPolicy).toMatchObject({
+        checksum,
+        version: `sha256:${checksum.slice(0, 12)}`,
+      });
+      const exact = await getWritingPolicy({ root, checksum, includeContent: true });
+      expect(exact?.policy).toMatchObject({
+        content: policyText,
+        preferences: {
+          tone: "direct",
+          spellingLocale: "en-Latn-US",
+          verbosity: "concise",
+          pageTarget: "two-page",
+          sectionOrder: ["Summary", "Experience", "Skills"],
+          emphasisAreas: ["Reliability", "Platform engineering"],
+        },
+      });
+      const terms = exact?.policy?.rules
+        ?.filter((rule) => rule.kind === "forbidden-term")
+        .map((rule) => rule.term);
+      expect(terms).toEqual(
+        expect.arrayContaining([
+          ...defaultAntiFormulaicTerms.filter((term) => term !== "dynamic professional"),
+          "DYNAMIC PROFESSIONAL",
+        ]),
+      );
+      expect(terms?.filter((term) => term.toLowerCase() === "dynamic professional")).toHaveLength(
+        1,
+      );
+      const safe = await getWritingPolicy({ root, checksum });
+      expect(safe).toEqual(expect.objectContaining({ checksum, version: exact?.version }));
+      expect(safe).not.toHaveProperty("policy");
+      expect(JSON.stringify(safe)).not.toContain(sourcePath);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("imports candidate policy versions without activation and preserves ordered history", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-history-");
+    const firstPath = join(root, "first-policy.md");
+    const secondPath = join(root, "second-policy.md");
+    const firstText = "Tone: warm\nAnti-formulaic defaults: disabled";
+    const secondText = "Tone: direct\nForbidden term: jargon";
+    await writeFile(firstPath, firstText, "utf8");
+    await writeFile(secondPath, secondText, "utf8");
+    const driver = createLocalApplicationDriver();
+    const getWritingPolicy = driver.getWritingPolicy;
+    const listWritingPolicyVersions = driver.listWritingPolicyVersions;
+    if (getWritingPolicy === undefined || listWritingPolicyVersions === undefined) {
+      throw new Error("writing-policy history APIs are unavailable");
+    }
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        { write: () => undefined },
+      );
+      const first = await driver.configureWritingPolicy(
+        { root, sourcePath: firstPath },
+        { write: () => undefined },
+      );
+      const beforeConfig = await workspaceConfig(root);
+      const managedPath = join(root, ".draft-loop", "writing-policy.md");
+      const managedBefore = await readFile(managedPath, "utf8");
+      const second = await driver.configureWritingPolicy(
+        { root, sourcePath: secondPath, activate: false },
+        { write: () => undefined },
+      );
+      expect(second.writingPolicyChecksum).toBe(first.writingPolicyChecksum);
+      expect(await workspaceConfig(root)).toEqual(beforeConfig);
+      expect(await readFile(managedPath, "utf8")).toBe(managedBefore);
+      const history = await listWritingPolicyVersions({ root });
+      expect(history).toHaveLength(2);
+      expect(history.map((record) => record.checksum)).toEqual([
+        first.writingPolicyChecksum,
+        createHash("sha256").update(secondText, "utf8").digest("hex"),
+      ]);
+      expect(history[1]?.priorChecksum).toBe(history[0]?.checksum);
+      expect(history.every((record) => !("policy" in record))).toBe(true);
+      const candidateChecksum = history[1]?.checksum;
+      if (candidateChecksum === undefined) throw new Error("candidate policy is missing");
+      const candidate = await getWritingPolicy({
+        root,
+        checksum: candidateChecksum,
+        includeContent: true,
+      });
+      expect(candidate?.policy?.content).toBe(secondText);
+      await driver.configureWritingPolicy(
+        { root, sourcePath: secondPath },
+        { write: () => undefined },
+      );
+      expect((await listWritingPolicyVersions({ root })).map((record) => record.checksum)).toEqual(
+        history.map((record) => record.checksum),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("uses a stored policy candidate only for an explicitly reviewed opportunity", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-override-");
+    const basePath = join(root, "base-policy.md");
+    const candidatePath = join(root, "candidate-policy.md");
+    const baseText = "Tone: warm\nAnti-formulaic defaults: disabled";
+    const candidateText = "Tone: direct\nPage target: one-page\nForbidden term: jargon";
+    await writeFile(basePath, baseText, "utf8");
+    await writeFile(candidatePath, candidateText, "utf8");
+    const driver = createLocalApplicationDriver();
+    const silent = { write: () => undefined };
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      await driver.configureWritingPolicy({ root, sourcePath: basePath }, silent);
+      const baseChecksum = (await workspaceConfig(root)).writingPolicyChecksum;
+      const configBeforeCandidate = await workspaceConfig(root);
+      const managedPath = join(root, ".draft-loop", "writing-policy.md");
+      const managedBefore = await readFile(managedPath, "utf8");
+      await driver.configureWritingPolicy(
+        { root, sourcePath: candidatePath, activate: false },
+        silent,
+      );
+      const history = await driver.listWritingPolicyVersions?.({ root });
+      if (history === undefined || history[1] === undefined) {
+        throw new Error("writing-policy history is missing the candidate");
+      }
+      const candidateChecksum = history[1].checksum;
+      expect((await workspaceConfig(root)).writingPolicyChecksum).toBe(
+        configBeforeCandidate.writingPolicyChecksum,
+      );
+      expect(await readFile(managedPath, "utf8")).toBe(managedBefore);
+      const sourceConfig = await readWorkspace(root);
+      const base = sourceConfig.writingPolicyChecksum;
+      expect(base).toBe(configBeforeCandidate.writingPolicyChecksum);
+      expect(base).toBeDefined();
+      expect(baseChecksum).toBeDefined();
+
+      const created = await driver.createOpportunity({
+        root,
+        id: "policy-override-brief",
+        sources: [
+          {
+            id: "override-job",
+            kind: "pasted-content",
+            classification: "job-posting",
+            content: "Platform engineer role with reliability responsibilities.",
+          },
+          {
+            id: "override-instructions",
+            kind: "candidate-input",
+            classification: "candidate-instruction",
+            content: "Prefer direct language.",
+            instructions: { tone: "direct", focusAreas: ["Reliability"] },
+          },
+        ],
+      });
+      const edited = await driver.editOpportunity({
+        root,
+        briefId: created.brief.id,
+        expectedVersion: created.brief.version,
+        patch: {
+          role: { value: "Platform Engineer", sourceIds: ["override-job"] },
+          employer: { value: "Example Systems", sourceIds: ["override-job"] },
+          requirements: [
+            {
+              id: "override-requirement",
+              text: "Reliability experience",
+              priority: "critical",
+              sourceIds: ["override-job"],
+            },
+          ],
+        },
+      });
+      const reviewed = await driver.reviewOpportunity({
+        root,
+        briefId: created.brief.id,
+        expectedVersion: edited.brief.version,
+        reviewedAt: "2026-08-28T12:00:00.000Z",
+      });
+      const begun = await driver.begin(
+        {
+          root,
+          opportunityBrief: { briefId: reviewed.brief.id, version: reviewed.brief.version },
+          writingPolicyOverrideChecksum: candidateChecksum,
+        },
+        silent,
+      );
+      const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        const context = await storage.getContextSnapshot(begun.contextSnapshotId);
+        expect(context?.payload).toMatchObject({
+          writingPolicy: {
+            content: candidateText,
+            checksum: candidateChecksum,
+            lineage: {
+              kind: "opportunity-override",
+              base: { checksum: base },
+              override: { checksum: candidateChecksum },
+            },
+          },
+        });
+      } finally {
+        await storage.close();
+      }
+      const projection = await driver.readRunWritingPolicy?.({ root, runId: begun.runId });
+      expect(projection).toMatchObject({
+        effective: { checksum: candidateChecksum },
+        base: { checksum: base },
+        override: { checksum: candidateChecksum },
+        lineage: {
+          kind: "opportunity-override",
+          base: { checksum: base },
+          override: { checksum: candidateChecksum },
+        },
+      });
+      expect(JSON.stringify(projection)).not.toContain(candidateText);
+      expect((await workspaceConfig(root)).writingPolicyChecksum).toBe(base);
+      expect(await readFile(managedPath, "utf8")).toBe(managedBefore);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("lazily migrates a legacy managed policy into immutable history on the next run", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-legacy-");
+    const policyText = "Tone: warm\nAnti-formulaic defaults: disabled";
+    const managedPath = join(root, ".draft-loop", "writing-policy.md");
+    const driver = createLocalApplicationDriver();
+    const silent = { write: () => undefined };
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      await mkdir(join(root, ".draft-loop"), { recursive: true });
+      await writeFile(managedPath, `${policyText}\n`, "utf8");
+      const config = await workspaceConfig(root);
+      await writeFile(
+        join(root, ".draft-loop", "workspace.json"),
+        `${JSON.stringify({ ...config, writingPolicyPath: ".draft-loop/writing-policy.md" })}\n`,
+        "utf8",
+      );
+      const before = await driver.readWorkspace(root);
+      expect(before.writingPolicyChecksum).toBeUndefined();
+      const begun = await driver.begin({ root, allowProviderData: false }, silent);
+      const after = await driver.readWorkspace(root);
+      expect(after.writingPolicyChecksum).toMatch(/^[a-f0-9]{64}$/u);
+      const history = await driver.listWritingPolicyVersions?.({ root });
+      expect(history).toHaveLength(1);
+      expect(history?.[0]).toMatchObject({ checksum: after.writingPolicyChecksum });
+      const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        const context = await storage.getContextSnapshot(begun.contextSnapshotId);
+        expect(context?.payload).toMatchObject({
+          writingPolicy: {
+            content: policyText,
+            checksum: after.writingPolicyChecksum,
+            lineage: { kind: "workspace" },
+          },
+        });
+      } finally {
+        await storage.close();
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("versions an edited managed policy before freezing a later run context", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-edited-");
+    const policyPath = join(root, "policy.md");
+    const firstText = "Tone: warm\nAnti-formulaic defaults: disabled";
+    const secondText = "Tone: direct\nPage target: two-page\nAnti-formulaic defaults: disabled";
+    await writeFile(policyPath, firstText, "utf8");
+    const driver = createLocalApplicationDriver();
+    const silent = { write: () => undefined };
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      const firstConfig = await driver.configureWritingPolicy(
+        { root, sourcePath: policyPath },
+        silent,
+      );
+      const firstRun = await driver.begin({ root, allowProviderData: false }, silent);
+      await writeFile(join(root, ".draft-loop", "writing-policy.md"), secondText, "utf8");
+      const secondRun = await driver.begin({ root, allowProviderData: false }, silent);
+      const history = await driver.listWritingPolicyVersions?.({ root });
+      expect(history).toHaveLength(2);
+      expect(history?.[1]?.priorChecksum).toBe(history?.[0]?.checksum);
+      expect((await driver.readWorkspace(root)).writingPolicyChecksum).toBe(history?.[1]?.checksum);
+      const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        const firstContext = await storage.getContextSnapshot(firstRun.contextSnapshotId);
+        const secondContext = await storage.getContextSnapshot(secondRun.contextSnapshotId);
+        expect(firstContext?.payload).toMatchObject({
+          writingPolicy: { checksum: firstConfig.writingPolicyChecksum, content: firstText },
+        });
+        expect(secondContext?.payload).toMatchObject({
+          writingPolicy: {
+            checksum: history?.[1]?.checksum,
+            content: secondText,
+            preferences: { pageTarget: "two-page" },
+          },
+        });
+      } finally {
+        await storage.close();
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps resume on the immutable policy captured by its existing context", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-resume-");
+    const policyPath = join(root, "policy.md");
+    const firstText = "Tone: warm\nAnti-formulaic defaults: disabled";
+    const changedText = "Tone: direct\nPage target: two-page\nAnti-formulaic defaults: disabled";
+    await writeFile(policyPath, firstText, "utf8");
+    const driver = createLocalApplicationDriver();
+    const silent = { write: () => undefined };
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      await driver.configureWritingPolicy({ root, sourcePath: policyPath }, silent);
+      const begun = await driver.begin({ root, allowProviderData: false }, silent);
+      await driver.lifecycle({ root, action: "pause", runId: begun.runId }, silent);
+      await writeFile(policyPath, changedText, "utf8");
+      const resumed = await driver.resume(
+        { root, runId: begun.runId, allowProviderData: false },
+        silent,
+      );
+      expect(resumed.contextSnapshotId).toBe(begun.contextSnapshotId);
+      const projection = await driver.readRunWritingPolicy?.({ root, runId: begun.runId });
+      expect(projection?.effective.checksum).toBe(
+        createHash("sha256").update(firstText, "utf8").digest("hex"),
+      );
+      if (projection === undefined) throw new Error("run policy projection is missing");
+      const exact = await driver.getWritingPolicy?.({
+        root,
+        checksum: projection.effective.checksum,
+        includeContent: true,
+      });
+      expect(exact?.policy?.content).toBe(firstText);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects every invalid override selection without changing the active workspace policy", async () => {
+    const root = await providerWorkspace("draft-loop-writing-policy-override-invalid-");
+    const basePath = join(root, "base-policy.md");
+    const candidatePath = join(root, "candidate-policy.md");
+    await writeFile(basePath, "Tone: warm\nAnti-formulaic defaults: disabled", "utf8");
+    await writeFile(candidatePath, "Tone: direct\nAnti-formulaic defaults: disabled", "utf8");
+    const driver = createLocalApplicationDriver();
+    const silent = { write: () => undefined };
+    try {
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+      await driver.configureWritingPolicy({ root, sourcePath: basePath }, silent);
+      const before = await workspaceConfig(root);
+      const managedPath = join(root, ".draft-loop", "writing-policy.md");
+      const managedBefore = await readFile(managedPath, "utf8");
+      await driver.configureWritingPolicy(
+        { root, sourcePath: candidatePath, activate: false },
+        silent,
+      );
+      const history = await driver.listWritingPolicyVersions?.({ root });
+      if (history === undefined || history.length !== 2) {
+        throw new Error("writing-policy override fixture history is incomplete");
+      }
+      const baseChecksum = before.writingPolicyChecksum;
+      const candidateChecksum = history[1]?.checksum;
+      if (typeof baseChecksum !== "string" || candidateChecksum === undefined) {
+        throw new Error("writing-policy override fixture identities are incomplete");
+      }
+      const created = await driver.createOpportunity({
+        root,
+        id: "invalid-policy-override-brief",
+        sources: [
+          {
+            id: "invalid-override-job",
+            kind: "pasted-content",
+            classification: "job-posting",
+            content: "Platform engineer role.",
+          },
+        ],
+      });
+      const edited = await driver.editOpportunity({
+        root,
+        briefId: created.brief.id,
+        expectedVersion: created.brief.version,
+        patch: {
+          role: { value: "Platform Engineer", sourceIds: ["invalid-override-job"] },
+          employer: { value: "Example Systems", sourceIds: ["invalid-override-job"] },
+          requirements: [
+            {
+              id: "invalid-override-requirement",
+              text: "Platform engineering",
+              priority: "critical",
+              sourceIds: ["invalid-override-job"],
+            },
+          ],
+        },
+      });
+      const reviewed = await driver.reviewOpportunity({
+        root,
+        briefId: created.brief.id,
+        expectedVersion: edited.brief.version,
+        reviewedAt: "2026-08-28T12:30:00.000Z",
+      });
+      const explicit = { briefId: reviewed.brief.id, version: reviewed.brief.version };
+      await expect(
+        driver.begin({ root, writingPolicyOverrideChecksum: candidateChecksum }, silent),
+      ).rejects.toThrow(/explicit reviewed opportunity brief/u);
+      await expect(
+        driver.begin(
+          { root, opportunityBrief: explicit, writingPolicyOverrideChecksum: baseChecksum },
+          silent,
+        ),
+      ).rejects.toThrow(/must differ/u);
+      await expect(
+        driver.begin(
+          { root, opportunityBrief: explicit, writingPolicyOverrideChecksum: "A".repeat(64) },
+          silent,
+        ),
+      ).rejects.toThrow(/lowercase SHA-256/u);
+      await expect(
+        driver.begin(
+          { root, opportunityBrief: explicit, writingPolicyOverrideChecksum: "f".repeat(64) },
+          silent,
+        ),
+      ).rejects.toThrow(/not found/u);
+      await expect(
+        driver.begin(
+          {
+            root,
+            opportunityBrief: { briefId: created.brief.id, version: created.brief.version },
+            writingPolicyOverrideChecksum: candidateChecksum,
+          },
+          silent,
+        ),
+      ).rejects.toThrow(/explicit reviewed opportunity brief/u);
+      const withoutActive = { ...before };
+      delete withoutActive.writingPolicyPath;
+      delete withoutActive.writingPolicyChecksum;
+      await writeFile(
+        join(root, ".draft-loop", "workspace.json"),
+        `${JSON.stringify(withoutActive)}\n`,
+        "utf8",
+      );
+      await expect(
+        driver.begin(
+          { root, opportunityBrief: explicit, writingPolicyOverrideChecksum: candidateChecksum },
+          silent,
+        ),
+      ).rejects.toThrow(/active base/u);
+      await writeFile(
+        join(root, ".draft-loop", "workspace.json"),
+        `${JSON.stringify(before)}\n`,
+        "utf8",
+      );
+      expect((await workspaceConfig(root)).writingPolicyChecksum).toBe(baseChecksum);
+      expect(await readFile(managedPath, "utf8")).toBe(managedBefore);
+      expect(
+        (await driver.listWritingPolicyVersions?.({ root }))?.map((record) => record.checksum),
+      ).toEqual([baseChecksum, candidateChecksum]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects malformed and duplicate writing preference directives without echoing values", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-writing-preferences-"));
     const sourcePath = join(root, "policy.md");
@@ -780,6 +1288,23 @@ describe("local application driver", () => {
       },
       { content: "Spelling locale: en_US", key: /Spelling locale/u, secret: "en_US" },
       { content: "Verbosity: exhaustive", key: /Verbosity/u, secret: "exhaustive" },
+      { content: "Page target: three-page", key: /Page target/u, secret: "three-page" },
+      {
+        content: "Section order: Summary, summary",
+        key: /Section order/u,
+        secret: "Summary",
+      },
+      { content: "Section order: Summary,", key: /Section order/u, secret: "Summary" },
+      {
+        content: "Emphasis areas: Ownership\nEmphasis areas: Reliability",
+        key: /Emphasis areas/u,
+        secret: "Ownership",
+      },
+      {
+        content: "Anti-formulaic defaults: maybe",
+        key: /Anti-formulaic defaults/u,
+        secret: "maybe",
+      },
     ];
 
     try {

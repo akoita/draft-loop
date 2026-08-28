@@ -1,3 +1,4 @@
+import { writingPolicySectionOrderRuleId } from "@draft-loop/domain";
 import type { DraftArtifact } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
@@ -50,6 +51,32 @@ function artifactWithClaim(
     ],
     decisions: [],
   };
+}
+
+function artifactWithOrderedSections(): DraftArtifact {
+  const artifact = artifactWithClaim("Built reliable systems.", [
+    evidence("Built reliable systems."),
+  ]);
+  const summary = artifact.sections[0];
+  if (summary === undefined) throw new Error("summary fixture is missing");
+  artifact.sections = [
+    {
+      id: "section-experience",
+      title: "Work Experience",
+      kind: "experience",
+      order: 0,
+      blocks: [
+        {
+          id: "block-experience",
+          type: "paragraph",
+          text: "Managed production platforms.",
+          claimIds: [],
+        },
+      ],
+    },
+    { ...summary, order: 1 },
+  ];
+  return artifact;
 }
 
 function context(
@@ -200,6 +227,67 @@ describe("deterministic artifact validation", () => {
       expect(issue.message).not.toContain("/local/evidence.txt");
     }
     expect(Object.isFrozen(result.issues[0]?.location)).toBe(true);
+  });
+
+  it("reports section-order violations using only stable opaque locations", () => {
+    const result = validateDraftArtifact(
+      artifactWithOrderedSections(),
+      context({
+        writingPolicy: {
+          content: "Keep the summary before work experience.",
+          version: "sha256:section-order",
+          preferences: { sectionOrder: ["Summary", "Experience"] },
+        },
+      }),
+    );
+
+    expect(result.issues).toEqual([
+      {
+        code: "writing-policy-section-order",
+        category: "format",
+        severity: "warning",
+        message: `draft violates writing policy sha256:section-order rule ${writingPolicySectionOrderRuleId}`,
+        sectionId: "section-summary",
+        blockId: "block-summary",
+        ruleId: writingPolicySectionOrderRuleId,
+      },
+    ]);
+    expect(result.issues[0]?.message).not.toContain("Summary");
+    expect(result.issues[0]?.message).not.toContain("Work Experience");
+    expect(result.issues[0]?.message).not.toContain("Built reliable systems");
+    expect(result.issues[0]?.message).not.toContain("/local/evidence.txt");
+  });
+
+  it("ignores unknown or correctly ordered sections for section-order policy checks", () => {
+    const artifact = artifactWithOrderedSections();
+    const summary = artifact.sections[1];
+    const experience = artifact.sections[0];
+    if (summary === undefined || experience === undefined) {
+      throw new Error("ordered section fixture is incomplete");
+    }
+    artifact.sections = [
+      { ...summary, order: 0 },
+      { ...experience, order: 1 },
+      {
+        id: "section-unknown",
+        title: "Additional Material",
+        kind: "custom",
+        order: 2,
+        blocks: [],
+      },
+    ];
+    const result = validateDraftArtifact(
+      artifact,
+      context({
+        writingPolicy: {
+          content: "Keep the summary before work experience.",
+          version: "v1",
+          preferences: { sectionOrder: ["Summary", "Experience"] },
+        },
+      }),
+    );
+
+    expect(result.issues).toEqual([]);
   });
 
   it("honors case-sensitive and whole-word term matching", () => {

@@ -33,6 +33,8 @@ import {
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
   maximumWritingPolicyCharactersLength,
+  maximumWritingPolicyPreferenceListEntries,
+  maximumWritingPolicyPreferenceNameLength,
   maximumWritingPolicyRules,
   maximumWritingPolicySpellingLocaleLength,
   maximumWritingPolicyTermLength,
@@ -62,8 +64,10 @@ import {
   renderingQaReportSchemaVersion,
   renderingQaVisibleContentOrderSignals,
   requirementPriorities,
+  writingPolicyPageTargets,
   writingPolicyRuleIdPattern,
   writingPolicyRuleKinds,
+  writingPolicySchemaVersion,
   writingPolicySpellingLocalePattern,
   writingPolicyTones,
   writingPolicyVerbosityLevels,
@@ -763,23 +767,114 @@ export const writingPolicyVerbositySchema = z
   )
   .transform((value) => value.toLowerCase() as (typeof writingPolicyVerbosityLevels)[number]);
 
+export const writingPolicyPageTargetSchema = z
+  .string()
+  .trim()
+  .refine(
+    (value) =>
+      writingPolicyPageTargets.includes(
+        value.toLowerCase() as (typeof writingPolicyPageTargets)[number],
+      ),
+    "must be one-page or two-page",
+  )
+  .transform((value) => value.toLowerCase() as (typeof writingPolicyPageTargets)[number]);
+
+const writingPolicyPreferenceNameSchema = nonEmptyString
+  .max(maximumWritingPolicyPreferenceNameLength)
+  .transform((value) => value.replace(/\s+/gu, " "));
+
+function normalizedWritingPolicyPreferenceName(value: string): string {
+  return value.normalize("NFKC").toLowerCase();
+}
+
+const writingPolicyPreferenceNamesSchema = (label: string) =>
+  z
+    .array(writingPolicyPreferenceNameSchema)
+    .min(1, `must contain at least one ${label}`)
+    .max(
+      maximumWritingPolicyPreferenceListEntries,
+      `must contain at most ${maximumWritingPolicyPreferenceListEntries} entries`,
+    )
+    .superRefine((values, context) => {
+      const seen = new Set<string>();
+      for (const [index, value] of values.entries()) {
+        const identity = normalizedWritingPolicyPreferenceName(value);
+        if (seen.has(identity)) {
+          context.addIssue({
+            code: "custom",
+            path: [index],
+            message: `${label} must be unique`,
+          });
+        }
+        seen.add(identity);
+      }
+    });
+
+const writingPolicyIdentitySchema = z.strictObject({
+  version: nonEmptyString,
+  checksum: sha256ChecksumSchema,
+});
+
+export const writingPolicyLineageSchema = z.discriminatedUnion("kind", [
+  z.strictObject({ kind: z.literal("workspace") }),
+  z.strictObject({
+    kind: z.literal("opportunity-override"),
+    base: writingPolicyIdentitySchema,
+    override: writingPolicyIdentitySchema,
+  }),
+]);
+
 export const writingPolicyPreferencesSchema = z.strictObject({
   tone: writingPolicyToneSchema.optional(),
   spellingLocale: writingPolicySpellingLocaleSchema.optional(),
   verbosity: writingPolicyVerbositySchema.optional(),
+  pageTarget: writingPolicyPageTargetSchema.optional(),
+  sectionOrder: writingPolicyPreferenceNamesSchema("section names").optional(),
+  emphasisAreas: writingPolicyPreferenceNamesSchema("emphasis areas").optional(),
 });
 
-export const writingPolicySchema = z.strictObject({
-  content: nonEmptyString,
-  checksum: z.string().regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum"),
-  version: nonEmptyString,
-  rules: writingPolicyRulesSchema.optional(),
-  preferences: writingPolicyPreferencesSchema.optional(),
-});
+export const writingPolicySchema = z
+  .strictObject({
+    schemaVersion: z
+      .literal(writingPolicySchemaVersion)
+      .optional()
+      .default(writingPolicySchemaVersion),
+    content: nonEmptyString,
+    checksum: z.string().regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum"),
+    version: nonEmptyString,
+    rules: writingPolicyRulesSchema.optional(),
+    preferences: writingPolicyPreferencesSchema.optional(),
+    lineage: writingPolicyLineageSchema.optional(),
+  })
+  .superRefine((policy, context) => {
+    if (policy.lineage?.kind !== "opportunity-override") return;
+    if (policy.lineage.base.checksum === policy.lineage.override.checksum) {
+      context.addIssue({
+        code: "custom",
+        path: ["lineage", "override", "checksum"],
+        message: "must differ from the immutable base policy checksum",
+      });
+    }
+    if (policy.lineage.override.version !== policy.version) {
+      context.addIssue({
+        code: "custom",
+        path: ["lineage", "override", "version"],
+        message: "must match the current policy version",
+      });
+    }
+    if (policy.lineage.override.checksum !== policy.checksum.toLowerCase()) {
+      context.addIssue({
+        code: "custom",
+        path: ["lineage", "override", "checksum"],
+        message: "must match the current policy checksum",
+      });
+    }
+  });
 
 export type WritingPolicyRule = z.infer<typeof writingPolicyRuleSchema>;
 export type WritingPolicyPreferences = z.infer<typeof writingPolicyPreferencesSchema>;
 export type WritingPolicy = z.infer<typeof writingPolicySchema>;
+export type WritingPolicyInput = z.input<typeof writingPolicySchema>;
 
 export const candidateProfileSchema = z.object({
   id: nonEmptyString,
@@ -3103,6 +3198,8 @@ export {
   renderingQaReportSchemaVersion,
   renderingQaVisibleContentOrderSignals,
   requirementPriorities,
+  writingPolicyPageTargets,
+  writingPolicySchemaVersion,
 };
 
 export const artifactSchemaVersion = 1 as const;

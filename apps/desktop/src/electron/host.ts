@@ -88,11 +88,13 @@ import {
   type ModelsListResult,
   type ModelsPreviewIndependenceInput,
   type ModelsPreviewIndependenceResult,
+  type OpportunityBriefSelectionInput,
   type OpportunityCreateInput,
   type OpportunityCreateSource,
   type OpportunityRecordResult,
   type ProviderAuthModeStatus,
   type ReviewDispatchInput,
+  type RunWritingPolicyProjection,
   type SelectedFile,
   type SourceAddUrlInput,
   type SourceAddUrlResult,
@@ -106,6 +108,7 @@ import type {
   DesktopReviewState,
   FindingDecision,
   IndependentReviewView,
+  PendingWritingPolicyOverride,
   ProviderFailureView,
   ProviderTransmissionPolicy,
   ProviderTransmissionPreflight,
@@ -117,6 +120,7 @@ import type {
   ReviewFinding,
   ReviewSection,
   WorkspaceReadiness,
+  WritingPolicyVersionMetadata,
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
 import {
@@ -290,6 +294,10 @@ interface ReviewOverrides {
   readonly rationales: Readonly<Record<string, string>>;
   readonly edits: Readonly<Record<string, string>>;
   readonly history: readonly ReviewDecisionHistoryEntry[];
+  /** Last exact reviewed opportunity selection, retained only as host state. */
+  readonly reviewedOpportunity?: OpportunityBriefSelectionInput;
+  /** Pending policy identity bound to the exact reviewed opportunity above. */
+  readonly pendingWritingPolicyOverride?: PendingWritingPolicyOverride;
 }
 
 interface ReviewDecisionHistoryEntry {
@@ -888,6 +896,7 @@ function reviewState(
   setup: WorkspaceReadiness,
   preflight: ProviderTransmissionPreflight,
   executionRunning = false,
+  writingPolicy?: RunWritingPolicyProjection,
 ): DesktopReviewState {
   const artifact =
     snapshot.artifact === null
@@ -930,6 +939,7 @@ function reviewState(
     },
     events: reviewEvents(snapshot, overrides, preflight),
     exportPath,
+    ...(writingPolicy === undefined ? {} : { writingPolicy }),
     setup,
   };
 }
@@ -1002,10 +1012,116 @@ function defaultExportPath(root: string, runId: string): string {
   return join(root, "exports", `${runId}.md`);
 }
 
+function safeWritingPolicyMetadata(value: unknown): WritingPolicyVersionMetadata | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const checksum = persistedWritingPolicyChecksum(record.checksum);
+  const version = persistedWritingPolicyVersion(record.version);
+  const schemaVersion = record.schemaVersion;
+  const createdAt = record.createdAt;
+  const priorChecksum =
+    record.priorChecksum === null ? null : persistedWritingPolicyChecksum(record.priorChecksum);
+  if (
+    checksum === undefined ||
+    version === undefined ||
+    typeof schemaVersion !== "number" ||
+    !Number.isSafeInteger(schemaVersion) ||
+    schemaVersion < 1 ||
+    schemaVersion > 100 ||
+    typeof createdAt !== "string" ||
+    createdAt.length === 0 ||
+    createdAt.length > 64 ||
+    !Number.isFinite(Date.parse(createdAt)) ||
+    (record.priorChecksum !== null && priorChecksum === undefined) ||
+    priorChecksum === checksum
+  ) {
+    return undefined;
+  }
+  if (priorChecksum === undefined) return undefined;
+  return { checksum, version, schemaVersion, createdAt, priorChecksum };
+}
+
+function safeWritingPolicyIdentity(value: unknown):
+  | {
+      readonly version: string;
+      readonly checksum: string;
+    }
+  | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const version = persistedWritingPolicyVersion(record.version);
+  const checksum = persistedWritingPolicyChecksum(record.checksum);
+  return version === undefined || checksum === undefined ? undefined : { version, checksum };
+}
+
+function safeRunWritingPolicyProjection(value: unknown): RunWritingPolicyProjection | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const effective = safeWritingPolicyMetadata(record.effective);
+  const lineageValue = record.lineage;
+  if (
+    effective === undefined ||
+    typeof lineageValue !== "object" ||
+    lineageValue === null ||
+    Array.isArray(lineageValue)
+  ) {
+    return undefined;
+  }
+  const lineage = lineageValue as Record<string, unknown>;
+  if (lineage.kind === "workspace") {
+    const base = record.base === undefined ? undefined : safeWritingPolicyMetadata(record.base);
+    if (record.override !== undefined || (record.base !== undefined && base === undefined)) {
+      return undefined;
+    }
+    if (
+      base !== undefined &&
+      (base.checksum !== effective.checksum || base.version !== effective.version)
+    ) {
+      return undefined;
+    }
+    return {
+      effective,
+      lineage: { kind: "workspace" },
+      ...(base === undefined ? {} : { base }),
+    };
+  }
+  if (lineage.kind !== "opportunity-override") return undefined;
+  const baseIdentity = safeWritingPolicyIdentity(lineage.base);
+  const overrideIdentity = safeWritingPolicyIdentity(lineage.override);
+  const base = safeWritingPolicyMetadata(record.base);
+  const override = safeWritingPolicyMetadata(record.override);
+  if (
+    baseIdentity === undefined ||
+    overrideIdentity === undefined ||
+    base === undefined ||
+    override === undefined ||
+    baseIdentity.checksum !== base.checksum ||
+    baseIdentity.version !== base.version ||
+    overrideIdentity.checksum !== override.checksum ||
+    overrideIdentity.version !== override.version ||
+    override.checksum !== effective.checksum ||
+    override.version !== effective.version ||
+    base.checksum === override.checksum
+  ) {
+    return undefined;
+  }
+  return {
+    effective,
+    lineage: {
+      kind: "opportunity-override",
+      base: baseIdentity,
+      override: overrideIdentity,
+    },
+    base,
+    override,
+  };
+}
+
 async function workspaceReadiness(
   descriptor: WorkspaceDescriptor,
   root: string,
   service: ApplicationService,
+  overrides: ReviewOverrides = emptyOverrides,
 ): Promise<WorkspaceReadiness> {
   const jobPath = resolve(root, descriptor.jobDescriptionPath);
   let jobDescriptionReady = false;
@@ -1017,25 +1133,83 @@ async function workspaceReadiness(
     jobDescriptionReady = false;
   }
   const evidenceSourceCount = await countEvidenceFiles(resolve(root, descriptor.sourceDirectory));
-  let writingPolicyStatus: WorkspaceReadiness["writingPolicyStatus"] =
-    descriptor.writingPolicyPath === undefined ? "none" : "unavailable";
-  let writingPolicy: WorkspaceReadiness["writingPolicy"] = null;
-  if (descriptor.writingPolicyPath !== undefined) {
+  let writingPolicy = safeWritingPolicyMetadata(descriptor.activeWritingPolicy);
+  let writingPolicyHistory: WritingPolicyVersionMetadata[] = [];
+  if (service.getWritingPolicy !== undefined) {
     try {
-      const content = (await readFile(resolve(root, descriptor.writingPolicyPath), "utf8")).trim();
+      writingPolicy =
+        safeWritingPolicyMetadata(
+          await service.getWritingPolicy({ root, includeContent: false }),
+        ) ?? writingPolicy;
+    } catch {
+      // The descriptor remains a safe fallback when an older application
+      // service cannot answer the optional metadata read.
+    }
+  }
+  if (service.listWritingPolicyVersions !== undefined) {
+    try {
+      writingPolicyHistory = (
+        await service.listWritingPolicyVersions({
+          root,
+          includeContent: false,
+        })
+      )
+        .map(safeWritingPolicyMetadata)
+        .filter((metadata): metadata is WritingPolicyVersionMetadata => metadata !== undefined)
+        .sort(
+          (left, right) =>
+            Date.parse(left.createdAt) - Date.parse(right.createdAt) ||
+            left.checksum.localeCompare(right.checksum),
+        );
+    } catch {
+      writingPolicyHistory = [];
+    }
+  }
+  if (writingPolicy === undefined && descriptor.writingPolicyChecksum !== undefined) {
+    writingPolicy = writingPolicyHistory.find(
+      (metadata) => metadata.checksum === descriptor.writingPolicyChecksum,
+    );
+  }
+  // A descriptor from an older application service has no policy metadata
+  // field. Hashing its local managed file is still safe here because only the
+  // identity is projected; content and path never enter review state.
+  if (writingPolicy === undefined && descriptor.writingPolicyPath !== undefined) {
+    try {
+      const policyPath = resolve(root, descriptor.writingPolicyPath);
+      const content = (await readFile(policyPath, "utf8")).trim();
       if (content !== "") {
+        const details = await stat(policyPath);
         const checksum = createHash("sha256").update(content, "utf8").digest("hex");
         writingPolicy = {
           version: `sha256:${checksum.slice(0, 12)}`,
           checksum,
-          preview: content.replace(/\s+/gu, " ").slice(0, 240),
+          schemaVersion: 1,
+          createdAt: details.mtime.toISOString(),
+          priorChecksum: null,
         };
-        writingPolicyStatus = "active";
       }
     } catch {
-      writingPolicy = null;
+      writingPolicy = undefined;
     }
   }
+  if (writingPolicyHistory.length === 0 && writingPolicy !== undefined) {
+    writingPolicyHistory = [writingPolicy];
+  } else if (
+    writingPolicy !== undefined &&
+    !writingPolicyHistory.some((metadata) => metadata.checksum === writingPolicy?.checksum)
+  ) {
+    writingPolicyHistory = [...writingPolicyHistory, writingPolicy].sort(
+      (left, right) =>
+        Date.parse(left.createdAt) - Date.parse(right.createdAt) ||
+        left.checksum.localeCompare(right.checksum),
+    );
+  }
+  const writingPolicyStatus: WorkspaceReadiness["writingPolicyStatus"] =
+    writingPolicy !== undefined
+      ? "active"
+      : descriptor.writingPolicyPath === undefined
+        ? "none"
+        : "unavailable";
   let retrievalStatus: WorkspaceReadiness["retrievalStatus"] = "not-indexed";
   let indexedEvidenceChunkCount = 0;
   let selectedEvidenceChunkCount = 0;
@@ -1071,7 +1245,10 @@ async function workspaceReadiness(
     jobDescriptionReady,
     evidenceSourceCount,
     writingPolicyStatus,
-    writingPolicy,
+    writingPolicy: writingPolicy ?? null,
+    writingPolicyHistory,
+    pendingWritingPolicyOverride: overrides.pendingWritingPolicyOverride ?? null,
+    reviewedOpportunity: overrides.reviewedOpportunity ?? null,
     retrievalStatus,
     indexedEvidenceChunkCount,
     selectedEvidenceChunkCount,
@@ -1085,6 +1262,58 @@ async function workspaceReadiness(
       retrievalStatus !== "unavailable",
     nextSteps,
   };
+}
+
+const writingPolicyChecksumPattern = /^[a-f0-9]{64}$/u;
+const writingPolicyVersionPattern = /^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,127}$/u;
+
+function persistedWritingPolicyChecksum(value: unknown): string | undefined {
+  return typeof value === "string" && writingPolicyChecksumPattern.test(value) ? value : undefined;
+}
+
+function persistedWritingPolicyVersion(value: unknown): string | undefined {
+  return typeof value === "string" &&
+    value.length > 0 &&
+    value.length <= 128 &&
+    writingPolicyVersionPattern.test(value)
+    ? value
+    : undefined;
+}
+
+function persistedOpportunitySelection(value: unknown): OpportunityBriefSelectionInput | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => !["briefId", "version"].includes(key)) ||
+    typeof record.briefId !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9._:/+@-]{0,127}$/u.test(record.briefId) ||
+    typeof record.version !== "number" ||
+    !Number.isSafeInteger(record.version) ||
+    record.version < 1 ||
+    record.version > 1_000_000
+  ) {
+    return undefined;
+  }
+  return { briefId: record.briefId, version: record.version };
+}
+
+function persistedPendingWritingPolicyOverride(
+  value: unknown,
+): PendingWritingPolicyOverride | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  if (
+    Object.keys(record).some((key) => !["checksum", "version", "opportunityBrief"].includes(key))
+  ) {
+    return undefined;
+  }
+  const checksum = persistedWritingPolicyChecksum(record.checksum);
+  const version = persistedWritingPolicyVersion(record.version);
+  const opportunityBrief = persistedOpportunitySelection(record.opportunityBrief);
+  if (checksum === undefined || version === undefined || opportunityBrief === undefined) {
+    return undefined;
+  }
+  return { checksum, version, opportunityBrief };
 }
 
 async function readOverrides(root: string): Promise<ReviewOverrides> {
@@ -1153,11 +1382,17 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
         });
       }
     }
+    const reviewedOpportunity = persistedOpportunitySelection(record.reviewedOpportunity);
+    const pendingWritingPolicyOverride = persistedPendingWritingPolicyOverride(
+      record.pendingWritingPolicyOverride,
+    );
     return {
       decisions: normalizedDecisions,
       rationales: normalizedRationales,
       edits: normalizedEdits,
       history: normalizedHistory,
+      ...(reviewedOpportunity === undefined ? {} : { reviewedOpportunity }),
+      ...(pendingWritingPolicyOverride === undefined ? {} : { pendingWritingPolicyOverride }),
     };
   } catch {
     return emptyOverrides;
@@ -1166,7 +1401,27 @@ async function readOverrides(root: string): Promise<ReviewOverrides> {
 
 async function writeOverrides(root: string, overrides: ReviewOverrides): Promise<void> {
   await mkdir(dirname(overridesPath(root)), { recursive: true });
-  await writeFile(overridesPath(root), `${JSON.stringify(overrides, null, 2)}\n`, "utf8");
+  const persisted: ReviewOverrides = {
+    decisions: { ...overrides.decisions },
+    rationales: { ...overrides.rationales },
+    edits: { ...overrides.edits },
+    history: overrides.history.slice(-100),
+    ...(overrides.reviewedOpportunity === undefined
+      ? {}
+      : { reviewedOpportunity: { ...overrides.reviewedOpportunity } }),
+    ...(overrides.pendingWritingPolicyOverride === undefined
+      ? {}
+      : {
+          pendingWritingPolicyOverride: {
+            checksum: overrides.pendingWritingPolicyOverride.checksum,
+            version: overrides.pendingWritingPolicyOverride.version,
+            opportunityBrief: {
+              ...overrides.pendingWritingPolicyOverride.opportunityBrief,
+            },
+          },
+        }),
+  };
+  await writeFile(overridesPath(root), `${JSON.stringify(persisted, null, 2)}\n`, "utf8");
 }
 
 function workspaceResult(descriptor: WorkspaceDescriptor): {
@@ -1333,12 +1588,14 @@ function projectOpportunityRecord(workspaceId: string, value: unknown): Opportun
 function statusResult(
   workspaceId: string,
   snapshot: RunSnapshot | undefined,
+  writingPolicy?: RunWritingPolicyProjection,
 ): {
   workspaceId: string;
   runId: string | null;
   state: DesktopReviewState["state"] | "collecting";
   round: number;
   approval: "pending" | "approved" | "rejected";
+  writingPolicy?: RunWritingPolicyProjection;
 } {
   return snapshot === undefined
     ? { workspaceId, runId: null, state: "collecting", round: 0, approval: "pending" }
@@ -1348,6 +1605,7 @@ function statusResult(
         state: runState(snapshot),
         round: snapshot.round,
         approval: snapshot.approval,
+        ...(writingPolicy === undefined ? {} : { writingPolicy }),
       };
 }
 
@@ -1430,6 +1688,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   let active: ActiveWorkspace | undefined;
   const knowledgeStoreRoots = new Map<string, string>();
   const backgroundRuns = new Map<string, BackgroundRun>();
+  const reviewedOpportunityCache = new Map<string, OpportunityBriefSelectionInput>();
 
   function backgroundKey(workspace: ActiveWorkspace, runId: string): string {
     return `${workspace.descriptor.id}:${runId}`;
@@ -1576,6 +1835,102 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       return fail("not-found", "The requested workspace is not open.");
     }
     return active;
+  }
+
+  function sameOpportunitySelection(
+    left: OpportunityBriefSelectionInput | undefined,
+    right: OpportunityBriefSelectionInput | undefined,
+  ): boolean {
+    return (
+      left !== undefined &&
+      right !== undefined &&
+      left.briefId === right.briefId &&
+      left.version === right.version
+    );
+  }
+
+  function withoutPendingWritingPolicyOverride(overrides: ReviewOverrides): ReviewOverrides {
+    const { pendingWritingPolicyOverride: _pending, ...rest } = overrides;
+    return rest;
+  }
+
+  function withoutReviewedOpportunity(overrides: ReviewOverrides): ReviewOverrides {
+    const {
+      reviewedOpportunity: _reviewedOpportunity,
+      pendingWritingPolicyOverride: _pending,
+      ...rest
+    } = overrides;
+    return rest;
+  }
+
+  /**
+   * Reconcile host-local policy preferences against the immutable application
+   * records before exposing or applying them. A newer latest opportunity, a
+   * non-reviewed record, or a missing history version makes the pending
+   * selection unavailable rather than silently applying stale material.
+   */
+  async function reconcileReviewPreferences(
+    workspace: ActiveWorkspace,
+    preferences: ReviewOverrides,
+    capability: BridgeCapability,
+  ): Promise<ReviewOverrides> {
+    let reconciled = preferences;
+    const reviewedOpportunity = preferences.reviewedOpportunity;
+    if (reviewedOpportunity !== undefined) {
+      let reviewed = sameOpportunitySelection(
+        reviewedOpportunityCache.get(workspace.root),
+        reviewedOpportunity,
+      );
+      try {
+        const latest = await service.getOpportunity({
+          root: workspace.root,
+          briefId: reviewedOpportunity.briefId,
+        });
+        reviewed =
+          latest !== undefined &&
+          latest.brief.status === "reviewed" &&
+          latest.brief.version === reviewedOpportunity.version;
+      } catch (error) {
+        options.onError?.(error, capability);
+        // A just-reviewed selection remains usable in this host session; a
+        // restarted host has no cache and therefore cannot apply it blindly.
+      }
+      if (!reviewed) {
+        reconciled = withoutReviewedOpportunity(reconciled);
+      }
+    }
+
+    const pending = reconciled.pendingWritingPolicyOverride;
+    const currentReviewed = reconciled.reviewedOpportunity;
+    if (pending !== undefined) {
+      const bound =
+        currentReviewed !== undefined &&
+        sameOpportunitySelection(currentReviewed, pending.opportunityBrief);
+      let available = bound;
+      if (available && service.listWritingPolicyVersions !== undefined) {
+        try {
+          const versions = await service.listWritingPolicyVersions({
+            root: workspace.root,
+            includeContent: false,
+          });
+          available = versions.some(
+            (version) =>
+              version.checksum === pending.checksum && version.version === pending.version,
+          );
+        } catch (error) {
+          options.onError?.(error, capability);
+          available = false;
+        }
+      }
+      if (!available) reconciled = withoutPendingWritingPolicyOverride(reconciled);
+    }
+    if (
+      reconciled.reviewedOpportunity !== preferences.reviewedOpportunity ||
+      reconciled.pendingWritingPolicyOverride !== preferences.pendingWritingPolicyOverride
+    ) {
+      await writeOverrides(workspace.root, reconciled);
+    }
+    return reconciled;
   }
 
   async function providerAuthModeStatus(
@@ -1729,6 +2084,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     } catch (error) {
       options.onError?.(error, capability);
       return null;
+    }
+  }
+
+  async function writingPolicyForRun(
+    workspace: ActiveWorkspace,
+    runId: string,
+    capability: BridgeCapability,
+  ): Promise<RunWritingPolicyProjection | undefined> {
+    if (service.readRunWritingPolicy === undefined) return undefined;
+    try {
+      return safeRunWritingPolicyProjection(
+        await service.readRunWritingPolicy({ root: workspace.root, runId }),
+      );
+    } catch (error) {
+      options.onError?.(error, capability);
+      return undefined;
     }
   }
 
@@ -1936,6 +2307,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       expectedVersion: input.expectedVersion,
       patch: input.patch as OpportunityDraftPatch,
     });
+    const preferences = await readOverrides(workspace.root);
+    if (
+      preferences.reviewedOpportunity?.briefId === input.briefId &&
+      preferences.reviewedOpportunity.version !== record.brief.version
+    ) {
+      reviewedOpportunityCache.delete(workspace.root);
+      await writeOverrides(workspace.root, withoutReviewedOpportunity(preferences));
+    }
     return projectOpportunityRecord(workspace.descriptor.id, record);
   }
 
@@ -1948,13 +2327,57 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       briefId: input.briefId,
       expectedVersion: input.expectedVersion,
     });
+    const reviewedOpportunity: OpportunityBriefSelectionInput = {
+      briefId: record.brief.id,
+      version: record.brief.version,
+    };
+    reviewedOpportunityCache.set(workspace.root, reviewedOpportunity);
+    const preferences = await readOverrides(workspace.root);
+    try {
+      await writeOverrides(workspace.root, {
+        ...withoutPendingWritingPolicyOverride(preferences),
+        reviewedOpportunity,
+      });
+    } catch (error) {
+      // Review remains usable for a host session whose synthetic/test root is
+      // not writable; real workspaces persist the binding for restart.
+      options.onError?.(error, "opportunity.review");
+    }
     return projectOpportunityRecord(workspace.descriptor.id, record);
   }
 
   async function selectFiles(input: FileSelectInput): Promise<FileSelectResult> {
     const workspace = workspaceFor(input.workspaceId);
     const targetKind = input.target ?? "evidence";
+    const writingPolicyTarget =
+      targetKind === "writing-policy" || targetKind === "writing-policy-override";
+    if (writingPolicyTarget && input.multiple === true) {
+      return fail(
+        "operation-failed",
+        "Writing policy selection accepts one Markdown or text file.",
+      );
+    }
+    let preferences =
+      targetKind === "writing-policy-override"
+        ? await reconcileReviewPreferences(
+            workspace,
+            await readOverrides(workspace.root),
+            "file.select",
+          )
+        : await readOverrides(workspace.root);
+    if (targetKind === "writing-policy-override" && preferences.reviewedOpportunity === undefined) {
+      return fail(
+        "operation-failed",
+        "Review an opportunity brief before importing an opportunity writing-policy override.",
+      );
+    }
     const selected = await options.dialogs.chooseFiles(input);
+    if (writingPolicyTarget && selected.length > 1) {
+      return fail(
+        "operation-failed",
+        "Writing policy selection accepts one Markdown or text file.",
+      );
+    }
     const files: SelectedFile[] = [];
     for (const sourcePath of selected.slice(0, input.multiple === false ? 1 : 100)) {
       const details = await stat(sourcePath);
@@ -1970,6 +2393,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         ![".pdf", ".docx"].includes(extension)
       ) {
         return fail("operation-failed", "The selected file type is not supported.");
+      }
+      if (writingPolicyTarget && ![".md", ".markdown", ".txt", ".text"].includes(extension)) {
+        return fail("operation-failed", "The writing policy must be a Markdown or text file.");
       }
 
       if (targetKind === "job-description") {
@@ -2024,6 +2450,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           io(),
         );
         active = { descriptor, root: workspace.root };
+        if (preferences.pendingWritingPolicyOverride !== undefined) {
+          preferences = withoutPendingWritingPolicyOverride(preferences);
+          await writeOverrides(workspace.root, preferences);
+        }
         const targetRelative = descriptor.writingPolicyPath ?? ".draft-loop/writing-policy.md";
         const target = resolve(workspace.root, targetRelative);
         const targetDetails = await stat(target);
@@ -2036,6 +2466,56 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           relativePath: targetRelative,
           mediaType: "text/markdown",
           byteLength: targetDetails.size,
+        });
+      } else if (targetKind === "writing-policy-override") {
+        const reviewedOpportunity = preferences.reviewedOpportunity;
+        if (reviewedOpportunity === undefined) {
+          return fail(
+            "operation-failed",
+            "Review an opportunity brief before importing an opportunity writing-policy override.",
+          );
+        }
+        await service.configureWritingPolicy(
+          { root: workspace.root, sourcePath, activate: false },
+          io(),
+        );
+        const importedContent = (await readFile(sourcePath, "utf8")).trim();
+        const importedChecksum = createHash("sha256").update(importedContent, "utf8").digest("hex");
+        if (service.listWritingPolicyVersions === undefined) {
+          return fail(
+            "capability-unavailable",
+            "Writing-policy history is unavailable; the override was not selected.",
+          );
+        }
+        const versions = await service.listWritingPolicyVersions({
+          root: workspace.root,
+          includeContent: false,
+        });
+        const imported = versions
+          .map(safeWritingPolicyMetadata)
+          .find((version) => version?.checksum === importedChecksum);
+        if (imported === undefined) {
+          return fail(
+            "operation-failed",
+            "The imported writing-policy version was not returned by workspace history.",
+          );
+        }
+        preferences = {
+          ...preferences,
+          pendingWritingPolicyOverride: {
+            checksum: imported.checksum,
+            version: imported.version,
+            opportunityBrief: reviewedOpportunity,
+          },
+        };
+        await writeOverrides(workspace.root, preferences);
+        const name = basename(sourcePath);
+        files.push({
+          id: imported.checksum.slice(0, 24),
+          name,
+          relativePath: `writing-policy-history/${name}`,
+          mediaType: extensionForMediaType(extension),
+          byteLength: (await stat(sourcePath)).size,
         });
       } else {
         const candidateRelative = relative(resolve(workspace.root), resolve(sourcePath)).replaceAll(
@@ -2149,7 +2629,11 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         : input.action.type === "start"
           ? await service.status({ root: workspace.root })
           : await loadSnapshot(workspace, input.runId);
-    let overrides = await readOverrides(workspace.root);
+    let overrides = await reconcileReviewPreferences(
+      workspace,
+      await readOverrides(workspace.root),
+      "review.dispatch",
+    );
     let exportPath: string | null = null;
     let dispatchedSnapshot: RunSnapshot | undefined;
     const action: ReviewAction = input.action;
@@ -2191,10 +2675,23 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }
       case "start": {
         await requireProviderTransmissionAcknowledgement(workspace);
+        const reviewedOpportunity = overrides.reviewedOpportunity;
+        const pendingWritingPolicyOverride = overrides.pendingWritingPolicyOverride;
         dispatchedSnapshot = await service.begin(
-          { root: workspace.root, allowProviderData: true },
+          {
+            root: workspace.root,
+            allowProviderData: true,
+            ...(reviewedOpportunity === undefined ? {} : { opportunityBrief: reviewedOpportunity }),
+            ...(pendingWritingPolicyOverride === undefined
+              ? {}
+              : { writingPolicyOverrideChecksum: pendingWritingPolicyOverride.checksum }),
+          },
           io(),
         );
+        if (pendingWritingPolicyOverride !== undefined) {
+          overrides = withoutPendingWritingPolicyOverride(overrides);
+          await writeOverrides(workspace.root, overrides);
+        }
         resumeInBackground(workspace, dispatchedSnapshot);
         break;
       }
@@ -2349,7 +2846,13 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           ? {}
           : { runId: input.runId }),
       }));
-    const setup = await workspaceReadiness(workspace.descriptor, workspace.root, service);
+    overrides = await reconcileReviewPreferences(workspace, overrides, "review.dispatch");
+    const setup = await workspaceReadiness(
+      workspace.descriptor,
+      workspace.root,
+      service,
+      overrides,
+    );
     const preflight = await providerTransmissionPreflight(
       workspace.descriptor,
       workspace.root,
@@ -2371,6 +2874,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       setup,
       preflight,
       backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),
+      await writingPolicyForRun(workspace, snapshot.runId, "review.dispatch"),
     );
   }
 
@@ -3703,14 +4207,18 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await reviewOpportunity(command.input) };
         case "run.status": {
           const workspace = workspaceFor(command.input.workspaceId);
+          const snapshot = await service.status({
+            root: workspace.root,
+            ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
+          });
           return {
             ok: true,
             value: statusResult(
               workspace.descriptor.id,
-              await service.status({
-                root: workspace.root,
-                ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
-              }),
+              snapshot,
+              snapshot === undefined
+                ? undefined
+                : await writingPolicyForRun(workspace, snapshot.runId, "run.status"),
             ),
           };
         }
@@ -3722,9 +4230,33 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ...(command.input.opportunityBrief === undefined
               ? {}
               : { opportunityBrief: command.input.opportunityBrief }),
+            ...(command.input.writingPolicyOverrideChecksum === undefined
+              ? {}
+              : {
+                  writingPolicyOverrideChecksum: command.input.writingPolicyOverrideChecksum,
+                }),
           };
           const snapshot = await service.start(startCommand, io());
-          return { ok: true, value: statusResult(workspace.descriptor.id, snapshot) };
+          if (command.input.writingPolicyOverrideChecksum !== undefined) {
+            const preferences = await readOverrides(workspace.root);
+            if (
+              preferences.pendingWritingPolicyOverride?.checksum ===
+              command.input.writingPolicyOverrideChecksum
+            ) {
+              await writeOverrides(
+                workspace.root,
+                withoutPendingWritingPolicyOverride(preferences),
+              );
+            }
+          }
+          return {
+            ok: true,
+            value: statusResult(
+              workspace.descriptor.id,
+              snapshot,
+              await writingPolicyForRun(workspace, snapshot.runId, "run.start"),
+            ),
+          };
         }
         case "run.pause":
         case "run.stop": {
@@ -3737,7 +4269,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             },
             io(),
           );
-          return { ok: true, value: statusResult(workspace.descriptor.id, snapshot) };
+          return {
+            ok: true,
+            value: statusResult(
+              workspace.descriptor.id,
+              snapshot,
+              await writingPolicyForRun(workspace, snapshot.runId, command.type),
+            ),
+          };
         }
         case "run.resume": {
           const workspace = workspaceFor(command.input.workspaceId);
@@ -3745,7 +4284,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             { root: workspace.root, runId: command.input.runId, allowProviderData: false },
             io(),
           );
-          return { ok: true, value: statusResult(workspace.descriptor.id, snapshot) };
+          return {
+            ok: true,
+            value: statusResult(
+              workspace.descriptor.id,
+              snapshot,
+              await writingPolicyForRun(workspace, snapshot.runId, "run.resume"),
+            ),
+          };
         }
         case "review.load": {
           const selectedWorkspace =
@@ -3758,7 +4304,17 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             root: workspace.root,
             ...(command.input.runId === undefined ? {} : { runId: command.input.runId }),
           });
-          const setup = await workspaceReadiness(workspace.descriptor, workspace.root, service);
+          const preferences = await reconcileReviewPreferences(
+            workspace,
+            await readOverrides(workspace.root),
+            "review.load",
+          );
+          const setup = await workspaceReadiness(
+            workspace.descriptor,
+            workspace.root,
+            service,
+            preferences,
+          );
           if (snapshot === undefined) {
             const preflight = await providerTransmissionPreflight(
               workspace.descriptor,
@@ -3783,7 +4339,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               workspace.descriptor,
               snapshot,
               await independentReviewFor(workspace, snapshot.runId, "review.load"),
-              await readOverrides(workspace.root),
+              preferences,
               await service.latestExportPath({
                 root: workspace.root,
                 runId: snapshot.runId,
@@ -3792,6 +4348,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
               setup,
               preflight,
               backgroundRuns.has(backgroundKey(workspace, snapshot.runId)),
+              await writingPolicyForRun(workspace, snapshot.runId, "review.load"),
             ),
           };
         }

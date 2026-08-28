@@ -182,20 +182,20 @@ raw text, and provenance remain outside provider-facing context.
 
 ## Writing policy enforcement
 
-The current workspace policy remains an explicitly selected local Markdown or
-text file. Its exact content, checksum-derived version, and deterministic
-structured rules are frozen into the run context and supplied to both author
-and critic as candidate-authored style guidance. Policy text and rules cannot
-change provider selection, transmission approval, permissions, tools, factual
-evidence, or workflow state.
+Writing policies are local, immutable, checksum-addressed versions. Activating
+a Markdown or text file appends it to the workspace's SQLite policy history and
+makes it the default for future runs. Importing appends a version without
+changing that default. Existing managed files are migrated lazily, and direct
+managed-file changes are versioned before the next run rather than silently
+overwriting history.
 
-The structured #70 policy components recognize bounded forbidden-term and
-forbidden-punctuation rules plus optional tone, spelling-locale, and verbosity
-preferences while retaining compatibility with earlier content-only policy
-snapshots. The preferences are compiled from explicit directives in the
-candidate-selected file and travel to both model roles in the immutable run
-context. They are advisory: locale does not imply spell checking, verbosity
-does not derive a numeric length limit, and none selects a rendering profile.
+The policy compiler recognizes bounded forbidden-term and
+forbidden-punctuation rules, tone, spelling locale, verbosity, a one- or
+two-page target, section order, emphasis areas, and transparent anti-formulaic
+defaults. The defaults are ordinary forbidden-term rules and can be disabled
+explicitly in the policy. Older content-only policy snapshots remain readable.
+Preferences are advisory model context: locale is not a spell checker, page
+target is not a rendering profile, and emphasis does not authorize new facts.
 
 `packages/validation` evaluates the deterministic rules in artifact section
 and block order. Each finding carries a stable rule identity and content-free
@@ -204,11 +204,17 @@ source paths, or surrounding content. The orchestrator applies the exact policy
 from the immutable context during normal draft validation before independent
 critique.
 
-These components do not add anti-formulaic defaults, page targets, section
-ordering, emphasis rules, a policy-history table, storage migration, global
-policy editor, shared CLI command, or opportunity-specific override. Those
-remain later #70 work, and an override must eventually bind an immutable base
-policy version without silently replacing the workspace policy.
+Section-order validation is deterministic and reports stable, content-free
+section and block locations. Page targets and emphasis areas remain advisory;
+rendering QA separately verifies the produced document.
+
+A reviewed opportunity may select one imported policy version as a complete
+run-specific override. The application verifies both immutable versions,
+records base and override checksums in the run context, and supplies the
+effective policy to both author and critic. The selection never changes the
+active workspace policy. CLI and desktop projections expose safe version and
+lineage metadata; exact policy content is available only through an explicit
+local content-read action.
 
 ## Portable Candidate Knowledge Base
 

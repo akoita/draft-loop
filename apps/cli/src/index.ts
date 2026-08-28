@@ -34,10 +34,13 @@ import {
   type PreviewKnowledgeSourceDirectoryReconciliationResult,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
   type PreviewKnowledgeSourceDirectoryRootRebindResult,
+  type RunWritingPolicyProjection,
   runPilot,
   type StatusCommand,
   safeErrorMessage,
   type WorkspaceDescriptor,
+  type WritingPolicyVersionMetadata,
+  type WritingPolicyVersionView,
   workspaceRoot,
 } from "./workflow.js";
 
@@ -104,6 +107,105 @@ function directoryIngestionOptions(
 
 function boolOption(options: Record<string, unknown>, key: string): boolean {
   return options[key] === true;
+}
+
+const writingPolicyChecksumPattern = /^[a-f0-9]{64}$/u;
+
+function writingPolicyChecksumOption(value: string): string {
+  if (!writingPolicyChecksumPattern.test(value)) {
+    throw new Error("Writing policy checksum must be a lowercase SHA-256 checksum.");
+  }
+  return value;
+}
+
+function requireWritingPolicyApi<T extends (...arguments_: never[]) => unknown>(
+  api: T | undefined,
+  operation: string,
+): T {
+  if (typeof api !== "function") {
+    throw new Error(`Writing policy ${operation} is unsupported by this application service.`);
+  }
+  return api;
+}
+
+function writingPolicyMetadataLine(label: string, metadata: WritingPolicyVersionMetadata): string {
+  return [
+    label === "" ? "writing-policy" : `writing-policy ${label}`,
+    `version=${metadata.version}`,
+    `checksum=${metadata.checksum}`,
+    `schemaVersion=${metadata.schemaVersion}`,
+    `createdAt=${metadata.createdAt}`,
+    `priorChecksum=${metadata.priorChecksum ?? "none"}`,
+  ].join(" ");
+}
+
+function writeWritingPolicyVersion(
+  io: ApplicationIo,
+  version: WritingPolicyVersionView,
+  includeContent = false,
+): void {
+  io.write(writingPolicyMetadataLine("", version));
+  if (!includeContent) return;
+  const content = version.policy?.content;
+  if (typeof content !== "string") {
+    throw new Error("The application service did not return writing policy content.");
+  }
+  io.write(content);
+}
+
+function writeRunWritingPolicy(
+  io: ApplicationIo,
+  projection: RunWritingPolicyProjection | undefined,
+): void {
+  if (projection === undefined) return;
+  io.write(`writing-policy lineage=${projection.lineage.kind}`);
+  io.write(writingPolicyMetadataLine("effective", projection.effective));
+  if (projection.base !== undefined) {
+    io.write(writingPolicyMetadataLine("base", projection.base));
+  } else if (projection.lineage.kind === "opportunity-override") {
+    io.write(
+      `writing-policy base version=${projection.lineage.base.version} checksum=${projection.lineage.base.checksum}`,
+    );
+  }
+  if (projection.override !== undefined) {
+    io.write(writingPolicyMetadataLine("override", projection.override));
+  } else if (projection.lineage.kind === "opportunity-override") {
+    io.write(
+      `writing-policy override version=${projection.lineage.override.version} checksum=${projection.lineage.override.checksum}`,
+    );
+  }
+}
+
+async function configureAndWritePolicy(
+  service: ApplicationService,
+  io: ApplicationIo,
+  sourcePath: string,
+  root: string,
+  activate: boolean,
+): Promise<void> {
+  const configured = await service.configureWritingPolicy(
+    {
+      root,
+      sourcePath,
+      ...(activate ? {} : { activate: false }),
+    },
+    io,
+  );
+  let imported: WritingPolicyVersionView | undefined = activate
+    ? configured.activeWritingPolicy
+    : undefined;
+  if (imported === undefined) {
+    const listWritingPolicyVersions = requireWritingPolicyApi(
+      service.listWritingPolicyVersions,
+      "history",
+    );
+    const history = await listWritingPolicyVersions({ root });
+    imported = history.at(-1);
+  }
+  if (imported === undefined) {
+    throw new Error("The application service did not return the imported writing policy version.");
+  }
+  writeWritingPolicyVersion(io, imported);
 }
 
 /** Status lines are user-facing output, so they go to stdout rather than stderr. */
@@ -1377,6 +1479,8 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       const root = workspaceRoot(workspace);
       await service.readWorkspace(root);
       await service.status({ root }, io);
+      const readRunPolicy = requireWritingPolicyApi(service.readRunWritingPolicy, "run reads");
+      writeRunWritingPolicy(io, await readRunPolicy({ root }));
       await writeIndependentReview({ root });
     });
 
@@ -1390,6 +1494,11 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       "exact reviewed opportunity version",
       positiveIntegerOption,
     )
+    .option(
+      "--writing-policy-override <checksum>",
+      "exact lowercase SHA-256 policy version for a reviewed opportunity",
+      writingPolicyChecksumOption,
+    )
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;
@@ -1397,6 +1506,12 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       if (hasBriefId !== hasVersion) {
         throw new Error(
           "--opportunity-brief-id and --opportunity-version must be provided together.",
+        );
+      }
+      const hasPolicyOverride = options.writingPolicyOverride !== undefined;
+      if (hasPolicyOverride && !hasBriefId) {
+        throw new Error(
+          "--writing-policy-override requires --opportunity-brief-id and --opportunity-version.",
         );
       }
       await service.start({
@@ -1408,6 +1523,9 @@ export function createCli(dependencies: CliDependencies = {}): Command {
                 version: options.opportunityVersion as number,
               },
             }
+          : {}),
+        ...(hasPolicyOverride
+          ? { writingPolicyOverrideChecksum: options.writingPolicyOverride as string }
           : {}),
         allowProviderData: boolOption(options, "allowProviderData"),
       });
@@ -1459,7 +1577,86 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         ...(options.runId === undefined ? {} : { runId: options.runId as string }),
       };
       await service.status(statusCommand, io);
+      const readRunPolicy = requireWritingPolicyApi(service.readRunWritingPolicy, "run reads");
+      writeRunWritingPolicy(io, await readRunPolicy(statusCommand));
       await writeIndependentReview(statusCommand);
+    });
+
+  const policy = command
+    .command("policy")
+    .description("Import and inspect immutable writing-policy versions");
+
+  policy
+    .command("activate")
+    .description("Import a local policy file and activate it for future runs")
+    .argument("<file>", "local writing-policy file")
+    .argument("[workspace]", "workspace directory", ".")
+    .action(async (file: string, workspace: string) => {
+      await configureAndWritePolicy(service, io, file, workspaceRoot(workspace), true);
+    });
+
+  policy
+    .command("import")
+    .description("Import a local policy file without changing the active workspace policy")
+    .argument("<file>", "local writing-policy file")
+    .argument("[workspace]", "workspace directory", ".")
+    .action(async (file: string, workspace: string) => {
+      await configureAndWritePolicy(service, io, file, workspaceRoot(workspace), false);
+    });
+
+  policy
+    .command("current")
+    .description("Show the active writing-policy metadata, or exact content with --content")
+    .argument("[workspace]", "workspace directory", ".")
+    .option("--content", "print the exact local policy content")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const getWritingPolicy = requireWritingPolicyApi(service.getWritingPolicy, "reads");
+      const version = await getWritingPolicy({
+        root: workspaceRoot(workspace),
+        ...(boolOption(options, "content") ? { includeContent: true } : {}),
+      });
+      if (version === undefined) {
+        io.write("No active writing policy.");
+        return;
+      }
+      writeWritingPolicyVersion(io, version, boolOption(options, "content"));
+    });
+
+  policy
+    .command("show")
+    .description("Show one exact writing-policy version, or content with --content")
+    .argument("<checksum>", "lowercase SHA-256 policy checksum")
+    .argument("[workspace]", "workspace directory", ".")
+    .option("--content", "print the exact local policy content")
+    .action(async (checksum: string, workspace: string, options: Record<string, unknown>) => {
+      const getWritingPolicy = requireWritingPolicyApi(service.getWritingPolicy, "reads");
+      const version = await getWritingPolicy({
+        root: workspaceRoot(workspace),
+        checksum: writingPolicyChecksumOption(checksum),
+        ...(boolOption(options, "content") ? { includeContent: true } : {}),
+      });
+      if (version === undefined) {
+        io.write(`Writing policy ${checksum} was not found.`);
+        return;
+      }
+      writeWritingPolicyVersion(io, version, boolOption(options, "content"));
+    });
+
+  policy
+    .command("list")
+    .description("List immutable writing-policy history without policy content")
+    .argument("[workspace]", "workspace directory", ".")
+    .action(async (workspace: string) => {
+      const listWritingPolicyVersions = requireWritingPolicyApi(
+        service.listWritingPolicyVersions,
+        "history",
+      );
+      const versions = await listWritingPolicyVersions({ root: workspaceRoot(workspace) });
+      if (versions.length === 0) {
+        io.write("No writing policy versions.");
+        return;
+      }
+      for (const version of versions) writeWritingPolicyVersion(io, version);
     });
 
   command

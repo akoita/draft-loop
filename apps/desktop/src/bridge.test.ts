@@ -463,6 +463,186 @@ describe("desktop capability bridge", () => {
     ).toThrow("invalid");
   });
 
+  it("accepts a lowercase writing-policy override checksum only on direct run.start", () => {
+    const checksum = "a".repeat(64);
+    expect(
+      validateBridgeCommand({
+        type: "run.start",
+        input: {
+          workspaceId: "workspace-1",
+          opportunityBrief: { briefId: "brief-1", version: 2 },
+          writingPolicyOverrideChecksum: checksum,
+        },
+      }),
+    ).toEqual({
+      type: "run.start",
+      input: {
+        workspaceId: "workspace-1",
+        opportunityBrief: { briefId: "brief-1", version: 2 },
+        writingPolicyOverrideChecksum: checksum,
+      },
+    });
+    for (const invalidChecksum of [
+      "A".repeat(64),
+      "a".repeat(63),
+      `${"a".repeat(63)}g`,
+      `${"a".repeat(64)}x`,
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "run.start",
+          input: { workspaceId: "workspace-1", writingPolicyOverrideChecksum: invalidChecksum },
+        }),
+      ).toThrow("invalid");
+    }
+  });
+
+  it("keeps opportunity policy selection single-file and text-only", () => {
+    expect(
+      validateBridgeCommand({
+        type: "file.select",
+        input: {
+          workspaceId: "workspace-1",
+          target: "writing-policy-override",
+          multiple: false,
+          extensions: [".md", ".txt"],
+        },
+      }),
+    ).toMatchObject({
+      type: "file.select",
+      input: { target: "writing-policy-override", multiple: false },
+    });
+    expect(() =>
+      validateBridgeCommand({
+        type: "file.select",
+        input: {
+          workspaceId: "workspace-1",
+          target: "writing-policy-override",
+          multiple: true,
+          extensions: [".md"],
+        },
+      }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "file.select",
+        input: {
+          workspaceId: "workspace-1",
+          target: "writing-policy-override",
+          multiple: false,
+          extensions: [".pdf"],
+        },
+      }),
+    ).toThrow("invalid");
+  });
+
+  it("round-trips safe writing-policy metadata and rejects content or broken lineage", async () => {
+    const baseChecksum = "a".repeat(64);
+    const overrideChecksum = "b".repeat(64);
+    const base = {
+      checksum: baseChecksum,
+      version: "sha256:aaaaaaaaaaaa",
+      schemaVersion: 1,
+      createdAt: "2026-08-28T10:00:00.000Z",
+      priorChecksum: null,
+    };
+    const override = {
+      checksum: overrideChecksum,
+      version: "sha256:bbbbbbbbbbbb",
+      schemaVersion: 1,
+      createdAt: "2026-08-28T10:01:00.000Z",
+      priorChecksum: baseChecksum,
+    };
+    const state = createFixtureReviewState();
+    const safeState = {
+      ...state,
+      writingPolicy: {
+        effective: override,
+        lineage: {
+          kind: "opportunity-override" as const,
+          base: { version: base.version, checksum: base.checksum },
+          override: { version: override.version, checksum: override.checksum },
+        },
+        base,
+        override,
+      },
+      setup: {
+        ...state.setup,
+        writingPolicy: base,
+        writingPolicyHistory: [base, override],
+        reviewedOpportunity: { briefId: "brief-1", version: 2 },
+        pendingWritingPolicyOverride: {
+          checksum: override.checksum,
+          version: override.version,
+          opportunityBrief: { briefId: "brief-1", version: 2 },
+        },
+      },
+    };
+    const port = createCapabilityPort(
+      bridge(async (command) => {
+        if (command.type === "review.load") return { ok: true, value: safeState };
+        return {
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            runId: null,
+            state: "collecting",
+            round: 0,
+            approval: "pending",
+          },
+        };
+      }),
+    );
+    await expect(port.execute({ type: "review.load", input: {} })).resolves.toMatchObject({
+      ok: true,
+      value: {
+        writingPolicy: {
+          effective: { checksum: overrideChecksum },
+          lineage: { kind: "opportunity-override" },
+        },
+      },
+    });
+
+    const contentBearing = {
+      ...safeState,
+      setup: { ...safeState.setup, writingPolicy: { ...base, content: "private policy" } },
+    };
+    const rejectingPort = createCapabilityPort(
+      bridge(async (command) =>
+        command.type === "review.load"
+          ? { ok: true, value: contentBearing }
+          : { ok: false, error: { code: "not-found", message: "unused" } },
+      ),
+    );
+    await expect(rejectingPort.execute({ type: "review.load", input: {} })).resolves.toMatchObject({
+      ok: false,
+      error: { code: "operation-failed" },
+    });
+
+    const brokenLineage = {
+      ...safeState,
+      writingPolicy: {
+        ...safeState.writingPolicy,
+        lineage: {
+          kind: "opportunity-override" as const,
+          base: { version: base.version, checksum: base.checksum.toUpperCase() },
+          override: { version: override.version, checksum: override.checksum },
+        },
+      },
+    };
+    const brokenPort = createCapabilityPort(
+      bridge(async (command) =>
+        command.type === "review.load"
+          ? { ok: true, value: brokenLineage }
+          : { ok: false, error: { code: "not-found", message: "unused" } },
+      ),
+    );
+    await expect(brokenPort.execute({ type: "review.load", input: {} })).resolves.toMatchObject({
+      ok: false,
+      error: { code: "operation-failed" },
+    });
+  });
+
   it("validates an optional exact reviewed opportunity selection only on run.start", () => {
     expect(
       validateBridgeCommand({

@@ -69,24 +69,21 @@ approval remains independently required.
 
 ### Current writing-policy scope
 
-The workspace writing policy is candidate-authored, untrusted style data. Its
-bounded managed content and checksum-derived version are already captured in
-immutable run context and sent to author and critic only through the existing
-provider-approval boundary. Structured forbidden-term and punctuation rules
-support deterministic artifact checks in normal orchestration. Optional tone,
-spelling-locale, and verbosity directives are bounded advisory context rather
-than spell-checking, numeric-length, or layout controls. Neither rules nor
-preferences can override system instructions, evidence requirements, provider
-identity, transmission policy, permissions, or tools.
+The workspace writing policy is candidate-authored, untrusted style data.
+Bounded content is stored locally as immutable, checksum-addressed versions;
+ordinary status and history projections expose metadata only. The effective
+version is captured in immutable run context and sent to author and critic only
+through the existing provider-approval boundary. Rules and preferences cannot
+override system instructions, evidence requirements, provider identity,
+transmission policy, permissions, or tools.
 
 Policy findings expose stable rule, section, block, and bounded position data
 without reproducing the forbidden value, matched artifact content, source
-paths, or context. Older content-only snapshots remain readable and retain the
-legacy bounded punctuation check. Policy-history persistence, migration,
-opportunity-specific overrides, and shared editors remain open #70 work; a
-future override must be immutable and must never mutate the global policy as a
-side effect. Anti-formulaic defaults, page targets, section ordering, and
-emphasis rules are also not implemented by the current components.
+paths, or context. Older content-only snapshots remain readable. Structured
+tone, locale, verbosity, page target, section order, emphasis, and transparent
+anti-formulaic defaults remain bounded advisory style data. A reviewed
+opportunity may bind one imported version as a complete override; the run pins
+base and override lineage, and the active workspace policy is not mutated.
 
 ### Current CKB scope
 

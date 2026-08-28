@@ -216,10 +216,12 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           input: {
             workspaceId: state.workspaceId,
             target,
-            ...(target === "job-description" || target === "writing-policy"
+            ...(target === "job-description" ||
+            target === "writing-policy" ||
+            target === "writing-policy-override"
               ? { multiple: false }
               : {}),
-            ...(target === "writing-policy"
+            ...(target === "writing-policy" || target === "writing-policy-override"
               ? { extensions: [".md", ".markdown", ".txt", ".text"] as const }
               : {}),
           },

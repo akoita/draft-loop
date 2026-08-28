@@ -18,6 +18,7 @@ import {
   type ReviewArtifact,
   type ReviewBlock,
   type ReviewFinding,
+  type RunWritingPolicyProjection,
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
@@ -32,7 +33,9 @@ interface ReviewWorkspaceProps {
   ) => void;
   readonly pendingBulkFindingCount?: number | null;
   readonly pendingReviewAction?: PendingReviewAction | null;
-  readonly onSelectFiles?: (target: "evidence" | "job-description" | "writing-policy") => void;
+  readonly onSelectFiles?: (
+    target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
+  ) => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   readonly errorMessage?: string | null;
   readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
@@ -1200,6 +1203,15 @@ function sameMarginLayout(left: MarginNoteLayout | null, right: MarginNoteLayout
 function claimSourceLabel(claim: DesktopReviewState["artifact"]["claims"][number]): string {
   if (claim.status === "disputed") return "source conflict";
   return claim.evidence.length > 0 ? "source linked" : "not linked to candidate materials";
+}
+
+function policyChecksumLabel(checksum: string): string {
+  return `${checksum.slice(0, 12)}…`;
+}
+
+function policyLineageLabel(policy: RunWritingPolicyProjection): string {
+  if (policy.lineage.kind === "workspace") return "Workspace policy";
+  return `Base ${policy.base?.version ?? policy.lineage.base.version} → override ${policy.override?.version ?? policy.lineage.override.version}`;
 }
 
 export function ReviewWorkspace({
@@ -2657,17 +2669,25 @@ export function ReviewWorkspace({
                         ? "Add explicit rules for both author and critic"
                         : `Applied as ${state.setup.writingPolicy.version}`}
                   </span>
-                  {state.setup.writingPolicy === null ? (
-                    <span className="setup-note">
-                      A selected policy is kept separate from career evidence. Its instructions and
-                      checksum are recorded with the run and its content is shared with both model
-                      providers.
-                    </span>
-                  ) : (
+                  <span className="setup-note">
+                    Policy content stays local to this workspace and is kept separate from career
+                    evidence. Runs record only its version and checksum in ordinary review status.
+                  </span>
+                  {state.setup.writingPolicy === null ? null : (
                     <span className="setup-retrieval-status" role="status">
-                      {state.setup.writingPolicy.preview}
+                      Current checksum {policyChecksumLabel(state.setup.writingPolicy.checksum)}
                     </span>
                   )}
+                  {(state.setup.writingPolicyHistory?.length ?? 0) > 0 ? (
+                    <span className="setup-retrieval-status" role="status">
+                      History:{" "}
+                      {state.setup.writingPolicyHistory
+                        ?.map(
+                          (policy) => `${policy.version} (${policyChecksumLabel(policy.checksum)})`,
+                        )
+                        .join(" · ")}
+                    </span>
+                  ) : null}
                   <button
                     className="button button-quiet"
                     type="button"
@@ -2678,6 +2698,38 @@ export function ReviewWorkspace({
                       ? "Choose policy file"
                       : "Replace policy"}
                   </button>
+                  <button
+                    className="button button-outline"
+                    type="button"
+                    disabled={
+                      onSelectFiles === undefined || state.setup.reviewedOpportunity == null
+                    }
+                    title={
+                      state.setup.reviewedOpportunity == null
+                        ? "Review an opportunity before importing an override."
+                        : "Import a policy version for this reviewed opportunity without changing the global policy."
+                    }
+                    onClick={() => onSelectFiles?.("writing-policy-override")}
+                  >
+                    Import opportunity override
+                  </button>
+                  {state.setup.reviewedOpportunity == null ? (
+                    <span className="setup-retrieval-status">
+                      Review an opportunity before importing an override.
+                    </span>
+                  ) : null}
+                  {state.setup.pendingWritingPolicyOverride == null ? null : (
+                    <span className="setup-retrieval-status" role="status">
+                      Selected override {state.setup.pendingWritingPolicyOverride.version} (
+                      {policyChecksumLabel(state.setup.pendingWritingPolicyOverride.checksum)})
+                      bound to brief{" "}
+                      {state.setup.pendingWritingPolicyOverride.opportunityBrief.briefId} v
+                      {state.setup.pendingWritingPolicyOverride.opportunityBrief.version}.
+                    </span>
+                  )}
+                  <span className="setup-note">
+                    Importing an opportunity override does not change the global policy.
+                  </span>
                 </article>
                 <article className={`setup-card${modelKeysReady ? " setup-card-ready" : ""}`}>
                   <div className="setup-card-head">
@@ -3289,6 +3341,16 @@ export function ReviewWorkspace({
                 {state.providerExposure.sensitiveData ? "present" : "absent"}
               </span>
             </div>
+            {state.writingPolicy === undefined || state.writingPolicy === null ? null : (
+              <div className="trust-fact">
+                <span className="label">Writing policy</span>
+                <strong>{state.writingPolicy.effective.version}</strong>
+                <span>
+                  Effective checksum {policyChecksumLabel(state.writingPolicy.effective.checksum)}
+                </span>
+                <span>{policyLineageLabel(state.writingPolicy)}</span>
+              </div>
+            )}
             <div className="trust-fact">
               <span className="label">Evidence</span>
               <strong className="numeric">
