@@ -63,6 +63,12 @@ function driver(): ApplicationDriver {
       critic: { company: "openai", model: "critic" },
       fixtureMode: true,
     })),
+    getWritingPolicy: vi.fn<NonNullable<ApplicationDriver["getWritingPolicy"]>>(
+      async () => undefined,
+    ),
+    listWritingPolicyVersions: vi.fn<NonNullable<ApplicationDriver["listWritingPolicyVersions"]>>(
+      async () => [],
+    ),
     configureKnowledgeSelection: vi.fn<ApplicationDriver["configureKnowledgeSelection"]>(
       async (command) => ({
         id: "workspace-1",
@@ -105,6 +111,9 @@ function driver(): ApplicationDriver {
       lineagesDistinct: true,
       required: true,
     })),
+    readRunWritingPolicy: vi.fn<NonNullable<ApplicationDriver["readRunWritingPolicy"]>>(
+      async () => undefined,
+    ),
   };
 }
 
@@ -150,6 +159,52 @@ describe("application service contract", () => {
       },
       expect.objectContaining({ write: expect.any(Function) }),
     );
+  });
+
+  it("forwards policy override and path-safe policy reads through the shared boundary", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+    const checksum = "a".repeat(64);
+    const getWritingPolicy = service.getWritingPolicy;
+    const listWritingPolicyVersions = service.listWritingPolicyVersions;
+    const readRunWritingPolicy = service.readRunWritingPolicy;
+    const underlyingGetWritingPolicy = underlying.getWritingPolicy;
+    const underlyingListWritingPolicyVersions = underlying.listWritingPolicyVersions;
+    const underlyingReadRunWritingPolicy = underlying.readRunWritingPolicy;
+    if (
+      getWritingPolicy === undefined ||
+      listWritingPolicyVersions === undefined ||
+      readRunWritingPolicy === undefined ||
+      underlyingGetWritingPolicy === undefined ||
+      underlyingListWritingPolicyVersions === undefined ||
+      underlyingReadRunWritingPolicy === undefined
+    ) {
+      throw new Error("writing-policy service APIs are unavailable");
+    }
+
+    await service.start({
+      root: "workspace",
+      opportunityBrief: { briefId: "brief-1", version: 3 },
+      writingPolicyOverrideChecksum: checksum,
+    });
+    await getWritingPolicy({ root: "workspace", checksum });
+    await listWritingPolicyVersions({ root: "workspace" });
+    await readRunWritingPolicy({ root: "workspace", runId: "run-1" });
+
+    expect(underlying.start).toHaveBeenCalledWith(
+      {
+        root: "workspace",
+        opportunityBrief: { briefId: "brief-1", version: 3 },
+        writingPolicyOverrideChecksum: checksum,
+      },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+    expect(underlyingGetWritingPolicy).toHaveBeenCalledWith({ root: "workspace", checksum });
+    expect(underlyingListWritingPolicyVersions).toHaveBeenCalledWith({ root: "workspace" });
+    expect(underlyingReadRunWritingPolicy).toHaveBeenCalledWith({
+      root: "workspace",
+      runId: "run-1",
+    });
   });
 
   it("forwards queryEvidence with normalized root", async () => {

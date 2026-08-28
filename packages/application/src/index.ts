@@ -2,13 +2,21 @@ import type {
   EvidenceRetrievalInspection,
   IndependentReviewRecord,
   ScoredEvidenceChunk,
+  WritingPolicy,
+  WritingPolicyLineage,
 } from "@draft-loop/domain";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OutputFormat } from "@draft-loop/rendering";
 import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 
-export type { EvidenceRetrievalInspection, IndependentReviewRecord, ScoredEvidenceChunk };
+export type {
+  EvidenceRetrievalInspection,
+  IndependentReviewRecord,
+  ScoredEvidenceChunk,
+  WritingPolicy,
+  WritingPolicyLineage,
+};
 
 export interface ApplicationIo {
   readonly write: (line: string) => void;
@@ -71,6 +79,48 @@ export interface ConfigureWritingPolicyCommand {
   readonly root: string;
   /** Local Markdown or text file deliberately selected by the candidate. */
   readonly sourcePath: string;
+  /** Import without changing the managed file or active workspace policy. */
+  readonly activate?: boolean;
+}
+
+/** Safe identity and lineage metadata for one immutable writing-policy version. */
+export interface WritingPolicyVersionMetadata {
+  readonly checksum: string;
+  readonly version: string;
+  readonly schemaVersion: number;
+  readonly createdAt: string;
+  readonly priorChecksum: string | null;
+}
+
+/** A policy version with content only when an exact local read requested it. */
+export interface WritingPolicyVersionView extends WritingPolicyVersionMetadata {
+  readonly policy?: WritingPolicy;
+}
+
+export interface GetWritingPolicyCommand {
+  readonly root: string;
+  /** Omit to read the current leaf; supply an exact lowercase SHA-256 checksum otherwise. */
+  readonly checksum?: string;
+  /** Exact local reads may request policy content; metadata reads never include it. */
+  readonly includeContent?: boolean;
+}
+
+export interface ListWritingPolicyVersionsCommand {
+  readonly root: string;
+  /** History is metadata-only unless an explicit local content read is requested. */
+  readonly includeContent?: boolean;
+}
+
+export interface ReadRunWritingPolicyCommand {
+  readonly root: string;
+  readonly runId?: string;
+}
+
+export interface RunWritingPolicyProjection {
+  readonly effective: WritingPolicyVersionMetadata;
+  readonly lineage: WritingPolicyLineage;
+  readonly base?: WritingPolicyVersionMetadata;
+  readonly override?: WritingPolicyVersionMetadata;
 }
 
 export interface ConfigureKnowledgeSelectionEntry {
@@ -96,6 +146,11 @@ export interface WorkspaceDescriptor {
   readonly sourceDirectory: string;
   /** Workspace-relative policy path. Policy text is never candidate evidence. */
   readonly writingPolicyPath?: string;
+  /** Active policy identity; policy content is intentionally not exposed here. */
+  readonly activeWritingPolicy?: WritingPolicyVersionMetadata;
+  /** Flat aliases for adapters that only need the active identity fields. */
+  readonly writingPolicyChecksum?: string;
+  readonly writingPolicyVersion?: string;
   readonly language: string;
   readonly outputFormat: "markdown";
   readonly requiredSections: readonly string[];
@@ -122,6 +177,8 @@ export interface StartRunCommand {
   readonly allowProviderData?: boolean;
   /** Exact immutable reviewed opportunity version to bind to the new run. */
   readonly opportunityBrief?: OpportunityBriefSelection;
+  /** Exact immutable policy history version for a reviewed opportunity override. */
+  readonly writingPolicyOverrideChecksum?: string;
 }
 
 export type BeginRunCommand = StartRunCommand;
@@ -253,6 +310,12 @@ export interface ApplicationDriver {
     command: ConfigureWritingPolicyCommand,
     io?: ApplicationIo,
   ) => Promise<WorkspaceDescriptor>;
+  readonly getWritingPolicy?: (
+    command: GetWritingPolicyCommand,
+  ) => Promise<WritingPolicyVersionView | undefined>;
+  readonly listWritingPolicyVersions?: (
+    command: ListWritingPolicyVersionsCommand,
+  ) => Promise<readonly WritingPolicyVersionView[]>;
   /** Validate and persist an explicit local candidate-knowledge selection. */
   readonly configureKnowledgeSelection: (
     command: ConfigureKnowledgeSelectionCommand,
@@ -302,6 +365,9 @@ export interface ApplicationDriver {
   readonly readIndependentReview: (
     command: StatusCommand,
   ) => Promise<IndependentReviewRecord | undefined>;
+  readonly readRunWritingPolicy?: (
+    command: ReadRunWritingPolicyCommand,
+  ) => Promise<RunWritingPolicyProjection | undefined>;
 }
 
 export interface ApplicationService extends ApplicationDriver {}
@@ -333,6 +399,14 @@ export function createApplicationService(driver: ApplicationDriver): Application
         { ...command, root: requireRoot(command.root) },
         normalizeIo(io),
       ),
+    getWritingPolicy: async (command) =>
+      driver.getWritingPolicy === undefined
+        ? undefined
+        : driver.getWritingPolicy({ ...command, root: requireRoot(command.root) }),
+    listWritingPolicyVersions: async (command) =>
+      driver.listWritingPolicyVersions === undefined
+        ? []
+        : driver.listWritingPolicyVersions({ ...command, root: requireRoot(command.root) }),
     configureKnowledgeSelection: async (command, io) =>
       driver.configureKnowledgeSelection(
         { ...command, root: requireRoot(command.root) },
@@ -373,6 +447,10 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.recordReviewDecision({ ...command, root: requireRoot(command.root) }),
     readIndependentReview: async (command) =>
       driver.readIndependentReview({ ...command, root: requireRoot(command.root) }),
+    readRunWritingPolicy: async (command) =>
+      driver.readRunWritingPolicy === undefined
+        ? undefined
+        : driver.readRunWritingPolicy({ ...command, root: requireRoot(command.root) }),
   };
   return Object.freeze(service);
 }

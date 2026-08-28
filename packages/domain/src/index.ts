@@ -929,6 +929,10 @@ export interface ContextSnapshot {
 export const writingPolicyRuleKinds = ["forbidden-term", "forbidden-characters"] as const;
 export type WritingPolicyRuleKind = (typeof writingPolicyRuleKinds)[number];
 
+/** Version of the structured writing-policy contract. */
+export const writingPolicySchemaVersion = 1 as const;
+export type WritingPolicySchemaVersion = typeof writingPolicySchemaVersion;
+
 export const maximumWritingPolicyRules = 64;
 export const writingPolicyRuleIdPrefix = "writing-policy-";
 export const maximumWritingPolicyRuleIdHexLength = 24;
@@ -941,6 +945,42 @@ export const writingPolicyTones = ["professional", "warm", "direct", "conversati
 export type WritingPolicyTone = (typeof writingPolicyTones)[number];
 export const writingPolicyVerbosityLevels = ["concise", "balanced", "detailed"] as const;
 export type WritingPolicyVerbosity = (typeof writingPolicyVerbosityLevels)[number];
+
+/** Page-count targets understood by the controlled rendering profiles. */
+export const writingPolicyPageTargets = ["one-page", "two-page"] as const;
+export type WritingPolicyPageTarget = (typeof writingPolicyPageTargets)[number];
+
+/** Maximum number of entries in each bounded writing-policy preference list. */
+export const maximumWritingPolicyPreferenceListEntries = 16;
+/** Maximum number of Unicode characters accepted for one named preference. */
+export const maximumWritingPolicyPreferenceNameLength = 120;
+/** Stable aliases kept explicit for callers that name each preference list. */
+export const maximumWritingPolicySectionOrderEntries = maximumWritingPolicyPreferenceListEntries;
+export const maximumWritingPolicyEmphasisAreaEntries = maximumWritingPolicyPreferenceListEntries;
+export const maximumWritingPolicySectionNameLength = maximumWritingPolicyPreferenceNameLength;
+export const maximumWritingPolicyEmphasisAreaLength = maximumWritingPolicyPreferenceNameLength;
+
+/**
+ * The deterministic section-order check has no provider-generated rule id. Its
+ * opaque identity is stable across runs and intentionally reveals no policy or
+ * artifact content. The digest is SHA-256("section-order") truncated to the
+ * same 24 hexadecimal characters used by compiler-generated policy rules.
+ */
+export const writingPolicySectionOrderRuleId = "writing-policy-4adab6e59968bb47b65c7c0f";
+
+/**
+ * Conservative, human-visible phrases for the application compiler to turn
+ * into ordinary forbidden-term rules. This finite list deliberately contains
+ * generic résumé clichés rather than a hidden detector, score, or model call.
+ */
+export const defaultAntiFormulaicTerms = Object.freeze([
+  "results-driven",
+  "dynamic professional",
+  "think outside the box",
+  "rockstar",
+  "ninja",
+  "game changer",
+] as const);
 /**
  * Conservative BCP-47-shaped syntax for spelling preferences. This is not a
  * locale registry or spell-checking claim; it only bounds and normalizes the
@@ -949,7 +989,14 @@ export type WritingPolicyVerbosity = (typeof writingPolicyVerbosityLevels)[numbe
 export const writingPolicySpellingLocalePattern =
   /^[A-Za-z]{2,8}(?:-[A-Za-z]{4})?(?:-(?:[A-Za-z]{2}|[0-9]{3}))?$/u;
 export const maximumWritingPolicySpellingLocaleLength = 16;
-const writingPolicyPreferenceKeys = ["tone", "spellingLocale", "verbosity"] as const;
+const writingPolicyPreferenceKeys = [
+  "tone",
+  "spellingLocale",
+  "verbosity",
+  "pageTarget",
+  "sectionOrder",
+  "emphasisAreas",
+] as const;
 
 export interface WritingPolicyForbiddenTermRule {
   readonly id: string;
@@ -969,13 +1016,39 @@ export type WritingPolicyRule =
   | WritingPolicyForbiddenTermRule
   | WritingPolicyForbiddenCharactersRule;
 
+export interface WritingPolicyIdentity {
+  readonly version: string;
+  readonly checksum: string;
+}
+
+export interface WorkspaceWritingPolicyLineage {
+  readonly kind: "workspace";
+}
+
+export interface OpportunityWritingPolicyLineage {
+  readonly kind: "opportunity-override";
+  /** Immutable workspace policy identity from which the override was derived. */
+  readonly base: WritingPolicyIdentity;
+  /** Exact identity of the explicit opportunity override. */
+  readonly override: WritingPolicyIdentity;
+}
+
+export type WritingPolicyLineage = WorkspaceWritingPolicyLineage | OpportunityWritingPolicyLineage;
+
 export interface WritingPolicyPreferences {
   readonly tone?: WritingPolicyTone;
   readonly spellingLocale?: string;
   readonly verbosity?: WritingPolicyVerbosity;
+  readonly pageTarget?: WritingPolicyPageTarget;
+  /** Ordered display headings or semantic section kinds. */
+  readonly sectionOrder?: readonly string[];
+  /** Candidate-approved areas to emphasize; advisory only. */
+  readonly emphasisAreas?: readonly string[];
 }
 
 export interface WritingPolicy {
+  /** Optional on legacy snapshots; normalized to 1 for new snapshots. */
+  readonly schemaVersion?: WritingPolicySchemaVersion;
   /** Exact policy text applied to this run. */
   readonly content: string;
   /** SHA-256 of `content`, recorded for audit and change detection. */
@@ -986,6 +1059,8 @@ export interface WritingPolicy {
   readonly rules?: readonly WritingPolicyRule[];
   /** Optional advisory style preferences; absent on legacy snapshots. */
   readonly preferences?: WritingPolicyPreferences;
+  /** Source lineage; legacy snapshots may omit it. */
+  readonly lineage?: WritingPolicyLineage;
 }
 
 export interface ContextSnapshotInput {
@@ -1841,6 +1916,59 @@ function isWritingPolicySpellingLocale(value: unknown): value is string {
   );
 }
 
+function normalizeWritingPolicyPreferenceName(value: string): string {
+  return value.trim().replace(/\s+/gu, " ");
+}
+
+function writingPolicyPreferenceIdentity(value: string): string {
+  return normalizeWritingPolicyPreferenceName(value).normalize("NFKC").toLowerCase();
+}
+
+function validateWritingPolicyPreferenceNames(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+  label: string,
+): value is readonly string[] {
+  if (!Array.isArray(value)) {
+    addIssue(issues, "invalid-value", field, `must be an array of ${label}.`);
+    return false;
+  }
+  if (value.length === 0) {
+    addIssue(issues, "invalid-value", field, `must contain at least one ${label}.`);
+  }
+  if (value.length > maximumWritingPolicyPreferenceListEntries) {
+    addIssue(
+      issues,
+      "invalid-value",
+      field,
+      `must contain at most ${maximumWritingPolicyPreferenceListEntries} entries.`,
+    );
+  }
+  const identities = new Set<string>();
+  value.forEach((entry, index) => {
+    const entryField = `${field}[${index}]`;
+    if (!isNonEmptyString(entry)) {
+      addIssue(issues, "invalid-value", entryField, `${label} must not be empty.`);
+      return;
+    }
+    if ([...entry.trim()].length > maximumWritingPolicyPreferenceNameLength) {
+      addIssue(
+        issues,
+        "invalid-value",
+        entryField,
+        `${label} must be at most ${maximumWritingPolicyPreferenceNameLength} characters.`,
+      );
+    }
+    const identity = writingPolicyPreferenceIdentity(entry);
+    if (identities.has(identity)) {
+      addIssue(issues, "invalid-value", entryField, `${label} must be unique.`);
+    }
+    identities.add(identity);
+  });
+  return true;
+}
+
 /** Normalize the conservative locale syntax without consulting a registry. */
 export function normalizeWritingPolicySpellingLocale(value: string): string {
   return value
@@ -1855,6 +1983,102 @@ export function normalizeWritingPolicySpellingLocale(value: string): string {
       return part;
     })
     .join("-");
+}
+
+function validateWritingPolicyIdentity(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is WritingPolicyIdentity {
+  if (!isRecord(value)) {
+    addIssue(issues, "invalid-value", field, "must be a writing policy identity object.");
+    return false;
+  }
+  const identity = value as Partial<WritingPolicyIdentity>;
+  let valid = true;
+  if (!isNonEmptyString(identity.version)) {
+    addIssue(issues, "invalid-value", `${field}.version`, "must not be empty.");
+    valid = false;
+  }
+  if (!isNonEmptyString(identity.checksum) || !/^[a-f0-9]{64}$/iu.test(identity.checksum)) {
+    addIssue(issues, "invalid-value", `${field}.checksum`, "must be a SHA-256 checksum.");
+    valid = false;
+  }
+  for (const key of Object.keys(identity)) {
+    if (key !== "version" && key !== "checksum") {
+      addIssue(issues, "invalid-value", `${field}.${key}`, "is not supported.");
+      valid = false;
+    }
+  }
+  return valid;
+}
+
+function validateWritingPolicyLineage(
+  value: unknown,
+  field: string,
+  policy: Partial<WritingPolicy>,
+  issues: SemanticValidationIssue[],
+): value is WritingPolicyLineage {
+  if (!isRecord(value)) {
+    addIssue(issues, "invalid-value", field, "must be a writing policy lineage object.");
+    return false;
+  }
+  if (value.kind === "workspace") {
+    for (const key of Object.keys(value)) {
+      if (key !== "kind") {
+        addIssue(issues, "invalid-value", `${field}.${key}`, "is not supported.");
+      }
+    }
+    return true;
+  }
+  if (value.kind !== "opportunity-override") {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.kind`,
+      "must be workspace or opportunity-override.",
+    );
+    return false;
+  }
+  for (const key of Object.keys(value)) {
+    if (key !== "kind" && key !== "base" && key !== "override") {
+      addIssue(issues, "invalid-value", `${field}.${key}`, "is not supported.");
+    }
+  }
+  const hasBase = validateWritingPolicyIdentity(value.base, `${field}.base`, issues);
+  const hasOverride = validateWritingPolicyIdentity(value.override, `${field}.override`, issues);
+  if (hasBase && hasOverride) {
+    const base = value.base as WritingPolicyIdentity;
+    const override = value.override as WritingPolicyIdentity;
+    if (base.checksum.trim().toLowerCase() === override.checksum.trim().toLowerCase()) {
+      addIssue(
+        issues,
+        "invalid-value",
+        `${field}.override.checksum`,
+        "must differ from the immutable base policy checksum.",
+      );
+    }
+    if (isNonEmptyString(policy.version) && override.version.trim() !== policy.version.trim()) {
+      addIssue(
+        issues,
+        "invalid-value",
+        `${field}.override.version`,
+        "must match the current policy version.",
+      );
+    }
+    if (
+      isNonEmptyString(policy.checksum) &&
+      override.checksum.trim().toLowerCase() !== policy.checksum.trim().toLowerCase()
+    ) {
+      addIssue(
+        issues,
+        "invalid-value",
+        `${field}.override.checksum`,
+        "must match the current policy checksum.",
+      );
+    }
+  }
+  return true;
 }
 
 function validateWritingPolicyPreferences(
@@ -1896,6 +2120,31 @@ function validateWritingPolicyPreferences(
       "must be a supported writing policy verbosity.",
     );
   }
+  if (
+    preferences.pageTarget !== undefined &&
+    (typeof preferences.pageTarget !== "string" ||
+      !writingPolicyPageTargets.includes(
+        preferences.pageTarget.trim().toLowerCase() as WritingPolicyPageTarget,
+      ))
+  ) {
+    addIssue(issues, "invalid-value", `${field}.pageTarget`, "must be one-page or two-page.");
+  }
+  if (preferences.sectionOrder !== undefined) {
+    validateWritingPolicyPreferenceNames(
+      preferences.sectionOrder,
+      `${field}.sectionOrder`,
+      issues,
+      "section names",
+    );
+  }
+  if (preferences.emphasisAreas !== undefined) {
+    validateWritingPolicyPreferenceNames(
+      preferences.emphasisAreas,
+      `${field}.emphasisAreas`,
+      issues,
+      "emphasis areas",
+    );
+  }
   return true;
 }
 
@@ -1909,6 +2158,27 @@ function validateWritingPolicy(
     return false;
   }
   const policy = value as Partial<WritingPolicy>;
+  for (const key of Object.keys(policy)) {
+    if (
+      key !== "schemaVersion" &&
+      key !== "content" &&
+      key !== "checksum" &&
+      key !== "version" &&
+      key !== "rules" &&
+      key !== "preferences" &&
+      key !== "lineage"
+    ) {
+      addIssue(issues, "invalid-value", `${field}.${key}`, "is not supported.");
+    }
+  }
+  if (policy.schemaVersion !== undefined && policy.schemaVersion !== writingPolicySchemaVersion) {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.schemaVersion`,
+      `only writing policy schema version ${writingPolicySchemaVersion} is supported.`,
+    );
+  }
   if (!isNonEmptyString(policy.content)) {
     addIssue(issues, "invalid-value", `${field}.content`, "must not be empty.");
   }
@@ -1917,6 +2187,9 @@ function validateWritingPolicy(
   }
   if (!isNonEmptyString(policy.version)) {
     addIssue(issues, "invalid-value", `${field}.version`, "must not be empty.");
+  }
+  if (policy.lineage !== undefined) {
+    validateWritingPolicyLineage(policy.lineage, `${field}.lineage`, policy, issues);
   }
   if (policy.preferences !== undefined) {
     validateWritingPolicyPreferences(policy.preferences, `${field}.preferences`, issues);
@@ -2008,6 +2281,13 @@ function validateWritingPolicy(
     }
   }
   return true;
+}
+
+/** Validate one policy without requiring callers to construct a full context. */
+export function validateWritingPolicyInput(value: unknown): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateWritingPolicy(value, "writingPolicy", issues);
+  return { valid: issues.length === 0, issues };
 }
 
 export function validateContextSnapshotInput(input: unknown): SemanticValidationResult {
@@ -2130,6 +2410,35 @@ function normalizeWritingPolicyPreferences(
     ...(preferences.verbosity === undefined
       ? {}
       : { verbosity: preferences.verbosity.trim().toLowerCase() as WritingPolicyVerbosity }),
+    ...(preferences.pageTarget === undefined
+      ? {}
+      : { pageTarget: preferences.pageTarget.trim().toLowerCase() as WritingPolicyPageTarget }),
+    ...(preferences.sectionOrder === undefined
+      ? {}
+      : {
+          sectionOrder: preferences.sectionOrder.map(normalizeWritingPolicyPreferenceName),
+        }),
+    ...(preferences.emphasisAreas === undefined
+      ? {}
+      : {
+          emphasisAreas: preferences.emphasisAreas.map(normalizeWritingPolicyPreferenceName),
+        }),
+  };
+}
+
+function normalizeWritingPolicyIdentity(identity: WritingPolicyIdentity): WritingPolicyIdentity {
+  return {
+    version: identity.version.trim(),
+    checksum: identity.checksum.trim().toLowerCase(),
+  };
+}
+
+function normalizeWritingPolicyLineage(lineage: WritingPolicyLineage): WritingPolicyLineage {
+  if (lineage.kind === "workspace") return { kind: "workspace" };
+  return {
+    kind: "opportunity-override",
+    base: normalizeWritingPolicyIdentity(lineage.base),
+    override: normalizeWritingPolicyIdentity(lineage.override),
   };
 }
 
@@ -2633,6 +2942,7 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
       ? {}
       : {
           writingPolicy: {
+            schemaVersion: writingPolicySchemaVersion,
             content: input.writingPolicy.content.trim(),
             checksum: input.writingPolicy.checksum.toLowerCase(),
             version: input.writingPolicy.version.trim(),
@@ -2644,6 +2954,10 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
               : {
                   preferences: normalizeWritingPolicyPreferences(input.writingPolicy.preferences),
                 }),
+            lineage:
+              input.writingPolicy.lineage === undefined
+                ? { kind: "workspace" }
+                : normalizeWritingPolicyLineage(input.writingPolicy.lineage),
           },
         }),
     readinessRubric: {

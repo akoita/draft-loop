@@ -32,8 +32,10 @@ import type {
   PreviewKnowledgeSourceDirectoryReconciliationResult,
   PreviewKnowledgeSourceDirectoryRefreshResult,
   PreviewKnowledgeSourceDirectoryRootRebindResult,
+  RunWritingPolicyProjection,
   StatusCommand,
   WorkspaceDescriptor,
+  WritingPolicyVersionView,
 } from "./workflow.js";
 
 function descriptor(root: string): WorkspaceDescriptor {
@@ -49,6 +51,33 @@ function descriptor(root: string): WorkspaceDescriptor {
     author: { company: "anthropic", model: "claude-sonnet-4-5" },
     critic: { company: "openai", model: "gpt-5.6-luna" },
     fixtureMode: true,
+  };
+}
+
+function writingPolicyVersion(
+  checksum: string,
+  version: string,
+  createdAt: string,
+  priorChecksum: string | null,
+  content?: string,
+): WritingPolicyVersionView {
+  return {
+    checksum,
+    version,
+    schemaVersion: 1,
+    createdAt,
+    priorChecksum,
+    ...(content === undefined
+      ? {}
+      : {
+          policy: {
+            schemaVersion: 1 as const,
+            content,
+            checksum,
+            version,
+            rules: [],
+          },
+        }),
   };
 }
 
@@ -102,6 +131,7 @@ function harness(record?: IndependentReviewRecord): Harness {
       independenceQueries.push(command);
       return record;
     },
+    readRunWritingPolicy: async () => undefined,
   };
   return {
     service,
@@ -540,6 +570,8 @@ describe("draft-loop opportunity commands", () => {
       "opportunity-one",
       "--opportunity-version",
       "3",
+      "--writing-policy-override",
+      "b".repeat(64),
       "--allow-provider-data",
     );
     await invoke("start", "legacy-workspace");
@@ -548,6 +580,7 @@ describe("draft-loop opportunity commands", () => {
       {
         root: resolve("workspace"),
         opportunityBrief: { briefId: "opportunity-one", version: 3 },
+        writingPolicyOverrideChecksum: "b".repeat(64),
         allowProviderData: true,
       },
       { root: resolve("legacy-workspace"), allowProviderData: false },
@@ -568,6 +601,9 @@ describe("draft-loop opportunity commands", () => {
       /must be provided together/u,
     );
     await expect(
+      invoke("start", "workspace", "--writing-policy-override", "a".repeat(64)),
+    ).rejects.toThrow(/requires --opportunity-brief-id and --opportunity-version/u);
+    await expect(
       invoke(
         "start",
         "workspace",
@@ -577,6 +613,18 @@ describe("draft-loop opportunity commands", () => {
         "0",
       ),
     ).rejects.toThrow(/positive integer/u);
+    await expect(
+      invoke(
+        "start",
+        "workspace",
+        "--opportunity-brief-id",
+        "opportunity-one",
+        "--opportunity-version",
+        "2",
+        "--writing-policy-override",
+        "A".repeat(64),
+      ),
+    ).rejects.toThrow(/lowercase SHA-256/u);
     expect(start).not.toHaveBeenCalled();
   });
 
@@ -794,6 +842,189 @@ describe("independent review in status output", () => {
       "workspace workspace-test",
       "Independent review: no lineage claim was recorded. Either no run has started yet, or the run predates independence being recorded.",
     ]);
+  });
+});
+
+describe("writing policy CLI controls", () => {
+  it("activates or imports policy files and keeps metadata separate from explicit content reads", async () => {
+    const dependencies = harness();
+    const sourcePath = resolve("candidate-policy.md");
+    const firstChecksum = "a".repeat(64);
+    const secondChecksum = "b".repeat(64);
+    const firstContent = "Tone: warm\nForbidden term: rockstar";
+    const secondContent = "Tone: direct\nPage target: one-page";
+    const first = writingPolicyVersion(
+      firstChecksum,
+      "sha256:aaaaaaaaaaaa",
+      "2026-08-28T10:00:00.000Z",
+      null,
+    );
+    const second = writingPolicyVersion(
+      secondChecksum,
+      "sha256:bbbbbbbbbbbb",
+      "2026-08-28T10:01:00.000Z",
+      firstChecksum,
+    );
+    const firstWithContent = writingPolicyVersion(
+      firstChecksum,
+      first.version,
+      first.createdAt,
+      first.priorChecksum,
+      firstContent,
+    );
+    const secondWithContent = writingPolicyVersion(
+      secondChecksum,
+      second.version,
+      second.createdAt,
+      second.priorChecksum,
+      secondContent,
+    );
+    const configuredCommands: Parameters<ApplicationService["configureWritingPolicy"]>[0][] = [];
+    const service: ApplicationService = {
+      ...dependencies.service,
+      configureWritingPolicy: async (command) => {
+        configuredCommands.push(command);
+        return command.activate === false
+          ? descriptor(command.root)
+          : { ...descriptor(command.root), activeWritingPolicy: first };
+      },
+      getWritingPolicy: async (command) => {
+        const version = command.checksum === secondChecksum ? second : first;
+        if (command.includeContent !== true) return version;
+        return command.checksum === secondChecksum ? secondWithContent : firstWithContent;
+      },
+      listWritingPolicyVersions: async () => [first, second],
+    };
+    const invoke = async (...arguments_: readonly string[]) =>
+      createCli({ service, io: dependencies.io }).parseAsync(["node", "draft-loop", ...arguments_]);
+
+    await invoke("policy", "activate", sourcePath, "workspace");
+    await invoke("policy", "import", sourcePath, "workspace");
+    expect(configuredCommands).toEqual([
+      { root: resolve("workspace"), sourcePath },
+      { root: resolve("workspace"), sourcePath, activate: false },
+    ]);
+    expect(dependencies.lines.join("\n")).toContain(`checksum=${firstChecksum}`);
+    expect(dependencies.lines.join("\n")).toContain(`checksum=${secondChecksum}`);
+    expect(dependencies.lines.join("\n")).not.toContain(sourcePath);
+
+    dependencies.lines.length = 0;
+    await invoke("policy", "list", "workspace");
+    const safeList = dependencies.lines.join("\n");
+    expect(safeList).toContain(`version=${first.version}`);
+    expect(safeList).toContain(`checksum=${secondChecksum}`);
+    expect(safeList).toContain(`priorChecksum=${firstChecksum}`);
+    expect(safeList).not.toContain(firstContent);
+    expect(safeList).not.toContain(secondContent);
+
+    dependencies.lines.length = 0;
+    await invoke("policy", "current", "workspace");
+    expect(dependencies.lines).toHaveLength(1);
+    expect(dependencies.lines[0]).toContain(`checksum=${firstChecksum}`);
+    expect(dependencies.lines[0]).not.toContain(firstContent);
+
+    dependencies.lines.length = 0;
+    await invoke("policy", "current", "workspace", "--content");
+    expect(dependencies.lines[0]).toContain(`checksum=${firstChecksum}`);
+    expect(dependencies.lines[1]).toBe(firstContent);
+
+    dependencies.lines.length = 0;
+    await invoke("policy", "show", secondChecksum, "workspace");
+    expect(dependencies.lines).toHaveLength(1);
+    expect(dependencies.lines[0]).toContain(`checksum=${secondChecksum}`);
+    expect(dependencies.lines[0]).not.toContain(secondContent);
+
+    dependencies.lines.length = 0;
+    await invoke("policy", "show", secondChecksum, "workspace", "--content");
+    expect(dependencies.lines[0]).toContain(`checksum=${secondChecksum}`);
+    expect(dependencies.lines[1]).toBe(secondContent);
+  });
+
+  it("prints only immutable run-policy lineage in status and open", async () => {
+    const dependencies = harness();
+    const baseChecksum = "a".repeat(64);
+    const overrideChecksum = "b".repeat(64);
+    const base = writingPolicyVersion(
+      baseChecksum,
+      "sha256:aaaaaaaaaaaa",
+      "2026-08-28T10:00:00.000Z",
+      null,
+    );
+    const override = writingPolicyVersion(
+      overrideChecksum,
+      "sha256:bbbbbbbbbbbb",
+      "2026-08-28T10:01:00.000Z",
+      baseChecksum,
+    );
+    const projection: RunWritingPolicyProjection = {
+      effective: override,
+      base,
+      override,
+      lineage: {
+        kind: "opportunity-override",
+        base: { version: base.version, checksum: base.checksum },
+        override: { version: override.version, checksum: override.checksum },
+      },
+    };
+    const policyQueries: StatusCommand[] = [];
+    const service: ApplicationService = {
+      ...dependencies.service,
+      readRunWritingPolicy: async (command) => {
+        policyQueries.push(command);
+        return projection;
+      },
+    };
+
+    await createCli({ service, io: dependencies.io }).parseAsync([
+      "node",
+      "draft-loop",
+      "status",
+      "workspace",
+      "--run-id",
+      "run-7",
+    ]);
+    await createCli({ service, io: dependencies.io }).parseAsync([
+      "node",
+      "draft-loop",
+      "open",
+      "workspace",
+    ]);
+
+    expect(policyQueries).toEqual([
+      { root: resolve("workspace"), runId: "run-7" },
+      { root: resolve("workspace") },
+    ]);
+    const output = dependencies.lines.join("\n");
+    expect(output).toContain("writing-policy lineage=opportunity-override");
+    expect(output).toContain(`writing-policy effective version=${override.version}`);
+    expect(output).toContain(`writing-policy base version=${base.version}`);
+    expect(output).toContain(`writing-policy override version=${override.version}`);
+  });
+
+  it("fails clearly when an injected service lacks policy capabilities", async () => {
+    const dependencies = harness();
+    const { getWritingPolicy, ...serviceWithoutGetWritingPolicy } = dependencies.service;
+    void getWritingPolicy;
+    const noReadService: ApplicationService = serviceWithoutGetWritingPolicy;
+    await expect(
+      createCli({ service: noReadService, io: dependencies.io }).parseAsync([
+        "node",
+        "draft-loop",
+        "policy",
+        "current",
+      ]),
+    ).rejects.toThrow(/Writing policy reads is unsupported/u);
+
+    const { readRunWritingPolicy, ...serviceWithoutRunPolicyProjection } = dependencies.service;
+    void readRunWritingPolicy;
+    const noRunProjectionService: ApplicationService = serviceWithoutRunPolicyProjection;
+    await expect(
+      createCli({ service: noRunProjectionService, io: dependencies.io }).parseAsync([
+        "node",
+        "draft-loop",
+        "status",
+      ]),
+    ).rejects.toThrow(/Writing policy run reads is unsupported/u);
   });
 });
 

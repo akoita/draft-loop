@@ -74,22 +74,27 @@ content. Resume reuses that snapshot, so later edits cannot change the run.
 
 ## Candidate writing policy handling
 
-The candidate explicitly selects the current local policy file. DraftLoop
-stores its bounded content in the managed workspace and records the exact
-checksum-derived version in each run context. Deterministically compiled
-forbidden-term and punctuation rules, together with optional structured tone,
-spelling-locale, and verbosity preferences, travel with that same context to
-author and critic only when the user approves provider transmission. These
-preferences are advisory model context: they do not perform spell checking,
-derive numeric length limits, or select a layout.
+The candidate explicitly imports or activates each local writing-policy file.
+DraftLoop stores bounded, immutable, checksum-addressed versions in local
+SQLite history; safe default views show metadata rather than content. Exact
+content is returned only by an explicit local content-read action. Direct
+changes to the managed active file are captured as a new version before a run.
+
+Compiled forbidden-term and punctuation rules, tone, spelling locale,
+verbosity, page target, section order, emphasis areas, and transparent
+anti-formulaic defaults travel with the effective policy to author and critic
+only after provider transmission approval. Preferences are advisory: they do
+not perform spell checking, create a numeric layout guarantee, or authorize
+unsupported claims.
 
 Local validation reports rule identity and section/block coordinates without
 copying the forbidden value, matched artifact text, nearby text, or source
 paths into diagnostics. Policy instructions remain style data: they cannot
 authorize provider access, select models, enable tools, create candidate facts,
-or relax truthfulness and evidence controls. Anti-formulaic defaults, page and
-section-order targets, emphasis rules, dedicated policy history, opportunity
-overrides, and shared editing controls are not implemented yet.
+or relax truthfulness and evidence controls. A run-specific override must be
+an imported immutable version bound to one exact reviewed opportunity. The run
+records base and override lineage, while the workspace's active policy remains
+unchanged.
 
 ## Local Candidate Knowledge Base handling
 

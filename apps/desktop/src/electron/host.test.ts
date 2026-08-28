@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -203,6 +204,12 @@ function service(
       configureWritingPolicy: vi.fn<ApplicationService["configureWritingPolicy"]>(
         async () => workspace,
       ),
+      getWritingPolicy: vi.fn<NonNullable<ApplicationService["getWritingPolicy"]>>(
+        async () => undefined,
+      ),
+      listWritingPolicyVersions: vi.fn<
+        NonNullable<ApplicationService["listWritingPolicyVersions"]>
+      >(async () => []),
       configureKnowledgeSelection: vi.fn<ApplicationService["configureKnowledgeSelection"]>(
         async () => workspace,
       ),
@@ -237,6 +244,9 @@ function service(
       recordReviewDecision: vi.fn(async () => undefined),
       readIndependentReview: vi.fn<ApplicationService["readIndependentReview"]>(
         async () => independentReview ?? undefined,
+      ),
+      readRunWritingPolicy: vi.fn<NonNullable<ApplicationService["readRunWritingPolicy"]>>(
+        async () => undefined,
       ),
     } satisfies ApplicationService,
     snapshot,
@@ -287,6 +297,7 @@ describe("native host", () => {
   it("forwards an exact reviewed opportunity selection only when starting a run", async () => {
     const root = "/local/opportunity-selection";
     const fixture = service(root);
+    const overrideChecksum = "c".repeat(64);
     const host = createNativeHost({
       applicationService: fixture.service,
       dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
@@ -299,6 +310,7 @@ describe("native host", () => {
         input: {
           workspaceId: "workspace-native",
           opportunityBrief: { briefId: "brief-native", version: 4 },
+          writingPolicyOverrideChecksum: overrideChecksum,
         },
       }),
     ).resolves.toMatchObject({ ok: true, value: { runId: "run-native" } });
@@ -307,6 +319,7 @@ describe("native host", () => {
         root,
         allowProviderData: false,
         opportunityBrief: { briefId: "brief-native", version: 4 },
+        writingPolicyOverrideChecksum: overrideChecksum,
       },
       expect.anything(),
     );
@@ -321,6 +334,168 @@ describe("native host", () => {
       { root, runId: "run-native", allowProviderData: false },
       expect.anything(),
     );
+  });
+
+  it("binds an imported opportunity override locally, leaves the global policy untouched, and clears it after dispatch start", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-policy-override-"));
+    const root = join(parent, "workspace");
+    const sourcePath = join(parent, "opportunity-override.md");
+    const sourceContent = "Use concise, evidence-backed wording.";
+    await mkdir(join(root, "evidence"), { recursive: true });
+    await writeFile(join(root, "job.md"), "TypeScript platform role", "utf8");
+    await writeFile(sourcePath, sourceContent, "utf8");
+    const fixture = service(root);
+    const baseChecksum = "a".repeat(64);
+    const overrideChecksum = createHash("sha256").update(sourceContent).digest("hex");
+    const baseMetadata = {
+      checksum: baseChecksum,
+      version: "sha256:aaaaaaaaaaaa",
+      schemaVersion: 1,
+      createdAt: "2026-08-28T10:00:00.000Z",
+      priorChecksum: null,
+    };
+    const overrideMetadata = {
+      checksum: overrideChecksum,
+      version: `sha256:${overrideChecksum.slice(0, 12)}`,
+      schemaVersion: 1,
+      createdAt: "2026-08-28T10:01:00.000Z",
+      priorChecksum: baseChecksum,
+    };
+    fixture.service.getOpportunity.mockResolvedValue(opportunityRecord(1, "reviewed") as never);
+    fixture.service.reviewOpportunity.mockResolvedValue(opportunityRecord(1, "reviewed") as never);
+    fixture.service.listWritingPolicyVersions.mockResolvedValue([
+      baseMetadata,
+      overrideMetadata,
+    ] as never);
+    fixture.service.readWorkspace.mockResolvedValue({
+      ...descriptor(root),
+      writingPolicyPath: ".draft-loop/writing-policy.md",
+      activeWritingPolicy: baseMetadata,
+      writingPolicyChecksum: baseChecksum,
+      writingPolicyVersion: baseMetadata.version,
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: {
+        chooseDirectory: async () => root,
+        chooseFiles: async () => [sourcePath],
+      },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      await host.invoke({
+        type: "opportunity.review",
+        input: { workspaceId: "workspace-native", briefId: "brief-native", expectedVersion: 1 },
+      });
+      const selected = await host.invoke({
+        type: "file.select",
+        input: {
+          workspaceId: "workspace-native",
+          target: "writing-policy-override",
+          multiple: false,
+          extensions: [".md"],
+        },
+      });
+      expect(selected).toMatchObject({
+        ok: true,
+        value: { files: [{ name: "opportunity-override.md" }] },
+      });
+      expect(fixture.service.configureWritingPolicy).toHaveBeenCalledWith(
+        { root, sourcePath, activate: false },
+        expect.anything(),
+      );
+      await expect(
+        readFile(join(root, ".draft-loop", "writing-policy.md"), "utf8"),
+      ).rejects.toThrow();
+      const persisted = JSON.parse(
+        await readFile(join(root, ".draft-loop", "review-overrides.json"), "utf8"),
+      ) as Record<string, unknown>;
+      expect(persisted).toMatchObject({
+        reviewedOpportunity: { briefId: "brief-native", version: 1 },
+        pendingWritingPolicyOverride: {
+          checksum: overrideChecksum,
+          version: overrideMetadata.version,
+          opportunityBrief: { briefId: "brief-native", version: 1 },
+        },
+      });
+      expect(JSON.stringify(persisted)).not.toContain(sourcePath);
+      const started = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "pending",
+          action: { type: "start" },
+        },
+      });
+      expect(started).toMatchObject({ ok: true, value: { runId: "run-native" } });
+      expect(fixture.service.begin).toHaveBeenCalledWith(
+        {
+          root,
+          allowProviderData: true,
+          opportunityBrief: { briefId: "brief-native", version: 1 },
+          writingPolicyOverrideChecksum: overrideChecksum,
+        },
+        expect.anything(),
+      );
+      const afterStart = JSON.parse(
+        await readFile(join(root, ".draft-loop", "review-overrides.json"), "utf8"),
+      ) as Record<string, unknown>;
+      expect(afterStart).not.toHaveProperty("pendingWritingPolicyOverride");
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("clears a pending override when the reviewed opportunity drifts", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-policy-drift-"));
+    const root = join(parent, "workspace");
+    const overrideChecksum = "b".repeat(64);
+    await mkdir(join(root, ".draft-loop"), { recursive: true });
+    await writeFile(
+      join(root, ".draft-loop", "review-overrides.json"),
+      JSON.stringify({
+        decisions: {},
+        rationales: {},
+        edits: {},
+        history: [],
+        reviewedOpportunity: { briefId: "brief-native", version: 1 },
+        pendingWritingPolicyOverride: {
+          checksum: overrideChecksum,
+          version: "sha256:bbbbbbbbbbbb",
+          opportunityBrief: { briefId: "brief-native", version: 1 },
+        },
+      }),
+      "utf8",
+    );
+    const fixture = service(root);
+    fixture.service.getOpportunity.mockResolvedValue(opportunityRecord(2, "draft") as never);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const loaded = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native" },
+      });
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          setup: {
+            reviewedOpportunity: null,
+            pendingWritingPolicyOverride: null,
+          },
+        },
+      });
+      const persisted = JSON.parse(
+        await readFile(join(root, ".draft-loop", "review-overrides.json"), "utf8"),
+      ) as Record<string, unknown>;
+      expect(persisted).not.toHaveProperty("reviewedOpportunity");
+      expect(persisted).not.toHaveProperty("pendingWritingPolicyOverride");
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
   });
 
   it("keeps other application user errors behind the generic bridge boundary", async () => {
@@ -1996,7 +2171,9 @@ describe("native host", () => {
             writingPolicy: {
               version: expect.stringMatching(/^sha256:[a-f0-9]{12}$/u),
               checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
-              preview: "Use ASCII punctuation and preserve exact metrics.",
+              schemaVersion: 1,
+              createdAt: expect.any(String),
+              priorChecksum: null,
             },
           },
           providerTransmissionPreflight: {
@@ -2006,6 +2183,9 @@ describe("native host", () => {
           },
         },
       });
+      expect(JSON.stringify(loaded)).not.toContain(
+        "Use ASCII punctuation and preserve exact metrics.",
+      );
     } finally {
       await rm(parent, { recursive: true, force: true });
     }

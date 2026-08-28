@@ -1056,7 +1056,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(activePort.selectFiles === undefined
         ? {}
         : {
-            onSelectFiles: (target: "evidence" | "job-description" | "writing-policy") => {
+            onSelectFiles: (
+              target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
+            ) => {
               setImportError(null);
               void activePort
                 .selectFiles?.(target)

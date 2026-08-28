@@ -306,6 +306,7 @@ describe("domain workspace and context snapshots", () => {
     );
 
     expect(snapshot.writingPolicy).toEqual({
+      schemaVersion: 1,
       content: "Use ASCII punctuation.",
       checksum: "b".repeat(64),
       version: "sha256:bbbbbbbbbbbb",
@@ -323,6 +324,7 @@ describe("domain workspace and context snapshots", () => {
           characters: "—–",
         },
       ],
+      lineage: { kind: "workspace" },
     });
     expect(snapshot.evidenceManifest).toHaveLength(1);
     expect(Object.isFrozen(snapshot.writingPolicy?.rules)).toBe(true);
@@ -363,7 +365,11 @@ describe("domain workspace and context snapshots", () => {
     expect(snapshot.writingPolicy?.preferences?.tone).toBe("warm");
 
     const legacy = createContextSnapshot(validInput({ writingPolicy: baseWritingPolicy }));
-    expect(legacy.writingPolicy).toEqual(baseWritingPolicy);
+    expect(legacy.writingPolicy).toEqual({
+      ...baseWritingPolicy,
+      schemaVersion: 1,
+      lineage: { kind: "workspace" },
+    });
     expect(legacy.writingPolicy).not.toHaveProperty("preferences");
 
     for (const invalidPreferences of [
@@ -381,6 +387,113 @@ describe("domain workspace and context snapshots", () => {
         ),
       ).toThrow(/writingPolicy\.preferences/i);
     }
+  });
+
+  it("normalizes bounded page, section-order, and emphasis preferences", () => {
+    const policy = {
+      content: "Preferences",
+      checksum,
+      version: "sha256:aaaaaaaaaaaa",
+      preferences: {
+        pageTarget: " TWO-PAGE ",
+        sectionOrder: ["  Summary  ", "Work   Experience"],
+        emphasisAreas: ["  Distributed   systems  ", "Mentoring"],
+      },
+    };
+    const snapshot = createContextSnapshot(validInput({ writingPolicy: policy as never }));
+    expect(snapshot.writingPolicy?.preferences).toEqual({
+      pageTarget: "two-page",
+      sectionOrder: ["Summary", "Work Experience"],
+      emphasisAreas: ["Distributed systems", "Mentoring"],
+    });
+
+    for (const preferences of [
+      { pageTarget: "three-page" },
+      { sectionOrder: [] },
+      { sectionOrder: ["Summary", " summary "] },
+      { emphasisAreas: [] },
+      { emphasisAreas: ["Area", " area "] },
+      { sectionOrder: Array.from({ length: 17 }, (_, index) => `Section ${index}`) },
+    ]) {
+      expect(() =>
+        createContextSnapshot(validInput({ writingPolicy: { ...policy, preferences } as never })),
+      ).toThrow(/writingPolicy\.preferences/i);
+    }
+  });
+
+  it("records workspace and opportunity-override policy lineage without mutating the base", () => {
+    const base = {
+      content: "Base policy",
+      checksum,
+      version: "sha256:aaaaaaaaaaaa",
+    };
+    const baseSnapshot = createContextSnapshot(validInput({ writingPolicy: base }));
+    expect(baseSnapshot.writingPolicy?.lineage).toEqual({ kind: "workspace" });
+
+    const overrideChecksum = "b".repeat(64);
+    const override = createContextSnapshot(
+      validInput({
+        writingPolicy: {
+          content: "Override policy",
+          checksum: overrideChecksum,
+          version: "sha256:bbbbbbbbbbbb",
+          lineage: {
+            kind: "opportunity-override",
+            base: { version: " sha256:AAAAAAAAAAAA ", checksum: checksum.toUpperCase() },
+            override: {
+              version: " sha256:bbbbbbbbbbbb ",
+              checksum: overrideChecksum.toUpperCase(),
+            },
+          },
+        },
+      }),
+    );
+    expect(override.writingPolicy?.lineage).toEqual({
+      kind: "opportunity-override",
+      base: { version: "sha256:AAAAAAAAAAAA", checksum },
+      override: { version: "sha256:bbbbbbbbbbbb", checksum: overrideChecksum },
+    });
+    expect(baseSnapshot.writingPolicy?.checksum).toBe(checksum);
+    expect(() =>
+      createContextSnapshot(
+        validInput({
+          writingPolicy: {
+            content: "Override policy",
+            checksum: overrideChecksum,
+            version: "sha256:bbbbbbbbbbbb",
+            lineage: {
+              kind: "opportunity-override",
+              base: { version: "base", checksum },
+              override: { version: "other", checksum: overrideChecksum },
+            },
+          },
+        }),
+      ),
+    ).toThrow(/lineage/i);
+    expect(() =>
+      createContextSnapshot(
+        validInput({
+          writingPolicy: {
+            content: "Override policy",
+            checksum: overrideChecksum,
+            version: "sha256:bbbbbbbbbbbb",
+            lineage: {
+              kind: "opportunity-override",
+              base: { version: "base", checksum },
+              override: { version: "sha256:bbbbbbbbbbbb" },
+            },
+          } as never,
+        }),
+      ),
+    ).toThrow(/lineage/i);
+  });
+
+  it("exports only finite, human-visible anti-formulaic terms", async () => {
+    const { defaultAntiFormulaicTerms } = await import("./index.js");
+    expect(defaultAntiFormulaicTerms.length).toBeGreaterThan(0);
+    expect(defaultAntiFormulaicTerms.length).toBeLessThanOrEqual(16);
+    expect(defaultAntiFormulaicTerms.every((term) => term.trim() !== "")).toBe(true);
+    expect(Object.isFrozen(defaultAntiFormulaicTerms)).toBe(true);
   });
 
   it("validates structured writing policy rule ids, kinds, and bounds", () => {

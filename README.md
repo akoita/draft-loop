@@ -123,6 +123,35 @@ pnpm --filter @draft-loop/cli start start ./workspace \
 must already be reviewed. DraftLoop verifies and pins that exact immutable
 version in run context; later edits do not change a started or resumed run.
 
+Writing policies are local, immutable versions. `policy activate` imports a
+file and makes it the workspace default for future runs; `policy import` adds a
+version without changing that default. Metadata-only reads are the default, and
+exact local content is printed only when `--content` is supplied.
+
+```sh
+pnpm --filter @draft-loop/cli start policy activate ./writing-policy.md ./workspace
+pnpm --filter @draft-loop/cli start policy import ./opportunity-policy.md ./workspace
+pnpm --filter @draft-loop/cli start policy current ./workspace
+pnpm --filter @draft-loop/cli start policy list ./workspace
+pnpm --filter @draft-loop/cli start policy show <checksum> ./workspace --content
+```
+
+A policy may contain `Tone`, `Spelling locale`, `Verbosity`, `Page target`,
+`Section order`, `Emphasis areas`, and `Anti-formulaic defaults` directives in
+`Name: value` form, alongside forbidden-term and punctuation rules. The
+anti-formulaic defaults are transparent and enabled unless the policy says
+`Anti-formulaic defaults: disabled`.
+
+An imported version can be selected as a complete override for one reviewed
+opportunity. The active workspace policy is unchanged, and the run records both
+base and override versions:
+
+```sh
+pnpm --filter @draft-loop/cli start start ./workspace \
+  --opportunity-brief-id target-role --opportunity-version 3 \
+  --writing-policy-override <checksum> --allow-provider-data
+```
+
 The CLI exposes shared CKB controls through `knowledge`: initialize a portable
 store with its default CKB, open or list a store, inspect path-free lifecycle
 readiness, list path-free source/version identities, report duplicate groups,

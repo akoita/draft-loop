@@ -10,10 +10,27 @@
 import type {
   DesktopReviewState,
   IndependentReviewView,
+  OpportunityBriefSelection,
+  PendingWritingPolicyOverride,
   ProviderExposureView,
   ProviderFailureView,
   ReviewAction,
+  RunWritingPolicyProjection,
+  WritingPolicyIdentity,
+  WritingPolicyLineage,
+  WritingPolicyVersionMetadata,
 } from "./model.js";
+
+// Re-export the safe policy vocabulary from the bridge so consumers that only
+// depend on renderer contracts do not need to import the model module.
+export type {
+  OpportunityBriefSelection,
+  PendingWritingPolicyOverride,
+  RunWritingPolicyProjection,
+  WritingPolicyIdentity,
+  WritingPolicyLineage,
+  WritingPolicyVersionMetadata,
+};
 
 export const bridgeCapabilities = [
   "workspace.open",
@@ -658,6 +675,8 @@ export interface RunStartInput {
   readonly workspaceId: string;
   /** Optional exact reviewed opportunity version to bind to this run. */
   readonly opportunityBrief?: OpportunityBriefSelectionInput;
+  /** Optional exact lowercase SHA-256 writing-policy override identity. */
+  readonly writingPolicyOverrideChecksum?: string;
 }
 
 export interface OpportunityBriefSelectionInput {
@@ -669,7 +688,11 @@ const opportunityBriefSelectionKeys = inputKeys<OpportunityBriefSelectionInput>(
   "briefId",
   "version",
 ]);
-const runStartKeys = inputKeys<RunStartInput>()(["workspaceId", "opportunityBrief"]);
+const runStartKeys = inputKeys<RunStartInput>()([
+  "workspaceId",
+  "opportunityBrief",
+  "writingPolicyOverrideChecksum",
+]);
 
 export interface RunLifecycleInput {
   readonly workspaceId: string;
@@ -697,7 +720,7 @@ export interface FileSelectInput {
   readonly workspaceId: string;
   readonly extensions?: readonly SupportedFileExtension[];
   readonly multiple?: boolean;
-  readonly target?: "evidence" | "job-description" | "writing-policy";
+  readonly target?: "evidence" | "job-description" | "writing-policy" | "writing-policy-override";
 }
 
 const fileSelectKeys = inputKeys<FileSelectInput>()([
@@ -1630,6 +1653,8 @@ export interface RunStatus {
   readonly state: BridgeRunState;
   readonly round: number;
   readonly approval: RunApproval;
+  /** Safe policy identities recorded with this run, when available. */
+  readonly writingPolicy?: RunWritingPolicyProjection | null;
 }
 
 const runStatusResultKeys = resultKeys<RunStatus>()([
@@ -1638,7 +1663,68 @@ const runStatusResultKeys = resultKeys<RunStatus>()([
   "state",
   "round",
   "approval",
+  "writingPolicy",
 ]);
+
+const writingPolicyVersionMetadataKeys = resultKeys<WritingPolicyVersionMetadata>()([
+  "checksum",
+  "version",
+  "schemaVersion",
+  "createdAt",
+  "priorChecksum",
+]);
+const writingPolicyIdentityKeys = resultKeys<WritingPolicyIdentity>()(["version", "checksum"]);
+const writingPolicyLineageKeys = ["kind", "base", "override"] as const;
+const pendingWritingPolicyOverrideKeys = resultKeys<PendingWritingPolicyOverride>()([
+  "checksum",
+  "version",
+  "opportunityBrief",
+]);
+const runWritingPolicyProjectionKeys = resultKeys<RunWritingPolicyProjection>()([
+  "effective",
+  "lineage",
+  "base",
+  "override",
+]);
+const workspaceReadinessKeys = [
+  "fixtureMode",
+  "jobDescriptionReady",
+  "evidenceSourceCount",
+  "writingPolicyStatus",
+  "writingPolicy",
+  "writingPolicyHistory",
+  "pendingWritingPolicyOverride",
+  "reviewedOpportunity",
+  "retrievalStatus",
+  "indexedEvidenceChunkCount",
+  "selectedEvidenceChunkCount",
+  "selectedEvidenceSourceCount",
+  "requiredSections",
+  "ready",
+  "nextSteps",
+] as const;
+const desktopReviewStateKeys = [
+  "workspaceId",
+  "runId",
+  "state",
+  "execution",
+  "round",
+  "approval",
+  "reviewComplete",
+  "totalCostUsd",
+  "budgetUsd",
+  "providerExposure",
+  "providerTransmissionPreflight",
+  "providerFailure",
+  "previousArtifact",
+  "artifact",
+  "findings",
+  "evaluation",
+  "events",
+  "exportPath",
+  "writingPolicy",
+  "setup",
+] as const;
 
 /**
  * The review state crosses the bridge whole rather than field by field, so
@@ -2643,6 +2729,13 @@ function timestampValue(value: unknown): string {
   return timestamp;
 }
 
+/** Checksums crossing the desktop boundary are canonical lowercase SHA-256. */
+function writingPolicyChecksumValue(value: unknown): string {
+  const checksum = stringValue(value, 64);
+  if (!/^[a-f0-9]{64}$/u.test(checksum)) return invalidInput();
+  return checksum;
+}
+
 function optionalTimestampValue(value: unknown): string | undefined {
   return value === undefined ? undefined : timestampValue(value);
 }
@@ -3277,9 +3370,14 @@ function validateRunStartInput(value: unknown): RunStartInput {
     input.opportunityBrief === undefined
       ? undefined
       : validateOpportunityBriefSelectionInput(input.opportunityBrief);
+  const writingPolicyOverrideChecksum =
+    input.writingPolicyOverrideChecksum === undefined
+      ? undefined
+      : writingPolicyChecksumValue(input.writingPolicyOverrideChecksum);
   return {
     workspaceId: identifier(input.workspaceId),
     ...(opportunityBrief === undefined ? {} : { opportunityBrief }),
+    ...(writingPolicyOverrideChecksum === undefined ? {} : { writingPolicyOverrideChecksum }),
   };
 }
 
@@ -3383,7 +3481,22 @@ function validateFileSelectInput(value: unknown): FileSelectInput {
   const target =
     input.target === undefined
       ? undefined
-      : enumValue(input.target, ["evidence", "job-description", "writing-policy"] as const);
+      : enumValue(input.target, [
+          "evidence",
+          "job-description",
+          "writing-policy",
+          "writing-policy-override",
+        ] as const);
+  if (target === "writing-policy" || target === "writing-policy-override") {
+    if (multiple === true) return invalidInput();
+    if (
+      normalizedExtensions?.some(
+        (extension) => ![".md", ".markdown", ".txt", ".text"].includes(extension),
+      )
+    ) {
+      return invalidInput();
+    }
+  }
   return {
     workspaceId: identifier(input.workspaceId),
     ...(normalizedExtensions === undefined ? {} : { extensions: normalizedExtensions }),
@@ -5178,6 +5291,105 @@ function normalizeWorkspaceModelsResult(value: unknown): WorkspaceModelsResult {
   };
 }
 
+function normalizeWritingPolicyIdentity(value: unknown): WritingPolicyIdentity {
+  const identity = requireRecord(value);
+  if (!hasOnlyKeys(identity, writingPolicyIdentityKeys)) return invalidInput();
+  return {
+    version: identifier(identity.version),
+    checksum: writingPolicyChecksumValue(identity.checksum),
+  };
+}
+
+function normalizeWritingPolicyVersionMetadata(value: unknown): WritingPolicyVersionMetadata {
+  const metadata = requireRecord(value);
+  if (!hasOnlyKeys(metadata, writingPolicyVersionMetadataKeys)) return invalidInput();
+  const schemaVersion = finiteInteger(metadata.schemaVersion, 100);
+  if (schemaVersion < 1) return invalidInput();
+  const priorChecksum =
+    metadata.priorChecksum === null ? null : writingPolicyChecksumValue(metadata.priorChecksum);
+  const checksum = writingPolicyChecksumValue(metadata.checksum);
+  if (priorChecksum === checksum) return invalidInput();
+  return {
+    checksum,
+    version: identifier(metadata.version),
+    schemaVersion,
+    createdAt: timestampValue(metadata.createdAt),
+    priorChecksum,
+  };
+}
+
+function sameWritingPolicyIdentity(
+  left: WritingPolicyIdentity | WritingPolicyVersionMetadata,
+  right: WritingPolicyIdentity | WritingPolicyVersionMetadata,
+): boolean {
+  return left.checksum === right.checksum && left.version === right.version;
+}
+
+function normalizeWritingPolicyLineage(value: unknown): WritingPolicyLineage {
+  const lineage = requireRecord(value);
+  if (!hasOnlyKeys(lineage, writingPolicyLineageKeys)) return invalidInput();
+  if (lineage.kind === "workspace") {
+    if (Object.hasOwn(lineage, "base") || Object.hasOwn(lineage, "override")) {
+      return invalidInput();
+    }
+    return { kind: "workspace" };
+  }
+  if (lineage.kind !== "opportunity-override") return invalidInput();
+  if (!Object.hasOwn(lineage, "base") || !Object.hasOwn(lineage, "override")) {
+    return invalidInput();
+  }
+  const base = normalizeWritingPolicyIdentity(lineage.base);
+  const override = normalizeWritingPolicyIdentity(lineage.override);
+  if (base.checksum === override.checksum) return invalidInput();
+  return { kind: "opportunity-override", base, override };
+}
+
+function normalizePendingWritingPolicyOverride(value: unknown): PendingWritingPolicyOverride {
+  const pending = requireRecord(value);
+  if (!hasOnlyKeys(pending, pendingWritingPolicyOverrideKeys)) return invalidInput();
+  const opportunityBrief = validateOpportunityBriefSelectionInput(pending.opportunityBrief);
+  return {
+    checksum: writingPolicyChecksumValue(pending.checksum),
+    version: identifier(pending.version),
+    opportunityBrief,
+  };
+}
+
+function normalizeRunWritingPolicyProjection(value: unknown): RunWritingPolicyProjection {
+  const projection = requireRecord(value);
+  if (!hasOnlyKeys(projection, runWritingPolicyProjectionKeys)) return invalidInput();
+  const effective = normalizeWritingPolicyVersionMetadata(projection.effective);
+  const lineage = normalizeWritingPolicyLineage(projection.lineage);
+  const base =
+    projection.base === undefined
+      ? undefined
+      : normalizeWritingPolicyVersionMetadata(projection.base);
+  const override =
+    projection.override === undefined
+      ? undefined
+      : normalizeWritingPolicyVersionMetadata(projection.override);
+  if (lineage.kind === "workspace") {
+    if (override !== undefined) return invalidInput();
+    if (base !== undefined && !sameWritingPolicyIdentity(base, effective)) return invalidInput();
+  } else {
+    if (base === undefined || override === undefined) return invalidInput();
+    if (
+      !sameWritingPolicyIdentity(base, lineage.base) ||
+      !sameWritingPolicyIdentity(override, lineage.override) ||
+      !sameWritingPolicyIdentity(override, effective) ||
+      base.checksum === override.checksum
+    ) {
+      return invalidInput();
+    }
+  }
+  return {
+    effective,
+    lineage,
+    ...(base === undefined ? {} : { base }),
+    ...(override === undefined ? {} : { override }),
+  };
+}
+
 function normalizeRunStatus(value: unknown): RunStatus {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, runStatusResultKeys)) return invalidInput();
@@ -5188,11 +5400,20 @@ function normalizeRunStatus(value: unknown): RunStatus {
     state: enumValue(result.state, runStates),
     round: finiteInteger(result.round, 1_000_000),
     approval: enumValue(result.approval, ["pending", "approved", "rejected"] as const),
+    ...(result.writingPolicy === undefined
+      ? {}
+      : {
+          writingPolicy:
+            result.writingPolicy === null
+              ? null
+              : normalizeRunWritingPolicyProjection(result.writingPolicy),
+        }),
   };
 }
 
 function normalizeReviewState(value: unknown): ReviewStateResult {
   if (!isRecord(value)) return invalidInput();
+  if (!hasOnlyKeys(value, desktopReviewStateKeys)) return invalidInput();
   if (
     typeof value.workspaceId !== "string" ||
     typeof value.runId !== "string" ||
@@ -5201,6 +5422,83 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
   ) {
     return invalidInput();
   }
+  const setup = value.setup;
+  let normalizedSetup: Record<string, unknown> | undefined;
+  if (setup !== undefined) {
+    const setupRecord = requireRecord(setup);
+    if (!hasOnlyKeys(setupRecord, workspaceReadinessKeys)) return invalidInput();
+    const normalizedPolicy =
+      setupRecord.writingPolicy === undefined || setupRecord.writingPolicy === null
+        ? setupRecord.writingPolicy
+        : normalizeWritingPolicyVersionMetadata(setupRecord.writingPolicy);
+    let normalizedHistory: readonly WritingPolicyVersionMetadata[] | undefined;
+    if (setupRecord.writingPolicyHistory !== undefined) {
+      if (
+        !Array.isArray(setupRecord.writingPolicyHistory) ||
+        setupRecord.writingPolicyHistory.length > 512
+      ) {
+        return invalidInput();
+      }
+      normalizedHistory = setupRecord.writingPolicyHistory.map(
+        normalizeWritingPolicyVersionMetadata,
+      );
+      const checksums = new Set<string>();
+      for (let index = 0; index < normalizedHistory.length; index += 1) {
+        const entry = normalizedHistory[index];
+        if (entry === undefined || checksums.has(entry.checksum)) return invalidInput();
+        checksums.add(entry.checksum);
+        const previous = normalizedHistory[index - 1];
+        if (
+          previous !== undefined &&
+          Date.parse(previous.createdAt) > Date.parse(entry.createdAt)
+        ) {
+          return invalidInput();
+        }
+      }
+    }
+    const pendingOverride =
+      setupRecord.pendingWritingPolicyOverride === undefined ||
+      setupRecord.pendingWritingPolicyOverride === null
+        ? setupRecord.pendingWritingPolicyOverride
+        : normalizePendingWritingPolicyOverride(setupRecord.pendingWritingPolicyOverride);
+    const reviewedOpportunity =
+      setupRecord.reviewedOpportunity === undefined || setupRecord.reviewedOpportunity === null
+        ? setupRecord.reviewedOpportunity
+        : validateOpportunityBriefSelectionInput(setupRecord.reviewedOpportunity);
+    if (
+      pendingOverride !== undefined &&
+      pendingOverride !== null &&
+      normalizedHistory !== undefined &&
+      !normalizedHistory.some(
+        (metadata) =>
+          metadata.checksum === pendingOverride.checksum &&
+          metadata.version === pendingOverride.version,
+      )
+    ) {
+      return invalidInput();
+    }
+    if (
+      pendingOverride !== undefined &&
+      pendingOverride !== null &&
+      reviewedOpportunity !== undefined &&
+      reviewedOpportunity !== null &&
+      (pendingOverride.opportunityBrief.briefId !== reviewedOpportunity.briefId ||
+        pendingOverride.opportunityBrief.version !== reviewedOpportunity.version)
+    ) {
+      return invalidInput();
+    }
+    normalizedSetup = {
+      ...setupRecord,
+      ...(normalizedPolicy === undefined ? {} : { writingPolicy: normalizedPolicy }),
+      ...(normalizedHistory === undefined ? {} : { writingPolicyHistory: normalizedHistory }),
+      ...(pendingOverride === undefined ? {} : { pendingWritingPolicyOverride: pendingOverride }),
+      ...(reviewedOpportunity === undefined ? {} : { reviewedOpportunity }),
+    };
+  }
+  const normalizedRunPolicy =
+    value.writingPolicy === undefined || value.writingPolicy === null
+      ? value.writingPolicy
+      : normalizeRunWritingPolicyProjection(value.writingPolicy);
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -5273,7 +5571,11 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
       }
     }
   }
-  return value as unknown as DesktopReviewState;
+  return {
+    ...value,
+    ...(normalizedSetup === undefined ? {} : { setup: normalizedSetup }),
+    ...(normalizedRunPolicy === undefined ? {} : { writingPolicy: normalizedRunPolicy }),
+  } as unknown as DesktopReviewState;
 }
 
 function normalizeFileResult(value: unknown): FileSelectResult {

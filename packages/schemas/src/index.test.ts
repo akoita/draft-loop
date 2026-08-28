@@ -307,6 +307,7 @@ describe("canonical context snapshot schemas", () => {
         version: "sha256:aaaaaaaaaaaa",
       }),
     ).toEqual({
+      schemaVersion: 1,
       content: "Legacy policy",
       checksum: "a".repeat(64),
       version: "sha256:aaaaaaaaaaaa",
@@ -325,7 +326,7 @@ describe("canonical context snapshot schemas", () => {
         },
       ],
     };
-    expect(writingPolicySchema.parse(valid)).toEqual(valid);
+    expect(writingPolicySchema.parse(valid)).toEqual({ ...valid, schemaVersion: 1 });
     expect(() => writingPolicySchema.parse({ ...valid, unexpected: true })).toThrow();
     expect(() =>
       writingPolicySchema.parse({
@@ -411,6 +412,95 @@ describe("canonical context snapshot schemas", () => {
           checksum: "a".repeat(64),
           version: "sha256:aaaaaaaaaaaa",
           preferences,
+        }),
+      ).toThrow();
+    }
+  });
+
+  it("normalizes bounded page, section-order, and emphasis preferences", () => {
+    const parsed = writingPolicySchema.parse({
+      content: "Structured policy",
+      checksum: "a".repeat(64),
+      version: "sha256:aaaaaaaaaaaa",
+      preferences: {
+        pageTarget: " TWO-PAGE ",
+        sectionOrder: [" Summary ", "Work   history"],
+        emphasisAreas: [" Evidence ", "Technical   depth"],
+      },
+    });
+
+    expect(parsed.preferences).toEqual({
+      pageTarget: "two-page",
+      sectionOrder: ["Summary", "Work history"],
+      emphasisAreas: ["Evidence", "Technical depth"],
+    });
+
+    for (const preferences of [
+      { pageTarget: "three-page" },
+      { sectionOrder: [] },
+      { emphasisAreas: [] },
+      { sectionOrder: ["Summary", " summary "] },
+      { emphasisAreas: ["Impact", " impact "] },
+      { sectionOrder: Array.from({ length: 17 }, (_, index) => `Section ${index}`) },
+      { emphasisAreas: Array.from({ length: 17 }, (_, index) => `Area ${index}`) },
+    ]) {
+      expect(() =>
+        writingPolicySchema.parse({
+          content: "Structured policy",
+          checksum: "a".repeat(64),
+          version: "sha256:aaaaaaaaaaaa",
+          preferences,
+        }),
+      ).toThrow();
+    }
+  });
+
+  it("normalizes policy schema version and validates immutable lineage", () => {
+    const checksum = "a".repeat(64);
+    const parsed = writingPolicySchema.parse({
+      content: "Workspace policy",
+      checksum,
+      version: "sha256:aaaaaaaaaaaa",
+      lineage: { kind: "workspace" },
+    });
+    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.lineage).toEqual({ kind: "workspace" });
+
+    const override = writingPolicySchema.parse({
+      content: "Opportunity override",
+      checksum: "b".repeat(64),
+      version: "sha256:bbbbbbbbbbbb",
+      lineage: {
+        kind: "opportunity-override",
+        base: { version: "sha256:base", checksum },
+        override: { version: "sha256:bbbbbbbbbbbb", checksum: "B".repeat(64) },
+      },
+    });
+    expect(override.lineage).toEqual({
+      kind: "opportunity-override",
+      base: { version: "sha256:base", checksum },
+      override: { version: "sha256:bbbbbbbbbbbb", checksum: "b".repeat(64) },
+    });
+
+    for (const lineage of [
+      {
+        kind: "opportunity-override" as const,
+        base: { version: "sha256:base", checksum },
+        override: { version: "sha256:other", checksum: "b".repeat(64) },
+      },
+      {
+        kind: "opportunity-override" as const,
+        base: { version: "sha256:base", checksum },
+        override: { version: "sha256:bbbbbbbbbbbb", checksum },
+      },
+      { kind: "workspace", unexpected: true },
+    ]) {
+      expect(() =>
+        writingPolicySchema.parse({
+          content: "Opportunity override",
+          checksum: "b".repeat(64),
+          version: "sha256:bbbbbbbbbbbb",
+          lineage,
         }),
       ).toThrow();
     }
