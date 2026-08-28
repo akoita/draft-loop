@@ -291,6 +291,17 @@ immutable context. Resume cannot replace that selection, and later edits do
 not alter the run. This completes #67; the milestone remains incomplete pending
 its downstream planning and drafting work.
 
+The first #66 component defines a strict immutable canonical-profile contract.
+Bounded normalized facts cover all career-history categories, require exact
+candidate-provided CKB source-version provenance, and may carry optional public
+corroboration. Conflicts, possible duplicates, and omissions remain visible;
+every issue must be acknowledged or resolved before reviewed status. Version
+lineage, review timestamps, selection membership, canonical ordering, deep
+immutability, and path-free JSON round trips are deterministic. Persistence,
+CKB content derivation, retention and backup integration, run binding, and
+shared CLI/desktop review controls remain open, so #66 and the milestone are
+incomplete.
+
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
 activation and import are separate actions. Structured rules and preferences
@@ -429,6 +440,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-28 | Added the first #66 canonical candidate-profile contract. | Profile versions can represent complete normalized career facts with exact selected CKB source-version provenance, visible conflicts and omissions, review blockers, and deterministic immutable round trips. Persistence, derivation, retention/backup behavior, run binding, and adapters remain open. |
 | 2026-08-28 | Integrated immutable writing-policy history and explicit opportunity-bound overrides through shared application, CLI, and desktop contracts. | Candidates can activate or import local versions, inspect safe history, and select one complete imported override for an exact reviewed opportunity. Runs pin base and override lineage without mutating the workspace default; both model roles receive the effective policy. |
 | 2026-08-28 | Bound an exact reviewed opportunity version into immutable run context. | Start requires an explicit brief ID/version pair, verifies reviewed status and checksum, derives opportunity context only from that record, and stores a safe reference. Resume reuses the snapshot; URLs, paths, raw intake, and provenance do not enter provider-facing context. |
 | 2026-08-28 | Integrated durable opportunity create, reload, list, edit, and review through the shared application, CLI, and packaged-desktop host contracts. | CLI paths remain runtime-only, desktop files use native pickers, renderer results omit paths and URLs, provider extraction requires explicit per-create approval, and stale edits or reviews fail closed. Exact reviewed planning handoff remains open. |

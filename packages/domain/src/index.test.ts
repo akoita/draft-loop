@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   archiveCandidateKnowledgeBase,
   assertIndependentReview,
+  type CanonicalCandidateProfileInput,
   type ContextSnapshotInput,
+  canonicalCandidateProfileFactCategories,
   canonicalizeModelId,
   createAgentContextReference,
   createCandidateKnowledgeBase,
@@ -12,6 +14,7 @@ import {
   createCandidateKnowledgeSourceRetirement,
   createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
+  createCanonicalCandidateProfile,
   createContextSnapshot,
   createProfile,
   createWorkspace,
@@ -25,6 +28,7 @@ import {
   renameCandidateKnowledgeBase,
   SemanticValidationError,
   validateCandidateKnowledgeSelectionSnapshot,
+  validateCanonicalCandidateProfile,
   workflowStates,
 } from "./index.js";
 
@@ -136,6 +140,48 @@ function validSelectionInput() {
         ],
       },
     ],
+  };
+}
+
+function validCanonicalCandidateProfileInput(): CanonicalCandidateProfileInput {
+  const provenance = {
+    storeId: "store-z",
+    knowledgeBaseId: "knowledge-z",
+    sourceId: "source-z",
+    versionId: "version-z",
+    kind: "candidate-provided" as const,
+  };
+  const categories = [
+    "identity",
+    "contact",
+    "role",
+    "employer",
+    "date",
+    "achievement",
+    "project",
+    "skill",
+    "certification",
+    "education",
+    "language",
+    "approved-link",
+  ] as const;
+  return {
+    id: "profile-canonical-1",
+    version: 1,
+    parentVersion: null,
+    status: "draft" as const,
+    createdAt: "2026-08-12T10:00:00.000Z",
+    updatedAt: "2026-08-12T10:00:00.000Z",
+    candidateKnowledgeSelection: validSelectionInput(),
+    facts: categories.map((category, index) => ({
+      id: `fact-${String(index + 1).padStart(2, "0")}`,
+      category,
+      ...(category === "role" ? { subjectId: "career-1" } : {}),
+      field: category === "approved-link" ? "url" : "value",
+      value: `${category}-value`,
+      provenance: [provenance],
+    })),
+    issues: [],
   };
 }
 
@@ -1091,6 +1137,407 @@ describe("CandidateProfile", () => {
   it("rejects empty profile name", () => {
     expect(() => createProfile("p-1", { name: "" })).toThrow(/profile name is required/i);
     expect(() => createProfile("p-1", { name: "   " })).toThrow(/profile name is required/i);
+  });
+});
+
+describe("CanonicalCandidateProfile", () => {
+  it("creates a complete, path-free profile without losing fact categories", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const profile = createCanonicalCandidateProfile(input);
+
+    expect(profile).toMatchObject({
+      schemaVersion: 1,
+      id: "profile-canonical-1",
+      version: 1,
+      parentVersion: null,
+      status: "draft",
+    });
+    expect(profile.facts.map((fact) => fact.category).sort()).toEqual(
+      [...canonicalCandidateProfileFactCategories].sort(),
+    );
+    expect(profile.facts).toHaveLength(12);
+    expect(profile.facts.find((fact) => fact.category === "role")?.subjectId).toBe("career-1");
+    expect(profile.facts[0]?.provenance[0]).toEqual({
+      storeId: "store-z",
+      knowledgeBaseId: "knowledge-z",
+      sourceId: "source-z",
+      versionId: "version-z",
+      kind: "candidate-provided",
+    });
+    expect(JSON.stringify(profile)).not.toContain("/local/");
+    expect(Object.isFrozen(profile)).toBe(true);
+    expect(Object.isFrozen(profile.facts)).toBe(true);
+    expect(Object.isFrozen(profile.facts[0])).toBe(true);
+    expect(Object.isFrozen(profile.facts[0]?.provenance)).toBe(true);
+  });
+
+  it("canonicalizes deterministic fact, provenance, issue, and selection order", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const reversedFacts = [...input.facts].reverse().map((fact, index) => ({
+      ...fact,
+      provenance: index === 0 ? [...fact.provenance].reverse() : fact.provenance,
+    }));
+    const unorderedInput = {
+      ...input,
+      facts: reversedFacts,
+      issues: [
+        {
+          id: "issue-z",
+          code: "omission",
+          severity: "warning",
+          status: "open",
+          message: "A field needs candidate confirmation.",
+          factIds: ["fact-02", "fact-01"],
+        },
+        {
+          id: "issue-a",
+          code: "duplicate",
+          severity: "error",
+          status: "resolved",
+          message: "Duplicate values were reviewed.",
+          factIds: ["fact-03", "fact-02"],
+        },
+      ],
+    } satisfies CanonicalCandidateProfileInput;
+
+    const profile = createCanonicalCandidateProfile(unorderedInput);
+    expect(profile.facts[0]?.id).toBe("fact-01");
+    expect(profile.issues.map((issue) => issue.id)).toEqual(["issue-a", "issue-z"]);
+    expect(profile.issues[1]?.factIds).toEqual(["fact-01", "fact-02"]);
+    expect(profile.candidateKnowledgeSelection?.entries[0]?.storeId).toBe("store-a");
+  });
+
+  it("requires candidate-provided provenance and exact selection membership", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const fact = input.facts[0];
+    const reference = fact?.provenance[0];
+    if (fact === undefined || reference === undefined) {
+      throw new Error("the profile fixture is incomplete");
+    }
+
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        facts: [
+          {
+            ...fact,
+            provenance: [{ ...reference, kind: "public-corroboration" }],
+          },
+        ],
+      }),
+    ).toThrow(/candidate-provided/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        facts: [
+          {
+            ...fact,
+            provenance: [
+              {
+                ...reference,
+                sourceId: "not-selected",
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/exact source version/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        facts: [
+          {
+            ...fact,
+            provenance: [
+              {
+                ...reference,
+                kind: "candidate-provided",
+              },
+              {
+                ...reference,
+                kind: "public-corroboration",
+              },
+            ],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it("does not conflate provenance identities containing key separators", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const fact = input.facts[0];
+    const selection = input.candidateKnowledgeSelection;
+    const entry = selection?.entries[0];
+    const source = entry?.sources[0];
+    if (
+      fact === undefined ||
+      selection === undefined ||
+      entry === undefined ||
+      source === undefined
+    ) {
+      throw new Error("the profile fixture is incomplete");
+    }
+
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        candidateKnowledgeSelection: {
+          ...selection,
+          entries: [
+            {
+              ...entry,
+              storeId: "store\u0000knowledge",
+              knowledgeBaseId: "base",
+              sources: [{ ...source, sourceId: "source", versionId: "version" }],
+            },
+          ],
+        },
+        facts: [
+          {
+            ...fact,
+            provenance: [
+              {
+                storeId: "store",
+                knowledgeBaseId: "knowledge\u0000base",
+                sourceId: "source",
+                versionId: "version",
+                kind: "candidate-provided",
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/exact source version/i);
+  });
+
+  it("blocks reviewed status on open errors and preserves visible conflicts", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const reviewedInput = {
+      ...input,
+      status: "reviewed" as const,
+      reviewedAt: "2026-08-12T11:00:00.000Z",
+      updatedAt: "2026-08-12T11:00:00.000Z",
+      issues: [
+        {
+          id: "issue-conflict",
+          code: "conflict-date",
+          severity: "error",
+          status: "open",
+          message: "Two dates require candidate review.",
+          factIds: ["fact-01", "fact-02"],
+          sourceRefs: [input.facts[0]?.provenance[0]].filter(
+            (reference): reference is NonNullable<typeof reference> => reference !== undefined,
+          ),
+        },
+      ],
+    } satisfies CanonicalCandidateProfileInput;
+    expect(() => createCanonicalCandidateProfile(reviewedInput)).toThrow(/open error/i);
+
+    const acknowledgedInput = {
+      ...reviewedInput,
+      issues: [
+        {
+          id: "issue-conflict",
+          code: "conflict-date" as const,
+          severity: "error" as const,
+          status: "acknowledged" as const,
+          message: "Two dates require candidate review.",
+          factIds: ["fact-01", "fact-02"],
+          sourceRefs: reviewedInput.issues[0]?.sourceRefs ?? [],
+        },
+      ],
+    } satisfies CanonicalCandidateProfileInput;
+    expect(createCanonicalCandidateProfile(acknowledgedInput).status).toBe("reviewed");
+  });
+
+  it("requires reviewed profiles to bind a selection and retain at least one fact", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const { candidateKnowledgeSelection: _selection, ...withoutSelection } = input;
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...withoutSelection,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+      }),
+    ).toThrow(/candidateKnowledgeSelection/i);
+
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+        facts: [],
+      }),
+    ).toThrow(/at least one fact/i);
+  });
+
+  it("requires every issue source reference to be selected and correlated for conflicts", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const firstFact = input.facts[0];
+    const secondFact = input.facts[1];
+    const selectedReference = firstFact?.provenance[0];
+    if (firstFact === undefined || secondFact === undefined || selectedReference === undefined) {
+      throw new Error("the profile fixture is incomplete");
+    }
+    const conflict = {
+      id: "issue-date-conflict",
+      code: "conflict-date" as const,
+      severity: "error" as const,
+      status: "open" as const,
+      message: "Two dates require review.",
+      factIds: [firstFact.id, secondFact.id],
+      sourceRefs: [selectedReference],
+    };
+    const { candidateKnowledgeSelection: _selection, ...withoutSelection } = input;
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...withoutSelection,
+        facts: [],
+        issues: [conflict],
+      }),
+    ).toThrow(/requires a bound candidateKnowledgeSelection/i);
+
+    const unrelatedReference = {
+      storeId: "store-a",
+      knowledgeBaseId: "knowledge-a",
+      sourceId: "source-b",
+      versionId: "version-b",
+      kind: "candidate-provided" as const,
+    };
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        issues: [{ ...conflict, sourceRefs: [unrelatedReference] }],
+      }),
+    ).toThrow(/involved profile facts/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        issues: [{ ...conflict, factIds: [firstFact.id] }],
+      }),
+    ).toThrow(/at least two distinct/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        issues: [{ ...conflict, factIds: [firstFact.id, "unknown-fact"] }],
+      }),
+    ).toThrow(/existing profile fact/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        issues: [
+          {
+            ...conflict,
+            sourceRefs: [selectedReference],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it("requires every reviewed issue, including warnings, to be acknowledged or resolved", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const draftIssue = {
+      id: "issue-omission",
+      code: "omission" as const,
+      severity: "warning" as const,
+      status: "open" as const,
+      message: "A candidate field remains to be confirmed.",
+    };
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+        issues: [draftIssue],
+      }),
+    ).toThrow(/acknowledged or resolved/i);
+    expect(
+      createCanonicalCandidateProfile({
+        ...input,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+        issues: [{ ...draftIssue, status: "resolved" as const }],
+      }).status,
+    ).toBe("reviewed");
+  });
+
+  it("enforces version lineage and timestamp invariants", () => {
+    const input = validCanonicalCandidateProfileInput();
+    expect(() =>
+      createCanonicalCandidateProfile({ ...input, version: 1, parentVersion: 2 }),
+    ).toThrow(/parentVersion null/i);
+    expect(() =>
+      createCanonicalCandidateProfile({ ...input, version: 3, parentVersion: 1 }),
+    ).toThrow(/immediate predecessor/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        updatedAt: "2026-08-12T09:00:00.000Z",
+      }),
+    ).toThrow(/updatedAt/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        status: "draft",
+        reviewedAt: "2026-08-12T10:00:00.000Z",
+      }),
+    ).toThrow(/omit reviewedAt/i);
+  });
+
+  it("rejects duplicate ids, unsupported keys, and unbound facts", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const firstFact = input.facts[0];
+    if (firstFact === undefined) throw new Error("the profile fixture is incomplete");
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        facts: [firstFact, { ...firstFact }],
+      }),
+    ).toThrow(/fact ids must be unique/i);
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        facts: [{ ...firstFact, unknown: "not allowed" } as never],
+      }),
+    ).toThrow(/not supported/i);
+    const { candidateKnowledgeSelection: _selection, ...withoutSelection } = input;
+    expect(() => createCanonicalCandidateProfile(withoutSelection)).toThrow(
+      /candidateKnowledgeSelection/i,
+    );
+    expect(validateCanonicalCandidateProfile({ ...input, facts: [{ ...firstFact }] }).valid).toBe(
+      true,
+    );
+  });
+
+  it("does not accept unknown or path-bearing selection fields", () => {
+    const input = validCanonicalCandidateProfileInput();
+    const selection = input.candidateKnowledgeSelection;
+    if (selection === undefined) throw new Error("the profile fixture is incomplete");
+    const entry = selection.entries[0];
+    if (entry === undefined) throw new Error("the selection fixture is incomplete");
+    expect(() =>
+      createCanonicalCandidateProfile({
+        ...input,
+        candidateKnowledgeSelection: {
+          ...selection,
+          entries: [{ ...entry, rootPath: "/private/candidate" }],
+        } as never,
+      }),
+    ).toThrow(/not supported/i);
+  });
+
+  it("round-trips through JSON while retaining immutable canonical data", () => {
+    const profile = createCanonicalCandidateProfile(validCanonicalCandidateProfileInput());
+    const reloaded = createCanonicalCandidateProfile(JSON.parse(JSON.stringify(profile)));
+    expect(reloaded).toEqual(profile);
+    expect(Object.isFrozen(reloaded)).toBe(true);
+    expect(Object.isFrozen(reloaded.candidateKnowledgeSelection)).toBe(true);
   });
 });
 

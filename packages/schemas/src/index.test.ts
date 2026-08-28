@@ -22,13 +22,19 @@ import {
   candidateKnowledgeSourceVersionSchema,
   candidateKnowledgeStoreSchema,
   candidateProfileSchema,
+  canonicalCandidateProfileFactSchema,
+  canonicalCandidateProfileIssueSchema,
+  canonicalCandidateProfileProvenanceReferenceSchema,
+  canonicalCandidateProfileSchema,
   contextSnapshotInputSchema,
   contextSnapshotSchema,
   draftArtifactSchema,
   jobRequirementInputSchema,
   modelConfigurationSchema,
   opportunityBriefReferenceSchema,
+  parseCanonicalCandidateProfile,
   parseContextSnapshot,
+  serializeCanonicalCandidateProfile,
   serializeContextSnapshot,
   writingPolicySchema,
 } from "./index.js";
@@ -129,6 +135,47 @@ function validSelection() {
         ],
       },
     ],
+  };
+}
+
+function validCanonicalCandidateProfile() {
+  const provenance = {
+    storeId: "store-z",
+    knowledgeBaseId: "knowledge-z",
+    sourceId: "source-z",
+    versionId: "version-z",
+    kind: "candidate-provided" as const,
+  };
+  const categories = [
+    "identity",
+    "contact",
+    "role",
+    "employer",
+    "date",
+    "achievement",
+    "project",
+    "skill",
+    "certification",
+    "education",
+    "language",
+    "approved-link",
+  ] as const;
+  return {
+    id: "profile-canonical-1",
+    version: 1,
+    parentVersion: null,
+    status: "draft" as const,
+    createdAt: "2026-08-12T10:00:00.000Z",
+    updatedAt: "2026-08-12T10:00:00.000Z",
+    candidateKnowledgeSelection: validSelection(),
+    facts: categories.map((category, index) => ({
+      id: `fact-${String(index + 1).padStart(2, "0")}`,
+      category,
+      field: category === "approved-link" ? "url" : "value",
+      value: `${category}-value`,
+      provenance: [provenance],
+    })),
+    issues: [],
   };
 }
 
@@ -879,6 +926,274 @@ describe("candidateProfileSchema", () => {
         name: "Test",
       }),
     ).toThrow();
+  });
+});
+
+describe("canonicalCandidateProfileSchema", () => {
+  it("parses every supported fact category and returns canonical immutable data", () => {
+    const input = validCanonicalCandidateProfile();
+    const parsed = canonicalCandidateProfileSchema.parse(input);
+
+    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.facts).toHaveLength(12);
+    expect(new Set(parsed.facts.map((fact) => fact.category)).size).toBe(12);
+    expect(parsed.facts[0]?.provenance[0]).toEqual({
+      storeId: "store-z",
+      knowledgeBaseId: "knowledge-z",
+      sourceId: "source-z",
+      versionId: "version-z",
+      kind: "candidate-provided",
+    });
+    expect(Object.isFrozen(parsed)).toBe(true);
+    expect(Object.isFrozen(parsed.facts)).toBe(true);
+    expect(Object.isFrozen(parsed.facts[0])).toBe(true);
+    expect(Object.isFrozen(parsed.facts[0]?.provenance)).toBe(true);
+  });
+
+  it("normalizes order and round-trips the exact profile contract", () => {
+    const input = validCanonicalCandidateProfile();
+    input.facts.reverse();
+    const parsed = canonicalCandidateProfileSchema.parse(input);
+    expect(parsed.facts[0]?.id).toBe("fact-01");
+    const roundTripped = parseCanonicalCandidateProfile(serializeCanonicalCandidateProfile(parsed));
+    expect(roundTripped).toEqual(parsed);
+  });
+
+  it("requires exact selected provenance and candidate-provided evidence", () => {
+    const input = validCanonicalCandidateProfile();
+    const fact = input.facts[0];
+    const reference = fact?.provenance[0];
+    if (fact === undefined || reference === undefined) {
+      throw new Error("the profile fixture is incomplete");
+    }
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        facts: [
+          {
+            ...fact,
+            provenance: [{ ...reference, kind: "public-corroboration" }],
+          },
+        ],
+      }),
+    ).toThrow(/candidate-provided/i);
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        facts: [
+          {
+            ...fact,
+            provenance: [{ ...reference, versionId: "not-selected" }],
+          },
+        ],
+      }),
+    ).toThrow(/exact source version/i);
+    expect(() =>
+      canonicalCandidateProfileProvenanceReferenceSchema.parse({
+        ...reference,
+        publicUrl: "https://example.invalid",
+      }),
+    ).toThrow(/unrecognized|unknown|publicUrl/i);
+  });
+
+  it("keeps public corroboration optional when candidate provenance exists", () => {
+    const input = validCanonicalCandidateProfile();
+    const fact = input.facts[0];
+    const reference = fact?.provenance[0];
+    if (fact === undefined || reference === undefined) {
+      throw new Error("the profile fixture is incomplete");
+    }
+    expect(
+      canonicalCandidateProfileFactSchema.parse({
+        ...fact,
+        provenance: [reference, { ...reference, kind: "public-corroboration" }],
+      }).provenance,
+    ).toHaveLength(2);
+    expect(
+      canonicalCandidateProfileIssueSchema.parse({
+        id: "issue-1",
+        code: "omission",
+        severity: "warning",
+        status: "open",
+        message: "A candidate field needs confirmation.",
+      }),
+    ).toMatchObject({ factIds: [], sourceRefs: [] });
+  });
+
+  it("rejects strict unknown keys, duplicates, and invalid profile lineage", () => {
+    const input = validCanonicalCandidateProfile();
+    const fact = input.facts[0];
+    if (fact === undefined) throw new Error("the profile fixture is incomplete");
+    expect(() => canonicalCandidateProfileSchema.parse({ ...input, unknown: true })).toThrow(
+      /unknown|unrecognized/i,
+    );
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        facts: [fact, { ...fact }],
+      }),
+    ).toThrow(/fact ids must be unique/i);
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({ ...input, version: 2, parentVersion: null }),
+    ).toThrow(/immediate predecessor/i);
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        updatedAt: "2026-08-12T09:00:00.000Z",
+      }),
+    ).toThrow(/updatedAt/i);
+  });
+
+  it("rejects unknown or path-bearing fields inside the bound selection", () => {
+    const input = validCanonicalCandidateProfile();
+    const entry = input.candidateKnowledgeSelection.entries[0];
+    if (entry === undefined) throw new Error("the selection fixture is incomplete");
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        candidateKnowledgeSelection: {
+          ...input.candidateKnowledgeSelection,
+          entries: [{ ...entry, rootPath: "/private/candidate" }],
+        },
+      }),
+    ).toThrow(/unknown|unrecognized|rootPath/i);
+  });
+
+  it("requires reviewed profiles to bind a selection and retain at least one fact", () => {
+    const input = validCanonicalCandidateProfile();
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+        facts: [],
+      }),
+    ).toThrow(/at least one fact/i);
+
+    const { candidateKnowledgeSelection: _selection, ...withoutSelection } = input;
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...withoutSelection,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+      }),
+    ).toThrow(/candidateKnowledgeSelection/i);
+  });
+
+  it("requires selected and fact-correlated source references for conflict issues", () => {
+    const input = validCanonicalCandidateProfile();
+    const firstFact = input.facts[0];
+    const secondFact = input.facts[1];
+    const selectedReference = firstFact?.provenance[0];
+    if (firstFact === undefined || secondFact === undefined || selectedReference === undefined) {
+      throw new Error("the profile fixture is incomplete");
+    }
+    const conflict = {
+      id: "issue-date-conflict",
+      code: "conflict-date" as const,
+      severity: "error" as const,
+      status: "open" as const,
+      message: "Two dates require review.",
+      factIds: [firstFact.id, secondFact.id],
+      sourceRefs: [selectedReference],
+    };
+    const { candidateKnowledgeSelection: _selection, ...withoutSelection } = input;
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...withoutSelection,
+        facts: [],
+        issues: [conflict],
+      }),
+    ).toThrow(/requires a bound candidateKnowledgeSelection/i);
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        issues: [{ ...conflict, factIds: [firstFact.id] }],
+      }),
+    ).toThrow(/at least two distinct/i);
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        issues: [{ ...conflict, factIds: [firstFact.id, "unknown-fact"] }],
+      }),
+    ).toThrow(/existing profile fact/i);
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        issues: [
+          {
+            ...conflict,
+            sourceRefs: [
+              {
+                storeId: "store-a",
+                knowledgeBaseId: "knowledge-a",
+                sourceId: "source-b",
+                versionId: "version-b",
+                kind: "candidate-provided" as const,
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/involved profile facts/i);
+  });
+
+  it("blocks reviewed profiles with open errors and preserves visible issue fields", () => {
+    const input = validCanonicalCandidateProfile();
+    const fact = input.facts[0];
+    const reference = fact?.provenance[0];
+    if (fact === undefined || reference === undefined) {
+      throw new Error("the profile fixture is incomplete");
+    }
+    const issue = {
+      id: "issue-conflict",
+      code: "conflict-title" as const,
+      severity: "error" as const,
+      status: "open" as const,
+      message: "Two title values require candidate review.",
+      factIds: [fact.id, input.facts[1]?.id ?? "fact-02"],
+      sourceRefs: [reference],
+    };
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+        issues: [issue],
+      }),
+    ).toThrow(/open error/i);
+    const reviewed = canonicalCandidateProfileSchema.parse({
+      ...input,
+      status: "reviewed",
+      reviewedAt: "2026-08-12T11:00:00.000Z",
+      updatedAt: "2026-08-12T11:00:00.000Z",
+      issues: [{ ...issue, status: "acknowledged" }],
+    });
+    expect(reviewed.issues[0]).toMatchObject({ code: "conflict-title", status: "acknowledged" });
+  });
+
+  it("requires reviewed warnings as well as errors to be acknowledged or resolved", () => {
+    const input = validCanonicalCandidateProfile();
+    expect(() =>
+      canonicalCandidateProfileSchema.parse({
+        ...input,
+        status: "reviewed",
+        reviewedAt: "2026-08-12T11:00:00.000Z",
+        updatedAt: "2026-08-12T11:00:00.000Z",
+        issues: [
+          {
+            id: "issue-omission",
+            code: "omission",
+            severity: "warning",
+            status: "open",
+            message: "A field remains to be confirmed.",
+          },
+        ],
+      }),
+    ).toThrow(/acknowledged or resolved/i);
   });
 });
 
