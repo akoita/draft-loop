@@ -1,6 +1,7 @@
 import type {
   ApplicationReadinessStoppingDecisionStopReason,
   CandidateKnowledgeSelectionSnapshotInput,
+  CanonicalCandidateProfileInput as CanonicalCandidateProfileDomainInput,
   RenderingLayoutProfileId,
   RenderingQaLimitationCode,
 } from "@draft-loop/domain";
@@ -23,13 +24,32 @@ import {
   candidateKnowledgeSourceKinds,
   candidateKnowledgeSourceRetirementReasons,
   candidateKnowledgeStoreSchemaVersion,
+  canonicalCandidateProfileFactCategories,
+  canonicalCandidateProfileIssueCodes,
+  canonicalCandidateProfileIssueSeverities,
+  canonicalCandidateProfileIssueStatuses,
+  canonicalCandidateProfileProvenanceKinds,
+  canonicalCandidateProfileSchemaVersion,
+  canonicalCandidateProfileStatuses,
   contextSchemaVersion,
   createCandidateKnowledgeSelectionSnapshot,
+  createCanonicalCandidateProfile,
   deriveModelLineage,
   independentReadinessReportFindingOrigins,
   independentReadinessReportInputAssessmentStatuses,
   independentReadinessReportSchemaVersion,
   independentReadinessReportTargetKinds,
+  maximumCanonicalCandidateProfileFactCount,
+  maximumCanonicalCandidateProfileFactIdLength,
+  maximumCanonicalCandidateProfileFieldLength,
+  maximumCanonicalCandidateProfileIdLength,
+  maximumCanonicalCandidateProfileIssueCount,
+  maximumCanonicalCandidateProfileIssueFactReferenceCount,
+  maximumCanonicalCandidateProfileIssueMessageLength,
+  maximumCanonicalCandidateProfileIssueSourceReferenceCount,
+  maximumCanonicalCandidateProfileProvenanceCount,
+  maximumCanonicalCandidateProfileSubjectIdLength,
+  maximumCanonicalCandidateProfileValueLength,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
   maximumWritingPolicyCharactersLength,
@@ -1725,6 +1745,187 @@ export type CandidateKnowledgeSelectionSnapshotSchemaOutput = z.output<
   typeof candidateKnowledgeSelectionSnapshotSchema
 >;
 
+/*
+ * The legacy selection schema intentionally remains permissive for old
+ * context snapshots. A canonical profile, however, must not silently strip a
+ * path, URL, or other unknown selection field before provenance validation,
+ * so it uses a strict copy of the same selection shape.
+ */
+const canonicalCandidateProfileSelectionObservationSchema =
+  candidateKnowledgeSelectionLifecycleObservationSchema.strict();
+const canonicalCandidateProfileSelectionRetirementSchema =
+  candidateKnowledgeSelectionLifecycleRetirementSchema.strict();
+const canonicalCandidateProfileSelectionDirectorySchema =
+  candidateKnowledgeSelectionLifecycleDirectorySchema.strict();
+const canonicalCandidateProfileSelectionRevisionSchema =
+  candidateKnowledgeSelectionLifecycleRevisionSchema
+    .extend({
+      observation: canonicalCandidateProfileSelectionObservationSchema.nullable(),
+      retirement: canonicalCandidateProfileSelectionRetirementSchema.nullable(),
+      directory: canonicalCandidateProfileSelectionDirectorySchema.nullable(),
+    })
+    .strict();
+
+const canonicalCandidateProfileSelectionSchema = z
+  .strictObject({
+    schemaVersion: z.literal(candidateKnowledgeSelectionSnapshotSchemaVersion).optional(),
+    capturedAt: strictTimestampSchema,
+    entries: z
+      .array(
+        z.strictObject({
+          storeId: nonEmptyString,
+          knowledgeBaseId: nonEmptyString,
+          sources: z
+            .array(
+              z.strictObject({
+                sourceId: nonEmptyString,
+                versionId: nonEmptyString,
+                lifecycleRevision: canonicalCandidateProfileSelectionRevisionSchema,
+              }),
+            )
+            .min(1),
+        }),
+      )
+      .min(1),
+  })
+  .transform((selection) =>
+    createCandidateKnowledgeSelectionSnapshot(
+      selection as unknown as CandidateKnowledgeSelectionSnapshotInput,
+    ),
+  );
+
+const canonicalCandidateProfileIdSchema = nonEmptyString.max(
+  maximumCanonicalCandidateProfileIdLength,
+);
+const canonicalCandidateProfileFactIdSchema = nonEmptyString.max(
+  maximumCanonicalCandidateProfileFactIdLength,
+);
+const canonicalCandidateProfileSubjectIdSchema = nonEmptyString.max(
+  maximumCanonicalCandidateProfileSubjectIdLength,
+);
+const canonicalCandidateProfileFieldSchema = nonEmptyString.max(
+  maximumCanonicalCandidateProfileFieldLength,
+);
+const canonicalCandidateProfileValueSchema = nonEmptyString.max(
+  maximumCanonicalCandidateProfileValueLength,
+);
+const canonicalCandidateProfileIssueMessageSchema = nonEmptyString.max(
+  maximumCanonicalCandidateProfileIssueMessageLength,
+);
+
+export const canonicalCandidateProfileStatusSchema = z.enum(canonicalCandidateProfileStatuses);
+export const canonicalCandidateProfileFactCategorySchema = z.enum(
+  canonicalCandidateProfileFactCategories,
+);
+export const canonicalCandidateProfileProvenanceKindSchema = z.enum(
+  canonicalCandidateProfileProvenanceKinds,
+);
+export const canonicalCandidateProfileIssueCodeSchema = z.enum(canonicalCandidateProfileIssueCodes);
+export const canonicalCandidateProfileIssueSeveritySchema = z.enum(
+  canonicalCandidateProfileIssueSeverities,
+);
+export const canonicalCandidateProfileIssueStatusSchema = z.enum(
+  canonicalCandidateProfileIssueStatuses,
+);
+
+export const canonicalCandidateProfileProvenanceReferenceSchema = z.strictObject({
+  storeId: canonicalCandidateProfileIdSchema,
+  knowledgeBaseId: canonicalCandidateProfileIdSchema,
+  sourceId: canonicalCandidateProfileIdSchema,
+  versionId: canonicalCandidateProfileIdSchema,
+  kind: canonicalCandidateProfileProvenanceKindSchema,
+});
+export type CanonicalCandidateProfileProvenanceReference = z.infer<
+  typeof canonicalCandidateProfileProvenanceReferenceSchema
+>;
+export type CanonicalCandidateProfileSourceReference = CanonicalCandidateProfileProvenanceReference;
+
+export const canonicalCandidateProfileFactSchema = z.strictObject({
+  id: canonicalCandidateProfileFactIdSchema,
+  category: canonicalCandidateProfileFactCategorySchema,
+  subjectId: canonicalCandidateProfileSubjectIdSchema.optional(),
+  field: canonicalCandidateProfileFieldSchema,
+  value: canonicalCandidateProfileValueSchema,
+  provenance: z
+    .array(canonicalCandidateProfileProvenanceReferenceSchema)
+    .min(1)
+    .max(maximumCanonicalCandidateProfileProvenanceCount),
+});
+export type CanonicalCandidateProfileFact = z.infer<typeof canonicalCandidateProfileFactSchema>;
+
+export const canonicalCandidateProfileIssueSchema = z.strictObject({
+  id: canonicalCandidateProfileFactIdSchema,
+  code: canonicalCandidateProfileIssueCodeSchema,
+  severity: canonicalCandidateProfileIssueSeveritySchema,
+  status: canonicalCandidateProfileIssueStatusSchema,
+  message: canonicalCandidateProfileIssueMessageSchema,
+  factIds: z
+    .array(canonicalCandidateProfileFactIdSchema)
+    .max(maximumCanonicalCandidateProfileIssueFactReferenceCount)
+    .default([]),
+  sourceRefs: z
+    .array(canonicalCandidateProfileProvenanceReferenceSchema)
+    .max(maximumCanonicalCandidateProfileIssueSourceReferenceCount)
+    .default([]),
+});
+export type CanonicalCandidateProfileIssue = z.infer<typeof canonicalCandidateProfileIssueSchema>;
+
+const canonicalCandidateProfileVersionSchema = z
+  .number()
+  .finite()
+  .int()
+  .positive()
+  .refine(Number.isSafeInteger, "must be a safe integer");
+
+/**
+ * Strict persisted profile shape. The transform delegates cross-field
+ * provenance, lineage, review, and canonical-order checks to the framework-
+ * free domain boundary and returns the deeply immutable representation.
+ */
+export const canonicalCandidateProfileSchema = z
+  .strictObject({
+    schemaVersion: z
+      .literal(canonicalCandidateProfileSchemaVersion)
+      .default(canonicalCandidateProfileSchemaVersion),
+    id: canonicalCandidateProfileIdSchema,
+    version: canonicalCandidateProfileVersionSchema,
+    parentVersion: canonicalCandidateProfileVersionSchema.nullable(),
+    status: canonicalCandidateProfileStatusSchema,
+    createdAt: strictTimestampSchema,
+    updatedAt: strictTimestampSchema,
+    reviewedAt: strictTimestampSchema.optional(),
+    candidateKnowledgeSelection: canonicalCandidateProfileSelectionSchema.optional(),
+    facts: z
+      .array(canonicalCandidateProfileFactSchema)
+      .max(maximumCanonicalCandidateProfileFactCount),
+    issues: z
+      .array(canonicalCandidateProfileIssueSchema)
+      .max(maximumCanonicalCandidateProfileIssueCount)
+      .default([]),
+  })
+  .transform((profile) =>
+    createCanonicalCandidateProfile(profile as unknown as CanonicalCandidateProfileDomainInput),
+  );
+
+export type CanonicalCandidateProfileSchemaInput = z.input<typeof canonicalCandidateProfileSchema>;
+export type CanonicalCandidateProfileSchemaOutput = z.output<
+  typeof canonicalCandidateProfileSchema
+>;
+export type CanonicalCandidateProfile = CanonicalCandidateProfileSchemaOutput;
+export type CanonicalCandidateProfileInput = CanonicalCandidateProfileSchemaInput;
+
+/** Serialize a validated profile without exposing a separate persistence shape. */
+export function serializeCanonicalCandidateProfile(profile: unknown): string {
+  return JSON.stringify(canonicalCandidateProfileSchema.parse(profile));
+}
+
+/** Reload a canonical profile through the same strict, immutable boundary. */
+export function parseCanonicalCandidateProfile(
+  serialized: string,
+): CanonicalCandidateProfileSchemaOutput {
+  return canonicalCandidateProfileSchema.parse(JSON.parse(serialized));
+}
+
 export const outputConstraintsSchema = z.object({
   format: z.enum(outputFormats).default("markdown"),
   maxWords: z.number().finite().int().positive().optional(),
@@ -3171,6 +3372,13 @@ export {
   authorAdjudicationDispositions,
   authorAdjudicationEffectRequirements,
   authorAdjudicationPlanSchemaVersion,
+  canonicalCandidateProfileFactCategories,
+  canonicalCandidateProfileIssueCodes,
+  canonicalCandidateProfileIssueSeverities,
+  canonicalCandidateProfileIssueStatuses,
+  canonicalCandidateProfileProvenanceKinds,
+  canonicalCandidateProfileSchemaVersion,
+  canonicalCandidateProfileStatuses,
   independentReadinessReportFindingOrigins,
   independentReadinessReportInputAssessmentStatuses,
   independentReadinessReportSchemaVersion,

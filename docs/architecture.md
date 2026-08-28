@@ -430,6 +430,28 @@ directory-member history. [ADR 0007][adr-0007] records the compact v6–v21
 schema-evolution summary and the invariants that
 motivated each boundary.
 
+### Canonical candidate profile contract
+
+The first #66 component defines a provider-independent, immutable canonical
+profile aggregate without replacing the legacy profile identity used by older
+contexts. A profile version binds an exact path-free CKB selection and stores
+bounded normalized facts for identity, contact, employment and dates,
+achievements, projects, skills, certifications, education, languages, and
+approved links. Every fact cites an exact selected store, CKB, source, and
+source version and requires candidate-provided provenance; public
+corroboration is optional.
+
+Conflicts, possible duplicates, and omissions remain explicit issues rather
+than silently selecting a value. Every issue must be handled before reviewed
+status. The strict
+schema and framework-free constructor enforce version lineage, review
+timestamps, source membership, bounded collections, stable identifiers,
+canonical ordering, deep immutability, and path-free JSON round trips.
+
+This component does not persist or derive profiles, read CKB content, bind a
+reviewed profile to a run, materialize normalized-fact retention, update
+backup/restore, or expose CLI/desktop controls. Those remain later #66 slices.
+
 ### CKB integration gap
 
 The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
