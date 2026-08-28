@@ -24,6 +24,7 @@ import {
   candidateKnowledgeSourceKinds,
   candidateKnowledgeSourceRetirementReasons,
   candidateKnowledgeStoreSchemaVersion,
+  canonicalCandidateProfileExtractionSchemaVersion,
   canonicalCandidateProfileFactCategories,
   canonicalCandidateProfileIssueCodes,
   canonicalCandidateProfileIssueSeverities,
@@ -1828,6 +1829,164 @@ export const canonicalCandidateProfileIssueStatusSchema = z.enum(
   canonicalCandidateProfileIssueStatuses,
 );
 
+const canonicalCandidateProfileExtractionOpaqueIdentifierPattern =
+  /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/u;
+const canonicalCandidateProfileExtractionOpaqueIdentifierSchema = nonEmptyString
+  .max(maximumCanonicalCandidateProfileIdLength)
+  .regex(
+    canonicalCandidateProfileExtractionOpaqueIdentifierPattern,
+    "must be a safe opaque identifier",
+  );
+const canonicalCandidateProfileExtractionFactKeySchema =
+  canonicalCandidateProfileFactIdSchema.regex(
+    canonicalCandidateProfileExtractionOpaqueIdentifierPattern,
+    "must be a safe opaque identifier",
+  );
+const canonicalCandidateProfileExtractionSubjectKeySchema =
+  canonicalCandidateProfileSubjectIdSchema.regex(
+    canonicalCandidateProfileExtractionOpaqueIdentifierPattern,
+    "must be a safe opaque identifier",
+  );
+
+const canonicalCandidateProfileExtractionEvidenceSchema = z.strictObject({
+  sourceId: canonicalCandidateProfileExtractionOpaqueIdentifierSchema,
+  quote: canonicalCandidateProfileValueSchema,
+});
+
+const canonicalCandidateProfileExtractionFactEvidenceSchema = z
+  .array(canonicalCandidateProfileExtractionEvidenceSchema)
+  .min(1)
+  .max(maximumCanonicalCandidateProfileProvenanceCount)
+  .superRefine((evidence, context) => {
+    const seen = new Set<string>();
+    for (const [index, item] of evidence.entries()) {
+      const tuple = JSON.stringify([item.sourceId, item.quote]);
+      if (seen.has(tuple)) {
+        context.addIssue({
+          code: "custom",
+          path: [index],
+          message: "evidence must contain unique sourceId/quote tuples",
+        });
+      }
+      seen.add(tuple);
+    }
+  });
+
+const canonicalCandidateProfileExtractionFactSchema = z.strictObject({
+  key: canonicalCandidateProfileExtractionFactKeySchema,
+  category: canonicalCandidateProfileFactCategorySchema,
+  subjectKey: canonicalCandidateProfileExtractionSubjectKeySchema.optional(),
+  field: canonicalCandidateProfileFieldSchema,
+  value: canonicalCandidateProfileValueSchema,
+  evidence: canonicalCandidateProfileExtractionFactEvidenceSchema,
+});
+
+const canonicalCandidateProfileExtractionIssueSchema = z.strictObject({
+  code: canonicalCandidateProfileIssueCodeSchema,
+  factKeys: z
+    .array(canonicalCandidateProfileExtractionFactKeySchema)
+    .max(maximumCanonicalCandidateProfileIssueFactReferenceCount),
+  sourceIds: z
+    .array(canonicalCandidateProfileExtractionOpaqueIdentifierSchema)
+    .max(maximumCanonicalCandidateProfileIssueSourceReferenceCount),
+});
+
+const canonicalCandidateProfileExtractionConflictCodes = new Set([
+  "conflict-date",
+  "conflict-title",
+  "conflict-duration",
+  "conflict-metric",
+  "conflict-value",
+  "duplicate",
+]);
+
+/** Provider-facing canonical profile extraction output without application metadata. */
+export const canonicalCandidateProfileExtractionProposalSchema = z
+  .strictObject({
+    schemaVersion: z.literal(canonicalCandidateProfileExtractionSchemaVersion),
+    facts: z
+      .array(canonicalCandidateProfileExtractionFactSchema)
+      .max(maximumCanonicalCandidateProfileFactCount),
+    issues: z
+      .array(canonicalCandidateProfileExtractionIssueSchema)
+      .max(maximumCanonicalCandidateProfileIssueCount),
+  })
+  .superRefine((proposal, context) => {
+    const factKeys = new Set<string>();
+    for (const [index, fact] of proposal.facts.entries()) {
+      if (factKeys.has(fact.key)) {
+        context.addIssue({
+          code: "custom",
+          path: ["facts", index, "key"],
+          message: "fact keys must be unique",
+        });
+      }
+      factKeys.add(fact.key);
+    }
+
+    for (const [issueIndex, issue] of proposal.issues.entries()) {
+      const issueFactKeys = new Set<string>();
+      for (const [factKeyIndex, factKey] of issue.factKeys.entries()) {
+        if (issueFactKeys.has(factKey)) {
+          context.addIssue({
+            code: "custom",
+            path: ["issues", issueIndex, "factKeys", factKeyIndex],
+            message: "factKeys must contain unique fact keys",
+          });
+        }
+        issueFactKeys.add(factKey);
+        if (!factKeys.has(factKey)) {
+          context.addIssue({
+            code: "custom",
+            path: ["issues", issueIndex, "factKeys", factKeyIndex],
+            message: "factKeys must reference proposal facts",
+          });
+        }
+      }
+
+      const issueSourceIds = new Set<string>();
+      for (const [sourceIdIndex, sourceId] of issue.sourceIds.entries()) {
+        if (issueSourceIds.has(sourceId)) {
+          context.addIssue({
+            code: "custom",
+            path: ["issues", issueIndex, "sourceIds", sourceIdIndex],
+            message: "sourceIds must contain unique source ids",
+          });
+        }
+        issueSourceIds.add(sourceId);
+      }
+
+      if (
+        canonicalCandidateProfileExtractionConflictCodes.has(issue.code) &&
+        issue.factKeys.length < 2
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["issues", issueIndex, "factKeys"],
+          message: "conflict and duplicate issues require at least two fact keys",
+        });
+      }
+    }
+  });
+
+export type CanonicalCandidateProfileExtractionProposal = z.infer<
+  typeof canonicalCandidateProfileExtractionProposalSchema
+>;
+
+/** Draft-7 JSON schema for provider-facing canonical profile extraction output. */
+const canonicalCandidateProfileExtractionProposalJsonSchemaWithMeta = z.toJSONSchema(
+  canonicalCandidateProfileExtractionProposalSchema,
+  { target: "draft-7" },
+);
+
+const {
+  $schema: _canonicalCandidateProfileExtractionProposalSchemaMetadata,
+  ...canonicalCandidateProfileExtractionProposalJsonSchemaValue
+} = canonicalCandidateProfileExtractionProposalJsonSchemaWithMeta;
+
+export const canonicalCandidateProfileExtractionProposalJsonSchema =
+  canonicalCandidateProfileExtractionProposalJsonSchemaValue;
+
 export const canonicalCandidateProfileProvenanceReferenceSchema = z.strictObject({
   storeId: canonicalCandidateProfileIdSchema,
   knowledgeBaseId: canonicalCandidateProfileIdSchema,
@@ -3372,6 +3531,7 @@ export {
   authorAdjudicationDispositions,
   authorAdjudicationEffectRequirements,
   authorAdjudicationPlanSchemaVersion,
+  canonicalCandidateProfileExtractionSchemaVersion,
   canonicalCandidateProfileFactCategories,
   canonicalCandidateProfileIssueCodes,
   canonicalCandidateProfileIssueSeverities,

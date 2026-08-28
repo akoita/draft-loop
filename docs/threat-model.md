@@ -94,12 +94,24 @@ Every fact points to an exact selected CKB source version and requires
 candidate-provided provenance. Persisted audit events exclude fact values,
 issue messages, raw source content, URLs, and host paths.
 
-The persistence service has no provider, tool, network, run, CLI, or desktop
-integration. It cannot yet derive from managed CKB bytes or invalidate data
-after source retirement or deletion. Because one profile may combine CKBs, it
-is not copied into a single CKB portable backup; whole-workspace database
-backups still preserve it. Retention, deletion, run binding, and adapter
-boundaries remain open #66 work.
+The derivation boundary reads exact managed versions as fresh byte copies after
+one-handle size, checksum, and identity verification; storage paths and URL or
+origin metadata do not cross that boundary. It normalizes bounded content,
+checks the lifecycle snapshot before extraction and again before persistence,
+and requires explicit provider-data approval before reading or invoking the
+extraction port. Source
+text remains untrusted data. A strict proposal schema accepts only facts,
+grounded evidence quotes with opaque citations, and issue relationships. A
+quote must occur in its cited normalized source and contain the proposed value; it is discarded after local
+verification; application code owns provenance, IDs, severity, messages,
+duplicate/conflict detection, and visible omissions.
+
+No concrete provider, tool, network, run, CLI, or desktop adapter invokes this
+service yet. It also cannot invalidate an immutable profile after source
+retirement or deletion. Because one profile may combine CKBs, it is not copied
+into a single CKB portable backup; whole-workspace database backups still
+preserve it. Retention, deletion, run binding, and adapter boundaries remain
+open #66 work.
 
 ### Current CKB scope
 

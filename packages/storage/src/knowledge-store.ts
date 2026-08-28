@@ -75,6 +75,7 @@ import {
   type CandidateKnowledgeSourceVersionRecord,
   type CandidateKnowledgeSourceVersionWriteResult,
   candidateKnowledgeRetentionClasses,
+  type ManagedCandidateKnowledgeSourceVersionRecord,
   type ManagedCandidateKnowledgeWriteJournalPhase,
   type ManagedCandidateKnowledgeWriteOperationRecord,
   type ManagedCandidateKnowledgeWriteRecoveryReport,
@@ -107,6 +108,16 @@ const descriptorKeyPrefix = "candidateKnowledgeStore";
 export const maximumManagedCandidateKnowledgeFileBytes = 20 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeUrlResponseBytes = 4 * 1024 * 1024;
 export const maximumManagedCandidateKnowledgeInventoryEntries = 1024;
+
+/**
+ * A path-free, integrity-verified snapshot of one managed CKB source version.
+ * Each read allocates a fresh byte buffer; callers may mutate that buffer
+ * without affecting the managed store or a later read.
+ */
+export interface ManagedCandidateKnowledgeSourceVersionReadResult {
+  readonly metadata: ManagedCandidateKnowledgeSourceVersionRecord;
+  readonly bytes: Uint8Array;
+}
 
 function currentKnowledgeStoreTimestamp(): string {
   return new Date().toISOString();
@@ -549,6 +560,11 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     sourceId: string,
     versionId: string,
   ) => Promise<string | undefined>;
+  readonly readManagedCandidateKnowledgeSourceVersion: (
+    knowledgeBaseId: string,
+    sourceId: string,
+    versionId: string,
+  ) => Promise<ManagedCandidateKnowledgeSourceVersionReadResult | undefined>;
   readonly inspectManagedCandidateKnowledgeFiles: () => Promise<ManagedCandidateKnowledgeFileInventory>;
   readonly exportPortableBackup: (
     destination: string,
@@ -1242,6 +1258,80 @@ async function hashManagedFile(path: string, expectedSize: number): Promise<stri
     return digest.digest("hex");
   } finally {
     await closeQuietly(handle);
+  }
+}
+
+async function readVerifiedManagedFile(
+  path: string,
+  version: Pick<CandidateKnowledgeSourceVersionRecord, "checksum" | "sizeBytes">,
+): Promise<Uint8Array> {
+  try {
+    if (
+      !/^[0-9a-f]{64}$/.test(version.checksum) ||
+      !Number.isSafeInteger(version.sizeBytes) ||
+      version.sizeBytes < 0 ||
+      version.sizeBytes > maximumManagedCandidateKnowledgeFileBytes
+    ) {
+      throw new StorageValidationError(
+        "Managed candidate knowledge source version integrity metadata is invalid.",
+      );
+    }
+    await requireRegularFile(
+      path,
+      "Managed candidate knowledge source version",
+      maximumManagedCandidateKnowledgeFileBytes,
+    );
+
+    let handle: FileHandle | undefined;
+    try {
+      handle = await open(path, sourceOpenFlags());
+      const before = await handle.stat();
+      if (!before.isFile() || before.size !== version.sizeBytes) {
+        throw new StorageValidationError(
+          "Managed candidate knowledge source version size does not match its record.",
+        );
+      }
+
+      const digest = createHash("sha256");
+      const chunks: Buffer[] = [];
+      const buffer = Buffer.allocUnsafe(64 * 1024);
+      let sizeBytes = 0;
+      while (true) {
+        const result = await handle.read(buffer, 0, buffer.length, null);
+        if (result.bytesRead === 0) break;
+        if (sizeBytes > maximumManagedCandidateKnowledgeFileBytes - result.bytesRead) {
+          throw new StorageValidationError(
+            "Managed candidate knowledge source version exceeds the size limit.",
+          );
+        }
+        sizeBytes += result.bytesRead;
+        const chunk = Buffer.from(buffer.subarray(0, result.bytesRead));
+        chunks.push(chunk);
+        digest.update(chunk);
+      }
+
+      const after = await handle.stat();
+      if (!sameFileState(before, after) || sizeBytes !== version.sizeBytes) {
+        throw new StorageValidationError(
+          "Managed candidate knowledge source version changed while it was being read.",
+        );
+      }
+      if (digest.digest("hex") !== version.checksum) {
+        throw new StorageValidationError(
+          "Managed candidate knowledge source version checksum does not match its record.",
+        );
+      }
+      return new Uint8Array(Buffer.concat(chunks, sizeBytes));
+    } finally {
+      await closeQuietly(handle);
+    }
+  } catch (error) {
+    if (error instanceof StorageValidationError || error instanceof StorageConflictError) {
+      throw error;
+    }
+    throw new StorageValidationError(
+      "Managed candidate knowledge source version could not be read safely.",
+    );
   }
 }
 
@@ -5615,6 +5705,45 @@ function createHandle(
       const path = managedVersionPath(root, sourceId.trim(), version.id);
       await verifyManagedFile(path, version);
       return path;
+    },
+    readManagedCandidateKnowledgeSourceVersion: async (knowledgeBaseId, sourceId, versionId) => {
+      const normalizedKnowledgeBaseId = requiredManagedText(
+        knowledgeBaseId,
+        "Candidate knowledge base id",
+      );
+      const normalizedSourceId = requiredManagedText(sourceId, "Candidate knowledge source id");
+      const normalizedVersionId = requiredManagedText(
+        versionId,
+        "Candidate knowledge source version id",
+      );
+      const managed = await storage.isCandidateKnowledgeSourceVersionManaged(
+        normalizedKnowledgeBaseId,
+        normalizedSourceId,
+        normalizedVersionId,
+      );
+      if (!managed) return undefined;
+      const version = storage
+        .listManagedCandidateKnowledgeSourceVersions()
+        .find(
+          (candidate) =>
+            candidate.knowledgeBaseId === normalizedKnowledgeBaseId &&
+            candidate.sourceId === normalizedSourceId &&
+            candidate.id === normalizedVersionId,
+        );
+      if (version === undefined) return undefined;
+      if (version.kind !== "file" && version.kind !== "url") {
+        throw new StorageValidationError(
+          "Candidate knowledge store contains a managed version for an unsupported source.",
+        );
+      }
+      const bytes = await readVerifiedManagedFile(
+        managedVersionPath(root, normalizedSourceId, normalizedVersionId),
+        version,
+      );
+      return Object.freeze({
+        metadata: Object.freeze({ ...version }),
+        bytes,
+      });
     },
     inspectManagedCandidateKnowledgeFiles: () =>
       inspectManagedCandidateKnowledgeFiles(storage, root),

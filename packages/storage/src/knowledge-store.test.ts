@@ -5070,6 +5070,166 @@ describe("portable candidate knowledge store", () => {
     await store.close();
   });
 
+  it("reads managed file and URL versions as path-free verified byte snapshots", async () => {
+    const parent = await temporaryParent();
+    const root = join(parent, "candidate-knowledge");
+    const inputPath = join(parent, "candidate.md");
+    const fileContent = "candidate evidence";
+    await writeFile(inputPath, fileContent, "utf8");
+    const store = await initializeCandidateKnowledgeStore(initialization(root));
+    const fileWrite = await store.createManagedCandidateKnowledgeFileSource(
+      {
+        id: "managed-file-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Candidate notes",
+        createdAt: "2026-08-21T14:01:00.000Z",
+      },
+      managedVersion(inputPath, fileContent, { id: "managed-file-version" }),
+    );
+    const urlBytes = new TextEncoder().encode("approved URL evidence");
+    const urlWrite = await store.createManagedCandidateKnowledgeUrlSource(
+      {
+        id: "managed-url-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        displayName: "Approved URL",
+        createdAt: "2026-08-21T14:02:00.000Z",
+      },
+      managedUrlVersion(urlBytes, {
+        id: "managed-url-version",
+        createdAt: "2026-08-21T14:02:00.000Z",
+        provenance: {
+          originalUrl: "https://example.com/evidence",
+          finalUrl: "https://example.com/evidence",
+          fetchedAt: "2026-08-21T14:02:00.000Z",
+          kind: "generic",
+        },
+      }),
+    );
+
+    const fileRead = await store.readManagedCandidateKnowledgeSourceVersion(
+      "ckb-default",
+      fileWrite.source.id,
+      fileWrite.version.id,
+    );
+    const urlRead = await store.readManagedCandidateKnowledgeSourceVersion(
+      "ckb-default",
+      urlWrite.source.id,
+      urlWrite.version.id,
+    );
+    expect(fileRead).toMatchObject({
+      metadata: {
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        id: "managed-file-version",
+        sourceId: "managed-file-source",
+        version: 1,
+        parentVersionId: null,
+        mediaType: "text/markdown",
+        checksum: sha256(fileContent),
+        sizeBytes: Buffer.byteLength(fileContent),
+      },
+      bytes: new TextEncoder().encode(fileContent),
+    });
+    expect(urlRead).toMatchObject({
+      metadata: {
+        knowledgeBaseId: "ckb-default",
+        kind: "url",
+        id: "managed-url-version",
+        sourceId: "managed-url-source",
+        version: 1,
+        parentVersionId: null,
+        mediaType: "text/plain",
+        checksum: sha256(urlBytes),
+        sizeBytes: urlBytes.byteLength,
+      },
+      bytes: urlBytes,
+    });
+    expect(fileRead).toBeDefined();
+    expect(urlRead).toBeDefined();
+    expect(Object.isFrozen(fileRead)).toBe(true);
+    expect(Object.isFrozen(fileRead?.metadata)).toBe(true);
+    const serialized = JSON.stringify({ metadata: fileRead?.metadata, bytes: fileRead?.bytes });
+    expect(serialized).not.toContain(inputPath);
+    expect(serialized).not.toContain("https://example.com/evidence");
+
+    if (fileRead === undefined || urlRead === undefined) {
+      throw new Error("expected managed content reads");
+    }
+    fileRead.bytes[0] = 0;
+    urlRead.bytes[0] = 0;
+    await expect(
+      store.readManagedCandidateKnowledgeSourceVersion(
+        "ckb-default",
+        "managed-file-source",
+        "managed-file-version",
+      ),
+    ).resolves.toMatchObject({ bytes: new TextEncoder().encode(fileContent) });
+    await expect(
+      store.readManagedCandidateKnowledgeSourceVersion(
+        "ckb-default",
+        "managed-url-source",
+        "managed-url-version",
+      ),
+    ).resolves.toMatchObject({ bytes: urlBytes });
+
+    await expect(
+      store.readManagedCandidateKnowledgeSourceVersion(
+        "ckb-default",
+        "unknown-source",
+        "unknown-version",
+      ),
+    ).resolves.toBeUndefined();
+    await store.createCandidateKnowledgeSource(
+      {
+        id: "unmanaged-source",
+        knowledgeBaseId: "ckb-default",
+        kind: "file",
+        displayName: "Legacy source",
+        createdAt: "2026-08-21T14:03:00.000Z",
+      },
+      {
+        id: "unmanaged-version",
+        mediaType: "text/plain",
+        checksum: sha256("unmanaged"),
+        sizeBytes: Buffer.byteLength("unmanaged"),
+        createdAt: "2026-08-21T14:03:00.000Z",
+      },
+    );
+    await expect(
+      store.readManagedCandidateKnowledgeSourceVersion(
+        "ckb-default",
+        "unmanaged-source",
+        "unmanaged-version",
+      ),
+    ).resolves.toBeUndefined();
+
+    const managedPath = await store.getManagedCandidateKnowledgeFilePath(
+      "ckb-default",
+      "managed-file-source",
+      "managed-file-version",
+    );
+    if (managedPath === undefined) throw new Error("expected managed file path");
+    await writeFile(managedPath, "corrupted evidence", "utf8");
+    await expect(
+      store.readManagedCandidateKnowledgeSourceVersion(
+        "ckb-default",
+        "managed-file-source",
+        "managed-file-version",
+      ),
+    ).rejects.toThrow(/checksum|size/i);
+    await rm(managedPath);
+    await expect(
+      store.readManagedCandidateKnowledgeSourceVersion(
+        "ckb-default",
+        "managed-file-source",
+        "managed-file-version",
+      ),
+    ).rejects.toThrow(/missing/i);
+    await store.close();
+  });
+
   it("enforces guarded managed file appends on changed and no-op database paths", async () => {
     const parent = await temporaryParent();
     const root = join(parent, "candidate-knowledge");

@@ -5,7 +5,14 @@ import { basename, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { classifyUrl, ingestDirectory, ingestFile, ingestSources, ingestUrl } from "./index.js";
+import {
+  classifyUrl,
+  ingestBytes,
+  ingestDirectory,
+  ingestFile,
+  ingestSources,
+  ingestUrl,
+} from "./index.js";
 
 const temporaryDirectories: string[] = [];
 
@@ -128,6 +135,33 @@ describe("local source ingestion", () => {
     });
   });
 
+  it("ingests explicit logical bytes with the same text normalization as a file", async () => {
+    const content = "\uFEFFFirst line\r\nSecond line  \r\n\r\nThird line";
+    const bytes = new TextEncoder().encode(content);
+    const originalBytes = new Uint8Array(bytes);
+
+    const result = await ingestBytes(
+      { path: "managed-source-version", mediaType: "TEXT/PLAIN; charset=utf-8" },
+      bytes,
+      { maxChunkCharacters: 24 },
+    );
+
+    expect(result.issues).toEqual([]);
+    expect(result.source).toMatchObject({
+      mediaType: "text/plain",
+      checksum: createHash("sha256").update(originalBytes).digest("hex"),
+      sizeBytes: originalBytes.byteLength,
+      text: "First line\nSecond line\n\nThird line",
+    });
+    expect(result.source?.chunks).toHaveLength(2);
+    expect(result.source?.chunks[0]).toMatchObject({
+      sourcePath: "managed-source-version",
+      locator: { lineStart: 1, lineEnd: 2 },
+      text: "First line\nSecond line",
+    });
+    expect(bytes).toEqual(originalBytes);
+  });
+
   it("bounds a selected local source without changing accepted text behavior", async () => {
     const path = await fixture("bounded.txt", "bounded source");
 
@@ -234,6 +268,75 @@ describe("local source ingestion", () => {
     expect(result.source?.text).toBe("Experience\nBuilt reliable systems.");
     expect(new Uint8Array(observed.bytes ?? [])).toEqual(new Uint8Array([37, 80, 68, 70]));
     expect(observed.checksum).toBe(result.source?.checksum);
+  });
+
+  it("uses an injected binary extractor for bytes without mutating caller input", async () => {
+    const bytes = new Uint8Array([37, 80, 68, 70]);
+    const originalBytes = new Uint8Array(bytes);
+    let extractedBytes: Uint8Array | undefined;
+
+    const result = await ingestBytes(
+      { path: "logical-resume.pdf", mediaType: "application/pdf" },
+      bytes,
+      {
+        extractors: [
+          {
+            mediaType: "application/pdf",
+            extract: ({ bytes: extractorInput }) => {
+              extractedBytes = extractorInput;
+              extractorInput[0] = 0;
+              return "Experience\nBuilt reliable systems.";
+            },
+          },
+        ],
+      },
+    );
+
+    expect(result.issues).toEqual([]);
+    expect(result.source).toMatchObject({
+      mediaType: "application/pdf",
+      sizeBytes: originalBytes.byteLength,
+      text: "Experience\nBuilt reliable systems.",
+    });
+    expect(extractedBytes?.[0]).toBe(0);
+    expect(bytes).toEqual(originalBytes);
+  });
+
+  it("enforces explicit media types, empty content, and byte bounds without filesystem access", async () => {
+    await expect(
+      ingestBytes({ path: "missing-media-type" }, new Uint8Array([1])),
+    ).resolves.toMatchObject({
+      source: null,
+      issues: [{ code: "unsupported-media-type" }],
+    });
+    await expect(
+      ingestBytes(
+        { path: "unsupported.bin", mediaType: "application/octet-stream" },
+        new Uint8Array([1]),
+      ),
+    ).resolves.toMatchObject({
+      source: null,
+      issues: [{ code: "unsupported-media-type" }],
+    });
+    await expect(
+      ingestBytes({ path: "empty.txt", mediaType: "text/plain" }, new Uint8Array()),
+    ).resolves.toMatchObject({
+      source: { text: "", sizeBytes: 0 },
+      issues: [{ code: "empty-content" }],
+    });
+    await expect(
+      ingestBytes({ path: "oversized.txt", mediaType: "text/plain" }, new Uint8Array([1, 2]), {
+        maxSourceBytes: 1,
+      }),
+    ).resolves.toMatchObject({
+      source: null,
+      issues: [{ code: "source-too-large" }],
+    });
+    await expect(
+      ingestBytes({ path: "invalid-limit.txt", mediaType: "text/plain" }, new Uint8Array([1]), {
+        maxSourceBytes: 0,
+      }),
+    ).rejects.toThrow(/maxSourceBytes must be a positive integer/u);
   });
 
   it("extracts text from local PDF and DOCX files with default safe extractors", async () => {
