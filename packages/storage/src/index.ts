@@ -21,9 +21,11 @@ import {
 } from "@draft-loop/domain";
 import {
   type CandidateKnowledgePortableBackupManifest,
+  type CanonicalCandidateProfile,
   candidateKnowledgePortableBackupManifestSchema,
   candidateKnowledgeRetentionOverrideInputSchema,
   candidateKnowledgeRetentionPolicyUpdateSchema,
+  canonicalCandidateProfileSchema,
   type OpportunityBrief,
   opportunityBriefSchema,
   type WritingPolicyInput,
@@ -784,6 +786,32 @@ export interface OpportunityBriefStoragePort {
   ) => Promise<readonly OpportunityBriefVersionRecord[]>;
 }
 
+export interface CanonicalCandidateProfileVersionRecord {
+  readonly workspaceId: string;
+  readonly profile: CanonicalCandidateProfile;
+  readonly checksum: string;
+}
+
+export interface CanonicalCandidateProfileStoragePort {
+  readonly saveCanonicalCandidateProfile: (
+    workspaceId: string,
+    profile: CanonicalCandidateProfile,
+  ) => Promise<CanonicalCandidateProfileVersionRecord>;
+  readonly getCanonicalCandidateProfile: (
+    workspaceId: string,
+    profileId: string,
+    version: number,
+  ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;
+  readonly getLatestCanonicalCandidateProfile: (
+    workspaceId: string,
+    profileId: string,
+  ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;
+  readonly listCanonicalCandidateProfileVersions: (
+    workspaceId: string,
+    profileId: string,
+  ) => Promise<readonly CanonicalCandidateProfileVersionRecord[]>;
+}
+
 export interface WritingPolicyVersionSaveOptions {
   /** Creation time for deterministic tests and imported local history. */
   readonly createdAt?: string;
@@ -1309,7 +1337,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 23 as const;
+export const storageSchemaVersion = 24 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -3111,6 +3139,50 @@ const migrationTwentyThree: Migration = {
   `.trim(),
 };
 
+const migrationTwentyFour: Migration = {
+  version: 24,
+  sql: `
+    CREATE TABLE IF NOT EXISTS canonical_candidate_profile_versions (
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+      profile_id TEXT NOT NULL CHECK (length(trim(profile_id)) > 0),
+      version INTEGER NOT NULL CHECK (typeof(version) = 'integer' AND version >= 1),
+      schema_version INTEGER NOT NULL CHECK (schema_version = 1),
+      parent_version INTEGER,
+      status TEXT NOT NULL CHECK (status IN ('draft', 'reviewed')),
+      created_at TEXT NOT NULL CHECK (julianday(created_at) IS NOT NULL),
+      updated_at TEXT NOT NULL CHECK (julianday(updated_at) IS NOT NULL),
+      reviewed_at TEXT CHECK (reviewed_at IS NULL OR julianday(reviewed_at) IS NOT NULL),
+      payload_json TEXT NOT NULL,
+      payload_checksum TEXT NOT NULL CHECK (
+        length(payload_checksum) = 64 AND payload_checksum NOT GLOB '*[^0-9a-f]*'
+      ),
+      PRIMARY KEY (workspace_id, profile_id, version),
+      FOREIGN KEY (workspace_id, profile_id, parent_version)
+        REFERENCES canonical_candidate_profile_versions(workspace_id, profile_id, version),
+      CHECK (
+        (version = 1 AND parent_version IS NULL)
+        OR (version > 1 AND parent_version = version - 1)
+      ),
+      CHECK (
+        (status = 'draft' AND reviewed_at IS NULL)
+        OR (status = 'reviewed' AND reviewed_at IS NOT NULL)
+      )
+    );
+
+    CREATE INDEX IF NOT EXISTS canonical_candidate_profile_versions_latest_idx
+      ON canonical_candidate_profile_versions(workspace_id, profile_id, version DESC);
+    CREATE INDEX IF NOT EXISTS canonical_candidate_profile_versions_list_idx
+      ON canonical_candidate_profile_versions(workspace_id, profile_id, version);
+
+    CREATE TRIGGER IF NOT EXISTS canonical_candidate_profile_versions_immutable_update
+      BEFORE UPDATE ON canonical_candidate_profile_versions
+      BEGIN SELECT RAISE(ABORT, 'canonical candidate profile versions are immutable'); END;
+    CREATE TRIGGER IF NOT EXISTS canonical_candidate_profile_versions_immutable_delete
+      BEFORE DELETE ON canonical_candidate_profile_versions
+      BEGIN SELECT RAISE(ABORT, 'canonical candidate profile versions are immutable'); END;
+  `.trim(),
+};
+
 const migrations: readonly Migration[] = [
   migrationOne,
   migrationTwo,
@@ -3135,6 +3207,7 @@ const migrations: readonly Migration[] = [
   migrationTwentyOne,
   migrationTwentyTwo,
   migrationTwentyThree,
+  migrationTwentyFour,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -3245,6 +3318,21 @@ function validatedWritingPolicy(value: unknown): WritingPolicy {
   };
 }
 
+function validatedCanonicalCandidateProfile(value: unknown): CanonicalCandidateProfile {
+  try {
+    const parsed = canonicalCandidateProfileSchema.safeParse(value);
+    if (!parsed.success) {
+      throw new StorageValidationError("Canonical candidate profile data is invalid.");
+    }
+    return parsed.data;
+  } catch (error) {
+    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
+      throw error;
+    }
+    throw new StorageValidationError("Canonical candidate profile data is invalid.");
+  }
+}
+
 function writingPolicyVersionSelect(): string {
   return "SELECT workspace_id, policy_checksum, version, schema_version, created_at, prior_checksum, payload_json, payload_checksum FROM writing_policy_versions";
 }
@@ -3284,6 +3372,78 @@ function currentWritingPolicyLeaf(
     throw new StorageConflictError("The writing policy history has no current leaf.");
   }
   return undefined;
+}
+
+function canonicalCandidateProfileVersionSelect(): string {
+  return "SELECT workspace_id, profile_id, version, schema_version, parent_version, status, created_at, updated_at, reviewed_at, payload_json, payload_checksum FROM canonical_candidate_profile_versions";
+}
+
+function canonicalCandidateProfileHistory(
+  database: SqliteHandle,
+  workspaceId: string,
+  profileId: string,
+): readonly CanonicalCandidateProfileVersionRecord[] {
+  const records = database
+    .prepare(
+      `${canonicalCandidateProfileVersionSelect()} WHERE workspace_id = ? AND profile_id = ? ORDER BY version`,
+    )
+    .all(workspaceId, profileId)
+    .map((row) => canonicalCandidateProfileVersionFromRow(row));
+  if (records.length === 0) return [];
+
+  const children = new Set<number>();
+  records.forEach((record, index) => {
+    if (record.workspaceId !== workspaceId || record.profile.id !== profileId) {
+      throw new StorageValidationError(
+        "The stored canonical candidate profile identity is inconsistent.",
+      );
+    }
+    if (record.profile.version !== index + 1) {
+      throw new StorageConflictError(
+        "The canonical candidate profile history is not a contiguous append-only chain.",
+      );
+    }
+    const expectedParent = index === 0 ? null : index;
+    if (record.profile.parentVersion !== expectedParent) {
+      throw new StorageConflictError(
+        "The canonical candidate profile history has an invalid parent version.",
+      );
+    }
+    if (index > 0) {
+      const parent = records[index - 1];
+      if (parent === undefined) {
+        throw new StorageConflictError(
+          "The canonical candidate profile history has an invalid parent version.",
+        );
+      }
+      if (Date.parse(record.profile.createdAt) < Date.parse(parent.profile.createdAt)) {
+        throw new StorageConflictError(
+          "The canonical candidate profile timestamp precedes its parent version.",
+        );
+      }
+      if (Date.parse(record.profile.updatedAt) < Date.parse(parent.profile.updatedAt)) {
+        throw new StorageConflictError(
+          "The canonical candidate profile timestamp precedes its parent version.",
+        );
+      }
+      children.add(parent.profile.version);
+    }
+  });
+
+  const leaves = records.filter((record) => !children.has(record.profile.version));
+  if (leaves.length !== 1) {
+    throw new StorageConflictError(
+      "The canonical candidate profile history has multiple current leaves.",
+    );
+  }
+  return records;
+}
+
+function canonicalCandidateProfileLeaf(
+  records: readonly CanonicalCandidateProfileVersionRecord[],
+): CanonicalCandidateProfileVersionRecord | undefined {
+  if (records.length === 0) return undefined;
+  return records[records.length - 1];
 }
 
 function requireNonEmpty(value: string, field: string): string {
@@ -3639,6 +3799,7 @@ export class SqliteStorage
     RetrievalPort,
     CandidateKnowledgeBaseStoragePort,
     OpportunityBriefStoragePort,
+    CanonicalCandidateProfileStoragePort,
     WritingPolicyStoragePort
 {
   private readonly database: SqliteHandle;
@@ -10110,6 +10271,196 @@ export class SqliteStorage
       .map((row) => opportunityBriefFromRow(row));
   }
 
+  public async saveCanonicalCandidateProfile(
+    workspaceId: string,
+    profile: CanonicalCandidateProfile,
+  ): Promise<CanonicalCandidateProfileVersionRecord> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(
+      workspaceId,
+      "canonical candidate profile workspaceId",
+    ).trim();
+    const normalizedProfile = validatedCanonicalCandidateProfile(profile);
+    const payload = recordToJson(normalizedProfile);
+    const payloadJson = serialize(payload);
+    const checksumValue = payloadChecksum(payload);
+    let result: CanonicalCandidateProfileVersionRecord | undefined;
+
+    this.database.transaction(() => {
+      const workspace = this.database
+        .prepare("SELECT id FROM workspaces WHERE id = ?")
+        .get(normalizedWorkspaceId);
+      if (workspace === undefined) {
+        throw new StorageValidationError(
+          "The canonical candidate profile workspace was not found.",
+        );
+      }
+
+      const existing = this.database
+        .prepare(
+          `${canonicalCandidateProfileVersionSelect()} WHERE workspace_id = ? AND profile_id = ? AND version = ?`,
+        )
+        .get(normalizedWorkspaceId, normalizedProfile.id, normalizedProfile.version);
+      if (existing !== undefined) {
+        const existingRecord = canonicalCandidateProfileVersionFromRow(existing);
+        if (existingRecord.checksum !== checksumValue) {
+          throw new StorageConflictError("The canonical candidate profile version is immutable.");
+        }
+        const history = canonicalCandidateProfileHistory(
+          this.database,
+          normalizedWorkspaceId,
+          normalizedProfile.id,
+        );
+        const historyRecord = history.find(
+          (record) => record.profile.version === normalizedProfile.version,
+        );
+        if (historyRecord === undefined || historyRecord.checksum !== existingRecord.checksum) {
+          throw new StorageValidationError(
+            "The stored canonical candidate profile history is inconsistent.",
+          );
+        }
+        result = historyRecord;
+        return;
+      }
+
+      const history = canonicalCandidateProfileHistory(
+        this.database,
+        normalizedWorkspaceId,
+        normalizedProfile.id,
+      );
+      const latest = canonicalCandidateProfileLeaf(history);
+      if (normalizedProfile.version === 1) {
+        if (latest !== undefined) {
+          throw new StorageConflictError(
+            "The canonical candidate profile version must append after the current leaf.",
+          );
+        }
+        if (normalizedProfile.parentVersion !== null) {
+          throw new StorageValidationError(
+            "The canonical candidate profile root version cannot have a parent.",
+          );
+        }
+      } else {
+        if (latest === undefined) {
+          throw new StorageConflictError(
+            "The canonical candidate profile parent version is missing.",
+          );
+        }
+        if (
+          normalizedProfile.version !== latest.profile.version + 1 ||
+          normalizedProfile.parentVersion !== latest.profile.version
+        ) {
+          throw new StorageConflictError(
+            "The canonical candidate profile version must append after the current leaf.",
+          );
+        }
+        if (
+          Date.parse(normalizedProfile.createdAt) < Date.parse(latest.profile.createdAt) ||
+          Date.parse(normalizedProfile.updatedAt) < Date.parse(latest.profile.updatedAt)
+        ) {
+          throw new StorageConflictError(
+            "The canonical candidate profile timestamp precedes its parent version.",
+          );
+        }
+      }
+
+      this.database
+        .prepare(
+          "INSERT INTO canonical_candidate_profile_versions (workspace_id, profile_id, version, schema_version, parent_version, status, created_at, updated_at, reviewed_at, payload_json, payload_checksum) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          normalizedWorkspaceId,
+          normalizedProfile.id,
+          normalizedProfile.version,
+          normalizedProfile.schemaVersion,
+          normalizedProfile.parentVersion,
+          normalizedProfile.status,
+          normalizedProfile.createdAt,
+          normalizedProfile.updatedAt,
+          normalizedProfile.reviewedAt ?? null,
+          payloadJson,
+          checksumValue,
+        );
+
+      const opaqueEntityId = checksum(
+        `${normalizedWorkspaceId}\u0000${normalizedProfile.id}`,
+      ).slice(0, 32);
+      this.insertAuditEvent({
+        id: `canonical-candidate-profile-version:${opaqueEntityId}:${normalizedProfile.version}:${checksumValue}`,
+        workspaceId: normalizedWorkspaceId,
+        eventType: "canonical-candidate-profile-version.appended",
+        entityType: "canonical-candidate-profile",
+        entityId: opaqueEntityId,
+        payload: {
+          checksum: checksumValue,
+          schemaVersion: normalizedProfile.schemaVersion,
+          status: normalizedProfile.status,
+          version: normalizedProfile.version,
+          parentVersion: normalizedProfile.parentVersion,
+        },
+        createdAt: normalizedProfile.createdAt,
+      });
+      result = {
+        workspaceId: normalizedWorkspaceId,
+        profile: normalizedProfile,
+        checksum: checksumValue,
+      };
+    })();
+    return result as CanonicalCandidateProfileVersionRecord;
+  }
+
+  public async getCanonicalCandidateProfile(
+    workspaceId: string,
+    profileId: string,
+    version: number,
+  ): Promise<CanonicalCandidateProfileVersionRecord | undefined> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(
+      workspaceId,
+      "canonical candidate profile workspaceId",
+    ).trim();
+    const normalizedProfileId = requireNonEmpty(profileId, "canonical candidate profileId").trim();
+    requirePositive(version, "canonical candidate profile version");
+    const history = canonicalCandidateProfileHistory(
+      this.database,
+      normalizedWorkspaceId,
+      normalizedProfileId,
+    );
+    return history.find((record) => record.profile.version === version);
+  }
+
+  public async getLatestCanonicalCandidateProfile(
+    workspaceId: string,
+    profileId: string,
+  ): Promise<CanonicalCandidateProfileVersionRecord | undefined> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(
+      workspaceId,
+      "canonical candidate profile workspaceId",
+    ).trim();
+    const normalizedProfileId = requireNonEmpty(profileId, "canonical candidate profileId").trim();
+    return canonicalCandidateProfileLeaf(
+      canonicalCandidateProfileHistory(this.database, normalizedWorkspaceId, normalizedProfileId),
+    );
+  }
+
+  public async listCanonicalCandidateProfileVersions(
+    workspaceId: string,
+    profileId: string,
+  ): Promise<readonly CanonicalCandidateProfileVersionRecord[]> {
+    this.ensureOpen();
+    const normalizedWorkspaceId = requireNonEmpty(
+      workspaceId,
+      "canonical candidate profile workspaceId",
+    ).trim();
+    const normalizedProfileId = requireNonEmpty(profileId, "canonical candidate profileId").trim();
+    return canonicalCandidateProfileHistory(
+      this.database,
+      normalizedWorkspaceId,
+      normalizedProfileId,
+    );
+  }
+
   public async saveWritingPolicyVersion(
     workspaceId: string,
     policy: WritingPolicyInput,
@@ -13370,6 +13721,72 @@ function opportunityBriefFromRow(row: Record<string, unknown>): OpportunityBrief
       throw error;
     }
     throw new StorageValidationError("The stored opportunity brief could not be read.");
+  }
+}
+
+function canonicalCandidateProfileVersionFromRow(
+  row: Record<string, unknown>,
+): CanonicalCandidateProfileVersionRecord {
+  try {
+    const payloadJson = rowString(row, "payload_json");
+    const payload = parse(payloadJson);
+    if (serialize(payload) !== payloadJson) {
+      throw new StorageValidationError(
+        "The stored canonical candidate profile payload is not canonical.",
+      );
+    }
+    const checksumValue = rowString(row, "payload_checksum");
+    if (!/^[a-f0-9]{64}$/u.test(checksumValue) || payloadChecksum(payload) !== checksumValue) {
+      throw new StorageValidationError(
+        "The stored canonical candidate profile checksum is invalid.",
+      );
+    }
+    const profile = validatedCanonicalCandidateProfile(payload);
+    const workspaceId = requireNonEmpty(
+      rowString(row, "workspace_id"),
+      "canonical candidate profile workspaceId",
+    ).trim();
+    const profileId = requireNonEmpty(
+      rowString(row, "profile_id"),
+      "canonical candidate profileId",
+    ).trim();
+    const version = rowNumber(row, "version");
+    const schemaVersion = rowNumber(row, "schema_version");
+    const parentVersion = rowNullableNumber(row, "parent_version");
+    const status = rowString(row, "status");
+    const createdAt = requireTimestamp(
+      rowString(row, "created_at"),
+      "canonical candidate profile createdAt",
+    );
+    const updatedAt = requireTimestamp(
+      rowString(row, "updated_at"),
+      "canonical candidate profile updatedAt",
+    );
+    const reviewedAt = rowNullableString(row, "reviewed_at");
+    if (
+      profile.id !== profileId ||
+      profile.version !== version ||
+      profile.schemaVersion !== schemaVersion ||
+      profile.parentVersion !== parentVersion ||
+      profile.status !== status ||
+      profile.createdAt !== createdAt ||
+      profile.updatedAt !== updatedAt ||
+      (profile.reviewedAt ?? null) !== reviewedAt
+    ) {
+      throw new StorageValidationError(
+        "The stored canonical candidate profile metadata is inconsistent.",
+      );
+    }
+    return {
+      workspaceId,
+      profile,
+      checksum: checksumValue,
+    };
+  } catch (error) {
+    if (error instanceof StorageValidationError || error instanceof StorageSecurityError) {
+      throw error;
+    }
+    throw new StorageValidationError("The stored canonical candidate profile could not be read.");
   }
 }
 

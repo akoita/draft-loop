@@ -443,14 +443,23 @@ corroboration is optional.
 
 Conflicts, possible duplicates, and omissions remain explicit issues rather
 than silently selecting a value. Every issue must be handled before reviewed
-status. The strict
-schema and framework-free constructor enforce version lineage, review
-timestamps, source membership, bounded collections, stable identifiers,
-canonical ordering, deep immutability, and path-free JSON round trips.
+status. The strict schema and framework-free constructor enforce version
+lineage, review timestamps, source membership, bounded collections, stable
+identifiers, canonical ordering, deep immutability, and path-free JSON round
+trips.
 
-This component does not persist or derive profiles, read CKB content, bind a
-reviewed profile to a run, materialize normalized-fact retention, update
-backup/restore, or expose CLI/desktop controls. Those remain later #66 slices.
+The second #66 component adds workspace-local, append-only profile history in
+SQLite migration 24. Canonical payload checksums, immediate parent lineage,
+monotonic update timestamps, immutable triggers, strict reload validation, and
+content-free audit events protect every version. A provider-independent
+application service supports optimistic fact/issue edits and creates a new
+reviewed version only after the domain review blockers pass.
+
+Profiles may combine explicitly selected CKBs, so their history does not belong
+to any one portable CKB package and is not included in CKB backup/restore. This
+component still does not derive profiles or read CKB content, bind a reviewed
+profile to a run, materialize normalized-fact retention, remove invalidated
+profile data, or expose CLI/desktop controls. Those remain later #66 slices.
 
 ### CKB integration gap
 

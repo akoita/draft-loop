@@ -3,7 +3,13 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type { OpportunityBrief, WritingPolicyInput } from "@draft-loop/schemas";
+import {
+  type CanonicalCandidateProfile,
+  type CanonicalCandidateProfileInput,
+  canonicalCandidateProfileSchema,
+  type OpportunityBrief,
+  type WritingPolicyInput,
+} from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -81,6 +87,65 @@ const writingPolicy = (
   version: "policy-1",
   ...overrides,
 });
+
+const canonicalCandidateProfile = (
+  overrides: Partial<CanonicalCandidateProfileInput> = {},
+): CanonicalCandidateProfile =>
+  canonicalCandidateProfileSchema.parse({
+    id: "profile-canonical-1",
+    version: 1,
+    parentVersion: null,
+    status: "draft",
+    createdAt: "2026-08-12T10:00:00.000Z",
+    updatedAt: "2026-08-12T10:00:00.000Z",
+    candidateKnowledgeSelection: {
+      capturedAt: "2026-08-12T09:00:00.000Z",
+      entries: [
+        {
+          storeId: "store-z",
+          knowledgeBaseId: "knowledge-z",
+          sources: [
+            {
+              sourceId: "source-z",
+              versionId: "version-z",
+              lifecycleRevision: {
+                knowledgeBaseState: "active",
+                knowledgeBaseArchivedAt: null,
+                versionId: "version-z",
+                version: 1,
+                createdAt: "2026-08-12T08:00:00.000Z",
+                managed: true,
+                originBoundAt: "2026-08-12T08:00:00.000Z",
+                observation: null,
+                retirement: null,
+                provenanceFetchedAt: null,
+                directory: null,
+              },
+            },
+          ],
+        },
+      ],
+    },
+    facts: [
+      {
+        id: "fact-01",
+        category: "identity",
+        field: "name",
+        value: "Candidate",
+        provenance: [
+          {
+            storeId: "store-z",
+            knowledgeBaseId: "knowledge-z",
+            sourceId: "source-z",
+            versionId: "version-z",
+            kind: "candidate-provided",
+          },
+        ],
+      },
+    ],
+    issues: [],
+    ...overrides,
+  });
 
 const contextSnapshot = (payload: ContextSnapshotInput["payload"]): ContextSnapshotInput => ({
   id: "context-1",
@@ -358,11 +423,11 @@ describe("SQLite storage", () => {
     const storage = openSqliteStorage(":memory:");
 
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     storage.migrate();
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
 
     await storage.set("ui.language", "en");
@@ -552,6 +617,242 @@ describe("SQLite storage", () => {
     await rm(directory, { recursive: true, force: true });
   });
 
+  it("persists an immutable canonical candidate profile chain across restart", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-canonical-profile-storage-"));
+    const filename = join(directory, "history.sqlite");
+    const first = openSqliteStorage(filename);
+    await first.saveWorkspace(workspace);
+
+    const profileOne = canonicalCandidateProfile();
+    const savedOne = await first.saveCanonicalCandidateProfile(workspace.id, profileOne);
+    const profileTwo = canonicalCandidateProfile({
+      version: 2,
+      parentVersion: 1,
+      createdAt: "2026-08-12T10:01:00.000Z",
+      updatedAt: "2026-08-12T10:01:00.000Z",
+      facts: [
+        ...profileOne.facts,
+        {
+          id: "fact-02",
+          category: "role",
+          subjectId: "career-1",
+          field: "title",
+          value: "Engineer",
+          provenance: [...(profileOne.facts[0]?.provenance ?? [])],
+        },
+      ] as unknown as CanonicalCandidateProfileInput["facts"],
+    });
+    const savedTwo = await first.saveCanonicalCandidateProfile(workspace.id, profileTwo);
+
+    expect(savedOne.workspaceId).toBe(workspace.id);
+    expect(savedOne.checksum).toMatch(/^[a-f0-9]{64}$/u);
+    expect(Object.isFrozen(savedOne.profile)).toBe(true);
+    expect(Object.isFrozen(savedOne.profile.facts)).toBe(true);
+    await expect(first.saveCanonicalCandidateProfile(workspace.id, profileTwo)).resolves.toEqual(
+      savedTwo,
+    );
+    await expect(
+      first.getCanonicalCandidateProfile(workspace.id, profileOne.id, 1),
+    ).resolves.toEqual(savedOne);
+    await expect(
+      first.getLatestCanonicalCandidateProfile(workspace.id, profileOne.id),
+    ).resolves.toEqual(savedTwo);
+    await expect(
+      first.listCanonicalCandidateProfileVersions(workspace.id, profileOne.id),
+    ).resolves.toEqual([savedOne, savedTwo]);
+
+    const raw = openRawDatabase(filename);
+    expect(() =>
+      raw.exec(
+        `UPDATE canonical_candidate_profile_versions SET status = 'reviewed' WHERE profile_id = '${profileOne.id}' AND version = 1`,
+      ),
+    ).toThrow(/immutable/iu);
+    expect(() =>
+      raw.exec(
+        `DELETE FROM canonical_candidate_profile_versions WHERE profile_id = '${profileOne.id}' AND version = 1`,
+      ),
+    ).toThrow(/immutable/iu);
+    raw.close();
+    await first.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(
+      reopened.getLatestCanonicalCandidateProfile(workspace.id, profileOne.id),
+    ).resolves.toEqual(savedTwo);
+    expect(JSON.parse(JSON.stringify(savedTwo.profile))).toEqual(savedTwo.profile);
+    await reopened.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("enforces canonical profile workspace isolation, linear lineage, and timestamps", async () => {
+    const storage = openSqliteStorage(":memory:");
+    const otherWorkspace: WorkspaceRecord = { ...workspace, id: "workspace-2" };
+    await storage.saveWorkspace(workspace);
+    await storage.saveWorkspace(otherWorkspace);
+    const root = canonicalCandidateProfile();
+    const otherProfile = canonicalCandidateProfile({ id: "profile-canonical-2" });
+    await expect(storage.saveCanonicalCandidateProfile("missing-workspace", root)).rejects.toThrow(
+      "The canonical candidate profile workspace was not found.",
+    );
+    await storage.saveCanonicalCandidateProfile(workspace.id, root);
+    await storage.saveCanonicalCandidateProfile(otherWorkspace.id, root);
+    await storage.saveCanonicalCandidateProfile(workspace.id, otherProfile);
+    expect(
+      await storage.listCanonicalCandidateProfileVersions(otherWorkspace.id, root.id),
+    ).toHaveLength(1);
+    expect(await storage.listCanonicalCandidateProfileVersions(workspace.id, root.id)).toHaveLength(
+      1,
+    );
+
+    await expect(
+      storage.saveCanonicalCandidateProfile(
+        workspace.id,
+        canonicalCandidateProfile({ version: 3, parentVersion: 2 }),
+      ),
+    ).rejects.toThrow(/immediate predecessor|append after the current leaf/i);
+
+    const timestampRoot = canonicalCandidateProfile({ id: "profile-timestamp" });
+    await storage.saveCanonicalCandidateProfile(workspace.id, timestampRoot);
+    await expect(
+      storage.saveCanonicalCandidateProfile(
+        workspace.id,
+        canonicalCandidateProfile({
+          id: timestampRoot.id,
+          version: 2,
+          parentVersion: 1,
+          createdAt: "2026-08-12T09:59:59.000Z",
+          updatedAt: "2026-08-12T10:00:00.000Z",
+        }),
+      ),
+    ).rejects.toThrow("The canonical candidate profile timestamp precedes its parent version.");
+    await storage.close();
+  });
+
+  it("fails closed on corrupted canonical profile payloads and identity metadata", async () => {
+    const payloadDirectory = await mkdtemp(join(tmpdir(), "draft-loop-canonical-profile-payload-"));
+    const payloadFilename = join(payloadDirectory, "history.sqlite");
+    const payloadStorage = openSqliteStorage(payloadFilename);
+    await payloadStorage.saveWorkspace(workspace);
+    const payloadSaved = await payloadStorage.saveCanonicalCandidateProfile(
+      workspace.id,
+      canonicalCandidateProfile({ id: "profile-payload" }),
+    );
+    await payloadStorage.close();
+
+    const payloadRaw = openRawDatabase(payloadFilename);
+    payloadRaw.exec("DROP TRIGGER canonical_candidate_profile_versions_immutable_update");
+    payloadRaw.exec(
+      `UPDATE canonical_candidate_profile_versions SET payload_json = payload_json || ' ' WHERE profile_id = '${payloadSaved.profile.id}'`,
+    );
+    payloadRaw.close();
+    const payloadReopened = openSqliteStorage(payloadFilename);
+    await expect(
+      payloadReopened.getCanonicalCandidateProfile(
+        workspace.id,
+        payloadSaved.profile.id,
+        payloadSaved.profile.version,
+      ),
+    ).rejects.toThrow("The stored canonical candidate profile payload is not canonical.");
+    await payloadReopened.close();
+    await rm(payloadDirectory, { recursive: true, force: true });
+
+    const checksumDirectory = await mkdtemp(
+      join(tmpdir(), "draft-loop-canonical-profile-checksum-"),
+    );
+    const checksumFilename = join(checksumDirectory, "history.sqlite");
+    const checksumStorage = openSqliteStorage(checksumFilename);
+    await checksumStorage.saveWorkspace(workspace);
+    const checksumSaved = await checksumStorage.saveCanonicalCandidateProfile(
+      workspace.id,
+      canonicalCandidateProfile({ id: "profile-checksum" }),
+    );
+    await checksumStorage.close();
+    const checksumRaw = openRawDatabase(checksumFilename);
+    checksumRaw.exec("DROP TRIGGER canonical_candidate_profile_versions_immutable_update");
+    checksumRaw.exec(
+      `UPDATE canonical_candidate_profile_versions SET payload_checksum = '${"0".repeat(64)}' WHERE profile_id = '${checksumSaved.profile.id}'`,
+    );
+    checksumRaw.close();
+    const checksumReopened = openSqliteStorage(checksumFilename);
+    await expect(
+      checksumReopened.getCanonicalCandidateProfile(
+        workspace.id,
+        checksumSaved.profile.id,
+        checksumSaved.profile.version,
+      ),
+    ).rejects.toThrow("The stored canonical candidate profile checksum is invalid.");
+    await checksumReopened.close();
+    await rm(checksumDirectory, { recursive: true, force: true });
+
+    const identityDirectory = await mkdtemp(
+      join(tmpdir(), "draft-loop-canonical-profile-identity-"),
+    );
+    const identityFilename = join(identityDirectory, "history.sqlite");
+    const identityStorage = openSqliteStorage(identityFilename);
+    await identityStorage.saveWorkspace(workspace);
+    const identitySaved = await identityStorage.saveCanonicalCandidateProfile(
+      workspace.id,
+      canonicalCandidateProfile({ id: "profile-identity" }),
+    );
+    await identityStorage.close();
+    const identityRaw = openRawDatabase(identityFilename);
+    identityRaw.exec("DROP TRIGGER canonical_candidate_profile_versions_immutable_update");
+    identityRaw.exec(
+      `UPDATE canonical_candidate_profile_versions SET profile_id = 'profile-moved' WHERE profile_id = '${identitySaved.profile.id}'`,
+    );
+    identityRaw.close();
+    const identityReopened = openSqliteStorage(identityFilename);
+    await expect(
+      identityReopened.getCanonicalCandidateProfile(workspace.id, "profile-moved", 1),
+    ).rejects.toThrow("The stored canonical candidate profile metadata is inconsistent.");
+    await identityReopened.close();
+    await rm(identityDirectory, { recursive: true, force: true });
+  });
+
+  it("fails closed on duplicate saves when profile lineage is corrupted", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-canonical-profile-lineage-"));
+    const filename = join(directory, "history.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.saveWorkspace(workspace);
+    const root = canonicalCandidateProfile({ id: "profile-lineage" });
+    await storage.saveCanonicalCandidateProfile(workspace.id, root);
+    const child = canonicalCandidateProfile({
+      id: root.id,
+      version: 2,
+      parentVersion: 1,
+      createdAt: "2026-08-12T10:01:00.000Z",
+      updatedAt: "2026-08-12T10:01:00.000Z",
+    });
+    const savedChild = await storage.saveCanonicalCandidateProfile(workspace.id, child);
+    await storage.close();
+
+    const corrupted = openRawDatabase(filename);
+    corrupted.exec("DROP TRIGGER canonical_candidate_profile_versions_immutable_delete");
+    corrupted.exec("PRAGMA foreign_keys = OFF");
+    corrupted.exec(
+      `DELETE FROM canonical_candidate_profile_versions WHERE workspace_id = '${workspace.id}' AND profile_id = '${root.id}' AND version = 1`,
+    );
+    corrupted.close();
+
+    const reopened = openSqliteStorage(filename);
+    const expectedError =
+      "The canonical candidate profile history is not a contiguous append-only chain.";
+    await expect(
+      reopened.getCanonicalCandidateProfile(workspace.id, root.id, savedChild.profile.version),
+    ).rejects.toThrow(expectedError);
+    await expect(
+      reopened.getLatestCanonicalCandidateProfile(workspace.id, root.id),
+    ).rejects.toThrow(expectedError);
+    await expect(
+      reopened.listCanonicalCandidateProfileVersions(workspace.id, root.id),
+    ).rejects.toThrow(expectedError);
+    await expect(
+      reopened.saveCanonicalCandidateProfile(workspace.id, savedChild.profile),
+    ).rejects.toThrow(expectedError);
+    await reopened.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
   it("rejects malformed writing policy inputs and detects corrupted persisted payloads", async () => {
     const directory = await mkdtemp(join(tmpdir(), "draft-loop-writing-policy-corruption-"));
     const filename = join(directory, "history.sqlite");
@@ -654,14 +955,20 @@ describe("SQLite storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(23);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(24);
     expect(await upgraded.getContextSnapshot(legacySnapshot.id)).toEqual(legacySnapshot);
     expect(await upgraded.getLatestWritingPolicyVersion(workspace.id)).toBeUndefined();
     expect(
       queryRawDatabase(filename, "SELECT COUNT(*) AS count FROM writing_policy_versions"),
     ).toEqual([{ count: 0 }]);
+    expect(
+      queryRawDatabase(
+        filename,
+        "SELECT COUNT(*) AS count FROM canonical_candidate_profile_versions",
+      ),
+    ).toEqual([{ count: 0 }]);
     upgraded.migrate();
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(23);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(24);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -754,7 +1061,7 @@ describe("SQLite storage", () => {
     legacy.close();
 
     const migrated = openSqliteStorage(filename);
-    expect(migrated.appliedMigrationVersions().at(-1)).toBe(23);
+    expect(migrated.appliedMigrationVersions().at(-1)).toBe(24);
     expect(await migrated.getWorkspace(workspace.id)).toEqual(workspace);
     const saved = await migrated.saveOpportunityBrief(workspace.id, opportunityBrief());
     await migrated.close();
@@ -800,7 +1107,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     const raw = openRawDatabase(filename);
     expect(
@@ -840,7 +1147,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     expect(
       queryRawDatabase(
@@ -858,7 +1165,7 @@ describe("SQLite storage", () => {
       },
     ]);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -908,7 +1215,7 @@ describe("SQLite storage", () => {
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     const migratedContext = await upgraded.getContextSnapshot(legacyContext.id);
@@ -916,7 +1223,7 @@ describe("SQLite storage", () => {
     expect(migratedContext?.payload).not.toHaveProperty("candidateKnowledgeSelection");
     upgraded.migrate();
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -932,7 +1239,7 @@ describe("SQLite storage", () => {
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
@@ -952,7 +1259,7 @@ describe("SQLite storage", () => {
     removeMigrationFive(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
       savedKnowledgeBase,
@@ -978,7 +1285,7 @@ describe("SQLite storage", () => {
     removeMigrationSix(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
@@ -1046,7 +1353,7 @@ describe("SQLite storage", () => {
     removeMigrationSeven(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged(
@@ -1119,7 +1426,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceOriginBinding("ckb-1", "ckb-source-1"),
@@ -1192,7 +1499,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRefreshObservation("ckb-1", "ckb-source-1"),
@@ -1307,7 +1614,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRetirement("ckb-1", "ckb-source-1"),
@@ -1367,7 +1674,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
     ]);
     const raw = openRawDatabase(filename);
     expect(() =>
