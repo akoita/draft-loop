@@ -22,6 +22,9 @@ import {
   candidateKnowledgeSourceVersionSchema,
   candidateKnowledgeStoreSchema,
   candidateProfileSchema,
+  canonicalCandidateProfileExtractionProposalJsonSchema,
+  canonicalCandidateProfileExtractionProposalSchema,
+  canonicalCandidateProfileExtractionSchemaVersion,
   canonicalCandidateProfileFactSchema,
   canonicalCandidateProfileIssueSchema,
   canonicalCandidateProfileProvenanceReferenceSchema,
@@ -176,6 +179,46 @@ function validCanonicalCandidateProfile() {
       provenance: [provenance],
     })),
     issues: [],
+  };
+}
+
+function validCanonicalCandidateProfileExtractionProposal() {
+  const categories = [
+    "identity",
+    "contact",
+    "role",
+    "employer",
+    "date",
+    "achievement",
+    "project",
+    "skill",
+    "certification",
+    "education",
+    "language",
+    "approved-link",
+  ] as const;
+  return {
+    schemaVersion: canonicalCandidateProfileExtractionSchemaVersion,
+    facts: categories.map((category, index) => ({
+      key: `fact-${String(index + 1).padStart(2, "0")}`,
+      category,
+      ...(category === "role" ? { subjectKey: "career-1" } : {}),
+      field: category === "approved-link" ? "url" : "value",
+      value: `${category}-value`,
+      evidence: [{ sourceId: "source-a", quote: `${category}-value` }],
+    })),
+    issues: [
+      {
+        code: "conflict-title" as const,
+        factKeys: ["fact-01", "fact-02"],
+        sourceIds: ["source-a", "source-b"],
+      },
+      {
+        code: "omission" as const,
+        factKeys: [],
+        sourceIds: [],
+      },
+    ],
   };
 }
 
@@ -1194,6 +1237,254 @@ describe("canonicalCandidateProfileSchema", () => {
         ],
       }),
     ).toThrow(/acknowledged or resolved/i);
+  });
+});
+
+describe("canonicalCandidateProfileExtractionProposalSchema", () => {
+  it("accepts provider facts across all canonical categories and issue relationships", () => {
+    const proposal = validCanonicalCandidateProfileExtractionProposal();
+    const parsed = canonicalCandidateProfileExtractionProposalSchema.parse(proposal);
+
+    expect(parsed.schemaVersion).toBe(1);
+    expect(parsed.facts).toHaveLength(12);
+    expect(new Set(parsed.facts.map((fact) => fact.category)).size).toBe(12);
+    expect(parsed.facts[2]).toMatchObject({ key: "fact-03", subjectKey: "career-1" });
+    expect(parsed.issues).toEqual(proposal.issues);
+  });
+
+  it("rejects application-owned fields, unsafe citations, and unknown keys", () => {
+    const proposal = validCanonicalCandidateProfileExtractionProposal();
+    const fact = proposal.facts[0];
+    const issue = proposal.issues[0];
+    if (fact === undefined || issue === undefined) {
+      throw new Error("the extraction proposal fixture is incomplete");
+    }
+
+    for (const field of [
+      "id",
+      "status",
+      "severity",
+      "message",
+      "provenance",
+      "path",
+      "url",
+      "sourceIds",
+    ]) {
+      expect(() =>
+        canonicalCandidateProfileExtractionProposalSchema.parse({
+          ...proposal,
+          facts: [{ ...fact, [field]: "private-provider-field" }],
+        }),
+      ).toThrow(/unknown|unrecognized/i);
+    }
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        facts: [
+          {
+            ...fact,
+            evidence: [
+              {
+                sourceId: "https://private.example/source",
+                quote: fact.value,
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/safe opaque identifier/i);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [{ ...issue, privateMetadata: "not allowed" }],
+      }),
+    ).toThrow(/unknown|unrecognized/i);
+  });
+
+  it("rejects duplicate keys, duplicate relationships, dangling references, and invalid arity", () => {
+    const proposal = validCanonicalCandidateProfileExtractionProposal();
+    const fact = proposal.facts[0];
+    const issue = proposal.issues[0];
+    if (fact === undefined || issue === undefined) {
+      throw new Error("the extraction proposal fixture is incomplete");
+    }
+
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        facts: [fact, { ...fact }],
+      }),
+    ).toThrow(/fact keys must be unique/i);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        facts: [
+          {
+            ...fact,
+            evidence: [
+              { sourceId: "source-a", quote: "same quote" },
+              { sourceId: "source-a", quote: "same quote" },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(/evidence must contain unique/i);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [{ ...issue, factKeys: ["fact-01", "fact-01"] }],
+      }),
+    ).toThrow(/factKeys must contain unique/i);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [{ ...issue, sourceIds: ["source-a", "source-a"] }],
+      }),
+    ).toThrow(/sourceIds must contain unique/i);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [{ ...issue, factKeys: ["fact-01", "missing-fact"] }],
+      }),
+    ).toThrow(/reference proposal facts/i);
+
+    expect(
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        facts: [
+          {
+            ...fact,
+            evidence: [
+              { sourceId: "source-a", quote: "first quote" },
+              { sourceId: "source-a", quote: "second quote" },
+            ],
+          },
+          ...proposal.facts.slice(1),
+        ],
+      }).facts[0]?.evidence,
+    ).toEqual([
+      { sourceId: "source-a", quote: "first quote" },
+      { sourceId: "source-a", quote: "second quote" },
+    ]);
+
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [{ ...issue, factKeys: ["fact-01"] }],
+      }),
+    ).toThrow(/at least two fact keys/i);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [{ code: "omission", factKeys: ["missing-fact"], sourceIds: [] }],
+      }),
+    ).toThrow(/reference proposal facts/i);
+  });
+
+  it("enforces bounded fact evidence and issue citation collections while allowing omission without facts", () => {
+    const proposal = validCanonicalCandidateProfileExtractionProposal();
+    const fact = proposal.facts[0];
+    const omissionIssue = proposal.issues.find((issue) => issue.code === "omission");
+    if (fact === undefined) throw new Error("the extraction proposal fixture is incomplete");
+    if (omissionIssue === undefined)
+      throw new Error("the extraction proposal fixture is incomplete");
+
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        facts: [
+          {
+            ...fact,
+            evidence: Array.from({ length: 33 }, (_, index) => ({
+              sourceId: `source-${index}`,
+              quote: `quote-${index}`,
+            })),
+          },
+        ],
+      }),
+    ).toThrow(/32/iu);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        facts: [
+          {
+            ...fact,
+            key: "a".repeat(121),
+          },
+        ],
+      }),
+    ).toThrow(/120/iu);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        facts: [
+          {
+            ...fact,
+            evidence: [],
+          },
+        ],
+      }),
+    ).toThrow(/1 items/iu);
+    expect(() =>
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [...proposal.issues, ...Array.from({ length: 255 }, () => omissionIssue)],
+      }),
+    ).toThrow(/256/iu);
+
+    expect(
+      canonicalCandidateProfileExtractionProposalSchema.parse({
+        ...proposal,
+        issues: [{ code: "omission", factKeys: [], sourceIds: [] }],
+      }).issues,
+    ).toEqual([{ code: "omission", factKeys: [], sourceIds: [] }]);
+  });
+
+  it("exports a Draft-7 JSON schema without top-level metadata", () => {
+    expect(canonicalCandidateProfileExtractionProposalJsonSchema).not.toHaveProperty("$schema");
+    expect(canonicalCandidateProfileExtractionProposalJsonSchema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        schemaVersion: { const: 1 },
+        facts: { type: "array", maxItems: 512 },
+        issues: { type: "array", maxItems: 256 },
+      },
+    });
+    const extractionJsonSchema =
+      canonicalCandidateProfileExtractionProposalJsonSchema as unknown as {
+        readonly properties?: {
+          readonly facts?: {
+            readonly items?: {
+              readonly properties?: Record<string, unknown>;
+            };
+          };
+        };
+      };
+    const extractionFactJsonSchema = extractionJsonSchema.properties?.facts?.items;
+    expect(extractionFactJsonSchema).toMatchObject({
+      properties: {
+        evidence: {
+          type: "array",
+          minItems: 1,
+          maxItems: 32,
+          items: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              sourceId: { type: "string" },
+              quote: { type: "string" },
+            },
+            required: ["sourceId", "quote"],
+          },
+        },
+      },
+      additionalProperties: false,
+    });
+    expect(extractionFactJsonSchema?.properties).not.toHaveProperty("sourceIds");
+    expect(canonicalCandidateProfileExtractionProposalJsonSchema).not.toHaveProperty(
+      "properties.facts.items.properties.provenance",
+    );
   });
 });
 

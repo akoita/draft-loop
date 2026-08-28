@@ -344,6 +344,20 @@ function isSupportedMediaType(value: string): value is SupportedMediaType {
   return (supportedMediaTypes as readonly string[]).includes(value);
 }
 
+function explicitMediaType(source: IngestionSource): SupportedMediaType | null {
+  const mediaType = source.mediaType?.split(";", 1)[0]?.trim().toLowerCase();
+  return mediaType !== undefined && isSupportedMediaType(mediaType) ? mediaType : null;
+}
+
+function validateMaxSourceBytes(options: IngestionOptions): void {
+  if (
+    options.maxSourceBytes !== undefined &&
+    (!Number.isSafeInteger(options.maxSourceBytes) || options.maxSourceBytes < 1)
+  ) {
+    throw new RangeError("maxSourceBytes must be a positive integer.");
+  }
+}
+
 function isUrlTextMediaType(value: SupportedMediaType): value is UrlAdapterInput["mediaType"] {
   return value === "text/plain" || value === "text/markdown" || value === "text/html";
 }
@@ -1837,12 +1851,7 @@ export async function ingestFile(
     return { source: null, issues: [resultIssue] };
   }
 
-  if (
-    options.maxSourceBytes !== undefined &&
-    (!Number.isSafeInteger(options.maxSourceBytes) || options.maxSourceBytes < 1)
-  ) {
-    throw new RangeError("maxSourceBytes must be a positive integer.");
-  }
+  validateMaxSourceBytes(options);
 
   let bytes: Uint8Array;
   try {
@@ -1856,6 +1865,43 @@ export async function ingestFile(
             "The source file exceeds the configured size limit.",
           )
         : safeErrorMessage("read", source.path);
+    return { source: null, issues: [resultIssue] };
+  }
+
+  return normalizeIngestedBytes(source, mediaType, bytes, options, source.url);
+}
+
+/**
+ * Ingest caller-owned bytes through the same bounded normalization and
+ * extraction pipeline as local files. The source path is only a logical
+ * caller-provided identifier; this function never accesses it.
+ */
+export async function ingestBytes(
+  source: IngestionSource,
+  input: Uint8Array,
+  options: IngestionOptions = {},
+): Promise<IngestionResult> {
+  const mediaType = explicitMediaType(source);
+  if (mediaType === null) {
+    const resultIssue = issue(
+      "unsupported-media-type",
+      source.path,
+      "An explicit supported source media type is required for byte ingestion.",
+    );
+    return { source: null, issues: [resultIssue] };
+  }
+  validateMaxSourceBytes(options);
+  if (!(input instanceof Uint8Array)) {
+    throw new TypeError("ingestBytes input must be a Uint8Array.");
+  }
+
+  const bytes = new Uint8Array(input);
+  if (options.maxSourceBytes !== undefined && bytes.byteLength > options.maxSourceBytes) {
+    const resultIssue = issue(
+      "source-too-large",
+      source.path,
+      "The source file exceeds the configured size limit.",
+    );
     return { source: null, issues: [resultIssue] };
   }
 

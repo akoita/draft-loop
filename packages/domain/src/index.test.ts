@@ -5,6 +5,7 @@ import {
   assertIndependentReview,
   type CanonicalCandidateProfileInput,
   type ContextSnapshotInput,
+  canonicalCandidateProfileExtractionSchemaVersion,
   canonicalCandidateProfileFactCategories,
   canonicalizeModelId,
   createAgentContextReference,
@@ -1141,6 +1142,10 @@ describe("CandidateProfile", () => {
 });
 
 describe("CanonicalCandidateProfile", () => {
+  it("keeps the provider extraction proposal version independent from persisted profiles", () => {
+    expect(canonicalCandidateProfileExtractionSchemaVersion).toBe(1);
+  });
+
   it("creates a complete, path-free profile without losing fact categories", () => {
     const input = validCanonicalCandidateProfileInput();
     const profile = createCanonicalCandidateProfile(input);

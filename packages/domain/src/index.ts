@@ -469,6 +469,11 @@ export interface CandidateKnowledgeSelectionSnapshot {
 export const canonicalCandidateProfileSchemaVersion = 1 as const;
 export type CanonicalCandidateProfileSchemaVersion = typeof canonicalCandidateProfileSchemaVersion;
 
+/** Version of the provider-facing canonical candidate profile extraction proposal. */
+export const canonicalCandidateProfileExtractionSchemaVersion = 1 as const;
+export type CanonicalCandidateProfileExtractionSchemaVersion =
+  typeof canonicalCandidateProfileExtractionSchemaVersion;
+
 export const canonicalCandidateProfileStatuses = ["draft", "reviewed"] as const;
 export type CanonicalCandidateProfileStatus = (typeof canonicalCandidateProfileStatuses)[number];
 

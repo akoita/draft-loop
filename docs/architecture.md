@@ -457,9 +457,25 @@ reviewed version only after the domain review blockers pass.
 
 Profiles may combine explicitly selected CKBs, so their history does not belong
 to any one portable CKB package and is not included in CKB backup/restore. This
-component still does not derive profiles or read CKB content, bind a reviewed
-profile to a run, materialize normalized-fact retention, remove invalidated
-profile data, or expose CLI/desktop controls. Those remain later #66 slices.
+component now also has a provider-independent derivation boundary. CKB storage
+returns fresh bytes plus safe version metadata after one-handle size, checksum,
+and file-identity verification; it never exposes the managed path. The
+application revalidates the exact lifecycle snapshot after normalization and
+again after extraction before persistence, requires explicit provider-data
+approval, and sends only
+bounded normalized text, media types, checksums, and application-owned opaque
+source IDs through a strict extraction port.
+
+The strict provider proposal can describe all canonical fact categories and
+relationships but cannot choose persisted IDs, provenance kinds, review state,
+severity, or messages. Each proposed fact must include an evidence quote that
+occurs in its cited normalized source and contains the proposed value; the quote
+is checked locally and is not persisted. The application maps valid citations back to exact selected CKB
+versions, generates deterministic IDs, keeps conflicting and duplicate facts,
+adds visible category omissions, builds a draft, and appends it through the
+shared history service. A concrete configured-provider adapter,
+source lifecycle reconciliation and removal, reviewed-profile run binding, and
+shared CLI/desktop controls remain later #66 slices.
 
 ### CKB integration gap
 

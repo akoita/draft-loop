@@ -105,13 +105,25 @@ provenance; optional public corroboration remains distinguishable. Storage
 audit events contain only opaque identity, version, status, lineage, schema,
 and checksum metadata rather than fact values or issue messages.
 
-The current application service can persist, reload, edit, and review these
-versions locally. It does not yet read CKB content, derive profile facts, send
-profiles to a provider, bind them to runs, expose them through adapters, or
-materialize profile indexes. Cross-CKB profiles are intentionally absent from
-single-CKB portable backups, while whole-workspace database backups preserve
-them with the rest of the workspace. Retention, invalidation, and deletion
-remain open #66 work.
+The current application services can persist, reload, edit, review, and derive
+draft versions from exact managed CKB source versions. Managed content is read
+through fresh integrity-verified byte copies; roots, managed paths, URL
+provenance, and origin bindings never enter the extraction request or profile.
+The derivation service refuses to read or invoke its extraction port until the
+caller explicitly approves provider data transmission. The approved request
+contains bounded normalized candidate text, media types, checksums, and opaque
+application-owned source IDs. Provider output is strict and cannot author
+persisted provenance, status, severity, messages, or identifiers.
+Every proposed fact must cite a quote that occurs in the corresponding
+normalized source and contains the proposed value. The application verifies that grounding before mapping the
+citation to exact CKB provenance, then discards the quote rather than storing
+another copy of candidate text.
+
+No concrete provider, CLI, or desktop adapter invokes this boundary yet, and
+profiles are not yet bound to runs or materialized into indexes. Cross-CKB
+profiles are intentionally absent from single-CKB portable backups, while
+whole-workspace database backups preserve them with the rest of the workspace.
+Retention, lifecycle invalidation, and deletion remain open #66 work.
 
 ## Local Candidate Knowledge Base handling
 

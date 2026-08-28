@@ -456,6 +456,8 @@ export function createApplicationService(driver: ApplicationDriver): Application
 }
 
 export * from "./candidate-profile.js";
+export * from "./candidate-profile-derivation.js";
+export * from "./candidate-profile-extraction.js";
 export * from "./candidate-profile-persistence.js";
 export * from "./knowledge-base.js";
 export * from "./local.js";
