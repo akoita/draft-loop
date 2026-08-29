@@ -126,11 +126,17 @@ only the bounded path-free source fields already owned by the extraction port.
 Provider output still passes the local schema and grounding checks before it
 can become a profile version.
 
-No shared application, CLI, or desktop operation invokes this adapter yet, and
-profiles are not bound to runs or materialized into indexes. Cross-CKB profiles
-remain absent from single-CKB portable backups, while whole-workspace database
-backups preserve them. Retention, lifecycle invalidation, and deletion remain
-open #66 work.
+The shared application boundary can now derive, reload, list, edit, and review
+profile versions. Derivation resolves the workspace's pinned CKB selection only
+inside the local driver and revalidates its store identities before reading;
+adapter-neutral commands and results contain no store roots. Reads, history,
+edits, and review do not invoke a provider.
+
+No CLI or desktop host control invokes these operations yet, and profiles are
+not bound to runs or materialized into indexes. Cross-CKB profiles remain
+absent from single-CKB portable backups, while whole-workspace database backups
+preserve them. Retention, lifecycle invalidation, and deletion remain open #66
+work.
 
 ## Local Candidate Knowledge Base handling
 

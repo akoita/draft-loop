@@ -478,9 +478,12 @@ author model and existing API-key, authenticated user-session, or local
 transport. Its system prompt treats source text as untrusted data, and the
 strict proposal schema remains the only accepted response shape.
 
-No shared application operation invokes profile derivation yet. Source
+Shared application and local-driver operations derive from the workspace's
+validated, pinned CKB selection and provide exact/latest reads, immutable
+history, optimistic edits, and candidate review. Store roots remain inside the
+local driver rather than entering adapter-neutral commands or results. Source
 lifecycle reconciliation and removal, reviewed-profile run binding, and shared
-CLI/desktop controls remain later #66 slices.
+CLI/desktop host controls remain later #66 slices.
 
 ### CKB integration gap
 

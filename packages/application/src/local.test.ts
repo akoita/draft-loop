@@ -100,7 +100,7 @@ function opportunityExtractionProposal(): JsonRecord {
   };
 }
 
-function canonicalCandidateProfileExtractionProposal(): JsonRecord {
+function canonicalCandidateProfileExtractionProposal(sourceId = "profile-source"): JsonRecord {
   return {
     schemaVersion: 1,
     facts: [
@@ -109,7 +109,7 @@ function canonicalCandidateProfileExtractionProposal(): JsonRecord {
         category: "identity",
         field: "name",
         value: "Ada Lovelace",
-        evidence: [{ sourceId: "profile-source", quote: "Ada Lovelace" }],
+        evidence: [{ sourceId, quote: "Ada Lovelace" }],
       },
     ],
     issues: [],
@@ -3176,6 +3176,249 @@ describe("workspace candidate knowledge selection binding", () => {
       await expect(driver.readWorkspace(root)).rejects.toThrow(
         "candidate knowledge selection could not be configured",
       );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("canonical candidate profile application API", () => {
+  const silent = { write: () => undefined };
+
+  it("derives from the configured selection and preserves immutable history across restart", async () => {
+    const root = await providerWorkspace("draft-loop-profile-application-api-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-profile.md");
+    await writeFile(candidatePath, "Ada Lovelace built local-first tools.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "profile-store",
+      "profile-ckb",
+      "profile-source",
+      "profile-version",
+    ]);
+    const transport = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly messages?: readonly { readonly content?: string }[];
+      };
+      const serialized = body.messages?.[1]?.content ?? "";
+      const input = JSON.parse(serialized) as {
+        readonly sources?: readonly { readonly id?: unknown }[];
+      };
+      const source = input.sources?.[0];
+      if (source === undefined || typeof source.id !== "string") {
+        throw new Error("The profile extraction transport received no source.");
+      }
+      expect(input).toEqual({ sources: [source] });
+      expect(body.messages?.[0]?.content).toContain("untrusted data");
+      return localCompletion(
+        canonicalCandidateProfileExtractionProposal(source.id),
+        "profile-application-extraction",
+      );
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: transport as unknown as typeof fetch }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "profile-extractor",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        silent,
+      );
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "profile-store", knowledgeBaseId: "profile-ckb" }],
+        },
+        silent,
+      );
+
+      await expect(
+        driver.deriveCanonicalCandidateProfile({
+          root,
+          profileId: "profile-1",
+          allowProviderData: false,
+        }),
+      ).rejects.toThrow("requires explicit provider-data approval");
+      expect(transport).not.toHaveBeenCalled();
+
+      const first = await driver.deriveCanonicalCandidateProfile({
+        root,
+        profileId: "profile-1",
+        allowProviderData: true,
+        createdAt: "2026-08-30T10:00:00.000Z",
+      });
+      expect(first.profile).toMatchObject({
+        id: "profile-1",
+        version: 1,
+        parentVersion: null,
+        status: "draft",
+        facts: [expect.objectContaining({ value: "Ada Lovelace" })],
+      });
+      expect(first.profile.issues.length).toBeGreaterThan(0);
+      expect(JSON.stringify(first)).not.toContain(storeRoot);
+      expect(JSON.stringify(first)).not.toContain(candidatePath);
+      expect(JSON.stringify(first)).not.toContain("Ada Lovelace built local-first tools");
+      expect(transport).toHaveBeenCalledOnce();
+
+      const providerFactory = vi.fn(() => {
+        throw new Error("Profile reads must not invoke a provider.");
+      });
+      const restarted = createLocalApplicationDriver({
+        providerClientFactories: { local: providerFactory },
+      });
+      await expect(
+        restarted.getCanonicalCandidateProfile({ root, profileId: "profile-1", version: 1 }),
+      ).resolves.toEqual(first);
+      await expect(
+        restarted.getCanonicalCandidateProfile({ root, profileId: "profile-1" }),
+      ).resolves.toEqual(first);
+      await expect(
+        restarted.listCanonicalCandidateProfileVersions({ root, profileId: "profile-1" }),
+      ).resolves.toEqual([first]);
+      expect(providerFactory).not.toHaveBeenCalled();
+
+      await expect(
+        restarted.reviewCanonicalCandidateProfile({
+          root,
+          profileId: "profile-1",
+          expectedVersion: 1,
+          reviewedAt: "2026-08-30T10:00:30.000Z",
+        }),
+      ).rejects.toThrow(/every profile issue must be acknowledged or resolved/u);
+      await expect(
+        restarted.editCanonicalCandidateProfile({
+          root,
+          profileId: "profile-1",
+          expectedVersion: 99,
+          patch: { issues: [] },
+          updatedAt: "2026-08-30T10:01:00.000Z",
+        }),
+      ).rejects.toThrow("canonical candidate profile version is stale");
+
+      const edited = await restarted.editCanonicalCandidateProfile({
+        root,
+        profileId: "profile-1",
+        expectedVersion: 1,
+        patch: { issues: [] },
+        updatedAt: "2026-08-30T10:01:00.000Z",
+      });
+      expect(edited.profile).toMatchObject({
+        id: "profile-1",
+        version: 2,
+        parentVersion: 1,
+        status: "draft",
+        issues: [],
+      });
+      expect(edited.profile).not.toHaveProperty("reviewedAt");
+
+      const reviewed = await restarted.reviewCanonicalCandidateProfile({
+        root,
+        profileId: "profile-1",
+        expectedVersion: 2,
+        reviewedAt: "2026-08-30T10:02:00.000Z",
+      });
+      expect(reviewed.profile).toMatchObject({
+        id: "profile-1",
+        version: 3,
+        parentVersion: 2,
+        status: "reviewed",
+        reviewedAt: "2026-08-30T10:02:00.000Z",
+      });
+      await expect(
+        restarted.getCanonicalCandidateProfile({ root, profileId: "profile-1" }),
+      ).resolves.toEqual(reviewed);
+      await expect(
+        restarted.listCanonicalCandidateProfileVersions({ root, profileId: "profile-1" }),
+      ).resolves.toEqual([first, edited, reviewed]);
+      expect(providerFactory).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects profile derivation when a configured root no longer matches its pinned store", async () => {
+    const root = await providerWorkspace("draft-loop-profile-selection-identity-");
+    const storeRoot = join(root, "candidate-store");
+    const candidatePath = join(root, "candidate-profile.md");
+    await writeFile(candidatePath, "Ada Lovelace built local-first tools.\n", "utf8");
+    await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
+      "identity-store",
+      "identity-ckb",
+      "identity-source",
+      "identity-version",
+    ]);
+    const transport = vi.fn(async () => localCompletion({}, "unexpected-profile-call"));
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: transport as unknown as typeof fetch }),
+      },
+    });
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "profile-extractor",
+          criticCompany: "anthropic",
+          criticModel: "claude-sonnet-4-5",
+        },
+        silent,
+      );
+      await driver.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "identity-store", knowledgeBaseId: "identity-ckb" }],
+        },
+        silent,
+      );
+      const configPath = join(root, ".draft-loop", "workspace.json");
+      const config = await workspaceConfig(root);
+      const binding = config.candidateKnowledgeSelection as
+        | { readonly entries?: readonly JsonRecord[]; readonly [key: string]: unknown }
+        | undefined;
+      const selectedEntry = binding?.entries?.[0];
+      if (binding === undefined || selectedEntry === undefined) {
+        throw new Error("The profile selection binding is missing.");
+      }
+      await writeFile(
+        configPath,
+        JSON.stringify(
+          {
+            ...config,
+            candidateKnowledgeSelection: {
+              ...binding,
+              entries: [{ ...selectedEntry, storeId: "wrong-pinned-store" }],
+            },
+          },
+          null,
+          2,
+        ),
+        "utf8",
+      );
+
+      const failure = driver.deriveCanonicalCandidateProfile({
+        root,
+        profileId: "profile-identity-failure",
+        allowProviderData: true,
+      });
+      await expect(failure).rejects.toThrow(
+        "configured candidate knowledge selection is no longer valid",
+      );
+      await expect(failure).rejects.not.toThrow(storeRoot);
+      expect(transport).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -89,10 +89,16 @@ import {
 } from "@draft-loop/storage";
 import OpenAI from "openai";
 import { buildAuthorArtifact } from "./author-output.js";
+import {
+  canonicalCandidateProfileDerivationApprovalErrorMessage,
+  canonicalCandidateProfileDerivationErrorMessage,
+  createCanonicalCandidateProfileDerivationService,
+} from "./candidate-profile-derivation.js";
 import type {
   CanonicalCandidateProfileExtractionPort,
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
+import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import type {
   ApplicationDriver,
   ApplicationIo,
@@ -1078,7 +1084,7 @@ async function importWritingPolicyVersion(
   workspaceId: string,
   policy: NonNullable<ContextSnapshot["writingPolicy"]>,
 ): Promise<WritingPolicyVersionRecord> {
-  await ensureOpportunityWorkspaceRecord(storage, workspaceId);
+  await ensureWorkspaceRecord(storage, workspaceId);
   const existing = await storage.getWritingPolicyVersion(workspaceId, policy.checksum);
   if (existing !== undefined) return existing;
   const parent = await storage.getLatestWritingPolicyVersion(workspaceId);
@@ -2282,11 +2288,8 @@ async function openStorage(root: string): Promise<SqliteStorage> {
   return openSqliteStorage(databasePath(root));
 }
 
-/** Ensure an initialized workspace has a durable parent row for opportunity records. */
-async function ensureOpportunityWorkspaceRecord(
-  storage: SqliteStorage,
-  workspaceId: string,
-): Promise<void> {
+/** Ensure an initialized workspace has the durable parent row used by child records. */
+async function ensureWorkspaceRecord(storage: SqliteStorage, workspaceId: string): Promise<void> {
   if ((await storage.getWorkspace(workspaceId)) !== undefined) return;
   const now = timestamp();
   const record: WorkspaceRecord = {
@@ -3480,7 +3483,7 @@ export function createLocalApplicationDriver(
       const config = await readWorkspace(root);
       const storage = await openStorage(root);
       try {
-        await ensureOpportunityWorkspaceRecord(storage, config.id);
+        await ensureWorkspaceRecord(storage, config.id);
         const draft = await createOpportunityDraft(
           {
             ...(command.id === undefined ? {} : { id: command.id }),
@@ -3555,6 +3558,110 @@ export function createLocalApplicationDriver(
         return await createOpportunityPersistenceService(storage).reviewLatestOpportunityBrief({
           workspaceId: config.id,
           briefId: command.briefId,
+          expectedVersion: command.expectedVersion,
+          reviewedAt: command.reviewedAt ?? timestamp(),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
+    deriveCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      if (command.allowProviderData !== true) {
+        throw new CliUserError(canonicalCandidateProfileDerivationApprovalErrorMessage);
+      }
+      const binding = config.candidateKnowledgeSelection;
+      const validatedSelection = await validateConfiguredKnowledgeSelection(binding);
+      if (binding === undefined || validatedSelection === undefined) {
+        throw new CliUserError(canonicalCandidateProfileDerivationErrorMessage);
+      }
+      const storage = await openStorage(root);
+      try {
+        await ensureWorkspaceRecord(storage, config.id);
+        const persistence = createCanonicalCandidateProfilePersistenceService(storage);
+        const derivation = createCanonicalCandidateProfileDerivationService({
+          persistence,
+          extractor: createProviderCanonicalCandidateProfileExtractionPort(config, {
+            ...providerOpportunityOptions,
+            allowProviderData: true,
+          }),
+          now: timestamp,
+        });
+        return await derivation.deriveCanonicalCandidateProfile({
+          workspaceId: config.id,
+          profileId: command.profileId,
+          selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
+            storeRoot,
+            knowledgeBaseId,
+          })),
+          ...(binding.combinationApproved === undefined
+            ? {}
+            : { combinationApproved: binding.combinationApproved }),
+          allowProviderData: true,
+          ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
+    getCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        const persistence = createCanonicalCandidateProfilePersistenceService(storage);
+        return await (command.version === undefined
+          ? persistence.getLatestCanonicalCandidateProfile(config.id, command.profileId)
+          : persistence.getCanonicalCandidateProfile(
+              config.id,
+              command.profileId,
+              command.version,
+            ));
+      } finally {
+        await storage.close();
+      }
+    },
+    listCanonicalCandidateProfileVersions: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createCanonicalCandidateProfilePersistenceService(
+          storage,
+        ).listCanonicalCandidateProfileVersions(config.id, command.profileId);
+      } finally {
+        await storage.close();
+      }
+    },
+    editCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createCanonicalCandidateProfilePersistenceService(
+          storage,
+        ).editLatestCanonicalCandidateProfile({
+          workspaceId: config.id,
+          profileId: command.profileId,
+          expectedVersion: command.expectedVersion,
+          patch: command.patch,
+          updatedAt: command.updatedAt ?? timestamp(),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
+    reviewCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createCanonicalCandidateProfilePersistenceService(
+          storage,
+        ).reviewLatestCanonicalCandidateProfile({
+          workspaceId: config.id,
+          profileId: command.profileId,
           expectedVersion: command.expectedVersion,
           reviewedAt: command.reviewedAt ?? timestamp(),
         });
