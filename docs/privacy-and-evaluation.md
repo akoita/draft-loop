@@ -132,11 +132,13 @@ inside the local driver and revalidates its store identities before reading;
 adapter-neutral commands and results contain no store roots. Reads, history,
 edits, and review do not invoke a provider.
 
-No CLI or desktop host control invokes these operations yet, and profiles are
-not bound to runs or materialized into indexes. Cross-CKB profiles remain
-absent from single-CKB portable backups, while whole-workspace database backups
-preserve them. Retention, lifecycle invalidation, and deletion remain open #66
-work.
+CLI commands now invoke these operations without accepting a CKB store root.
+Derivation requires an explicit provider-data flag; local reload, history,
+edit, and review commands do not cross the provider boundary. No desktop host
+control invokes the profile workflow yet, and profiles are not bound to runs or
+materialized into indexes. Cross-CKB profiles remain absent from single-CKB
+portable backups, while whole-workspace database backups preserve them.
+Retention, lifecycle invalidation, and deletion remain open #66 work.
 
 ## Local Candidate Knowledge Base handling
 

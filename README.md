@@ -123,6 +123,24 @@ pnpm --filter @draft-loop/cli start start ./workspace \
 must already be reviewed. DraftLoop verifies and pins that exact immutable
 version in run context; later edits do not change a started or resumed run.
 
+The `profile` command group derives a canonical candidate profile from the
+workspace's configured CKB selection, reloads exact or latest versions, and
+creates immutable edited or reviewed successors. Derivation is the only
+provider-backed operation and requires `--allow-provider-data`; the other
+commands operate on workspace-local history. Profile commands never accept a
+CKB store root.
+
+```sh
+pnpm --filter @draft-loop/cli start profile derive ./workspace \
+  --profile-id default-profile --allow-provider-data
+pnpm --filter @draft-loop/cli start profile get ./workspace \
+  --profile-id default-profile
+pnpm --filter @draft-loop/cli start profile edit ./workspace \
+  --profile-id default-profile --expected-version 1 --patch ./profile-patch.json
+pnpm --filter @draft-loop/cli start profile review ./workspace \
+  --profile-id default-profile --expected-version 2
+```
+
 Writing policies are local, immutable versions. `policy activate` imports a
 file and makes it the workspace default for future runs; `policy import` adds a
 version without changing that default. Metadata-only reads are the default, and

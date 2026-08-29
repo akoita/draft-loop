@@ -483,7 +483,9 @@ validated, pinned CKB selection and provide exact/latest reads, immutable
 history, optimistic edits, and candidate review. Store roots remain inside the
 local driver rather than entering adapter-neutral commands or results. Source
 lifecycle reconciliation and removal, reviewed-profile run binding, and shared
-CLI/desktop host controls remain later #66 slices.
+desktop host controls remain later #66 slices. The CLI exposes the shared five
+operation workflow without accepting a CKB store root; only derivation has a
+provider-transmission approval flag.
 
 ### CKB integration gap
 

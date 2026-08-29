@@ -118,8 +118,9 @@ The service also cannot invalidate an immutable profile after source
 retirement or deletion. Because one profile may combine CKBs, it is not copied
 into a single CKB portable backup; whole-workspace database backups still
 preserve it. Retention, deletion, run binding, and host adapter boundaries
-remain open #66 work; no CLI or desktop host command exposes the profile API
-yet.
+remain open #66 work. The CLI exposes the shared profile API without accepting
+store roots and requires a visible flag before derivation can transmit data;
+the desktop host does not expose it yet.
 
 ### Current CKB scope
 

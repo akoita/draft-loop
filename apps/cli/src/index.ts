@@ -19,6 +19,7 @@ import {
   type CandidateKnowledgeSourceWriteResult,
   type CandidateKnowledgeStoreService,
   type CandidateKnowledgeStoreView,
+  type CanonicalCandidateProfilePatch,
   type ImportKnowledgeSourceDirectoryResult,
   type KnowledgeBaseLifecycleReadinessResult,
   type KnowledgeSourceDuplicateGroup,
@@ -1358,6 +1359,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
   const command = new Command()
     .name("draft-loop")
     .description("Local-first CV drafting and review workspace")
+    .enablePositionalOptions()
     .version(packageJson.version)
     .showHelpAfterError();
 
@@ -1762,6 +1764,95 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       const record = await service.reviewOpportunity({
         root: workspaceRoot(workspace),
         briefId: options.briefId as string,
+        expectedVersion: options.expectedVersion as number,
+      });
+      writeJson(io, record);
+    });
+
+  const profile = command
+    .command("profile")
+    .description("Derive and review an immutable canonical candidate profile");
+
+  profile
+    .command("derive")
+    .description("Derive a canonical candidate profile from the configured knowledge selection")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--profile-id <id>", "canonical candidate profile id")
+    .option("--allow-provider-data", "explicitly approve structured provider extraction")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const record = await service.deriveCanonicalCandidateProfile({
+        root: workspaceRoot(workspace),
+        profileId: options.profileId as string,
+        allowProviderData: boolOption(options, "allowProviderData"),
+      });
+      writeJson(io, record);
+    });
+
+  profile
+    .command("get")
+    .description("Read the latest or an exact canonical candidate profile version")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--profile-id <id>", "canonical candidate profile id")
+    .option("--version <number>", "exact version; omit to reload latest", integerOption)
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const record = await service.getCanonicalCandidateProfile({
+        root: workspaceRoot(workspace),
+        profileId: options.profileId as string,
+        ...(options.version === undefined ? {} : { version: options.version as number }),
+      });
+      writeJson(io, record ?? null);
+    });
+
+  profile
+    .command("list")
+    .description("List immutable canonical candidate profile versions")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--profile-id <id>", "canonical candidate profile id")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      writeJson(
+        io,
+        await service.listCanonicalCandidateProfileVersions({
+          root: workspaceRoot(workspace),
+          profileId: options.profileId as string,
+        }),
+      );
+    });
+
+  profile
+    .command("edit")
+    .description("Create an immutable edited draft profile version")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--profile-id <id>", "canonical candidate profile id")
+    .requiredOption("--expected-version <number>", "latest version being edited", integerOption)
+    .requiredOption("--patch <path>", "JSON file containing editable profile fields")
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const patch = await readJsonObject(
+        options.patch as string,
+        "Canonical candidate profile patch",
+      );
+      const record = await service.editCanonicalCandidateProfile({
+        root: workspaceRoot(workspace),
+        profileId: options.profileId as string,
+        expectedVersion: options.expectedVersion as number,
+        patch: patch as CanonicalCandidateProfilePatch,
+      });
+      writeJson(io, record);
+    });
+
+  profile
+    .command("review")
+    .description("Create a reviewed version from the current complete profile draft")
+    .argument("[workspace]", "workspace directory", ".")
+    .requiredOption("--profile-id <id>", "canonical candidate profile id")
+    .requiredOption(
+      "--expected-version <number>",
+      "latest draft version being reviewed",
+      integerOption,
+    )
+    .action(async (workspace: string, options: Record<string, unknown>) => {
+      const record = await service.reviewCanonicalCandidateProfile({
+        root: workspaceRoot(workspace),
+        profileId: options.profileId as string,
         expectedVersion: options.expectedVersion as number,
       });
       writeJson(io, record);
