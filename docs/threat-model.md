@@ -106,12 +106,17 @@ quote must occur in its cited normalized source and contain the proposed value; 
 verification; application code owns provenance, IDs, severity, messages,
 duplicate/conflict detection, and visible omissions.
 
-No concrete provider, tool, network, run, CLI, or desktop adapter invokes this
-service yet. It also cannot invalidate an immutable profile after source
+A configured-provider adapter now uses the existing author-provider policy and
+auth boundary. Its system prompt treats normalized source text as untrusted,
+its structured request contains no managed paths or CKB provenance, and the
+strict response is still revalidated and grounded locally. No application,
+run, CLI, or desktop operation invokes the adapter yet.
+
+The service also cannot invalidate an immutable profile after source
 retirement or deletion. Because one profile may combine CKBs, it is not copied
 into a single CKB portable backup; whole-workspace database backups still
-preserve it. Retention, deletion, run binding, and adapter boundaries remain
-open #66 work.
+preserve it. Retention, deletion, run binding, and host adapter boundaries
+remain open #66 work.
 
 ### Current CKB scope
 

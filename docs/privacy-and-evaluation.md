@@ -119,11 +119,18 @@ normalized source and contains the proposed value. The application verifies that
 citation to exact CKB provenance, then discards the quote rather than storing
 another copy of candidate text.
 
-No concrete provider, CLI, or desktop adapter invokes this boundary yet, and
-profiles are not yet bound to runs or materialized into indexes. Cross-CKB
-profiles are intentionally absent from single-CKB portable backups, while
-whole-workspace database backups preserve them with the rest of the workspace.
-Retention, lifecycle invalidation, and deletion remain open #66 work.
+A configured-provider adapter can now execute the strict extraction request
+through the workspace's author model after explicit approval. It supports the
+existing API-key, authenticated user-session, and local transports, and sends
+only the bounded path-free source fields already owned by the extraction port.
+Provider output still passes the local schema and grounding checks before it
+can become a profile version.
+
+No shared application, CLI, or desktop operation invokes this adapter yet, and
+profiles are not bound to runs or materialized into indexes. Cross-CKB profiles
+remain absent from single-CKB portable backups, while whole-workspace database
+backups preserve them. Retention, lifecycle invalidation, and deletion remain
+open #66 work.
 
 ## Local Candidate Knowledge Base handling
 
