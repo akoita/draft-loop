@@ -22,6 +22,42 @@ function bridge(
   return { capabilities, invoke };
 }
 
+function canonicalCandidateProfileResult(
+  version = 1,
+  status: "draft" | "reviewed" = "draft",
+): Record<string, unknown> {
+  const capturedAt = "2026-08-28T10:00:00.000Z";
+  return {
+    workspaceId: "workspace-1",
+    profileId: "profile-1",
+    version,
+    parentVersion: version === 1 ? null : version - 1,
+    status,
+    createdAt: capturedAt,
+    updatedAt: capturedAt,
+    reviewedAt: status === "reviewed" ? capturedAt : null,
+    checksum: "b".repeat(64),
+    facts: [
+      {
+        id: "fact-link",
+        category: "approved-link",
+        field: "url",
+        value: "https://approved.example.test/me",
+        provenance: [
+          {
+            storeId: "store-1",
+            knowledgeBaseId: "knowledge-1",
+            sourceId: "source-1",
+            versionId: "version-1",
+            kind: "candidate-provided",
+          },
+        ],
+      },
+    ],
+    issues: [],
+  };
+}
+
 describe("workspace model reconfiguration", () => {
   const base = {
     workspaceId: "ws-1",
@@ -1409,6 +1445,190 @@ describe("desktop capability bridge", () => {
         input: { workspaceId: state.workspaceId, briefId: "brief-1", expectedVersion: 1 },
       },
     ]);
+  });
+
+  it("keeps canonical profile commands strict, path-free, and explicitly approved", () => {
+    const reference = {
+      storeId: "store-1",
+      knowledgeBaseId: "knowledge-1",
+      sourceId: "source-1",
+      versionId: "version-1",
+      kind: "candidate-provided",
+    } as const;
+    const fact = {
+      id: "fact-link",
+      category: "approved-link",
+      field: "url",
+      value: "https://approved.example.test/me",
+      provenance: [reference],
+    } as const;
+    const commands = [
+      {
+        type: "profile.derive" as const,
+        input: {
+          workspaceId: "workspace-1",
+          profileId: "profile-1",
+          providerTransmissionApproved: true,
+        },
+      },
+      {
+        type: "profile.get" as const,
+        input: { workspaceId: "workspace-1", profileId: "profile-1", version: 2 },
+      },
+      {
+        type: "profile.list" as const,
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      },
+      {
+        type: "profile.edit" as const,
+        input: {
+          workspaceId: "workspace-1",
+          profileId: "profile-1",
+          expectedVersion: 1,
+          patch: { facts: [fact] },
+        },
+      },
+      {
+        type: "profile.review" as const,
+        input: { workspaceId: "workspace-1", profileId: "profile-1", expectedVersion: 1 },
+      },
+    ];
+
+    for (const command of commands) {
+      expect(validateBridgeCommand(command)).toEqual(command);
+    }
+    expect(
+      validateBridgeCommand({
+        type: "profile.derive",
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      }),
+    ).toEqual({
+      type: "profile.derive",
+      input: { workspaceId: "workspace-1", profileId: "profile-1" },
+    });
+
+    for (const input of [
+      { workspaceId: "workspace-1", profileId: "profile-1", root: "/private" },
+      { workspaceId: "workspace-1", profileId: "profile-1", storeRoot: "/private" },
+      { workspaceId: "workspace-1", profileId: "profile:unsafe" },
+      {
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        expectedVersion: 1,
+        patch: { facts: [{ ...fact, path: "/private" }] },
+      },
+      {
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        expectedVersion: 1,
+        patch: { facts: [{ ...fact, sourceUrl: "https://private.example.test" }] },
+      },
+    ]) {
+      const type = "expectedVersion" in input ? "profile.edit" : "profile.derive";
+      expect(() => validateBridgeCommand({ type, input })).toThrow("invalid");
+    }
+  });
+
+  it("normalizes canonical profile results while rejecting malformed lineage and leaked fields", async () => {
+    const record = canonicalCandidateProfileResult();
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
+      if (command.type === "profile.list") {
+        return {
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            profileId: "profile-1",
+            versions: [record],
+          },
+        };
+      }
+      return { ok: true, value: record };
+    });
+    const port = createCapabilityPort(
+      bridge(invoke, [
+        "profile.derive",
+        "profile.get",
+        "profile.list",
+        "profile.edit",
+        "profile.review",
+      ]),
+    );
+
+    await expect(
+      port.execute({
+        type: "profile.derive",
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: {
+        profileId: "profile-1",
+        facts: [{ category: "approved-link", value: "https://approved.example.test/me" }],
+      },
+    });
+    await expect(
+      port.execute({
+        type: "profile.list",
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { versions: [{ version: 1 }] } });
+
+    const malformedHistoryPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            profileId: "profile-1",
+            versions: [record, { ...record, version: 3, parentVersion: 2 }],
+          },
+        }),
+        ["profile.list"],
+      ),
+    );
+    await expect(
+      malformedHistoryPort.execute({
+        type: "profile.list",
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
+    const leakedFactPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            ...record,
+            facts: [
+              { ...(record.facts as readonly Record<string, unknown>[])[0], path: "/private" },
+            ],
+          },
+        }),
+        ["profile.get"],
+      ),
+    );
+    await expect(
+      leakedFactPort.execute({
+        type: "profile.get",
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+
+    const leakedSelectionPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: { ...record, candidateKnowledgeSelection: { entries: [] } },
+        }),
+        ["profile.get"],
+      ),
+    );
+    await expect(
+      leakedSelectionPort.execute({
+        type: "profile.get",
+        input: { workspaceId: "workspace-1", profileId: "profile-1" },
+      }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
   });
 
   it("carries the recorded independence claim, rationale included, back to the renderer", async () => {

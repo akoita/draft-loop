@@ -481,11 +481,13 @@ strict proposal schema remains the only accepted response shape.
 Shared application and local-driver operations derive from the workspace's
 validated, pinned CKB selection and provide exact/latest reads, immutable
 history, optimistic edits, and candidate review. Store roots remain inside the
-local driver rather than entering adapter-neutral commands or results. Source
-lifecycle reconciliation and removal, reviewed-profile run binding, and shared
-desktop host controls remain later #66 slices. The CLI exposes the shared five
-operation workflow without accepting a CKB store root; only derivation has a
-provider-transmission approval flag.
+local driver rather than entering adapter-neutral commands or results. The CLI
+and packaged desktop host expose the shared five-operation workflow without
+accepting a CKB store root; only derivation has a provider-transmission approval
+flag. The desktop bridge returns an explicit bounded profile projection and
+does not expose the stored selection snapshot. Source lifecycle reconciliation
+and removal, reviewed-profile run binding, and a visual profile editor remain
+later #66 slices.
 
 ### CKB integration gap
 

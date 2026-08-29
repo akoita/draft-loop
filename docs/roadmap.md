@@ -328,9 +328,10 @@ strict path-free request and response boundaries. Shared application and
 local-driver operations now derive from the workspace's validated pinned
 selection and provide provider-free exact/latest reads, history, optimistic
 edits, and review without exposing store roots. The CLI now exposes those five
-operations with an explicit provider-data flag for derivation. Desktop host
-controls, lifecycle invalidation/deletion, and reviewed-profile run binding
-remain open, so #66 is still incomplete.
+operations with an explicit provider-data flag for derivation. The packaged
+desktop host provides equivalent strict capabilities and returns only a bounded
+profile projection. Lifecycle invalidation/deletion, reviewed-profile run
+binding, and a visual profile editor remain open, so #66 is still incomplete.
 
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
@@ -470,6 +471,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Added packaged-desktop host capabilities for the canonical-profile workflow. | Strict bridge and native-host operations use the active workspace, accept no store roots, require explicit derivation approval, and return an explicit bounded facts/issues/provenance projection without the stored selection snapshot. Lifecycle reconciliation, run binding, and visual profile UI remain open #66 work. |
 | 2026-08-30 | Exposed canonical-profile derivation and review through the CLI. | The CLI derives only from the workspace's configured selection, requires an explicit provider-data flag, accepts no CKB store root, and provides provider-free exact/latest reads, history, edits, and review. Desktop host controls, lifecycle reconciliation, and run binding remain open #66 work. |
 | 2026-08-30 | Added the shared application and local-driver canonical-profile workflow. | Adapter-neutral operations derive from the workspace's validated pinned CKB selection and provide provider-free immutable reads, history, edits, and candidate review without accepting or returning store roots. CLI/desktop host controls, lifecycle reconciliation, and exact reviewed-profile run binding remain open #66 work. |
 | 2026-08-30 | Added configured-provider execution for canonical-profile extraction. | Explicitly approved, bounded path-free source text can use the workspace author model through existing API-key, authenticated user-session, or local transports. Strict local schema, citation, and grounding checks still own what can become a profile; application/CLI/desktop invocation, lifecycle reconciliation, and run binding remain open #66 work. |

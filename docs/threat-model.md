@@ -119,8 +119,10 @@ retirement or deletion. Because one profile may combine CKBs, it is not copied
 into a single CKB portable backup; whole-workspace database backups still
 preserve it. Retention, deletion, run binding, and host adapter boundaries
 remain open #66 work. The CLI exposes the shared profile API without accepting
-store roots and requires a visible flag before derivation can transmit data;
-the desktop host does not expose it yet.
+store roots and requires a visible flag before derivation can transmit data.
+The desktop host exposes the same operations through strict bridge inputs and
+an explicit result projection that omits the stored selection snapshot, paths,
+source URLs, and unrecognized future fields.
 
 ### Current CKB scope
 

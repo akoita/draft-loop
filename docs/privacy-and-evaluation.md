@@ -134,11 +134,17 @@ edits, and review do not invoke a provider.
 
 CLI commands now invoke these operations without accepting a CKB store root.
 Derivation requires an explicit provider-data flag; local reload, history,
-edit, and review commands do not cross the provider boundary. No desktop host
-control invokes the profile workflow yet, and profiles are not bound to runs or
-materialized into indexes. Cross-CKB profiles remain absent from single-CKB
-portable backups, while whole-workspace database backups preserve them.
-Retention, lifecycle invalidation, and deletion remain open #66 work.
+edit, and review commands do not cross the provider boundary. The packaged
+desktop host exposes equivalent path-free capabilities against the active
+workspace. Its renderer result is an explicit bounded projection of facts,
+issues, and opaque provenance references; it omits the stored CKB selection
+snapshot and any future unrecognized fields.
+
+Profiles are not bound to runs or materialized into indexes, and the renderer
+has no dedicated visual profile editor yet. Cross-CKB profiles remain absent
+from single-CKB portable backups, while whole-workspace database backups
+preserve them. Retention, lifecycle invalidation, and deletion remain open #66
+work.
 
 ## Local Candidate Knowledge Base handling
 
