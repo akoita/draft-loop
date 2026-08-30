@@ -2116,6 +2116,7 @@ async function createProviderAdapter(
     openai: "api-key",
   },
   userSessionRunners?: ProviderUserSessionRunners,
+  userSessionTimeoutMs?: number,
 ) {
   const provider = providerId(model.company);
   if (!allowProviderData) {
@@ -2139,6 +2140,7 @@ async function createProviderAdapter(
         ...(userSessionRunners?.anthropic === undefined
           ? {}
           : { runner: userSessionRunners.anthropic }),
+        ...(userSessionTimeoutMs === undefined ? {} : { timeoutMs: userSessionTimeoutMs }),
       });
     }
     const apiKey = await resolveCredential("anthropic");
@@ -2159,6 +2161,7 @@ async function createProviderAdapter(
     return new OpenAICodexUserSessionAdapter<JsonObject, JsonObject>({
       configuredModel: model,
       ...(userSessionRunners?.openai === undefined ? {} : { runner: userSessionRunners.openai }),
+      ...(userSessionTimeoutMs === undefined ? {} : { timeoutMs: userSessionTimeoutMs }),
     });
   }
   const apiKey = await resolveCredential("openai");
@@ -2184,6 +2187,7 @@ function providerAgents(
     openai: "api-key",
   },
   userSessionRunners?: ProviderUserSessionRunners,
+  userSessionTimeoutMs?: number,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const dataPolicy = (company: string) =>
     providerDataPolicy(company, allowProviderData, providerAuthModeConfiguration);
@@ -2197,6 +2201,7 @@ function providerAgents(
       providerClientFactories,
       providerAuthModeConfiguration,
       userSessionRunners,
+      userSessionTimeoutMs,
     );
   }
   const promptContext = modelFacingContext(context);
@@ -2336,6 +2341,7 @@ function engine(
     openai: "api-key",
   },
   userSessionRunners?: ProviderUserSessionRunners,
+  userSessionTimeoutMs?: number,
   retrieval?: RetrievalPort,
 ): OrchestrationEngine {
   const agents = needsAgents
@@ -2349,6 +2355,7 @@ function engine(
           providerClientFactories,
           providerAuthModeConfiguration,
           userSessionRunners,
+          userSessionTimeoutMs,
         )
     : noopAgents();
   const store = createStorageRunStore(storage);
@@ -2680,19 +2687,29 @@ async function contextForRun(storage: SqliteStorage, runId: string): Promise<Con
   return contextSnapshotSchema.parse(contextRecord.payload) as unknown as ContextSnapshot;
 }
 
+interface RunOptions {
+  readonly runId?: string;
+  readonly allowProviderData?: boolean;
+  readonly opportunityBrief?: OpportunityBriefSelection;
+  readonly candidateProfile?: CandidateProfileSelection;
+  readonly writingPolicyOverrideChecksum?: string;
+  readonly resolveCredential?: ProviderCredentialResolver;
+  readonly providerClientFactories?: ProviderClientFactories;
+  readonly providerAuthMode?: ProviderAuthMode;
+  readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
+  readonly userSessionRunners?: ProviderUserSessionRunners;
+  readonly userSessionTimeoutMs?: number;
+  readonly signal?: AbortSignal;
+}
+type OmitRunOptions<K extends keyof RunOptions> = Omit<RunOptions, K>;
+type BeginStartRunOptions = OmitRunOptions<"runId" | "signal" | "writingPolicyOverrideChecksum">;
+type ResumeRunOptions = OmitRunOptions<
+  "opportunityBrief" | "candidateProfile" | "writingPolicyOverrideChecksum"
+>;
+
 async function createRun(
   rootInput: string,
-  options: {
-    readonly allowProviderData?: boolean;
-    readonly opportunityBrief?: OpportunityBriefSelection;
-    readonly candidateProfile?: CandidateProfileSelection;
-    readonly writingPolicyOverrideChecksum?: string;
-    readonly resolveCredential?: ProviderCredentialResolver;
-    readonly providerClientFactories?: ProviderClientFactories;
-    readonly providerAuthMode?: ProviderAuthMode;
-    readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
-    readonly userSessionRunners?: ProviderUserSessionRunners;
-  } = {},
+  options: RunOptions = {},
   io: CliIo = defaultIo,
   advance = true,
 ): Promise<RunSnapshot> {
@@ -2813,6 +2830,7 @@ async function createRun(
       options.providerClientFactories,
       options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode),
       options.userSessionRunners,
+      options.userSessionTimeoutMs,
       candidateRetrieval?.port,
     );
     const request = {
@@ -2840,16 +2858,7 @@ async function createRun(
 
 export async function beginRun(
   rootInput: string,
-  options: {
-    readonly allowProviderData?: boolean;
-    readonly opportunityBrief?: OpportunityBriefSelection;
-    readonly candidateProfile?: CandidateProfileSelection;
-    readonly resolveCredential?: ProviderCredentialResolver;
-    readonly providerClientFactories?: ProviderClientFactories;
-    readonly providerAuthMode?: ProviderAuthMode;
-    readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
-    readonly userSessionRunners?: ProviderUserSessionRunners;
-  } = {},
+  options: BeginStartRunOptions = {},
   io: CliIo = defaultIo,
 ): Promise<RunSnapshot> {
   return createRun(rootInput, options, io, false);
@@ -2857,16 +2866,7 @@ export async function beginRun(
 
 export async function startRun(
   rootInput: string,
-  options: {
-    readonly allowProviderData?: boolean;
-    readonly opportunityBrief?: OpportunityBriefSelection;
-    readonly candidateProfile?: CandidateProfileSelection;
-    readonly resolveCredential?: ProviderCredentialResolver;
-    readonly providerClientFactories?: ProviderClientFactories;
-    readonly providerAuthMode?: ProviderAuthMode;
-    readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
-    readonly userSessionRunners?: ProviderUserSessionRunners;
-  } = {},
+  options: BeginStartRunOptions = {},
   io: CliIo = defaultIo,
 ): Promise<RunSnapshot> {
   return createRun(rootInput, options, io);
@@ -2874,16 +2874,7 @@ export async function startRun(
 
 export async function resumeRun(
   rootInput: string,
-  options: {
-    readonly runId?: string;
-    readonly allowProviderData?: boolean;
-    readonly resolveCredential?: ProviderCredentialResolver;
-    readonly providerClientFactories?: ProviderClientFactories;
-    readonly providerAuthMode?: ProviderAuthMode;
-    readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
-    readonly userSessionRunners?: ProviderUserSessionRunners;
-    readonly signal?: AbortSignal;
-  } = {},
+  options: ResumeRunOptions = {},
   io: CliIo = defaultIo,
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
@@ -2905,6 +2896,7 @@ export async function resumeRun(
       options.providerClientFactories,
       options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode),
       options.userSessionRunners,
+      options.userSessionTimeoutMs,
       candidateRetrieval?.port,
     );
     preflight(config, io, budget(config));
@@ -3487,6 +3479,7 @@ export interface LocalApplicationDriverOptions {
   readonly resolveCredential?: ProviderCredentialResolver;
   readonly providerClientFactories?: ProviderClientFactories;
   readonly userSessionRunners?: ProviderUserSessionRunners;
+  readonly userSessionTimeoutMs?: number;
 }
 
 const environmentCredentialResolver: ProviderCredentialResolver = async (provider) =>
@@ -3499,6 +3492,7 @@ export interface ProviderOpportunityExtractionOptions {
   readonly resolveCredential?: ProviderCredentialResolver;
   readonly providerClientFactories?: ProviderClientFactories;
   readonly userSessionRunners?: ProviderUserSessionRunners;
+  readonly userSessionTimeoutMs?: number;
 }
 
 export interface ProviderCanonicalCandidateProfileExtractionOptions {
@@ -3508,6 +3502,7 @@ export interface ProviderCanonicalCandidateProfileExtractionOptions {
   readonly resolveCredential?: ProviderCredentialResolver;
   readonly providerClientFactories?: ProviderClientFactories;
   readonly userSessionRunners?: ProviderUserSessionRunners;
+  readonly userSessionTimeoutMs?: number;
 }
 
 const opportunityExtractionSystemPrompt =
@@ -3539,6 +3534,7 @@ export function createProviderOpportunityExtractionPort(
         options.providerClientFactories,
         providerAuthModeConfiguration,
         options.userSessionRunners,
+        options.userSessionTimeoutMs,
       );
       const response = await adapter.execute({
         contextSnapshotId: request.operationId,
@@ -3583,6 +3579,7 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
         options.providerClientFactories,
         providerAuthModeConfiguration,
         options.userSessionRunners,
+        options.userSessionTimeoutMs,
       );
       const response = await adapter.execute({
         contextSnapshotId: request.operationId,
@@ -3621,6 +3618,9 @@ export function createLocalApplicationDriver(
     ...(options?.userSessionRunners === undefined
       ? {}
       : { userSessionRunners: options.userSessionRunners }),
+    ...(options?.userSessionTimeoutMs === undefined
+      ? {}
+      : { userSessionTimeoutMs: options.userSessionTimeoutMs }),
   };
   const providerOpportunityOptions = {
     ...credentialOptions,
