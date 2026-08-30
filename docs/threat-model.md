@@ -114,12 +114,19 @@ operations accept no store roots: the local driver resolves and revalidates the
 workspace's pinned CKB selection before derivation. Provider-free reload,
 history, edit, and review operations stay within workspace storage.
 
-The service also cannot invalidate an immutable profile after source
+One exact reviewed profile may be bound to a new run by opaque ID and version.
+The local driver verifies the stored checksum and requires the profile's CKB
+selection to match the workspace's current lifecycle-ready selection before
+persisting only its ID, version, and checksum in immutable context. Resume
+accepts no replacement selection, and renderer inputs expose no roots or stored
+selection snapshot.
+
+The service still cannot invalidate an immutable profile after source
 retirement or deletion. Because one profile may combine CKBs, it is not copied
 into a single CKB portable backup; whole-workspace database backups still
-preserve it. Retention, deletion, run binding, and host adapter boundaries
-remain open #66 work. The CLI exposes the shared profile API without accepting
-store roots and requires a visible flag before derivation can transmit data.
+preserve it. Retention and deletion remain open #66 work. The CLI exposes the
+shared profile API without accepting store roots and requires a visible flag
+before derivation can transmit data.
 The desktop host exposes the same operations through strict bridge inputs and
 an explicit result projection that omits the stored selection snapshot, paths,
 source URLs, and unrecognized future fields.

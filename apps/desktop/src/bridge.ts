@@ -705,6 +705,8 @@ export interface RunStartInput {
   readonly workspaceId: string;
   /** Optional exact reviewed opportunity version to bind to this run. */
   readonly opportunityBrief?: OpportunityBriefSelectionInput;
+  /** Optional exact reviewed canonical candidate-profile version to bind to this run. */
+  readonly candidateProfile?: CandidateProfileSelectionInput;
   /** Optional exact lowercase SHA-256 writing-policy override identity. */
   readonly writingPolicyOverrideChecksum?: string;
 }
@@ -714,13 +716,23 @@ export interface OpportunityBriefSelectionInput {
   readonly version: number;
 }
 
+export interface CandidateProfileSelectionInput {
+  readonly profileId: string;
+  readonly version: number;
+}
+
 const opportunityBriefSelectionKeys = inputKeys<OpportunityBriefSelectionInput>()([
   "briefId",
+  "version",
+]);
+const candidateProfileSelectionKeys = inputKeys<CandidateProfileSelectionInput>()([
+  "profileId",
   "version",
 ]);
 const runStartKeys = inputKeys<RunStartInput>()([
   "workspaceId",
   "opportunityBrief",
+  "candidateProfile",
   "writingPolicyOverrideChecksum",
 ]);
 
@@ -3610,6 +3622,15 @@ function validateOpportunityBriefSelectionInput(value: unknown): OpportunityBrie
   };
 }
 
+function validateCandidateProfileSelectionInput(value: unknown): CandidateProfileSelectionInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, candidateProfileSelectionKeys)) return invalidInput();
+  return {
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+    version: opportunityVersion(input.version),
+  };
+}
+
 function validateRunStartInput(value: unknown): RunStartInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, runStartKeys)) return invalidInput();
@@ -3617,6 +3638,10 @@ function validateRunStartInput(value: unknown): RunStartInput {
     input.opportunityBrief === undefined
       ? undefined
       : validateOpportunityBriefSelectionInput(input.opportunityBrief);
+  const candidateProfile =
+    input.candidateProfile === undefined
+      ? undefined
+      : validateCandidateProfileSelectionInput(input.candidateProfile);
   const writingPolicyOverrideChecksum =
     input.writingPolicyOverrideChecksum === undefined
       ? undefined
@@ -3624,6 +3649,7 @@ function validateRunStartInput(value: unknown): RunStartInput {
   return {
     workspaceId: identifier(input.workspaceId),
     ...(opportunityBrief === undefined ? {} : { opportunityBrief }),
+    ...(candidateProfile === undefined ? {} : { candidateProfile }),
     ...(writingPolicyOverrideChecksum === undefined ? {} : { writingPolicyOverrideChecksum }),
   };
 }

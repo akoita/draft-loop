@@ -485,9 +485,16 @@ local driver rather than entering adapter-neutral commands or results. The CLI
 and packaged desktop host expose the shared five-operation workflow without
 accepting a CKB store root; only derivation has a provider-transmission approval
 flag. The desktop bridge returns an explicit bounded profile projection and
-does not expose the stored selection snapshot. Source lifecycle reconciliation
-and removal, reviewed-profile run binding, and a visual profile editor remain
-later #66 slices.
+does not expose the stored selection snapshot.
+
+New runs may select one exact reviewed profile version. The local driver
+verifies its persisted checksum and requires its CKB selection to match the
+workspace's current lifecycle-ready selection before recording a safe profile
+ID, version, and checksum reference in immutable context. Resume accepts no
+replacement selection, so later profile edits cannot change an existing run.
+Legacy starts without a canonical profile remain readable. Source lifecycle
+reconciliation and removal and a visual profile editor remain later #66
+slices.
 
 ### CKB integration gap
 

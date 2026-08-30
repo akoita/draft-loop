@@ -690,6 +690,52 @@ describe("domain workspace and context snapshots", () => {
     expect(snapshot).not.toHaveProperty("opportunityBriefReference");
   });
 
+  it("normalizes, validates, and freezes an optional candidate profile reference", () => {
+    const reference = {
+      profileId: "  profile-reviewed  ",
+      version: 2,
+      checksum: "a".repeat(64),
+    };
+    const snapshot = createContextSnapshot(validInput({ candidateProfileReference: reference }));
+
+    expect(snapshot.candidateProfileReference).toEqual({
+      profileId: "profile-reviewed",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+    expect(Object.isFrozen(snapshot.candidateProfileReference)).toBe(true);
+    reference.profileId = "changed";
+    reference.checksum = "b".repeat(64);
+    expect(snapshot.candidateProfileReference).toEqual({
+      profileId: "profile-reviewed",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+
+    for (const candidateProfileReference of [
+      null,
+      {},
+      { profileId: " ", version: 1, checksum: reference.checksum },
+      { profileId: "profile-1", version: 0, checksum: reference.checksum },
+      { profileId: "profile-1", version: 1.5, checksum: reference.checksum },
+      {
+        profileId: "profile-1",
+        version: Number.MAX_SAFE_INTEGER + 1,
+        checksum: reference.checksum,
+      },
+      { profileId: "profile-1", version: 1, checksum: "a".repeat(63) },
+      { profileId: "profile-1", version: 1, checksum: "g".repeat(64) },
+      { profileId: "profile-1", version: 1, checksum: "A".repeat(64) },
+      { profileId: "profile-1", version: 1, checksum: "a".repeat(64), path: "/private/profile" },
+    ]) {
+      expect(() =>
+        createContextSnapshot(
+          validInput({ candidateProfileReference: candidateProfileReference as never }),
+        ),
+      ).toThrow(/candidateProfileReference/i);
+    }
+  });
+
   it("creates author and critic references to one snapshot id", () => {
     const snapshot = createContextSnapshot(validInput());
     const author = createAgentContextReference(snapshot, snapshot.modelConfiguration.author);

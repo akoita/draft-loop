@@ -28,6 +28,7 @@ import {
   canonicalCandidateProfileFactSchema,
   canonicalCandidateProfileIssueSchema,
   canonicalCandidateProfileProvenanceReferenceSchema,
+  canonicalCandidateProfileReferenceSchema,
   canonicalCandidateProfileSchema,
   contextSnapshotInputSchema,
   contextSnapshotSchema,
@@ -298,6 +299,59 @@ describe("canonical context snapshot schemas", () => {
 
     expect(contextSnapshotSchema.parse(createContextSnapshot(validInput()))).not.toHaveProperty(
       "opportunityBriefReference",
+    );
+  });
+
+  it("accepts and round-trips an exact reviewed candidate profile reference", () => {
+    const reference = canonicalCandidateProfileReferenceSchema.parse({
+      profileId: "  profile-reviewed  ",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+    const snapshot = createContextSnapshot({
+      ...validInput(),
+      candidateProfileReference: reference,
+    } as ContextSnapshotInput);
+    const parsed = contextSnapshotSchema.parse(snapshot);
+
+    expect(reference).toEqual({
+      profileId: "profile-reviewed",
+      version: 2,
+      checksum: "a".repeat(64),
+    });
+    expect(parsed.candidateProfileReference).toEqual(reference);
+    expect(
+      parseContextSnapshot(serializeContextSnapshot(snapshot)).candidateProfileReference,
+    ).toEqual(reference);
+  });
+
+  it("rejects malformed candidate profile references and preserves legacy absence", () => {
+    const valid = {
+      profileId: "profile-1",
+      version: 1,
+      checksum: "a".repeat(64),
+    };
+    for (const candidateProfileReference of [
+      null,
+      {},
+      { profileId: " ", version: 1, checksum: valid.checksum },
+      { profileId: valid.profileId, version: 0, checksum: valid.checksum },
+      { profileId: valid.profileId, version: 1.5, checksum: valid.checksum },
+      {
+        profileId: valid.profileId,
+        version: Number.MAX_SAFE_INTEGER + 1,
+        checksum: valid.checksum,
+      },
+      { profileId: valid.profileId, version: 1, checksum: "A".repeat(64) },
+      { ...valid, path: "/private/profile" },
+    ]) {
+      expect(() =>
+        canonicalCandidateProfileReferenceSchema.parse(candidateProfileReference),
+      ).toThrow();
+    }
+
+    expect(contextSnapshotSchema.parse(createContextSnapshot(validInput()))).not.toHaveProperty(
+      "candidateProfileReference",
     );
   });
 

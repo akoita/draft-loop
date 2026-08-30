@@ -181,6 +181,8 @@ export interface StartRunCommand {
   readonly allowProviderData?: boolean;
   /** Exact immutable reviewed opportunity version to bind to the new run. */
   readonly opportunityBrief?: OpportunityBriefSelection;
+  /** Exact immutable reviewed candidate-profile version to bind to the new run. */
+  readonly candidateProfile?: CandidateProfileSelection;
   /** Exact immutable policy history version for a reviewed opportunity override. */
   readonly writingPolicyOverrideChecksum?: string;
 }
@@ -189,6 +191,11 @@ export type BeginRunCommand = StartRunCommand;
 
 export interface OpportunityBriefSelection {
   readonly briefId: string;
+  readonly version: number;
+}
+
+export interface CandidateProfileSelection {
+  readonly profileId: string;
   readonly version: number;
 }
 

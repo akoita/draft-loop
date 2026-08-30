@@ -4660,6 +4660,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ...(command.input.opportunityBrief === undefined
               ? {}
               : { opportunityBrief: command.input.opportunityBrief }),
+            ...(command.input.candidateProfile === undefined
+              ? {}
+              : { candidateProfile: command.input.candidateProfile }),
             ...(command.input.writingPolicyOverrideChecksum === undefined
               ? {}
               : {

@@ -1501,6 +1501,12 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       "exact lowercase SHA-256 policy version for a reviewed opportunity",
       writingPolicyChecksumOption,
     )
+    .option("--candidate-profile-id <id>", "exact reviewed candidate profile id")
+    .option(
+      "--candidate-profile-version <number>",
+      "exact reviewed candidate profile version",
+      positiveIntegerOption,
+    )
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;
@@ -1516,6 +1522,13 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           "--writing-policy-override requires --opportunity-brief-id and --opportunity-version.",
         );
       }
+      const hasCandidateProfileId = options.candidateProfileId !== undefined;
+      const hasCandidateProfileVersion = options.candidateProfileVersion !== undefined;
+      if (hasCandidateProfileId !== hasCandidateProfileVersion) {
+        throw new Error(
+          "--candidate-profile-id and --candidate-profile-version must be provided together.",
+        );
+      }
       await service.start({
         root: workspaceRoot(workspace),
         ...(hasBriefId
@@ -1523,6 +1536,14 @@ export function createCli(dependencies: CliDependencies = {}): Command {
               opportunityBrief: {
                 briefId: options.opportunityBriefId as string,
                 version: options.opportunityVersion as number,
+              },
+            }
+          : {}),
+        ...(hasCandidateProfileId
+          ? {
+              candidateProfile: {
+                profileId: options.candidateProfileId as string,
+                version: options.candidateProfileVersion as number,
               },
             }
           : {}),

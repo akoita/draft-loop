@@ -102,6 +102,7 @@ import { createCanonicalCandidateProfilePersistenceService } from "./candidate-p
 import type {
   ApplicationDriver,
   ApplicationIo,
+  CandidateProfileSelection,
   ConfigureKnowledgeSelectionCommand,
   ConfigureWritingPolicyCommand,
   GetWritingPolicyCommand,
@@ -1484,6 +1485,7 @@ async function prepareInputs(
   config: WorkspaceConfig,
   opportunityRecord?: OpportunityBriefVersionRecord,
   writingPolicy?: NonNullable<ContextSnapshot["writingPolicy"]>,
+  candidateProfileReference?: ContextSnapshot["candidateProfileReference"],
 ): Promise<PreparedInputs> {
   const candidateKnowledgeSelection = await validateConfiguredKnowledgeSelection(
     config.candidateKnowledgeSelection,
@@ -1559,6 +1561,7 @@ async function prepareInputs(
     ...(reviewedOpportunity === undefined
       ? {}
       : { opportunityBriefReference: reviewedOpportunity.opportunityBriefReference }),
+    ...(candidateProfileReference === undefined ? {} : { candidateProfileReference }),
     ...(candidateKnowledgeSelection === undefined ? {} : { candidateKnowledgeSelection }),
   });
   return { context, sources: ingestion.sources };
@@ -2521,6 +2524,7 @@ async function createRun(
   options: {
     readonly allowProviderData?: boolean;
     readonly opportunityBrief?: OpportunityBriefSelection;
+    readonly candidateProfile?: CandidateProfileSelection;
     readonly writingPolicyOverrideChecksum?: string;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
@@ -2538,11 +2542,14 @@ async function createRun(
   // compiled here as part of that same validation, then imported only after
   // the inputs are known to be usable.
   const precompiledPolicy =
-    options.opportunityBrief === undefined && config.writingPolicyPath !== undefined
+    options.opportunityBrief === undefined &&
+    options.candidateProfile === undefined &&
+    config.writingPolicyPath !== undefined
       ? await writingPolicyFromPath(pathFromWorkspace(root, config.writingPolicyPath))
       : undefined;
   const legacyInputs =
     options.opportunityBrief === undefined &&
+    options.candidateProfile === undefined &&
     (config.writingPolicyChecksum === undefined || precompiledPolicy !== undefined)
       ? await prepareInputs(root, config, undefined, precompiledPolicy)
       : undefined;
@@ -2561,6 +2568,41 @@ async function createRun(
     if (options.opportunityBrief !== undefined && opportunityRecord === undefined) {
       throw new CliUserError("The selected opportunity brief version was not found.");
     }
+    const candidateProfileRecord =
+      options.candidateProfile === undefined
+        ? undefined
+        : await createCanonicalCandidateProfilePersistenceService(
+            storage,
+          ).getCanonicalCandidateProfile(
+            config.id,
+            options.candidateProfile.profileId,
+            options.candidateProfile.version,
+          );
+    if (options.candidateProfile !== undefined && candidateProfileRecord === undefined) {
+      throw new CliUserError("The selected candidate profile version was not found.");
+    }
+    if (
+      candidateProfileRecord !== undefined &&
+      candidateProfileRecord.profile.status !== "reviewed"
+    ) {
+      throw new CliUserError("The selected candidate profile version is not reviewed.");
+    }
+    const configuredCandidateKnowledgeSelection =
+      options.candidateProfile === undefined
+        ? undefined
+        : await validateConfiguredKnowledgeSelection(config.candidateKnowledgeSelection);
+    if (options.candidateProfile !== undefined) {
+      const profileSelection = candidateProfileRecord?.profile.candidateKnowledgeSelection;
+      if (
+        configuredCandidateKnowledgeSelection === undefined ||
+        profileSelection === undefined ||
+        !selectionSnapshotsMatch(profileSelection, configuredCandidateKnowledgeSelection)
+      ) {
+        throw new CliUserError(
+          "The selected candidate profile is not bound to the current candidate knowledge selection.",
+        );
+      }
+    }
     const effectivePolicy = await resolveRunWritingPolicy(
       storage,
       config.id,
@@ -2569,8 +2611,36 @@ async function createRun(
       options.opportunityBrief,
       opportunityRecord,
     );
+    const candidateProfileReference =
+      candidateProfileRecord === undefined
+        ? undefined
+        : {
+            profileId: candidateProfileRecord.profile.id,
+            version: candidateProfileRecord.profile.version,
+            checksum: candidateProfileRecord.checksum,
+          };
     const inputs =
-      legacyInputs ?? (await prepareInputs(root, config, opportunityRecord, effectivePolicy));
+      legacyInputs ??
+      (await prepareInputs(
+        root,
+        config,
+        opportunityRecord,
+        effectivePolicy,
+        candidateProfileReference,
+      ));
+    if (candidateProfileRecord !== undefined) {
+      const profileSelection = candidateProfileRecord.profile.candidateKnowledgeSelection;
+      const contextSelection = inputs.context.candidateKnowledgeSelection;
+      if (
+        profileSelection === undefined ||
+        contextSelection === undefined ||
+        !selectionSnapshotsMatch(profileSelection, contextSelection)
+      ) {
+        throw new CliUserError(
+          "The selected candidate profile is not bound to the current candidate knowledge selection.",
+        );
+      }
+    }
     await saveInputs(storage, config, inputs);
     const retrieval = await storage.inspectEvidenceRetrieval(inputs.context.jobDescription, {
       workspaceId: config.id,
@@ -2620,6 +2690,7 @@ export async function beginRun(
   options: {
     readonly allowProviderData?: boolean;
     readonly opportunityBrief?: OpportunityBriefSelection;
+    readonly candidateProfile?: CandidateProfileSelection;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
     readonly providerAuthMode?: ProviderAuthMode;
@@ -2636,6 +2707,7 @@ export async function startRun(
   options: {
     readonly allowProviderData?: boolean;
     readonly opportunityBrief?: OpportunityBriefSelection;
+    readonly candidateProfile?: CandidateProfileSelection;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
     readonly providerAuthMode?: ProviderAuthMode;
@@ -3433,6 +3505,9 @@ export function createLocalApplicationDriver(
           ...(command.opportunityBrief === undefined
             ? {}
             : { opportunityBrief: command.opportunityBrief }),
+          ...(command.candidateProfile === undefined
+            ? {}
+            : { candidateProfile: command.candidateProfile }),
           ...(command.writingPolicyOverrideChecksum === undefined
             ? {}
             : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),
@@ -3452,6 +3527,9 @@ export function createLocalApplicationDriver(
           ...(command.opportunityBrief === undefined
             ? {}
             : { opportunityBrief: command.opportunityBrief }),
+          ...(command.candidateProfile === undefined
+            ? {}
+            : { candidateProfile: command.candidateProfile }),
           ...(command.writingPolicyOverrideChecksum === undefined
             ? {}
             : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),

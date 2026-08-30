@@ -171,6 +171,24 @@ describe("application service contract", () => {
     );
   });
 
+  it("forwards an exact candidate profile only when creating a run", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.start({
+      root: "workspace",
+      candidateProfile: { profileId: "profile-1", version: 3 },
+    });
+
+    expect(underlying.start).toHaveBeenCalledWith(
+      {
+        root: "workspace",
+        candidateProfile: { profileId: "profile-1", version: 3 },
+      },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+  });
+
   it("forwards policy override and path-safe policy reads through the shared boundary", async () => {
     const underlying = driver();
     const service = createApplicationService(underlying);

@@ -371,6 +371,7 @@ describe("native host", () => {
         input: {
           workspaceId: "workspace-native",
           opportunityBrief: { briefId: "brief-native", version: 4 },
+          candidateProfile: { profileId: "profile-native", version: 2 },
           writingPolicyOverrideChecksum: overrideChecksum,
         },
       }),
@@ -380,6 +381,7 @@ describe("native host", () => {
         root,
         allowProviderData: false,
         opportunityBrief: { briefId: "brief-native", version: 4 },
+        candidateProfile: { profileId: "profile-native", version: 2 },
         writingPolicyOverrideChecksum: overrideChecksum,
       },
       expect.anything(),

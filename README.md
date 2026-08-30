@@ -116,12 +116,15 @@ pnpm --filter @draft-loop/cli start opportunity review ./workspace \
   --brief-id target-role --expected-version 2
 pnpm --filter @draft-loop/cli start start ./workspace \
   --opportunity-brief-id target-role --opportunity-version 3 \
+  --candidate-profile-id default-profile --candidate-profile-version 3 \
   --allow-provider-data
 ```
 
-`start` accepts the brief ID and version only as a pair. The selected version
-must already be reviewed. DraftLoop verifies and pins that exact immutable
-version in run context; later edits do not change a started or resumed run.
+`start` accepts each brief or candidate-profile ID and version only as a pair.
+Each selected version must already be reviewed. DraftLoop verifies and pins
+the exact immutable versions and their checksums in run context; later edits do
+not change a started or resumed run. Starts that predate canonical profiles
+remain supported without a profile selection.
 
 The `profile` command group derives a canonical candidate profile from the
 workspace's configured CKB selection, reloads exact or latest versions, and

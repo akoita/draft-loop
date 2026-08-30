@@ -580,6 +580,14 @@ describe("draft-loop opportunity commands", () => {
       "--allow-provider-data",
     );
     await invoke("start", "legacy-workspace");
+    await invoke(
+      "start",
+      "profile-workspace",
+      "--candidate-profile-id",
+      "profile-one",
+      "--candidate-profile-version",
+      "4",
+    );
 
     expect(startCommands).toEqual([
       {
@@ -589,6 +597,11 @@ describe("draft-loop opportunity commands", () => {
         allowProviderData: true,
       },
       { root: resolve("legacy-workspace"), allowProviderData: false },
+      {
+        root: resolve("profile-workspace"),
+        candidateProfile: { profileId: "profile-one", version: 4 },
+        allowProviderData: false,
+      },
     ]);
   });
 
@@ -630,6 +643,22 @@ describe("draft-loop opportunity commands", () => {
         "A".repeat(64),
       ),
     ).rejects.toThrow(/lowercase SHA-256/u);
+    await expect(
+      invoke("start", "workspace", "--candidate-profile-id", "profile-one"),
+    ).rejects.toThrow(/must be provided together/u);
+    await expect(invoke("start", "workspace", "--candidate-profile-version", "2")).rejects.toThrow(
+      /must be provided together/u,
+    );
+    await expect(
+      invoke(
+        "start",
+        "workspace",
+        "--candidate-profile-id",
+        "profile-one",
+        "--candidate-profile-version",
+        "0",
+      ),
+    ).rejects.toThrow(/positive integer/u);
     expect(start).not.toHaveBeenCalled();
   });
 

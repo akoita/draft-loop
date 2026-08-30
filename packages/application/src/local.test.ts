@@ -244,6 +244,19 @@ async function recordedCandidateKnowledgeSelection(
   }
 }
 
+async function recordedCandidateProfileReference(
+  root: string,
+  contextSnapshotId: string,
+): Promise<unknown> {
+  const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+  try {
+    const record = await storage.getContextSnapshot(contextSnapshotId);
+    return (record?.payload as JsonRecord | undefined)?.candidateProfileReference;
+  } finally {
+    await storage.close();
+  }
+}
+
 async function initializeReadyCandidateKnowledgeStore(
   storeRoot: string,
   sourcePath: string,
@@ -3251,6 +3264,17 @@ describe("canonical candidate profile application API", () => {
       ).rejects.toThrow("requires explicit provider-data approval");
       expect(transport).not.toHaveBeenCalled();
 
+      await expect(
+        driver.begin(
+          {
+            root,
+            allowProviderData: false,
+            candidateProfile: { profileId: "missing-profile", version: 1 },
+          },
+          silent,
+        ),
+      ).rejects.toThrow("selected candidate profile version was not found");
+
       const first = await driver.deriveCanonicalCandidateProfile({
         root,
         profileId: "profile-1",
@@ -3269,6 +3293,17 @@ describe("canonical candidate profile application API", () => {
       expect(JSON.stringify(first)).not.toContain(candidatePath);
       expect(JSON.stringify(first)).not.toContain("Ada Lovelace built local-first tools");
       expect(transport).toHaveBeenCalledOnce();
+
+      await expect(
+        driver.begin(
+          {
+            root,
+            allowProviderData: false,
+            candidateProfile: { profileId: "profile-1", version: 1 },
+          },
+          silent,
+        ),
+      ).rejects.toThrow("selected candidate profile version is not reviewed");
 
       const providerFactory = vi.fn(() => {
         throw new Error("Profile reads must not invoke a provider.");
@@ -3340,6 +3375,62 @@ describe("canonical candidate profile application API", () => {
       await expect(
         restarted.listCanonicalCandidateProfileVersions({ root, profileId: "profile-1" }),
       ).resolves.toEqual([first, edited, reviewed]);
+      expect(providerFactory).not.toHaveBeenCalled();
+
+      const alternateStoreRoot = join(root, "alternate-candidate-store");
+      await initializeReadyCandidateKnowledgeStore(alternateStoreRoot, candidatePath, [
+        "alternate-store",
+        "alternate-ckb",
+        "alternate-source",
+        "alternate-version",
+      ]);
+      await restarted.configureKnowledgeSelection(
+        {
+          root,
+          entries: [
+            {
+              storeRoot: alternateStoreRoot,
+              storeId: "alternate-store",
+              knowledgeBaseId: "alternate-ckb",
+            },
+          ],
+        },
+        silent,
+      );
+      await expect(
+        restarted.begin(
+          {
+            root,
+            allowProviderData: false,
+            candidateProfile: { profileId: "profile-1", version: reviewed.profile.version },
+          },
+          silent,
+        ),
+      ).rejects.toThrow("not bound to the current candidate knowledge selection");
+      expect(providerFactory).not.toHaveBeenCalled();
+      await restarted.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "profile-store", knowledgeBaseId: "profile-ckb" }],
+        },
+        silent,
+      );
+
+      const bound = await restarted.begin(
+        {
+          root,
+          allowProviderData: false,
+          candidateProfile: { profileId: "profile-1", version: reviewed.profile.version },
+        },
+        silent,
+      );
+      await expect(
+        recordedCandidateProfileReference(root, bound.contextSnapshotId),
+      ).resolves.toEqual({
+        profileId: "profile-1",
+        version: reviewed.profile.version,
+        checksum: reviewed.checksum,
+      });
       expect(providerFactory).not.toHaveBeenCalled();
     } finally {
       await rm(root, { recursive: true, force: true });

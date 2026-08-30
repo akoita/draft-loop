@@ -731,6 +731,50 @@ describe("desktop capability bridge", () => {
         },
       }),
     ).toThrow("invalid");
+
+    expect(
+      validateBridgeCommand({
+        type: "run.start",
+        input: {
+          workspaceId: "workspace-1",
+          candidateProfile: { profileId: "profile-1", version: 2 },
+        },
+      }),
+    ).toEqual({
+      type: "run.start",
+      input: {
+        workspaceId: "workspace-1",
+        candidateProfile: { profileId: "profile-1", version: 2 },
+      },
+    });
+
+    for (const candidateProfile of [
+      null,
+      {},
+      { profileId: "profile-1" },
+      { version: 1 },
+      { profileId: "profile-1", version: 0 },
+      { profileId: "profile-1", version: 1.5 },
+      { profileId: "profile-1", version: "1" },
+      { profileId: "profile-1", version: 1, path: "/private/profile" },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "run.start",
+          input: { workspaceId: "workspace-1", candidateProfile },
+        }),
+      ).toThrow("invalid");
+    }
+
+    expect(() =>
+      validateBridgeCommand({
+        type: "run.start",
+        input: {
+          workspaceId: "workspace-1",
+          candidateProfile: { profileId: "../private", version: 1 },
+        },
+      }),
+    ).toThrow("invalid");
     expect(() =>
       validateBridgeCommand({
         type: "run.resume",
