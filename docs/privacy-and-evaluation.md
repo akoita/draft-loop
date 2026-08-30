@@ -151,8 +151,8 @@ Lifecycle changes do not erase immutable profile history, existing run
 references, or approved export records. Cross-CKB profiles remain absent from
 single-CKB portable backups, while whole-workspace database backup and restore
 preserve profiles and exports; workspace retention currently removes eligible
-audit events only. Profile-derived retrieval indexes are not materialized yet.
-Issue #80 owns their rebuild and removal using this lifecycle rule. The
+audit events only. Exact-source retrieval indexes are rebuilt on demand from
+the current lifecycle-ready selection and invalidated with their source data. The
 collecting desktop workspace provides a dedicated editor over the bounded
 path-free host projection. It preserves opaque provenance while changing fact
 values or issue status, requires explicit transmission approval for
@@ -165,17 +165,15 @@ The portable Candidate Knowledge Base (CKB) is a separate local component. It
 stores a logical CKB identity, source identity, immutable source versions, and
 approved managed bytes. An application workspace may bind an explicit CKB
 selection and record its path-free source/version identities in new immutable
-run contexts. The current CLI and desktop flow still does not read or send CKB
-content to providers; the existing workspace evidence boundary remains
-authoritative. [ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
+run contexts. Runs with that selection query only its exact source versions and
+send only the selected bounded excerpts with opaque chunk IDs to providers.
+[ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
 defines the storage contract. [ADR 0008](adr/0008-ckb-scoped-lexical-retrieval.md)
 defines the retrieval boundary. SQLite migration 25 implements the replaceable
 exact-source-version CKB index and immutable content-free workspace trace
-stores without cutting live runs over to the new path. Multi-CKB queries may
-open only the explicit workspace selection and must expose stale or unindexed
-status rather than silently supplying empty context. Lifecycle synchronization,
-application fan-out, and provider use remain blocked until their later issue
-issue #80 slices pass. The [threat model](threat-model.md) records the security risks
+stores. Multi-CKB queries open only the explicit workspace selection and expose
+stale or unindexed status rather than silently supplying empty context. The
+[threat model](threat-model.md) records the security risks
 and residual limitations.
 
 Explicit CKB URL intake is a local acquisition action, not provider

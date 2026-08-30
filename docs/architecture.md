@@ -133,9 +133,11 @@ active derived rows inside the lifecycle boundary that can delete or rebuild
 them. SQLite migration 25 supplies the separate CKB chunk/FTS projection,
 manifest freshness inspection, deterministic exact-scope query and fallback,
 whole-projection invalidation on source-version deletion, and immutable
-workspace trace persistence. The legacy workspace evidence index remains
-readable until lifecycle synchronization and the complete issue #80 runtime
-path are integrated and validated.
+workspace trace persistence. Runs with an explicit CKB selection now rebuild
+the exact selected projection, query it through application fan-out, persist
+content-free traces, and provide only opaque chunk references and bounded text
+to author and critic. Legacy workspaces without a CKB selection continue to
+use the earlier workspace evidence index.
 
 ## Opportunity brief contract
 

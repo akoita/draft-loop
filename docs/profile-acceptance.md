@@ -41,6 +41,6 @@ The executable evidence is
 [`candidate-profile-acceptance.test.ts`](../packages/application/src/candidate-profile-acceptance.test.ts).
 Existing storage tests separately cover migrations, immutable history,
 whole-workspace backup and restore, retention, and preservation of approved
-exports. Profile-derived retrieval indexes do not exist yet; issue #80 owns
-their construction and lifecycle cleanup rather than making this validation
-claim about a nonexistent index.
+exports. Retrieval now indexes the exact source versions selected by the
+profile and run, but this profile acceptance remains scoped to profile quality
+rather than retrieval relevance.

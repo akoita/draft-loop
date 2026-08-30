@@ -1196,7 +1196,10 @@ export function createOrchestrationEngine(
               context.jobDescription || context.requirements.map((r) => r.text).join(" "),
               { workspaceId: snapshot.workspaceId },
             )
-            .catch(() => [])
+            .catch((error: unknown) => {
+              if (context.candidateKnowledgeSelection !== undefined) throw error;
+              return [];
+            })
         : undefined;
 
       const execution =

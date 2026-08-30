@@ -18,7 +18,12 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-
+import type {
+  CandidateKnowledgeLexicalIndexIdentityInput,
+  CandidateKnowledgeLexicalRetrievalRequestInput,
+  CandidateKnowledgeLexicalRetrievalResult,
+  CandidateKnowledgeRetrievalScopeInput,
+} from "@draft-loop/domain";
 import {
   type CandidateKnowledgePortableBackupInspection,
   type CandidateKnowledgePortableBackupManifest,
@@ -58,6 +63,11 @@ import {
   type CandidateKnowledgeDirectoryRootRebindInput,
   type CandidateKnowledgeDirectoryRootRebindResult,
   type CandidateKnowledgeDirectoryRootRevisionRecord,
+  type CandidateKnowledgeLexicalIndexInspection,
+  type CandidateKnowledgeLexicalIndexRebuildInput,
+  type CandidateKnowledgeLexicalIndexRecord,
+  type CandidateKnowledgeLexicalIndexUpsertInput,
+  type CandidateKnowledgeLexicalSourceVersionDeletionInput,
   type CandidateKnowledgeRetentionClass,
   type CandidateKnowledgeRetentionOwnershipStatus,
   type CandidateKnowledgeRetentionPlan,
@@ -121,6 +131,26 @@ export interface ManagedCandidateKnowledgeSourceVersionReadResult {
 
 function currentKnowledgeStoreTimestamp(): string {
   return new Date().toISOString();
+}
+
+/**
+ * Remove the replaceable lexical projection for one CKB. The lexical storage
+ * port intentionally accepts an exact source-version-shaped input, while a
+ * lifecycle transition invalidates the whole CKB projection. The identifiers
+ * below are internal invalidation tokens; they are validated by the storage
+ * port but never persisted or exposed.
+ */
+async function invalidateCandidateKnowledgeLexicalProjection(
+  storage: SqliteStorage,
+  storeId: string,
+  knowledgeBaseId: string,
+): Promise<void> {
+  await storage.deleteCandidateKnowledgeLexicalSourceVersion({
+    storeId,
+    knowledgeBaseId,
+    sourceId: "lifecycle",
+    versionId: "lifecycle",
+  });
 }
 
 export type CandidateKnowledgeDeletionBlockerCode =
@@ -434,6 +464,23 @@ export interface CandidateKnowledgeStoreHandle extends CandidateKnowledgeBaseSto
     callback: () => Promise<T>,
     options?: CandidateKnowledgeWriterLeaseOptions,
   ) => Promise<T>;
+  /** Replaceable exact-source-version lexical projection owned by this store. */
+  readonly rebuildCandidateKnowledgeLexicalIndex: (
+    input: CandidateKnowledgeLexicalIndexRebuildInput,
+  ) => Promise<CandidateKnowledgeLexicalIndexRecord>;
+  readonly upsertCandidateKnowledgeLexicalChunks: (
+    input: CandidateKnowledgeLexicalIndexUpsertInput,
+  ) => Promise<CandidateKnowledgeLexicalIndexRecord>;
+  readonly deleteCandidateKnowledgeLexicalSourceVersion: (
+    input: CandidateKnowledgeLexicalSourceVersionDeletionInput,
+  ) => Promise<void>;
+  readonly inspectCandidateKnowledgeLexicalIndex: (
+    scope: CandidateKnowledgeRetrievalScopeInput,
+    index?: CandidateKnowledgeLexicalIndexIdentityInput,
+  ) => Promise<CandidateKnowledgeLexicalIndexInspection>;
+  readonly queryCandidateKnowledge: (
+    request: CandidateKnowledgeLexicalRetrievalRequestInput,
+  ) => Promise<CandidateKnowledgeLexicalRetrievalResult>;
   readonly createManagedCandidateKnowledgeFileSource: (
     source: CandidateKnowledgeSourceInput,
     initialVersion: ManagedCandidateKnowledgeFileVersionInput,
@@ -5242,6 +5289,10 @@ async function deleteCandidateKnowledgeBase(
       inode: artifact.identity.ino,
     })),
   };
+  // The CKB owns its replaceable lexical projection. Invalidate it before
+  // staging/removing the source graph so foreign-key checks cannot leave
+  // derived rows behind after a confirmed deletion.
+  await invalidateCandidateKnowledgeLexicalProjection(storage, descriptor.id, knowledgeBaseId);
   await storage.beginCandidateKnowledgeDeletion(operationInput);
   let logicallyCommitted = false;
   let stagingCreated = false;
@@ -5346,6 +5397,21 @@ function createHandle(
     recoveryReport: recovery,
     withWriterLease: (operation, callback, options) =>
       withCandidateKnowledgeStoreWriterLease(root, operation, callback, options),
+    rebuildCandidateKnowledgeLexicalIndex: (input) =>
+      coordinateWrite("ckb-lexical-rebuild", () =>
+        storage.rebuildCandidateKnowledgeLexicalIndex(input),
+      ),
+    upsertCandidateKnowledgeLexicalChunks: (input) =>
+      coordinateWrite("ckb-lexical-upsert", () =>
+        storage.upsertCandidateKnowledgeLexicalChunks(input),
+      ),
+    deleteCandidateKnowledgeLexicalSourceVersion: (input) =>
+      coordinateWrite("ckb-lexical-delete", () =>
+        storage.deleteCandidateKnowledgeLexicalSourceVersion(input),
+      ),
+    inspectCandidateKnowledgeLexicalIndex: (scope, index) =>
+      storage.inspectCandidateKnowledgeLexicalIndex(scope, index),
+    queryCandidateKnowledge: (request) => storage.queryCandidateKnowledge(request),
     ensureDefaultCandidateKnowledgeBase: (input) =>
       coordinateWrite("ckb-ensure-default", () =>
         storage.ensureDefaultCandidateKnowledgeBase(input),
@@ -5359,15 +5425,35 @@ function createHandle(
         storage.renameCandidateKnowledgeBase(id, displayName, updatedAt),
       ),
     archiveCandidateKnowledgeBase: (id, archivedAt) =>
-      coordinateWrite("ckb-archive", () => storage.archiveCandidateKnowledgeBase(id, archivedAt)),
+      coordinateWrite("ckb-archive", async () => {
+        const result = await storage.archiveCandidateKnowledgeBase(id, archivedAt);
+        await invalidateCandidateKnowledgeLexicalProjection(storage, descriptor.id, id);
+        return result;
+      }),
     createCandidateKnowledgeSource: (source, initialVersion) =>
-      coordinateWrite("ckb-source-create", () =>
-        storage.createCandidateKnowledgeSource(source, initialVersion),
-      ),
+      coordinateWrite("ckb-source-create", async () => {
+        const result = await storage.createCandidateKnowledgeSource(source, initialVersion);
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          source.knowledgeBaseId,
+        );
+        return result;
+      }),
     appendCandidateKnowledgeSourceVersion: (knowledgeBaseId, sourceId, version) =>
-      coordinateWrite("ckb-source-append", () =>
-        storage.appendCandidateKnowledgeSourceVersion(knowledgeBaseId, sourceId, version),
-      ),
+      coordinateWrite("ckb-source-append", async () => {
+        const result = await storage.appendCandidateKnowledgeSourceVersion(
+          knowledgeBaseId,
+          sourceId,
+          version,
+        );
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          knowledgeBaseId,
+        );
+        return result;
+      }),
     getCandidateKnowledgeSource: (knowledgeBaseId, sourceId) =>
       storage.getCandidateKnowledgeSource(knowledgeBaseId, sourceId),
     listCandidateKnowledgeSources: (knowledgeBaseId) =>
@@ -5594,27 +5680,39 @@ function createHandle(
       return retirement === undefined ? undefined : Object.freeze({ ...retirement });
     },
     retireCandidateKnowledgeSource: (knowledgeBaseId, sourceId, input) =>
-      coordinateWrite("ckb-source-retire", async () =>
-        Object.freeze({
-          ...(await storage.retireCandidateKnowledgeSource(knowledgeBaseId, sourceId, input)),
-        }),
-      ),
+      coordinateWrite("ckb-source-retire", async () => {
+        const result = await storage.retireCandidateKnowledgeSource(
+          knowledgeBaseId,
+          sourceId,
+          input,
+        );
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          knowledgeBaseId,
+        );
+        return Object.freeze({ ...result });
+      }),
     retireCandidateKnowledgeDirectoryMember: async (
       knowledgeBaseId,
       directoryId,
       sourceId,
       input,
     ) =>
-      coordinateWrite("ckb-directory-member-retire", async () =>
-        Object.freeze({
-          ...(await storage.retireCandidateKnowledgeDirectoryMember(
-            knowledgeBaseId,
-            directoryId,
-            sourceId,
-            input,
-          )),
-        }),
-      ),
+      coordinateWrite("ckb-directory-member-retire", async () => {
+        const result = await storage.retireCandidateKnowledgeDirectoryMember(
+          knowledgeBaseId,
+          directoryId,
+          sourceId,
+          input,
+        );
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          knowledgeBaseId,
+        );
+        return Object.freeze({ ...result });
+      }),
     getCandidateKnowledgeRetentionPolicy: async (knowledgeBaseId) =>
       storage.getCandidateKnowledgeRetentionPolicy(knowledgeBaseId),
     setCandidateKnowledgeRetentionPolicy: (knowledgeBaseId, input) =>
@@ -5652,39 +5750,63 @@ function createHandle(
         ),
       ),
     createManagedCandidateKnowledgeFileSource: (source, initialVersion) =>
-      coordinateWrite("ckb-managed-file-create", () =>
-        writeManagedCandidateKnowledgeFile(storage, root, {
+      coordinateWrite("ckb-managed-file-create", async () => {
+        const result = await writeManagedCandidateKnowledgeFile(storage, root, {
           kind: "create",
           source,
           version: initialVersion,
-        }),
-      ),
+        });
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          source.knowledgeBaseId,
+        );
+        return result;
+      }),
     createManagedCandidateKnowledgeUrlSource: (source, initialVersion) =>
-      coordinateWrite("ckb-managed-url-create", () =>
-        writeManagedCandidateKnowledgeUrlVersion(storage, root, {
+      coordinateWrite("ckb-managed-url-create", async () => {
+        const result = await writeManagedCandidateKnowledgeUrlVersion(storage, root, {
           kind: "create",
           source,
           version: initialVersion,
-        }),
-      ),
+        });
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          source.knowledgeBaseId,
+        );
+        return result;
+      }),
     appendManagedCandidateKnowledgeUrlVersion: (knowledgeBaseId, sourceId, version) =>
-      coordinateWrite("ckb-managed-url-append", () =>
-        writeManagedCandidateKnowledgeUrlVersion(storage, root, {
+      coordinateWrite("ckb-managed-url-append", async () => {
+        const result = await writeManagedCandidateKnowledgeUrlVersion(storage, root, {
           kind: "append",
           knowledgeBaseId,
           sourceId,
           version,
-        }),
-      ),
+        });
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          knowledgeBaseId,
+        );
+        return result;
+      }),
     appendManagedCandidateKnowledgeFileVersion: (knowledgeBaseId, sourceId, version) =>
-      coordinateWrite("ckb-managed-file-append", () =>
-        writeManagedCandidateKnowledgeFile(storage, root, {
+      coordinateWrite("ckb-managed-file-append", async () => {
+        const result = await writeManagedCandidateKnowledgeFile(storage, root, {
           kind: "append",
           knowledgeBaseId,
           sourceId,
           version,
-        }),
-      ),
+        });
+        await invalidateCandidateKnowledgeLexicalProjection(
+          storage,
+          descriptor.id,
+          knowledgeBaseId,
+        );
+        return result;
+      }),
     rebindManagedCandidateKnowledgeFileOrigin: (knowledgeBaseId, sourceId, input) =>
       coordinateWrite("ckb-managed-file-rebind", () =>
         rebindManagedCandidateKnowledgeFileOrigin(storage, root, knowledgeBaseId, sourceId, input),
