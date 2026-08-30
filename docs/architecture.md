@@ -338,15 +338,15 @@ root binding and immutable SHA-256 hashes of normalized relative member paths.
 The current bounded operations are summarized here; their full contract and
 privacy invariants are canonical in [ADR 0007][adr-0007].
 
-| Operation                     | Scope and result                                                                                                                                           | Writes                                                                                                          |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Inventory and refresh preview | Count-only store inventory; path-free member states (`current`, `changed`, `missing`, `retired`, `origin-conflict`) and unmatched-file count               | None                                                                                                            |
-| Add members                   | Confirm and append unmatched accepted files as independent sources in lexical order through shared CLI/desktop controls                                    | Each candidate's source, version, origin binding, managed bytes, journal event, and immutable member atomically |
-| Observation / applied refresh | Record path-free observations, or append changed bytes for existing active same-member files in source-ID order                                            | Observation batch is atomic; applied refresh may return path-free partial progress after a later member failure |
-| Member retirement             | Approve one active same-member `missing` member with root/member/version/origin guards                                                                    | Existing immutable `user-requested` retirement marker only; bytes and membership remain                         |
-| Root rebind                   | Reuse one complete scan, verify every historical member, and update all origins                                                                            | Guarded append-only root revision with path-free `rebound` counts, or path-free `current` no-op                 |
-| Moved-candidate preview       | Compare exact media type, checksum, and size for same-member missing sources and unmatched files                                                           | None; ambiguous matches are omitted                                                                             |
-| One-source member move        | Reuse exactly one bounded scan for one selected source; accept a unique exact-integrity missing-member match or the scanned current member for idempotency | Verified append-only member revision, or guarded no-op; result is frozen, path-free `moved`/`current`           |
+| Operation                     | Scope and result                                                                                                                                                                                           | Writes                                                                                                                                |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Inventory and refresh preview | Count-only store inventory; path-free member states (`current`, `changed`, `missing`, `retired`, `origin-conflict`) and unmatched-file count                                                               | None                                                                                                                                  |
+| Add members                   | Confirm and append unmatched accepted files as independent sources in lexical order through shared CLI/desktop controls                                                                                    | Each candidate's source, version, origin binding, managed bytes, journal event, and immutable member atomically                       |
+| Observation / applied refresh | Record path-free observations, or append changed bytes for existing active same-member files in source-ID order                                                                                            | Observation batch is atomic; applied refresh may return path-free partial progress after a later member failure                       |
+| Member retirement             | Approve one active same-member `missing` member with root/member/version/origin guards                                                                                                                     | Existing immutable `user-requested` retirement marker only; bytes and membership remain                                               |
+| Root rebind                   | Reuse one complete scan, verify every historical member, and update all origins                                                                                                                            | Guarded append-only root revision with path-free `rebound` counts, or path-free `current` no-op                                       |
+| Moved-candidate preview       | Compare exact media type, checksum, and size for same-member missing sources and unmatched files                                                                                                           | None; ambiguous matches are omitted                                                                                                   |
+| One-source member move        | Reuse exactly one bounded scan for one selected source; accept a unique exact-integrity missing-member match or the scanned current member for idempotency                                                 | Verified append-only member revision, or guarded no-op; result is frozen, path-free `moved`/`current`                                 |
 | Missing-member reconciliation | Partition one complete scan into path-free current, changed, moved-candidate, missing, already-retired, conflicted, and unmatched/new state; apply only explicitly selected retirements in source-ID order | Each retirement marker is atomic; all-success returns `applied`/`current`, while a later failure returns frozen path-free partial IDs |
 
 The explicit move command accepts no target path. It forwards a runtime-only
@@ -580,6 +580,18 @@ This first v0.8 component is a contract slice only. It does not call providers,
 persist reports, wire the CLI or desktop, establish approval semantics, or
 derive application-ready status or stopping decisions. Runtime integration is
 gated on the complete drafting and writing-policy work in #69 and #70.
+
+### Complete CV composition boundary
+
+The live author contract represents header, summary, experience, projects,
+skills, education, certifications, and languages as semantic sections. The
+author includes each section supported by retrieved candidate evidence and
+preserves authored section and entry order through the canonical artifact and
+Markdown, DOCX, and PDF exporters. Before provider output becomes an artifact,
+the application rejects substantive claims without evidence, unrelated
+citations, and changed exact invariants such as dates, metrics, credentials,
+links, employers, and multi-word titles. Missing configured sections remain
+visible to the existing deterministic completeness check.
 
 ### Author adjudication and revision trace boundary
 

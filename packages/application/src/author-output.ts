@@ -15,6 +15,8 @@ import {
 } from "@draft-loop/schemas";
 import { z } from "zod";
 
+import { completeCvProposalIssues } from "./complete-cv.js";
+
 export interface AuthorArtifactBuildContext {
   readonly language: string;
   readonly evidenceManifest: readonly Pick<EvidenceSource, "id" | "path" | "checksum">[];
@@ -143,6 +145,10 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
   const proposal = authorArtifactProposalSchema.parse(options.proposal);
   const retrievedEvidence = options.retrievedEvidence ?? [];
   const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);
+  const groundingIssues = completeCvProposalIssues(proposal, retrievedEvidence);
+  if (groundingIssues.length > 0) {
+    throw new z.ZodError(groundingIssues.map((issue) => ({ code: "custom", ...issue })));
+  }
   const executionHash = executionDigest(options.executionId);
   const claimCount = proposal.sections.reduce(
     (total, section) =>

@@ -4289,19 +4289,9 @@ export const artifactSchemaVersion = 1 as const;
 export const artifactKinds = ["cv", "cover-letter", "application-qa"] as const;
 export type ArtifactKind = (typeof artifactKinds)[number];
 
+// biome-ignore format: frozen hotspot keeps semantic variants compact.
 export const artifactSectionKinds = [
-  "summary",
-  "experience",
-  "education",
-  "skills",
-  "projects",
-  "custom",
-  "salutation",
-  "hook",
-  "alignment",
-  "closing",
-  "question",
-  "answer",
+  "summary", "experience", "education", "skills", "projects", "custom", "header", "certifications", "languages", "salutation", "hook", "alignment", "closing", "question", "answer",
 ] as const;
 
 export const artifactBlockTypes = ["paragraph", "bullet"] as const;
