@@ -649,8 +649,8 @@ approval, persists the readiness decision and an exact artifact checksum
 binding, clears that binding on revision or artifact replacement, and requires
 the same application-ready binding before export. Older snapshots may omit
 these optional fields and fail closed at export until a new approval records
-them. Provider, CLI, desktop presentation, and rendering-QA integration remain
-owned by their respective boundaries.
+them. Provider, CLI, and desktop presentation remain owned by their respective
+boundaries; export invokes the rendering-QA contract after this binding passes.
 
 ### Rendering and rendering-QA boundary (#74)
 
@@ -663,16 +663,18 @@ an overflowing PDF is a deterministic QA failure signal.
 
 `buildRenderingQaReport` produces a strict, immutable, content-free report of
 exact visible-content integrity, section/block order, active-content signatures,
-and inspectable PDF page counts. An independent viewer observation is optional
-for Markdown, but is required before PDF or DOCX QA can be complete or pass.
-Self-extraction from the renderer is deterministic integrity evidence, not
-independent ATS or viewer evidence. Structured links and images are explicit
-limitations because the current artifact model does not represent them.
+and inspectable PDF page counts. The application builds this report after exact
+approval and before writing any export, and persists it with export history.
+Markdown uses deterministic QA; PDF and DOCX use the named controlled byte
+inspectors, which recover text and report bounded page/layout failures.
 
-This first #74 component does not deliver visual golden tests, a viewer adapter,
-link modeling, persistence, UI profile selection, approval/export wiring, or
-complete #69/#73 integration. The current PDF and DOCX implementations remain
-minimal, and v0.8 is not complete or validated by this contract slice.
+The PDF inspector checks page targets, blank pages, text coordinates, and
+orphaned section starts where a page boundary makes them determinable. The DOCX
+inspector checks OOXML text order, explicit page breaks, package integrity, and
+relationship targets. OOXML bytes cannot establish true office pagination or
+visual clipping, so that limitation remains explicit; this is not exhaustive
+cross-viewer certification. Structured links and images remain unsupported by
+the current artifact model.
 
 ## Author–critic loop
 

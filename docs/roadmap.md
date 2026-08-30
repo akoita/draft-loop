@@ -175,7 +175,7 @@ applications.
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Now      | Evidence-backed CV drafting (v0.7 program) | [Released alpha.3 checkpoint](stage-evidence-v0.7.0-alpha.3.md); [Released alpha.4 checkpoint](stage-evidence-v0.7.0-alpha.4.md); [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | Complete CV composition, runtime review/readiness/rendering integration, and representative validation remain |
-| Next     | Usable CV MVP ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Retrieval, deterministic planning, complete CV composition, and #72 runtime author handoff integrated; two bounded capabilities remain | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Complete #73, then #74 |
+| Next     | Usable CV MVP ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | All bounded MVP capabilities integrated; deterministic validation complete | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Record representative outcome evidence without overstating DOCX visual coverage |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
@@ -249,10 +249,9 @@ chronology, factual invariants, provenance, and writing-policy checks pass.
 Turn selected candidate evidence and one reviewed opportunity into a complete,
 independently reviewed, human-approved, ATS-readable CV.
 
-Retrieval #80, planning #68, complete CV composition #69, and the #72 runtime
-author handoff are complete. Execute the remaining capabilities in order: #73,
-then #74. Each is one
-MVP outcome and one PR. Routine MVP implementation uses one verified Luna
+Retrieval #80, planning #68, complete CV composition #69, the #72 runtime
+author handoff, exact approval readiness #73, and bounded rendering QA #74 are
+integrated. Each was one MVP outcome and one PR. Routine MVP implementation uses one verified Luna
 implementation worker, no separate scout or reviewer, while the Sol root keeps
 requirements, one consolidated diff review, and publication. Use focused checks
 while developing and run the full validation gate once before publication.
@@ -347,16 +346,16 @@ imported policy as a complete run override without mutating the active
 workspace policy. The run pins both base and override versions. This completes
 issue #70; the milestone remains incomplete pending its other drafting outcomes.
 
-The first #74 component is implemented as controlled A4 layout profiles and a
-strict, content-free rendering-QA report builder. It preserves exact visible
-content and ordering signals, detects local active-content signatures, and
-inspects PDF page targets. PDF/DOCX reports remain incomplete without an
-independent viewer observation; renderer self-extraction is not independent
-ATS or visual evidence. The current PDF/DOCX implementations remain minimal.
-Visual golden tests, viewer adapters, link modeling, persistence, UI profile
-selection, approval/export wiring, and complete #69/#73 integration are not
-delivered. This is the first #74 component only; #74 and v0.8 remain incomplete
-and unvalidated.
+Issue #74 now connects the controlled A4 renderers to a strict, content-free
+rendering-QA report at export time. Markdown uses deterministic checks; PDF and
+DOCX use named byte inspectors for recovered text order, package integrity, and
+bounded page/layout failures. Export refuses incomplete or failing PDF/DOCX QA
+and persists the report with export history. DOCX OOXML cannot establish true
+office pagination or visual clipping, so that limitation remains explicit
+rather than being represented as viewer certification. Cross-viewer golden
+tests, link modeling, UI profile selection, and broader validation remain out
+of scope. The bounded v0.8 implementation and deterministic validation are
+complete; representative outcome evidence remains before release claims.
 
 **Exit criterion:** The complete factual draft receives an independent critique
 and traceable revision; unresolved disagreements remain visible; deterministic
@@ -471,6 +470,8 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Integrated #74 controlled rendering QA into approved export. | Markdown uses deterministic integrity checks; PDF and DOCX use named byte inspectors before any file is written, and the content-free report is retained with export history. DOCX office pagination and clipping remain explicit limitations rather than implied certification. |
+| 2026-08-30 | Integrated #73 exact application-readiness approval and export binding. | Human approval now follows a fresh deterministic decision for the current reviewed artifact, revisions invalidate it, and export accepts only the exact approved content checksum. |
 | 2026-08-30 | Integrated the #72 live author handoff for adjudicated revisions. | The matching revision author receives the persisted content-safe plan with explicit accepted-effect, disagreement-preservation, and evidence-safety instructions; the remaining v0.8 sequence is #73, then #74. |
 | 2026-08-30 | Added deterministic requirement-to-achievement planning before provider drafting. | Each selected achievement cites one unique retrieved chunk, uncovered requirements remain explicit, and zero relevant evidence blocks provider drafting. The implementation lives in a focused module while the local-runtime hotspot shrinks. |
 | 2026-08-30 | Froze growth in the six concentrated TypeScript architecture hotspots. | New MVP behavior must live in focused modules, validation rejects hotspot line-count growth, and every extraction lowers the permanent baseline instead of allowing the monoliths to regrow. |

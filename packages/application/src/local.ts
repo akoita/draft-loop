@@ -103,6 +103,7 @@ import type {
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
+import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import type {
   ApplicationDriver,
@@ -2920,7 +2921,6 @@ export async function resumeRun(
     await storage.close();
   }
 }
-
 type LifecycleAction =
   | "pause"
   | "stop"
@@ -3123,7 +3123,6 @@ export async function readRunIndependentReview(
     await storage.close();
   }
 }
-
 export async function exportRun(
   rootInput: string,
   runIdInput: string | undefined,
@@ -3165,6 +3164,7 @@ export async function exportRun(
       allowUnbackedClaims: false,
       generatedAt: timestamp(),
     });
+    const renderingQa = assertExportRenderingQa(snapshot.artifact, rendered);
     await writeFile(outputPath, rendered.content);
     const outputChecksum = rendered.metadata.checksum;
     await storage.saveExport({
@@ -3183,6 +3183,7 @@ export async function exportRun(
         artifactVersion: rendered.metadata.artifactVersion,
         templateVersion: rendered.metadata.templateVersion,
         mimeType: rendered.mimeType,
+        renderingQa,
       },
     });
     const transitionEngine = createOrchestrationEngine({
@@ -3234,7 +3235,6 @@ export async function latestExportPath(
     await storage.close();
   }
 }
-
 function writingPolicyVersionMetadata(
   record: WritingPolicyVersionRecord,
 ): WritingPolicyVersionMetadata {
