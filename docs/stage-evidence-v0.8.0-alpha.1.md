@@ -1,12 +1,11 @@
-# v0.8.0-alpha.1 Usable CV MVP stage-exit candidate
+# v0.8.0-alpha.1 Usable CV MVP release evidence
 
-**Status:** Pre-release stage-exit candidate — outcome not yet Validated or Released  
+**Status:** Released alpha artifact — outcome not Validated
 **Recorded:** 2026-08-30  
 **Stage:** Usable CV MVP  
 **Scope:** All 17 v0.8 issues are closed. The bounded drafting, review,
-readiness, and export capabilities are integrated and have deterministic
-validation evidence. This record is prepared before release workflow
-publication and does not claim a published artifact.
+readiness, and export capabilities are integrated, deterministically validated,
+and published as a cross-platform alpha artifact.
 
 ## Evidence and boundary
 
@@ -37,13 +36,28 @@ quality gates:
 These checks establish implementation and integration evidence. They do not
 establish a representative product outcome.
 
+## Release evidence
+
+- The exact release revision `85aae36d1c879bc0cdd81856ec179e8e89efea3e`
+  passed `pnpm release:preflight`, including the deterministic suite and the
+  synthetic live-provider workflow using Anthropic as author and OpenAI as
+  critic.
+- The [release workflow](https://github.com/akoita/draft-loop/actions/runs/33313291567)
+  passed source validation and produced Linux x64, macOS arm64, and Windows x64
+  desktop artifacts.
+- The [v0.8.0-alpha.1 prerelease](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)
+  points to that exact revision and publishes the three platform ZIPs,
+  `release-manifest.json`, `SHA256SUMS`, and a CycloneDX SBOM.
+- A preceding [dry run](https://github.com/akoita/draft-loop/actions/runs/33313093965)
+  verified the same platform matrix and release metadata. Provenance
+  attestation was not requested for this alpha.
+
 ## Outcome boundary
 
-No representative consented outcome has been recorded for this candidate. The
-v0.8 outcome therefore remains unvalidated, and the candidate must not be
-described as Validated or Released before the release workflow publishes the
-approved revision. After publication, the roadmap should add the release tag,
-manifest, checksums, platform results, and any sanitized acceptance results.
+No representative consented outcome has been recorded for this release. The
+artifact is Released, but the v0.8 product outcome remains unvalidated.
+Deterministic and synthetic checks must not be presented as representative
+acceptance evidence.
 
 ## Remaining limitations
 
@@ -56,7 +70,5 @@ manifest, checksums, platform results, and any sanitized acceptance results.
 
 ## Next decision
 
-Publish this alpha candidate only after maintainer review and the release
-workflow's artifact checks. Keep v0.9 workflow parity and release work queued
-after this publication: comparison evidence is #75 and the release evidence and
-next decision are #76.
+Proceed to v0.9 workflow parity without broadening the MVP. Comparison evidence
+is #75; consolidated release evidence and the next product decision are #76.

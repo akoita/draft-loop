@@ -14,11 +14,11 @@ up traceability or control of their source material. Claims remain connected to
 candidate-provided evidence, provider and model identities are visible, and the
 candidate decides what to approve and export.
 
-> **Current maturity:** DraftLoop is the `v0.8.0-alpha.1` Usable CV MVP
-> stage-exit candidate. Its bounded capabilities are integrated and
-> deterministically validated, but no representative consented outcome has
-> been recorded. The [roadmap and current status](docs/roadmap.md) record its
-> evidence and remaining gaps. This project is not production-ready.
+> **Current maturity:** DraftLoop `v0.8.0-alpha.1` is a released Usable CV MVP
+> alpha. Its bounded capabilities are integrated and deterministically
+> validated, but no representative consented outcome has been recorded. The
+> [roadmap and current status](docs/roadmap.md) record its evidence and
+> remaining gaps. This project is not production-ready.
 
 ## How DraftLoop works
 
@@ -73,7 +73,7 @@ shasum -a 256 "./<downloaded-archive>.zip"
 On Windows, run `(Get-FileHash .\your-download.zip -Algorithm SHA256).Hash` in
 PowerShell and compare that output with the matching `SHA256SUMS` entry. Extract
 the matching ZIP and launch the desktop executable from the extracted folder.
-These are v0.8 alpha stage-exit candidate packages, not signed installers or
+These are v0.8 alpha packages, not signed installers or
 dependable real-application tooling; no representative consented outcome has
 been recorded, and signing and automatic updates remain ahead. The CLI is a
 separate, source-only interface and has no standalone installer.
