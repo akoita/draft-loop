@@ -19,7 +19,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "0.116.0",
+    "@anthropic-ai/sdk": "0.117.1",
     "@draft-loop/artifacts": "workspace:*",
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/ingestion": "workspace:*",
@@ -29,7 +29,7 @@
     "@draft-loop/schemas": "workspace:*",
     "@draft-loop/security": "workspace:*",
     "@draft-loop/storage": "workspace:*",
-    "openai": "7.4.0",
+    "openai": "7.5.0",
     "zod": "4.4.3"
   }
 }
