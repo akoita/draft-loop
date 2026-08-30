@@ -362,13 +362,20 @@ and traceable revision; unresolved disagreements remain visible; deterministic
 factuality, completeness, chronology, ATS, and approval gates prevent a
 regressed artifact from being labelled application-ready.
 
-### Next — Workflow parity and release (v0.9, after v0.8 publication)
+### Now — Workflow parity and release (v0.9)
 
 After v0.8.0-alpha.1 publication, compare the complete workflow with the
 consented private manual baseline using predeclared factuality, completeness, recall, coverage, effort, cost,
 confidence, and usability measures (#75), then publish evidence, artifacts,
 manifests, checksums, platform results, limitations, and the next decision
 (#76).
+
+Issues #75 and #76 remain outcome rollups rather than executable sprint units.
+The dependency-ordered v0.9 work first enforces a private predeclared
+comparison gate (#248), then records one consented parity result (#249),
+prepares the exact release candidate after #75 closes (#250), and publishes the
+release evidence and next decision (#251) before closing #76. Each child keeps
+one primary boundary, focused verification, and a one-PR exit.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -470,6 +477,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Split the v0.9 workflow-parity and release rollups into four dependency-ordered execution issues. | #248 predeclares the private comparison gate before #249 records the consented outcome; #250 prepares the release candidate only after #75 closes, and #251 records released evidence and the next decision before #76 closes. |
 | 2026-08-30 | Integrated #74 controlled rendering QA into approved export. | Markdown uses deterministic integrity checks; PDF and DOCX use named byte inspectors before any file is written, and the content-free report is retained with export history. DOCX office pagination and clipping remain explicit limitations rather than implied certification. |
 | 2026-08-30 | Integrated #73 exact application-readiness approval and export binding. | Human approval now follows a fresh deterministic decision for the current reviewed artifact, revisions invalidate it, and export accepts only the exact approved content checksum. |
 | 2026-08-30 | Integrated the #72 live author handoff for adjudicated revisions. | The matching revision author receives the persisted content-safe plan with explicit accepted-effect, disagreement-preservation, and evidence-safety instructions; the remaining v0.8 sequence is #73, then #74. |

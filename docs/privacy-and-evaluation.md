@@ -462,11 +462,19 @@ deltas, and revised-versus-baseline comparisons. The CI gate is first-to-
 revised: configured tolerances must not allow a revised draft to regress a
 dimension. The manual baseline is a comparison reference, not automatic truth.
 
-For a consented real-application outcome, the harness may record only a private,
-content-free result: approval/export completion, round count, provider cost,
-user confidence, misleading-evidence observations, prompt-injection
-observations, critical-requirement coverage, and unsupported-claim counts. A
-synthetic fixture or incomplete outcome is indeterminate evidence; follow the
+For a consented real-application outcome, the harness requires a private,
+predeclared v1 comparison gate after consent and no later than the first draft.
+The private record carries bounded recall, coverage, and revised-effort
+thresholds plus factual-invariant, section-preservation, chronology, and recall
+measurements. Factual-invariant violations and unsupported model-added claims
+remain zero-tolerance checks. The sanitized report exposes only the overall
+gate status and the `pass`, `fail`, or `indeterminate` status for each named
+dimension; it does not copy timestamps, thresholds, measurements, identifiers,
+content, or paths. The report may retain permitted aggregate outcome measures:
+approval/export completion, round count, provider cost, user confidence,
+misleading-evidence observations, prompt-injection observations,
+critical-requirement coverage, and unsupported-claim counts. A synthetic
+fixture or incomplete outcome is indeterminate evidence; follow the
 [consented outcome pilot protocol](pilot-protocol.md).
 
 Fixtures must be synthetic and contain no real candidate documents, provider

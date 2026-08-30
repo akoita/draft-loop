@@ -72,7 +72,7 @@ const validCase: ConsentedPilotCase = {
   context,
   consent: {
     candidateId: "candidate-sanitized-1",
-    consentedAt: "2026-08-17T12:00:00.000Z",
+    consentedAt: "2026-08-17T08:00:00.000Z",
     sanitizationCompleted: true,
     piiRedacted: true,
     employerSecretsRedacted: true,
@@ -90,9 +90,30 @@ const validCase: ConsentedPilotCase = {
     promptInjection: "not-tested",
     limitations: ["single-consented-case"],
   },
+  comparisonGate: {
+    schemaVersion: 1,
+    declaredAt: "2026-08-17T09:00:00.000Z",
+    thresholds: {
+      minimumRelevantAchievementRecall: 0.8,
+      minimumCriticalRequirementCoverage: 1,
+      maximumRevisedReviewMinutes: 0,
+      maximumRevisedEditCount: 0,
+    },
+  },
+  comparisonMeasurements: {
+    factualInvariantViolationCount: 0,
+    requiredSectionsPreserved: true,
+    chronologyPreserved: true,
+    relevantAchievementRecall: 1,
+  },
   firstDraft: artifact("first"),
   revisedDraft: artifact("revised"),
   manualBaseline: artifact("manual"),
+  userEffort: {
+    "first-draft": { reviewMinutes: 1, editCount: 1 },
+    "revised-draft": { reviewMinutes: 0, editCount: 0 },
+    "manual-baseline": { reviewMinutes: 1, editCount: 1 },
+  },
 };
 
 const silentIo = { write: () => {} };

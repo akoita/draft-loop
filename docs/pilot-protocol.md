@@ -1,10 +1,10 @@
 # Consented outcome pilot protocol
 
-This protocol is for the real-application validation gate in roadmap issue
-104. It is deliberately split into a private record and a sanitized report:
-the private record may identify the participant and retain the local run, while
-the repository report contains only aggregate measures and bounded status
-values.
+This protocol supports the real-application comparison in roadmap issue #75;
+the enforceable comparison-gate contract is implemented in issue #248. It is
+deliberately split into a private record and a sanitized report: the private
+record may identify the participant and retain the local run, while the
+repository report contains only aggregate measures and bounded status values.
 
 ## Before the run
 
@@ -19,12 +19,34 @@ values.
    retention choice, budget, and explicit acknowledgement before a live run.
 4. Use a representative application and record whether a manual baseline is
    available. Do not replace a missing baseline with a synthetic fixture.
+5. After consent and before creating the first draft, declare the private v1
+   comparison gate described below. Keep its declaration timestamp no later
+   than the first-draft timestamp.
+
+## Private comparison gate
+
+Every real-outcome case passed to the harness with `requireOutcome: true` must
+carry a complete, versioned `comparisonGate` and its private
+`comparisonMeasurements`. The v1 gate records `schemaVersion: 1`, `declaredAt`,
+and thresholds for minimum relevant-achievement recall, minimum
+critical-requirement coverage, maximum revised review minutes, and maximum
+revised edit count. Thresholds are bounded and are fixed before the first
+draft; they are not tuned after seeing the variants.
+
+Factual-invariant violations and unsupported model-added claims are fixed
+zero-tolerance checks, not configurable allowances. Required-section
+preservation, chronology preservation, and professional readiness are also
+mandatory dimensions. The private measurements record the factual-invariant
+violation count, required-sections-preserved flag, chronology-preserved flag,
+and relevant-achievement recall. The harness validates strict ISO timestamps
+and requires `consentedAt <= declaredAt <= firstDraft.createdAt`.
 
 ## Outcome record
 
 Record the content-free `PilotOutcomeRecord` after the user has reviewed the
 result. The fields are intentionally limited to completion, counts, cost,
-confidence, bounded adversarial observations, and structured limitations:
+confidence, bounded adversarial observations, and structured limitations. The
+gate and comparison measurements remain in the private case file:
 
 - approval and export completion, including the formats that were actually
   exported;
@@ -54,10 +76,19 @@ The harness also computes critical-requirement coverage and deterministic
 unsupported-claim counts for the first draft, revised draft, and manual
 baseline. These are signals for the review, not truth proofs.
 
+The sanitized summary exposes only the comparison-gate overall status and the
+`pass`, `fail`, or `indeterminate` status for each named dimension: factual
+safety, required-section preservation, chronology preservation,
+relevant-achievement recall, critical-requirement coverage, bounded human
+review, and professional readiness. It does not expose `declaredAt`, private
+thresholds, private measurements, candidate identifiers, draft content, or
+paths.
+
 Each case supplies `context`, `firstDraft`, `revisedDraft`, and
-`manualBaseline` as draft artifacts, plus the consent and outcome records. The
-manual baseline is authored by the candidate rather than parsed from a
-document, so the candidate controls exactly what it asserts.
+`manualBaseline` as draft artifacts, plus the consent, outcome, gate, and
+private measurement records. The manual baseline is authored by the candidate
+rather than parsed from a document, so the candidate controls exactly what it
+asserts.
 
 ## Reporting and decision gate
 
@@ -66,8 +97,9 @@ for anonymized reporting. The summary must not contain candidate identifiers,
 source paths, claim text, evidence excerpts, prompts, provider responses,
 credentials, employer names, or free-form private notes.
 
-Do not call the stage validated when the report is `INDETERMINATE`, when
-approval or export is incomplete, or when the sample is only synthetic. A
-passing report supports one consented outcome observation; it does not prove
-generalization. Record the remaining limitations and the next decision in
-`docs/roadmap.md` and the stage evidence before preparing the release.
+Do not call the stage validated when the report is `INDETERMINATE`, when any
+comparison-gate dimension fails or is indeterminate, when approval or export
+is incomplete, or when the sample is only synthetic. A passing report supports
+one consented outcome observation; it does not prove generalization. Record
+the remaining limitations and the next decision in `docs/roadmap.md` and the
+stage evidence before preparing the release.

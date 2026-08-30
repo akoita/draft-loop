@@ -9,6 +9,7 @@ import {
 } from "@draft-loop/schemas";
 
 export * from "./pilot.js";
+export * from "./pilot-comparison-gate.js";
 export * from "./readiness-report.js";
 export * from "./retrieval.js";
 export * from "./stopping-decision.js";

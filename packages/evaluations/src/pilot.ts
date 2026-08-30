@@ -8,6 +8,17 @@ import {
   type ReadinessDimension,
   readinessDimensions,
 } from "./index.js";
+import {
+  evaluatePilotComparisonGate,
+  type PilotComparisonGate,
+  type PilotComparisonGateDimension,
+  type PilotComparisonGateEvaluationInput,
+  type PilotComparisonGateStatus,
+  type PilotComparisonMeasurements,
+  pilotComparisonGateDimensions,
+  validatePilotComparisonGate,
+  validatePilotComparisonMeasurements,
+} from "./pilot-comparison-gate.js";
 
 export const pilotExportFormats = ["markdown", "docx", "pdf"] as const;
 export type PilotExportFormat = (typeof pilotExportFormats)[number];
@@ -56,6 +67,10 @@ export interface PilotOutcomeRecord {
 export interface ConsentedPilotCase extends EvaluationCase {
   readonly consent: PilotConsentRecord;
   readonly outcome?: PilotOutcomeRecord;
+  /** Private, predeclared thresholds for a real-outcome comparison. */
+  readonly comparisonGate?: PilotComparisonGate;
+  /** Private measurements that are not available from deterministic checks. */
+  readonly comparisonMeasurements?: PilotComparisonMeasurements;
   readonly findingsDisposition?: {
     readonly usefulCount: number;
     readonly rejectedCount: number;
@@ -76,6 +91,11 @@ export interface PilotVariantSafetyMeasures {
   readonly unsupportedClaimCount: number | null;
 }
 
+export interface PilotComparisonGateSummary {
+  readonly dimensions: Readonly<Record<PilotComparisonGateDimension, PilotComparisonGateStatus>>;
+  readonly overall: PilotComparisonGateStatus;
+}
+
 export interface PilotSummaryReport {
   readonly generatedAt: string;
   readonly caseCount: number;
@@ -91,6 +111,8 @@ export interface PilotSummaryReport {
     readonly recommendations: readonly string[];
   };
   readonly outcomeValidation: PilotHypothesisResult;
+  /** Bounded statuses only; gate thresholds and per-case measurements stay private. */
+  readonly comparisonGate: PilotComparisonGateSummary;
   readonly productMeasures: {
     readonly outcomeCaseCount: number;
     readonly approvalCompletionRate: number | null;
@@ -168,6 +190,20 @@ function validatePilotOutcomeCase(pilotCase: ConsentedPilotCase): void {
   validatePilotOutcome(pilotCase.outcome);
 }
 
+function validatePilotComparisonGateCase(pilotCase: ConsentedPilotCase): void {
+  if (pilotCase.comparisonGate === undefined) {
+    throw new Error("A real pilot case must record a predeclared comparison gate.");
+  }
+  if (pilotCase.comparisonMeasurements === undefined) {
+    throw new Error("A real pilot case must record private comparison measurements.");
+  }
+  validatePilotComparisonGate(pilotCase.comparisonGate, {
+    consentedAt: pilotCase.consent.consentedAt,
+    firstDraftCreatedAt: pilotCase.firstDraft.createdAt,
+  });
+  validatePilotComparisonMeasurements(pilotCase.comparisonMeasurements);
+}
+
 function computeVariantSummary(
   variant: EvaluationVariant,
   comparisons: readonly ReturnType<typeof compareEvaluationCase>[],
@@ -235,13 +271,7 @@ function safetyMeasures(
   let unsupportedClaims = 0;
 
   for (const pilotCase of cases) {
-    const artifact =
-      variant === "first-draft"
-        ? pilotCase.firstDraft
-        : variant === "revised-draft"
-          ? pilotCase.revisedDraft
-          : pilotCase.manualBaseline;
-    const validation = validateDraftArtifact(artifact, pilotCase.context);
+    const validation = validateDraftVariant(variant, pilotCase);
     const uncovered = new Set(
       validation.issues
         .filter((issue) => issue.code === "uncovered-requirement")
@@ -268,11 +298,117 @@ function safetyMeasures(
   };
 }
 
+function validateDraftVariant(
+  variant: EvaluationVariant,
+  pilotCase: ConsentedPilotCase,
+): ReturnType<typeof validateDraftArtifact> {
+  const artifact =
+    variant === "first-draft"
+      ? pilotCase.firstDraft
+      : variant === "revised-draft"
+        ? pilotCase.revisedDraft
+        : pilotCase.manualBaseline;
+  return validateDraftArtifact(artifact, pilotCase.context);
+}
+
+function caseSafetyMeasures(
+  variant: EvaluationVariant,
+  pilotCase: ConsentedPilotCase,
+): PilotVariantSafetyMeasures {
+  const validation = validateDraftVariant(variant, pilotCase);
+  const uncovered = new Set(
+    validation.issues
+      .filter((issue) => issue.code === "uncovered-requirement")
+      .map((issue) => issue.requirementId),
+  );
+  const critical = pilotCase.context.requirements.filter(
+    (requirement) => requirement.priority === "critical",
+  );
+  return {
+    criticalRequirementCoverage:
+      critical.length === 0
+        ? null
+        : Number(
+            (
+              critical.filter((requirement) => !uncovered.has(requirement.id)).length /
+              critical.length
+            ).toFixed(4),
+          ),
+    unsupportedClaimCount: validation.issues.filter((issue) => issue.code === "unsupported-claim")
+      .length,
+  };
+}
+
 function averageNullable(values: readonly (number | null)[]): number | null {
   const available = values.filter((value): value is number => value !== null);
   return available.length === 0
     ? null
     : Number((available.reduce((total, value) => total + value, 0) / available.length).toFixed(2));
+}
+
+function emptyComparisonGateSummary(): PilotComparisonGateSummary {
+  return {
+    dimensions: Object.fromEntries(
+      pilotComparisonGateDimensions.map((dimension) => [dimension, "indeterminate"]),
+    ) as Record<PilotComparisonGateDimension, PilotComparisonGateStatus>,
+    overall: "indeterminate",
+  };
+}
+
+function aggregatePilotComparisonGateStatuses(
+  evaluations: readonly ReturnType<typeof evaluatePilotComparisonGate>[],
+): PilotComparisonGateSummary {
+  const dimensions = Object.fromEntries(
+    pilotComparisonGateDimensions.map((dimension) => {
+      const statuses = evaluations.map((evaluation) => evaluation.dimensions[dimension]);
+      const status: PilotComparisonGateStatus = statuses.includes("fail")
+        ? "fail"
+        : statuses.includes("indeterminate")
+          ? "indeterminate"
+          : "pass";
+      return [dimension, status];
+    }),
+  ) as Record<PilotComparisonGateDimension, PilotComparisonGateStatus>;
+  const statuses = Object.values(dimensions);
+  return {
+    dimensions,
+    overall: statuses.includes("fail")
+      ? "fail"
+      : statuses.includes("indeterminate")
+        ? "indeterminate"
+        : "pass",
+  };
+}
+
+function evaluateComparisonGateSummary(
+  cases: readonly ConsentedPilotCase[],
+  comparisons: readonly ReturnType<typeof compareEvaluationCase>[],
+): PilotComparisonGateSummary {
+  const evaluations = cases.map((pilotCase, index) => {
+    const gate = pilotCase.comparisonGate;
+    const measurements = pilotCase.comparisonMeasurements;
+    const comparison = comparisons[index];
+    if (gate === undefined || measurements === undefined || comparison === undefined) {
+      throw new Error("Pilot comparison gate data is incomplete.");
+    }
+    const revised = comparison.results.find((result) => result.variant === "revised-draft");
+    if (revised === undefined) {
+      throw new Error("Pilot comparison results are incomplete.");
+    }
+    const revisedSafety = caseSafetyMeasures("revised-draft", pilotCase);
+    const input: PilotComparisonGateEvaluationInput = {
+      ...measurements,
+      unsupportedClaimCount: revisedSafety.unsupportedClaimCount,
+      criticalRequirementCoverage: revisedSafety.criticalRequirementCoverage,
+      revisedReviewMinutes: pilotCase.userEffort?.["revised-draft"]?.reviewMinutes ?? null,
+      revisedEditCount: pilotCase.userEffort?.["revised-draft"]?.editCount ?? null,
+      revisedReady: revised.evaluation.ready,
+      approvalCompleted: pilotCase.outcome?.approvalCompleted ?? null,
+      exportCompleted: pilotCase.outcome?.exportCompleted ?? null,
+    };
+    return evaluatePilotComparisonGate(gate, input);
+  });
+  return aggregatePilotComparisonGateStatuses(evaluations);
 }
 
 export function generatePilotMarkdownReport(
@@ -339,6 +475,25 @@ export function generatePilotMarkdownReport(
   }
 
   lines.push("");
+  lines.push("## Predeclared comparison gate");
+  lines.push("");
+  lines.push(`- **Overall:** ${report.comparisonGate.overall.toUpperCase()}`);
+  const comparisonGateLabels: Readonly<Record<PilotComparisonGateDimension, string>> = {
+    factualSafety: "Factual safety",
+    requiredSectionPreservation: "Required-section preservation",
+    chronologyPreservation: "Chronology preservation",
+    relevantAchievementRecall: "Relevant-achievement recall",
+    criticalRequirementCoverage: "Critical-requirement coverage",
+    boundedHumanReview: "Bounded human review",
+    professionalReadiness: "Professional readiness",
+  };
+  for (const dimension of pilotComparisonGateDimensions) {
+    lines.push(
+      `- **${comparisonGateLabels[dimension]}:** ${report.comparisonGate.dimensions[dimension].toUpperCase()}`,
+    );
+  }
+
+  lines.push("");
   lines.push("## Consented application outcome");
   lines.push("");
   lines.push(`- **Outcome validation:** ${report.outcomeValidation.toUpperCase()}`);
@@ -400,11 +555,21 @@ export function runConsentedPilotHarness(
   }
 
   for (const pilotCase of cases) {
-    if (options?.requireOutcome) validatePilotOutcomeCase(pilotCase);
-    else validatePilotConsent(pilotCase.consent);
+    if (options?.requireOutcome) {
+      validatePilotOutcomeCase(pilotCase);
+      // All private gate declarations and measurements are checked before any
+      // draft evaluation runs, so malformed real-outcome input cannot reach
+      // compareEvaluationCase.
+      validatePilotComparisonGateCase(pilotCase);
+    } else {
+      validatePilotConsent(pilotCase.consent);
+    }
   }
 
   const comparisons = cases.map((pilotCase) => compareEvaluationCase(pilotCase, options));
+  const comparisonGate = options?.requireOutcome
+    ? evaluateComparisonGateSummary(cases, comparisons)
+    : emptyComparisonGateSummary();
 
   const variants: Record<EvaluationVariant, PilotVariantSummary> = {
     "first-draft": computeVariantSummary("first-draft", comparisons),
@@ -470,9 +635,13 @@ export function runConsentedPilotHarness(
   const outcomeValidation: PilotHypothesisResult =
     outcomeCaseCount === 0
       ? "indeterminate"
-      : allOutcomesComplete && factualityPreservedOrImproved === "pass"
-        ? "pass"
-        : "fail";
+      : !allOutcomesComplete || factualityPreservedOrImproved !== "pass"
+        ? "fail"
+        : options?.requireOutcome && comparisonGate.overall === "indeterminate"
+          ? "indeterminate"
+          : !options?.requireOutcome || comparisonGate.overall === "pass"
+            ? "pass"
+            : "fail";
   const misleadingEvidence = emptyObservationCounts();
   const promptInjection = emptyObservationCounts();
   const limitations = emptyLimitationCounts();
@@ -536,6 +705,7 @@ export function runConsentedPilotHarness(
       recommendations,
     },
     outcomeValidation,
+    comparisonGate,
     productMeasures,
   };
 
