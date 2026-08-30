@@ -560,7 +560,11 @@ describe("local application driver", () => {
     const silent = { write: () => undefined };
     const storeRoot = join(root, "selection-store");
     const candidatePath = join(root, "selection-source.md");
-    await writeFile(candidatePath, "Private selection bytes.\n", "utf8");
+    await writeFile(
+      candidatePath,
+      "Built TypeScript local-first tools with deterministic testing. Private selection bytes.\n",
+      "utf8",
+    );
     await initializeReadyCandidateKnowledgeStore(storeRoot, candidatePath, [
       "provider-selection-store",
       "provider-selection-ckb",
@@ -616,6 +620,8 @@ describe("local application driver", () => {
 
       expect(authorInputs).toHaveLength(1);
       expect(authorInputs[0]).toContain("Private selection bytes.");
+      expect(authorInputs[0]).toContain('"achievementPlan"');
+      expect(authorInputs[0]).toContain('"status":"ready"');
       expect(authorInputs[0]).not.toContain(
         "Built local-first TypeScript tools with deterministic testing.",
       );
@@ -631,7 +637,7 @@ describe("local application driver", () => {
         expect(traces).toHaveLength(1);
         expect(traces[0]).toMatchObject({
           purpose: "achievement-recall",
-          status: "bounded-fallback",
+          status: "matched",
           selectedChunkCount: 1,
           selectedSourceCount: 1,
         });
