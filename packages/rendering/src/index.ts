@@ -1375,3 +1375,5 @@ export function renderArtifact(
     metadata: Object.freeze(metadata),
   });
 }
+
+export * from "./controlled-document-inspector.js";
