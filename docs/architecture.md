@@ -130,8 +130,12 @@ each portable store owns its replaceable exact-source-version lexical index,
 while the application fans out only across the workspace's explicit selection
 and persists content-free retrieval traces in workspace history. This keeps
 active derived rows inside the lifecycle boundary that can delete or rebuild
-them. The legacy workspace evidence index remains readable until the complete
-issue #80 path is integrated and validated.
+them. SQLite migration 25 supplies the separate CKB chunk/FTS projection,
+manifest freshness inspection, deterministic exact-scope query and fallback,
+whole-projection invalidation on source-version deletion, and immutable
+workspace trace persistence. The legacy workspace evidence index remains
+readable until lifecycle synchronization and the complete issue #80 runtime
+path are integrated and validated.
 
 ## Opportunity brief contract
 
