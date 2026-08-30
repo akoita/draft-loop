@@ -322,8 +322,11 @@ categories; every fact needs a locally verified quote from its cited normalized
 source that contains the proposed value, and the quote is discarded after exact CKB provenance is mapped.
 Application code owns deterministic IDs, conflicts, possible duplicates,
 omissions, and append-only persistence. Concrete
-provider and shared CLI/desktop adapters, lifecycle invalidation/deletion, and
-reviewed-profile run binding remain open, so #66 is still incomplete.
+provider execution now uses the configured author model through the existing
+API-key, authenticated user-session, or local transports while retaining the
+strict path-free request and response boundaries. Shared application,
+CLI/desktop adapters, lifecycle invalidation/deletion, and reviewed-profile run
+binding remain open, so #66 is still incomplete.
 
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
@@ -463,6 +466,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Added configured-provider execution for canonical-profile extraction. | Explicitly approved, bounded path-free source text can use the workspace author model through existing API-key, authenticated user-session, or local transports. Strict local schema, citation, and grounding checks still own what can become a profile; application/CLI/desktop invocation, lifecycle reconciliation, and run binding remain open #66 work. |
 | 2026-08-28 | Added integrity-verified, explicitly approved canonical-profile derivation from selected managed CKB versions. | Exact managed bytes are normalized without exposing paths; every proposed fact needs a locally verified source quote before its opaque citation maps to candidate-provided provenance, while application logic owns IDs, conflicts, duplicates, omissions, and append-only draft persistence. Provider/adapters, lifecycle reconciliation, and run binding remain open #66 work. |
 | 2026-08-28 | Added workspace-local immutable canonical-profile history and provider-independent edit/review transitions. | Migration 24 stores checksum-verified linear versions with content-free audits. Profiles may combine CKBs and therefore remain outside single-CKB portable backups; derivation, retention/deletion, run binding, and adapters remain open #66 work. |
 | 2026-08-28 | Added the first #66 canonical candidate-profile contract. | Profile versions can represent complete normalized career facts with exact selected CKB source-version provenance, visible conflicts and omissions, review blockers, and deterministic immutable round trips. Persistence, derivation, retention/backup behavior, run binding, and adapters remain open. |

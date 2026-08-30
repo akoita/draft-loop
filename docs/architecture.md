@@ -473,9 +473,14 @@ occurs in its cited normalized source and contains the proposed value; the quote
 is checked locally and is not persisted. The application maps valid citations back to exact selected CKB
 versions, generates deterministic IDs, keeps conflicting and duplicate facts,
 adds visible category omissions, builds a draft, and appends it through the
-shared history service. A concrete configured-provider adapter,
-source lifecycle reconciliation and removal, reviewed-profile run binding, and
-shared CLI/desktop controls remain later #66 slices.
+shared history service. The configured-provider adapter uses the workspace's
+author model and existing API-key, authenticated user-session, or local
+transport. Its system prompt treats source text as untrusted data, and the
+strict proposal schema remains the only accepted response shape.
+
+No shared application operation invokes profile derivation yet. Source
+lifecycle reconciliation and removal, reviewed-profile run binding, and shared
+CLI/desktop controls remain later #66 slices.
 
 ### CKB integration gap
 
