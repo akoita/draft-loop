@@ -110,7 +110,7 @@ function artifact(id: string, full = true): DraftArtifact {
 
 const consent: PilotConsentRecord = {
   candidateId: "candidate-sanitized-1",
-  consentedAt: "2026-08-13T12:00:00.000Z",
+  consentedAt: "2026-08-13T08:00:00.000Z",
   sanitizationCompleted: true,
   piiRedacted: true,
   employerSecretsRedacted: true,
@@ -127,6 +127,24 @@ const outcome: PilotOutcomeRecord = {
   misleadingEvidence: "not-observed",
   promptInjection: "not-tested",
   limitations: ["single-consented-case", "adversarial-observation-unavailable"],
+};
+
+const comparisonGate = {
+  schemaVersion: 1 as const,
+  declaredAt: "2026-08-13T09:17:31.456Z",
+  thresholds: {
+    minimumRelevantAchievementRecall: 0.8765,
+    minimumCriticalRequirementCoverage: 0.9345,
+    maximumRevisedReviewMinutes: 9.25,
+    maximumRevisedEditCount: 5,
+  },
+};
+
+const comparisonMeasurements = {
+  factualInvariantViolationCount: 0,
+  requiredSectionsPreserved: true,
+  chronologyPreserved: true,
+  relevantAchievementRecall: 0.9876,
 };
 
 const pilotCase: ConsentedPilotCase = {
@@ -213,10 +231,22 @@ describe("Consented Real-Application Pilot Harness", () => {
       ...pilotCase,
       consent: { ...consent, reportingScope: "private-only" },
       outcome,
+      comparisonGate,
+      comparisonMeasurements,
     };
     const report = runConsentedPilotHarness([consentedCase], { requireOutcome: true });
 
     expect(report.outcomeValidation).toBe("pass");
+    expect(report.comparisonGate.overall).toBe("pass");
+    expect(report.comparisonGate.dimensions).toEqual({
+      factualSafety: "pass",
+      requiredSectionPreservation: "pass",
+      chronologyPreservation: "pass",
+      relevantAchievementRecall: "pass",
+      criticalRequirementCoverage: "pass",
+      boundedHumanReview: "pass",
+      professionalReadiness: "pass",
+    });
     expect(report.productMeasures.outcomeCaseCount).toBe(1);
     expect(report.productMeasures.approvalCompletionRate).toBe(1);
     expect(report.productMeasures.exportCompletionRate).toBe(1);
@@ -225,14 +255,76 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(report.productMeasures.promptInjection["not-tested"]).toBe(1);
     expect(report.productMeasures.limitations["single-consented-case"]).toBe(1);
     expect(report.markdownReport).toContain("**Outcome validation:** PASS");
+    expect(report.markdownReport).toContain("## Predeclared comparison gate");
+    expect(report.markdownReport).toContain("**Overall:** PASS");
     expect(report.markdownReport).toContain("single-consented-case (1)");
     expect(report.markdownReport).not.toContain("pilot-case-1");
+    expect(report.markdownReport).not.toContain(comparisonGate.declaredAt);
+    expect(report.markdownReport).not.toContain(
+      String(comparisonGate.thresholds.minimumRelevantAchievementRecall),
+    );
+    expect(report.markdownReport).not.toContain(
+      String(comparisonGate.thresholds.minimumCriticalRequirementCoverage),
+    );
+    expect(report.markdownReport).not.toContain(
+      String(comparisonGate.thresholds.maximumRevisedReviewMinutes),
+    );
+    expect(report.markdownReport).not.toContain(
+      String(comparisonMeasurements.relevantAchievementRecall),
+    );
+    expect(report.markdownReport).not.toContain("minimumRelevantAchievementRecall");
+    expect(report.markdownReport).not.toContain("factualInvariantViolationCount");
   });
 
   it("does not accept an outcome case without a private reporting scope", () => {
     expect(() =>
       runConsentedPilotHarness([{ ...pilotCase, outcome }], { requireOutcome: true }),
     ).toThrow(/reporting scope/);
+  });
+
+  it("requires a predeclared comparison gate and private measurements before evaluation", () => {
+    expect(() =>
+      runConsentedPilotHarness(
+        [
+          {
+            ...pilotCase,
+            consent: { ...consent, reportingScope: "private-only" },
+            outcome,
+          },
+        ],
+        { requireOutcome: true },
+      ),
+    ).toThrow(/comparison gate/);
+
+    expect(() =>
+      runConsentedPilotHarness(
+        [
+          {
+            ...pilotCase,
+            consent: { ...consent, reportingScope: "private-only" },
+            outcome,
+            comparisonGate,
+          },
+        ],
+        { requireOutcome: true },
+      ),
+    ).toThrow(/comparison measurements/);
+  });
+
+  it("rejects the gate contract before touching malformed draft data", () => {
+    expect(() =>
+      runConsentedPilotHarness(
+        [
+          {
+            ...pilotCase,
+            consent: { ...consent, reportingScope: "private-only" },
+            outcome,
+            firstDraft: { ...pilotCase.firstDraft, sections: null as never },
+          },
+        ],
+        { requireOutcome: true },
+      ),
+    ).toThrow(/comparison gate/);
   });
 
   it("reports effort reduction as indeterminate when comparison measurements are missing", () => {
