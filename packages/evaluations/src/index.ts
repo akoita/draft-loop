@@ -13,6 +13,7 @@ export * from "./pilot-comparison-gate.js";
 export * from "./readiness-report.js";
 export * from "./retrieval.js";
 export * from "./stopping-decision.js";
+export * from "./synthetic-scenarios.js";
 
 export const readinessDimensions = schemaReadinessDimensions;
 

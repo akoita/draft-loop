@@ -474,8 +474,10 @@ content, or paths. The report may retain permitted aggregate outcome measures:
 approval/export completion, round count, provider cost, user confidence,
 misleading-evidence observations, prompt-injection observations,
 critical-requirement coverage, and unsupported-claim counts. A synthetic
-fixture or incomplete outcome is indeterminate evidence; follow the
-[consented outcome pilot protocol](pilot-protocol.md).
+fixture or incomplete outcome is indeterminate evidence. The provider-free
+[synthetic scenario preflight](synthetic-scenario-preflight.md) documents
+implementation evidence that cannot replace the [consented outcome pilot
+protocol](pilot-protocol.md).
 
 Fixtures must be synthetic and contain no real candidate documents, provider
 responses, credentials, employer secrets, or hidden reasoning. A quality
