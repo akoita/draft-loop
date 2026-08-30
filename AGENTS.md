@@ -6,6 +6,20 @@ Before proposing or implementing roadmap-stage work, read `docs/roadmap.md`,
 align the work with its current stage, and update the roadmap when scope or
 priorities change.
 
+## MVP execution mode
+
+DraftLoop is a small side-project MVP. Routine feature and bug-fix work should
+run directly in one task, preferably using a Luna-class model. Do not invoke
+Maestro or create subagents unless the user explicitly requests orchestration
+or the work is security-sensitive, a data migration, or a genuinely
+cross-cutting architecture decision.
+
+Use one issue, one implementation task, and one PR. During implementation,
+inspect only the files needed for the issue, run focused checks, and perform
+the full repository gate once before opening the PR. Do not add standalone
+architecture, generalized framework, documentation, or tracker work unless it
+directly blocks the MVP outcome.
+
 ## Sprint execution budget
 
 Broad outcome issues are rollups, not executable sprint work. Before coding,
@@ -14,13 +28,13 @@ architecture boundary, one focused test surface, and a credible one-PR exit.
 If it combines concerns such as migration, lifecycle, runtime integration, UI,
 and representative evaluation, create ordered child issues first.
 
-Use one implementation worker by default. Do not add a separate exploration
-worker unless a specific unresolved question blocks implementation. Keep root
-work to requirements, one consolidated review of the completed diff, and
-publication. Run focused checks while developing and the full repository gate
-once before sharing the PR; do not continuously poll hosted checks.
+Routine MVP work uses no implementation or exploration worker. If an approved
+exception requires delegation, use one bounded implementation worker and no
+separate scout unless a specific unresolved question blocks implementation.
+Keep coordination to requirements, one consolidated review of the completed
+diff, and publication. Do not continuously poll hosted checks.
 
-An execution issue has a 30-minute active implementation-and-review budget,
+An execution issue has a 20-minute active implementation-and-review budget,
 excluding time spent waiting for local tests or hosted CI. At the limit, stop
 and split remaining work into a new bounded issue before continuing. Never
 silently turn one issue into a multi-hour task. Preserve quality by reducing
