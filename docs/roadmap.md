@@ -333,8 +333,11 @@ desktop host provides equivalent strict capabilities and returns only a bounded
 profile projection. New runs can select an exact reviewed profile version;
 DraftLoop verifies its checksum and current CKB lifecycle selection, pins a
 safe ID/version/checksum reference in immutable context, and never accepts a
-replacement on resume. Lifecycle invalidation/deletion and a visual profile
-editor remain open, so #66 is still incomplete.
+replacement on resume. Review and new-run use now fail closed when that stored
+selection is no longer current, while immutable profile history, existing run
+references, and approved exports remain intact. Whole-workspace backup and
+retention preserve those records; #80 owns removal and rebuild of derived index
+rows. A visual profile editor remains open, so #66 is still incomplete.
 
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
@@ -474,6 +477,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Defined canonical-profile lifecycle reconciliation without erasing audit history. | Drafts cannot become reviewed and reviewed profiles cannot enter new runs when their exact CKB selection is unavailable or changed. Immutable profiles, run references, and approved exports survive workspace backup/restore and audit retention; #80 owns derived-index cleanup. |
 | 2026-08-30 | Bound exact reviewed canonical-profile versions to new runs. | Shared application, CLI, and desktop start contracts accept an opaque profile ID/version pair, verify reviewed status, checksum, and current CKB lifecycle selection, and persist only a safe reference in immutable context. Resume cannot replace it; legacy unbound runs remain readable. |
 | 2026-08-30 | Added packaged-desktop host capabilities for the canonical-profile workflow. | Strict bridge and native-host operations use the active workspace, accept no store roots, require explicit derivation approval, and return an explicit bounded facts/issues/provenance projection without the stored selection snapshot. Lifecycle reconciliation, run binding, and visual profile UI remain open #66 work. |
 | 2026-08-30 | Exposed canonical-profile derivation and review through the CLI. | The CLI derives only from the workspace's configured selection, requires an explicit provider-data flag, accepts no CKB store root, and provides provider-free exact/latest reads, history, edits, and review. Desktop host controls, lifecycle reconciliation, and run binding remain open #66 work. |

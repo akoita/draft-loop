@@ -3322,6 +3322,45 @@ describe("canonical candidate profile application API", () => {
       ).resolves.toEqual([first]);
       expect(providerFactory).not.toHaveBeenCalled();
 
+      const alternateStoreRoot = join(root, "alternate-candidate-store");
+      await initializeReadyCandidateKnowledgeStore(alternateStoreRoot, candidatePath, [
+        "alternate-store",
+        "alternate-ckb",
+        "alternate-source",
+        "alternate-version",
+      ]);
+      await restarted.configureKnowledgeSelection(
+        {
+          root,
+          entries: [
+            {
+              storeRoot: alternateStoreRoot,
+              storeId: "alternate-store",
+              knowledgeBaseId: "alternate-ckb",
+            },
+          ],
+        },
+        silent,
+      );
+      await expect(
+        restarted.reviewCanonicalCandidateProfile({
+          root,
+          profileId: "profile-1",
+          expectedVersion: 1,
+          reviewedAt: "2026-08-30T10:00:30.000Z",
+        }),
+      ).rejects.toThrow("not bound to the current candidate knowledge selection");
+      await expect(
+        restarted.listCanonicalCandidateProfileVersions({ root, profileId: "profile-1" }),
+      ).resolves.toEqual([first]);
+      await restarted.configureKnowledgeSelection(
+        {
+          root,
+          entries: [{ storeRoot, storeId: "profile-store", knowledgeBaseId: "profile-ckb" }],
+        },
+        silent,
+      );
+
       await expect(
         restarted.reviewCanonicalCandidateProfile({
           root,
@@ -3377,13 +3416,6 @@ describe("canonical candidate profile application API", () => {
       ).resolves.toEqual([first, edited, reviewed]);
       expect(providerFactory).not.toHaveBeenCalled();
 
-      const alternateStoreRoot = join(root, "alternate-candidate-store");
-      await initializeReadyCandidateKnowledgeStore(alternateStoreRoot, candidatePath, [
-        "alternate-store",
-        "alternate-ckb",
-        "alternate-source",
-        "alternate-version",
-      ]);
       await restarted.configureKnowledgeSelection(
         {
           root,
@@ -3421,6 +3453,27 @@ describe("canonical candidate profile application API", () => {
           root,
           allowProviderData: false,
           candidateProfile: { profileId: "profile-1", version: reviewed.profile.version },
+        },
+        silent,
+      );
+      await expect(
+        recordedCandidateProfileReference(root, bound.contextSnapshotId),
+      ).resolves.toEqual({
+        profileId: "profile-1",
+        version: reviewed.profile.version,
+        checksum: reviewed.checksum,
+      });
+      await restarted.lifecycle({ root, action: "pause", runId: bound.runId }, silent);
+      await restarted.configureKnowledgeSelection(
+        {
+          root,
+          entries: [
+            {
+              storeRoot: alternateStoreRoot,
+              storeId: "alternate-store",
+              knowledgeBaseId: "alternate-ckb",
+            },
+          ],
         },
         silent,
       );

@@ -493,8 +493,13 @@ workspace's current lifecycle-ready selection before recording a safe profile
 ID, version, and checksum reference in immutable context. Resume accepts no
 replacement selection, so later profile edits cannot change an existing run.
 Legacy starts without a canonical profile remain readable. Source lifecycle
-reconciliation and removal and a visual profile editor remain later #66
-slices.
+changes preserve immutable profile and run history, but the same selection
+check blocks stale drafts from becoming reviewed and blocks unavailable
+profiles from new runs. Whole-workspace backup and retention preserve profile
+and approved-export records; a portable single-CKB backup does not claim a
+cross-CKB workspace profile. #80 owns removal or rebuilding of derived index
+rows when these dependencies become unavailable. A visual profile editor
+remains a later #66 slice.
 
 ### CKB integration gap
 

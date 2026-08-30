@@ -140,11 +140,20 @@ workspace. Its renderer result is an explicit bounded projection of facts,
 issues, and opaque provenance references; it omits the stored CKB selection
 snapshot and any future unrecognized fields.
 
-Profiles are not bound to runs or materialized into indexes, and the renderer
-has no dedicated visual profile editor yet. Cross-CKB profiles remain absent
-from single-CKB portable backups, while whole-workspace database backups
-preserve them. Retention, lifecycle invalidation, and deletion remain open #66
-work.
+New runs may bind one exact reviewed profile by opaque ID and version. The
+local driver verifies its checksum and requires the stored CKB selection to
+match the workspace's current lifecycle-ready selection before recording only
+the safe reference in immutable context. Resume cannot replace it. The same
+availability check blocks a draft from becoming reviewed after a referenced
+source retires, disappears, or changes selection.
+
+Lifecycle changes do not erase immutable profile history, existing run
+references, or approved export records. Cross-CKB profiles remain absent from
+single-CKB portable backups, while whole-workspace database backup and restore
+preserve profiles and exports; workspace retention currently removes eligible
+audit events only. Profile-derived retrieval indexes are not materialized yet.
+Issue #80 owns their rebuild and removal using this lifecycle rule. The renderer has
+no dedicated visual profile editor yet.
 
 ## Local Candidate Knowledge Base handling
 

@@ -79,6 +79,7 @@ import {
 } from "@draft-loop/schemas";
 import { redactText } from "@draft-loop/security";
 import {
+  type CanonicalCandidateProfileVersionRecord,
   type EvidenceChunkRecord,
   type EvidenceSourceRecord,
   type OpportunityBriefVersionRecord,
@@ -710,6 +711,37 @@ function selectionSnapshotsMatch(
     historical.schemaVersion === current.schemaVersion &&
     JSON.stringify(historical.entries) === JSON.stringify(current.entries)
   );
+}
+
+/**
+ * Prove that a persisted canonical profile still describes the workspace's
+ * currently configured, lifecycle-ready candidate knowledge selection.
+ *
+ * The workspace configuration owns local roots, while the profile stores only
+ * the path-free selection snapshot. Reopening the configured stores here
+ * checks both pinned identities and lifecycle readiness without exposing any
+ * of that local metadata to an adapter or error surface.
+ */
+async function assertCanonicalCandidateProfileSelectionCurrent(
+  root: string,
+  profile: CanonicalCandidateProfileVersionRecord,
+): Promise<void> {
+  try {
+    const profileSelection = profile.profile.candidateKnowledgeSelection;
+    const config = await readWorkspace(root);
+    const current = await validateConfiguredKnowledgeSelection(config.candidateKnowledgeSelection);
+    if (
+      profileSelection === undefined ||
+      current === undefined ||
+      !selectionSnapshotsMatch(profileSelection, current)
+    ) {
+      throw new Error("candidate profile selection mismatch");
+    }
+  } catch {
+    throw new CliUserError(
+      "The selected candidate profile is not bound to the current candidate knowledge selection.",
+    );
+  }
 }
 
 /**
@@ -2587,21 +2619,8 @@ async function createRun(
     ) {
       throw new CliUserError("The selected candidate profile version is not reviewed.");
     }
-    const configuredCandidateKnowledgeSelection =
-      options.candidateProfile === undefined
-        ? undefined
-        : await validateConfiguredKnowledgeSelection(config.candidateKnowledgeSelection);
-    if (options.candidateProfile !== undefined) {
-      const profileSelection = candidateProfileRecord?.profile.candidateKnowledgeSelection;
-      if (
-        configuredCandidateKnowledgeSelection === undefined ||
-        profileSelection === undefined ||
-        !selectionSnapshotsMatch(profileSelection, configuredCandidateKnowledgeSelection)
-      ) {
-        throw new CliUserError(
-          "The selected candidate profile is not bound to the current candidate knowledge selection.",
-        );
-      }
+    if (candidateProfileRecord !== undefined) {
+      await assertCanonicalCandidateProfileSelectionCurrent(root, candidateProfileRecord);
     }
     const effectivePolicy = await resolveRunWritingPolicy(
       storage,
@@ -3735,9 +3754,15 @@ export function createLocalApplicationDriver(
       const config = await readWorkspace(root);
       const storage = await openStorage(root);
       try {
-        return await createCanonicalCandidateProfilePersistenceService(
-          storage,
-        ).reviewLatestCanonicalCandidateProfile({
+        const persistence = createCanonicalCandidateProfilePersistenceService(storage);
+        const latest = await persistence.getLatestCanonicalCandidateProfile(
+          config.id,
+          command.profileId,
+        );
+        if (latest?.profile.status === "draft") {
+          await assertCanonicalCandidateProfileSelectionCurrent(root, latest);
+        }
+        return await persistence.reviewLatestCanonicalCandidateProfile({
           workspaceId: config.id,
           profileId: command.profileId,
           expectedVersion: command.expectedVersion,

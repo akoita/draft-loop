@@ -131,7 +131,10 @@ workspace's configured CKB selection, reloads exact or latest versions, and
 creates immutable edited or reviewed successors. Derivation is the only
 provider-backed operation and requires `--allow-provider-data`; the other
 commands operate on workspace-local history. Profile commands never accept a
-CKB store root.
+CKB store root. A draft can become reviewed, and a reviewed version can enter a
+new run, only while its exact CKB selection still matches the workspace's
+current lifecycle-ready selection. Historical profile versions and existing
+run/export records remain available for audit after lifecycle changes.
 
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \

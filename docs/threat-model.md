@@ -121,12 +121,20 @@ persisting only its ID, version, and checksum in immutable context. Resume
 accepts no replacement selection, and renderer inputs expose no roots or stored
 selection snapshot.
 
-The service still cannot invalidate an immutable profile after source
-retirement or deletion. Because one profile may combine CKBs, it is not copied
-into a single CKB portable backup; whole-workspace database backups still
-preserve it. Retention and deletion remain open #66 work. The CLI exposes the
-shared profile API without accepting store roots and requires a visible flag
-before derivation can transmit data.
+The local application reconciles availability without mutating history. A
+draft cannot become reviewed and a reviewed profile cannot enter a new run
+when its exact CKB selection no longer matches the workspace's current
+lifecycle-ready selection. Retirement, deletion, missing stores, and changed
+source versions therefore fail closed at future-use boundaries, while exact
+profile reads and existing run references remain auditable.
+
+Because one profile may combine CKBs, it is not copied into a single CKB
+portable backup; whole-workspace database backups preserve it. Workspace audit
+retention and CKB deletion do not cascade into immutable profile or approved
+export records. Profile-derived indexes are not materialized yet; #80 must
+remove or rebuild their derived rows under the same availability rule. The CLI
+exposes the shared profile API without accepting store roots and requires a
+visible flag before derivation can transmit data.
 The desktop host exposes the same operations through strict bridge inputs and
 an explicit result projection that omits the stored selection snapshot, paths,
 source URLs, and unrecognized future fields.
