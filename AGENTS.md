@@ -8,11 +8,11 @@ priorities change.
 
 ## MVP execution mode
 
-DraftLoop is a small side-project MVP. Routine feature and bug-fix work should
-run directly in one task, preferably using a Luna-class model. Do not invoke
-Maestro or create subagents unless the user explicitly requests orchestration
-or the work is security-sensitive, a data migration, or a genuinely
-cross-cutting architecture decision.
+DraftLoop is a small side-project MVP. Use Maestro for routine feature and
+bug-fix work with one verified Luna implementation worker. Do not add a scout
+or separate review worker unless a specific unresolved question blocks
+implementation. The Sol root owns requirements, one consolidated diff review,
+and publication.
 
 Use one issue, one implementation task, and one PR. During implementation,
 inspect only the files needed for the issue, run focused checks, and perform
@@ -28,11 +28,11 @@ architecture boundary, one focused test surface, and a credible one-PR exit.
 If it combines concerns such as migration, lifecycle, runtime integration, UI,
 and representative evaluation, create ordered child issues first.
 
-Routine MVP work uses no implementation or exploration worker. If an approved
-exception requires delegation, use one bounded implementation worker and no
-separate scout unless a specific unresolved question blocks implementation.
-Keep coordination to requirements, one consolidated review of the completed
-diff, and publication. Do not continuously poll hosted checks.
+Routine MVP work uses one verified Luna implementation worker and no separate
+scout or reviewer unless a specific unresolved question blocks implementation.
+Keep Sol coordination to requirements, one consolidated review of the
+completed diff, and publication. Fail closed before implementation if the
+worker route cannot be verified. Do not continuously poll hosted checks.
 
 An execution issue has a 20-minute active implementation-and-review budget,
 excluding time spent waiting for local tests or hosted CI. At the limit, stop
