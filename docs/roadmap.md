@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-08-30<br>
-**Current stage:** Usable CV MVP (v0.8.0-alpha.1 stage-exit candidate)
+**Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -84,7 +84,7 @@ The product status is easiest to read by outcome:
 
 | Outcome                            | Current evidence                      | What is true now                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ---------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Integrated author–critic workspace | Integrated foundation; [v0.8.0-alpha.1 stage-exit candidate](stage-evidence-v0.8.0-alpha.1.md); representative outcome not recorded | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
+| Integrated author–critic workspace | [Released v0.8.0-alpha.1](stage-evidence-v0.8.0-alpha.1.md); representative outcome not recorded | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
 | Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
 | Workspace retrieval and policy     | Policy and CKB lexical runtime integrated | Explicit CKB selections rebuild and query exact source-version indexes, fail visibly on unavailable retrieval, persist immutable content-free traces, and provide only selected opaque chunk references and bounded text to live author/critic requests. Legacy unselected workspaces retain the earlier evidence path. Writing policies remain integrated with immutable lineage and shared controls. |
 | Opportunity brief                  | Integrated reviewed-version handoff      | A strict provider-independent contract and shared CLI/packaged-desktop host workflows assemble approved URLs, selected files, pasted content, and typed local candidate instructions into immutable draft/review versions with honest provenance and visible failures. New runs can pin one exact checksum-verified reviewed version; resume reuses the immutable context. Provider extraction and run transmission each retain explicit approval boundaries.                    |
@@ -176,8 +176,8 @@ applications.
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
-| Now      | Usable CV MVP (v0.8.0-alpha.1 stage-exit candidate) | [Stage-exit evidence](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; deterministic validation complete; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Publish the candidate, then record representative outcome evidence without overstating DOCX visual coverage |
-| Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4), after v0.8 publication) | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison (#75), release evidence and next decision (#76), zero factual regression, bounded editing, and cross-platform evidence |
+| Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison (#75), release evidence and next decision (#76), zero factual regression, bounded editing, and cross-platform evidence |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -245,7 +245,7 @@ source versions produce a reviewed profile and opportunity brief; CKB-scoped
 lexical retrieval supports a planned, complete CV whose required sections,
 chronology, factual invariants, provenance, and writing-policy checks pass.
 
-### Current candidate — Usable CV MVP (v0.8.0-alpha.1)
+### Released alpha — Usable CV MVP (v0.8.0-alpha.1)
 
 Turn selected candidate evidence and one reviewed opportunity into a complete,
 independently reviewed, human-approved, ATS-readable CV.
@@ -253,9 +253,9 @@ independently reviewed, human-approved, ATS-readable CV.
 Retrieval #80, planning #68, complete CV composition #69, the #72 runtime
 author handoff, exact approval readiness #73, and bounded rendering QA #74 are
 integrated. All 17 v0.8 issues are closed and deterministic validation is
-complete. No representative consented outcome has been recorded, so this is a
-stage-exit candidate pending release workflow publication; do not label the
-v0.8 outcome Validated or Released before publication.
+complete. The cross-platform alpha artifact is Released with manifests,
+checksums, an SBOM, and platform workflow evidence. No representative consented
+outcome has been recorded, so do not label the v0.8 outcome Validated.
 
 Existing #71, #72, and #73 contracts are supporting components, not reasons to
 build generalized frameworks. The MVP adds only the runtime behavior required
