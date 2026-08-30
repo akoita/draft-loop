@@ -175,7 +175,7 @@ applications.
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Now      | Evidence-backed CV drafting (v0.7 program) | [Released alpha.3 checkpoint](stage-evidence-v0.7.0-alpha.3.md); [Released alpha.4 checkpoint](stage-evidence-v0.7.0-alpha.4.md); [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | Complete CV composition, runtime review/readiness/rendering integration, and representative validation remain |
-| Next     | Usable CV MVP ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Retrieval and deterministic planning integrated; four bounded capabilities remain | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Complete #69, #72, #73, and #74 in dependency order |
+| Next     | Usable CV MVP ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Retrieval, deterministic planning, and complete CV composition integrated; three bounded capabilities remain | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Complete #72, #73, and #74 in dependency order |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
@@ -249,11 +249,14 @@ chronology, factual invariants, provenance, and writing-policy checks pass.
 Turn selected candidate evidence and one reviewed opportunity into a complete,
 independently reviewed, human-approved, ATS-readable CV.
 
-Retrieval #80 and planning #68 are complete. Execute the remaining capabilities
-in order: #69, #72, #73, then #74. Each is one MVP outcome and one PR. Routine work
-runs directly in a fresh Luna task without subagents, uses focused checks while
-developing, and runs the full validation gate once before publication. Active
-implementation and review stops after 20 minutes rather than expanding scope.
+Retrieval #80, planning #68, and complete CV composition #69 are complete.
+Execute the remaining capabilities in order: #72, #73, then #74. Each is one
+MVP outcome and one PR. Routine MVP implementation uses one verified Luna
+implementation worker, no separate scout or reviewer, while the Sol root keeps
+requirements, one consolidated diff review, and publication. Use focused checks
+while developing and run the full validation gate once before publication.
+Active implementation and review stops after 20 minutes rather than expanding
+scope.
 
 Existing #71, #72, and #73 contracts are supporting components, not reasons to
 build generalized frameworks. The MVP adds only the runtime behavior required

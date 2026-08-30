@@ -581,6 +581,18 @@ persist reports, wire the CLI or desktop, establish approval semantics, or
 derive application-ready status or stopping decisions. Runtime integration is
 gated on the complete drafting and writing-policy work in #69 and #70.
 
+### Complete CV composition boundary
+
+The live author contract represents header, summary, experience, projects,
+skills, education, certifications, and languages as semantic sections. The
+author includes each section supported by retrieved candidate evidence and
+preserves authored section and entry order through the canonical artifact and
+Markdown, DOCX, and PDF exporters. Before provider output becomes an artifact,
+the application rejects substantive claims without evidence, unrelated
+citations, and changed exact invariants such as dates, metrics, credentials,
+links, employers, and multi-word titles. Missing configured sections remain
+visible to the existing deterministic completeness check.
+
 ### Author adjudication and revision trace boundary
 
 `packages/schemas` also owns the strict, versioned author-adjudication plan and
