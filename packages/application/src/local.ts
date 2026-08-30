@@ -131,6 +131,8 @@ import type {
 } from "./opportunity-extraction.js";
 import { createOpportunityDraft } from "./opportunity-intake.js";
 import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
+import { modelFacingContext } from "./provider-context.js";
+import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -2071,33 +2073,6 @@ function parseCritique(value: JsonObject): Critique {
   };
 }
 
-/**
- * The snapshot as the author and critic see it.
- *
- * The independence record and the lineage labels are operator prose about
- * model choice, written for an auditor. Sending them would put free text the
- * candidate never wrote into the model input, which is both a category error
- * and an injection surface, and would gain the model nothing it cannot read
- * from `company` and `modelId`.
- */
-function modelFacingContext(context: ContextSnapshot): ContextSnapshot {
-  const configuration = context.modelConfiguration;
-  const { candidateKnowledgeSelection: _candidateKnowledgeSelection, ...withoutSelection } =
-    context;
-  const withoutLineage = <T extends { readonly lineage?: string }>(selection: T): T => {
-    const { lineage: _lineage, ...rest } = selection;
-    return rest as T;
-  };
-  return {
-    ...withoutSelection,
-    modelConfiguration: {
-      author: withoutLineage(configuration.author),
-      critic: withoutLineage(configuration.critic),
-      requireProviderDiversity: configuration.requireProviderDiversity,
-    },
-  };
-}
-
 function providerDataPolicy(
   company: string,
   allowProviderData: boolean,
@@ -2234,6 +2209,13 @@ function providerAgents(
       retrievedEvidence = [],
       signal,
     }) => {
+      const achievementPlan = createRequirementAchievementPlan(
+        context.requirements,
+        retrievedEvidence,
+      );
+      if (achievementPlan.status === "no-evidence") {
+        throw new CliUserError("Drafting requires retrieved candidate evidence.");
+      }
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.author,
@@ -2245,6 +2227,7 @@ function providerAgents(
           round,
           context: promptContext,
           retrievedEvidence,
+          achievementPlan,
           currentArtifact,
           findings,
         }),
@@ -2284,6 +2267,13 @@ function providerAgents(
       retrievedEvidence = [],
       signal,
     }) => {
+      const achievementPlan = createRequirementAchievementPlan(
+        context.requirements,
+        retrievedEvidence,
+      );
+      if (achievementPlan.status === "no-evidence") {
+        throw new CliUserError("Critique requires retrieved candidate evidence.");
+      }
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.critic,
@@ -2294,6 +2284,7 @@ function providerAgents(
           round,
           context: promptContext,
           retrievedEvidence,
+          achievementPlan,
           artifact,
           deterministicFindings,
         }),
