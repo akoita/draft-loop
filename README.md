@@ -151,8 +151,9 @@ The packaged desktop host exposes the same five profile operations through its
 validated native capability boundary. Renderer commands use the active
 workspace identity, never accept a CKB root or open a profile-specific picker,
 and receive an explicit bounded projection of facts, issues, and opaque source
-references. This is a host API; a dedicated visual profile editor is not yet
-part of the renderer UI.
+references. The collecting workspace includes a dedicated profile surface for
+derivation approval, immutable version selection, fact-value and issue-status
+editing, review, and exact reviewed-version selection for the next run.
 
 Writing policies are local, immutable versions. `policy activate` imports a
 file and makes it the workspace default for future runs; `policy import` adds a

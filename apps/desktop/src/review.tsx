@@ -1,4 +1,5 @@
 import {
+  type ReactNode,
   type RefObject,
   useCallback,
   useEffect,
@@ -38,6 +39,10 @@ interface ReviewWorkspaceProps {
   ) => void;
   readonly onAddUrl?: (target: "evidence" | "job-description", url: string) => void;
   readonly errorMessage?: string | null;
+  /** Optional exact-profile gate shared by every new-run trigger. */
+  readonly startDisabledReason?: string | null;
+  /** Profile controls rendered in the collecting/setup workspace. */
+  readonly profilePanel?: ReactNode;
   readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
   readonly onSetCredential?: (provider: "anthropic" | "openai", apiKey: string) => Promise<void>;
   readonly onRemoveCredential?: (provider: "anthropic" | "openai") => Promise<void>;
@@ -1223,6 +1228,8 @@ export function ReviewWorkspace({
   onSelectFiles,
   onAddUrl,
   errorMessage,
+  startDisabledReason = null,
+  profilePanel,
   getCredentialStatus,
   onSetCredential,
   onRemoveCredential,
@@ -1970,7 +1977,9 @@ export function ReviewWorkspace({
           ? "A review is already under way."
           : !transmissionReady
             ? "Provider transmission has not been acknowledged."
-            : pendingActionReason,
+            : startDisabledReason
+              ? startDisabledReason
+              : pendingActionReason,
       run: () => onAction({ type: "start" }),
     },
     {
@@ -2762,6 +2771,7 @@ export function ReviewWorkspace({
                 </article>
               </div>
               {renderProviderTransmissionPreflight()}
+              {profilePanel}
               {state.setup.nextSteps.length > 0 ? (
                 <div className="setup-next-steps">
                   <strong>Next steps</strong>
@@ -2785,6 +2795,7 @@ export function ReviewWorkspace({
                   disabled={
                     !state.setup.ready ||
                     !transmissionReady ||
+                    startDisabledReason !== null ||
                     pendingReviewAction?.action === "start"
                   }
                   onClick={() => onAction({ type: "start" })}
@@ -2794,6 +2805,11 @@ export function ReviewWorkspace({
                     : "Start author–critic review"}
                 </button>
               </div>
+              {startDisabledReason !== null ? (
+                <p className="setup-note setup-blocker" role="status">
+                  {startDisabledReason}
+                </p>
+              ) : null}
               {pendingReviewAction?.action === "start" ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
                   Starting review… Elapsed {pendingReviewAction.elapsedSeconds} second
@@ -2851,6 +2867,8 @@ export function ReviewWorkspace({
               </div>
             </div>
           </header>
+
+          {state.state === "stopped" ? profilePanel : null}
 
           {errorMessage ? (
             <div className="error-banner" role="alert">
@@ -3248,7 +3266,11 @@ export function ReviewWorkspace({
                 <button
                   className="button button-primary"
                   type="button"
-                  disabled={!transmissionReady || pendingReviewAction !== null}
+                  disabled={
+                    !transmissionReady ||
+                    startDisabledReason !== null ||
+                    pendingReviewAction !== null
+                  }
                   onClick={() => onAction({ type: "start" })}
                 >
                   {pendingReviewAction?.action === "start"
@@ -3264,6 +3286,11 @@ export function ReviewWorkspace({
                 >
                   {pendingReviewAction?.action === "stop" ? "Stopping…" : "Stop review"}
                 </button>
+              ) : null}
+              {state.state === "stopped" && startDisabledReason !== null ? (
+                <p className="setup-note setup-blocker" role="status">
+                  {startDisabledReason}
+                </p>
               ) : null}
             </div>
             {state.execution.status === "interrupted" ? (

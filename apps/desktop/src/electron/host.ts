@@ -3102,6 +3102,9 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             root: workspace.root,
             allowProviderData: true,
             ...(reviewedOpportunity === undefined ? {} : { opportunityBrief: reviewedOpportunity }),
+            ...(action.candidateProfile === undefined
+              ? {}
+              : { candidateProfile: action.candidateProfile }),
             ...(pendingWritingPolicyOverride === undefined
               ? {}
               : { writingPolicyOverrideChecksum: pendingWritingPolicyOverride.checksum }),

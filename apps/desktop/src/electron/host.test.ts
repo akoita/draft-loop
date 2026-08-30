@@ -399,6 +399,44 @@ describe("native host", () => {
     );
   });
 
+  it("forwards an exact reviewed candidate profile pair through review start", async () => {
+    const root = "/local/profile-selection";
+    const fixture = service(root);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    await expect(
+      host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "pending",
+          action: {
+            type: "start",
+            candidateProfile: { profileId: "profile-native", version: 2 },
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { runId: "run-native" } });
+
+    expect(fixture.service.begin).toHaveBeenCalledWith(
+      {
+        root,
+        allowProviderData: true,
+        candidateProfile: { profileId: "profile-native", version: 2 },
+      },
+      expect.anything(),
+    );
+    const beginCommand = (
+      fixture.service.begin.mock.calls as unknown as readonly [Record<string, unknown>][]
+    )[0]?.[0];
+    expect(beginCommand).not.toHaveProperty("candidateKnowledgeSelection");
+    expect(beginCommand).not.toHaveProperty("storeRoot");
+  });
+
   it("binds an imported opportunity override locally, leaves the global policy untouched, and clears it after dispatch start", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-policy-override-"));
     const root = join(parent, "workspace");

@@ -73,4 +73,24 @@ describe("Desktop Review Keyboard Accessibility and WCAG AA Compliance", () => {
     expect(html).toContain("Approve artifact");
     expect(html).toMatch(/aria-keyshortcuts="Alt\+A"[^>]*disabled=""/u);
   });
+
+  it("announces and disables the collecting start blocker for profile-capable hosts", () => {
+    const state = {
+      ...createFixtureReviewState(),
+      state: "collecting" as const,
+      runId: "pending",
+      setup: { ...createFixtureReviewState().setup, ready: true },
+    };
+    const html = renderToStaticMarkup(
+      <ReviewWorkspace
+        state={state}
+        onAction={() => undefined}
+        startDisabledReason="Select an exact reviewed candidate profile before starting a review."
+      />,
+    );
+
+    expect(html).toContain("Select an exact reviewed candidate profile before starting a review.");
+    expect(html).toContain('class="button button-primary" type="button" disabled=""');
+    expect(html).toContain('role="status"');
+  });
 });

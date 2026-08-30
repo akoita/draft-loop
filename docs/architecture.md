@@ -498,8 +498,12 @@ check blocks stale drafts from becoming reviewed and blocks unavailable
 profiles from new runs. Whole-workspace backup and retention preserve profile
 and approved-export records; a portable single-CKB backup does not claim a
 cross-CKB workspace profile. #80 owns removal or rebuilding of derived index
-rows when these dependencies become unavailable. A visual profile editor
-remains a later #66 slice.
+rows when these dependencies become unavailable. A visual profile editor in
+the collecting desktop workspace uses only the bounded host projection. It
+loads exact history, preserves provenance while editing fact values and issue
+statuses, requires explicit transmission approval for derivation, and injects
+the selected reviewed ID/version pair into the existing run-dispatch boundary.
+Historical and reviewed versions remain read-only in that surface.
 
 ### CKB integration gap
 

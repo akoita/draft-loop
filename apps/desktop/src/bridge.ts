@@ -3711,7 +3711,6 @@ function validateReviewAction(value: unknown): ReviewAction {
       return { type: action.type, fingerprint };
     }
     case "pause":
-    case "start":
     case "resume":
     case "recover-to-review":
     case "recover-round-limit":
@@ -3721,6 +3720,17 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "export":
       if (!hasOnlyKeys(action, ["type"])) return invalidInput();
       return { type: action.type };
+    case "start": {
+      if (!hasOnlyKeys(action, ["type", "candidateProfile"])) return invalidInput();
+      const candidateProfile =
+        action.candidateProfile === undefined
+          ? undefined
+          : validateCandidateProfileSelectionInput(action.candidateProfile);
+      return {
+        type: action.type,
+        ...(candidateProfile === undefined ? {} : { candidateProfile }),
+      };
+    }
     default:
       return invalidInput();
   }

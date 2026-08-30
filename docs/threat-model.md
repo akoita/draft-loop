@@ -137,7 +137,10 @@ exposes the shared profile API without accepting store roots and requires a
 visible flag before derivation can transmit data.
 The desktop host exposes the same operations through strict bridge inputs and
 an explicit result projection that omits the stored selection snapshot, paths,
-source URLs, and unrecognized future fields.
+source URLs, and unrecognized future fields. The visual profile surface edits
+only values and statuses on projected records while preserving opaque
+provenance; derivation needs a fresh explicit approval, and run start forwards
+only the selected reviewed profile ID and version.
 
 ### Current CKB scope
 

@@ -337,7 +337,9 @@ replacement on resume. Review and new-run use now fail closed when that stored
 selection is no longer current, while immutable profile history, existing run
 references, and approved exports remain intact. Whole-workspace backup and
 retention preserve those records; #80 owns removal and rebuild of derived index
-rows. A visual profile editor remains open, so #66 is still incomplete.
+rows. The collecting desktop workspace now provides a dedicated profile
+history, edit, review, derivation-approval, and exact run-selection surface.
+Representative acceptance validation remains before #66 can close.
 
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
@@ -477,6 +479,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Added the candidate-facing canonical-profile review surface. | The collecting desktop workspace can derive with explicit transmission approval, load immutable history, inspect bounded provenance, edit latest-draft fact values and issue statuses, review, and bind the exact selected reviewed version to the next run without exposing roots or stored selections. |
 | 2026-08-30 | Defined canonical-profile lifecycle reconciliation without erasing audit history. | Drafts cannot become reviewed and reviewed profiles cannot enter new runs when their exact CKB selection is unavailable or changed. Immutable profiles, run references, and approved exports survive workspace backup/restore and audit retention; #80 owns derived-index cleanup. |
 | 2026-08-30 | Bound exact reviewed canonical-profile versions to new runs. | Shared application, CLI, and desktop start contracts accept an opaque profile ID/version pair, verify reviewed status, checksum, and current CKB lifecycle selection, and persist only a safe reference in immutable context. Resume cannot replace it; legacy unbound runs remain readable. |
 | 2026-08-30 | Added packaged-desktop host capabilities for the canonical-profile workflow. | Strict bridge and native-host operations use the active workspace, accept no store roots, require explicit derivation approval, and return an explicit bounded facts/issues/provenance projection without the stored selection snapshot. Lifecycle reconciliation, run binding, and visual profile UI remain open #66 work. |

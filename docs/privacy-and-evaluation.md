@@ -152,8 +152,12 @@ references, or approved export records. Cross-CKB profiles remain absent from
 single-CKB portable backups, while whole-workspace database backup and restore
 preserve profiles and exports; workspace retention currently removes eligible
 audit events only. Profile-derived retrieval indexes are not materialized yet.
-Issue #80 owns their rebuild and removal using this lifecycle rule. The renderer has
-no dedicated visual profile editor yet.
+Issue #80 owns their rebuild and removal using this lifecycle rule. The
+collecting desktop workspace provides a dedicated editor over the bounded
+path-free host projection. It preserves opaque provenance while changing fact
+values or issue status, requires explicit transmission approval for
+derivation, and sends only the selected reviewed profile ID/version pair when
+starting a run.
 
 ## Local Candidate Knowledge Base handling
 

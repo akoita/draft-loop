@@ -443,6 +443,64 @@ describe("desktop capability bridge", () => {
       }),
     ).toMatchObject({ type: "review.dispatch", input: { action: { type: "start" } } });
 
+    expect(
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "pending",
+          action: {
+            type: "start",
+            candidateProfile: { profileId: "profile-1", version: 2 },
+          },
+        },
+      }),
+    ).toEqual({
+      type: "review.dispatch",
+      input: {
+        workspaceId: "workspace-1",
+        runId: "pending",
+        action: {
+          type: "start",
+          candidateProfile: { profileId: "profile-1", version: 2 },
+        },
+      },
+    });
+
+    for (const candidateProfile of [
+      null,
+      {},
+      { profileId: "profile-1" },
+      { version: 2 },
+      { profileId: "profile-1", version: 0 },
+      { profileId: "profile-1", version: 1.5 },
+      { profileId: "profile-1", version: "2" },
+      { profileId: "profile-1", version: 2, root: "/private/profile" },
+      { profileId: "../private", version: 2 },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({
+          type: "review.dispatch",
+          input: {
+            workspaceId: "workspace-1",
+            runId: "pending",
+            action: { type: "start", candidateProfile },
+          },
+        }),
+      ).toThrow("invalid");
+    }
+
+    expect(() =>
+      validateBridgeCommand({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-1",
+          runId: "pending",
+          action: { type: "start", root: "/private/profile" },
+        },
+      }),
+    ).toThrow("invalid");
+
     const fingerprint = "a".repeat(64);
     expect(
       validateBridgeCommand({

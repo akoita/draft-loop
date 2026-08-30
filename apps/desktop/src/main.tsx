@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import {
@@ -6,13 +6,19 @@ import {
   type ModelsPreviewIndependenceResult,
   modelCompanies,
 } from "./bridge.js";
-import type { DesktopReviewState, FindingDecision, ReviewAction } from "./model.js";
+import type {
+  CandidateProfileSelection,
+  DesktopReviewState,
+  FindingDecision,
+  ReviewAction,
+} from "./model.js";
 import {
   createDesktopReviewPort,
   DesktopBridgeError,
   type DesktopSetupPort,
   type WorkspaceModelSelection,
 } from "./native.js";
+import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import "./styles.css";
@@ -115,6 +121,27 @@ function isModelCompany(value: string): value is ModelCompany {
 
 function messageOf(reason: unknown, fallback: string): string {
   return reason instanceof Error && reason.message.trim() !== "" ? reason.message : fallback;
+}
+
+export const candidateProfileStartBlockerMessage =
+  "Select an exact reviewed candidate profile before starting a review.";
+
+export function candidateProfileStartDisabledReason(
+  profileCapabilitiesPresent: boolean,
+  selectedProfile: CandidateProfileSelection | null,
+): string | null {
+  return profileCapabilitiesPresent && selectedProfile === null
+    ? candidateProfileStartBlockerMessage
+    : null;
+}
+
+export function reviewActionWithCandidateProfile(
+  action: ReviewAction,
+  selectedProfile: CandidateProfileSelection | null,
+): ReviewAction {
+  return action.type === "start" && selectedProfile !== null
+    ? { ...action, candidateProfile: selectedProfile }
+    : action;
 }
 
 /** Whether a `local` company on either side means an endpoint field is in play. */
@@ -722,6 +749,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [busy, setBusy] = useState(false);
   const [pendingReviewAction, setPendingReviewAction] = useState<PendingReviewAction | null>(null);
   const [pendingBulkFindingCount, setPendingBulkFindingCount] = useState<number | null>(null);
+  const [candidateProfileSelection, setCandidateProfileSelection] = useState<{
+    readonly workspaceId: string;
+    readonly profile: CandidateProfileSelection;
+  } | null>(null);
   const [reviewActionDispatcher] = useState(() =>
     createReviewActionDispatcher(setPendingReviewAction),
   );
@@ -742,6 +773,29 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [preview, setPreview] = useState<IndependencePreviewState>({ status: "idle" });
   const requestedCompanies = useRef(new Set<ModelCompany>());
   const activeExecutionStatus = state?.execution.status;
+  const profileCapabilities = hasCanonicalCandidateProfileCapabilities(activePort)
+    ? activePort
+    : null;
+  const selectedCandidateProfile =
+    state !== null && candidateProfileSelection?.workspaceId === state.workspaceId
+      ? candidateProfileSelection.profile
+      : null;
+  const profileStartDisabledReason = candidateProfileStartDisabledReason(
+    profileCapabilities !== null &&
+      state !== null &&
+      (state.state === "collecting" || state.state === "stopped"),
+    selectedCandidateProfile,
+  );
+  const onCandidateProfileSelectionChange = useCallback(
+    (selection: CandidateProfileSelection | null) => {
+      setCandidateProfileSelection(
+        selection === null || state === null
+          ? null
+          : { workspaceId: state.workspaceId, profile: selection },
+      );
+    },
+    [state],
+  );
   const nativeActions = useMemo(
     () => ({
       open: activePort.openWorkspace,
@@ -802,10 +856,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
 
   const onAction = (action: ReviewAction) => {
     if (state === null) return;
+    if (action.type === "start" && profileStartDisabledReason !== null) {
+      setImportError(profileStartDisabledReason);
+      return;
+    }
+    const dispatchedAction = reviewActionWithCandidateProfile(action, selectedCandidateProfile);
     setImportError(null);
-    reviewActionDispatcher.dispatch(action, async () => {
+    reviewActionDispatcher.dispatch(dispatchedAction, async () => {
       try {
-        setState(await activePort.dispatch(state, action));
+        setState(await activePort.dispatch(state, dispatchedAction));
       } catch (reason: unknown) {
         setImportError(
           reason instanceof Error ? reason.message : "The review action could not be completed.",
@@ -1053,6 +1112,19 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       pendingBulkFindingCount={pendingBulkFindingCount}
       errorMessage={importError}
       pendingReviewAction={pendingReviewAction}
+      startDisabledReason={profileStartDisabledReason}
+      profilePanel={
+        (state.state === "collecting" || state.state === "stopped") &&
+        profileCapabilities !== null ? (
+          <ProfileWorkspace
+            key={state.workspaceId}
+            workspaceId={state.workspaceId}
+            capabilities={profileCapabilities}
+            selectedProfile={selectedCandidateProfile}
+            onSelectionChange={onCandidateProfileSelectionChange}
+          />
+        ) : undefined
+      }
       {...(activePort.selectFiles === undefined
         ? {}
         : {

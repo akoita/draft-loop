@@ -280,6 +280,12 @@ export interface DesktopReviewState {
   readonly setup: WorkspaceReadiness;
 }
 
+/** Exact reviewed canonical profile selected for the next new run. */
+export interface CandidateProfileSelection {
+  readonly profileId: string;
+  readonly version: number;
+}
+
 export type ReviewAction =
   | {
       readonly type: "finding-decision";
@@ -290,7 +296,7 @@ export type ReviewAction =
   | { readonly type: "edit-block"; readonly blockId: string; readonly text: string }
   | { readonly type: "pause" }
   | { readonly type: "acknowledge-provider-transmission"; readonly fingerprint: string }
-  | { readonly type: "start" }
+  | { readonly type: "start"; readonly candidateProfile?: CandidateProfileSelection }
   | { readonly type: "resume" }
   | { readonly type: "recover-to-review" }
   | { readonly type: "recover-round-limit" }
