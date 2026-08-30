@@ -3,8 +3,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import type { EvidenceChunkRecord, EvidenceSourceRecord, WorkspaceRecord } from "./index.js";
-import { openSqliteStorage } from "./index.js";
+import type {
+  CandidateKnowledgeBaseInput,
+  CandidateKnowledgeSourceInput,
+  CandidateKnowledgeSourceVersionInput,
+  EvidenceChunkRecord,
+  EvidenceSourceRecord,
+  WorkspaceRecord,
+} from "./index.js";
+import {
+  computeCandidateKnowledgeLexicalManifestChecksum,
+  openSqliteStorage,
+  StorageConflictError,
+  StorageValidationError,
+} from "./index.js";
 
 function workspace(id = "workspace-1"): WorkspaceRecord {
   return {
@@ -43,6 +55,76 @@ function chunk(
     checksum: "0123456789abcdef0123456789abcdef01234567",
     text,
     createdAt: "2026-08-13T10:00:00.000Z",
+  };
+}
+
+function candidateKnowledgeBase(id: string, isDefault: boolean): CandidateKnowledgeBaseInput {
+  return {
+    id,
+    displayName: `Knowledge ${id}`,
+    description: "Sanitized test knowledge",
+    isDefault,
+    createdAt: "2026-08-13T09:00:00.000Z",
+  };
+}
+
+function candidateKnowledgeSource(
+  id: string,
+  knowledgeBaseId: string,
+): CandidateKnowledgeSourceInput {
+  return {
+    id,
+    knowledgeBaseId,
+    kind: "file",
+    displayName: `${id}.md`,
+    createdAt: "2026-08-13T09:01:00.000Z",
+  };
+}
+
+function candidateKnowledgeVersion(
+  id: string,
+  checksum = "d".repeat(64),
+): CandidateKnowledgeSourceVersionInput {
+  return {
+    id,
+    mediaType: "text/markdown",
+    checksum,
+    sizeBytes: 128,
+    createdAt: "2026-08-13T09:02:00.000Z",
+  };
+}
+
+function lexicalScope(
+  storeId: string,
+  knowledgeBaseId: string,
+  sourceId: string,
+  versionId: string,
+) {
+  return {
+    sources: [{ storeId, knowledgeBaseId, sourceId, versionId }],
+  };
+}
+
+function lexicalChunk(
+  chunkId: string,
+  sourceId: string,
+  versionId: string,
+  text: string,
+  ordinal = 0,
+  storeId = "store-a",
+  knowledgeBaseId = "ckb-a",
+) {
+  return {
+    chunkId,
+    ordinal,
+    lineStart: ordinal + 1,
+    lineEnd: ordinal + 1,
+    text,
+    metadata: {
+      section: "Experience",
+      technology: "TypeScript",
+      provenance: { storeId, knowledgeBaseId, sourceId, versionId },
+    },
   };
 }
 
@@ -280,6 +362,309 @@ describe("SQLite FTS5 / BM25 Evidence Retrieval", () => {
     });
     expect(limited).toHaveLength(3);
 
+    await storage.close();
+  });
+});
+
+describe("SQLite CKB lexical retrieval", () => {
+  it("rebuilds, updates, isolates, and exactly deletes source-version projections", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "draft-loop-ckb-lexical-"));
+    const storage = openSqliteStorage(join(dir, "knowledge.sqlite"));
+
+    await storage.ensureDefaultCandidateKnowledgeBase(candidateKnowledgeBase("ckb-a", true));
+    const sourceA = await storage.createCandidateKnowledgeSource(
+      candidateKnowledgeSource("source-a", "ckb-a"),
+      candidateKnowledgeVersion("version-a"),
+    );
+    const sourceA2 = await storage.createCandidateKnowledgeSource(
+      candidateKnowledgeSource("source-a2", "ckb-a"),
+      candidateKnowledgeVersion("version-a2", "f".repeat(64)),
+    );
+    await storage.createCandidateKnowledgeBase(candidateKnowledgeBase("ckb-b", false));
+    const sourceB = await storage.createCandidateKnowledgeSource(
+      candidateKnowledgeSource("source-b", "ckb-b"),
+      candidateKnowledgeVersion("version-b", "e".repeat(64)),
+    );
+    const scopeA = {
+      sources: [
+        {
+          storeId: "store-a",
+          knowledgeBaseId: "ckb-a",
+          sourceId: sourceA.source.id,
+          versionId: sourceA.version.id,
+        },
+        {
+          storeId: "store-a",
+          knowledgeBaseId: "ckb-a",
+          sourceId: sourceA2.source.id,
+          versionId: sourceA2.version.id,
+        },
+      ],
+    };
+    const scopeA2 = lexicalScope("store-a", "ckb-a", sourceA2.source.id, sourceA2.version.id);
+    const scopeB = lexicalScope("store-b", "ckb-b", sourceB.source.id, sourceB.version.id);
+    const indexA = {
+      indexerId: "fts5-v1",
+      manifestChecksum: computeCandidateKnowledgeLexicalManifestChecksum(scopeA),
+    };
+    const indexB = {
+      indexerId: "fts5-v1",
+      manifestChecksum: computeCandidateKnowledgeLexicalManifestChecksum(scopeB),
+    };
+
+    await storage.rebuildCandidateKnowledgeLexicalIndex({
+      scope: scopeA,
+      index: indexA,
+      createdAt: "2026-08-13T09:10:00.000Z",
+      chunks: [
+        lexicalChunk(
+          "chunk-a2",
+          sourceA.source.id,
+          sourceA.version.id,
+          "Led platform operations",
+          1,
+        ),
+        lexicalChunk(
+          "chunk-a1",
+          sourceA.source.id,
+          sourceA.version.id,
+          "Built TypeScript services",
+          0,
+        ),
+        lexicalChunk(
+          "chunk-a3",
+          sourceA2.source.id,
+          sourceA2.version.id,
+          "Designed Python automation",
+          0,
+        ),
+      ],
+    });
+    await storage.rebuildCandidateKnowledgeLexicalIndex({
+      scope: scopeB,
+      index: indexB,
+      createdAt: "2026-08-13T09:11:00.000Z",
+      chunks: [
+        lexicalChunk(
+          "chunk-b1",
+          sourceB.source.id,
+          sourceB.version.id,
+          "Private Python automation",
+          0,
+          "store-b",
+          "ckb-b",
+        ),
+      ],
+    });
+
+    await expect(storage.inspectCandidateKnowledgeLexicalIndex(scopeA)).resolves.toMatchObject({
+      status: "matched",
+      indexedChunkCount: 3,
+    });
+    await expect(
+      storage.queryCandidateKnowledge({
+        purpose: "achievement-recall",
+        query: "TypeScript",
+        scope: scopeA,
+      }),
+    ).resolves.toMatchObject({
+      status: "matched",
+      hits: [{ chunkId: "chunk-a1" }],
+      selectedSourceCount: 1,
+    });
+    await expect(
+      storage.queryCandidateKnowledge({
+        purpose: "achievement-recall",
+        query: "quantum chemistry",
+        scope: scopeA,
+        limit: 1,
+      }),
+    ).resolves.toMatchObject({
+      status: "bounded-fallback",
+      hits: [{ chunkId: "chunk-a1" }],
+    });
+    await expect(
+      storage.queryCandidateKnowledge({
+        purpose: "factual-checks",
+        query: "the and we",
+        scope: scopeA,
+      }),
+    ).resolves.toMatchObject({
+      status: "no-query",
+      hits: [],
+    });
+
+    await storage.upsertCandidateKnowledgeLexicalChunks({
+      scope: scopeA,
+      index: indexA,
+      chunks: [
+        lexicalChunk("chunk-a1", sourceA.source.id, sourceA.version.id, "Built Rust services", 0),
+      ],
+    });
+    await expect(
+      storage.queryCandidateKnowledge({
+        purpose: "factual-checks",
+        query: "Rust",
+        scope: scopeA,
+      }),
+    ).resolves.toMatchObject({ status: "matched", hits: [{ chunkId: "chunk-a1" }] });
+
+    await storage.deleteCandidateKnowledgeLexicalSourceVersion({
+      storeId: "store-a",
+      knowledgeBaseId: "ckb-a",
+      sourceId: sourceA.source.id,
+      versionId: sourceA.version.id,
+    });
+    await expect(storage.inspectCandidateKnowledgeLexicalIndex(scopeA)).resolves.toMatchObject({
+      status: "not-indexed",
+      indexedChunkCount: 0,
+    });
+    await expect(storage.inspectCandidateKnowledgeLexicalIndex(scopeA2)).resolves.toMatchObject({
+      status: "not-indexed",
+      index: null,
+      indexedScope: null,
+      indexedChunkCount: 0,
+    });
+    await expect(
+      storage.queryCandidateKnowledge({
+        purpose: "critic-review",
+        query: "Rust",
+        scope: scopeA,
+      }),
+    ).resolves.toMatchObject({ status: "not-indexed", hits: [] });
+    await expect(
+      storage.queryCandidateKnowledge({
+        purpose: "critic-review",
+        query: "Python",
+        scope: scopeB,
+      }),
+    ).resolves.toMatchObject({ status: "matched", hits: [{ chunkId: "chunk-b1" }] });
+    await storage.close();
+  });
+
+  it("reports stale exact-scope requests and rejects multi-CKB or unbound manifests", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.ensureDefaultCandidateKnowledgeBase(candidateKnowledgeBase("ckb-a", true));
+    const sourceA = await storage.createCandidateKnowledgeSource(
+      candidateKnowledgeSource("source-a", "ckb-a"),
+      candidateKnowledgeVersion("version-a"),
+    );
+    const scopeA = lexicalScope("store-a", "ckb-a", sourceA.source.id, sourceA.version.id);
+    const alternateScope = lexicalScope("store-a", "ckb-a", "source-other", "version-other");
+    const index = {
+      indexerId: "fts5-v1",
+      manifestChecksum: computeCandidateKnowledgeLexicalManifestChecksum(scopeA),
+    };
+    await expect(
+      storage.rebuildCandidateKnowledgeLexicalIndex({
+        scope: {
+          sources: [
+            ...scopeA.sources,
+            {
+              storeId: "store-b",
+              knowledgeBaseId: "ckb-a",
+              sourceId: sourceA.source.id,
+              versionId: sourceA.version.id,
+            },
+          ],
+        },
+        index,
+        createdAt: "2026-08-13T09:10:00.000Z",
+        chunks: [],
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.rebuildCandidateKnowledgeLexicalIndex({
+        scope: scopeA,
+        index: { ...index, manifestChecksum: "a".repeat(64) },
+        createdAt: "2026-08-13T09:10:00.000Z",
+        chunks: [],
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await expect(
+      storage.rebuildCandidateKnowledgeLexicalIndex({
+        scope: scopeA,
+        index,
+        createdAt: "2026-08-13T09:10:00.000Z",
+        chunks: [],
+      }),
+    ).rejects.toThrow(StorageValidationError);
+    await storage.rebuildCandidateKnowledgeLexicalIndex({
+      scope: scopeA,
+      index,
+      createdAt: "2026-08-13T09:10:00.000Z",
+      chunks: [lexicalChunk("chunk-a1", sourceA.source.id, sourceA.version.id, "TypeScript")],
+    });
+    await expect(
+      storage.inspectCandidateKnowledgeLexicalIndex(alternateScope),
+    ).resolves.toMatchObject({
+      status: "stale",
+      indexedChunkCount: 1,
+    });
+    await expect(
+      storage.queryCandidateKnowledge({
+        purpose: "opportunity-requirements",
+        query: "TypeScript",
+        scope: alternateScope,
+      }),
+    ).resolves.toMatchObject({ status: "stale", hits: [] });
+    await storage.close();
+  });
+
+  it("stores immutable private retrieval traces without query or source content", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.saveWorkspace(workspace("workspace-trace"));
+    const scope = lexicalScope("store-a", "ckb-a", "source-a", "version-a");
+    const index = {
+      schemaVersion: 1 as const,
+      indexerId: "fts5-v1",
+      manifestChecksum: computeCandidateKnowledgeLexicalManifestChecksum(scope),
+    };
+    const trace = {
+      schemaVersion: 1 as const,
+      id: "trace-1",
+      workspaceId: "workspace-trace",
+      operationId: "operation-1",
+      purpose: "critic-review" as const,
+      queryChecksum: "a".repeat(64),
+      scope,
+      index,
+      status: "matched" as const,
+      indexedChunkCount: 2,
+      selectedChunkCount: 1,
+      selectedSourceCount: 1,
+      latencyMs: 12,
+      selectedChunks: [{ chunkId: "chunk-a1", bm25Rank: -1.5 }],
+      createdAt: "2026-08-13T10:00:00.000Z",
+    };
+    await expect(storage.appendCandidateKnowledgeRetrievalTrace(trace)).resolves.toEqual(trace);
+    await expect(
+      storage.getCandidateKnowledgeRetrievalTrace("workspace-trace", "trace-1"),
+    ).resolves.toEqual(trace);
+    await expect(
+      storage.listCandidateKnowledgeRetrievalTraces("workspace-trace", {
+        operationId: "operation-1",
+      }),
+    ).resolves.toEqual([trace]);
+    await expect(storage.appendCandidateKnowledgeRetrievalTrace(trace)).resolves.toEqual(trace);
+    await expect(
+      storage.appendCandidateKnowledgeRetrievalTrace({
+        ...trace,
+        queryChecksum: "b".repeat(64),
+      }),
+    ).rejects.toThrow(StorageConflictError);
+    const serializedTrace = JSON.stringify(trace);
+    expect(serializedTrace).toContain("queryChecksum");
+    expect(serializedTrace).toContain("source-a");
+    expect(serializedTrace).toContain("version-a");
+    expect(serializedTrace).not.toMatch(/raw query|chunk text|\/private|https?:/i);
+    await expect(
+      storage.appendCandidateKnowledgeRetrievalTrace({
+        ...trace,
+        id: "trace-2",
+        query: "raw query",
+      } as never),
+    ).rejects.toThrow(StorageValidationError);
     await storage.close();
   });
 });

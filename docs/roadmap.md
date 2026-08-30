@@ -79,7 +79,7 @@ The product status is easiest to read by outcome:
 | ---------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Integrated author–critic workspace | Integrated foundation; [Released alpha.4 checkpoint](stage-evidence-v0.7.0-alpha.4.md); [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); v0.7 incomplete/unvalidated | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
 | Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
-| Workspace retrieval and policy     | Policy integrated; retrieval partial  | Workspace-scoped SQLite FTS/BM25 supplies selected chunks to live requests. Writing policies have immutable local history, structured preferences and deterministic rules, shared CLI/desktop controls, and explicit reviewed-opportunity overrides. Runs pin effective/base/override lineage and supply the effective policy to both model roles. Application-grade drafting and CKB retrieval integration remain open. |
+| Workspace retrieval and policy     | Policy integrated; CKB persistence implemented; runtime partial | Legacy workspace-scoped SQLite FTS/BM25 still supplies selected chunks to live requests. Migration 25 now provides separate exact-version CKB index/query persistence and immutable content-free workspace traces, without claiming lifecycle or runtime cutover. Writing policies remain integrated with immutable lineage and shared controls. |
 | Opportunity brief                  | Integrated reviewed-version handoff      | A strict provider-independent contract and shared CLI/packaged-desktop host workflows assemble approved URLs, selected files, pasted content, and typed local candidate instructions into immutable draft/review versions with honest provenance and visible failures. New runs can pin one exact checksum-verified reviewed version; resume reuses the immutable context. Provider extraction and run transmission each retain explicit approval boundaries.                    |
 | Portable CKB                       | [Released Sprint 2 checkpoint](stage-evidence-v0.7.0-alpha.2.md); [Released alpha.3 checkpoint](stage-evidence-v0.7.0-alpha.3.md); #78 accepted; v0.7 incomplete/unvalidated | The reusable CKB foundation is complete: stable source identity and immutable versions, explicit lifecycle/readiness evidence, isolated application/run selection, shared CLI/desktop controls, coordinated recovery, six-class retention planning, portable backup/restore, and exact-plan deletion. Retrieval/index construction remains #80 scope. |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
@@ -296,27 +296,7 @@ immutable context. Resume cannot replace that selection, and later edits do
 not alter the run. This completes #67; the milestone remains incomplete pending
 its downstream planning and drafting work.
 
-The first #66 component defines a strict immutable canonical-profile contract.
-Bounded normalized facts cover all career-history categories, require exact
-candidate-provided CKB source-version provenance, and may carry optional public
-corroboration. Conflicts, possible duplicates, and omissions remain visible;
-every issue must be acknowledged or resolved before reviewed status. Version
-lineage, review timestamps, selection membership, canonical ordering, deep
-immutability, and path-free JSON round trips are deterministic. Persistence,
-CKB content derivation, retention and backup integration, run binding, and
-shared CLI/desktop review controls remain open, so #66 and the milestone are
-incomplete.
-
-The second #66 component persists that contract in workspace-local,
-append-only SQLite history through migration 24. Canonical checksums, immediate
-parent lineage, monotonic update timestamps, immutable triggers, corruption
-checks, and content-free audits protect restart-safe versions. A
-provider-independent application service supports optimistic fact/issue edits
-and reviewed successors without reading CKB content. Cross-CKB profiles remain
-outside single-CKB portable backups. Derivation, retention/deletion, run
-binding, and shared adapters remain open, so #66 is still incomplete.
-
-The third #66 component derives a draft from the exact latest source versions
+The completed #66 canonical-profile path derives a draft from the exact latest source versions
 in an explicitly selected CKB or approved combination. Managed reads return
 fresh path-free bytes after one-handle integrity verification, and byte
 ingestion reuses the bounded text/PDF/DOCX pipeline. Explicit provider-data
@@ -348,9 +328,9 @@ The [sanitized representative acceptance](profile-acceptance.md) now proves
 12-of-12 category preservation, exact candidate-source provenance, private
 project handling without public proof, visible unresolved conflicts,
 duplicates and omissions, path-free schema round trips, and SQLite restart.
-This completes #66 at its current no-derived-index boundary; #80 remains
-responsible for building those indexes and enforcing the same lifecycle rule
-once rows exist.
+This completes #66. Issue #80 now owns synchronization of the persisted derived
+index rows with the same lifecycle rule and their later application/runtime
+cutover.
 
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
@@ -490,6 +470,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Persisted the first CKB lexical projection and immutable workspace retrieval traces without cutting over live runs. | Migration 25 keeps CKB chunks and FTS rows separate from legacy evidence, binds one projection to an exact single-CKB source-version manifest, exposes stale/unindexed states, uses bounded deterministic fallback, and invalidates the whole derived projection on source-version deletion. Lifecycle-triggered indexing and application fan-out remain open #80 work. |
 | 2026-08-30 | Defined the CKB-scoped lexical retrieval boundary before persistence and runtime integration. | Each CKB owns a replaceable exact-source-version FTS projection, multi-CKB retrieval is explicit application fan-out with deterministic fusion, and the workspace stores immutable content-free traces. Provider projections contain only bounded text and opaque citable chunk IDs; stale or unavailable indexes cannot silently become empty context. |
 | 2026-08-30 | Validated the canonical candidate profile with a deterministic sanitized representative career. | A real temporary CKB and SQLite round trip preserves all 12 categories with exact candidate provenance, accepts private-project evidence without public proof, and keeps conflicts, duplicates, and omissions visible before review. This completes #66 while #80 retains ownership of future derived-index lifecycle behavior. |
 | 2026-08-30 | Added the candidate-facing canonical-profile review surface. | The collecting desktop workspace can derive with explicit transmission approval, load immutable history, inspect bounded provenance, edit latest-draft fact values and issue statuses, review, and bind the exact selected reviewed version to the next run without exposing roots or stored selections. |
