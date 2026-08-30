@@ -108,7 +108,15 @@ describe("phase-0 CLI workflow", () => {
     ]);
     await startedStorage.close();
 
-    const approved = await lifecycleRun(root, "approve", undefined, messages.value);
+    await expect(lifecycleRun(root, "approve", undefined, messages.value)).rejects.toThrow(
+      /not application-ready/i,
+    );
+    const revision = await lifecycleRun(root, "revision", started.runId, messages.value);
+    expect(revision.state).toBe("revising");
+    const reviewedRevision = await resumeRun(root, { runId: started.runId }, messages.value);
+    expect(reviewedRevision).toMatchObject({ state: "awaiting-approval", round: 2 });
+
+    const approved = await lifecycleRun(root, "approve", started.runId, messages.value);
     expect(approved.state).toBe("approved");
     const outputPath = await exportRun(root, undefined, undefined, messages.value);
     expect(await readFile(outputPath, "utf8")).toContain("## Summary");

@@ -103,6 +103,7 @@ import type {
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
+import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import type {
   ApplicationDriver,
   ApplicationIo,
@@ -3146,6 +3147,8 @@ export async function exportRun(
       throw new CliUserError("A completed independent critic review is required before export.");
     }
     if (snapshot.artifact === null) throw new CliUserError("The approved run has no artifact.");
+    const readinessFailure = exactApprovedArtifactFailure(snapshot);
+    if (readinessFailure !== null) throw new CliUserError(readinessFailure);
     if (!outputFormats.includes(formatInput as OutputFormat)) {
       throw new CliUserError(`Unsupported export format: ${formatInput}.`);
     }
@@ -3159,10 +3162,7 @@ export async function exportRun(
       requiredSections: config.requiredSections,
       ...(config.maxWords === undefined ? {} : { maxWords: config.maxWords }),
       ...(config.maxCharacters === undefined ? {} : { maxCharacters: config.maxCharacters }),
-      // Reaching this point requires durable human approval above. Missing
-      // source references remain visible in review history, but they must not
-      // become a second, hidden approval gate during file rendering.
-      allowUnbackedClaims: true,
+      allowUnbackedClaims: false,
       generatedAt: timestamp(),
     });
     await writeFile(outputPath, rendered.content);

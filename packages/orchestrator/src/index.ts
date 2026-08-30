@@ -18,6 +18,7 @@ import {
 import {
   type AdjudicatedRevisionEffectOverride,
   type AdjudicatedRevisionTrace,
+  type ApplicationReadinessStoppingDecision,
   type AuthorAdjudicationDecisionInput,
   type AuthorAdjudicationPlan,
   adjudicatedRevisionEffectOverrideSchema,
@@ -42,6 +43,12 @@ import {
   validateDraftArtifact,
 } from "@draft-loop/validation";
 import { buildAuthorAdjudicationPlan } from "./adjudication.js";
+import {
+  type ApprovedArtifactBinding,
+  approvedArtifactBinding,
+  assertExactApprovedArtifact,
+  buildApplicationReadinessStoppingDecision,
+} from "./readiness.js";
 
 export type RunState = WorkflowState | "provider-error";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
@@ -197,6 +204,10 @@ export interface RunSnapshot {
   readonly lastError: RunError | null;
   /** Optional for snapshots written before the adjudication runtime existed. */
   readonly adjudicationRuntime?: AdjudicationRuntimeState | null;
+  /** Optional for snapshots written before approval readiness was persisted. */
+  readonly readinessDecision?: ApplicationReadinessStoppingDecision | null;
+  /** Exact content binding for the artifact approved by the human. */
+  readonly approvedArtifact?: ApprovedArtifactBinding | null;
 }
 
 export type RunEventType =
@@ -943,6 +954,8 @@ function initialSnapshot(request: OrchestrationRequest, now: string): RunSnapsho
     updatedAt: now,
     lastError: null,
     adjudicationRuntime: null,
+    readinessDecision: null,
+    approvedArtifact: null,
   });
 }
 
@@ -960,6 +973,7 @@ export function createOrchestrationEngine(
   options: OrchestrationEngineOptions,
 ): OrchestrationEngine & OrchestrationPort {
   const clock = options.now ?? (() => new Date().toISOString());
+  const contextsByRunId = new Map<string, ContextSnapshot>();
 
   const save = async (snapshot: RunSnapshot): Promise<RunSnapshot> => {
     const immutableSnapshot = immutable(snapshot);
@@ -1355,6 +1369,8 @@ export function createOrchestrationEngine(
         findings: validation.issues,
         state: "reviewing" as const,
         currentStep: "critic" as const,
+        readinessDecision: null,
+        approvedArtifact: null,
         updatedAt: clock(),
       };
       return saveAndEmit(updated, "state.changed", { to: "reviewing" });
@@ -1471,6 +1487,7 @@ export function createOrchestrationEngine(
 
   const begin = async (request: OrchestrationRequest): Promise<RunSnapshot> => {
     validateOrchestrationRequest(request);
+    contextsByRunId.set(request.runId, request.context);
     const budget = validateBudget(request.budget);
     let snapshot = await options.store.loadRun(request.runId);
     if (snapshot === undefined) {
@@ -1536,6 +1553,7 @@ export function createOrchestrationEngine(
       resumeOptions.context ?? (await options.contextResolver?.(snapshot.contextSnapshotId));
     if (context === undefined)
       throw new Error("A context snapshot is required to resume this run.");
+    contextsByRunId.set(runId, context);
     if (
       legacyCriticRecovery &&
       (context.id !== snapshot.contextSnapshotId || context.workspaceId !== snapshot.workspaceId)
@@ -1617,11 +1635,63 @@ export function createOrchestrationEngine(
       throw new Error("Only a run awaiting approval can be approved.");
     if (!hasCompletedIndependentCritique(snapshot))
       throw new Error("A completed independent critic review is required before approval.");
-    const updated = {
+    const context =
+      contextsByRunId.get(runId) ?? (await options.contextResolver?.(snapshot.contextSnapshotId));
+    if (context === undefined)
+      throw new Error("A context snapshot is required to approve this run.");
+    contextsByRunId.set(runId, context);
+    if (snapshot.artifact === null)
+      throw new Error("A draft artifact is required before approval.");
+    const currentCritiqueFindings = snapshot.executionHistory
+      .filter(
+        (execution) =>
+          execution.runId === snapshot.runId &&
+          execution.contextSnapshotId === snapshot.contextSnapshotId &&
+          execution.round === snapshot.round &&
+          execution.step === "critic" &&
+          execution.status === "completed" &&
+          structurallyValidCritique(execution.output),
+      )
+      .flatMap((execution) =>
+        executionOutputIsCritique(execution) && execution.output !== undefined
+          ? execution.output.findings
+          : [],
+      );
+    const latestRevisionTrace =
+      snapshot.adjudicationRuntime?.trace === null ||
+      snapshot.adjudicationRuntime?.trace === undefined
+        ? undefined
+        : snapshot.adjudicationRuntime.trace;
+    const readinessDecision = buildApplicationReadinessStoppingDecision({
+      artifact: snapshot.artifact,
+      context,
+      critiqueFindings: currentCritiqueFindings,
+      round: snapshot.round,
+      budget: snapshot.budget,
+      priorScoreHistory: snapshot.scoreHistory,
+      ...(latestRevisionTrace === undefined ? {} : { latestRevisionTrace }),
+      createdAt: clock(),
+    });
+    const reviewed = {
       ...snapshot,
+      readinessDecision,
+      approvedArtifact: null,
+      updatedAt: clock(),
+    };
+    if (!readinessDecision.applicationReady) {
+      await save(reviewed);
+      throw new Error(
+        `The current artifact is not application-ready (${readinessDecision.blockers
+          .map((blocker) => blocker.code)
+          .join(", ")}).`,
+      );
+    }
+    const updated = {
+      ...reviewed,
       state: "approved" as const,
       approval: "approved" as const,
       currentStep: null,
+      approvedArtifact: approvedArtifactBinding(snapshot.artifact),
       updatedAt: clock(),
     };
     await saveAndEmit(updated, "user.approved");
@@ -1631,11 +1701,18 @@ export function createOrchestrationEngine(
 
   const markExported = async (runId: string): Promise<RunSnapshot> => {
     const snapshot = await loadForAction(runId);
-    if (snapshot.state === "exported") return snapshot;
-    if (snapshot.state !== "approved")
+    if (snapshot.state !== "approved" && snapshot.state !== "exported")
       throw new Error("Only an approved run can be marked as exported.");
     if (!hasCompletedIndependentCritique(snapshot))
       throw new Error("A completed independent critic review is required before export.");
+    assertExactApprovedArtifact(
+      snapshot.artifact,
+      snapshot.approvedArtifact,
+      snapshot.readinessDecision,
+    );
+    if (snapshot.state === "exported") return snapshot;
+    if (snapshot.approval !== "approved")
+      throw new Error("Only an approved run can be marked as exported.");
     const updated = {
       ...snapshot,
       state: "exported" as const,
@@ -1722,6 +1799,8 @@ export function createOrchestrationEngine(
     const staged = await save({
       ...snapshot,
       adjudicationRuntime: runtime,
+      readinessDecision: null,
+      approvedArtifact: null,
       updatedAt: now,
     });
     const updated = {
@@ -1730,6 +1809,8 @@ export function createOrchestrationEngine(
       approval: "rejected" as const,
       round: snapshot.round + 1,
       currentStep: "revision" as const,
+      readinessDecision: null,
+      approvedArtifact: null,
       updatedAt: now,
       adjudicationRuntime: {
         ...runtime,
@@ -1765,6 +1846,9 @@ export function createOrchestrationEngine(
       approval: "rejected" as const,
       round: snapshot.round + 1,
       currentStep: "revision" as const,
+      adjudicationRuntime: null,
+      readinessDecision: null,
+      approvedArtifact: null,
       updatedAt: clock(),
     };
     await saveAndEmit(updated, "user.revision-requested");
@@ -1802,6 +1886,8 @@ export function createOrchestrationEngine(
       state: "awaiting-approval" as const,
       currentStep: null,
       approval: "pending" as const,
+      readinessDecision: null,
+      approvedArtifact: null,
       updatedAt: clock(),
       lastError: null,
     };
@@ -1836,4 +1922,13 @@ export interface OrchestrationPort {
 }
 
 export * from "./adjudication.js";
+export type {
+  ApprovedArtifactBinding,
+  BuildApplicationReadinessDecisionInput,
+} from "./readiness.js";
+export {
+  approvedArtifactBinding,
+  assertExactApprovedArtifact,
+  buildApplicationReadinessStoppingDecision,
+} from "./readiness.js";
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };

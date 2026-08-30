@@ -2105,6 +2105,32 @@ describe("native host", () => {
         },
       });
       expect(persistedDecision).toMatchObject({ ok: true });
+      const blockedApproval = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId,
+          runId: reviewValue.runId,
+          action: { type: "approve" },
+        },
+      });
+      expect(blockedApproval).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      const revision = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId,
+          runId: reviewValue.runId,
+          action: { type: "request-revision" },
+        },
+      });
+      expect(revision).toMatchObject({ ok: true, value: { state: "revising" } });
+      const reviewedRevision = await host.invoke({
+        type: "run.resume",
+        input: { workspaceId, runId: reviewValue.runId },
+      });
+      expect(reviewedRevision).toMatchObject({
+        ok: true,
+        value: { state: "awaiting-approval", round: 2 },
+      });
       const approved = await host.invoke({
         type: "review.dispatch",
         input: {
@@ -2143,14 +2169,12 @@ describe("native host", () => {
         type: "review.load",
         input: { workspaceId, runId: reviewValue.runId },
       });
-      expect((recovered as { readonly value: DesktopReviewState }).value.findings[0]?.id).toBe(
-        reviewValue.findings[0]?.id,
-      );
       expect(recovered).toMatchObject({
         ok: true,
         value: {
           approval: "approved",
-          findings: [{ decision: "overridden" }],
+          state: "exported",
+          findings: [],
         },
       });
       expect(await readFile(customExportPath, "utf8")).toContain("candidate-provided materials");
