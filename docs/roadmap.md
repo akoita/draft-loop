@@ -339,7 +339,13 @@ references, and approved exports remain intact. Whole-workspace backup and
 retention preserve those records; #80 owns removal and rebuild of derived index
 rows. The collecting desktop workspace now provides a dedicated profile
 history, edit, review, derivation-approval, and exact run-selection surface.
-Representative acceptance validation remains before #66 can close.
+The [sanitized representative acceptance](profile-acceptance.md) now proves
+12-of-12 category preservation, exact candidate-source provenance, private
+project handling without public proof, visible unresolved conflicts,
+duplicates and omissions, path-free schema round trips, and SQLite restart.
+This completes #66 at its current no-derived-index boundary; #80 remains
+responsible for building those indexes and enforcing the same lifecycle rule
+once rows exist.
 
 The #70 writing-policy outcome is integrated. Local SQLite history stores
 immutable checksum-addressed versions and migrates existing managed policies;
@@ -479,6 +485,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Validated the canonical candidate profile with a deterministic sanitized representative career. | A real temporary CKB and SQLite round trip preserves all 12 categories with exact candidate provenance, accepts private-project evidence without public proof, and keeps conflicts, duplicates, and omissions visible before review. This completes #66 while #80 retains ownership of future derived-index lifecycle behavior. |
 | 2026-08-30 | Added the candidate-facing canonical-profile review surface. | The collecting desktop workspace can derive with explicit transmission approval, load immutable history, inspect bounded provenance, edit latest-draft fact values and issue statuses, review, and bind the exact selected reviewed version to the next run without exposing roots or stored selections. |
 | 2026-08-30 | Defined canonical-profile lifecycle reconciliation without erasing audit history. | Drafts cannot become reviewed and reviewed profiles cannot enter new runs when their exact CKB selection is unavailable or changed. Immutable profiles, run references, and approved exports survive workspace backup/restore and audit retention; #80 owns derived-index cleanup. |
 | 2026-08-30 | Bound exact reviewed canonical-profile versions to new runs. | Shared application, CLI, and desktop start contracts accept an opaque profile ID/version pair, verify reviewed status, checksum, and current CKB lifecycle selection, and persist only a safe reference in immutable context. Resume cannot replace it; legacy unbound runs remain readable. |
