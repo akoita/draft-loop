@@ -20,7 +20,7 @@ rollups for a milestone exit, but they are never executable sprint units and
 do not enter implementation until ordered child issues exist. Each execution
 issue must target one observable outcome, one primary architecture boundary,
 one focused test surface, and one PR. Active implementation and review is
-limited to 30 minutes, excluding test and CI wait time; reaching the limit
+limited to 20 minutes, excluding test and CI wait time; reaching the limit
 requires another split rather than silent continuation. Quality gates remain
 unchanged.
 
@@ -175,7 +175,7 @@ applications.
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Now      | Evidence-backed CV drafting (v0.7 program) | [Released alpha.3 checkpoint](stage-evidence-v0.7.0-alpha.3.md); [Released alpha.4 checkpoint](stage-evidence-v0.7.0-alpha.4.md); [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); v0.7 incomplete/unvalidated | Produce a complete factual, source-traceable application draft | Reviewed profile and opportunity, lexical retrieval, planning, complete CV, writing policy, runtime/UI integration, and representative validation remain |
-| Next     | Independent review and readiness ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Dependency-closed sprint; #71 report, #72 adjudication/trace plus its first runtime-carrier slice, and #73 stopping-decision contract component implemented | Turn the factual draft into a reviewed, revised, human-approvable artifact            | Finish the in-sprint CKB, profile, opportunity, retrieval, planning, artifact, and policy prerequisites before the remaining review, readiness, and rendering integration |
+| Next     | Usable CV MVP ([milestone v0.8.0](https://github.com/akoita/draft-loop/milestone/3))           | Six bounded capabilities remain; supporting contracts are already implemented | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Complete #80, #68, #69, #72, #73, and #74 in dependency order |
 | Next     | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4))                | Designed; parity validation not started              | Demonstrate the complete application-grade workflow and publish evidence              | Consented comparison, zero factual regression, bounded editing, and cross-platform release evidence                     |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
@@ -234,10 +234,9 @@ added 10,365 lines across 71 file-changes, so #166 was removed instead of
 extending an already oversized sprint. Future sprint admission requires
 measured, independently closable units. Confirmed deletion #166 was subsequently
 implemented as a standalone prerequisite on the #69 dependency chain.
-Milestone 3 contains the remaining outcome rollups and their satisfied
-prerequisites. Its open rollups must be represented by bounded child issues
-before further implementation; the displayed rollup count is not evidence of
-remaining capacity or execution progress.
+Milestone 3 contains the six remaining MVP capabilities and their satisfied
+prerequisites. Their issue bodies define bounded exits; standalone architecture
+programs and generalized infrastructure are deferred until after the MVP.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -245,32 +244,22 @@ source versions produce a reviewed profile and opportunity brief; CKB-scoped
 lexical retrieval supports a planned, complete CV whose required sections,
 chronology, factual invariants, provenance, and writing-policy checks pass.
 
-### Next — Independent review and readiness (v0.8)
+### Next — Usable CV MVP (v0.8)
 
-Produce the structured independent readiness report (#71), record per-finding
-author adjudication and artifact revision (#72), apply calibrated stopping
-rules (#73), and render a professional ATS-readable DOCX/PDF with visual QA
-(#74).
+Turn selected candidate evidence and one reviewed opportunity into a complete,
+independently reviewed, human-approved, ATS-readable CV.
 
-The milestone executes its dependency graph rather than starting with the final
-review issues. The CKB foundation roll-ups (#111, #113, and #78) and the
-independent opportunity and writing-policy inputs (#67 and #70) are complete.
-Next deliver the profile, lexical retrieval, and planning chain: #66, #80, and
-issue #68, followed by the complete artifact (#69). Then complete issues #72, #73,
-and #74; #71 is already closed. Closed prerequisites such as #60 and #110 remain
-in their historical milestones.
+Execute these capabilities in order: #80, #68, #69, #72, #73, then #74. Each
+is one MVP outcome and one PR. Routine work
+runs directly in a fresh Luna task without subagents, uses focused checks while
+developing, and runs the full validation gate once before publication. Active
+implementation and review stops after 20 minutes rather than expanding scope.
 
-The #71 component is implemented as a strict, provider-independent report
-contract and pure assembler. The first #72 component is implemented as strict
-author-adjudication and artifact-revision trace contracts with pure plan,
-diff, and effect helpers. The first #73 component is implemented as a strict
-application-readiness stopping-decision contract and pure evaluator. Runtime
-lifecycle, human approval/export/version invalidation, persistence/history,
-budget accounting, providers, CLI/desktop wiring, and full #69/#70/#72
-integration remain out of scope. The v0.8 outcome remains blocked on the
-complete drafting and writing-policy dependencies in #69 and #70. The v0.8
-stage remains Next and incomplete; these components do not claim the
-milestone is complete.
+Existing #71, #72, and #73 contracts are supporting components, not reasons to
+build generalized frameworks. The MVP adds only the runtime behavior required
+for one CV workflow. Vector or hybrid retrieval, extra provider roles,
+multiple template families, exhaustive evaluation infrastructure, standalone
+architecture programs, and autonomous submission remain outside v0.8.
 
 The first #67 component defines a strict, versioned opportunity-brief contract
 and pure builder. It preserves source-linked role, employer, responsibilities,
@@ -479,6 +468,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Reset v0.8 around the smallest usable CV workflow and direct Luna execution. | Six existing issues now carry bounded MVP exits in dependency order. Standalone refactors, routine Maestro orchestration, subagents, generalized frameworks, and non-blocking polish are deferred; active work stops at 20 minutes. |
 | 2026-08-30 | Replaced unbounded epic execution with an enforceable sprint-size and active-work budget. | Outcome rollups no longer enter implementation directly. Each child must fit one boundary, focused test surface, and PR; active implementation and review stops at 30 minutes and splits again instead of silently consuming hours. Required quality gates remain unchanged. |
 | 2026-08-30 | Persisted the first CKB lexical projection and immutable workspace retrieval traces without cutting over live runs. | Migration 25 keeps CKB chunks and FTS rows separate from legacy evidence, binds one projection to an exact single-CKB source-version manifest, exposes stale/unindexed states, uses bounded deterministic fallback, and invalidates the whole derived projection on source-version deletion. Lifecycle-triggered indexing and application fan-out remain open #80 work. |
 | 2026-08-30 | Defined the CKB-scoped lexical retrieval boundary before persistence and runtime integration. | Each CKB owns a replaceable exact-source-version FTS projection, multi-CKB retrieval is explicit application fan-out with deterministic fusion, and the workspace stores immutable content-free traces. Provider projections contain only bounded text and opaque citable chunk IDs; stale or unavailable indexes cannot silently become empty context. |
