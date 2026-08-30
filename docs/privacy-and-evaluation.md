@@ -168,8 +168,13 @@ selection and record its path-free source/version identities in new immutable
 run contexts. The current CLI and desktop flow still does not read or send CKB
 content to providers; the existing workspace evidence boundary remains
 authoritative. [ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
-defines the storage contract. The [threat model](threat-model.md) records the
-security risks and residual limitations.
+defines the storage contract. [ADR 0008](adr/0008-ckb-scoped-lexical-retrieval.md)
+defines the retrieval boundary before implementation: each CKB owns its
+replaceable exact-source-version index, while workspace history stores only
+immutable content-free traces. Multi-CKB queries may open only the explicit
+workspace selection and must expose stale or unindexed status rather than
+silently supplying empty context. The [threat model](threat-model.md) records
+the security risks and residual limitations.
 
 Explicit CKB URL intake is a local acquisition action, not provider
 transmission. The user must approve each adapter request before retrieval. The
