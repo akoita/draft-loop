@@ -10,12 +10,19 @@ discovery or pilot evidence, and **Later** is directional. The status model
 describes evidence for a product outcome; it does not count lines of code or
 package-level capabilities.
 
-GitHub milestones are dependency-closed delivery sprints. Every open prerequisite
-of a sprint issue belongs to the same milestone and is ordered before the work
-it enables; completed prerequisites remain in their historical milestones.
-This keeps execution inside the visible sprint scope. Broad outcome issues may
-join a sprint when they are required for its exit, while implementation should
-still proceed through independently closable slices.
+GitHub milestones are dependency-closed delivery sprints. Every open
+prerequisite of a sprint issue belongs to the same milestone and is ordered
+before the work it enables; completed prerequisites remain in their historical
+milestones. This keeps execution inside the visible sprint scope.
+
+Issue count is not a capacity measure. Broad outcome issues may remain as
+rollups for a milestone exit, but they are never executable sprint units and
+do not enter implementation until ordered child issues exist. Each execution
+issue must target one observable outcome, one primary architecture boundary,
+one focused test surface, and one PR. Active implementation and review is
+limited to 30 minutes, excluding test and CI wait time; reaching the limit
+requires another split rather than silent continuation. Quality gates remain
+unchanged.
 
 ## Vision
 
@@ -226,9 +233,11 @@ retention, backup export, and collision-safe restore. Its five feature PRs
 added 10,365 lines across 71 file-changes, so #166 was removed instead of
 extending an already oversized sprint. Future sprint admission requires
 measured, independently closable units. Confirmed deletion #166 was subsequently
-implemented as a standalone prerequisite on the #69 dependency chain. Milestone
-3 now includes open prerequisite epics #66–#70 and #80 so no
-remaining sprint issue depends on open work outside the sprint.
+implemented as a standalone prerequisite on the #69 dependency chain.
+Milestone 3 contains the remaining outcome rollups and their satisfied
+prerequisites. Its open rollups must be represented by bounded child issues
+before further implementation; the displayed rollup count is not evidence of
+remaining capacity or execution progress.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -470,6 +479,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Replaced unbounded epic execution with an enforceable sprint-size and active-work budget. | Outcome rollups no longer enter implementation directly. Each child must fit one boundary, focused test surface, and PR; active implementation and review stops at 30 minutes and splits again instead of silently consuming hours. Required quality gates remain unchanged. |
 | 2026-08-30 | Persisted the first CKB lexical projection and immutable workspace retrieval traces without cutting over live runs. | Migration 25 keeps CKB chunks and FTS rows separate from legacy evidence, binds one projection to an exact single-CKB source-version manifest, exposes stale/unindexed states, uses bounded deterministic fallback, and invalidates the whole derived projection on source-version deletion. Lifecycle-triggered indexing and application fan-out remain open #80 work. |
 | 2026-08-30 | Defined the CKB-scoped lexical retrieval boundary before persistence and runtime integration. | Each CKB owns a replaceable exact-source-version FTS projection, multi-CKB retrieval is explicit application fan-out with deterministic fusion, and the workspace stores immutable content-free traces. Provider projections contain only bounded text and opaque citable chunk IDs; stale or unavailable indexes cannot silently become empty context. |
 | 2026-08-30 | Validated the canonical candidate profile with a deterministic sanitized representative career. | A real temporary CKB and SQLite round trip preserves all 12 categories with exact candidate provenance, accepts private-project evidence without public proof, and keeps conflicts, duplicates, and omissions visible before review. This completes #66 while #80 retains ownership of future derived-index lifecycle behavior. |
