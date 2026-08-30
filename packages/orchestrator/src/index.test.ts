@@ -1098,4 +1098,51 @@ describe("durable orchestration", () => {
       }),
     );
   });
+
+  it("does not silently discard retrieval failure for a selected candidate knowledge base", async () => {
+    const retrievalFailure = new Error("selected candidate knowledge retrieval failed");
+    const retrieval = { queryEvidence: vi.fn(async () => Promise.reject(retrievalFailure)) };
+    const { engine, author } = engineFixture({ retrieval });
+    const selectedContext = createContextSnapshot({
+      ...context(),
+      candidateKnowledgeSelection: {
+        schemaVersion: 1,
+        capturedAt: timestamp,
+        entries: [
+          {
+            storeId: "store-1",
+            knowledgeBaseId: "knowledge-1",
+            sources: [
+              {
+                sourceId: "source-1",
+                versionId: "version-1",
+                lifecycleRevision: {
+                  knowledgeBaseState: "active",
+                  knowledgeBaseArchivedAt: null,
+                  versionId: "version-1",
+                  version: 1,
+                  createdAt: timestamp,
+                  managed: true,
+                  originBoundAt: timestamp,
+                  observation: null,
+                  retirement: null,
+                  provenanceFetchedAt: null,
+                  directory: null,
+                },
+              },
+            ],
+          },
+        ],
+      },
+    });
+
+    const snapshot = await engine.start(request({ context: selectedContext }));
+
+    expect(snapshot).toMatchObject({
+      state: "provider-error",
+      lastError: { code: "provider-error", retryable: false, step: "author" },
+    });
+    expect(retrieval.queryEvidence).toHaveBeenCalledOnce();
+    expect(author).not.toHaveBeenCalled();
+  });
 });

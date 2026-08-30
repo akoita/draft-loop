@@ -615,10 +615,33 @@ describe("local application driver", () => {
       await driver.start({ root, allowProviderData: true }, silent);
 
       expect(authorInputs).toHaveLength(1);
+      expect(authorInputs[0]).toContain("Private selection bytes.");
+      expect(authorInputs[0]).not.toContain(
+        "Built local-first TypeScript tools with deterministic testing.",
+      );
       expect(authorInputs[0]).not.toContain("candidateKnowledgeSelection");
       expect(authorInputs[0]).not.toContain(storeRoot);
       expect(authorInputs[0]).not.toContain("provider-selection-store");
       expect(authorInputs[0]).not.toContain("provider-selection-ckb");
+      const history = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        const traces = await history.listCandidateKnowledgeRetrievalTraces(
+          (await readWorkspace(root)).id,
+        );
+        expect(traces).toHaveLength(1);
+        expect(traces[0]).toMatchObject({
+          purpose: "achievement-recall",
+          status: "bounded-fallback",
+          selectedChunkCount: 1,
+          selectedSourceCount: 1,
+        });
+        const serialized = JSON.stringify(traces);
+        expect(serialized).not.toContain("Private selection bytes");
+        expect(serialized).not.toContain("Build TypeScript local-first tools");
+        expect(serialized).not.toContain(storeRoot);
+      } finally {
+        await history.close();
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
