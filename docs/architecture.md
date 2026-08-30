@@ -613,16 +613,19 @@ explicit, bounded effect override records a concise rationale; rejected and nuan
 findings remain `disagreement-preserved`. A trace is valid only when no
 accepted effect is missing, and it never exposes a `resolved` flag.
 
-The orchestrator now exposes a dormant `requestAdjudicatedRevision` runtime
-carrier. It persists the exact report, canonical plan, accepted-effect
-overrides, and nullable derived trace in the existing run snapshot, and passes
-that carrier only to the matching revision author execution. Legacy revision
-requests remain separate, and invalid provider lineage fails closed without a
-trace. This is only the first runtime-carrier slice: it does not generate
-reports, add persistence tables or migrations, wire provider prompts,
-application commands, CLI or desktop controls, or change approval and stopping
-semantics. It stores no raw prompts, raw responses, or hidden reasoning, and
-full #69/#70/#72 integration remains out of scope.
+The orchestrator exposes a `requestAdjudicatedRevision` runtime carrier. It
+persists the exact report, canonical plan, accepted-effect overrides, and
+nullable derived trace in the existing run snapshot, and passes that carrier
+only to the matching revision author execution. The application author
+adapter now transmits that exact content-safe carrier only on that matching
+revision and adds explicit instructions to apply accepted findings, preserve
+rejected or nuanced disagreements, and retain the evidence and factuality
+safeguards above. Legacy revision requests remain separate, and invalid
+provider lineage fails closed without a trace. This #72 runtime slice does not
+generate reports, add persistence tables or migrations, wire application
+commands, CLI or desktop controls, or change approval and stopping semantics.
+It stores no raw prompts, raw responses, or hidden reasoning; #73 and #74
+remain the next runtime capabilities.
 
 ### Application-readiness stopping decision boundary
 
@@ -643,7 +646,7 @@ projection.
 
 This first #73 component deliberately leaves runtime lifecycle, human
 approval/export/version invalidation, persistence/history, budget accounting,
-providers, CLI/desktop wiring, and full #69/#70/#72 integration out of scope.
+providers, and CLI/desktop wiring out of scope.
 The v0.8 runtime outcome remains incomplete and blocked on those boundaries.
 
 ### Rendering and rendering-QA boundary (#74)
