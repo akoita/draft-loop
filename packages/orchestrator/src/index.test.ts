@@ -388,7 +388,23 @@ describe("durable orchestration", () => {
     expect(
       result.executionHistory.every((execution) => execution.contextSnapshotId === "context-1"),
     ).toBe(true);
-    expect((await engine.approve("run-1")).state).toBe("approved");
+    const approved = await engine.approve("run-1");
+    expect(approved).toMatchObject({
+      state: "approved",
+      approval: "approved",
+      readinessDecision: {
+        applicationReady: true,
+        humanApprovalRequired: true,
+        artifact: { id: "artifact-1", version: 1 },
+        report: { artifact: { id: "artifact-1", version: 1 } },
+      },
+      approvedArtifact: {
+        id: "artifact-1",
+        version: 1,
+        checksum: expect.stringMatching(/^[a-f0-9]{64}$/u),
+      },
+    });
+    expect(approved.readinessDecision?.humanApprovalRequired).toBe(true);
     expect((await engine.markExported("run-1")).state).toBe("exported");
     expect((await engine.markExported("run-1")).state).toBe("exported");
     expect((await engine.events("run-1")).map((event) => event.type)).toEqual(
@@ -400,6 +416,47 @@ describe("durable orchestration", () => {
         "user.exported",
       ]),
     );
+  });
+
+  it("persists a blocked approval decision and clears it when revision is requested", async () => {
+    const unsupported = artifact();
+    const claim = unsupported.claims[0];
+    if (claim === undefined) throw new Error("the artifact fixture is incomplete");
+    claim.evidence = [];
+    const { engine, store } = engineFixture({
+      author: async () => execution(unsupported, "anthropic", "author-test"),
+    });
+
+    await engine.start(request());
+    await expect(engine.approve("run-1")).rejects.toThrow(/not application-ready/i);
+    const blocked = await store.loadRun("run-1");
+    expect(blocked?.state).toBe("awaiting-approval");
+    expect(blocked?.approval).toBe("pending");
+    expect(blocked?.readinessDecision).toMatchObject({
+      applicationReady: false,
+      humanApprovalRequired: true,
+      blockers: expect.arrayContaining([
+        expect.objectContaining({ code: "deterministic-error", checkCode: "unsupported-claim" }),
+      ]),
+    });
+    expect(blocked?.approvedArtifact).toBeNull();
+
+    const revision = await engine.requestRevision("run-1");
+    expect(revision.readinessDecision).toBeNull();
+    expect(revision.approvedArtifact).toBeNull();
+  });
+
+  it("rejects exporting content that no longer matches the approved binding", async () => {
+    const { engine, store } = engineFixture();
+    await engine.start(request());
+    const approved = await engine.approve("run-1");
+    if (approved.artifact === null) throw new Error("the approved artifact is missing");
+    await store.saveRun({
+      ...approved,
+      artifact: { ...approved.artifact, language: "fr" },
+    });
+
+    await expect(engine.markExported("run-1")).rejects.toThrow(/exactly match/i);
   });
 
   it("allows a reviewed snapshot to request a revision", async () => {

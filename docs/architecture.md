@@ -644,10 +644,13 @@ bounded stop-reason precedence. It stores no diagnostic messages, source
 excerpts, provider payloads, or hidden reasoning in its deterministic
 projection.
 
-This first #73 component deliberately leaves runtime lifecycle, human
-approval/export/version invalidation, persistence/history, budget accounting,
-providers, and CLI/desktop wiring out of scope.
-The v0.8 runtime outcome remains incomplete and blocked on those boundaries.
+The #73 runtime boundary assembles a fresh current-artifact report at human
+approval, persists the readiness decision and an exact artifact checksum
+binding, clears that binding on revision or artifact replacement, and requires
+the same application-ready binding before export. Older snapshots may omit
+these optional fields and fail closed at export until a new approval records
+them. Provider, CLI, desktop presentation, and rendering-QA integration remain
+owned by their respective boundaries.
 
 ### Rendering and rendering-QA boundary (#74)
 
