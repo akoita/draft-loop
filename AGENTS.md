@@ -40,6 +40,15 @@ and split remaining work into a new bounded issue before continuing. Never
 silently turn one issue into a multi-hour task. Preserve quality by reducing
 scope, not by skipping required checks or merging incomplete work.
 
+## Hotspot containment
+
+The architecture hotspot check freezes growth in the existing monolithic
+domain, schema, storage, knowledge-base, and local-runtime files. New feature
+logic and focused tests belong in feature-specific modules; hotspot files may
+contain only compatibility exports or thin wiring that does not increase their
+line-count baseline. Whenever an extraction reduces a hotspot, lower its
+recorded limit in the same change so the reduction cannot regress.
+
 ## Documentation synchronization
 
 - Keep code synchronized with `README.md`, architecture documents and diagrams,
