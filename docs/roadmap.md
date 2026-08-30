@@ -372,10 +372,11 @@ manifests, checksums, platform results, limitations, and the next decision
 
 Issues #75 and #76 remain outcome rollups rather than executable sprint units.
 The dependency-ordered v0.9 work first enforces a private predeclared
-comparison gate (#248), then records one consented parity result (#249),
-prepares the exact release candidate after #75 closes (#250), and publishes the
-release evidence and next decision (#251) before closing #76. Each child keeps
-one primary boundary, focused verification, and a one-PR exit.
+comparison gate (#248), runs the provider-free synthetic trust preflight
+(#253), then records one consented parity result (#249). It prepares the exact
+release candidate after #75 closes (#250) and publishes the release evidence
+and next decision (#251) before closing #76. Each child keeps one primary
+boundary, focused verification, and a one-PR exit.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -477,6 +478,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Added a provider-free synthetic trust preflight between the private comparison gate and the consented parity run. | #253 exercises eight sanitized deterministic scenarios before #249; its results are implementation evidence and cannot satisfy the consented outcome requirement. |
 | 2026-08-30 | Split the v0.9 workflow-parity and release rollups into four dependency-ordered execution issues. | #248 predeclares the private comparison gate before #249 records the consented outcome; #250 prepares the release candidate only after #75 closes, and #251 records released evidence and the next decision before #76 closes. |
 | 2026-08-30 | Integrated #74 controlled rendering QA into approved export. | Markdown uses deterministic integrity checks; PDF and DOCX use named byte inspectors before any file is written, and the content-free report is retained with export history. DOCX office pagination and clipping remain explicit limitations rather than implied certification. |
 | 2026-08-30 | Integrated #73 exact application-readiness approval and export binding. | Human approval now follows a fresh deterministic decision for the current reviewed artifact, revisions invalidate it, and export accepts only the exact approved content checksum. |
