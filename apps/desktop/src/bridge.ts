@@ -7,6 +7,31 @@
  * projections.
  */
 
+import {
+  type CanonicalCandidateProfileFactCategory,
+  type CanonicalCandidateProfileIssueCode,
+  type CanonicalCandidateProfileIssueSeverity,
+  type CanonicalCandidateProfileIssueStatus,
+  type CanonicalCandidateProfileProvenanceKind,
+  type CanonicalCandidateProfileStatus,
+  canonicalCandidateProfileFactCategories,
+  canonicalCandidateProfileIssueCodes,
+  canonicalCandidateProfileIssueSeverities,
+  canonicalCandidateProfileIssueStatuses,
+  canonicalCandidateProfileProvenanceKinds,
+  canonicalCandidateProfileStatuses,
+  maximumCanonicalCandidateProfileFactCount,
+  maximumCanonicalCandidateProfileFactIdLength,
+  maximumCanonicalCandidateProfileFieldLength,
+  maximumCanonicalCandidateProfileIdLength,
+  maximumCanonicalCandidateProfileIssueCount,
+  maximumCanonicalCandidateProfileIssueFactReferenceCount,
+  maximumCanonicalCandidateProfileIssueMessageLength,
+  maximumCanonicalCandidateProfileIssueSourceReferenceCount,
+  maximumCanonicalCandidateProfileProvenanceCount,
+  maximumCanonicalCandidateProfileSubjectIdLength,
+  maximumCanonicalCandidateProfileValueLength,
+} from "@draft-loop/domain";
 import type {
   DesktopReviewState,
   IndependentReviewView,
@@ -77,6 +102,11 @@ export const bridgeCapabilities = [
   "opportunity.list",
   "opportunity.edit",
   "opportunity.review",
+  "profile.derive",
+  "profile.get",
+  "profile.list",
+  "profile.edit",
+  "profile.review",
   "run.status",
   "run.start",
   "run.pause",
@@ -675,6 +705,8 @@ export interface RunStartInput {
   readonly workspaceId: string;
   /** Optional exact reviewed opportunity version to bind to this run. */
   readonly opportunityBrief?: OpportunityBriefSelectionInput;
+  /** Optional exact reviewed canonical candidate-profile version to bind to this run. */
+  readonly candidateProfile?: CandidateProfileSelectionInput;
   /** Optional exact lowercase SHA-256 writing-policy override identity. */
   readonly writingPolicyOverrideChecksum?: string;
 }
@@ -684,13 +716,23 @@ export interface OpportunityBriefSelectionInput {
   readonly version: number;
 }
 
+export interface CandidateProfileSelectionInput {
+  readonly profileId: string;
+  readonly version: number;
+}
+
 const opportunityBriefSelectionKeys = inputKeys<OpportunityBriefSelectionInput>()([
   "briefId",
+  "version",
+]);
+const candidateProfileSelectionKeys = inputKeys<CandidateProfileSelectionInput>()([
+  "profileId",
   "version",
 ]);
 const runStartKeys = inputKeys<RunStartInput>()([
   "workspaceId",
   "opportunityBrief",
+  "candidateProfile",
   "writingPolicyOverrideChecksum",
 ]);
 
@@ -2201,6 +2243,213 @@ const opportunityListResultKeys = resultKeys<OpportunityListResult>()([
   "versions",
 ]);
 
+export interface CanonicalCandidateProfileDeriveInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+  /** Enables provider transmission only when explicitly set to true. */
+  readonly providerTransmissionApproved?: boolean;
+}
+
+export interface CanonicalCandidateProfileGetInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+  /** Omit to reload the latest durable version. */
+  readonly version?: number;
+}
+
+export interface CanonicalCandidateProfileListInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+}
+
+export interface CanonicalCandidateProfileProvenanceReferenceInput {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly versionId: string;
+  readonly kind: CanonicalCandidateProfileProvenanceKind;
+}
+
+export interface CanonicalCandidateProfileFactInput {
+  readonly id: string;
+  readonly category: CanonicalCandidateProfileFactCategory;
+  readonly subjectId?: string;
+  readonly field: string;
+  readonly value: string;
+  readonly provenance: readonly CanonicalCandidateProfileProvenanceReferenceInput[];
+}
+
+export interface CanonicalCandidateProfileIssuePatchInput {
+  readonly id: string;
+  readonly code: CanonicalCandidateProfileIssueCode;
+  readonly severity: CanonicalCandidateProfileIssueSeverity;
+  readonly status: CanonicalCandidateProfileIssueStatus;
+  readonly message: string;
+  readonly factIds?: readonly string[];
+  readonly sourceRefs?: readonly CanonicalCandidateProfileProvenanceReferenceInput[];
+}
+
+export interface CanonicalCandidateProfileEditPatchInput {
+  readonly facts?: readonly CanonicalCandidateProfileFactInput[];
+  readonly issues?: readonly CanonicalCandidateProfileIssuePatchInput[];
+}
+
+export interface CanonicalCandidateProfileEditInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+  /** The latest version the editor read; stale writes are rejected by the app. */
+  readonly expectedVersion: number;
+  readonly patch: CanonicalCandidateProfileEditPatchInput;
+}
+
+export interface CanonicalCandidateProfileReviewInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+  /** The latest draft version the reviewer read; stale reviews are rejected by the app. */
+  readonly expectedVersion: number;
+}
+
+const canonicalCandidateProfileDeriveKeys = inputKeys<CanonicalCandidateProfileDeriveInput>()([
+  "workspaceId",
+  "profileId",
+  "providerTransmissionApproved",
+]);
+const canonicalCandidateProfileGetKeys = inputKeys<CanonicalCandidateProfileGetInput>()([
+  "workspaceId",
+  "profileId",
+  "version",
+]);
+const canonicalCandidateProfileListKeys = inputKeys<CanonicalCandidateProfileListInput>()([
+  "workspaceId",
+  "profileId",
+]);
+const canonicalCandidateProfileProvenanceReferenceKeys =
+  inputKeys<CanonicalCandidateProfileProvenanceReferenceInput>()([
+    "storeId",
+    "knowledgeBaseId",
+    "sourceId",
+    "versionId",
+    "kind",
+  ]);
+const canonicalCandidateProfileFactKeys = inputKeys<CanonicalCandidateProfileFactInput>()([
+  "id",
+  "category",
+  "subjectId",
+  "field",
+  "value",
+  "provenance",
+]);
+const canonicalCandidateProfileIssuePatchKeys =
+  inputKeys<CanonicalCandidateProfileIssuePatchInput>()([
+    "id",
+    "code",
+    "severity",
+    "status",
+    "message",
+    "factIds",
+    "sourceRefs",
+  ]);
+const canonicalCandidateProfileEditPatchKeys = inputKeys<CanonicalCandidateProfileEditPatchInput>()(
+  ["facts", "issues"],
+);
+const canonicalCandidateProfileEditKeys = inputKeys<CanonicalCandidateProfileEditInput>()([
+  "workspaceId",
+  "profileId",
+  "expectedVersion",
+  "patch",
+]);
+const canonicalCandidateProfileReviewKeys = inputKeys<CanonicalCandidateProfileReviewInput>()([
+  "workspaceId",
+  "profileId",
+  "expectedVersion",
+]);
+
+export interface CanonicalCandidateProfileProvenanceReferenceResult {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly versionId: string;
+  readonly kind: CanonicalCandidateProfileProvenanceKind;
+}
+
+export interface CanonicalCandidateProfileFactResult {
+  readonly id: string;
+  readonly category: CanonicalCandidateProfileFactCategory;
+  readonly subjectId?: string;
+  readonly field: string;
+  readonly value: string;
+  readonly provenance: readonly CanonicalCandidateProfileProvenanceReferenceResult[];
+}
+
+export interface CanonicalCandidateProfileIssueResult {
+  readonly id: string;
+  readonly code: CanonicalCandidateProfileIssueCode;
+  readonly severity: CanonicalCandidateProfileIssueSeverity;
+  readonly status: CanonicalCandidateProfileIssueStatus;
+  readonly message: string;
+  readonly factIds: readonly string[];
+  readonly sourceRefs: readonly CanonicalCandidateProfileProvenanceReferenceResult[];
+}
+
+export interface CanonicalCandidateProfileRecordResult {
+  readonly workspaceId: string;
+  readonly profileId: string;
+  readonly version: number;
+  readonly parentVersion: number | null;
+  readonly status: CanonicalCandidateProfileStatus;
+  readonly createdAt: string;
+  readonly updatedAt: string;
+  readonly reviewedAt: string | null;
+  readonly checksum: string;
+  readonly facts: readonly CanonicalCandidateProfileFactResult[];
+  readonly issues: readonly CanonicalCandidateProfileIssueResult[];
+}
+
+export interface CanonicalCandidateProfileListResult {
+  readonly workspaceId: string;
+  readonly profileId: string;
+  readonly versions: readonly CanonicalCandidateProfileRecordResult[];
+}
+
+const canonicalCandidateProfileProvenanceReferenceResultKeys =
+  resultKeys<CanonicalCandidateProfileProvenanceReferenceResult>()([
+    "storeId",
+    "knowledgeBaseId",
+    "sourceId",
+    "versionId",
+    "kind",
+  ]);
+const canonicalCandidateProfileFactResultKeys = resultKeys<CanonicalCandidateProfileFactResult>()([
+  "id",
+  "category",
+  "subjectId",
+  "field",
+  "value",
+  "provenance",
+]);
+const canonicalCandidateProfileIssueResultKeys = resultKeys<CanonicalCandidateProfileIssueResult>()(
+  ["id", "code", "severity", "status", "message", "factIds", "sourceRefs"],
+);
+const canonicalCandidateProfileRecordResultKeys =
+  resultKeys<CanonicalCandidateProfileRecordResult>()([
+    "workspaceId",
+    "profileId",
+    "version",
+    "parentVersion",
+    "status",
+    "createdAt",
+    "updatedAt",
+    "reviewedAt",
+    "checksum",
+    "facts",
+    "issues",
+  ]);
+const canonicalCandidateProfileListResultKeys = resultKeys<CanonicalCandidateProfileListResult>()([
+  "workspaceId",
+  "profileId",
+  "versions",
+]);
+
 export interface ExportResult {
   readonly exportId: string;
   readonly workspaceId: string;
@@ -2357,6 +2606,11 @@ export interface BridgeCommandInputMap {
   "opportunity.list": OpportunityListInput;
   "opportunity.edit": OpportunityEditInput;
   "opportunity.review": OpportunityReviewInput;
+  "profile.derive": CanonicalCandidateProfileDeriveInput;
+  "profile.get": CanonicalCandidateProfileGetInput;
+  "profile.list": CanonicalCandidateProfileListInput;
+  "profile.edit": CanonicalCandidateProfileEditInput;
+  "profile.review": CanonicalCandidateProfileReviewInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -2421,6 +2675,11 @@ export interface BridgeCommandOutputMap {
   "opportunity.list": OpportunityListResult;
   "opportunity.edit": OpportunityRecordResult;
   "opportunity.review": OpportunityRecordResult;
+  "profile.derive": CanonicalCandidateProfileRecordResult;
+  "profile.get": CanonicalCandidateProfileRecordResult;
+  "profile.list": CanonicalCandidateProfileListResult;
+  "profile.edit": CanonicalCandidateProfileRecordResult;
+  "profile.review": CanonicalCandidateProfileRecordResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -3363,6 +3622,15 @@ function validateOpportunityBriefSelectionInput(value: unknown): OpportunityBrie
   };
 }
 
+function validateCandidateProfileSelectionInput(value: unknown): CandidateProfileSelectionInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, candidateProfileSelectionKeys)) return invalidInput();
+  return {
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+    version: opportunityVersion(input.version),
+  };
+}
+
 function validateRunStartInput(value: unknown): RunStartInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, runStartKeys)) return invalidInput();
@@ -3370,6 +3638,10 @@ function validateRunStartInput(value: unknown): RunStartInput {
     input.opportunityBrief === undefined
       ? undefined
       : validateOpportunityBriefSelectionInput(input.opportunityBrief);
+  const candidateProfile =
+    input.candidateProfile === undefined
+      ? undefined
+      : validateCandidateProfileSelectionInput(input.candidateProfile);
   const writingPolicyOverrideChecksum =
     input.writingPolicyOverrideChecksum === undefined
       ? undefined
@@ -3377,6 +3649,7 @@ function validateRunStartInput(value: unknown): RunStartInput {
   return {
     workspaceId: identifier(input.workspaceId),
     ...(opportunityBrief === undefined ? {} : { opportunityBrief }),
+    ...(candidateProfile === undefined ? {} : { candidateProfile }),
     ...(writingPolicyOverrideChecksum === undefined ? {} : { writingPolicyOverrideChecksum }),
   };
 }
@@ -3438,7 +3711,6 @@ function validateReviewAction(value: unknown): ReviewAction {
       return { type: action.type, fingerprint };
     }
     case "pause":
-    case "start":
     case "resume":
     case "recover-to-review":
     case "recover-round-limit":
@@ -3448,6 +3720,17 @@ function validateReviewAction(value: unknown): ReviewAction {
     case "export":
       if (!hasOnlyKeys(action, ["type"])) return invalidInput();
       return { type: action.type };
+    case "start": {
+      if (!hasOnlyKeys(action, ["type", "candidateProfile"])) return invalidInput();
+      const candidateProfile =
+        action.candidateProfile === undefined
+          ? undefined
+          : validateCandidateProfileSelectionInput(action.candidateProfile);
+      return {
+        type: action.type,
+        ...(candidateProfile === undefined ? {} : { candidateProfile }),
+      };
+    }
     default:
       return invalidInput();
   }
@@ -3519,6 +3802,7 @@ function validateSourceAddUrlInput(value: unknown): SourceAddUrlInput {
 
 const maximumOpportunitySourceCount = 128;
 const maximumOpportunityCollectionEntries = 256;
+const maximumCanonicalCandidateProfileVersionCount = 256;
 const maximumOpportunitySourceIds = 64;
 const maximumOpportunityTextLength = 2_000;
 const maximumOpportunityContentLength = 64 * 1024;
@@ -3844,6 +4128,249 @@ function validateOpportunityReviewInput(value: unknown): OpportunityReviewInput 
   };
 }
 
+function canonicalCandidateProfileText(value: unknown, maximum: number): string {
+  if (typeof value !== "string" || value.trim().length === 0 || value.length > maximum) {
+    return invalidInput();
+  }
+  if (
+    [...value].some((character) => {
+      const codePoint = character.codePointAt(0) ?? 0;
+      return (
+        (codePoint < 0x20 && character !== "\n" && character !== "\r" && character !== "\t") ||
+        codePoint === 0x7f ||
+        (codePoint >= 0x80 && codePoint <= 0x9f)
+      );
+    })
+  ) {
+    return invalidInput();
+  }
+  return value.trim();
+}
+
+function canonicalCandidateProfileIdentifier(
+  value: unknown,
+  maximum = maximumCanonicalCandidateProfileIdLength,
+): string {
+  const result = canonicalCandidateProfileText(value, maximum);
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(result)) return invalidInput();
+  return result;
+}
+
+function canonicalCandidateProfileChecksum(value: unknown): string {
+  const checksum = stringValue(value, 64);
+  if (!/^[a-f0-9]{64}$/u.test(checksum)) return invalidInput();
+  return checksum;
+}
+
+function canonicalCandidateProfileReferenceKey(
+  reference: CanonicalCandidateProfileProvenanceReferenceInput,
+): string {
+  return JSON.stringify([
+    reference.storeId,
+    reference.knowledgeBaseId,
+    reference.sourceId,
+    reference.versionId,
+    reference.kind,
+  ]);
+}
+
+function validateCanonicalCandidateProfileProvenanceReference(
+  value: unknown,
+): CanonicalCandidateProfileProvenanceReferenceInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileProvenanceReferenceKeys)) {
+    return invalidInput();
+  }
+  return {
+    storeId: canonicalCandidateProfileIdentifier(input.storeId),
+    knowledgeBaseId: canonicalCandidateProfileIdentifier(input.knowledgeBaseId),
+    sourceId: canonicalCandidateProfileIdentifier(input.sourceId),
+    versionId: canonicalCandidateProfileIdentifier(input.versionId),
+    kind: enumValue(input.kind, canonicalCandidateProfileProvenanceKinds),
+  };
+}
+
+function validateCanonicalCandidateProfileFact(value: unknown): CanonicalCandidateProfileFactInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileFactKeys)) return invalidInput();
+  const subjectId =
+    input.subjectId === undefined
+      ? undefined
+      : canonicalCandidateProfileIdentifier(
+          input.subjectId,
+          maximumCanonicalCandidateProfileSubjectIdLength,
+        );
+  if (!Array.isArray(input.provenance) || input.provenance.length === 0) return invalidInput();
+  if (input.provenance.length > maximumCanonicalCandidateProfileProvenanceCount) {
+    return invalidInput();
+  }
+  const provenance = input.provenance.map(validateCanonicalCandidateProfileProvenanceReference);
+  if (new Set(provenance.map(canonicalCandidateProfileReferenceKey)).size !== provenance.length) {
+    return invalidInput();
+  }
+  if (!provenance.some((reference) => reference.kind === "candidate-provided")) {
+    return invalidInput();
+  }
+  return {
+    id: canonicalCandidateProfileIdentifier(input.id, maximumCanonicalCandidateProfileFactIdLength),
+    category: enumValue(input.category, canonicalCandidateProfileFactCategories),
+    ...(subjectId === undefined ? {} : { subjectId }),
+    field: canonicalCandidateProfileText(input.field, maximumCanonicalCandidateProfileFieldLength),
+    value: canonicalCandidateProfileText(input.value, maximumCanonicalCandidateProfileValueLength),
+    provenance,
+  };
+}
+
+function canonicalCandidateProfileIdentifierList(
+  value: unknown,
+  maximum: number,
+): readonly string[] {
+  if (!Array.isArray(value) || value.length > maximum) return invalidInput();
+  const result = value.map((entry) => canonicalCandidateProfileIdentifier(entry));
+  if (new Set(result).size !== result.length) return invalidInput();
+  return result;
+}
+
+function validateCanonicalCandidateProfileIssuePatch(
+  value: unknown,
+): CanonicalCandidateProfileIssuePatchInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileIssuePatchKeys)) return invalidInput();
+  const factIds =
+    input.factIds === undefined
+      ? undefined
+      : canonicalCandidateProfileIdentifierList(
+          input.factIds,
+          maximumCanonicalCandidateProfileIssueFactReferenceCount,
+        );
+  const sourceRefs =
+    input.sourceRefs === undefined
+      ? undefined
+      : (() => {
+          if (
+            !Array.isArray(input.sourceRefs) ||
+            input.sourceRefs.length > maximumCanonicalCandidateProfileIssueSourceReferenceCount
+          ) {
+            return invalidInput();
+          }
+          const references = input.sourceRefs.map(
+            validateCanonicalCandidateProfileProvenanceReference,
+          );
+          if (
+            new Set(references.map(canonicalCandidateProfileReferenceKey)).size !==
+            references.length
+          ) {
+            return invalidInput();
+          }
+          return references;
+        })();
+  return {
+    id: canonicalCandidateProfileIdentifier(input.id, maximumCanonicalCandidateProfileFactIdLength),
+    code: enumValue(input.code, canonicalCandidateProfileIssueCodes),
+    severity: enumValue(input.severity, canonicalCandidateProfileIssueSeverities),
+    status: enumValue(input.status, canonicalCandidateProfileIssueStatuses),
+    message: canonicalCandidateProfileText(
+      input.message,
+      maximumCanonicalCandidateProfileIssueMessageLength,
+    ),
+    ...(factIds === undefined ? {} : { factIds }),
+    ...(sourceRefs === undefined ? {} : { sourceRefs }),
+  };
+}
+
+function validateCanonicalCandidateProfileDeriveInput(
+  value: unknown,
+): CanonicalCandidateProfileDeriveInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileDeriveKeys)) return invalidInput();
+  const providerTransmissionApproved = optionalBooleanValue(input.providerTransmissionApproved);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+    ...(providerTransmissionApproved === undefined ? {} : { providerTransmissionApproved }),
+  };
+}
+
+function validateCanonicalCandidateProfileGetInput(
+  value: unknown,
+): CanonicalCandidateProfileGetInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileGetKeys)) return invalidInput();
+  const version = input.version === undefined ? undefined : opportunityVersion(input.version);
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+    ...(version === undefined ? {} : { version }),
+  };
+}
+
+function validateCanonicalCandidateProfileListInput(
+  value: unknown,
+): CanonicalCandidateProfileListInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileListKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+  };
+}
+
+function validateCanonicalCandidateProfileEditPatch(
+  value: unknown,
+): CanonicalCandidateProfileEditPatchInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileEditPatchKeys)) return invalidInput();
+  if (input.facts === undefined && input.issues === undefined) return invalidInput();
+  if (!Array.isArray(input.facts) && input.facts !== undefined) return invalidInput();
+  if (!Array.isArray(input.issues) && input.issues !== undefined) return invalidInput();
+  if (input.facts !== undefined && input.facts.length > maximumCanonicalCandidateProfileFactCount) {
+    return invalidInput();
+  }
+  if (
+    input.issues !== undefined &&
+    input.issues.length > maximumCanonicalCandidateProfileIssueCount
+  ) {
+    return invalidInput();
+  }
+  const facts = input.facts?.map(validateCanonicalCandidateProfileFact);
+  const issues = input.issues?.map(validateCanonicalCandidateProfileIssuePatch);
+  if (facts !== undefined && new Set(facts.map((fact) => fact.id)).size !== facts.length) {
+    return invalidInput();
+  }
+  if (issues !== undefined && new Set(issues.map((issue) => issue.id)).size !== issues.length) {
+    return invalidInput();
+  }
+  return {
+    ...(facts === undefined ? {} : { facts }),
+    ...(issues === undefined ? {} : { issues }),
+  };
+}
+
+function validateCanonicalCandidateProfileEditInput(
+  value: unknown,
+): CanonicalCandidateProfileEditInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileEditKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+    expectedVersion: opportunityVersion(input.expectedVersion),
+    patch: validateCanonicalCandidateProfileEditPatch(input.patch),
+  };
+}
+
+function validateCanonicalCandidateProfileReviewInput(
+  value: unknown,
+): CanonicalCandidateProfileReviewInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileReviewKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+    expectedVersion: opportunityVersion(input.expectedVersion),
+  };
+}
+
 function validateExportWriteInput(value: unknown): ExportWriteInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, exportWriteKeys)) return invalidInput();
@@ -4115,6 +4642,31 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "opportunity.review",
         input: validateOpportunityReviewInput(command.input),
+      };
+    case "profile.derive":
+      return {
+        type: "profile.derive",
+        input: validateCanonicalCandidateProfileDeriveInput(command.input),
+      };
+    case "profile.get":
+      return {
+        type: "profile.get",
+        input: validateCanonicalCandidateProfileGetInput(command.input),
+      };
+    case "profile.list":
+      return {
+        type: "profile.list",
+        input: validateCanonicalCandidateProfileListInput(command.input),
+      };
+    case "profile.edit":
+      return {
+        type: "profile.edit",
+        input: validateCanonicalCandidateProfileEditInput(command.input),
+      };
+    case "profile.review":
+      return {
+        type: "profile.review",
+        input: validateCanonicalCandidateProfileReviewInput(command.input),
       };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
@@ -5854,6 +6406,144 @@ function normalizeOpportunityListResult(value: unknown): OpportunityListResult {
   return { workspaceId, briefId, versions };
 }
 
+function normalizeCanonicalCandidateProfileProvenanceReferenceResult(
+  value: unknown,
+): CanonicalCandidateProfileProvenanceReferenceResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileProvenanceReferenceResultKeys)) {
+    return invalidInput();
+  }
+  return validateCanonicalCandidateProfileProvenanceReference(result);
+}
+
+function normalizeCanonicalCandidateProfileFactResult(
+  value: unknown,
+): CanonicalCandidateProfileFactResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileFactResultKeys)) return invalidInput();
+  const fact = validateCanonicalCandidateProfileFact(result);
+  return {
+    ...fact,
+    provenance: fact.provenance.map(normalizeCanonicalCandidateProfileProvenanceReferenceResult),
+  };
+}
+
+function normalizeCanonicalCandidateProfileIssueResult(
+  value: unknown,
+): CanonicalCandidateProfileIssueResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileIssueResultKeys)) return invalidInput();
+  if (!Array.isArray(result.factIds) || !Array.isArray(result.sourceRefs)) return invalidInput();
+  const issue = validateCanonicalCandidateProfileIssuePatch(result);
+  if (issue.factIds === undefined || issue.sourceRefs === undefined) return invalidInput();
+  return {
+    ...issue,
+    factIds: issue.factIds,
+    sourceRefs: issue.sourceRefs.map(normalizeCanonicalCandidateProfileProvenanceReferenceResult),
+  };
+}
+
+function normalizeCanonicalCandidateProfileRecordResult(
+  value: unknown,
+  expectedWorkspaceId?: string,
+  expectedProfileId?: string,
+): CanonicalCandidateProfileRecordResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileRecordResultKeys)) return invalidInput();
+  if (
+    !Array.isArray(result.facts) ||
+    result.facts.length > maximumCanonicalCandidateProfileFactCount ||
+    !Array.isArray(result.issues) ||
+    result.issues.length > maximumCanonicalCandidateProfileIssueCount
+  ) {
+    return invalidInput();
+  }
+  const workspaceId = identifier(result.workspaceId);
+  const profileId = canonicalCandidateProfileIdentifier(result.profileId);
+  if (
+    (expectedWorkspaceId !== undefined && workspaceId !== expectedWorkspaceId) ||
+    (expectedProfileId !== undefined && profileId !== expectedProfileId)
+  ) {
+    return invalidInput();
+  }
+  const version = opportunityVersion(result.version);
+  const parentVersion =
+    result.parentVersion === null ? null : opportunityVersion(result.parentVersion);
+  if ((version === 1) !== (parentVersion === null)) return invalidInput();
+  if (parentVersion !== null && parentVersion !== version - 1) return invalidInput();
+  const status = enumValue(result.status, canonicalCandidateProfileStatuses);
+  const createdAt = timestampValue(result.createdAt);
+  const updatedAt = timestampValue(result.updatedAt);
+  const reviewedAt = result.reviewedAt === null ? null : timestampValue(result.reviewedAt);
+  if (
+    (status === "draft") !== (reviewedAt === null) ||
+    Date.parse(updatedAt) < Date.parse(createdAt) ||
+    (reviewedAt !== null &&
+      (Date.parse(reviewedAt) < Date.parse(createdAt) ||
+        Date.parse(reviewedAt) > Date.parse(updatedAt)))
+  ) {
+    return invalidInput();
+  }
+  const facts = result.facts.map(normalizeCanonicalCandidateProfileFactResult);
+  const issues = result.issues.map(normalizeCanonicalCandidateProfileIssueResult);
+  const factIds = new Set(facts.map((fact) => fact.id));
+  if (
+    factIds.size !== facts.length ||
+    new Set(issues.map((issue) => issue.id)).size !== issues.length
+  ) {
+    return invalidInput();
+  }
+  for (const issue of issues) {
+    if (issue.factIds.some((factId) => !factIds.has(factId))) return invalidInput();
+  }
+  return {
+    workspaceId,
+    profileId,
+    version,
+    parentVersion,
+    status,
+    createdAt,
+    updatedAt,
+    reviewedAt,
+    checksum: canonicalCandidateProfileChecksum(result.checksum),
+    facts,
+    issues,
+  };
+}
+
+function normalizeCanonicalCandidateProfileListResult(
+  value: unknown,
+): CanonicalCandidateProfileListResult {
+  const result = requireRecord(value);
+  if (
+    !hasOnlyKeys(result, canonicalCandidateProfileListResultKeys) ||
+    !Array.isArray(result.versions) ||
+    result.versions.length > maximumCanonicalCandidateProfileVersionCount
+  ) {
+    return invalidInput();
+  }
+  const workspaceId = identifier(result.workspaceId);
+  const profileId = canonicalCandidateProfileIdentifier(result.profileId);
+  const versions = result.versions.map((version) =>
+    normalizeCanonicalCandidateProfileRecordResult(version, workspaceId, profileId),
+  );
+  let previousVersion = 0;
+  for (const version of versions) {
+    if (
+      version.workspaceId !== workspaceId ||
+      version.profileId !== profileId ||
+      version.version !== previousVersion + 1 ||
+      (previousVersion === 0
+        ? version.parentVersion !== null
+        : version.parentVersion !== previousVersion)
+    ) {
+      return invalidInput();
+    }
+    previousVersion = version.version;
+  }
+  return { workspaceId, profileId, versions };
+}
+
 function normalizeExportResult(value: unknown): ExportResult {
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, exportResultKeys)) return invalidInput();
@@ -5949,8 +6639,8 @@ function normalizeModelsPreviewIndependenceResult(value: unknown): ModelsPreview
   };
 }
 
-function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
-  switch (command) {
+function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
+  switch (command.type) {
     case "workspace.open":
     case "workspace.create":
       return normalizeWorkspaceResult(value);
@@ -5974,6 +6664,17 @@ function normalizeSuccess(command: BridgeCommandName, value: unknown): unknown {
       return normalizeOpportunityRecordResult(value);
     case "opportunity.list":
       return normalizeOpportunityListResult(value);
+    case "profile.derive":
+    case "profile.get":
+    case "profile.edit":
+    case "profile.review":
+      return normalizeCanonicalCandidateProfileRecordResult(
+        value,
+        command.input.workspaceId,
+        command.input.profileId,
+      );
+    case "profile.list":
+      return normalizeCanonicalCandidateProfileListResult(value);
     case "knowledge.readiness":
       return normalizeKnowledgeReadinessResult(value);
     case "knowledge.sources":
@@ -6066,7 +6767,7 @@ function normalizeResponse(
     return { ok: false, error: safeSerializedBridgeError(response.error, command.type) };
   }
   try {
-    return { ok: true, value: normalizeSuccess(command.type, response.value) };
+    return { ok: true, value: normalizeSuccess(command, response.value) };
   } catch (error) {
     const normalizedError = safeBridgeError(error, command.type);
     return {

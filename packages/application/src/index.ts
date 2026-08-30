@@ -7,7 +7,11 @@ import type {
 } from "@draft-loop/domain";
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OutputFormat } from "@draft-loop/rendering";
-import type { OpportunityBriefVersionRecord } from "@draft-loop/storage";
+import type {
+  CanonicalCandidateProfileVersionRecord,
+  OpportunityBriefVersionRecord,
+} from "@draft-loop/storage";
+import type { CanonicalCandidateProfilePatch } from "./candidate-profile-persistence.js";
 import type { OpportunityDraftPatch, OpportunitySourceInput } from "./opportunity-intake.js";
 
 export type {
@@ -177,6 +181,8 @@ export interface StartRunCommand {
   readonly allowProviderData?: boolean;
   /** Exact immutable reviewed opportunity version to bind to the new run. */
   readonly opportunityBrief?: OpportunityBriefSelection;
+  /** Exact immutable reviewed candidate-profile version to bind to the new run. */
+  readonly candidateProfile?: CandidateProfileSelection;
   /** Exact immutable policy history version for a reviewed opportunity override. */
   readonly writingPolicyOverrideChecksum?: string;
 }
@@ -185,6 +191,11 @@ export type BeginRunCommand = StartRunCommand;
 
 export interface OpportunityBriefSelection {
   readonly briefId: string;
+  readonly version: number;
+}
+
+export interface CandidateProfileSelection {
+  readonly profileId: string;
   readonly version: number;
 }
 
@@ -245,6 +256,40 @@ export interface EditOpportunityCommand {
 export interface ReviewOpportunityCommand {
   readonly root: string;
   readonly briefId: string;
+  readonly expectedVersion: number;
+  readonly reviewedAt?: string;
+}
+
+export interface DeriveCanonicalCandidateProfileCommand {
+  readonly root: string;
+  readonly profileId: string;
+  readonly allowProviderData: boolean;
+  readonly createdAt?: string;
+}
+
+export interface GetCanonicalCandidateProfileCommand {
+  readonly root: string;
+  readonly profileId: string;
+  /** Omit to load the latest persisted version. */
+  readonly version?: number;
+}
+
+export interface ListCanonicalCandidateProfileVersionsCommand {
+  readonly root: string;
+  readonly profileId: string;
+}
+
+export interface EditCanonicalCandidateProfileCommand {
+  readonly root: string;
+  readonly profileId: string;
+  readonly expectedVersion: number;
+  readonly patch: CanonicalCandidateProfilePatch;
+  readonly updatedAt?: string;
+}
+
+export interface ReviewCanonicalCandidateProfileCommand {
+  readonly root: string;
+  readonly profileId: string;
   readonly expectedVersion: number;
   readonly reviewedAt?: string;
 }
@@ -342,6 +387,21 @@ export interface ApplicationDriver {
   readonly reviewOpportunity: (
     command: ReviewOpportunityCommand,
   ) => Promise<OpportunityBriefVersionRecord>;
+  readonly deriveCanonicalCandidateProfile: (
+    command: DeriveCanonicalCandidateProfileCommand,
+  ) => Promise<CanonicalCandidateProfileVersionRecord>;
+  readonly getCanonicalCandidateProfile: (
+    command: GetCanonicalCandidateProfileCommand,
+  ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;
+  readonly listCanonicalCandidateProfileVersions: (
+    command: ListCanonicalCandidateProfileVersionsCommand,
+  ) => Promise<readonly CanonicalCandidateProfileVersionRecord[]>;
+  readonly editCanonicalCandidateProfile: (
+    command: EditCanonicalCandidateProfileCommand,
+  ) => Promise<CanonicalCandidateProfileVersionRecord>;
+  readonly reviewCanonicalCandidateProfile: (
+    command: ReviewCanonicalCandidateProfileCommand,
+  ) => Promise<CanonicalCandidateProfileVersionRecord>;
   readonly export: (command: ExportCommand, io?: ApplicationIo) => Promise<string>;
   readonly latestExportPath: (command: LatestExportPathCommand) => Promise<string | null>;
   readonly queryEvidence: (
@@ -432,6 +492,16 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.editOpportunity({ ...command, root: requireRoot(command.root) }),
     reviewOpportunity: async (command) =>
       driver.reviewOpportunity({ ...command, root: requireRoot(command.root) }),
+    deriveCanonicalCandidateProfile: async (command) =>
+      driver.deriveCanonicalCandidateProfile({ ...command, root: requireRoot(command.root) }),
+    getCanonicalCandidateProfile: async (command) =>
+      driver.getCanonicalCandidateProfile({ ...command, root: requireRoot(command.root) }),
+    listCanonicalCandidateProfileVersions: async (command) =>
+      driver.listCanonicalCandidateProfileVersions({ ...command, root: requireRoot(command.root) }),
+    editCanonicalCandidateProfile: async (command) =>
+      driver.editCanonicalCandidateProfile({ ...command, root: requireRoot(command.root) }),
+    reviewCanonicalCandidateProfile: async (command) =>
+      driver.reviewCanonicalCandidateProfile({ ...command, root: requireRoot(command.root) }),
     export: async (command, io) =>
       driver.export({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     latestExportPath: async (command) =>

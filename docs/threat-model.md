@@ -109,14 +109,38 @@ duplicate/conflict detection, and visible omissions.
 A configured-provider adapter now uses the existing author-provider policy and
 auth boundary. Its system prompt treats normalized source text as untrusted,
 its structured request contains no managed paths or CKB provenance, and the
-strict response is still revalidated and grounded locally. No application,
-run, CLI, or desktop operation invokes the adapter yet.
+strict response is still revalidated and grounded locally. Shared application
+operations accept no store roots: the local driver resolves and revalidates the
+workspace's pinned CKB selection before derivation. Provider-free reload,
+history, edit, and review operations stay within workspace storage.
 
-The service also cannot invalidate an immutable profile after source
-retirement or deletion. Because one profile may combine CKBs, it is not copied
-into a single CKB portable backup; whole-workspace database backups still
-preserve it. Retention, deletion, run binding, and host adapter boundaries
-remain open #66 work.
+One exact reviewed profile may be bound to a new run by opaque ID and version.
+The local driver verifies the stored checksum and requires the profile's CKB
+selection to match the workspace's current lifecycle-ready selection before
+persisting only its ID, version, and checksum in immutable context. Resume
+accepts no replacement selection, and renderer inputs expose no roots or stored
+selection snapshot.
+
+The local application reconciles availability without mutating history. A
+draft cannot become reviewed and a reviewed profile cannot enter a new run
+when its exact CKB selection no longer matches the workspace's current
+lifecycle-ready selection. Retirement, deletion, missing stores, and changed
+source versions therefore fail closed at future-use boundaries, while exact
+profile reads and existing run references remain auditable.
+
+Because one profile may combine CKBs, it is not copied into a single CKB
+portable backup; whole-workspace database backups preserve it. Workspace audit
+retention and CKB deletion do not cascade into immutable profile or approved
+export records. Profile-derived indexes are not materialized yet; #80 must
+remove or rebuild their derived rows under the same availability rule. The CLI
+exposes the shared profile API without accepting store roots and requires a
+visible flag before derivation can transmit data.
+The desktop host exposes the same operations through strict bridge inputs and
+an explicit result projection that omits the stored selection snapshot, paths,
+source URLs, and unrecognized future fields. The visual profile surface edits
+only values and statuses on projected records while preserving opaque
+provenance; derivation needs a fresh explicit approval, and run start forwards
+only the selected reviewed profile ID and version.
 
 ### Current CKB scope
 

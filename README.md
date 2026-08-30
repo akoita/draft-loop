@@ -116,12 +116,44 @@ pnpm --filter @draft-loop/cli start opportunity review ./workspace \
   --brief-id target-role --expected-version 2
 pnpm --filter @draft-loop/cli start start ./workspace \
   --opportunity-brief-id target-role --opportunity-version 3 \
+  --candidate-profile-id default-profile --candidate-profile-version 3 \
   --allow-provider-data
 ```
 
-`start` accepts the brief ID and version only as a pair. The selected version
-must already be reviewed. DraftLoop verifies and pins that exact immutable
-version in run context; later edits do not change a started or resumed run.
+`start` accepts each brief or candidate-profile ID and version only as a pair.
+Each selected version must already be reviewed. DraftLoop verifies and pins
+the exact immutable versions and their checksums in run context; later edits do
+not change a started or resumed run. Starts that predate canonical profiles
+remain supported without a profile selection.
+
+The `profile` command group derives a canonical candidate profile from the
+workspace's configured CKB selection, reloads exact or latest versions, and
+creates immutable edited or reviewed successors. Derivation is the only
+provider-backed operation and requires `--allow-provider-data`; the other
+commands operate on workspace-local history. Profile commands never accept a
+CKB store root. A draft can become reviewed, and a reviewed version can enter a
+new run, only while its exact CKB selection still matches the workspace's
+current lifecycle-ready selection. Historical profile versions and existing
+run/export records remain available for audit after lifecycle changes.
+
+```sh
+pnpm --filter @draft-loop/cli start profile derive ./workspace \
+  --profile-id default-profile --allow-provider-data
+pnpm --filter @draft-loop/cli start profile get ./workspace \
+  --profile-id default-profile
+pnpm --filter @draft-loop/cli start profile edit ./workspace \
+  --profile-id default-profile --expected-version 1 --patch ./profile-patch.json
+pnpm --filter @draft-loop/cli start profile review ./workspace \
+  --profile-id default-profile --expected-version 2
+```
+
+The packaged desktop host exposes the same five profile operations through its
+validated native capability boundary. Renderer commands use the active
+workspace identity, never accept a CKB root or open a profile-specific picker,
+and receive an explicit bounded projection of facts, issues, and opaque source
+references. The collecting workspace includes a dedicated profile surface for
+derivation approval, immutable version selection, fact-value and issue-status
+editing, review, and exact reviewed-version selection for the next run.
 
 Writing policies are local, immutable versions. `policy activate` imports a
 file and makes it the workspace default for future runs; `policy import` adds a

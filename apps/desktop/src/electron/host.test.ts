@@ -160,6 +160,46 @@ function opportunityRecord(version = 1, status: "draft" | "reviewed" = "draft"):
   };
 }
 
+function canonicalCandidateProfileRecord(
+  version = 1,
+  status: "draft" | "reviewed" = "draft",
+): unknown {
+  const capturedAt = "2026-08-28T10:00:00.000Z";
+  return {
+    workspaceId: "workspace-native",
+    checksum: "e".repeat(64),
+    profile: {
+      schemaVersion: 1,
+      id: "profile-native",
+      version,
+      parentVersion: version === 1 ? null : version - 1,
+      status,
+      createdAt: capturedAt,
+      updatedAt: capturedAt,
+      reviewedAt: status === "reviewed" ? capturedAt : undefined,
+      candidateKnowledgeSelection: { storeRoot: "/private/selection-root" },
+      facts: [
+        {
+          id: "fact-link",
+          category: "approved-link",
+          field: "url",
+          value: "https://approved.example.test/me",
+          provenance: [
+            {
+              storeId: "store-native",
+              knowledgeBaseId: "knowledge-native",
+              sourceId: "source-native",
+              versionId: "version-native",
+              kind: "candidate-provided",
+            },
+          ],
+        },
+      ],
+      issues: [],
+    },
+  };
+}
+
 function service(
   root: string,
   snapshotOverrides: Readonly<Record<string, unknown>> = {},
@@ -229,6 +269,27 @@ function service(
       reviewOpportunity: vi.fn(async () => {
         throw new Error("opportunity fixture method was not configured");
       }),
+      deriveCanonicalCandidateProfile: vi.fn<ApplicationService["deriveCanonicalCandidateProfile"]>(
+        async () => {
+          throw new Error("profile fixture method was not configured");
+        },
+      ),
+      getCanonicalCandidateProfile: vi.fn<ApplicationService["getCanonicalCandidateProfile"]>(
+        async () => undefined,
+      ),
+      listCanonicalCandidateProfileVersions: vi.fn<
+        ApplicationService["listCanonicalCandidateProfileVersions"]
+      >(async () => []),
+      editCanonicalCandidateProfile: vi.fn<ApplicationService["editCanonicalCandidateProfile"]>(
+        async () => {
+          throw new Error("profile fixture method was not configured");
+        },
+      ),
+      reviewCanonicalCandidateProfile: vi.fn<ApplicationService["reviewCanonicalCandidateProfile"]>(
+        async () => {
+          throw new Error("profile fixture method was not configured");
+        },
+      ),
       export: vi.fn(
         async (command) => command.outputPath ?? join(root, "exports", "run-native.md"),
       ),
@@ -310,6 +371,7 @@ describe("native host", () => {
         input: {
           workspaceId: "workspace-native",
           opportunityBrief: { briefId: "brief-native", version: 4 },
+          candidateProfile: { profileId: "profile-native", version: 2 },
           writingPolicyOverrideChecksum: overrideChecksum,
         },
       }),
@@ -319,6 +381,7 @@ describe("native host", () => {
         root,
         allowProviderData: false,
         opportunityBrief: { briefId: "brief-native", version: 4 },
+        candidateProfile: { profileId: "profile-native", version: 2 },
         writingPolicyOverrideChecksum: overrideChecksum,
       },
       expect.anything(),
@@ -334,6 +397,44 @@ describe("native host", () => {
       { root, runId: "run-native", allowProviderData: false },
       expect.anything(),
     );
+  });
+
+  it("forwards an exact reviewed candidate profile pair through review start", async () => {
+    const root = "/local/profile-selection";
+    const fixture = service(root);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    await expect(
+      host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "pending",
+          action: {
+            type: "start",
+            candidateProfile: { profileId: "profile-native", version: 2 },
+          },
+        },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { runId: "run-native" } });
+
+    expect(fixture.service.begin).toHaveBeenCalledWith(
+      {
+        root,
+        allowProviderData: true,
+        candidateProfile: { profileId: "profile-native", version: 2 },
+      },
+      expect.anything(),
+    );
+    const beginCommand = (
+      fixture.service.begin.mock.calls as unknown as readonly [Record<string, unknown>][]
+    )[0]?.[0];
+    expect(beginCommand).not.toHaveProperty("candidateKnowledgeSelection");
+    expect(beginCommand).not.toHaveProperty("storeRoot");
   });
 
   it("binds an imported opportunity override locally, leaves the global policy untouched, and clears it after dispatch start", async () => {
@@ -4929,5 +5030,169 @@ describe("candidate knowledge native controls", () => {
     });
     expect(stale).toMatchObject({ ok: false, error: { code: "operation-failed" } });
     expect(JSON.stringify(stale)).not.toContain("private stale");
+  });
+
+  it("exposes canonical profile controls through a dialog-free, minimal projection", async () => {
+    const root = "/local/profile-workspace";
+    const fixture = service(root);
+    const chooseFiles = vi.fn(async () => {
+      throw new Error("profile operations must not open a file dialog");
+    });
+    fixture.service.deriveCanonicalCandidateProfile.mockResolvedValue(
+      canonicalCandidateProfileRecord() as never,
+    );
+    fixture.service.getCanonicalCandidateProfile.mockResolvedValue(
+      canonicalCandidateProfileRecord() as never,
+    );
+    fixture.service.listCanonicalCandidateProfileVersions.mockResolvedValue([
+      canonicalCandidateProfileRecord(),
+      canonicalCandidateProfileRecord(2),
+    ] as never);
+    fixture.service.editCanonicalCandidateProfile.mockResolvedValue(
+      canonicalCandidateProfileRecord(2) as never,
+    );
+    fixture.service.reviewCanonicalCandidateProfile.mockResolvedValue(
+      canonicalCandidateProfileRecord(2, "reviewed") as never,
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const denied = await host.invoke({
+      type: "profile.derive",
+      input: { workspaceId: "workspace-native", profileId: "profile-native" },
+    });
+    const approved = await host.invoke({
+      type: "profile.derive",
+      input: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        providerTransmissionApproved: true,
+      },
+    });
+    await expect(
+      host.invoke({
+        type: "profile.get",
+        input: { workspaceId: "workspace-native", profileId: "profile-native", version: 1 },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { profileId: "profile-native", version: 1, reviewedAt: null },
+    });
+    await expect(
+      host.invoke({
+        type: "profile.list",
+        input: { workspaceId: "workspace-native", profileId: "profile-native" },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { workspaceId: "workspace-native", versions: [{ version: 1 }, { version: 2 }] },
+    });
+    await expect(
+      host.invoke({
+        type: "profile.edit",
+        input: {
+          workspaceId: "workspace-native",
+          profileId: "profile-native",
+          expectedVersion: 1,
+          patch: { facts: [] },
+        },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { version: 2 } });
+    await expect(
+      host.invoke({
+        type: "profile.review",
+        input: {
+          workspaceId: "workspace-native",
+          profileId: "profile-native",
+          expectedVersion: 2,
+        },
+      }),
+    ).resolves.toMatchObject({ ok: true, value: { version: 2, status: "reviewed" } });
+
+    expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenNthCalledWith(1, {
+      root,
+      profileId: "profile-native",
+      allowProviderData: false,
+    });
+    expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenNthCalledWith(2, {
+      root,
+      profileId: "profile-native",
+      allowProviderData: true,
+    });
+    expect(fixture.service.getCanonicalCandidateProfile).toHaveBeenCalledWith({
+      root,
+      profileId: "profile-native",
+      version: 1,
+    });
+    expect(fixture.service.listCanonicalCandidateProfileVersions).toHaveBeenCalledWith({
+      root,
+      profileId: "profile-native",
+    });
+    expect(fixture.service.editCanonicalCandidateProfile).toHaveBeenCalledWith({
+      root,
+      profileId: "profile-native",
+      expectedVersion: 1,
+      patch: { facts: [] },
+    });
+    expect(fixture.service.reviewCanonicalCandidateProfile).toHaveBeenCalledWith({
+      root,
+      profileId: "profile-native",
+      expectedVersion: 2,
+    });
+
+    expect(denied).toMatchObject({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        facts: [{ value: "https://approved.example.test/me" }],
+      },
+    });
+    expect(approved).toMatchObject({ ok: true, value: { profileId: "profile-native" } });
+    expect(JSON.stringify(denied)).not.toContain("candidateKnowledgeSelection");
+    expect(JSON.stringify(denied)).not.toContain("/private/selection-root");
+    expect(JSON.stringify(denied)).not.toContain("storeRoot");
+    expect(JSON.stringify(denied)).not.toContain(root);
+    expect(chooseFiles).not.toHaveBeenCalled();
+  });
+
+  it("fails closed on malformed canonical profile history and stale errors", async () => {
+    const root = "/local/profile-safety";
+    const fixture = service(root);
+    fixture.service.listCanonicalCandidateProfileVersions.mockResolvedValue([
+      canonicalCandidateProfileRecord(),
+      canonicalCandidateProfileRecord(3),
+    ] as never);
+    fixture.service.editCanonicalCandidateProfile.mockRejectedValue(
+      new Error("private stale version /secret/candidate"),
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const malformed = await host.invoke({
+      type: "profile.list",
+      input: { workspaceId: "workspace-native", profileId: "profile-native" },
+    });
+    expect(malformed).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    expect(JSON.stringify(malformed)).not.toContain("secret");
+
+    const stale = await host.invoke({
+      type: "profile.edit",
+      input: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        expectedVersion: 1,
+        patch: { facts: [] },
+      },
+    });
+    expect(stale).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    expect(JSON.stringify(stale)).not.toContain("private stale");
+    expect(JSON.stringify(stale)).not.toContain("/secret");
   });
 });

@@ -3414,6 +3414,29 @@ export const opportunityBriefReferenceSchema = z.strictObject({
 export type OpportunityBriefReference = z.infer<typeof opportunityBriefReferenceSchema>;
 export type OpportunityBriefReferenceInput = z.input<typeof opportunityBriefReferenceSchema>;
 
+/** The exact reviewed canonical candidate-profile version bound to a run. */
+const canonicalCandidateProfileReferenceChecksumSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/u, "must be a lowercase SHA-256 checksum");
+
+export const canonicalCandidateProfileReferenceSchema = z.strictObject({
+  profileId: canonicalCandidateProfileIdSchema,
+  version: z
+    .number()
+    .finite()
+    .int()
+    .positive()
+    .refine(Number.isSafeInteger, "must be a safe integer"),
+  checksum: canonicalCandidateProfileReferenceChecksumSchema,
+});
+
+export type CanonicalCandidateProfileReference = z.infer<
+  typeof canonicalCandidateProfileReferenceSchema
+>;
+export type CanonicalCandidateProfileReferenceInput = z.input<
+  typeof canonicalCandidateProfileReferenceSchema
+>;
+
 const contextSnapshotShape = z.object({
   schemaVersion: z.literal(contextSchemaVersion),
   id: nonEmptyString,
@@ -3431,6 +3454,7 @@ const contextSnapshotShape = z.object({
   modelConfiguration: modelConfigurationSchema,
   candidateKnowledgeSelection: candidateKnowledgeSelectionSnapshotSchema.optional(),
   opportunityBriefReference: opportunityBriefReferenceSchema.optional(),
+  candidateProfileReference: canonicalCandidateProfileReferenceSchema.optional(),
   profileId: nonEmptyString.optional(),
 });
 
@@ -3474,6 +3498,7 @@ const contextSnapshotInputShape = z.object({
   modelConfiguration: modelConfigurationSchema,
   candidateKnowledgeSelection: candidateKnowledgeSelectionSnapshotSchema.optional(),
   opportunityBriefReference: opportunityBriefReferenceSchema.optional(),
+  candidateProfileReference: canonicalCandidateProfileReferenceSchema.optional(),
   profileId: nonEmptyString.optional(),
 });
 

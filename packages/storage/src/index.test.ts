@@ -28,7 +28,7 @@ import {
   openSqliteStorage,
   type RoundRecordInput,
   type RunRecordInput,
-  type SqliteStorage,
+  SqliteStorage,
   StorageConflictError,
   StorageSecurityError,
   StorageValidationError,
@@ -2929,6 +2929,70 @@ describe("SQLite storage", () => {
     await expect(backup.listAuditEvents(workspace.id)).resolves.toHaveLength(3);
     await backup.close();
     await rm(directory, { recursive: true, force: true });
+  });
+
+  it("backs up and restores canonical profile history and approved exports with the workspace", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-profile-backup-"));
+    const filename = join(directory, "workspace.sqlite");
+    const backupFilename = join(directory, "workspace-backup.sqlite");
+    const restoredFilename = join(directory, "workspace-restored.sqlite");
+    const storage = openSqliteStorage(filename);
+    await seedHistory(storage);
+    const profileOne = await storage.saveCanonicalCandidateProfile(
+      workspace.id,
+      canonicalCandidateProfile({ id: "profile-backup" }),
+    );
+    const profileTwo = await storage.saveCanonicalCandidateProfile(
+      workspace.id,
+      canonicalCandidateProfile({
+        id: "profile-backup",
+        version: 2,
+        parentVersion: 1,
+        createdAt: "2026-08-12T10:01:00.000Z",
+        updatedAt: "2026-08-12T10:01:00.000Z",
+      }),
+    );
+    const exports = await storage.listExports("run-1");
+
+    await storage.createBackup(backupFilename);
+    await storage.close();
+
+    const restored = await SqliteStorage.restore(backupFilename, restoredFilename);
+    await expect(
+      restored.listCanonicalCandidateProfileVersions(workspace.id, "profile-backup"),
+    ).resolves.toEqual([profileOne, profileTwo]);
+    await expect(restored.listExports("run-1")).resolves.toEqual(exports);
+    await restored.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("keeps canonical profile history and approved exports outside retention purge", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await seedHistory(storage);
+    const profileOne = await storage.saveCanonicalCandidateProfile(
+      workspace.id,
+      canonicalCandidateProfile({ id: "profile-retention" }),
+    );
+    const profileTwo = await storage.saveCanonicalCandidateProfile(
+      workspace.id,
+      canonicalCandidateProfile({
+        id: "profile-retention",
+        version: 2,
+        parentVersion: 1,
+        createdAt: "2026-08-12T10:01:00.000Z",
+        updatedAt: "2026-08-12T10:01:00.000Z",
+      }),
+    );
+    const exports = await storage.listExports("run-1");
+
+    await expect(
+      storage.purgeRetention("2026-08-13T00:00:00.000Z", { confirmed: true }),
+    ).resolves.toMatchObject({ deletedAuditEventsCount: expect.any(Number) });
+    await expect(
+      storage.listCanonicalCandidateProfileVersions(workspace.id, "profile-retention"),
+    ).resolves.toEqual([profileOne, profileTwo]);
+    await expect(storage.listExports("run-1")).resolves.toEqual(exports);
+    await storage.close();
   });
 
   it("persists the per-candidate retention policy and overrides", async () => {

@@ -3,6 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { ModelCompany } from "./bridge.js";
 import {
+  candidateProfileStartBlockerMessage,
+  candidateProfileStartDisabledReason,
   dispatchFindingDecisions,
   filterModelOptions,
   type IndependencePreviewState,
@@ -16,6 +18,7 @@ import {
   modelInputMode,
   otherModelOptionValue,
   requiresLocalEndpoint,
+  reviewActionWithCandidateProfile,
   sharedLineageBlocksCreation,
   type WorkspaceSetupDraft,
   WorkspaceSetupForm,
@@ -809,6 +812,30 @@ describe("desktop trust-centered review", () => {
     expect(html).toContain('disabled=""');
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
+  });
+});
+
+describe("desktop candidate profile run selection", () => {
+  it("injects only the exact selected reviewed profile into a new start action", () => {
+    const selected = { profileId: "profile-1", version: 3 };
+    expect(reviewActionWithCandidateProfile({ type: "start" }, selected)).toEqual({
+      type: "start",
+      candidateProfile: selected,
+    });
+    expect(reviewActionWithCandidateProfile({ type: "resume" }, selected)).toEqual({
+      type: "resume",
+    });
+    expect(reviewActionWithCandidateProfile({ type: "start" }, null)).toEqual({ type: "start" });
+  });
+
+  it("blocks a packaged collecting start until a reviewed profile is selected", () => {
+    expect(candidateProfileStartDisabledReason(true, null)).toBe(
+      candidateProfileStartBlockerMessage,
+    );
+    expect(candidateProfileStartDisabledReason(true, { profileId: "profile-1", version: 2 })).toBe(
+      null,
+    );
+    expect(candidateProfileStartDisabledReason(false, null)).toBe(null);
   });
 });
 

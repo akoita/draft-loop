@@ -1065,6 +1065,26 @@ export interface OpportunityBriefReferenceInput {
   readonly checksum: string;
 }
 
+/**
+ * The exact reviewed canonical candidate-profile version bound to a run
+ * context.
+ *
+ * The reference carries identity and integrity metadata only. Profile facts,
+ * issues, and the local knowledge-selection snapshot remain local to their
+ * own stores and are not copied into a context reference.
+ */
+export interface CanonicalCandidateProfileReference {
+  readonly profileId: string;
+  readonly version: number;
+  readonly checksum: string;
+}
+
+export interface CanonicalCandidateProfileReferenceInput {
+  readonly profileId: string;
+  readonly version: number;
+  readonly checksum: string;
+}
+
 export interface ContextSnapshot {
   readonly schemaVersion: ContextSchemaVersion;
   readonly id: ContextSnapshotId;
@@ -1085,6 +1105,8 @@ export interface ContextSnapshot {
   readonly candidateKnowledgeSelection?: CandidateKnowledgeSelectionSnapshot;
   /** Optional exact reviewed opportunity brief version bound to this run. */
   readonly opportunityBriefReference?: OpportunityBriefReference;
+  /** Optional exact reviewed canonical candidate-profile version bound to this run. */
+  readonly candidateProfileReference?: CanonicalCandidateProfileReference;
   readonly profileId?: ProfileId;
 }
 
@@ -1248,6 +1270,8 @@ export interface ContextSnapshotInput {
   readonly candidateKnowledgeSelection?: CandidateKnowledgeSelectionSnapshotInput;
   /** Optional exact reviewed opportunity brief version to bind to this run. */
   readonly opportunityBriefReference?: OpportunityBriefReferenceInput;
+  /** Optional exact reviewed canonical candidate-profile version to bind to this run. */
+  readonly candidateProfileReference?: CanonicalCandidateProfileReferenceInput;
   readonly profileId?: string;
 }
 
@@ -2533,6 +2557,42 @@ function validateOpportunityBriefReference(
   return true;
 }
 
+const canonicalCandidateProfileReferenceKeys = new Set(["profileId", "version", "checksum"]);
+
+function validateCanonicalCandidateProfileReference(
+  value: unknown,
+  issues: SemanticValidationIssue[],
+): value is CanonicalCandidateProfileReferenceInput {
+  const field = "candidateProfileReference";
+  if (!isRecord(value)) {
+    addIssue(issues, "invalid-value", field, "must be an object when provided.");
+    return false;
+  }
+  for (const key of Object.keys(value)) {
+    if (!canonicalCandidateProfileReferenceKeys.has(key)) {
+      addIssue(issues, "invalid-value", `${field}.${key}`, "is not supported.");
+    }
+  }
+  const reference = value as Partial<CanonicalCandidateProfileReferenceInput>;
+  if (!isNonEmptyString(reference.profileId)) {
+    addIssue(issues, "invalid-value", `${field}.profileId`, "must be a non-empty id.");
+  } else if (reference.profileId.trim().length > maximumCanonicalCandidateProfileIdLength) {
+    addIssue(
+      issues,
+      "invalid-value",
+      `${field}.profileId`,
+      `must be at most ${maximumCanonicalCandidateProfileIdLength} characters.`,
+    );
+  }
+  if (!isSafePositiveInteger(reference.version)) {
+    addIssue(issues, "invalid-value", `${field}.version`, "must be a positive safe integer.");
+  }
+  if (typeof reference.checksum !== "string" || !/^[a-f0-9]{64}$/u.test(reference.checksum)) {
+    addIssue(issues, "invalid-value", `${field}.checksum`, "must be a SHA-256 checksum.");
+  }
+  return true;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -3351,6 +3411,9 @@ export function validateContextSnapshotInput(input: unknown): SemanticValidation
   if (candidate.opportunityBriefReference !== undefined) {
     validateOpportunityBriefReference(candidate.opportunityBriefReference, issues);
   }
+  if (candidate.candidateProfileReference !== undefined) {
+    validateCanonicalCandidateProfileReference(candidate.candidateProfileReference, issues);
+  }
 
   return { valid: issues.length === 0, issues };
 }
@@ -3488,6 +3551,16 @@ function normalizeOpportunityBriefReference(
 ): OpportunityBriefReference {
   return {
     briefId: reference.briefId.trim(),
+    version: reference.version,
+    checksum: reference.checksum.toLowerCase(),
+  };
+}
+
+function normalizeCanonicalCandidateProfileReference(
+  reference: CanonicalCandidateProfileReferenceInput,
+): CanonicalCandidateProfileReference {
+  return {
+    profileId: reference.profileId.trim(),
     version: reference.version,
     checksum: reference.checksum.toLowerCase(),
   };
@@ -4068,6 +4141,13 @@ export function createContextSnapshot(input: ContextSnapshotInput): ContextSnaps
       : {
           opportunityBriefReference: normalizeOpportunityBriefReference(
             input.opportunityBriefReference,
+          ),
+        }),
+    ...(input.candidateProfileReference === undefined
+      ? {}
+      : {
+          candidateProfileReference: normalizeCanonicalCandidateProfileReference(
+            input.candidateProfileReference,
           ),
         }),
     ...(input.profileId ? { profileId: input.profileId.trim() as ProfileId } : {}),

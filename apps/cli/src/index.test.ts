@@ -122,6 +122,11 @@ function harness(record?: IndependentReviewRecord): Harness {
     listOpportunityVersions: unreachable("listOpportunityVersions"),
     editOpportunity: unreachable("editOpportunity"),
     reviewOpportunity: unreachable("reviewOpportunity"),
+    deriveCanonicalCandidateProfile: unreachable("deriveCanonicalCandidateProfile"),
+    getCanonicalCandidateProfile: unreachable("getCanonicalCandidateProfile"),
+    listCanonicalCandidateProfileVersions: unreachable("listCanonicalCandidateProfileVersions"),
+    editCanonicalCandidateProfile: unreachable("editCanonicalCandidateProfile"),
+    reviewCanonicalCandidateProfile: unreachable("reviewCanonicalCandidateProfile"),
     export: unreachable("export"),
     latestExportPath: unreachable("latestExportPath"),
     queryEvidence: unreachable("queryEvidence"),
@@ -575,6 +580,14 @@ describe("draft-loop opportunity commands", () => {
       "--allow-provider-data",
     );
     await invoke("start", "legacy-workspace");
+    await invoke(
+      "start",
+      "profile-workspace",
+      "--candidate-profile-id",
+      "profile-one",
+      "--candidate-profile-version",
+      "4",
+    );
 
     expect(startCommands).toEqual([
       {
@@ -584,6 +597,11 @@ describe("draft-loop opportunity commands", () => {
         allowProviderData: true,
       },
       { root: resolve("legacy-workspace"), allowProviderData: false },
+      {
+        root: resolve("profile-workspace"),
+        candidateProfile: { profileId: "profile-one", version: 4 },
+        allowProviderData: false,
+      },
     ]);
   });
 
@@ -625,6 +643,22 @@ describe("draft-loop opportunity commands", () => {
         "A".repeat(64),
       ),
     ).rejects.toThrow(/lowercase SHA-256/u);
+    await expect(
+      invoke("start", "workspace", "--candidate-profile-id", "profile-one"),
+    ).rejects.toThrow(/must be provided together/u);
+    await expect(invoke("start", "workspace", "--candidate-profile-version", "2")).rejects.toThrow(
+      /must be provided together/u,
+    );
+    await expect(
+      invoke(
+        "start",
+        "workspace",
+        "--candidate-profile-id",
+        "profile-one",
+        "--candidate-profile-version",
+        "0",
+      ),
+    ).rejects.toThrow(/positive integer/u);
     expect(start).not.toHaveBeenCalled();
   });
 
@@ -748,6 +782,226 @@ describe("draft-loop opportunity commands", () => {
     } finally {
       await rm(directory, { recursive: true, force: true });
     }
+  });
+});
+
+describe("draft-loop canonical candidate profile commands", () => {
+  it("delegates derive, get, list, edit, and review through the shared service", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-cli-profile-"));
+    const patchPath = join(directory, "patch.json");
+    await writeFile(patchPath, JSON.stringify({ issues: [] }), "utf8");
+    const dependencies = harness();
+    const deriveCommands: Parameters<ApplicationService["deriveCanonicalCandidateProfile"]>[0][] =
+      [];
+    const getCommands: Parameters<ApplicationService["getCanonicalCandidateProfile"]>[0][] = [];
+    const listCommands: Parameters<
+      ApplicationService["listCanonicalCandidateProfileVersions"]
+    >[0][] = [];
+    const editCommands: Parameters<ApplicationService["editCanonicalCandidateProfile"]>[0][] = [];
+    const reviewCommands: Parameters<ApplicationService["reviewCanonicalCandidateProfile"]>[0][] =
+      [];
+    const record = {
+      workspaceId: "workspace-test",
+      profile: {
+        id: "candidate-profile",
+        version: 1,
+        status: "draft",
+      },
+      checksum: "a".repeat(64),
+    } as unknown as Awaited<ReturnType<ApplicationService["deriveCanonicalCandidateProfile"]>>;
+    const service: ApplicationService = {
+      ...dependencies.service,
+      deriveCanonicalCandidateProfile: async (command) => {
+        deriveCommands.push(command);
+        return record;
+      },
+      getCanonicalCandidateProfile: async (command) => {
+        getCommands.push(command);
+        return record;
+      },
+      listCanonicalCandidateProfileVersions: async (command) => {
+        listCommands.push(command);
+        return [record];
+      },
+      editCanonicalCandidateProfile: async (command) => {
+        editCommands.push(command);
+        return record;
+      },
+      reviewCanonicalCandidateProfile: async (command) => {
+        reviewCommands.push(command);
+        return record;
+      },
+    };
+    const invoke = async (...arguments_: readonly string[]) =>
+      createCli({ service, io: dependencies.io }).parseAsync(["node", "draft-loop", ...arguments_]);
+
+    try {
+      await invoke(
+        "profile",
+        "derive",
+        directory,
+        "--profile-id",
+        "candidate-profile",
+        "--allow-provider-data",
+      );
+      await invoke(
+        "profile",
+        "get",
+        directory,
+        "--profile-id",
+        "candidate-profile",
+        "--version",
+        "2",
+      );
+      await invoke("profile", "list", directory, "--profile-id", "candidate-profile");
+      await invoke(
+        "profile",
+        "edit",
+        directory,
+        "--profile-id",
+        "candidate-profile",
+        "--expected-version",
+        "2",
+        "--patch",
+        patchPath,
+      );
+      await invoke(
+        "profile",
+        "review",
+        directory,
+        "--profile-id",
+        "candidate-profile",
+        "--expected-version",
+        "3",
+      );
+
+      expect(deriveCommands).toEqual([
+        {
+          root: resolve(directory),
+          profileId: "candidate-profile",
+          allowProviderData: true,
+        },
+      ]);
+      expect(getCommands).toEqual([
+        { root: resolve(directory), profileId: "candidate-profile", version: 2 },
+      ]);
+      expect(listCommands).toEqual([{ root: resolve(directory), profileId: "candidate-profile" }]);
+      expect(editCommands).toEqual([
+        {
+          root: resolve(directory),
+          profileId: "candidate-profile",
+          expectedVersion: 2,
+          patch: { issues: [] },
+        },
+      ]);
+      expect(reviewCommands).toEqual([
+        { root: resolve(directory), profileId: "candidate-profile", expectedVersion: 3 },
+      ]);
+      expect(dependencies.lines).toHaveLength(5);
+      expect(dependencies.lines.map((line) => JSON.parse(line))).toEqual([
+        record,
+        record,
+        [record],
+        record,
+        record,
+      ]);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  });
+
+  it("defaults provider approval to false and forwards explicit approval", async () => {
+    const dependencies = harness();
+    const deriveCommands: Parameters<ApplicationService["deriveCanonicalCandidateProfile"]>[0][] =
+      [];
+    const record = {} as Awaited<ReturnType<ApplicationService["deriveCanonicalCandidateProfile"]>>;
+    const service: ApplicationService = {
+      ...dependencies.service,
+      deriveCanonicalCandidateProfile: async (command) => {
+        deriveCommands.push(command);
+        return record;
+      },
+    };
+    const invoke = async (...arguments_: readonly string[]) =>
+      createCli({ service, io: dependencies.io }).parseAsync(["node", "draft-loop", ...arguments_]);
+
+    await invoke("profile", "derive", "workspace", "--profile-id", "candidate-profile");
+    await invoke(
+      "profile",
+      "derive",
+      "workspace",
+      "--profile-id",
+      "candidate-profile",
+      "--allow-provider-data",
+    );
+
+    expect(deriveCommands).toEqual([
+      {
+        root: resolve("workspace"),
+        profileId: "candidate-profile",
+        allowProviderData: false,
+      },
+      {
+        root: resolve("workspace"),
+        profileId: "candidate-profile",
+        allowProviderData: true,
+      },
+    ]);
+  });
+
+  it("rejects invalid profile integer options before calling the service", async () => {
+    const dependencies = harness();
+    const get = vi.fn(async () => undefined);
+    const record = {} as Awaited<ReturnType<ApplicationService["editCanonicalCandidateProfile"]>>;
+    const edit = vi.fn(async () => record);
+    const review = vi.fn(async () => record);
+    const service: ApplicationService = {
+      ...dependencies.service,
+      getCanonicalCandidateProfile: get,
+      editCanonicalCandidateProfile: edit,
+      reviewCanonicalCandidateProfile: review,
+    };
+    const invoke = async (...arguments_: readonly string[]) =>
+      createCli({ service, io: dependencies.io }).parseAsync(["node", "draft-loop", ...arguments_]);
+
+    await expect(
+      invoke(
+        "profile",
+        "get",
+        "workspace",
+        "--profile-id",
+        "candidate-profile",
+        "--version",
+        "nope",
+      ),
+    ).rejects.toThrow(/Expected (?:a number|an integer)/u);
+    await expect(
+      invoke(
+        "profile",
+        "edit",
+        "workspace",
+        "--profile-id",
+        "candidate-profile",
+        "--expected-version",
+        "nope",
+        "--patch",
+        "missing.json",
+      ),
+    ).rejects.toThrow(/Expected (?:a number|an integer)/u);
+    await expect(
+      invoke(
+        "profile",
+        "review",
+        "workspace",
+        "--profile-id",
+        "candidate-profile",
+        "--expected-version",
+        "nope",
+      ),
+    ).rejects.toThrow(/Expected (?:a number|an integer)/u);
+    expect(get).not.toHaveBeenCalled();
+    expect(edit).not.toHaveBeenCalled();
+    expect(review).not.toHaveBeenCalled();
   });
 });
 

@@ -3,6 +3,10 @@ import {
   type BridgeResult,
   bridgeCapabilities,
   bridgeError,
+  type CanonicalCandidateProfileDeriveInput,
+  type CanonicalCandidateProfileEditInput,
+  type CanonicalCandidateProfileListResult,
+  type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
   createCapabilityPort,
   type ModelCandidate,
@@ -84,9 +88,30 @@ export interface DesktopOpportunityCapabilities {
   ) => Promise<OpportunityRecordResult>;
 }
 
+export interface DesktopProfileCapabilities {
+  readonly deriveCanonicalCandidateProfile?: (
+    input: Omit<CanonicalCandidateProfileDeriveInput, "workspaceId">,
+  ) => Promise<CanonicalCandidateProfileRecordResult>;
+  readonly getCanonicalCandidateProfile?: (
+    profileId: string,
+    version?: number,
+  ) => Promise<CanonicalCandidateProfileRecordResult>;
+  readonly listCanonicalCandidateProfileVersions?: (
+    profileId: string,
+  ) => Promise<CanonicalCandidateProfileListResult>;
+  readonly editCanonicalCandidateProfile?: (
+    input: Omit<CanonicalCandidateProfileEditInput, "workspaceId">,
+  ) => Promise<CanonicalCandidateProfileRecordResult>;
+  readonly reviewCanonicalCandidateProfile?: (
+    profileId: string,
+    expectedVersion: number,
+  ) => Promise<CanonicalCandidateProfileRecordResult>;
+}
+
 export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
   WorkspaceSetupCapabilities &
-  DesktopOpportunityCapabilities & {
+  DesktopOpportunityCapabilities &
+  DesktopProfileCapabilities & {
     readonly getProviderAuthModeStatus?: (
       provider: "anthropic" | "openai",
     ) => Promise<ProviderAuthModeStatus>;
@@ -370,6 +395,79 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "opportunity.review",
                 input: { workspaceId: state.workspaceId, briefId, expectedVersion },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.derive")
+      ? {
+          deriveCanonicalCandidateProfile: async (
+            input: Omit<CanonicalCandidateProfileDeriveInput, "workspaceId">,
+          ) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.derive",
+                input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.get")
+      ? {
+          getCanonicalCandidateProfile: async (profileId: string, version?: number) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.get",
+                input: {
+                  workspaceId: state.workspaceId,
+                  profileId,
+                  ...(version === undefined ? {} : { version }),
+                },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.list")
+      ? {
+          listCanonicalCandidateProfileVersions: async (profileId: string) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.list",
+                input: { workspaceId: state.workspaceId, profileId },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.edit")
+      ? {
+          editCanonicalCandidateProfile: async (
+            input: Omit<CanonicalCandidateProfileEditInput, "workspaceId">,
+          ) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.edit",
+                input: { workspaceId: state.workspaceId, ...input },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.review")
+      ? {
+          reviewCanonicalCandidateProfile: async (profileId: string, expectedVersion: number) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.review",
+                input: { workspaceId: state.workspaceId, profileId, expectedVersion },
               }),
             );
           },

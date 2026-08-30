@@ -126,11 +126,38 @@ only the bounded path-free source fields already owned by the extraction port.
 Provider output still passes the local schema and grounding checks before it
 can become a profile version.
 
-No shared application, CLI, or desktop operation invokes this adapter yet, and
-profiles are not bound to runs or materialized into indexes. Cross-CKB profiles
-remain absent from single-CKB portable backups, while whole-workspace database
-backups preserve them. Retention, lifecycle invalidation, and deletion remain
-open #66 work.
+The shared application boundary can now derive, reload, list, edit, and review
+profile versions. Derivation resolves the workspace's pinned CKB selection only
+inside the local driver and revalidates its store identities before reading;
+adapter-neutral commands and results contain no store roots. Reads, history,
+edits, and review do not invoke a provider.
+
+CLI commands now invoke these operations without accepting a CKB store root.
+Derivation requires an explicit provider-data flag; local reload, history,
+edit, and review commands do not cross the provider boundary. The packaged
+desktop host exposes equivalent path-free capabilities against the active
+workspace. Its renderer result is an explicit bounded projection of facts,
+issues, and opaque provenance references; it omits the stored CKB selection
+snapshot and any future unrecognized fields.
+
+New runs may bind one exact reviewed profile by opaque ID and version. The
+local driver verifies its checksum and requires the stored CKB selection to
+match the workspace's current lifecycle-ready selection before recording only
+the safe reference in immutable context. Resume cannot replace it. The same
+availability check blocks a draft from becoming reviewed after a referenced
+source retires, disappears, or changes selection.
+
+Lifecycle changes do not erase immutable profile history, existing run
+references, or approved export records. Cross-CKB profiles remain absent from
+single-CKB portable backups, while whole-workspace database backup and restore
+preserve profiles and exports; workspace retention currently removes eligible
+audit events only. Profile-derived retrieval indexes are not materialized yet.
+Issue #80 owns their rebuild and removal using this lifecycle rule. The
+collecting desktop workspace provides a dedicated editor over the bounded
+path-free host projection. It preserves opaque provenance while changing fact
+values or issue status, requires explicit transmission approval for
+derivation, and sends only the selected reviewed profile ID/version pair when
+starting a run.
 
 ## Local Candidate Knowledge Base handling
 

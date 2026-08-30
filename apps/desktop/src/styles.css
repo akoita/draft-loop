@@ -2839,6 +2839,278 @@ input[type="checkbox"] {
 }
 
 /* =========================================================================
+   Canonical candidate profile
+   ========================================================================= */
+
+.profile-panel {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+  border-color: var(--teal-line);
+  padding: var(--space-5);
+  background: var(--surface-2);
+}
+
+.profile-panel h2,
+.profile-panel h3,
+.profile-panel h4,
+.profile-panel h5 {
+  margin: 0;
+}
+
+.profile-copy {
+  max-width: 76ch;
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
+
+.profile-controls {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  align-items: end;
+  gap: var(--space-3);
+}
+
+.profile-id-label,
+.profile-history-label,
+.profile-issue-status {
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-approval-label {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.profile-approval-label input {
+  margin-top: 0.2em;
+}
+
+.profile-status {
+  min-height: 1.4em;
+  color: var(--text-4);
+  font-size: var(--text-xs);
+}
+
+.profile-error {
+  margin: 0;
+}
+
+.profile-history-label {
+  max-width: 18rem;
+}
+
+.profile-metadata {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-4) 0;
+}
+
+.profile-metadata div {
+  min-width: 0;
+}
+
+.profile-metadata dt,
+.profile-provenance-entry dt {
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-metadata dd,
+.profile-provenance-entry dd {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  overflow-wrap: anywhere;
+}
+
+.profile-note,
+.profile-empty {
+  margin: 0;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
+.profile-note {
+  color: var(--amber);
+}
+
+.profile-subsection {
+  display: grid;
+  gap: var(--space-3);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+.profile-subsection h3 {
+  color: var(--text-1);
+  font-size: var(--text-md);
+}
+
+.profile-groups {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.profile-group {
+  display: grid;
+  gap: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--surface-1);
+}
+
+.profile-group h4,
+.profile-issue-group h5 {
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-fact-list,
+.profile-issue-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.profile-fact,
+.profile-issue {
+  display: grid;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-3);
+}
+
+.profile-fact:first-child,
+.profile-issue:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.profile-fact-heading,
+.profile-issue-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.profile-fact-heading strong,
+.profile-issue-heading strong {
+  color: var(--text-1);
+  font-size: var(--text-xs);
+}
+
+.profile-opaque-id {
+  color: var(--text-4);
+  font-family: var(--font-mono);
+  font-size: var(--text-micro);
+  overflow-wrap: anywhere;
+}
+
+.profile-fact-value {
+  width: 100%;
+  min-width: 0;
+}
+
+.profile-provenance {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.profile-provenance-entry {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  border-left: 2px solid var(--teal-line);
+  padding-left: var(--space-3);
+}
+
+.profile-provenance-entry div {
+  min-width: 0;
+}
+
+.profile-remove {
+  justify-self: start;
+}
+
+.profile-issue-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.profile-issue-heading {
+  justify-content: flex-start;
+}
+
+.profile-issue-severity {
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.profile-issue-error {
+  color: var(--red);
+}
+
+.profile-issue-warning {
+  color: var(--amber);
+}
+
+.profile-issue p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.profile-issue-status {
+  max-width: 14rem;
+}
+
+.profile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+}
+
+/* =========================================================================
    Transmission preflight
    ========================================================================= */
 
@@ -3514,8 +3786,18 @@ input[type="checkbox"] {
   .setup-grid,
   .preflight-policy-grid,
   .preflight-scope,
-  .trust-strip {
+  .trust-strip,
+  .profile-provenance-entry {
     grid-template-columns: 1fr;
+  }
+
+  .profile-controls,
+  .profile-metadata {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-approval-label {
+    grid-column: auto;
   }
 
   .finding-actions {

@@ -9,6 +9,11 @@ function driver(): ApplicationDriver {
     brief: { id: "brief-1", version: 1 },
     checksum: "a".repeat(64),
   } as never;
+  const profileRecord = {
+    workspaceId: "workspace-1",
+    profile: { id: "profile-1", version: 1 },
+    checksum: "b".repeat(64),
+  } as never;
   return {
     initialize: vi.fn(async (command) => ({
       id: "workspace-1",
@@ -94,6 +99,11 @@ function driver(): ApplicationDriver {
     listOpportunityVersions: vi.fn(async () => [opportunityRecord]),
     editOpportunity: vi.fn(async () => opportunityRecord),
     reviewOpportunity: vi.fn(async () => opportunityRecord),
+    deriveCanonicalCandidateProfile: vi.fn(async () => profileRecord),
+    getCanonicalCandidateProfile: vi.fn(async () => profileRecord),
+    listCanonicalCandidateProfileVersions: vi.fn(async () => [profileRecord]),
+    editCanonicalCandidateProfile: vi.fn(async () => profileRecord),
+    reviewCanonicalCandidateProfile: vi.fn(async () => profileRecord),
     export: vi.fn(async () => "exports/run-1.md"),
     latestExportPath: vi.fn(async () => null),
     queryEvidence: vi.fn(async () => []),
@@ -156,6 +166,24 @@ describe("application service contract", () => {
       {
         root: "workspace",
         opportunityBrief: { briefId: "brief-1", version: 3 },
+      },
+      expect.objectContaining({ write: expect.any(Function) }),
+    );
+  });
+
+  it("forwards an exact candidate profile only when creating a run", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.start({
+      root: "workspace",
+      candidateProfile: { profileId: "profile-1", version: 3 },
+    });
+
+    expect(underlying.start).toHaveBeenCalledWith(
+      {
+        root: "workspace",
+        candidateProfile: { profileId: "profile-1", version: 3 },
       },
       expect.objectContaining({ write: expect.any(Function) }),
     );
@@ -286,6 +314,79 @@ describe("application service contract", () => {
       service.getOpportunity({ root: "   ", briefId: "private-brief-id" }),
     ).rejects.toThrow("workspace root is required");
     expect(underlying.getOpportunity).toHaveBeenCalledTimes(2);
+  });
+
+  it("forwards canonical candidate profile version commands and validates their roots", async () => {
+    const underlying = driver();
+    const service = createApplicationService(underlying);
+
+    await service.deriveCanonicalCandidateProfile({
+      root: "workspace",
+      profileId: "profile-1",
+      allowProviderData: true,
+      createdAt: "2026-08-28T10:00:00.000Z",
+    });
+    await service.getCanonicalCandidateProfile({ root: "workspace", profileId: "profile-1" });
+    await service.getCanonicalCandidateProfile({
+      root: "workspace",
+      profileId: "profile-1",
+      version: 1,
+    });
+    await service.listCanonicalCandidateProfileVersions({
+      root: "workspace",
+      profileId: "profile-1",
+    });
+    await service.editCanonicalCandidateProfile({
+      root: "workspace",
+      profileId: "profile-1",
+      expectedVersion: 1,
+      patch: { facts: [] },
+      updatedAt: "2026-08-28T10:01:00.000Z",
+    });
+    await service.reviewCanonicalCandidateProfile({
+      root: "workspace",
+      profileId: "profile-1",
+      expectedVersion: 2,
+      reviewedAt: "2026-08-28T10:02:00.000Z",
+    });
+
+    expect(underlying.deriveCanonicalCandidateProfile).toHaveBeenCalledWith({
+      root: "workspace",
+      profileId: "profile-1",
+      allowProviderData: true,
+      createdAt: "2026-08-28T10:00:00.000Z",
+    });
+    expect(underlying.getCanonicalCandidateProfile).toHaveBeenNthCalledWith(1, {
+      root: "workspace",
+      profileId: "profile-1",
+    });
+    expect(underlying.getCanonicalCandidateProfile).toHaveBeenNthCalledWith(2, {
+      root: "workspace",
+      profileId: "profile-1",
+      version: 1,
+    });
+    expect(underlying.listCanonicalCandidateProfileVersions).toHaveBeenCalledWith({
+      root: "workspace",
+      profileId: "profile-1",
+    });
+    expect(underlying.editCanonicalCandidateProfile).toHaveBeenCalledWith({
+      root: "workspace",
+      profileId: "profile-1",
+      expectedVersion: 1,
+      patch: { facts: [] },
+      updatedAt: "2026-08-28T10:01:00.000Z",
+    });
+    expect(underlying.reviewCanonicalCandidateProfile).toHaveBeenCalledWith({
+      root: "workspace",
+      profileId: "profile-1",
+      expectedVersion: 2,
+      reviewedAt: "2026-08-28T10:02:00.000Z",
+    });
+
+    await expect(
+      service.getCanonicalCandidateProfile({ root: "   ", profileId: "private-profile-id" }),
+    ).rejects.toThrow("workspace root is required");
+    expect(underlying.getCanonicalCandidateProfile).toHaveBeenCalledTimes(2);
   });
 
   it("forwards the durable latest export path query with normalized root", async () => {

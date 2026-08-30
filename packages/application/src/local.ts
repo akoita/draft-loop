@@ -79,6 +79,7 @@ import {
 } from "@draft-loop/schemas";
 import { redactText } from "@draft-loop/security";
 import {
+  type CanonicalCandidateProfileVersionRecord,
   type EvidenceChunkRecord,
   type EvidenceSourceRecord,
   type OpportunityBriefVersionRecord,
@@ -89,13 +90,20 @@ import {
 } from "@draft-loop/storage";
 import OpenAI from "openai";
 import { buildAuthorArtifact } from "./author-output.js";
+import {
+  canonicalCandidateProfileDerivationApprovalErrorMessage,
+  canonicalCandidateProfileDerivationErrorMessage,
+  createCanonicalCandidateProfileDerivationService,
+} from "./candidate-profile-derivation.js";
 import type {
   CanonicalCandidateProfileExtractionPort,
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
+import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
 import type {
   ApplicationDriver,
   ApplicationIo,
+  CandidateProfileSelection,
   ConfigureKnowledgeSelectionCommand,
   ConfigureWritingPolicyCommand,
   GetWritingPolicyCommand,
@@ -706,6 +714,37 @@ function selectionSnapshotsMatch(
 }
 
 /**
+ * Prove that a persisted canonical profile still describes the workspace's
+ * currently configured, lifecycle-ready candidate knowledge selection.
+ *
+ * The workspace configuration owns local roots, while the profile stores only
+ * the path-free selection snapshot. Reopening the configured stores here
+ * checks both pinned identities and lifecycle readiness without exposing any
+ * of that local metadata to an adapter or error surface.
+ */
+async function assertCanonicalCandidateProfileSelectionCurrent(
+  root: string,
+  profile: CanonicalCandidateProfileVersionRecord,
+): Promise<void> {
+  try {
+    const profileSelection = profile.profile.candidateKnowledgeSelection;
+    const config = await readWorkspace(root);
+    const current = await validateConfiguredKnowledgeSelection(config.candidateKnowledgeSelection);
+    if (
+      profileSelection === undefined ||
+      current === undefined ||
+      !selectionSnapshotsMatch(profileSelection, current)
+    ) {
+      throw new Error("candidate profile selection mismatch");
+    }
+  } catch {
+    throw new CliUserError(
+      "The selected candidate profile is not bound to the current candidate knowledge selection.",
+    );
+  }
+}
+
+/**
  * Reopen the configured stores and prove that a persisted run selection still
  * describes exactly the same lifecycle-ready sources. The capture timestamp
  * is intentionally excluded: it records when the snapshot was taken, not the
@@ -1078,7 +1117,7 @@ async function importWritingPolicyVersion(
   workspaceId: string,
   policy: NonNullable<ContextSnapshot["writingPolicy"]>,
 ): Promise<WritingPolicyVersionRecord> {
-  await ensureOpportunityWorkspaceRecord(storage, workspaceId);
+  await ensureWorkspaceRecord(storage, workspaceId);
   const existing = await storage.getWritingPolicyVersion(workspaceId, policy.checksum);
   if (existing !== undefined) return existing;
   const parent = await storage.getLatestWritingPolicyVersion(workspaceId);
@@ -1478,6 +1517,7 @@ async function prepareInputs(
   config: WorkspaceConfig,
   opportunityRecord?: OpportunityBriefVersionRecord,
   writingPolicy?: NonNullable<ContextSnapshot["writingPolicy"]>,
+  candidateProfileReference?: ContextSnapshot["candidateProfileReference"],
 ): Promise<PreparedInputs> {
   const candidateKnowledgeSelection = await validateConfiguredKnowledgeSelection(
     config.candidateKnowledgeSelection,
@@ -1553,6 +1593,7 @@ async function prepareInputs(
     ...(reviewedOpportunity === undefined
       ? {}
       : { opportunityBriefReference: reviewedOpportunity.opportunityBriefReference }),
+    ...(candidateProfileReference === undefined ? {} : { candidateProfileReference }),
     ...(candidateKnowledgeSelection === undefined ? {} : { candidateKnowledgeSelection }),
   });
   return { context, sources: ingestion.sources };
@@ -2282,11 +2323,8 @@ async function openStorage(root: string): Promise<SqliteStorage> {
   return openSqliteStorage(databasePath(root));
 }
 
-/** Ensure an initialized workspace has a durable parent row for opportunity records. */
-async function ensureOpportunityWorkspaceRecord(
-  storage: SqliteStorage,
-  workspaceId: string,
-): Promise<void> {
+/** Ensure an initialized workspace has the durable parent row used by child records. */
+async function ensureWorkspaceRecord(storage: SqliteStorage, workspaceId: string): Promise<void> {
   if ((await storage.getWorkspace(workspaceId)) !== undefined) return;
   const now = timestamp();
   const record: WorkspaceRecord = {
@@ -2518,6 +2556,7 @@ async function createRun(
   options: {
     readonly allowProviderData?: boolean;
     readonly opportunityBrief?: OpportunityBriefSelection;
+    readonly candidateProfile?: CandidateProfileSelection;
     readonly writingPolicyOverrideChecksum?: string;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
@@ -2535,11 +2574,14 @@ async function createRun(
   // compiled here as part of that same validation, then imported only after
   // the inputs are known to be usable.
   const precompiledPolicy =
-    options.opportunityBrief === undefined && config.writingPolicyPath !== undefined
+    options.opportunityBrief === undefined &&
+    options.candidateProfile === undefined &&
+    config.writingPolicyPath !== undefined
       ? await writingPolicyFromPath(pathFromWorkspace(root, config.writingPolicyPath))
       : undefined;
   const legacyInputs =
     options.opportunityBrief === undefined &&
+    options.candidateProfile === undefined &&
     (config.writingPolicyChecksum === undefined || precompiledPolicy !== undefined)
       ? await prepareInputs(root, config, undefined, precompiledPolicy)
       : undefined;
@@ -2558,6 +2600,28 @@ async function createRun(
     if (options.opportunityBrief !== undefined && opportunityRecord === undefined) {
       throw new CliUserError("The selected opportunity brief version was not found.");
     }
+    const candidateProfileRecord =
+      options.candidateProfile === undefined
+        ? undefined
+        : await createCanonicalCandidateProfilePersistenceService(
+            storage,
+          ).getCanonicalCandidateProfile(
+            config.id,
+            options.candidateProfile.profileId,
+            options.candidateProfile.version,
+          );
+    if (options.candidateProfile !== undefined && candidateProfileRecord === undefined) {
+      throw new CliUserError("The selected candidate profile version was not found.");
+    }
+    if (
+      candidateProfileRecord !== undefined &&
+      candidateProfileRecord.profile.status !== "reviewed"
+    ) {
+      throw new CliUserError("The selected candidate profile version is not reviewed.");
+    }
+    if (candidateProfileRecord !== undefined) {
+      await assertCanonicalCandidateProfileSelectionCurrent(root, candidateProfileRecord);
+    }
     const effectivePolicy = await resolveRunWritingPolicy(
       storage,
       config.id,
@@ -2566,8 +2630,36 @@ async function createRun(
       options.opportunityBrief,
       opportunityRecord,
     );
+    const candidateProfileReference =
+      candidateProfileRecord === undefined
+        ? undefined
+        : {
+            profileId: candidateProfileRecord.profile.id,
+            version: candidateProfileRecord.profile.version,
+            checksum: candidateProfileRecord.checksum,
+          };
     const inputs =
-      legacyInputs ?? (await prepareInputs(root, config, opportunityRecord, effectivePolicy));
+      legacyInputs ??
+      (await prepareInputs(
+        root,
+        config,
+        opportunityRecord,
+        effectivePolicy,
+        candidateProfileReference,
+      ));
+    if (candidateProfileRecord !== undefined) {
+      const profileSelection = candidateProfileRecord.profile.candidateKnowledgeSelection;
+      const contextSelection = inputs.context.candidateKnowledgeSelection;
+      if (
+        profileSelection === undefined ||
+        contextSelection === undefined ||
+        !selectionSnapshotsMatch(profileSelection, contextSelection)
+      ) {
+        throw new CliUserError(
+          "The selected candidate profile is not bound to the current candidate knowledge selection.",
+        );
+      }
+    }
     await saveInputs(storage, config, inputs);
     const retrieval = await storage.inspectEvidenceRetrieval(inputs.context.jobDescription, {
       workspaceId: config.id,
@@ -2617,6 +2709,7 @@ export async function beginRun(
   options: {
     readonly allowProviderData?: boolean;
     readonly opportunityBrief?: OpportunityBriefSelection;
+    readonly candidateProfile?: CandidateProfileSelection;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
     readonly providerAuthMode?: ProviderAuthMode;
@@ -2633,6 +2726,7 @@ export async function startRun(
   options: {
     readonly allowProviderData?: boolean;
     readonly opportunityBrief?: OpportunityBriefSelection;
+    readonly candidateProfile?: CandidateProfileSelection;
     readonly resolveCredential?: ProviderCredentialResolver;
     readonly providerClientFactories?: ProviderClientFactories;
     readonly providerAuthMode?: ProviderAuthMode;
@@ -3430,6 +3524,9 @@ export function createLocalApplicationDriver(
           ...(command.opportunityBrief === undefined
             ? {}
             : { opportunityBrief: command.opportunityBrief }),
+          ...(command.candidateProfile === undefined
+            ? {}
+            : { candidateProfile: command.candidateProfile }),
           ...(command.writingPolicyOverrideChecksum === undefined
             ? {}
             : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),
@@ -3449,6 +3546,9 @@ export function createLocalApplicationDriver(
           ...(command.opportunityBrief === undefined
             ? {}
             : { opportunityBrief: command.opportunityBrief }),
+          ...(command.candidateProfile === undefined
+            ? {}
+            : { candidateProfile: command.candidateProfile }),
           ...(command.writingPolicyOverrideChecksum === undefined
             ? {}
             : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),
@@ -3480,7 +3580,7 @@ export function createLocalApplicationDriver(
       const config = await readWorkspace(root);
       const storage = await openStorage(root);
       try {
-        await ensureOpportunityWorkspaceRecord(storage, config.id);
+        await ensureWorkspaceRecord(storage, config.id);
         const draft = await createOpportunityDraft(
           {
             ...(command.id === undefined ? {} : { id: command.id }),
@@ -3555,6 +3655,116 @@ export function createLocalApplicationDriver(
         return await createOpportunityPersistenceService(storage).reviewLatestOpportunityBrief({
           workspaceId: config.id,
           briefId: command.briefId,
+          expectedVersion: command.expectedVersion,
+          reviewedAt: command.reviewedAt ?? timestamp(),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
+    deriveCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      if (command.allowProviderData !== true) {
+        throw new CliUserError(canonicalCandidateProfileDerivationApprovalErrorMessage);
+      }
+      const binding = config.candidateKnowledgeSelection;
+      const validatedSelection = await validateConfiguredKnowledgeSelection(binding);
+      if (binding === undefined || validatedSelection === undefined) {
+        throw new CliUserError(canonicalCandidateProfileDerivationErrorMessage);
+      }
+      const storage = await openStorage(root);
+      try {
+        await ensureWorkspaceRecord(storage, config.id);
+        const persistence = createCanonicalCandidateProfilePersistenceService(storage);
+        const derivation = createCanonicalCandidateProfileDerivationService({
+          persistence,
+          extractor: createProviderCanonicalCandidateProfileExtractionPort(config, {
+            ...providerOpportunityOptions,
+            allowProviderData: true,
+          }),
+          now: timestamp,
+        });
+        return await derivation.deriveCanonicalCandidateProfile({
+          workspaceId: config.id,
+          profileId: command.profileId,
+          selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
+            storeRoot,
+            knowledgeBaseId,
+          })),
+          ...(binding.combinationApproved === undefined
+            ? {}
+            : { combinationApproved: binding.combinationApproved }),
+          allowProviderData: true,
+          ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
+    getCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        const persistence = createCanonicalCandidateProfilePersistenceService(storage);
+        return await (command.version === undefined
+          ? persistence.getLatestCanonicalCandidateProfile(config.id, command.profileId)
+          : persistence.getCanonicalCandidateProfile(
+              config.id,
+              command.profileId,
+              command.version,
+            ));
+      } finally {
+        await storage.close();
+      }
+    },
+    listCanonicalCandidateProfileVersions: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createCanonicalCandidateProfilePersistenceService(
+          storage,
+        ).listCanonicalCandidateProfileVersions(config.id, command.profileId);
+      } finally {
+        await storage.close();
+      }
+    },
+    editCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        return await createCanonicalCandidateProfilePersistenceService(
+          storage,
+        ).editLatestCanonicalCandidateProfile({
+          workspaceId: config.id,
+          profileId: command.profileId,
+          expectedVersion: command.expectedVersion,
+          patch: command.patch,
+          updatedAt: command.updatedAt ?? timestamp(),
+        });
+      } finally {
+        await storage.close();
+      }
+    },
+    reviewCanonicalCandidateProfile: async (command) => {
+      const root = resolve(command.root);
+      const config = await readWorkspace(root);
+      const storage = await openStorage(root);
+      try {
+        const persistence = createCanonicalCandidateProfilePersistenceService(storage);
+        const latest = await persistence.getLatestCanonicalCandidateProfile(
+          config.id,
+          command.profileId,
+        );
+        if (latest?.profile.status === "draft") {
+          await assertCanonicalCandidateProfileSelectionCurrent(root, latest);
+        }
+        return await persistence.reviewLatestCanonicalCandidateProfile({
+          workspaceId: config.id,
+          profileId: command.profileId,
           expectedVersion: command.expectedVersion,
           reviewedAt: command.reviewedAt ?? timestamp(),
         });

@@ -478,9 +478,32 @@ author model and existing API-key, authenticated user-session, or local
 transport. Its system prompt treats source text as untrusted data, and the
 strict proposal schema remains the only accepted response shape.
 
-No shared application operation invokes profile derivation yet. Source
-lifecycle reconciliation and removal, reviewed-profile run binding, and shared
-CLI/desktop controls remain later #66 slices.
+Shared application and local-driver operations derive from the workspace's
+validated, pinned CKB selection and provide exact/latest reads, immutable
+history, optimistic edits, and candidate review. Store roots remain inside the
+local driver rather than entering adapter-neutral commands or results. The CLI
+and packaged desktop host expose the shared five-operation workflow without
+accepting a CKB store root; only derivation has a provider-transmission approval
+flag. The desktop bridge returns an explicit bounded profile projection and
+does not expose the stored selection snapshot.
+
+New runs may select one exact reviewed profile version. The local driver
+verifies its persisted checksum and requires its CKB selection to match the
+workspace's current lifecycle-ready selection before recording a safe profile
+ID, version, and checksum reference in immutable context. Resume accepts no
+replacement selection, so later profile edits cannot change an existing run.
+Legacy starts without a canonical profile remain readable. Source lifecycle
+changes preserve immutable profile and run history, but the same selection
+check blocks stale drafts from becoming reviewed and blocks unavailable
+profiles from new runs. Whole-workspace backup and retention preserve profile
+and approved-export records; a portable single-CKB backup does not claim a
+cross-CKB workspace profile. #80 owns removal or rebuilding of derived index
+rows when these dependencies become unavailable. A visual profile editor in
+the collecting desktop workspace uses only the bounded host projection. It
+loads exact history, preserves provenance while editing fact values and issue
+statuses, requires explicit transmission approval for derivation, and injects
+the selected reviewed ID/version pair into the existing run-dispatch boundary.
+Historical and reviewed versions remain read-only in that surface.
 
 ### CKB integration gap
 
