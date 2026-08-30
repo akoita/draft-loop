@@ -6,6 +6,26 @@ Before proposing or implementing roadmap-stage work, read `docs/roadmap.md`,
 align the work with its current stage, and update the roadmap when scope or
 priorities change.
 
+## Sprint execution budget
+
+Broad outcome issues are rollups, not executable sprint work. Before coding,
+an admitted execution issue must have one observable outcome, one primary
+architecture boundary, one focused test surface, and a credible one-PR exit.
+If it combines concerns such as migration, lifecycle, runtime integration, UI,
+and representative evaluation, create ordered child issues first.
+
+Use one implementation worker by default. Do not add a separate exploration
+worker unless a specific unresolved question blocks implementation. Keep root
+work to requirements, one consolidated review of the completed diff, and
+publication. Run focused checks while developing and the full repository gate
+once before sharing the PR; do not continuously poll hosted checks.
+
+An execution issue has a 30-minute active implementation-and-review budget,
+excluding time spent waiting for local tests or hosted CI. At the limit, stop
+and split remaining work into a new bounded issue before continuing. Never
+silently turn one issue into a multi-hour task. Preserve quality by reducing
+scope, not by skipping required checks or merging incomplete work.
+
 ## Documentation synchronization
 
 - Keep code synchronized with `README.md`, architecture documents and diagrams,
