@@ -29,6 +29,10 @@ export type CandidateKnowledgeStoreId = Brand<string, "CandidateKnowledgeStoreId
 export type CandidateKnowledgeBaseId = Brand<string, "CandidateKnowledgeBaseId">;
 export type CandidateKnowledgeSourceId = Brand<string, "CandidateKnowledgeSourceId">;
 export type CandidateKnowledgeSourceVersionId = Brand<string, "CandidateKnowledgeSourceVersionId">;
+export type CandidateKnowledgeRetrievalChunkId = Brand<
+  string,
+  "CandidateKnowledgeRetrievalChunkId"
+>;
 
 export interface WorkspaceIdentity {
   readonly id: WorkspaceId;
@@ -951,6 +955,242 @@ export interface RetrievalPort {
   ) => Promise<readonly ScoredEvidenceChunk[]>;
 }
 
+/** Version of the provider-independent CKB retrieval contract. */
+export const candidateKnowledgeRetrievalSchemaVersion = 1 as const;
+export type CandidateKnowledgeRetrievalSchemaVersion =
+  typeof candidateKnowledgeRetrievalSchemaVersion;
+
+/** The only query purposes accepted by CKB retrieval. */
+export const candidateKnowledgeRetrievalPurposes = [
+  "opportunity-requirements",
+  "achievement-recall",
+  "factual-checks",
+  "contradiction-detection",
+  "critic-review",
+] as const;
+export type CandidateKnowledgeRetrievalPurpose =
+  (typeof candidateKnowledgeRetrievalPurposes)[number];
+
+/** Visible outcomes distinguish missing, stale, and empty retrieval from a match. */
+export const candidateKnowledgeRetrievalStatuses = [
+  "matched",
+  "bounded-fallback",
+  "not-indexed",
+  "stale",
+  "no-query",
+] as const;
+export type CandidateKnowledgeRetrievalStatus =
+  (typeof candidateKnowledgeRetrievalStatuses)[number];
+
+/** Version of the replaceable FTS/BM25 index projection. */
+export const candidateKnowledgeLexicalIndexSchemaVersion = 1 as const;
+export type CandidateKnowledgeLexicalIndexSchemaVersion =
+  typeof candidateKnowledgeLexicalIndexSchemaVersion;
+
+/** Version of the immutable workspace retrieval trace contract. */
+export const candidateKnowledgeRetrievalTraceSchemaVersion = 1 as const;
+export type CandidateKnowledgeRetrievalTraceSchemaVersion =
+  typeof candidateKnowledgeRetrievalTraceSchemaVersion;
+
+export const maximumCandidateKnowledgeRetrievalIdentifierLength = 120 as const;
+export const maximumCandidateKnowledgeRetrievalQueryLength = 2_000 as const;
+export const maximumCandidateKnowledgeRetrievalScopeSourceCount = 1_024 as const;
+export const maximumCandidateKnowledgeRetrievalChunkCount = 100 as const;
+export const maximumCandidateKnowledgeRetrievalIndexedChunkCount = 100_000 as const;
+export const maximumCandidateKnowledgeRetrievalChunkIdLength = 120 as const;
+export const maximumCandidateKnowledgeRetrievalChunkTextLength = 4_000 as const;
+export const maximumCandidateKnowledgeRetrievalChunkMetadataValueLength = 160 as const;
+export const maximumCandidateKnowledgeRetrievalIndexerIdLength = 120 as const;
+export const maximumCandidateKnowledgeRetrievalTraceOperationIdLength = 120 as const;
+export const maximumCandidateKnowledgeRetrievalLatencyMs = 86_400_000 as const;
+export const maximumCandidateKnowledgeRetrievalBm25Rank = 1_000_000_000 as const;
+
+/** Exact, path-free identity of one CKB source version. */
+export interface CandidateKnowledgeRetrievalSourceVersionReferenceInput {
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly sourceId: string;
+  readonly versionId: string;
+}
+
+export interface CandidateKnowledgeRetrievalSourceVersionReference {
+  readonly storeId: CandidateKnowledgeStoreId;
+  readonly knowledgeBaseId: CandidateKnowledgeBaseId;
+  readonly sourceId: CandidateKnowledgeSourceId;
+  readonly versionId: CandidateKnowledgeSourceVersionId;
+}
+
+/** The exact source-version set a query is allowed to inspect. */
+export interface CandidateKnowledgeRetrievalScopeInput {
+  readonly sources: readonly CandidateKnowledgeRetrievalSourceVersionReferenceInput[];
+}
+
+export interface CandidateKnowledgeRetrievalScope {
+  readonly sources: readonly CandidateKnowledgeRetrievalSourceVersionReference[];
+}
+
+/** Bounded normalized metadata attached to an indexed chunk. */
+export interface CandidateKnowledgeLexicalChunkMetadataInput {
+  readonly careerEntity?: string;
+  readonly date?: string;
+  readonly section?: string;
+  readonly technology?: string;
+  readonly project?: string;
+  readonly credential?: string;
+  readonly provenance: CandidateKnowledgeRetrievalSourceVersionReferenceInput;
+}
+
+export interface CandidateKnowledgeLexicalChunkMetadata {
+  readonly careerEntity?: string;
+  readonly date?: string;
+  readonly section?: string;
+  readonly technology?: string;
+  readonly project?: string;
+  readonly credential?: string;
+  readonly provenance: CandidateKnowledgeRetrievalSourceVersionReference;
+}
+
+/** One deterministic, source-version-scoped chunk in the lexical index. */
+export interface CandidateKnowledgeLexicalChunkInput {
+  readonly chunkId: string;
+  readonly ordinal: number;
+  readonly lineStart: number;
+  readonly lineEnd: number;
+  readonly text: string;
+  readonly metadata: CandidateKnowledgeLexicalChunkMetadataInput;
+}
+
+export interface CandidateKnowledgeLexicalChunk {
+  readonly chunkId: CandidateKnowledgeRetrievalChunkId;
+  readonly ordinal: number;
+  readonly lineStart: number;
+  readonly lineEnd: number;
+  readonly text: string;
+  readonly metadata: CandidateKnowledgeLexicalChunkMetadata;
+}
+
+/** A retrieval hit retains exact provenance for local validation and traceability. */
+export interface CandidateKnowledgeLexicalHitInput extends CandidateKnowledgeLexicalChunkInput {
+  readonly bm25Rank: number;
+}
+
+export interface CandidateKnowledgeLexicalHit extends CandidateKnowledgeLexicalChunk {
+  readonly bm25Rank: number;
+}
+
+/** Provider projection: only this opaque chunk id may be cited by model output. */
+export interface CandidateKnowledgeLexicalProviderHit {
+  readonly chunkId: CandidateKnowledgeRetrievalChunkId;
+  readonly text: string;
+}
+
+export interface CandidateKnowledgeLexicalIndexIdentityInput {
+  readonly schemaVersion?: number;
+  readonly indexerId: string;
+  readonly manifestChecksum: string;
+}
+
+export interface CandidateKnowledgeLexicalIndexIdentity {
+  readonly schemaVersion: CandidateKnowledgeLexicalIndexSchemaVersion;
+  readonly indexerId: string;
+  /** SHA-256 identity of the deterministic source-version index manifest. */
+  readonly manifestChecksum: string;
+}
+
+export interface CandidateKnowledgeLexicalRetrievalRequestInput {
+  readonly schemaVersion?: number;
+  readonly purpose: CandidateKnowledgeRetrievalPurpose;
+  /** Query text is transient request data and is never accepted by trace contracts. */
+  readonly query: string;
+  readonly scope: CandidateKnowledgeRetrievalScopeInput;
+  readonly limit?: number;
+}
+
+export interface CandidateKnowledgeLexicalRetrievalRequest {
+  readonly schemaVersion: CandidateKnowledgeRetrievalSchemaVersion;
+  readonly purpose: CandidateKnowledgeRetrievalPurpose;
+  readonly query: string;
+  readonly scope: CandidateKnowledgeRetrievalScope;
+  readonly limit: number;
+}
+
+export interface CandidateKnowledgeLexicalRetrievalResultInput {
+  readonly schemaVersion?: number;
+  readonly purpose: CandidateKnowledgeRetrievalPurpose;
+  readonly status: CandidateKnowledgeRetrievalStatus;
+  readonly scope: CandidateKnowledgeRetrievalScopeInput;
+  readonly index: CandidateKnowledgeLexicalIndexIdentityInput | null;
+  readonly indexedChunkCount: number;
+  readonly selectedChunkCount: number;
+  readonly selectedSourceCount: number;
+  readonly hits: readonly CandidateKnowledgeLexicalHitInput[];
+}
+
+export interface CandidateKnowledgeLexicalRetrievalResult {
+  readonly schemaVersion: CandidateKnowledgeRetrievalSchemaVersion;
+  readonly purpose: CandidateKnowledgeRetrievalPurpose;
+  readonly status: CandidateKnowledgeRetrievalStatus;
+  readonly scope: CandidateKnowledgeRetrievalScope;
+  readonly index: CandidateKnowledgeLexicalIndexIdentity | null;
+  readonly indexedChunkCount: number;
+  readonly selectedChunkCount: number;
+  readonly selectedSourceCount: number;
+  readonly hits: readonly CandidateKnowledgeLexicalHit[];
+}
+
+export interface CandidateKnowledgeLexicalRetrievalPort {
+  readonly queryCandidateKnowledge: (
+    request: CandidateKnowledgeLexicalRetrievalRequestInput,
+  ) => Promise<CandidateKnowledgeLexicalRetrievalResult>;
+}
+
+export interface CandidateKnowledgeRetrievalTraceChunkInput {
+  readonly chunkId: string;
+  readonly bm25Rank: number;
+}
+
+export interface CandidateKnowledgeRetrievalTraceChunk {
+  readonly chunkId: CandidateKnowledgeRetrievalChunkId;
+  readonly bm25Rank: number;
+}
+
+/** Content-free, immutable workspace evidence of one retrieval operation. */
+export interface CandidateKnowledgeRetrievalTraceInput {
+  readonly schemaVersion?: number;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly operationId: string;
+  readonly purpose: CandidateKnowledgeRetrievalPurpose;
+  readonly queryChecksum: string;
+  readonly scope: CandidateKnowledgeRetrievalScopeInput;
+  readonly index: CandidateKnowledgeLexicalIndexIdentityInput | null;
+  readonly status: CandidateKnowledgeRetrievalStatus;
+  readonly indexedChunkCount: number;
+  readonly selectedChunkCount: number;
+  readonly selectedSourceCount: number;
+  readonly latencyMs: number;
+  readonly selectedChunks: readonly CandidateKnowledgeRetrievalTraceChunkInput[];
+  readonly createdAt: string;
+}
+
+export interface CandidateKnowledgeRetrievalTrace {
+  readonly schemaVersion: CandidateKnowledgeRetrievalTraceSchemaVersion;
+  readonly id: string;
+  readonly workspaceId: string;
+  readonly operationId: string;
+  readonly purpose: CandidateKnowledgeRetrievalPurpose;
+  readonly queryChecksum: string;
+  readonly scope: CandidateKnowledgeRetrievalScope;
+  readonly index: CandidateKnowledgeLexicalIndexIdentity | null;
+  readonly status: CandidateKnowledgeRetrievalStatus;
+  readonly indexedChunkCount: number;
+  readonly selectedChunkCount: number;
+  readonly selectedSourceCount: number;
+  readonly latencyMs: number;
+  readonly selectedChunks: readonly CandidateKnowledgeRetrievalTraceChunk[];
+  readonly createdAt: string;
+}
+
 export type AgentRole = "author" | "critic";
 export type ModelCompany = "anthropic" | "openai" | (string & {});
 
@@ -1308,6 +1548,1277 @@ export class SemanticValidationError extends Error {
   }
 }
 
+const candidateKnowledgeRetrievalReferenceKeys = new Set([
+  "storeId",
+  "knowledgeBaseId",
+  "sourceId",
+  "versionId",
+]);
+const candidateKnowledgeRetrievalScopeKeys = new Set(["sources"]);
+const candidateKnowledgeLexicalChunkMetadataKeys = new Set([
+  "careerEntity",
+  "date",
+  "section",
+  "technology",
+  "project",
+  "credential",
+  "provenance",
+]);
+const candidateKnowledgeLexicalChunkKeys = new Set([
+  "chunkId",
+  "ordinal",
+  "lineStart",
+  "lineEnd",
+  "text",
+  "metadata",
+]);
+const candidateKnowledgeLexicalHitKeys = new Set([
+  ...candidateKnowledgeLexicalChunkKeys,
+  "bm25Rank",
+]);
+const candidateKnowledgeLexicalProviderHitKeys = new Set(["chunkId", "text"]);
+const candidateKnowledgeLexicalIndexIdentityKeys = new Set([
+  "schemaVersion",
+  "indexerId",
+  "manifestChecksum",
+]);
+const candidateKnowledgeLexicalRetrievalRequestKeys = new Set([
+  "schemaVersion",
+  "purpose",
+  "query",
+  "scope",
+  "limit",
+]);
+const candidateKnowledgeLexicalRetrievalResultKeys = new Set([
+  "schemaVersion",
+  "purpose",
+  "status",
+  "scope",
+  "index",
+  "indexedChunkCount",
+  "selectedChunkCount",
+  "selectedSourceCount",
+  "hits",
+]);
+const candidateKnowledgeRetrievalTraceChunkKeys = new Set(["chunkId", "bm25Rank"]);
+const candidateKnowledgeRetrievalTraceKeys = new Set([
+  "schemaVersion",
+  "id",
+  "workspaceId",
+  "operationId",
+  "purpose",
+  "queryChecksum",
+  "scope",
+  "index",
+  "status",
+  "indexedChunkCount",
+  "selectedChunkCount",
+  "selectedSourceCount",
+  "latencyMs",
+  "selectedChunks",
+  "createdAt",
+]);
+const candidateKnowledgeRetrievalOpaqueIdentifierPattern =
+  /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/u;
+
+function candidateKnowledgeRetrievalIssue(
+  issues: SemanticValidationIssue[],
+  field: string,
+  message: string,
+): void {
+  addIssue(issues, "invalid-value", field, message);
+}
+
+function validateCandidateKnowledgeRetrievalKeys(
+  value: Record<string, unknown>,
+  allowed: ReadonlySet<string>,
+  field: string,
+  issues: SemanticValidationIssue[],
+): void {
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) {
+      candidateKnowledgeRetrievalIssue(issues, `${field}.${key}`, "is not supported.");
+    }
+  }
+}
+
+function validateCandidateKnowledgeRetrievalIdentifier(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+  maximumLength = maximumCandidateKnowledgeRetrievalIdentifierLength,
+): value is string {
+  if (!isNonEmptyString(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be a non-empty safe identifier.");
+    return false;
+  }
+  const normalized = value.trim();
+  if (normalized.length > maximumLength) {
+    candidateKnowledgeRetrievalIssue(issues, field, `must be at most ${maximumLength} characters.`);
+  }
+  if (!candidateKnowledgeRetrievalOpaqueIdentifierPattern.test(normalized)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be a safe opaque identifier.");
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeRetrievalChecksum(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is string {
+  if (typeof value !== "string" || !/^[a-f0-9]{64}$/iu.test(value.trim())) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be a SHA-256 checksum.");
+    return false;
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeRetrievalSchemaVersion(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+  expected: number,
+): void {
+  if (value !== undefined && value !== expected) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      field,
+      `only schema version ${expected} is supported.`,
+    );
+  }
+}
+
+function validateCandidateKnowledgeRetrievalReferenceShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeRetrievalSourceVersionReferenceInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeRetrievalReferenceKeys,
+    field,
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalIdentifier(value.storeId, `${field}.storeId`, issues);
+  validateCandidateKnowledgeRetrievalIdentifier(
+    value.knowledgeBaseId,
+    `${field}.knowledgeBaseId`,
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalIdentifier(value.sourceId, `${field}.sourceId`, issues);
+  validateCandidateKnowledgeRetrievalIdentifier(value.versionId, `${field}.versionId`, issues);
+  return true;
+}
+
+function candidateKnowledgeRetrievalReferenceKey(
+  value: Pick<
+    CandidateKnowledgeRetrievalSourceVersionReferenceInput,
+    "storeId" | "knowledgeBaseId" | "sourceId" | "versionId"
+  >,
+): string {
+  return JSON.stringify([
+    value.storeId.trim(),
+    value.knowledgeBaseId.trim(),
+    value.sourceId.trim(),
+    value.versionId.trim(),
+  ]);
+}
+
+function candidateKnowledgeRetrievalReferenceSortKey(
+  value: CandidateKnowledgeRetrievalSourceVersionReferenceInput,
+): string {
+  return candidateKnowledgeRetrievalReferenceKey(value);
+}
+
+function validateCandidateKnowledgeRetrievalScopeShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+  requireCanonicalOrder: boolean,
+): value is CandidateKnowledgeRetrievalScopeInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeRetrievalScopeKeys,
+    field,
+    issues,
+  );
+  if (!Array.isArray(value.sources) || value.sources.length === 0) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      `${field}.sources`,
+      "must contain at least one source.",
+    );
+    return false;
+  }
+  if (value.sources.length > maximumCandidateKnowledgeRetrievalScopeSourceCount) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      `${field}.sources`,
+      `must contain at most ${maximumCandidateKnowledgeRetrievalScopeSourceCount} sources.`,
+    );
+  }
+  const seen = new Set<string>();
+  let previousSortKey: string | undefined;
+  for (const [index, source] of value.sources.entries()) {
+    const sourceField = `${field}.sources[${index}]`;
+    if (!validateCandidateKnowledgeRetrievalReferenceShape(source, sourceField, issues)) continue;
+    const logicalKey = candidateKnowledgeRetrievalReferenceKey(source);
+    if (seen.has(logicalKey)) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        sourceField,
+        "source-version references must be unique.",
+      );
+    }
+    seen.add(logicalKey);
+    const sortKey = candidateKnowledgeRetrievalReferenceSortKey(source);
+    if (requireCanonicalOrder && previousSortKey !== undefined && sortKey < previousSortKey) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        sourceField,
+        "source-version references must use canonical order.",
+      );
+    }
+    previousSortKey = sortKey;
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeRetrievalBoundedText(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+  maximumLength: number,
+  required: boolean,
+): value is string | undefined {
+  if (value === undefined && !required) return true;
+  if (typeof value !== "string" || (required && value.trim() === "")) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      field,
+      required ? "must be a non-empty string." : "must be a string when provided.",
+    );
+    return false;
+  }
+  if (value.trim().length > maximumLength) {
+    candidateKnowledgeRetrievalIssue(issues, field, `must be at most ${maximumLength} characters.`);
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeLexicalChunkMetadataShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeLexicalChunkMetadataInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeLexicalChunkMetadataKeys,
+    field,
+    issues,
+  );
+  for (const key of [
+    "careerEntity",
+    "date",
+    "section",
+    "technology",
+    "project",
+    "credential",
+  ] as const) {
+    validateCandidateKnowledgeRetrievalBoundedText(
+      value[key],
+      `${field}.${key}`,
+      issues,
+      maximumCandidateKnowledgeRetrievalChunkMetadataValueLength,
+      false,
+    );
+  }
+  validateCandidateKnowledgeRetrievalReferenceShape(
+    value.provenance,
+    `${field}.provenance`,
+    issues,
+  );
+  return true;
+}
+
+function validateCandidateKnowledgeLexicalChunkFields(
+  value: Record<string, unknown>,
+  field: string,
+  issues: SemanticValidationIssue[],
+): boolean {
+  validateCandidateKnowledgeRetrievalIdentifier(
+    value.chunkId,
+    `${field}.chunkId`,
+    issues,
+    maximumCandidateKnowledgeRetrievalChunkIdLength,
+  );
+  if (!isSafeNonNegativeInteger(value.ordinal)) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      `${field}.ordinal`,
+      "must be a nonnegative safe integer.",
+    );
+  }
+  if (!isSafeNonNegativeInteger(value.lineStart)) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      `${field}.lineStart`,
+      "must be a nonnegative safe integer.",
+    );
+  }
+  if (!isSafeNonNegativeInteger(value.lineEnd)) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      `${field}.lineEnd`,
+      "must be a nonnegative safe integer.",
+    );
+  }
+  if (isSafeNonNegativeInteger(value.lineStart) && isSafeNonNegativeInteger(value.lineEnd)) {
+    if (value.lineEnd < value.lineStart) {
+      candidateKnowledgeRetrievalIssue(issues, `${field}.lineEnd`, "must not precede lineStart.");
+    }
+  }
+  validateCandidateKnowledgeRetrievalBoundedText(
+    value.text,
+    `${field}.text`,
+    issues,
+    maximumCandidateKnowledgeRetrievalChunkTextLength,
+    true,
+  );
+  validateCandidateKnowledgeLexicalChunkMetadataShape(value.metadata, `${field}.metadata`, issues);
+  return true;
+}
+
+function validateCandidateKnowledgeLexicalChunkShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeLexicalChunkInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(value, candidateKnowledgeLexicalChunkKeys, field, issues);
+  validateCandidateKnowledgeLexicalChunkFields(value, field, issues);
+  return true;
+}
+
+function validateCandidateKnowledgeLexicalHitShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeLexicalHitInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(value, candidateKnowledgeLexicalHitKeys, field, issues);
+  validateCandidateKnowledgeLexicalChunkFields(value, field, issues);
+  if (
+    typeof value.bm25Rank !== "number" ||
+    !Number.isFinite(value.bm25Rank) ||
+    value.bm25Rank < -maximumCandidateKnowledgeRetrievalBm25Rank ||
+    value.bm25Rank > maximumCandidateKnowledgeRetrievalBm25Rank
+  ) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      `${field}.bm25Rank`,
+      `must be a finite number from -${maximumCandidateKnowledgeRetrievalBm25Rank} through ${maximumCandidateKnowledgeRetrievalBm25Rank}.`,
+    );
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeLexicalProviderHitShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeLexicalProviderHit {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeLexicalProviderHitKeys,
+    field,
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalIdentifier(
+    value.chunkId,
+    `${field}.chunkId`,
+    issues,
+    maximumCandidateKnowledgeRetrievalChunkIdLength,
+  );
+  validateCandidateKnowledgeRetrievalBoundedText(
+    value.text,
+    `${field}.text`,
+    issues,
+    maximumCandidateKnowledgeRetrievalChunkTextLength,
+    true,
+  );
+  return true;
+}
+
+function validateCandidateKnowledgeLexicalIndexIdentityShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeLexicalIndexIdentityInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeLexicalIndexIdentityKeys,
+    field,
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalSchemaVersion(
+    value.schemaVersion,
+    `${field}.schemaVersion`,
+    issues,
+    candidateKnowledgeLexicalIndexSchemaVersion,
+  );
+  validateCandidateKnowledgeRetrievalIdentifier(
+    value.indexerId,
+    `${field}.indexerId`,
+    issues,
+    maximumCandidateKnowledgeRetrievalIndexerIdLength,
+  );
+  validateCandidateKnowledgeRetrievalChecksum(
+    value.manifestChecksum,
+    `${field}.manifestChecksum`,
+    issues,
+  );
+  return true;
+}
+
+function validateCandidateKnowledgeRetrievalCount(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+  maximum: number,
+): value is number {
+  if (!isSafeNonNegativeInteger(value) || value > maximum) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      field,
+      `must be a nonnegative safe integer no greater than ${maximum}.`,
+    );
+    return false;
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeLexicalRetrievalRequestShape(
+  value: unknown,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeLexicalRetrievalRequestInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalRequest", "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeLexicalRetrievalRequestKeys,
+    "retrievalRequest",
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalSchemaVersion(
+    value.schemaVersion,
+    "retrievalRequest.schemaVersion",
+    issues,
+    candidateKnowledgeRetrievalSchemaVersion,
+  );
+  if (
+    !candidateKnowledgeRetrievalPurposes.includes(
+      value.purpose as CandidateKnowledgeRetrievalPurpose,
+    )
+  ) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalRequest.purpose",
+      "must be a supported retrieval purpose.",
+    );
+  }
+  if (typeof value.query !== "string") {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalRequest.query", "must be a string.");
+  } else if (value.query.trim().length > maximumCandidateKnowledgeRetrievalQueryLength) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalRequest.query",
+      `must be at most ${maximumCandidateKnowledgeRetrievalQueryLength} characters.`,
+    );
+  }
+  validateCandidateKnowledgeRetrievalScopeShape(
+    value.scope,
+    "retrievalRequest.scope",
+    issues,
+    false,
+  );
+  if (
+    value.limit !== undefined &&
+    (!isSafePositiveInteger(value.limit) ||
+      value.limit > maximumCandidateKnowledgeRetrievalChunkCount)
+  ) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalRequest.limit",
+      `must be a positive safe integer no greater than ${maximumCandidateKnowledgeRetrievalChunkCount}.`,
+    );
+  }
+  return true;
+}
+
+function retrievalStatusNeedsHits(status: CandidateKnowledgeRetrievalStatus): boolean {
+  return status === "matched" || status === "bounded-fallback";
+}
+
+function candidateKnowledgeRetrievalRankPrecedes(
+  leftRank: number,
+  leftChunkId: string,
+  rightRank: number,
+  rightChunkId: string,
+): boolean {
+  return leftRank < rightRank || (leftRank === rightRank && leftChunkId <= rightChunkId);
+}
+
+function validateCandidateKnowledgeLexicalRetrievalResultShape(
+  value: unknown,
+  issues: SemanticValidationIssue[],
+  requireCanonicalOrder: boolean,
+): value is CandidateKnowledgeLexicalRetrievalResultInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalResult", "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeLexicalRetrievalResultKeys,
+    "retrievalResult",
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalSchemaVersion(
+    value.schemaVersion,
+    "retrievalResult.schemaVersion",
+    issues,
+    candidateKnowledgeRetrievalSchemaVersion,
+  );
+  if (
+    !candidateKnowledgeRetrievalPurposes.includes(
+      value.purpose as CandidateKnowledgeRetrievalPurpose,
+    )
+  ) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalResult.purpose", "must be supported.");
+  }
+  if (
+    !candidateKnowledgeRetrievalStatuses.includes(value.status as CandidateKnowledgeRetrievalStatus)
+  ) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalResult.status", "must be supported.");
+  }
+  const scopeValid = validateCandidateKnowledgeRetrievalScopeShape(
+    value.scope,
+    "retrievalResult.scope",
+    issues,
+    requireCanonicalOrder,
+  );
+  if (
+    value.index !== null &&
+    !validateCandidateKnowledgeLexicalIndexIdentityShape(
+      value.index,
+      "retrievalResult.index",
+      issues,
+    )
+  ) {
+    // Validation issues are already recorded by the nested shape validator.
+  }
+  validateCandidateKnowledgeRetrievalCount(
+    value.indexedChunkCount,
+    "retrievalResult.indexedChunkCount",
+    issues,
+    maximumCandidateKnowledgeRetrievalIndexedChunkCount,
+  );
+  const selectedCountValid = validateCandidateKnowledgeRetrievalCount(
+    value.selectedChunkCount,
+    "retrievalResult.selectedChunkCount",
+    issues,
+    maximumCandidateKnowledgeRetrievalChunkCount,
+  );
+  const selectedSourceCountValid = validateCandidateKnowledgeRetrievalCount(
+    value.selectedSourceCount,
+    "retrievalResult.selectedSourceCount",
+    issues,
+    maximumCandidateKnowledgeRetrievalScopeSourceCount,
+  );
+  if (!Array.isArray(value.hits)) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalResult.hits", "must be an array.");
+    return false;
+  }
+  if (value.hits.length > maximumCandidateKnowledgeRetrievalChunkCount) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalResult.hits",
+      `must contain at most ${maximumCandidateKnowledgeRetrievalChunkCount} hits.`,
+    );
+  }
+  const scopeKeys = new Set<string>();
+  if (scopeValid && isRecord(value.scope) && Array.isArray(value.scope.sources)) {
+    for (const source of value.scope.sources) {
+      if (isRecord(source)) scopeKeys.add(candidateKnowledgeRetrievalReferenceKey(source as never));
+    }
+  }
+  const hitIds = new Set<string>();
+  const hitProvenanceKeys = new Set<string>();
+  let previousHit: CandidateKnowledgeLexicalHitInput | undefined;
+  for (const [index, hit] of value.hits.entries()) {
+    const hitField = `retrievalResult.hits[${index}]`;
+    if (!validateCandidateKnowledgeLexicalHitShape(hit, hitField, issues)) continue;
+    const chunkId = typeof hit.chunkId === "string" ? hit.chunkId.trim() : "";
+    if (hitIds.has(chunkId)) {
+      candidateKnowledgeRetrievalIssue(issues, `${hitField}.chunkId`, "chunk ids must be unique.");
+    }
+    hitIds.add(chunkId);
+    const provenance = isRecord(hit.metadata) ? hit.metadata.provenance : undefined;
+    if (isRecord(provenance)) {
+      const key = candidateKnowledgeRetrievalReferenceKey(provenance as never);
+      hitProvenanceKeys.add(key);
+      if (scopeKeys.size > 0 && !scopeKeys.has(key)) {
+        candidateKnowledgeRetrievalIssue(
+          issues,
+          `${hitField}.metadata.provenance`,
+          "must reference an exact source version in scope.",
+        );
+      }
+    }
+    if (
+      requireCanonicalOrder &&
+      previousHit !== undefined &&
+      !candidateKnowledgeRetrievalRankPrecedes(
+        previousHit.bm25Rank,
+        typeof previousHit.chunkId === "string" ? previousHit.chunkId.trim() : "",
+        hit.bm25Rank,
+        chunkId,
+      )
+    ) {
+      candidateKnowledgeRetrievalIssue(issues, hitField, "hits must use canonical BM25 order.");
+    }
+    previousHit = hit;
+  }
+  if (selectedCountValid && value.selectedChunkCount !== value.hits.length) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalResult.selectedChunkCount",
+      "must equal the number of hits.",
+    );
+  }
+  if (
+    selectedSourceCountValid &&
+    isSafeNonNegativeInteger(value.selectedSourceCount) &&
+    scopeValid &&
+    isRecord(value.scope) &&
+    Array.isArray(value.scope.sources) &&
+    value.selectedSourceCount > value.scope.sources.length
+  ) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalResult.selectedSourceCount",
+      "must not exceed the number of scoped source versions.",
+    );
+  }
+  if (
+    candidateKnowledgeRetrievalStatuses.includes(value.status as CandidateKnowledgeRetrievalStatus)
+  ) {
+    const needsHits = retrievalStatusNeedsHits(value.status as CandidateKnowledgeRetrievalStatus);
+    if (needsHits && value.hits.length === 0) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalResult.hits",
+        "this status requires at least one hit.",
+      );
+    }
+    if (!needsHits && value.hits.length > 0) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalResult.hits",
+        "this status must not contain hits.",
+      );
+    }
+    if (needsHits && value.index === null) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalResult.index",
+        "this status requires an index identity.",
+      );
+    }
+    if (value.status === "not-indexed" && value.index !== null) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalResult.index",
+        "not-indexed status must not claim an index identity.",
+      );
+    }
+    if (value.status === "not-indexed" && value.indexedChunkCount !== 0) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalResult.indexedChunkCount",
+        "not-indexed status must report zero indexed chunks.",
+      );
+    }
+    if (value.status === "stale" && value.index === null) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalResult.index",
+        "stale status requires the stale index identity.",
+      );
+    }
+    if (
+      selectedSourceCountValid &&
+      value.selectedSourceCount !== (needsHits ? hitProvenanceKeys.size : 0)
+    ) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalResult.selectedSourceCount",
+        needsHits
+          ? "must equal the number of distinct hit source versions."
+          : "must be zero when no hits are selected.",
+      );
+    }
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeRetrievalTraceChunkShape(
+  value: unknown,
+  field: string,
+  issues: SemanticValidationIssue[],
+): value is CandidateKnowledgeRetrievalTraceChunkInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, field, "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeRetrievalTraceChunkKeys,
+    field,
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalIdentifier(
+    value.chunkId,
+    `${field}.chunkId`,
+    issues,
+    maximumCandidateKnowledgeRetrievalChunkIdLength,
+  );
+  if (
+    typeof value.bm25Rank !== "number" ||
+    !Number.isFinite(value.bm25Rank) ||
+    value.bm25Rank < -maximumCandidateKnowledgeRetrievalBm25Rank ||
+    value.bm25Rank > maximumCandidateKnowledgeRetrievalBm25Rank
+  ) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      `${field}.bm25Rank`,
+      `must be a finite number from -${maximumCandidateKnowledgeRetrievalBm25Rank} through ${maximumCandidateKnowledgeRetrievalBm25Rank}.`,
+    );
+  }
+  return true;
+}
+
+function validateCandidateKnowledgeRetrievalTraceShape(
+  value: unknown,
+  issues: SemanticValidationIssue[],
+  requireCanonicalOrder: boolean,
+): value is CandidateKnowledgeRetrievalTraceInput {
+  if (!isRecord(value)) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalTrace", "must be an object.");
+    return false;
+  }
+  validateCandidateKnowledgeRetrievalKeys(
+    value,
+    candidateKnowledgeRetrievalTraceKeys,
+    "retrievalTrace",
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalSchemaVersion(
+    value.schemaVersion,
+    "retrievalTrace.schemaVersion",
+    issues,
+    candidateKnowledgeRetrievalTraceSchemaVersion,
+  );
+  validateCandidateKnowledgeRetrievalIdentifier(value.id, "retrievalTrace.id", issues);
+  validateCandidateKnowledgeRetrievalIdentifier(
+    value.workspaceId,
+    "retrievalTrace.workspaceId",
+    issues,
+  );
+  validateCandidateKnowledgeRetrievalIdentifier(
+    value.operationId,
+    "retrievalTrace.operationId",
+    issues,
+    maximumCandidateKnowledgeRetrievalTraceOperationIdLength,
+  );
+  if (
+    !candidateKnowledgeRetrievalPurposes.includes(
+      value.purpose as CandidateKnowledgeRetrievalPurpose,
+    )
+  ) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalTrace.purpose", "must be supported.");
+  }
+  validateCandidateKnowledgeRetrievalChecksum(
+    value.queryChecksum,
+    "retrievalTrace.queryChecksum",
+    issues,
+  );
+  const scopeValid = validateCandidateKnowledgeRetrievalScopeShape(
+    value.scope,
+    "retrievalTrace.scope",
+    issues,
+    requireCanonicalOrder,
+  );
+  if (
+    value.index !== null &&
+    !validateCandidateKnowledgeLexicalIndexIdentityShape(
+      value.index,
+      "retrievalTrace.index",
+      issues,
+    )
+  ) {
+    // Validation issues are already recorded by the nested shape validator.
+  }
+  validateCandidateKnowledgeRetrievalCount(
+    value.indexedChunkCount,
+    "retrievalTrace.indexedChunkCount",
+    issues,
+    maximumCandidateKnowledgeRetrievalIndexedChunkCount,
+  );
+  const selectedCountValid = validateCandidateKnowledgeRetrievalCount(
+    value.selectedChunkCount,
+    "retrievalTrace.selectedChunkCount",
+    issues,
+    maximumCandidateKnowledgeRetrievalChunkCount,
+  );
+  const selectedSourceCountValid = validateCandidateKnowledgeRetrievalCount(
+    value.selectedSourceCount,
+    "retrievalTrace.selectedSourceCount",
+    issues,
+    maximumCandidateKnowledgeRetrievalScopeSourceCount,
+  );
+  if (
+    !isSafeNonNegativeInteger(value.latencyMs) ||
+    value.latencyMs > maximumCandidateKnowledgeRetrievalLatencyMs
+  ) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalTrace.latencyMs",
+      `must be a nonnegative safe integer no greater than ${maximumCandidateKnowledgeRetrievalLatencyMs}.`,
+    );
+  }
+  if (!isIsoTimestamp(value.createdAt)) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalTrace.createdAt",
+      "must be a valid ISO timestamp.",
+    );
+  }
+  if (!Array.isArray(value.selectedChunks)) {
+    candidateKnowledgeRetrievalIssue(issues, "retrievalTrace.selectedChunks", "must be an array.");
+    return false;
+  }
+  if (value.selectedChunks.length > maximumCandidateKnowledgeRetrievalChunkCount) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalTrace.selectedChunks",
+      `must contain at most ${maximumCandidateKnowledgeRetrievalChunkCount} chunks.`,
+    );
+  }
+  const chunkIds = new Set<string>();
+  let previousChunk: CandidateKnowledgeRetrievalTraceChunkInput | undefined;
+  for (const [index, chunk] of value.selectedChunks.entries()) {
+    const chunkField = `retrievalTrace.selectedChunks[${index}]`;
+    if (!validateCandidateKnowledgeRetrievalTraceChunkShape(chunk, chunkField, issues)) continue;
+    const chunkId = typeof chunk.chunkId === "string" ? chunk.chunkId.trim() : "";
+    if (chunkIds.has(chunkId)) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        `${chunkField}.chunkId`,
+        "chunk ids must be unique.",
+      );
+    }
+    chunkIds.add(chunkId);
+    if (
+      requireCanonicalOrder &&
+      previousChunk !== undefined &&
+      !candidateKnowledgeRetrievalRankPrecedes(
+        previousChunk.bm25Rank,
+        typeof previousChunk.chunkId === "string" ? previousChunk.chunkId.trim() : "",
+        chunk.bm25Rank,
+        chunkId,
+      )
+    ) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        chunkField,
+        "selected chunks must use canonical BM25 order.",
+      );
+    }
+    previousChunk = chunk;
+  }
+  if (selectedCountValid && value.selectedChunkCount !== value.selectedChunks.length) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalTrace.selectedChunkCount",
+      "must equal the number of selected chunks.",
+    );
+  }
+  if (
+    selectedSourceCountValid &&
+    isSafeNonNegativeInteger(value.selectedSourceCount) &&
+    scopeValid &&
+    isRecord(value.scope) &&
+    Array.isArray(value.scope.sources) &&
+    value.selectedSourceCount > value.scope.sources.length
+  ) {
+    candidateKnowledgeRetrievalIssue(
+      issues,
+      "retrievalTrace.selectedSourceCount",
+      "must not exceed the number of scoped source versions.",
+    );
+  }
+  if (
+    candidateKnowledgeRetrievalStatuses.includes(value.status as CandidateKnowledgeRetrievalStatus)
+  ) {
+    const needsHits = retrievalStatusNeedsHits(value.status as CandidateKnowledgeRetrievalStatus);
+    if (needsHits && value.selectedChunks.length === 0) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalTrace.selectedChunks",
+        "this status requires at least one selected chunk.",
+      );
+    }
+    if (!needsHits && value.selectedChunks.length > 0) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalTrace.selectedChunks",
+        "this status must not contain selected chunks.",
+      );
+    }
+    if (needsHits && value.index === null) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalTrace.index",
+        "this status requires an index identity.",
+      );
+    }
+    if (value.status === "not-indexed" && value.index !== null) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalTrace.index",
+        "not-indexed status must not claim an index identity.",
+      );
+    }
+    if (value.status === "not-indexed" && value.indexedChunkCount !== 0) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalTrace.indexedChunkCount",
+        "not-indexed status must report zero indexed chunks.",
+      );
+    }
+    if (value.status === "stale" && value.index === null) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalTrace.index",
+        "stale status requires the stale index identity.",
+      );
+    }
+    if (!needsHits && selectedSourceCountValid && value.selectedSourceCount !== 0) {
+      candidateKnowledgeRetrievalIssue(
+        issues,
+        "retrievalTrace.selectedSourceCount",
+        "must be zero when no chunks are selected.",
+      );
+    }
+  }
+  return true;
+}
+
+export function validateCandidateKnowledgeRetrievalSourceVersionReference(
+  value: unknown,
+): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeRetrievalReferenceShape(value, "sourceVersionReference", issues);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeRetrievalScope(value: unknown): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeRetrievalScopeShape(value, "retrievalScope", issues, true);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeLexicalChunkMetadata(
+  value: unknown,
+): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalChunkMetadataShape(value, "lexicalChunkMetadata", issues);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeLexicalChunk(value: unknown): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalChunkShape(value, "lexicalChunk", issues);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeLexicalHit(value: unknown): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalHitShape(value, "lexicalHit", issues);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeLexicalIndexIdentity(
+  value: unknown,
+): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalIndexIdentityShape(value, "lexicalIndexIdentity", issues);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeLexicalRetrievalRequest(
+  value: unknown,
+): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalRetrievalRequestShape(value, issues);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeLexicalRetrievalResult(
+  value: unknown,
+): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalRetrievalResultShape(value, issues, true);
+  return { valid: issues.length === 0, issues };
+}
+
+export function validateCandidateKnowledgeRetrievalTrace(value: unknown): SemanticValidationResult {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeRetrievalTraceShape(value, issues, true);
+  return { valid: issues.length === 0, issues };
+}
+
+function throwCandidateKnowledgeRetrievalValidation(validation: SemanticValidationResult): void {
+  if (!validation.valid) throw new SemanticValidationError(validation.issues);
+}
+
+function normalizeCandidateKnowledgeRetrievalReference(
+  value: CandidateKnowledgeRetrievalSourceVersionReferenceInput,
+): CandidateKnowledgeRetrievalSourceVersionReference {
+  return {
+    storeId: value.storeId.trim() as CandidateKnowledgeStoreId,
+    knowledgeBaseId: value.knowledgeBaseId.trim() as CandidateKnowledgeBaseId,
+    sourceId: value.sourceId.trim() as CandidateKnowledgeSourceId,
+    versionId: value.versionId.trim() as CandidateKnowledgeSourceVersionId,
+  };
+}
+
+function normalizeCandidateKnowledgeRetrievalScope(
+  value: CandidateKnowledgeRetrievalScopeInput,
+): CandidateKnowledgeRetrievalScope {
+  const sources = value.sources
+    .map(normalizeCandidateKnowledgeRetrievalReference)
+    .sort((left, right) => {
+      const leftKey = candidateKnowledgeRetrievalReferenceSortKey(left);
+      const rightKey = candidateKnowledgeRetrievalReferenceSortKey(right);
+      return leftKey < rightKey ? -1 : leftKey > rightKey ? 1 : 0;
+    });
+  return cloneAndFreeze({ sources });
+}
+
+export function createCandidateKnowledgeRetrievalSourceVersionReference(
+  input: CandidateKnowledgeRetrievalSourceVersionReferenceInput,
+): CandidateKnowledgeRetrievalSourceVersionReference {
+  throwCandidateKnowledgeRetrievalValidation(
+    validateCandidateKnowledgeRetrievalSourceVersionReference(input),
+  );
+  return cloneAndFreeze(normalizeCandidateKnowledgeRetrievalReference(input));
+}
+
+export function createCandidateKnowledgeRetrievalScope(
+  input: CandidateKnowledgeRetrievalScopeInput,
+): CandidateKnowledgeRetrievalScope {
+  const issues: SemanticValidationIssue[] = [];
+  if (!validateCandidateKnowledgeRetrievalScopeShape(input, "retrievalScope", issues, false)) {
+    throw new SemanticValidationError(issues);
+  }
+  if (issues.length > 0) throw new SemanticValidationError(issues);
+  return normalizeCandidateKnowledgeRetrievalScope(input);
+}
+
+function normalizeCandidateKnowledgeLexicalChunkMetadata(
+  input: CandidateKnowledgeLexicalChunkMetadataInput,
+): CandidateKnowledgeLexicalChunkMetadata {
+  return {
+    ...(input.careerEntity === undefined ? {} : { careerEntity: input.careerEntity.trim() }),
+    ...(input.date === undefined ? {} : { date: input.date.trim() }),
+    ...(input.section === undefined ? {} : { section: input.section.trim() }),
+    ...(input.technology === undefined ? {} : { technology: input.technology.trim() }),
+    ...(input.project === undefined ? {} : { project: input.project.trim() }),
+    ...(input.credential === undefined ? {} : { credential: input.credential.trim() }),
+    provenance: normalizeCandidateKnowledgeRetrievalReference(input.provenance),
+  };
+}
+
+export function createCandidateKnowledgeLexicalChunkMetadata(
+  input: CandidateKnowledgeLexicalChunkMetadataInput,
+): CandidateKnowledgeLexicalChunkMetadata {
+  throwCandidateKnowledgeRetrievalValidation(validateCandidateKnowledgeLexicalChunkMetadata(input));
+  return cloneAndFreeze(normalizeCandidateKnowledgeLexicalChunkMetadata(input));
+}
+
+function normalizeCandidateKnowledgeLexicalChunk(
+  input: CandidateKnowledgeLexicalChunkInput,
+): CandidateKnowledgeLexicalChunk {
+  return {
+    chunkId: input.chunkId.trim() as CandidateKnowledgeRetrievalChunkId,
+    ordinal: input.ordinal,
+    lineStart: input.lineStart,
+    lineEnd: input.lineEnd,
+    text: input.text.trim(),
+    metadata: normalizeCandidateKnowledgeLexicalChunkMetadata(input.metadata),
+  };
+}
+
+export function createCandidateKnowledgeLexicalChunk(
+  input: CandidateKnowledgeLexicalChunkInput,
+): CandidateKnowledgeLexicalChunk {
+  throwCandidateKnowledgeRetrievalValidation(validateCandidateKnowledgeLexicalChunk(input));
+  return cloneAndFreeze(normalizeCandidateKnowledgeLexicalChunk(input));
+}
+
+export function createCandidateKnowledgeLexicalHit(
+  input: CandidateKnowledgeLexicalHitInput,
+): CandidateKnowledgeLexicalHit {
+  throwCandidateKnowledgeRetrievalValidation(validateCandidateKnowledgeLexicalHit(input));
+  return cloneAndFreeze({
+    ...normalizeCandidateKnowledgeLexicalChunk(input),
+    bm25Rank: input.bm25Rank,
+  });
+}
+
+export function createCandidateKnowledgeLexicalProviderHit(
+  input: CandidateKnowledgeLexicalProviderHit,
+): CandidateKnowledgeLexicalProviderHit {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalProviderHitShape(input, "providerHit", issues);
+  if (issues.length > 0) throw new SemanticValidationError(issues);
+  return cloneAndFreeze({
+    chunkId: input.chunkId.trim() as CandidateKnowledgeRetrievalChunkId,
+    text: input.text.trim(),
+  });
+}
+
+export function createCandidateKnowledgeLexicalIndexIdentity(
+  input: CandidateKnowledgeLexicalIndexIdentityInput,
+): CandidateKnowledgeLexicalIndexIdentity {
+  const issues: SemanticValidationIssue[] = [];
+  validateCandidateKnowledgeLexicalIndexIdentityShape(input, "lexicalIndexIdentity", issues);
+  if (issues.length > 0) throw new SemanticValidationError(issues);
+  return cloneAndFreeze({
+    schemaVersion: candidateKnowledgeLexicalIndexSchemaVersion,
+    indexerId: input.indexerId.trim(),
+    manifestChecksum: input.manifestChecksum.trim().toLowerCase(),
+  });
+}
+
+export function createCandidateKnowledgeLexicalRetrievalRequest(
+  input: CandidateKnowledgeLexicalRetrievalRequestInput,
+): CandidateKnowledgeLexicalRetrievalRequest {
+  throwCandidateKnowledgeRetrievalValidation(
+    validateCandidateKnowledgeLexicalRetrievalRequest(input),
+  );
+  return cloneAndFreeze({
+    schemaVersion: candidateKnowledgeRetrievalSchemaVersion,
+    purpose: input.purpose,
+    query: input.query.trim(),
+    scope: createCandidateKnowledgeRetrievalScope(input.scope),
+    limit: input.limit ?? Math.min(20, maximumCandidateKnowledgeRetrievalChunkCount),
+  });
+}
+
+export function createCandidateKnowledgeLexicalRetrievalResult(
+  input: CandidateKnowledgeLexicalRetrievalResultInput,
+): CandidateKnowledgeLexicalRetrievalResult {
+  const issues: SemanticValidationIssue[] = [];
+  if (!validateCandidateKnowledgeLexicalRetrievalResultShape(input, issues, false)) {
+    throw new SemanticValidationError(issues);
+  }
+  if (issues.length > 0) throw new SemanticValidationError(issues);
+  const hits = input.hits.map(createCandidateKnowledgeLexicalHit).sort((left, right) => {
+    if (left.bm25Rank !== right.bm25Rank) return left.bm25Rank - right.bm25Rank;
+    return left.chunkId < right.chunkId ? -1 : left.chunkId > right.chunkId ? 1 : 0;
+  });
+  return cloneAndFreeze({
+    schemaVersion: candidateKnowledgeRetrievalSchemaVersion,
+    purpose: input.purpose,
+    status: input.status,
+    scope: createCandidateKnowledgeRetrievalScope(input.scope),
+    index: input.index === null ? null : createCandidateKnowledgeLexicalIndexIdentity(input.index),
+    indexedChunkCount: input.indexedChunkCount,
+    selectedChunkCount: input.selectedChunkCount,
+    selectedSourceCount: input.selectedSourceCount,
+    hits,
+  });
+}
+
+export function createCandidateKnowledgeRetrievalTrace(
+  input: CandidateKnowledgeRetrievalTraceInput,
+): CandidateKnowledgeRetrievalTrace {
+  const issues: SemanticValidationIssue[] = [];
+  if (!validateCandidateKnowledgeRetrievalTraceShape(input, issues, false)) {
+    throw new SemanticValidationError(issues);
+  }
+  if (issues.length > 0) throw new SemanticValidationError(issues);
+  const selectedChunks = input.selectedChunks
+    .map((chunk) => ({
+      chunkId: chunk.chunkId.trim() as CandidateKnowledgeRetrievalChunkId,
+      bm25Rank: chunk.bm25Rank,
+    }))
+    .sort((left, right) => {
+      if (left.bm25Rank !== right.bm25Rank) return left.bm25Rank - right.bm25Rank;
+      return left.chunkId < right.chunkId ? -1 : left.chunkId > right.chunkId ? 1 : 0;
+    });
+  return cloneAndFreeze({
+    schemaVersion: candidateKnowledgeRetrievalTraceSchemaVersion,
+    id: input.id.trim(),
+    workspaceId: input.workspaceId.trim(),
+    operationId: input.operationId.trim(),
+    purpose: input.purpose,
+    queryChecksum: input.queryChecksum.trim().toLowerCase(),
+    scope: createCandidateKnowledgeRetrievalScope(input.scope),
+    index: input.index === null ? null : createCandidateKnowledgeLexicalIndexIdentity(input.index),
+    status: input.status,
+    indexedChunkCount: input.indexedChunkCount,
+    selectedChunkCount: input.selectedChunkCount,
+    selectedSourceCount: input.selectedSourceCount,
+    latencyMs: input.latencyMs,
+    selectedChunks,
+    createdAt: input.createdAt.trim(),
+  });
+}
+
 function selectionValidationIssue(
   issues: SemanticValidationIssue[],
   field: string,
@@ -1318,6 +2829,10 @@ function selectionValidationIssue(
 
 function isSafePositiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function isSafeNonNegativeInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
 function validateCandidateKnowledgeSelectionLifecycleRevision(

@@ -5,11 +5,21 @@ import {
   assertIndependentReview,
   type CanonicalCandidateProfileInput,
   type ContextSnapshotInput,
+  candidateKnowledgeRetrievalPurposes,
+  candidateKnowledgeRetrievalStatuses,
   canonicalCandidateProfileExtractionSchemaVersion,
   canonicalCandidateProfileFactCategories,
   canonicalizeModelId,
   createAgentContextReference,
   createCandidateKnowledgeBase,
+  createCandidateKnowledgeLexicalChunk,
+  createCandidateKnowledgeLexicalHit,
+  createCandidateKnowledgeLexicalIndexIdentity,
+  createCandidateKnowledgeLexicalProviderHit,
+  createCandidateKnowledgeLexicalRetrievalRequest,
+  createCandidateKnowledgeLexicalRetrievalResult,
+  createCandidateKnowledgeRetrievalScope,
+  createCandidateKnowledgeRetrievalTrace,
   createCandidateKnowledgeSelectionSnapshot,
   createCandidateKnowledgeSource,
   createCandidateKnowledgeSourceRetirement,
@@ -28,6 +38,9 @@ import {
   maximumIndependenceOverrideRationaleLength,
   renameCandidateKnowledgeBase,
   SemanticValidationError,
+  validateCandidateKnowledgeLexicalRetrievalResult,
+  validateCandidateKnowledgeRetrievalScope,
+  validateCandidateKnowledgeRetrievalTrace,
   validateCandidateKnowledgeSelectionSnapshot,
   validateCanonicalCandidateProfile,
   workflowStates,
@@ -1962,5 +1975,234 @@ describe("profileId propagation", () => {
   it("trims profileId whitespace", () => {
     const snapshot = createContextSnapshot(validInput({ profileId: "  profile-1  " }));
     expect(snapshot.profileId).toBe("profile-1");
+  });
+});
+
+describe("CKB lexical retrieval contracts", () => {
+  const sourceVersion = {
+    storeId: "store-a",
+    knowledgeBaseId: "knowledge-a",
+    sourceId: "source-a",
+    versionId: "version-a",
+  };
+  const alternateSourceVersion = {
+    storeId: "store-z",
+    knowledgeBaseId: "knowledge-z",
+    sourceId: "source-z",
+    versionId: "version-z",
+  };
+  const indexManifestChecksum = "b".repeat(64);
+
+  function validChunk(overrides: Record<string, unknown> = {}) {
+    return {
+      chunkId: "chunk-a",
+      ordinal: 0,
+      lineStart: 1,
+      lineEnd: 3,
+      text: "Built a reliable local-first application.",
+      metadata: {
+        careerEntity: "career-a",
+        section: "Experience",
+        technology: "TypeScript",
+        provenance: sourceVersion,
+      },
+      ...overrides,
+    };
+  }
+
+  it("normalizes immutable exact scopes and exposes only the five purposes", () => {
+    expect(candidateKnowledgeRetrievalPurposes).toEqual([
+      "opportunity-requirements",
+      "achievement-recall",
+      "factual-checks",
+      "contradiction-detection",
+      "critic-review",
+    ]);
+    expect(candidateKnowledgeRetrievalStatuses).toEqual([
+      "matched",
+      "bounded-fallback",
+      "not-indexed",
+      "stale",
+      "no-query",
+    ]);
+
+    const scope = createCandidateKnowledgeRetrievalScope({
+      sources: [alternateSourceVersion, sourceVersion],
+    });
+    expect(scope.sources.map((source) => source.storeId)).toEqual(["store-a", "store-z"]);
+    expect(Object.isFrozen(scope)).toBe(true);
+    expect(Object.isFrozen(scope.sources)).toBe(true);
+    expect(
+      createCandidateKnowledgeLexicalRetrievalRequest({
+        purpose: "achievement-recall",
+        query: "  TypeScript  ",
+        scope: { sources: [sourceVersion] },
+      }),
+    ).toMatchObject({ query: "TypeScript", limit: 20, schemaVersion: 1 });
+    expect(
+      validateCandidateKnowledgeRetrievalScope({ sources: [alternateSourceVersion, sourceVersion] })
+        .valid,
+    ).toBe(false);
+    expect(
+      validateCandidateKnowledgeRetrievalScope({
+        sources: [{ ...sourceVersion, path: "/private/candidate" }],
+      }).valid,
+    ).toBe(false);
+  });
+
+  it("bounds chunks, keeps exact provenance, and prevents provider metadata leakage", () => {
+    const chunk = createCandidateKnowledgeLexicalChunk(validChunk());
+    expect(chunk.metadata.provenance).toEqual(sourceVersion);
+    expect(Object.isFrozen(chunk)).toBe(true);
+    expect(Object.isFrozen(chunk.metadata)).toBe(true);
+    expect(
+      createCandidateKnowledgeLexicalProviderHit({
+        chunkId: chunk.chunkId,
+        text: chunk.text,
+      }),
+    ).toEqual({ chunkId: "chunk-a", text: "Built a reliable local-first application." });
+    expect(() =>
+      createCandidateKnowledgeLexicalChunk(validChunk({ lineStart: 4, lineEnd: 3 })),
+    ).toThrow(/lineStart|lineEnd/i);
+    expect(() =>
+      createCandidateKnowledgeLexicalProviderHit({
+        chunkId: "chunk-a",
+        text: "safe",
+        path: "/private/candidate",
+      } as never),
+    ).toThrow(/not supported|safe opaque/i);
+  });
+
+  it("requires manifest identity and records bounded hits without query text", () => {
+    const index = createCandidateKnowledgeLexicalIndexIdentity({
+      indexerId: "ckb-fts5-v1",
+      manifestChecksum: indexManifestChecksum.toUpperCase(),
+    });
+    expect(index).toEqual({
+      schemaVersion: 1,
+      indexerId: "ckb-fts5-v1",
+      manifestChecksum: indexManifestChecksum,
+    });
+
+    const firstHit = createCandidateKnowledgeLexicalHit({
+      ...validChunk({ chunkId: "chunk-b", metadata: { provenance: sourceVersion } }),
+      bm25Rank: -2,
+    });
+    const secondHit = createCandidateKnowledgeLexicalHit({
+      ...validChunk({ chunkId: "chunk-a", metadata: { provenance: sourceVersion } }),
+      bm25Rank: -1,
+    });
+    const result = createCandidateKnowledgeLexicalRetrievalResult({
+      purpose: "factual-checks",
+      status: "matched",
+      scope: { sources: [sourceVersion] },
+      index,
+      indexedChunkCount: 2,
+      selectedChunkCount: 2,
+      selectedSourceCount: 1,
+      hits: [firstHit, secondHit],
+    });
+    expect(result.hits.map((hit) => hit.chunkId)).toEqual(["chunk-b", "chunk-a"]);
+    expect(validateCandidateKnowledgeLexicalRetrievalResult(result).valid).toBe(true);
+
+    const trace = createCandidateKnowledgeRetrievalTrace({
+      id: "trace-1",
+      workspaceId: "workspace-1",
+      operationId: "operation-1",
+      purpose: result.purpose,
+      queryChecksum: checksum,
+      scope: { sources: [sourceVersion] },
+      index,
+      status: result.status,
+      indexedChunkCount: result.indexedChunkCount,
+      selectedChunkCount: result.selectedChunkCount,
+      selectedSourceCount: result.selectedSourceCount,
+      latencyMs: 12,
+      selectedChunks: [
+        { chunkId: "chunk-b", bm25Rank: -2 },
+        { chunkId: "chunk-a", bm25Rank: -1 },
+      ],
+      createdAt: "2026-08-12T10:00:00.000Z",
+    });
+    const serialized = JSON.stringify(trace);
+    expect(serialized).not.toMatch(/Built a reliable|TypeScript|\/private|https?:/i);
+    expect(trace.selectedChunks.map((chunk) => chunk.chunkId)).toEqual(["chunk-b", "chunk-a"]);
+    expect(validateCandidateKnowledgeRetrievalTrace(trace).valid).toBe(true);
+    expect(Object.isFrozen(trace)).toBe(true);
+    expect(Object.isFrozen(trace.selectedChunks)).toBe(true);
+  });
+
+  it("rejects unsafe identities, source mismatches, duplicate hits, and invalid trace values", () => {
+    expect(() =>
+      createCandidateKnowledgeLexicalIndexIdentity({
+        indexerId: "../index",
+        manifestChecksum: checksum,
+      }),
+    ).toThrow(/safe opaque/i);
+    expect(() =>
+      createCandidateKnowledgeLexicalIndexIdentity({
+        indexerId: "ckb-fts5-v1",
+        manifestChecksum: "not-a-checksum",
+      }),
+    ).toThrow(/SHA-256/i);
+
+    const invalidResult = {
+      purpose: "matched",
+      status: "matched",
+      scope: { sources: [sourceVersion] },
+      index: {
+        indexerId: "ckb-fts5-v1",
+        manifestChecksum: checksum,
+      },
+      indexedChunkCount: 1,
+      selectedChunkCount: 2,
+      selectedSourceCount: 1,
+      hits: [
+        { ...validChunk({ metadata: { provenance: alternateSourceVersion } }), bm25Rank: 1 },
+        { ...validChunk({ metadata: { provenance: alternateSourceVersion } }), bm25Rank: 2 },
+      ],
+    };
+    expect(validateCandidateKnowledgeLexicalRetrievalResult(invalidResult).valid).toBe(false);
+    expect(
+      validateCandidateKnowledgeLexicalRetrievalResult({
+        ...invalidResult,
+        purpose: "factual-checks",
+        status: "not-indexed",
+        indexedChunkCount: 1,
+        selectedChunkCount: 0,
+        selectedSourceCount: 0,
+        hits: [],
+      }).valid,
+    ).toBe(false);
+    expect(
+      validateCandidateKnowledgeLexicalRetrievalResult({
+        ...invalidResult,
+        purpose: "factual-checks",
+        status: "stale",
+        index: null,
+        selectedChunkCount: 0,
+        selectedSourceCount: 0,
+        hits: [],
+      }).valid,
+    ).toBe(false);
+    expect(
+      validateCandidateKnowledgeRetrievalTrace({
+        id: "trace-1",
+        workspaceId: "workspace-1",
+        operationId: "operation-1",
+        purpose: "critic-review",
+        queryChecksum: "not-a-checksum",
+        scope: { sources: [sourceVersion] },
+        index: null,
+        status: "no-query",
+        indexedChunkCount: 0,
+        selectedChunkCount: 0,
+        selectedSourceCount: 0,
+        latencyMs: -1,
+        selectedChunks: [],
+        createdAt: "not-a-date",
+        root: "/private/candidate",
+      }).valid,
+    ).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-08-28<br>
+**Last reviewed:** 2026-08-30<br>
 **Current stage:** Evidence-backed CV drafting (v0.7)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -150,12 +150,17 @@ renames, retire sources, or authorize cleanup. The exact constraints and
 privacy invariants live in [ADR 0007][adr-0007].
 
 RAG for an application is scoped to the CKB and source versions recorded by
-that application. SQLite FTS/BM25 remains the current local baseline; vector or
-hybrid retrieval requires measured gains in relevant-achievement recall and
-citation accuracy without more unsupported claims. Remote embeddings or vector
-storage require a separate architecture and privacy decision. User-approved
-research remains distinct from candidate evidence and cannot create experience,
-contact employers, or submit applications.
+that application. [ADR 0008](adr/0008-ckb-scoped-lexical-retrieval.md) defines
+the local lexical baseline: each CKB owns a replaceable exact-version FTS index,
+the application queries only the selected source versions, and the workspace
+retains immutable content-free retrieval traces. Missing, stale, fallback, and
+empty-query outcomes remain visible rather than becoming silent zero-context
+runs. Vector or hybrid retrieval requires measured gains in
+relevant-achievement recall and citation accuracy without more unsupported
+claims. Remote embeddings or vector storage require a separate architecture
+and privacy decision. User-approved research remains distinct from candidate
+evidence and cannot create experience, contact employers, or submit
+applications.
 
 ## Roadmap
 
@@ -485,6 +490,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-30 | Defined the CKB-scoped lexical retrieval boundary before persistence and runtime integration. | Each CKB owns a replaceable exact-source-version FTS projection, multi-CKB retrieval is explicit application fan-out with deterministic fusion, and the workspace stores immutable content-free traces. Provider projections contain only bounded text and opaque citable chunk IDs; stale or unavailable indexes cannot silently become empty context. |
 | 2026-08-30 | Validated the canonical candidate profile with a deterministic sanitized representative career. | A real temporary CKB and SQLite round trip preserves all 12 categories with exact candidate provenance, accepts private-project evidence without public proof, and keeps conflicts, duplicates, and omissions visible before review. This completes #66 while #80 retains ownership of future derived-index lifecycle behavior. |
 | 2026-08-30 | Added the candidate-facing canonical-profile review surface. | The collecting desktop workspace can derive with explicit transmission approval, load immutable history, inspect bounded provenance, edit latest-draft fact values and issue statuses, review, and bind the exact selected reviewed version to the next run without exposing roots or stored selections. |
 | 2026-08-30 | Defined canonical-profile lifecycle reconciliation without erasing audit history. | Drafts cannot become reviewed and reviewed profiles cannot enter new runs when their exact CKB selection is unavailable or changed. Immutable profiles, run references, and approved exports survive workspace backup/restore and audit retention; #80 owns derived-index cleanup. |

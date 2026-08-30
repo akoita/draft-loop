@@ -125,6 +125,14 @@ author and critic requests. Local vector and hybrid implementations remain
 evaluation components until deletion, retention, isolation, provenance, and
 quality are validated for the product path.
 
+[ADR 0008](adr/0008-ckb-scoped-lexical-retrieval.md) defines the CKB cutover:
+each portable store owns its replaceable exact-source-version lexical index,
+while the application fans out only across the workspace's explicit selection
+and persists content-free retrieval traces in workspace history. This keeps
+active derived rows inside the lifecycle boundary that can delete or rebuild
+them. The legacy workspace evidence index remains readable until the complete
+issue #80 path is integrated and validated.
+
 ## Opportunity brief contract
 
 The #67 components define a provider-independent, versioned opportunity brief
@@ -507,9 +515,10 @@ Historical and reviewed versions remain read-only in that surface.
 
 ### CKB integration gap
 
-The CKB does not yet provide normalized facts, lexical/vector/hybrid indexes,
-retrieval-index drift enforcement, provider transmission scope, missing-blob
-repair, or general cleanup beyond confirmed deletion of ownership-proven data.
+The CKB does not yet implement its newly defined lexical index, retrieval-index
+drift enforcement, provider transmission scope, missing-blob repair, or general
+cleanup beyond confirmed deletion of ownership-proven data. Vector and hybrid
+indexes remain deferred.
 Until those contracts are
 integrated and validated, the workspace-scoped evidence and retrieval path
 remains authoritative for application runs.

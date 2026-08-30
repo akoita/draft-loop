@@ -16,9 +16,14 @@ import {
   authorAdjudicationEffectRequirements,
   authorAdjudicationPlanSchemaVersion,
   candidateKnowledgeBaseStates,
+  candidateKnowledgeLexicalIndexSchemaVersion,
   candidateKnowledgeRetentionClasses,
   candidateKnowledgeRetentionOverrideKinds,
   candidateKnowledgeRetentionRules,
+  candidateKnowledgeRetrievalPurposes,
+  candidateKnowledgeRetrievalSchemaVersion,
+  candidateKnowledgeRetrievalStatuses,
+  candidateKnowledgeRetrievalTraceSchemaVersion,
   candidateKnowledgeSelectionLifecycleObservationStatuses,
   candidateKnowledgeSelectionSnapshotSchemaVersion,
   candidateKnowledgeSourceKinds,
@@ -33,6 +38,15 @@ import {
   canonicalCandidateProfileSchemaVersion,
   canonicalCandidateProfileStatuses,
   contextSchemaVersion,
+  createCandidateKnowledgeLexicalChunk,
+  createCandidateKnowledgeLexicalChunkMetadata,
+  createCandidateKnowledgeLexicalHit,
+  createCandidateKnowledgeLexicalIndexIdentity,
+  createCandidateKnowledgeLexicalProviderHit,
+  createCandidateKnowledgeLexicalRetrievalRequest,
+  createCandidateKnowledgeLexicalRetrievalResult,
+  createCandidateKnowledgeRetrievalScope,
+  createCandidateKnowledgeRetrievalTrace,
   createCandidateKnowledgeSelectionSnapshot,
   createCanonicalCandidateProfile,
   deriveModelLineage,
@@ -40,6 +54,18 @@ import {
   independentReadinessReportInputAssessmentStatuses,
   independentReadinessReportSchemaVersion,
   independentReadinessReportTargetKinds,
+  maximumCandidateKnowledgeRetrievalBm25Rank,
+  maximumCandidateKnowledgeRetrievalChunkCount,
+  maximumCandidateKnowledgeRetrievalChunkIdLength,
+  maximumCandidateKnowledgeRetrievalChunkMetadataValueLength,
+  maximumCandidateKnowledgeRetrievalChunkTextLength,
+  maximumCandidateKnowledgeRetrievalIdentifierLength,
+  maximumCandidateKnowledgeRetrievalIndexedChunkCount,
+  maximumCandidateKnowledgeRetrievalIndexerIdLength,
+  maximumCandidateKnowledgeRetrievalLatencyMs,
+  maximumCandidateKnowledgeRetrievalQueryLength,
+  maximumCandidateKnowledgeRetrievalScopeSourceCount,
+  maximumCandidateKnowledgeRetrievalTraceOperationIdLength,
   maximumCanonicalCandidateProfileFactCount,
   maximumCanonicalCandidateProfileFactIdLength,
   maximumCanonicalCandidateProfileFieldLength,
@@ -1105,6 +1131,669 @@ export const candidateKnowledgeSourceVersionSchema = z
   });
 
 export type CandidateKnowledgeSourceVersion = z.infer<typeof candidateKnowledgeSourceVersionSchema>;
+
+const candidateKnowledgeRetrievalIdentifierPattern =
+  /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/u;
+const candidateKnowledgeRetrievalIdentifierSchema = nonEmptyString
+  .max(maximumCandidateKnowledgeRetrievalIdentifierLength)
+  .regex(candidateKnowledgeRetrievalIdentifierPattern, "must be a safe opaque identifier");
+const candidateKnowledgeRetrievalChunkIdSchema = nonEmptyString
+  .max(maximumCandidateKnowledgeRetrievalChunkIdLength)
+  .regex(candidateKnowledgeRetrievalIdentifierPattern, "must be a safe opaque identifier");
+const candidateKnowledgeRetrievalIndexerIdSchema = nonEmptyString
+  .max(maximumCandidateKnowledgeRetrievalIndexerIdLength)
+  .regex(candidateKnowledgeRetrievalIdentifierPattern, "must be a safe opaque identifier");
+const candidateKnowledgeRetrievalOperationIdSchema = nonEmptyString
+  .max(maximumCandidateKnowledgeRetrievalTraceOperationIdLength)
+  .regex(candidateKnowledgeRetrievalIdentifierPattern, "must be a safe opaque identifier");
+const candidateKnowledgeRetrievalQuerySchema = z
+  .string()
+  .trim()
+  .max(maximumCandidateKnowledgeRetrievalQueryLength);
+const candidateKnowledgeRetrievalBoundedTextSchema = z
+  .string()
+  .trim()
+  .min(1, "must not be empty")
+  .max(maximumCandidateKnowledgeRetrievalChunkMetadataValueLength);
+const candidateKnowledgeRetrievalChunkTextSchema = z
+  .string()
+  .trim()
+  .min(1, "must not be empty")
+  .max(maximumCandidateKnowledgeRetrievalChunkTextLength);
+const candidateKnowledgeRetrievalSha256ChecksumJsonSchema = z
+  .string()
+  .regex(/^[a-f0-9]{64}$/iu, "must be a SHA-256 checksum");
+const candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema = z
+  .number()
+  .finite()
+  .int()
+  .nonnegative()
+  .refine(Number.isSafeInteger, "must be a safe integer");
+const candidateKnowledgeRetrievalSafePositiveIntegerSchema = z
+  .number()
+  .finite()
+  .int()
+  .positive()
+  .refine(Number.isSafeInteger, "must be a safe integer");
+const candidateKnowledgeRetrievalBm25RankSchema = z
+  .number()
+  .finite()
+  .min(-maximumCandidateKnowledgeRetrievalBm25Rank)
+  .max(maximumCandidateKnowledgeRetrievalBm25Rank);
+
+export const candidateKnowledgeRetrievalPurposeSchema = z.enum(candidateKnowledgeRetrievalPurposes);
+export type CandidateKnowledgeRetrievalPurpose = z.infer<
+  typeof candidateKnowledgeRetrievalPurposeSchema
+>;
+
+export const candidateKnowledgeRetrievalStatusSchema = z.enum(candidateKnowledgeRetrievalStatuses);
+export type CandidateKnowledgeRetrievalStatus = z.infer<
+  typeof candidateKnowledgeRetrievalStatusSchema
+>;
+
+export const candidateKnowledgeRetrievalSourceVersionReferenceSchema = z.strictObject({
+  storeId: candidateKnowledgeRetrievalIdentifierSchema,
+  knowledgeBaseId: candidateKnowledgeRetrievalIdentifierSchema,
+  sourceId: candidateKnowledgeRetrievalIdentifierSchema,
+  versionId: candidateKnowledgeRetrievalIdentifierSchema,
+});
+
+export type CandidateKnowledgeRetrievalSourceVersionReference = z.infer<
+  typeof candidateKnowledgeRetrievalSourceVersionReferenceSchema
+>;
+
+function candidateKnowledgeRetrievalReferenceKey(
+  reference: Pick<
+    CandidateKnowledgeRetrievalSourceVersionReference,
+    "storeId" | "knowledgeBaseId" | "sourceId" | "versionId"
+  >,
+): string {
+  return JSON.stringify([
+    reference.storeId,
+    reference.knowledgeBaseId,
+    reference.sourceId,
+    reference.versionId,
+  ]);
+}
+
+function addCanonicalReferenceOrderIssues(
+  references: readonly CandidateKnowledgeRetrievalSourceVersionReference[],
+  path: readonly (string | number)[],
+  context: z.RefinementCtx,
+): void {
+  const seen = new Set<string>();
+  let previous: string | undefined;
+  for (const [index, reference] of references.entries()) {
+    const key = candidateKnowledgeRetrievalReferenceKey(reference);
+    if (seen.has(key)) {
+      context.addIssue({
+        code: "custom",
+        path: [...path, index],
+        message: "source-version references must be unique",
+      });
+    }
+    if (previous !== undefined && key < previous) {
+      context.addIssue({
+        code: "custom",
+        path: [...path, index],
+        message: "source-version references must use canonical order",
+      });
+    }
+    seen.add(key);
+    previous = key;
+  }
+}
+
+export const candidateKnowledgeRetrievalScopeSchema = z
+  .strictObject({
+    sources: z
+      .array(candidateKnowledgeRetrievalSourceVersionReferenceSchema)
+      .min(1)
+      .max(maximumCandidateKnowledgeRetrievalScopeSourceCount),
+  })
+  .superRefine((scope, context) => {
+    addCanonicalReferenceOrderIssues(scope.sources, ["sources"], context);
+  })
+  .transform((scope) => createCandidateKnowledgeRetrievalScope(scope));
+
+export type CandidateKnowledgeRetrievalScope = z.output<
+  typeof candidateKnowledgeRetrievalScopeSchema
+>;
+
+export const candidateKnowledgeLexicalChunkMetadataSchema = z
+  .strictObject({
+    careerEntity: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+    date: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+    section: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+    technology: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+    project: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+    credential: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+    provenance: candidateKnowledgeRetrievalSourceVersionReferenceSchema,
+  })
+  .transform((metadata) =>
+    createCandidateKnowledgeLexicalChunkMetadata(
+      metadata as unknown as Parameters<typeof createCandidateKnowledgeLexicalChunkMetadata>[0],
+    ),
+  );
+
+export type CandidateKnowledgeLexicalChunkMetadata = z.output<
+  typeof candidateKnowledgeLexicalChunkMetadataSchema
+>;
+
+const candidateKnowledgeLexicalChunkFields = {
+  chunkId: candidateKnowledgeRetrievalChunkIdSchema,
+  ordinal: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema,
+  lineStart: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema,
+  lineEnd: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema,
+  text: candidateKnowledgeRetrievalChunkTextSchema,
+  metadata: candidateKnowledgeLexicalChunkMetadataSchema,
+};
+
+export const candidateKnowledgeLexicalChunkSchema = z
+  .strictObject(candidateKnowledgeLexicalChunkFields)
+  .superRefine((chunk, context) => {
+    if (chunk.lineEnd < chunk.lineStart) {
+      context.addIssue({
+        code: "custom",
+        path: ["lineEnd"],
+        message: "lineEnd must not precede lineStart",
+      });
+    }
+  })
+  .transform((chunk) => createCandidateKnowledgeLexicalChunk(chunk));
+
+export type CandidateKnowledgeLexicalChunk = z.output<typeof candidateKnowledgeLexicalChunkSchema>;
+
+export const candidateKnowledgeLexicalHitSchema = z
+  .strictObject({
+    ...candidateKnowledgeLexicalChunkFields,
+    bm25Rank: candidateKnowledgeRetrievalBm25RankSchema,
+  })
+  .superRefine((hit, context) => {
+    if (hit.lineEnd < hit.lineStart) {
+      context.addIssue({
+        code: "custom",
+        path: ["lineEnd"],
+        message: "lineEnd must not precede lineStart",
+      });
+    }
+  })
+  .transform((hit) => createCandidateKnowledgeLexicalHit(hit));
+
+export type CandidateKnowledgeLexicalHit = z.output<typeof candidateKnowledgeLexicalHitSchema>;
+
+export const candidateKnowledgeLexicalProviderHitSchema = z
+  .strictObject({
+    chunkId: candidateKnowledgeRetrievalChunkIdSchema,
+    text: candidateKnowledgeRetrievalChunkTextSchema,
+  })
+  .transform((hit) =>
+    createCandidateKnowledgeLexicalProviderHit(
+      hit as unknown as Parameters<typeof createCandidateKnowledgeLexicalProviderHit>[0],
+    ),
+  );
+
+export type CandidateKnowledgeLexicalProviderHit = z.output<
+  typeof candidateKnowledgeLexicalProviderHitSchema
+>;
+
+export const candidateKnowledgeLexicalIndexIdentitySchema = z
+  .strictObject({
+    schemaVersion: z.literal(candidateKnowledgeLexicalIndexSchemaVersion).optional(),
+    indexerId: candidateKnowledgeRetrievalIndexerIdSchema,
+    manifestChecksum: sha256ChecksumSchema,
+  })
+  .transform((identity) =>
+    createCandidateKnowledgeLexicalIndexIdentity(
+      identity as unknown as Parameters<typeof createCandidateKnowledgeLexicalIndexIdentity>[0],
+    ),
+  );
+
+export type CandidateKnowledgeLexicalIndexIdentity = z.output<
+  typeof candidateKnowledgeLexicalIndexIdentitySchema
+>;
+
+export const candidateKnowledgeLexicalRetrievalRequestSchema = z
+  .strictObject({
+    schemaVersion: z.literal(candidateKnowledgeRetrievalSchemaVersion).optional(),
+    purpose: candidateKnowledgeRetrievalPurposeSchema,
+    query: candidateKnowledgeRetrievalQuerySchema,
+    scope: candidateKnowledgeRetrievalScopeSchema,
+    limit: candidateKnowledgeRetrievalSafePositiveIntegerSchema
+      .max(maximumCandidateKnowledgeRetrievalChunkCount)
+      .optional(),
+  })
+  .transform((request) =>
+    createCandidateKnowledgeLexicalRetrievalRequest(
+      request as unknown as Parameters<typeof createCandidateKnowledgeLexicalRetrievalRequest>[0],
+    ),
+  );
+
+export type CandidateKnowledgeLexicalRetrievalRequest = z.output<
+  typeof candidateKnowledgeLexicalRetrievalRequestSchema
+>;
+
+function lexicalRetrievalHitPrecedes(
+  left: CandidateKnowledgeLexicalHit,
+  right: CandidateKnowledgeLexicalHit,
+): boolean {
+  return (
+    left.bm25Rank < right.bm25Rank ||
+    (left.bm25Rank === right.bm25Rank && left.chunkId <= right.chunkId)
+  );
+}
+
+function retrievalStatusNeedsHits(status: CandidateKnowledgeRetrievalStatus): boolean {
+  return status === "matched" || status === "bounded-fallback";
+}
+
+export const candidateKnowledgeLexicalRetrievalResultSchema = z
+  .strictObject({
+    schemaVersion: z.literal(candidateKnowledgeRetrievalSchemaVersion).optional(),
+    purpose: candidateKnowledgeRetrievalPurposeSchema,
+    status: candidateKnowledgeRetrievalStatusSchema,
+    scope: candidateKnowledgeRetrievalScopeSchema,
+    index: candidateKnowledgeLexicalIndexIdentitySchema.nullable(),
+    indexedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+      maximumCandidateKnowledgeRetrievalIndexedChunkCount,
+    ),
+    selectedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+      maximumCandidateKnowledgeRetrievalChunkCount,
+    ),
+    selectedSourceCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+      maximumCandidateKnowledgeRetrievalScopeSourceCount,
+    ),
+    hits: z
+      .array(candidateKnowledgeLexicalHitSchema)
+      .max(maximumCandidateKnowledgeRetrievalChunkCount),
+  })
+  .superRefine((result, context) => {
+    const hitIds = new Set<string>();
+    const hitProvenanceKeys = new Set<string>();
+    const scopeKeys = new Set(result.scope.sources.map(candidateKnowledgeRetrievalReferenceKey));
+    for (const [index, hit] of result.hits.entries()) {
+      if (hitIds.has(hit.chunkId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["hits", index, "chunkId"],
+          message: "chunk ids must be unique",
+        });
+      }
+      hitIds.add(hit.chunkId);
+      const provenanceKey = candidateKnowledgeRetrievalReferenceKey(hit.metadata.provenance);
+      hitProvenanceKeys.add(provenanceKey);
+      if (!scopeKeys.has(provenanceKey)) {
+        context.addIssue({
+          code: "custom",
+          path: ["hits", index, "metadata", "provenance"],
+          message: "must reference an exact source version in scope",
+        });
+      }
+      const previousHit = result.hits[index - 1];
+      if (previousHit !== undefined && !lexicalRetrievalHitPrecedes(previousHit, hit)) {
+        context.addIssue({
+          code: "custom",
+          path: ["hits", index],
+          message: "hits must use canonical BM25 order",
+        });
+      }
+    }
+    if (result.selectedChunkCount !== result.hits.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedChunkCount"],
+        message: "must equal the number of hits",
+      });
+    }
+    if (result.selectedSourceCount > result.scope.sources.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedSourceCount"],
+        message: "must not exceed the number of scoped source versions",
+      });
+    }
+    if (retrievalStatusNeedsHits(result.status)) {
+      if (result.hits.length === 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["hits"],
+          message: "this status requires at least one hit",
+        });
+      }
+      if (result.index === null) {
+        context.addIssue({
+          code: "custom",
+          path: ["index"],
+          message: "this status requires an index identity",
+        });
+      }
+    } else if (result.hits.length > 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["hits"],
+        message: "this status must not contain hits",
+      });
+    }
+    if (result.status === "not-indexed" && result.index !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["index"],
+        message: "not-indexed status must not claim an index identity",
+      });
+    }
+    if (result.status === "not-indexed" && result.indexedChunkCount !== 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["indexedChunkCount"],
+        message: "not-indexed status must report zero indexed chunks",
+      });
+    }
+    if (result.status === "stale" && result.index === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["index"],
+        message: "stale status requires the stale index identity",
+      });
+    }
+    const expectedSelectedSourceCount = retrievalStatusNeedsHits(result.status)
+      ? hitProvenanceKeys.size
+      : 0;
+    if (result.selectedSourceCount !== expectedSelectedSourceCount) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedSourceCount"],
+        message: retrievalStatusNeedsHits(result.status)
+          ? "must equal the number of distinct hit source versions"
+          : "must be zero when no hits are selected",
+      });
+    }
+  })
+  .transform((result) =>
+    createCandidateKnowledgeLexicalRetrievalResult(
+      result as unknown as Parameters<typeof createCandidateKnowledgeLexicalRetrievalResult>[0],
+    ),
+  );
+
+export type CandidateKnowledgeLexicalRetrievalResult = z.output<
+  typeof candidateKnowledgeLexicalRetrievalResultSchema
+>;
+
+export const candidateKnowledgeRetrievalTraceChunkSchema = z.strictObject({
+  chunkId: candidateKnowledgeRetrievalChunkIdSchema,
+  bm25Rank: candidateKnowledgeRetrievalBm25RankSchema,
+});
+
+export type CandidateKnowledgeRetrievalTraceChunk = z.infer<
+  typeof candidateKnowledgeRetrievalTraceChunkSchema
+>;
+
+export const candidateKnowledgeRetrievalTraceSchema = z
+  .strictObject({
+    schemaVersion: z.literal(candidateKnowledgeRetrievalTraceSchemaVersion).optional(),
+    id: candidateKnowledgeRetrievalIdentifierSchema,
+    workspaceId: candidateKnowledgeRetrievalIdentifierSchema,
+    operationId: candidateKnowledgeRetrievalOperationIdSchema,
+    purpose: candidateKnowledgeRetrievalPurposeSchema,
+    queryChecksum: sha256ChecksumSchema,
+    scope: candidateKnowledgeRetrievalScopeSchema,
+    index: candidateKnowledgeLexicalIndexIdentitySchema.nullable(),
+    status: candidateKnowledgeRetrievalStatusSchema,
+    indexedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+      maximumCandidateKnowledgeRetrievalIndexedChunkCount,
+    ),
+    selectedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+      maximumCandidateKnowledgeRetrievalChunkCount,
+    ),
+    selectedSourceCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+      maximumCandidateKnowledgeRetrievalScopeSourceCount,
+    ),
+    latencyMs: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+      maximumCandidateKnowledgeRetrievalLatencyMs,
+    ),
+    selectedChunks: z
+      .array(candidateKnowledgeRetrievalTraceChunkSchema)
+      .max(maximumCandidateKnowledgeRetrievalChunkCount),
+    createdAt: strictTimestampSchema,
+  })
+  .superRefine((trace, context) => {
+    const chunkIds = new Set<string>();
+    for (const [index, chunk] of trace.selectedChunks.entries()) {
+      if (chunkIds.has(chunk.chunkId)) {
+        context.addIssue({
+          code: "custom",
+          path: ["selectedChunks", index, "chunkId"],
+          message: "chunk ids must be unique",
+        });
+      }
+      chunkIds.add(chunk.chunkId);
+      if (
+        (index > 0 && (trace.selectedChunks[index - 1]?.bm25Rank ?? 0) > chunk.bm25Rank) ||
+        ((trace.selectedChunks[index - 1]?.bm25Rank ?? 0) === chunk.bm25Rank &&
+          (trace.selectedChunks[index - 1]?.chunkId ?? "") > chunk.chunkId)
+      ) {
+        context.addIssue({
+          code: "custom",
+          path: ["selectedChunks", index],
+          message: "selected chunks must use canonical BM25 order",
+        });
+      }
+    }
+    if (trace.selectedChunkCount !== trace.selectedChunks.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedChunkCount"],
+        message: "must equal the number of selected chunks",
+      });
+    }
+    if (trace.selectedSourceCount > trace.scope.sources.length) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedSourceCount"],
+        message: "must not exceed the number of scoped source versions",
+      });
+    }
+    if (retrievalStatusNeedsHits(trace.status)) {
+      if (trace.selectedChunks.length === 0) {
+        context.addIssue({
+          code: "custom",
+          path: ["selectedChunks"],
+          message: "this status requires at least one selected chunk",
+        });
+      }
+      if (trace.index === null) {
+        context.addIssue({
+          code: "custom",
+          path: ["index"],
+          message: "this status requires an index identity",
+        });
+      }
+    } else if (trace.selectedChunks.length > 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedChunks"],
+        message: "this status must not contain selected chunks",
+      });
+    }
+    if (trace.status === "not-indexed" && trace.index !== null) {
+      context.addIssue({
+        code: "custom",
+        path: ["index"],
+        message: "not-indexed status must not claim an index identity",
+      });
+    }
+    if (trace.status === "not-indexed" && trace.indexedChunkCount !== 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["indexedChunkCount"],
+        message: "not-indexed status must report zero indexed chunks",
+      });
+    }
+    if (trace.status === "stale" && trace.index === null) {
+      context.addIssue({
+        code: "custom",
+        path: ["index"],
+        message: "stale status requires the stale index identity",
+      });
+    }
+    if (!retrievalStatusNeedsHits(trace.status) && trace.selectedSourceCount !== 0) {
+      context.addIssue({
+        code: "custom",
+        path: ["selectedSourceCount"],
+        message: "must be zero when no chunks are selected",
+      });
+    }
+  })
+  .transform((trace) =>
+    createCandidateKnowledgeRetrievalTrace(
+      trace as unknown as Parameters<typeof createCandidateKnowledgeRetrievalTrace>[0],
+    ),
+  );
+
+export type CandidateKnowledgeRetrievalTrace = z.output<
+  typeof candidateKnowledgeRetrievalTraceSchema
+>;
+
+function draft7JsonSchema(schema: z.ZodType): Record<string, unknown> {
+  const value = z.toJSONSchema(schema, { target: "draft-7" });
+  const { $schema: _schema, ...withoutMetadata } = value;
+  return withoutMetadata;
+}
+
+/*
+ * JSON Schema describes the exchanged shape, while the Zod schemas above
+ * additionally transform values through the immutable domain constructors.
+ * Keep a transform-free mirror here so schema generation remains strict and
+ * does not degrade transformed fields to `any`.
+ */
+const candidateKnowledgeRetrievalScopeJsonSchemaSource = z.strictObject({
+  sources: z
+    .array(candidateKnowledgeRetrievalSourceVersionReferenceSchema)
+    .min(1)
+    .max(maximumCandidateKnowledgeRetrievalScopeSourceCount),
+});
+const candidateKnowledgeLexicalProviderHitJsonSchemaSource = z.strictObject({
+  chunkId: candidateKnowledgeRetrievalChunkIdSchema,
+  text: candidateKnowledgeRetrievalChunkTextSchema,
+});
+const candidateKnowledgeLexicalChunkMetadataJsonSchemaSource = z.strictObject({
+  careerEntity: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+  date: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+  section: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+  technology: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+  project: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+  credential: candidateKnowledgeRetrievalBoundedTextSchema.optional(),
+  provenance: candidateKnowledgeRetrievalSourceVersionReferenceSchema,
+});
+const candidateKnowledgeLexicalChunkJsonSchemaSource = z.strictObject({
+  chunkId: candidateKnowledgeRetrievalChunkIdSchema,
+  ordinal: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema,
+  lineStart: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema,
+  lineEnd: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema,
+  text: candidateKnowledgeRetrievalChunkTextSchema,
+  metadata: candidateKnowledgeLexicalChunkMetadataJsonSchemaSource,
+});
+const candidateKnowledgeLexicalHitJsonSchemaSource = z.strictObject({
+  ...candidateKnowledgeLexicalChunkJsonSchemaSource.shape,
+  bm25Rank: candidateKnowledgeRetrievalBm25RankSchema,
+});
+const candidateKnowledgeLexicalIndexIdentityJsonSchemaSource = z.strictObject({
+  schemaVersion: z.literal(candidateKnowledgeLexicalIndexSchemaVersion).optional(),
+  indexerId: candidateKnowledgeRetrievalIndexerIdSchema,
+  manifestChecksum: candidateKnowledgeRetrievalSha256ChecksumJsonSchema,
+});
+const candidateKnowledgeLexicalRetrievalRequestJsonSchemaSource = z.strictObject({
+  schemaVersion: z.literal(candidateKnowledgeRetrievalSchemaVersion).optional(),
+  purpose: candidateKnowledgeRetrievalPurposeSchema,
+  query: candidateKnowledgeRetrievalQuerySchema,
+  scope: candidateKnowledgeRetrievalScopeJsonSchemaSource,
+  limit: candidateKnowledgeRetrievalSafePositiveIntegerSchema
+    .max(maximumCandidateKnowledgeRetrievalChunkCount)
+    .optional(),
+});
+const candidateKnowledgeLexicalRetrievalResultJsonSchemaSource = z.strictObject({
+  schemaVersion: z.literal(candidateKnowledgeRetrievalSchemaVersion).optional(),
+  purpose: candidateKnowledgeRetrievalPurposeSchema,
+  status: candidateKnowledgeRetrievalStatusSchema,
+  scope: candidateKnowledgeRetrievalScopeJsonSchemaSource,
+  index: candidateKnowledgeLexicalIndexIdentityJsonSchemaSource.nullable(),
+  indexedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+    maximumCandidateKnowledgeRetrievalIndexedChunkCount,
+  ),
+  selectedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+    maximumCandidateKnowledgeRetrievalChunkCount,
+  ),
+  selectedSourceCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+    maximumCandidateKnowledgeRetrievalScopeSourceCount,
+  ),
+  hits: z
+    .array(candidateKnowledgeLexicalHitJsonSchemaSource)
+    .max(maximumCandidateKnowledgeRetrievalChunkCount),
+});
+const candidateKnowledgeRetrievalTraceChunkJsonSchemaSource = z.strictObject({
+  chunkId: candidateKnowledgeRetrievalChunkIdSchema,
+  bm25Rank: candidateKnowledgeRetrievalBm25RankSchema,
+});
+const candidateKnowledgeRetrievalTraceJsonSchemaSource = z.strictObject({
+  schemaVersion: z.literal(candidateKnowledgeRetrievalTraceSchemaVersion).optional(),
+  id: candidateKnowledgeRetrievalIdentifierSchema,
+  workspaceId: candidateKnowledgeRetrievalIdentifierSchema,
+  operationId: candidateKnowledgeRetrievalOperationIdSchema,
+  purpose: candidateKnowledgeRetrievalPurposeSchema,
+  queryChecksum: candidateKnowledgeRetrievalSha256ChecksumJsonSchema,
+  scope: candidateKnowledgeRetrievalScopeJsonSchemaSource,
+  index: candidateKnowledgeLexicalIndexIdentityJsonSchemaSource.nullable(),
+  status: candidateKnowledgeRetrievalStatusSchema,
+  indexedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+    maximumCandidateKnowledgeRetrievalIndexedChunkCount,
+  ),
+  selectedChunkCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+    maximumCandidateKnowledgeRetrievalChunkCount,
+  ),
+  selectedSourceCount: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+    maximumCandidateKnowledgeRetrievalScopeSourceCount,
+  ),
+  latencyMs: candidateKnowledgeRetrievalSafeNonNegativeIntegerSchema.max(
+    maximumCandidateKnowledgeRetrievalLatencyMs,
+  ),
+  selectedChunks: z
+    .array(candidateKnowledgeRetrievalTraceChunkJsonSchemaSource)
+    .max(maximumCandidateKnowledgeRetrievalChunkCount),
+  createdAt: strictTimestampSchema,
+});
+
+export const candidateKnowledgeRetrievalSourceVersionReferenceJsonSchema = draft7JsonSchema(
+  candidateKnowledgeRetrievalSourceVersionReferenceSchema,
+);
+export const candidateKnowledgeRetrievalScopeJsonSchema = draft7JsonSchema(
+  candidateKnowledgeRetrievalScopeJsonSchemaSource,
+);
+export const candidateKnowledgeLexicalChunkMetadataJsonSchema = draft7JsonSchema(
+  candidateKnowledgeLexicalChunkMetadataJsonSchemaSource,
+);
+export const candidateKnowledgeLexicalChunkJsonSchema = draft7JsonSchema(
+  candidateKnowledgeLexicalChunkJsonSchemaSource,
+);
+export const candidateKnowledgeLexicalHitJsonSchema = draft7JsonSchema(
+  candidateKnowledgeLexicalHitJsonSchemaSource,
+);
+export const candidateKnowledgeLexicalProviderHitJsonSchema = draft7JsonSchema(
+  candidateKnowledgeLexicalProviderHitJsonSchemaSource,
+);
+export const candidateKnowledgeLexicalIndexIdentityJsonSchema = draft7JsonSchema(
+  candidateKnowledgeLexicalIndexIdentityJsonSchemaSource,
+);
+export const candidateKnowledgeLexicalRetrievalRequestJsonSchema = draft7JsonSchema(
+  candidateKnowledgeLexicalRetrievalRequestJsonSchemaSource,
+);
+export const candidateKnowledgeLexicalRetrievalResultJsonSchema = draft7JsonSchema(
+  candidateKnowledgeLexicalRetrievalResultJsonSchemaSource,
+);
+export const candidateKnowledgeRetrievalTraceChunkJsonSchema = draft7JsonSchema(
+  candidateKnowledgeRetrievalTraceChunkSchema,
+);
+export const candidateKnowledgeRetrievalTraceJsonSchema = draft7JsonSchema(
+  candidateKnowledgeRetrievalTraceJsonSchemaSource,
+);
 
 export const candidateKnowledgePortableBackupFormat =
   "draft-loop-candidate-knowledge-backup" as const;
