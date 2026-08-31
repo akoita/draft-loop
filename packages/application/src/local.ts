@@ -92,6 +92,7 @@ import {
 } from "@draft-loop/storage";
 import OpenAI from "openai";
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
+import { createAuthorGroundingGuide } from "./author-grounding.js";
 import { buildAuthorArtifact } from "./author-output.js";
 import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
@@ -1884,7 +1885,6 @@ function fixtureArtifact(context: ContextSnapshot, current: DraftArtifact | null
   };
   return current === null ? createArtifact(input) : createArtifactVersion(current, input);
 }
-
 function fixtureAgents(
   config: WorkspaceConfig,
   context: ContextSnapshot,
@@ -1942,7 +1942,6 @@ function fixtureAgents(
     },
   };
 }
-
 const maximumCritiqueFindings = 16;
 const maximumCritiqueMessageCharacters = 400;
 const maximumCritiqueOutputTokens = 16_384;
@@ -2190,7 +2189,6 @@ function providerAgents(
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const dataPolicy = (company: string) =>
     providerDataPolicy(company, allowProviderData, providerAuthModeConfiguration);
-
   async function createAdapter(company: string, modelId: string, role: "author" | "critic") {
     return createProviderAdapter(
       config,
@@ -2223,7 +2221,11 @@ function providerAgents(
       if (achievementPlan.status === "no-evidence") {
         throw new CliUserError("Drafting requires retrieved candidate evidence.");
       }
-      const authorPrompt = createAuthorAdjudicationPrompt(pendingAdjudication, retryFeedback);
+      const authorPrompt = createAuthorAdjudicationPrompt(
+        pendingAdjudication,
+        retryFeedback,
+        createAuthorGroundingGuide(retrievedEvidence),
+      );
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.author,
@@ -2327,7 +2329,6 @@ function noopAgents(): { readonly author: AuthorAgent; readonly critic: CriticAg
     },
   };
 }
-
 function engine(
   storage: SqliteStorage,
   config: WorkspaceConfig,
@@ -2372,7 +2373,6 @@ function engine(
     },
   });
 }
-
 function candidateKnowledgeRuntimeRetrieval(
   storage: SqliteStorage,
   config: WorkspaceConfig,

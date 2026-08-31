@@ -497,6 +497,12 @@ describe("local application driver", () => {
   it("drafts through a local model server without resolving any credential", async () => {
     const root = await providerWorkspace("draft-loop-local-provider-");
     const io = { write: () => undefined };
+    const authorInputs: JsonRecord[] = [];
+    await writeFile(
+      join(root, "evidence", "resume.md"),
+      "Built local-first TypeScript tools with deterministic testing. Staff Engineer at Example Systems in 2024 delivered 85% gains. AWS Certified Developer. See https://example.com/cv and contact Ada@example.com.\n",
+      "utf8",
+    );
     const credentialCalls: string[] = [];
     const requestedEndpoints: (string | undefined)[] = [];
     const fetchCalls: string[] = [];
@@ -508,6 +514,7 @@ describe("local application driver", () => {
       };
       expect(body.model).toBe("qwen3-coder-30b");
       const serialized = body.messages[1]?.content ?? "";
+      authorInputs.push(JSON.parse(serialized) as JsonRecord);
       return localCompletion(authorProposal(evidenceChunkId(serialized)), "local-1");
     });
     const providerClientFactories: ProviderClientFactories = {
@@ -551,6 +558,26 @@ describe("local application driver", () => {
       expect(fetchCalls).toEqual(["http://127.0.0.1:8080/v1/chat/completions"]);
       // A local server has no account, so the local author asked for no key.
       expect(credentialCalls).toEqual(["anthropic"]);
+      expect(authorInputs[0]?.groundingGuide).toEqual([
+        {
+          evidenceChunkId: expect.any(String),
+          protectedValues: [
+            "Staff Engineer",
+            "Example Systems",
+            "Example",
+            "2024",
+            "85%",
+            "AWS",
+            "AWS Certified Developer",
+            "https://example.com/cv",
+            "Ada@example.com",
+          ],
+        },
+      ]);
+      const guideEntry = (
+        authorInputs[0]?.groundingGuide as readonly Record<string, unknown>[] | undefined
+      )?.[0];
+      expect(Object.keys(guideEntry ?? {}).sort()).toEqual(["evidenceChunkId", "protectedValues"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
