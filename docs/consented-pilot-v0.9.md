@@ -2,14 +2,14 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-08-31<br>
-**Cases:** Two bounded observations of one consented, anonymized case
+**Cases:** Three bounded observations of one consented, anonymized case
 
 ## Result
 
 The predeclared workflow-parity gate remains **INDETERMINATE**. The live
 workflow did not produce a revised, human-approved artifact, so these
-observations cannot
-establish factual parity, professional readiness, or reduced review effort.
+observations cannot establish factual parity, professional readiness, or
+reduced review effort.
 It does not validate the v0.9 product outcome and does not authorize release
 preparation.
 
@@ -28,6 +28,14 @@ corrective retry cleared that boundary but failed one local factual-invariant
 claim-text path. The final bounded retry failed a different single claim-text
 path. No author response was accepted, so the OpenAI critic was not called in
 this observation.
+
+After the deterministic grounding guide was merged, a third observation reused
+the same private case, model pair, and case limit. Repeated same-scope starts
+failed before author output. Content-free instrumentation confirmed a
+structured HTTP 429 response without quota markers, but the nonzero CLI exit
+was recorded as non-retryable `unknown` before the structured status could be
+classified. The local Claude session remained installed and authenticated. No
+author response was accepted, and the OpenAI critic was not called.
 
 ## Predeclared comparison gate
 
@@ -50,7 +58,8 @@ accepted artifact against which to evaluate the gate.
 
 - Provider roles remained Anthropic `claude-sonnet-4-5` as author and OpenAI
   `gpt-5.6-luna` as critic. The initial observation reached both roles; the
-  corrective observation exhausted three author attempts before critique.
+  corrective observation exhausted three author attempts before critique; the
+  grounding-guide observation failed at the Anthropic transport boundary.
   Provider-reported usage and cost were unavailable for the failed attempts.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
@@ -67,7 +76,8 @@ accepted artifact against which to evaluate the gate.
 ## Decision
 
 Keep the workflow-parity outcome unvalidated. Issue #249 records the initial
-observation, and #262 records the corrective rerun. The #75 outcome rollup stays
-open, and release-preparation issue #250 remains blocked pending a complete
-consented comparison. Do not repeat the unchanged run: first bound the remaining
-author factual-invariant reliability failure as a separate execution issue.
+observation, #262 records the corrective rerun, and #266 records the
+grounding-guide observation. The #75 outcome rollup stays open, and
+release-preparation issue #250 remains blocked pending a complete consented
+comparison. Issue #267 must preserve structured Claude error classification
+before another authorized run.

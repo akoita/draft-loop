@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Two observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Close the current bounded author-grounding guide blocker (#264) before another authorized comparison (#75), then release evidence and next decision (#76); #250 remains blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Three observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Close the structured Claude error-classification blocker (#267) before another authorized comparison (#75), then release evidence and next decision (#76); #250 remains blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -388,10 +388,12 @@ comparison. The bounded provider-timeout, author-grounding, and corrective
 retry blockers #256, #258, and #260 are closed. The corrective observation
 under issue #262 is closed as indeterminate: it used all three author attempts, with
 output-token excess followed by two different single claim-text
-factual-invariant failures. No draft reached the critic. The current bounded
-per-evidence author-grounding guide blocker is #264; keep #75 open and #250
-blocked until it closes, and do not repeat the unchanged run before that gate
-is met.
+factual-invariant failures. No draft reached the critic. The per-evidence
+author-grounding guide blocker #264 then closed. The authorized observation
+under #266 repeatedly failed before author output: a structured HTTP 429
+without quota markers was persisted as non-retryable `unknown` because generic
+nonzero-exit handling ran before structured Claude error parsing. Issue #267 is
+the current bounded blocker. Keep #75 open and #250 blocked until it closes.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -493,6 +495,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-31 | Recorded #266 as indeterminate and bounded structured Claude nonzero-exit classification as #267. | The authenticated author transport returned a structured 429 without quota markers, but the adapter persisted non-retryable `unknown` before parsing it. No author or critic result exists; #75 stays open and #250 remains blocked. |
 | 2026-08-31 | Closed #262 as indeterminate and bounded the per-evidence author-grounding guide as #264. | The guide is the current blocker before another authorized #75 attempt; parity remains unvalidated and #250 remains blocked. |
 | 2026-08-31 | Recorded the corrective consented rerun under #262 as indeterminate. | Retry feedback moved the author beyond its initial output-token failure, but two subsequent attempts failed different single claim-text factual invariants. No accepted draft or critic result exists; #75 stays open and #250 remains blocked. |
 | 2026-08-31 | Closed author-grounding blocker #258 and bounded author retry feedback as #260. | Parity remains unvalidated; #260 must close before another consented #75 attempt, and #250 remains blocked pending that outcome. |
