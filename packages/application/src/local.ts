@@ -454,7 +454,6 @@ export function resolveProviderAuthModes(
 }
 
 export type SupportedModelCompany = (typeof supportedModelCompanies)[number];
-
 export interface WorkspaceKnowledgeSelectionEntry {
   readonly storeRoot: string;
   readonly storeId: string;
@@ -2213,6 +2212,7 @@ function providerAgents(
       currentArtifact,
       findings,
       pendingAdjudication,
+      retryFeedback,
       retrievedEvidence = [],
       signal,
     }) => {
@@ -2223,7 +2223,7 @@ function providerAgents(
       if (achievementPlan.status === "no-evidence") {
         throw new CliUserError("Drafting requires retrieved candidate evidence.");
       }
-      const authorPrompt = createAuthorAdjudicationPrompt(pendingAdjudication);
+      const authorPrompt = createAuthorAdjudicationPrompt(pendingAdjudication, retryFeedback);
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.author,

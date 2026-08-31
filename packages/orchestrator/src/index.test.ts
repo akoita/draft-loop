@@ -550,8 +550,10 @@ describe("durable orchestration", () => {
 
   it("persists failed attempts and retries with a new execution id", async () => {
     let attempts = 0;
+    const authorRequests: unknown[] = [];
     const { engine, author } = engineFixture({
-      author: async () => {
+      author: async (request) => {
+        authorRequests.push(request);
         attempts += 1;
         if (attempts === 1) {
           const error = new Error("temporary provider failure") as Error & {
@@ -560,7 +562,14 @@ describe("durable orchestration", () => {
           };
           error.code = "timeout";
           error.diagnostics = [
-            { code: "invalid_type", path: "sections.0.blocks" },
+            { code: "invalid_type", path: "sections.0.blocks.0" },
+            { code: "invalid_type", path: "sections.0.blocks.1" },
+            { code: "invalid_type", path: "sections.0.blocks.2" },
+            { code: "invalid_type", path: "sections.0.blocks.3" },
+            { code: "invalid_type", path: "sections.0.blocks.4" },
+            { code: "invalid_type", path: "sections.0.blocks.5" },
+            { code: "invalid_type", path: "sections.0.blocks.6" },
+            { code: "invalid_type", path: "sections.0.blocks.7" },
             { code: "unsafe", path: "candidate secret text!" },
           ];
           throw error;
@@ -588,7 +597,16 @@ describe("durable orchestration", () => {
       attempt: 1,
       maxAttempts: 3,
       retryable: true,
-      diagnostics: [{ code: "invalid_type", path: "sections.0.blocks" }],
+      diagnostics: [
+        { code: "invalid_type", path: "sections.0.blocks.0" },
+        { code: "invalid_type", path: "sections.0.blocks.1" },
+        { code: "invalid_type", path: "sections.0.blocks.2" },
+        { code: "invalid_type", path: "sections.0.blocks.3" },
+        { code: "invalid_type", path: "sections.0.blocks.4" },
+        { code: "invalid_type", path: "sections.0.blocks.5" },
+        { code: "invalid_type", path: "sections.0.blocks.6" },
+        { code: "invalid_type", path: "sections.0.blocks.7" },
+      ],
     });
 
     const resumed = await engine.resume("run-1", { context: context() });
@@ -597,15 +615,33 @@ describe("durable orchestration", () => {
     expect(resumed.executionHistory.map((item) => item.id)).toEqual(
       expect.arrayContaining(["run-1:1:author:attempt:1", "run-1:1:author:attempt:2"]),
     );
+    expect(authorRequests[0]).not.toHaveProperty("retryFeedback");
+    expect((authorRequests[1] as { retryFeedback?: unknown }).retryFeedback).toEqual({
+      failureCode: "timeout",
+      diagnostics: [
+        { code: "invalid_type", path: "sections.0.blocks.0" },
+        { code: "invalid_type", path: "sections.0.blocks.1" },
+        { code: "invalid_type", path: "sections.0.blocks.2" },
+        { code: "invalid_type", path: "sections.0.blocks.3" },
+        { code: "invalid_type", path: "sections.0.blocks.4" },
+        { code: "invalid_type", path: "sections.0.blocks.5" },
+        { code: "invalid_type", path: "sections.0.blocks.6" },
+        { code: "invalid_type", path: "sections.0.blocks.7" },
+      ],
+    });
+    expect(JSON.stringify(authorRequests[1])).not.toContain("candidate secret text");
+    expect(JSON.stringify(resumed)).not.toContain("retryFeedback");
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("provider.failed");
   });
 
   it("retries a failed critic without rerunning the author", async () => {
     const savedArtifact = artifact();
     let criticAttempts = 0;
+    const criticRequests: unknown[] = [];
     const { engine, author, critic } = engineFixture({
       author: async () => execution(savedArtifact, "anthropic", "author-test"),
-      critic: async () => {
+      critic: async (request) => {
+        criticRequests.push(request);
         criticAttempts += 1;
         if (criticAttempts === 1) {
           throw Object.assign(new Error("temporary critic failure"), { code: "timeout" });
@@ -633,6 +669,53 @@ describe("durable orchestration", () => {
     );
     expect(author).toHaveBeenCalledOnce();
     expect(critic).toHaveBeenCalledTimes(2);
+    expect(criticRequests[0]).not.toHaveProperty("retryFeedback");
+    expect(criticRequests[1]).not.toHaveProperty("retryFeedback");
+  });
+
+  it("passes retry feedback to exactly the next revision author attempt", async () => {
+    let authorAttempts = 0;
+    const authorRequests: unknown[] = [];
+    const { engine, author, critic } = engineFixture({
+      author: async (request) => {
+        authorRequests.push(request);
+        authorAttempts += 1;
+        if (authorAttempts === 2) {
+          throw Object.assign(new Error("private revision failure"), {
+            code: "invalid-response",
+            retryable: true,
+            diagnostics: [
+              { code: "custom", path: "sections.0.blocks.0.claims.0.evidenceChunkIds.0" },
+            ],
+          });
+        }
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+
+    const initial = await engine.start(request());
+    expect(initial.state).toBe("awaiting-approval");
+    const revision = await engine.requestRevision("run-1");
+    expect(revision).toMatchObject({ state: "revising", currentStep: "revision", round: 2 });
+
+    const failed = await engine.resume("run-1", { context: context() });
+    expect(failed).toMatchObject({ state: "provider-error", currentStep: "revision" });
+    const recovered = await engine.resume("run-1", { context: context() });
+
+    expect(recovered.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(3);
+    expect(authorRequests[0]).not.toHaveProperty("retryFeedback");
+    expect(authorRequests[1]).not.toHaveProperty("retryFeedback");
+    expect(authorRequests[2]).toMatchObject({
+      retryFeedback: {
+        failureCode: "invalid-response",
+        diagnostics: [{ code: "custom", path: "sections.0.blocks.0.claims.0.evidenceChunkIds.0" }],
+      },
+    });
+    expect(critic).toHaveBeenCalledTimes(2);
+    for (const [criticRequest] of critic.mock.calls) {
+      expect(criticRequest).not.toHaveProperty("retryFeedback");
+    }
   });
 
   it("allows a bounded retry when a provider response fails local validation", async () => {

@@ -6,25 +6,36 @@ const authorSystemPrompt =
 const adjudicatedRevisionInstructions =
   " This is an adjudicated revision. Make observable changes for accepted findings unless an explicit accepted-effect override applies. Do not apply rejected or nuanced recommendations; keep those disagreements visible. Never treat a decision or accepted-effect override as evidence or permission to invent facts. Continue to use only retrieved candidate evidence for substantive claims and cite only retrievedEvidence[].id values in evidenceChunkIds.";
 
+const authorRetryInstructions =
+  " When retryFeedback is present, output_token_budget_exceeded means return a materially more concise proposal. Claim/evidence diagnostic paths mean correct that exact boundary by citing all supporting chunks, splitting the claim, or omitting unsupported protected values. Never reconstruct or request rejected content.";
+
 type PendingAdjudication = NonNullable<AuthorRequest["pendingAdjudication"]>;
 
 export interface AuthorAdjudicationPrompt {
   readonly systemPrompt: string;
   readonly providerInput: Readonly<{
     readonly pendingAdjudication?: PendingAdjudication;
+    readonly retryFeedback?: NonNullable<AuthorRequest["retryFeedback"]>;
   }>;
 }
 
 /** Build the live author prompt and the optional validated adjudication carrier. */
 export function createAuthorAdjudicationPrompt(
   pendingAdjudication: AuthorRequest["pendingAdjudication"],
+  retryFeedback: AuthorRequest["retryFeedback"] = undefined,
 ): AuthorAdjudicationPrompt {
   if (pendingAdjudication === undefined) {
-    return { systemPrompt: authorSystemPrompt, providerInput: {} };
+    return {
+      systemPrompt: `${authorSystemPrompt}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
+      providerInput: retryFeedback === undefined ? {} : { retryFeedback },
+    };
   }
 
   return {
-    systemPrompt: `${authorSystemPrompt}${adjudicatedRevisionInstructions}`,
-    providerInput: { pendingAdjudication },
+    systemPrompt: `${authorSystemPrompt}${adjudicatedRevisionInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
+    providerInput: {
+      pendingAdjudication,
+      ...(retryFeedback === undefined ? {} : { retryFeedback }),
+    },
   };
 }

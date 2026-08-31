@@ -116,6 +116,7 @@ export interface AuthorRequest {
     AdjudicationRuntimeState,
     "report" | "plan" | "acceptedEffectOverrides"
   >;
+  readonly retryFeedback?: AuthorRetryFeedback;
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
   readonly signal?: AbortSignal;
 }
@@ -181,6 +182,12 @@ export interface RunError {
 export interface RunErrorDiagnostic {
   readonly code: string;
   readonly path: string;
+}
+
+/** Content-free feedback from a prior retryable author or revision failure. */
+export interface AuthorRetryFeedback {
+  readonly failureCode: string;
+  readonly diagnostics?: readonly RunErrorDiagnostic[];
 }
 
 export interface RunSnapshot {
@@ -1065,6 +1072,7 @@ export function createOrchestrationEngine(
     snapshot: RunSnapshot,
     context: ContextSnapshot,
     signal?: AbortSignal,
+    retryFeedback?: AuthorRetryFeedback,
   ): Promise<RunSnapshot> => {
     if (snapshot.currentStep === null) return snapshot;
     const step = snapshot.currentStep;
@@ -1236,6 +1244,7 @@ export function createOrchestrationEngine(
               currentArtifact: snapshot.artifact,
               findings: snapshot.findings,
               ...(pendingAdjudication === undefined ? {} : { pendingAdjudication }),
+              ...(retryFeedback === undefined ? {} : { retryFeedback }),
               ...(retrievedEvidence ? { retrievedEvidence } : {}),
               ...(signal === undefined ? {} : { signal }),
             });
@@ -1438,8 +1447,20 @@ export function createOrchestrationEngine(
     signal?: AbortSignal,
   ): Promise<RunSnapshot> => {
     let current = snapshot;
+    let retryFeedback: AuthorRetryFeedback | undefined;
     if (current.state === "provider-error") {
       if (current.lastError?.retryable !== true) return immutable(current);
+      if (current.currentStep === "author" || current.currentStep === "revision") {
+        const diagnostics = current.lastError.diagnostics;
+        retryFeedback = {
+          failureCode: current.lastError.code,
+          ...(diagnostics === undefined
+            ? {}
+            : {
+                diagnostics: diagnostics.slice(0, 8).map(({ code, path }) => ({ code, path })),
+              }),
+        };
+      }
       const attempts = current.executionHistory.filter(
         (execution) =>
           execution.runId === current.runId &&
@@ -1474,7 +1495,15 @@ export function createOrchestrationEngine(
       current.state !== "awaiting-approval" &&
       current.state !== "provider-error"
     ) {
-      current = await executeStep(current, context, signal);
+      const stepRetryFeedback =
+        current.currentStep === "author" || current.currentStep === "revision"
+          ? retryFeedback
+          : undefined;
+      try {
+        current = await executeStep(current, context, signal, stepRetryFeedback);
+      } finally {
+        retryFeedback = undefined;
+      }
     }
     return immutable(current);
   };
