@@ -458,6 +458,64 @@ interface ClaudeJsonResult {
   readonly tool_uses?: unknown;
 }
 
+function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterError {
+  const status =
+    typeof response.api_error_status === "number" && Number.isFinite(response.api_error_status)
+      ? response.api_error_status
+      : undefined;
+  const statusMetadata = status === undefined ? {} : { status };
+  const safeResult = typeof response.result === "string" ? response.result.toLowerCase() : "";
+  if (status === 429) {
+    const quota =
+      safeResult.includes("weekly limit") ||
+      safeResult.includes("usage limit") ||
+      safeResult.includes("quota");
+    return new ProviderAdapterError(
+      "anthropic",
+      quota ? "quota-exhausted" : "rate-limit",
+      quota
+        ? "The user-session provider quota is exhausted."
+        : "The user-session provider rate limit was reached.",
+      { ...statusMetadata, retryable: !quota },
+    );
+  }
+  if (status === 401 || status === 403) {
+    return new ProviderAdapterError(
+      "anthropic",
+      "authentication",
+      "The user-session provider is not authenticated.",
+      { ...statusMetadata, retryable: false },
+    );
+  }
+  if (status !== undefined && status >= 500) {
+    return new ProviderAdapterError(
+      "anthropic",
+      "transient",
+      "The user-session provider encountered a transient error.",
+      { ...statusMetadata, retryable: true },
+    );
+  }
+  return new ProviderAdapterError(
+    "anthropic",
+    "unknown",
+    "The user-session provider request failed.",
+    { ...statusMetadata, retryable: false },
+  );
+}
+
+function parseClaudeStructuredError(text: string): ClaudeJsonResult | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return undefined;
+  const response = parsed as ClaudeJsonResult;
+  if (response.type !== "result" || response.is_error !== true) return undefined;
+  return response;
+}
+
 function parseClaudeResult<Output extends JsonValue>(
   text: string,
 ): {
@@ -483,35 +541,7 @@ function parseClaudeResult<Output extends JsonValue>(
     );
   }
   if (response.is_error === true) {
-    const safeResult = typeof response.result === "string" ? response.result.toLowerCase() : "";
-    if (response.api_error_status === 429) {
-      const quota =
-        safeResult.includes("weekly limit") ||
-        safeResult.includes("usage limit") ||
-        safeResult.includes("quota");
-      throw new ProviderAdapterError(
-        "anthropic",
-        quota ? "quota-exhausted" : "rate-limit",
-        quota
-          ? "The user-session provider quota is exhausted."
-          : "The user-session provider rate limit was reached.",
-        { retryable: !quota },
-      );
-    }
-    if (response.api_error_status === 401 || response.api_error_status === 403) {
-      throw new ProviderAdapterError(
-        "anthropic",
-        "authentication",
-        "The user-session provider is not authenticated.",
-        { retryable: false },
-      );
-    }
-    throw new ProviderAdapterError(
-      "anthropic",
-      "unknown",
-      "The user-session provider request failed.",
-      { retryable: false },
-    );
+    throw mapClaudeStructuredError(response);
   }
   if (
     response.type !== "result" ||
@@ -609,6 +639,10 @@ export class AnthropicClaudeUserSessionAdapter<
           ...(request.signal === undefined ? {} : { signal: request.signal }),
         });
         assertBoundedResult(this.provider, result, this.options.maxOutputBytes);
+        if (result.exitCode !== 0) {
+          const structuredError = parseClaudeStructuredError(result.stdout);
+          if (structuredError !== undefined) throw mapClaudeStructuredError(structuredError);
+        }
         resultOrError(this.provider, result);
         const parsed = parseClaudeResult<Output>(result.stdout);
         assertOutputWithinLimit(this.provider, parsed.outputTokens, maxOutputTokens);

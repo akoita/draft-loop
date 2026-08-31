@@ -204,6 +204,106 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
     }
   });
 
+  it.each([
+    [429, "temporary service response", "success", "rate-limit", true],
+    [429, "usage limit reached", "error", "quota-exhausted", false],
+    [401, "authentication response", "error", "authentication", false],
+    [403, "permission response", "error", "authentication", false],
+    [500, "temporary service response", "error", "transient", true],
+    [529, "temporary service response", "error", "transient", true],
+  ] as const)(
+    "maps a nonzero structured Claude status %s without exposing envelope content",
+    async (status, resultText, subtype, code, retryable) => {
+      const stdoutMarker = `synthetic-stdout-${status}`;
+      const resultMarker = `synthetic-result-${status}`;
+      const stderrMarker = `synthetic-stderr-${status}`;
+      const adapter = new AnthropicClaudeUserSessionAdapter({
+        configuredModel: anthropicModel,
+        runner: async () => ({
+          exitCode: 1,
+          stdout: JSON.stringify({
+            type: "result",
+            subtype,
+            is_error: true,
+            api_error_status: status,
+            result: `${resultText} ${resultMarker} ${stdoutMarker}`,
+          }),
+          stderr: stderrMarker,
+        }),
+      });
+
+      try {
+        await adapter.execute(request(anthropicModel));
+        throw new Error("expected rejection");
+      } catch (error) {
+        expect(error).toBeInstanceOf(ProviderAdapterError);
+        expect(error).toMatchObject({
+          code,
+          retryable,
+          status,
+          metadata: { status },
+        });
+        for (const marker of [stdoutMarker, resultMarker, stderrMarker]) {
+          expect((error as Error).message).not.toContain(marker);
+          expect(JSON.stringify((error as ProviderAdapterError).metadata)).not.toContain(marker);
+          expect(JSON.stringify((error as ProviderAdapterError).diagnostics)).not.toContain(marker);
+          expect(JSON.stringify(error)).not.toContain(marker);
+        }
+      }
+    },
+  );
+
+  it.each(["malformed", "array", "scalar", "unrecognized", "success-shaped"] as const)(
+    "uses the existing safe generic fallback for nonzero %s Claude output",
+    async (shape) => {
+      const marker = `synthetic-${shape}-provider-output`;
+      const stdout =
+        shape === "malformed"
+          ? `not-json ${marker}`
+          : shape === "array"
+            ? JSON.stringify([
+                { type: "result", is_error: true, api_error_status: 500, result: marker },
+              ])
+            : shape === "scalar"
+              ? JSON.stringify(marker)
+              : shape === "unrecognized"
+                ? JSON.stringify({
+                    type: "message",
+                    is_error: true,
+                    api_error_status: 500,
+                    result: marker,
+                  })
+                : JSON.stringify({
+                    type: "result",
+                    subtype: "success",
+                    is_error: false,
+                    session_id: "session",
+                    structured_output: { marker },
+                    usage: { input_tokens: 1, output_tokens: 1 },
+                  });
+      const stderrMarker = `synthetic-${shape}-stderr`;
+      const adapter = new AnthropicClaudeUserSessionAdapter({
+        configuredModel: anthropicModel,
+        runner: async () => ({ exitCode: 1, stdout, stderr: stderrMarker }),
+      });
+
+      try {
+        await adapter.execute(request(anthropicModel));
+        throw new Error("expected rejection");
+      } catch (error) {
+        expect(error).toBeInstanceOf(ProviderAdapterError);
+        expect(error).toMatchObject({ code: "unknown", retryable: false });
+        expect((error as ProviderAdapterError).status).toBe(null);
+        for (const value of [marker, stderrMarker]) {
+          expect((error as Error).message).not.toContain(value);
+          expect(JSON.stringify((error as ProviderAdapterError).metadata)).not.toContain(value);
+          expect(JSON.stringify((error as ProviderAdapterError).diagnostics)).not.toContain(value);
+          expect(JSON.stringify(error)).not.toContain(value);
+        }
+      }
+    },
+  );
+
   it.each([1, maximumUserSessionTimeoutMs])(
     "forwards configured timeout %s to the Claude runner",
     async (timeoutMs) => {
