@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-08-30<br>
+**Last reviewed:** 2026-08-31<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [One consented result is indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Close bounded provider-timeout blocker #256 before a fresh consented comparison (#75), then release evidence and next decision (#76) |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [One consented result is indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Close bounded author-grounding blocker #258 before a fresh consented comparison (#75), then release evidence and next decision (#76); #250 remains blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -384,9 +384,9 @@ approved fresh retry timed out during authoring because the user-session
 adapter's 120-second request limit could not use the 20-minute case budget. No
 revised, approved, or exported artifact was produced. The private manual
 baseline also targets a related but different role, which limits any future
-comparison. Keep #75 open and #250 blocked: the bounded provider-timeout
-blocker, issue #256, must close before a fresh consented attempt with new
-transmission approval.
+comparison. The bounded provider-timeout blocker #256 is closed. Keep #75 open
+and #250 blocked: the current bounded author-grounding blocker, issue #258, must
+close before a fresh consented attempt with new transmission approval.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -488,7 +488,8 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-08-31 | Bounded the provider-timeout blocker as #256 after the indeterminate #249 result. | #256 must close before a fresh consented attempt; the pilot remains incomplete and unvalidated. |
+| 2026-08-31 | Closed provider-timeout blocker #256 and bounded the next author-grounding blocker as #258. | Parity remains unvalidated; #258 must close before the next consented #75 attempt, and #250 remains blocked pending that outcome. |
+| 2026-08-31 | Identified the provider-timeout blocker as #256 after the indeterminate #249 result. | The blocker was bounded for execution while the pilot remained incomplete and unvalidated. |
 | 2026-08-30 | Recorded the first consented v0.9 workflow-parity observation as indeterminate. | The initial run timed out during revision and its one approved fresh retry timed out during authoring at the user-session adapter's 120-second limit. No revised or approved artifact exists; the role-mismatched manual baseline remains a limitation, #75 stays open, and #250 remains blocked. |
 | 2026-08-30 | Added a provider-free synthetic trust preflight between the private comparison gate and the consented parity run. | #253 exercises eight sanitized deterministic scenarios before #249; its results are implementation evidence and cannot satisfy the consented outcome requirement. |
 | 2026-08-30 | Split the v0.9 workflow-parity and release rollups into four dependency-ordered execution issues. | #248 predeclares the private comparison gate before #249 records the consented outcome; #250 prepares the release candidate only after #75 closes, and #251 records released evidence and the next decision before #76 closes. |
