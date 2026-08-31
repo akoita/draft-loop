@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-08-31<br>
-**Cases:** Three bounded observations of one consented, anonymized case
+**Cases:** Four bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -37,6 +37,13 @@ was recorded as non-retryable `unknown` before the structured status could be
 classified. The local Claude session remained installed and authenticated. No
 author response was accepted, and the OpenAI critic was not called.
 
+After structured Claude error recovery was merged, a fourth observation reached
+all three bounded author attempts. The first response exceeded the output-token
+boundary. The second response failed three local factual-invariant claim-text
+paths. Corrective feedback reduced the final response to one repeated
+claim-text path, but no proposal was accepted and the OpenAI critic was not
+called.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -59,8 +66,10 @@ accepted artifact against which to evaluate the gate.
 - Provider roles remained Anthropic `claude-sonnet-4-5` as author and OpenAI
   `gpt-5.6-luna` as critic. The initial observation reached both roles; the
   corrective observation exhausted three author attempts before critique; the
-  grounding-guide observation failed at the Anthropic transport boundary.
-  Provider-reported usage and cost were unavailable for the failed attempts.
+  grounding-guide observation failed at the Anthropic transport boundary; the
+  structured-recovery observation exhausted three author attempts before
+  critique. Provider-reported usage and cost were unavailable for the failed
+  attempts.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
 - The existing private manual CV was retained as the human baseline. It
@@ -77,7 +86,7 @@ accepted artifact against which to evaluate the gate.
 
 Keep the workflow-parity outcome unvalidated. Issue #249 records the initial
 observation, #262 records the corrective rerun, and #266 records the
-grounding-guide observation. The #75 outcome rollup stays open, and
-release-preparation issue #250 remains blocked pending a complete consented
-comparison. Issue #267 must preserve structured Claude error classification
-before another authorized run.
+grounding-guide observation. Issue #271 records the structured-recovery
+observation. The #75 outcome rollup stays open, and release-preparation issue
+issue #250 remains blocked pending a complete consented comparison. Issue #272 must
+complete exact-value evidence citations locally before another authorized run.
