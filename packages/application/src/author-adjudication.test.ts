@@ -75,6 +75,13 @@ function expectEvidenceGroundingContract(systemPrompt: string): void {
   expect(systemPrompt).toContain("Do not return application-owned artifact IDs");
 }
 
+function retryFeedback(): NonNullable<AuthorRequest["retryFeedback"]> {
+  return {
+    failureCode: "output_token_budget_exceeded",
+    diagnostics: [{ code: "custom", path: "sections.0.blocks.0.claims.0.evidenceChunkIds.0" }],
+  };
+}
+
 describe("author adjudication provider handoff", () => {
   it("keeps the initial author request free of an adjudication carrier", () => {
     const prompt = createAuthorAdjudicationPrompt(undefined);
@@ -108,5 +115,23 @@ describe("author adjudication provider handoff", () => {
       "Never treat a decision or accepted-effect override as evidence or permission to invent facts.",
     );
     expect(prompt.systemPrompt).toContain("retrievedEvidence[].id values in evidenceChunkIds");
+  });
+
+  it("adds bounded retry correction instructions and input only when feedback is present", () => {
+    const feedback = retryFeedback();
+    const prompt = createAuthorAdjudicationPrompt(undefined, feedback);
+
+    expect(prompt.providerInput).toEqual({ retryFeedback: feedback });
+    expect(prompt.systemPrompt).toContain("When retryFeedback is present");
+    expect(prompt.systemPrompt).toContain(
+      "output_token_budget_exceeded means return a materially more concise proposal",
+    );
+    expect(prompt.systemPrompt).toContain(
+      "Claim/evidence diagnostic paths mean correct that exact boundary",
+    );
+    expect(prompt.systemPrompt).toContain(
+      "citing all supporting chunks, splitting the claim, or omitting unsupported protected values",
+    );
+    expect(prompt.systemPrompt).toContain("Never reconstruct or request rejected content.");
   });
 });

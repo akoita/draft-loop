@@ -556,6 +556,83 @@ describe("local application driver", () => {
     }
   });
 
+  it("passes only bounded author retry feedback through a local provider input", async () => {
+    const root = await providerWorkspace("draft-loop-author-retry-feedback-");
+    const authorInputs: JsonRecord[] = [];
+    const criticInputs: JsonRecord[] = [];
+    let authorAttempts = 0;
+    const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as {
+        readonly model: string;
+        readonly messages: readonly { readonly content: string }[];
+      };
+      const serialized = body.messages[1]?.content ?? "";
+      if (body.model === "retry-author") {
+        authorInputs.push(JSON.parse(serialized) as JsonRecord);
+        authorAttempts += 1;
+        return authorAttempts === 1
+          ? localCompletion({}, "invalid-author-request-id")
+          : localCompletion(authorProposal(evidenceChunkId(serialized)), "valid-author");
+      }
+      criticInputs.push(JSON.parse(serialized) as JsonRecord);
+      return localCompletion({ findings: [] }, "critic");
+    });
+    const driver = createLocalApplicationDriver({
+      providerClientFactories: {
+        local: () => ({ fetch: localFetch as unknown as typeof fetch }),
+      },
+    });
+    const silent = { write: () => undefined };
+
+    try {
+      await driver.initialize(
+        {
+          root,
+          jobDescription: "job.md",
+          sources: "evidence",
+          authorCompany: "local",
+          authorModel: "retry-author",
+          criticCompany: "local",
+          criticModel: "retry-critic",
+          localEndpoint: "http://127.0.0.1:8080/v1",
+        },
+        silent,
+      );
+
+      const failed = await driver.start({ root, allowProviderData: true }, silent);
+      expect(failed).toMatchObject({
+        state: "provider-error",
+        lastError: {
+          code: "invalid-response",
+          step: "author",
+          diagnostics: [{ code: "invalid_type", path: "sections" }],
+        },
+      });
+
+      const recovered = await driver.resume(
+        { root, runId: failed.runId, allowProviderData: true },
+        silent,
+      );
+      expect(recovered.state).toBe("awaiting-approval");
+      expect(authorInputs).toHaveLength(2);
+      expect(authorInputs[0]).not.toHaveProperty("retryFeedback");
+      expect(authorInputs[1]).toMatchObject({
+        retryFeedback: {
+          failureCode: "invalid-response",
+          diagnostics: [{ code: "invalid_type", path: "sections" }],
+        },
+      });
+      expect(JSON.stringify(authorInputs[1])).not.toContain("invalid-author-request-id");
+      expect(JSON.stringify(authorInputs[1])).not.toContain(
+        "The author returned an invalid content proposal.",
+      );
+      expect(criticInputs).toHaveLength(1);
+      expect(criticInputs[0]).not.toHaveProperty("retryFeedback");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("strips candidate-knowledge selection evidence from provider requests", async () => {
     const root = await providerWorkspace("draft-loop-selection-provider-privacy-");
     const silent = { write: () => undefined };
