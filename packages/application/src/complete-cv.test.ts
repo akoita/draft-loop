@@ -37,6 +37,34 @@ const retrievedEvidence = sectionText.map((text, index) => ({
   rank: index,
 }));
 
+const compoundClaimText =
+  "Staff Engineer at Analytical Engines led the Reliable Compiler project in 2022-2026.";
+const compoundRetrievedEvidence = [
+  ...retrievedEvidence,
+  {
+    id: "chunk-compound-role",
+    workspaceId: "workspace-1",
+    sourceId: "source-1",
+    ordinal: 8,
+    lineStart: 9,
+    lineEnd: 9,
+    checksum,
+    text: "Staff Engineer at Analytical Engines, 2022-2026.",
+    rank: 8,
+  },
+  {
+    id: "chunk-compound-project",
+    workspaceId: "workspace-1",
+    sourceId: "source-1",
+    ordinal: 9,
+    lineStart: 10,
+    lineEnd: 10,
+    checksum,
+    text: "Led the Reliable Compiler project.",
+    rank: 9,
+  },
+];
+
 function proposal(texts: readonly string[] = sectionText) {
   return {
     sections: sectionKinds.map((kind, index) => ({
@@ -57,6 +85,32 @@ function proposal(texts: readonly string[] = sectionText) {
         },
       ],
     })),
+  };
+}
+
+function compoundProposal(evidenceChunkIds: readonly string[]) {
+  const base = proposal();
+  return {
+    ...base,
+    sections: base.sections.map((section, sectionIndex) => {
+      if (sectionIndex !== 1) return section;
+      const block = section.blocks[0];
+      if (block === undefined) throw new Error("summary block is missing");
+      const claim = block.claims[0];
+      if (claim === undefined) throw new Error("summary claim is missing");
+      return {
+        ...section,
+        blocks: [
+          {
+            ...block,
+            text: compoundClaimText,
+            claims: [
+              { ...claim, text: compoundClaimText, evidenceChunkIds: [...evidenceChunkIds] },
+            ],
+          },
+        ],
+      };
+    }),
   };
 }
 
@@ -82,6 +136,25 @@ describe("complete CV composition", () => {
         renderArtifact(artifact, format, { requiredSections: [...sectionKinds] }).content.length,
       ).toBeGreaterThan(0);
     }
+  });
+
+  it("requires every evidence chunk for protected values split across a compound claim", () => {
+    const artifact = buildAuthorArtifact({
+      proposal: compoundProposal(["chunk-compound-role", "chunk-compound-project"]),
+      executionId: "compound-cv",
+      context,
+      retrievedEvidence: compoundRetrievedEvidence,
+    });
+
+    expect(artifact.sections[1]?.blocks[0]?.text).toContain("Reliable Compiler");
+    expect(() =>
+      buildAuthorArtifact({
+        proposal: compoundProposal(["chunk-compound-role"]),
+        executionId: "compound-cv-missing-evidence",
+        context,
+        retrievedEvidence: compoundRetrievedEvidence,
+      }),
+    ).toThrow(z.ZodError);
   });
 
   it("rejects unsupported claims and changed factual invariants", () => {
