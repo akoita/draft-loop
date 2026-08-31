@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [One consented result is indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Close bounded author-retry-feedback blocker #260 before another consented comparison (#75), then release evidence and next decision (#76); #250 remains blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Two observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Bound the remaining author factual-invariant reliability failure before another consented comparison (#75), then release evidence and next decision (#76); #250 remains blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -378,16 +378,18 @@ release candidate after #75 closes (#250) and publishes the release evidence
 and next decision (#251) before closing #76. Each child keeps one primary
 boundary, focused verification, and a one-PR exit.
 
-The first [consented result](consented-pilot-v0.9.md) is indeterminate. An
+The [consented result](consented-pilot-v0.9.md) remains indeterminate. An
 initial run reached independent critique but timed out during revision; the one
 approved fresh retry timed out during authoring because the user-session
 adapter's 120-second request limit could not use the 20-minute case budget. No
 revised, approved, or exported artifact was produced. The private manual
 baseline also targets a related but different role, which limits any future
-comparison. The bounded provider-timeout blocker #256 and author-grounding
-blocker #258 are closed. Keep #75 open and #250 blocked: the current bounded
-author-retry-feedback blocker, issue #260, must close before another consented
-attempt under the user's standing retry authorization.
+comparison. The bounded provider-timeout, author-grounding, and corrective
+retry blockers #256, #258, and #260 are closed. A fresh observation under #262
+then used all three author attempts: output-token excess followed by two
+different single claim-text factual-invariant failures. No draft reached the
+critic. Keep #75 open and #250 blocked; do not repeat the unchanged run before
+the remaining author factual-invariant reliability failure is bounded.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -489,6 +491,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-08-31 | Recorded the corrective consented rerun under #262 as indeterminate. | Retry feedback moved the author beyond its initial output-token failure, but two subsequent attempts failed different single claim-text factual invariants. No accepted draft or critic result exists; #75 stays open and #250 remains blocked. |
 | 2026-08-31 | Closed author-grounding blocker #258 and bounded author retry feedback as #260. | Parity remains unvalidated; #260 must close before another consented #75 attempt, and #250 remains blocked pending that outcome. |
 | 2026-08-31 | Closed provider-timeout blocker #256 and bounded the next author-grounding blocker as #258. | #258 became the next gate before a fresh consented attempt; the pilot remained incomplete and unvalidated. |
 | 2026-08-31 | Identified the provider-timeout blocker as #256 after the indeterminate #249 result. | The blocker was bounded for execution while the pilot remained incomplete and unvalidated. |
