@@ -7,6 +7,7 @@ import { defaultAntiFormulaicTerms } from "@draft-loop/domain";
 import {
   type AnthropicClient,
   createLocalModelAdapter,
+  maximumUserSessionTimeoutMs,
   type UserSessionProcessRunner,
 } from "@draft-loop/providers";
 import { openSqliteStorage } from "@draft-loop/storage";
@@ -2049,6 +2050,7 @@ describe("local application driver", () => {
       throw new Error("API-key resolution must not run in user-session mode.");
     });
     const anthropicRunner = vi.fn<UserSessionProcessRunner>(async (_command, _args, options) => {
+      expect(options.timeoutMs).toBe(maximumUserSessionTimeoutMs);
       const input = JSON.parse(options.stdin) as {
         readonly retrievedEvidence?: readonly { readonly id?: string }[];
       };
@@ -2069,6 +2071,7 @@ describe("local application driver", () => {
       };
     });
     const openaiRunner = vi.fn<UserSessionProcessRunner>(async (_command, args, options) => {
+      expect(options.timeoutMs).toBe(maximumUserSessionTimeoutMs);
       expect(options.stdin).toContain("Do not repeat deterministicFindings");
       expect(options.stdin).toContain("Return no more than 16 findings");
       expect(options.stdin).toContain("keep each message to 400 characters or fewer");
@@ -2100,6 +2103,7 @@ describe("local application driver", () => {
         },
       },
       userSessionRunners: { anthropic: anthropicRunner, openai: openaiRunner },
+      userSessionTimeoutMs: maximumUserSessionTimeoutMs,
     });
 
     try {

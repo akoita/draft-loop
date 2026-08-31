@@ -6,7 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AnthropicClaudeUserSessionAdapter,
+  defaultUserSessionTimeoutMs,
   type ModelRequest,
+  maximumUserSessionTimeoutMs,
   OpenAICodexUserSessionAdapter,
   ProviderAdapterError,
   probeAnthropicClaudeUserSession,
@@ -78,6 +80,7 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
   it("uses the locked-down Claude argv, private cwd, scrubbed environment, and structured result", async () => {
     const runner = vi.fn<UserSessionProcessRunner>(async (command, args, options) => {
       expect(command).toBe("claude-test");
+      expect(options.timeoutMs).toBe(defaultUserSessionTimeoutMs);
       expect(args).toEqual([
         "-p",
         "--safe-mode",
@@ -200,12 +203,44 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       expect((error as Error).message).not.toContain("Sensitive");
     }
   });
+
+  it.each([1, maximumUserSessionTimeoutMs])(
+    "forwards configured timeout %s to the Claude runner",
+    async (timeoutMs) => {
+      const runner = vi.fn<UserSessionProcessRunner>(async (_command, _args, options) => {
+        expect(options.timeoutMs).toBe(timeoutMs);
+        return {
+          exitCode: 0,
+          stdout: JSON.stringify({
+            type: "result",
+            subtype: "success",
+            is_error: false,
+            session_id: "claude-session",
+            structured_output: { answer: "yes" },
+            usage: { input_tokens: 1, output_tokens: 1 },
+            permission_denials: [],
+          }),
+          stderr: "",
+        };
+      });
+      const adapter = new AnthropicClaudeUserSessionAdapter({
+        configuredModel: anthropicModel,
+        runner,
+        timeoutMs,
+      });
+
+      await expect(adapter.execute(request(anthropicModel))).resolves.toMatchObject({
+        output: { answer: "yes" },
+      });
+    },
+  );
 });
 
 describe("OpenAICodexUserSessionAdapter", () => {
   it("uses locked-down Codex argv/config, private files, scrubbed environment, and JSONL usage", async () => {
     const runner = vi.fn<UserSessionProcessRunner>(async (command, args, options) => {
       expect(command).toBe("codex-test");
+      expect(options.timeoutMs).toBe(defaultUserSessionTimeoutMs);
       const schemaIndex = args.indexOf("--output-schema");
       const outputIndex = args.indexOf("--output-last-message");
       const schemaPath = args[schemaIndex + 1];
@@ -380,6 +415,38 @@ describe("OpenAICodexUserSessionAdapter", () => {
     });
   });
 
+  it.each([1, maximumUserSessionTimeoutMs])(
+    "forwards configured timeout %s to the Codex runner",
+    async (timeoutMs) => {
+      const runner = vi.fn<UserSessionProcessRunner>(async (_command, args, options) => {
+        expect(options.timeoutMs).toBe(timeoutMs);
+        const outputPath = args[args.indexOf("--output-last-message") + 1];
+        if (outputPath === undefined) throw new Error("output path missing");
+        await writeFile(outputPath, '{"answer":"yes"}');
+        return {
+          exitCode: 0,
+          stdout: [
+            JSON.stringify({ type: "thread.started", thread_id: "thread" }),
+            JSON.stringify({
+              type: "turn.completed",
+              usage: { input_tokens: 1, output_tokens: 1 },
+            }),
+          ].join("\n"),
+          stderr: "",
+        };
+      });
+      const adapter = new OpenAICodexUserSessionAdapter({
+        configuredModel: openAIModel,
+        runner,
+        timeoutMs,
+      });
+
+      await expect(adapter.execute(request(openAIModel))).resolves.toMatchObject({
+        output: { answer: "yes" },
+      });
+    },
+  );
+
   it("rejects prohibited command events before reading a valid final response", async () => {
     const runner: UserSessionProcessRunner = async (_command, args) => {
       const outputPath = args[args.indexOf("--output-last-message") + 1];
@@ -474,6 +541,32 @@ describe("OpenAICodexUserSessionAdapter", () => {
 });
 
 describe("user-session error normalization and login probes", () => {
+  it.each([0, 1.5, maximumUserSessionTimeoutMs + 1])(
+    "rejects invalid timeout %s during adapter construction before runner invocation",
+    (timeoutMs) => {
+      const anthropicRunner = vi.fn<UserSessionProcessRunner>();
+      const openAIRunner = vi.fn<UserSessionProcessRunner>();
+      expect(
+        () =>
+          new AnthropicClaudeUserSessionAdapter({
+            configuredModel: anthropicModel,
+            runner: anthropicRunner,
+            timeoutMs,
+          }),
+      ).toThrow("The user-session timeout is invalid.");
+      expect(
+        () =>
+          new OpenAICodexUserSessionAdapter({
+            configuredModel: openAIModel,
+            runner: openAIRunner,
+            timeoutMs,
+          }),
+      ).toThrow("The user-session timeout is invalid.");
+      expect(anthropicRunner).not.toHaveBeenCalled();
+      expect(openAIRunner).not.toHaveBeenCalled();
+    },
+  );
+
   it("maps cancellation, auth, and quota without exposing raw stderr", async () => {
     const cancelled = new AnthropicClaudeUserSessionAdapter({
       configuredModel: anthropicModel,

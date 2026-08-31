@@ -14,7 +14,8 @@ import {
   ProviderAdapterError,
 } from "./index.js";
 
-const defaultTimeoutMs = 120_000;
+export const defaultUserSessionTimeoutMs = 120_000;
+export const maximumUserSessionTimeoutMs = 1_200_000;
 const defaultMaxOutputBytes = 1_048_576;
 const maximumMaxOutputTokens = 32_768;
 const defaultMaxOutputTokens = 4_096;
@@ -240,6 +241,29 @@ function resolveOutputTokenLimit(
     );
   }
   return limit;
+}
+
+function resolveUserSessionTimeout(
+  provider: "anthropic" | "openai",
+  value: number | undefined,
+): number {
+  const timeoutMs = value ?? defaultUserSessionTimeoutMs;
+  if (
+    !Number.isSafeInteger(timeoutMs) ||
+    timeoutMs < 1 ||
+    timeoutMs > maximumUserSessionTimeoutMs
+  ) {
+    throw new ProviderAdapterError(
+      provider,
+      "invalid-request",
+      "The user-session timeout is invalid.",
+      {
+        retryable: false,
+        diagnostics: [{ code: "invalid_user_session_timeout", path: "timeoutMs" }],
+      },
+    );
+  }
+  return timeoutMs;
 }
 
 function validTokenCount(value: unknown): value is number {
@@ -529,7 +553,7 @@ export class AnthropicClaudeUserSessionAdapter<
       ...options,
       runner: options.runner ?? runUserSessionProcess,
       command: options.command ?? "claude",
-      timeoutMs: options.timeoutMs ?? defaultTimeoutMs,
+      timeoutMs: resolveUserSessionTimeout(this.provider, options.timeoutMs),
       maxOutputBytes: options.maxOutputBytes ?? defaultMaxOutputBytes,
     };
   }
@@ -768,7 +792,7 @@ export class OpenAICodexUserSessionAdapter<
       ...options,
       runner: options.runner ?? runUserSessionProcess,
       command: options.command ?? "codex",
-      timeoutMs: options.timeoutMs ?? defaultTimeoutMs,
+      timeoutMs: resolveUserSessionTimeout(this.provider, options.timeoutMs),
       maxOutputBytes: options.maxOutputBytes ?? defaultMaxOutputBytes,
     };
   }
