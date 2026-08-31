@@ -1,20 +1,14 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
+import { extractProtectedValues } from "./author-grounding.js";
+
 export interface CompleteCvProposalIssue {
   readonly path: PropertyKey[];
   readonly message: string;
 }
 
 const meaningfulTokenPattern = /[\p{L}\p{N}]+/gu;
-const protectedValuePatterns = [
-  /https?:\/\/[^\s)]+/giu,
-  /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/gu,
-  /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![\p{L}\p{N}])/giu,
-  /\b[\p{Lu}]{2,}(?:[+-][\p{Lu}\p{N}]+)*\b/gu,
-  /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu,
-  /\b(?:at|for)\s+(\p{Lu}[\p{L}'’-]+)\b/gu,
-] as const;
 
 const ignoredTokens = new Set(["and", "for", "from", "into", "the", "that", "this", "with"]);
 
@@ -25,12 +19,6 @@ function normalized(value: string): string {
 function meaningfulTokens(value: string): readonly string[] {
   return (normalized(value).match(meaningfulTokenPattern) ?? []).filter(
     (token) => token.length >= 3 && !ignoredTokens.has(token),
-  );
-}
-
-function protectedValues(value: string): readonly string[] {
-  return protectedValuePatterns.flatMap((pattern) =>
-    [...value.matchAll(pattern)].map((match) => match[1] ?? match[0]),
   );
 }
 
@@ -68,7 +56,7 @@ export function completeCvProposalIssues(
             message: "cited evidence does not support the CV claim",
           });
         }
-        for (const value of protectedValues(claim.text)) {
+        for (const value of extractProtectedValues(claim.text)) {
           if (!evidence.includes(normalized(value))) {
             issues.push({
               path: [...path, "text"],
