@@ -724,6 +724,24 @@ unsupported claims. `provider-error` stays distinct across application and
 desktop boundaries. Retry does not silently broaden the acknowledged
 transmission scope.
 
+### Active provider-duration accounting
+
+When `maxDurationMs` is configured, each `RunSnapshot` persists an optional
+`durationAccounting` record with accumulated active milliseconds and an
+`activeSince` timestamp (or `null`). New runs start active at `startedAt`.
+Drafting, reviewing, and revising accrue time; awaiting human approval,
+explicit pause, provider-error retry waits, budget exhaustion, and terminal
+states do not. Leaving active work settles the segment, and retry/resume or a
+revision request starts a new segment. Provider calls remain inside the active
+segment, so their elapsed time is counted without timers or cancellation.
+
+Snapshots written before this record existed use conservative wall-clock time
+from `startedAt` until a safe transition persists the migrated accounting.
+Malformed accounting fails closed at the duration budget boundary, and clock
+regressions never reduce accumulated active time. This accounting changes only
+duration measurement; round, cost, retry, and cancellation semantics remain
+unchanged.
+
 ## Trust and privacy controls
 
 The system keeps evidence links, structured findings, approved artifact
