@@ -8,6 +8,11 @@ import type {
 import type { RunSnapshot } from "@draft-loop/orchestrator";
 import type { OutputFormat } from "@draft-loop/rendering";
 import type {
+  AdjudicatedRevisionEffectOverride,
+  AuthorAdjudicationDecisionInput,
+  IndependentReadinessReport,
+} from "@draft-loop/schemas";
+import type {
   CanonicalCandidateProfileVersionRecord,
   OpportunityBriefVersionRecord,
 } from "@draft-loop/storage";
@@ -188,6 +193,15 @@ export interface StartRunCommand {
 }
 
 export type BeginRunCommand = StartRunCommand;
+
+/** Exact, provider-independent adjudication supplied by a review surface. */
+export interface RequestAdjudicatedRevisionCommand {
+  readonly root: string;
+  readonly runId?: string;
+  readonly report: IndependentReadinessReport;
+  readonly decisions: readonly AuthorAdjudicationDecisionInput[];
+  readonly acceptedEffectOverrides?: readonly AdjudicatedRevisionEffectOverride[];
+}
 
 export interface OpportunityBriefSelection {
   readonly briefId: string;
@@ -370,6 +384,11 @@ export interface ApplicationDriver {
   readonly begin: (command: BeginRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly start: (command: StartRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly resume: (command: ResumeRunCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
+  /** Stage an exact adjudication without opening a provider adapter. */
+  readonly requestAdjudicatedRevision?: (
+    command: RequestAdjudicatedRevisionCommand,
+    io?: ApplicationIo,
+  ) => Promise<RunSnapshot>;
   readonly lifecycle: (command: LifecycleCommand, io?: ApplicationIo) => Promise<RunSnapshot>;
   readonly status: (command: StatusCommand, io?: ApplicationIo) => Promise<RunSnapshot | undefined>;
   readonly createOpportunity: (
@@ -430,7 +449,12 @@ export interface ApplicationDriver {
   ) => Promise<RunWritingPolicyProjection | undefined>;
 }
 
-export interface ApplicationService extends ApplicationDriver {}
+export interface ApplicationService extends ApplicationDriver {
+  readonly requestAdjudicatedRevision: (
+    command: RequestAdjudicatedRevisionCommand,
+    io?: ApplicationIo,
+  ) => Promise<RunSnapshot>;
+}
 
 const defaultIo: ApplicationIo = { write: () => undefined };
 
@@ -478,6 +502,15 @@ export function createApplicationService(driver: ApplicationDriver): Application
       driver.start({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     resume: async (command, io) =>
       driver.resume({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
+    requestAdjudicatedRevision: async (command, io) => {
+      const normalizedCommand = { ...command, root: requireRoot(command.root) };
+      if (driver.requestAdjudicatedRevision === undefined) {
+        throw new Error(
+          "Adjudicated revision staging is not available in this application driver.",
+        );
+      }
+      return driver.requestAdjudicatedRevision(normalizedCommand, normalizeIo(io));
+    },
     lifecycle: async (command, io) =>
       driver.lifecycle({ ...command, root: requireRoot(command.root) }, normalizeIo(io)),
     status: async (command, io) =>

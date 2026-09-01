@@ -622,10 +622,13 @@ revision and adds explicit instructions to apply accepted findings, preserve
 rejected or nuanced disagreements, and retain the evidence and factuality
 safeguards above. Legacy revision requests remain separate, and invalid
 provider lineage fails closed without a trace. This #72 runtime slice does not
-generate reports, add persistence tables or migrations, wire application
-commands, CLI or desktop controls, or change approval and stopping semantics.
-It stores no raw prompts, raw responses, or hidden reasoning; #73 and #74
-remain the next runtime capabilities.
+generate reports, add persistence tables or migrations, or change approval and
+stopping semantics. The #277 application/local boundary now stages that exact
+report and complete adjudication through the shared application driver, using
+the existing provider-independent runtime validation and durable run history
+without opening a provider. CLI and desktop controls and report generation
+remain deferred. It stores no raw prompts, raw responses, or hidden reasoning;
+duration accounting issue #278 remains ordered after this staging prerequisite.
 
 ### Application-readiness stopping decision boundary
 
