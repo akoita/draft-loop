@@ -128,6 +128,7 @@ import {
   createKnowledgeSelectionSnapshot,
   type KnowledgeSelectionSnapshot,
 } from "./knowledge-base.js";
+import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 import type {
   OpportunityExtractionPort,
@@ -145,20 +146,15 @@ const writingPolicyFilename = "writing-policy.md";
 const maximumWritingPolicyBytes = 64 * 1024;
 const writingPolicyChecksumPattern = /^[a-f0-9]{64}$/u;
 const timestamp = (): string => new Date().toISOString();
-
 const recognizedWritingPolicyPunctuation = "‐‑‒–—―‘’“”";
-
 type WithoutWritingPolicyRuleId<T> = T extends unknown ? Omit<T, "id"> : never;
 type UnidentifiedWritingPolicyRule = WithoutWritingPolicyRuleId<WritingPolicyRule>;
-
 function compareWritingPolicySemantics(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
-
 function writingPolicyTermIdentity(term: string): string {
   return term.normalize("NFKC").replace(/\s+/gu, " ").toLowerCase();
 }
-
 function writingPolicyRuleId(rule: UnidentifiedWritingPolicyRule): string {
   const semantics =
     rule.kind === "forbidden-term"
@@ -169,7 +165,6 @@ function writingPolicyRuleId(rule: UnidentifiedWritingPolicyRule): string {
   const digest = createHash("sha256").update(semantics, "utf8").digest("hex").slice(0, 24);
   return `writing-policy-${digest}`;
 }
-
 function compileWritingPolicyRules(
   content: string,
   antiFormulaicDefaultsEnabled = true,
@@ -189,7 +184,6 @@ function compileWritingPolicyRules(
         .join(""),
     });
   }
-
   const defaultTerms = new Map<string, string>();
   if (antiFormulaicDefaultsEnabled) {
     for (const term of defaultAntiFormulaicTerms) {
@@ -221,7 +215,6 @@ function compileWritingPolicyRules(
       wholeWord: true,
     });
   }
-
   const ordered = [...candidates].sort((left, right) => {
     const leftKey =
       left.kind === "forbidden-term"
@@ -240,12 +233,10 @@ function compileWritingPolicyRules(
   }
   return ordered.map((rule) => ({ id: writingPolicyRuleId(rule), ...rule }));
 }
-
 type WritingPolicyPreferenceKey = keyof WritingPolicyPreferences;
 type MutableWritingPolicyPreferences = {
   -readonly [Key in keyof WritingPolicyPreferences]?: WritingPolicyPreferences[Key];
 };
-
 const writingPolicyPreferenceDirectives = {
   tone: "Tone",
   spellingLocale: "Spelling locale",
@@ -254,14 +245,11 @@ const writingPolicyPreferenceDirectives = {
   sectionOrder: "Section order",
   emphasisAreas: "Emphasis areas",
 } as const satisfies Record<WritingPolicyPreferenceKey, string>;
-
 type WritingPolicyDirective = WritingPolicyPreferenceKey | "antiFormulaicDefaults";
-
 const writingPolicyDirectiveLabels: Record<WritingPolicyDirective, string> = {
   ...writingPolicyPreferenceDirectives,
   antiFormulaicDefaults: "Anti-formulaic defaults",
 };
-
 function writingPolicyDirectiveError(
   directive: WritingPolicyDirective,
   kind: "duplicate" | "invalid",
@@ -273,11 +261,9 @@ function writingPolicyDirectiveError(
       : `The writing policy contains an invalid ${label} directive.`,
   );
 }
-
 function normalizePolicyPreferenceName(value: string): string {
   return value.trim().replace(/\s+/gu, " ");
 }
-
 function compilePolicyPreferenceNames(
   directive: "sectionOrder" | "emphasisAreas",
   value: string,
@@ -300,12 +286,10 @@ function compilePolicyPreferenceNames(
   }
   return Object.freeze(entries);
 }
-
 interface CompiledWritingPolicyDirectives {
   readonly preferences?: WritingPolicyPreferences;
   readonly antiFormulaicDefaultsEnabled: boolean;
 }
-
 function compileWritingPolicyPreferences(content: string): CompiledWritingPolicyDirectives {
   const preferences: MutableWritingPolicyPreferences = {};
   const seen = new Set<WritingPolicyDirective>();
@@ -3704,6 +3688,22 @@ export function createLocalApplicationDriver(
           ...credentialOptions,
           ...providerClientOptions,
           ...authOptions,
+        },
+        io,
+      ),
+    requestAdjudicatedRevision: (command, io) =>
+      requestLocalAdjudicatedRevision(
+        command,
+        {
+          readWorkspace,
+          openStorage,
+          contextForRun,
+          assertSelectionStable: assertCandidateKnowledgeSelectionStable,
+          createEngine: (storage, config, context) =>
+            engine(storage, config, context, false, false, environmentCredentialResolver),
+          saveTypedHistory,
+          outputEvents,
+          outputSnapshot,
         },
         io,
       ),

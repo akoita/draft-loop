@@ -254,6 +254,9 @@ function service(
         async () => workspace,
       ),
       begin: vi.fn(async () => snapshot),
+      requestAdjudicatedRevision: vi.fn<ApplicationService["requestAdjudicatedRevision"]>(
+        async () => snapshot,
+      ),
       start: vi.fn<ApplicationService["start"]>(async () => snapshot),
       resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),
       lifecycle: vi.fn(async () => snapshot),

@@ -110,6 +110,7 @@ function harness(record?: IndependentReviewRecord): Harness {
     configureWritingPolicy: unreachable("configureWritingPolicy"),
     configureKnowledgeSelection: unreachable("configureKnowledgeSelection"),
     begin: unreachable("begin"),
+    requestAdjudicatedRevision: unreachable("requestAdjudicatedRevision"),
     start: unreachable("start"),
     resume: unreachable("resume"),
     lifecycle: unreachable("lifecycle"),
