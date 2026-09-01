@@ -126,6 +126,56 @@ describe("live author proposal boundary", () => {
     });
   });
 
+  it("completes exact citations before canonical evidence normalization without changing content", () => {
+    const text = "Staff Engineer at Example Systems, 2024.";
+    const evidenceText = "staff engineer at example systems, 2024.";
+    const artifact = buildAuthorArtifact({
+      proposal: {
+        sections: [
+          {
+            title: "Summary",
+            kind: "summary",
+            blocks: [
+              {
+                type: "paragraph",
+                text,
+                claims: [{ text, substantive: true, evidenceChunkIds: [] }],
+              },
+            ],
+          },
+        ],
+      },
+      executionId: "exact-citation-completion",
+      context,
+      retrievedEvidence: [
+        {
+          id: "chunk-exact-support",
+          workspaceId: "workspace-1",
+          sourceId: "source-1",
+          ordinal: 1,
+          lineStart: 10,
+          lineEnd: 11,
+          checksum: "c".repeat(64),
+          text: evidenceText,
+          rank: 1,
+        },
+      ],
+      createdAt: "2026-08-15T10:00:00.000Z",
+    });
+
+    expect(artifact.claims[0]).toMatchObject({
+      text,
+      evidence: [
+        {
+          sourcePath: "/local/candidate/resume.md",
+          sourceChecksum,
+          locator: "line:10-11",
+          excerpt: evidenceText,
+        },
+      ],
+    });
+  });
+
   it("creates a canonical child version without trusting proposal metadata", () => {
     const parent = buildAuthorArtifact({
       proposal: proposal(),
