@@ -138,23 +138,18 @@ describe("complete CV composition", () => {
     }
   });
 
-  it("requires every evidence chunk for protected values split across a compound claim", () => {
+  it("completes omitted exact evidence citations for protected values split across a compound claim", () => {
     const artifact = buildAuthorArtifact({
-      proposal: compoundProposal(["chunk-compound-role", "chunk-compound-project"]),
-      executionId: "compound-cv",
+      proposal: compoundProposal(["chunk-compound-role"]),
+      executionId: "compound-cv-completed",
       context,
       retrievedEvidence: compoundRetrievedEvidence,
     });
 
     expect(artifact.sections[1]?.blocks[0]?.text).toContain("Reliable Compiler");
-    expect(() =>
-      buildAuthorArtifact({
-        proposal: compoundProposal(["chunk-compound-role"]),
-        executionId: "compound-cv-missing-evidence",
-        context,
-        retrievedEvidence: compoundRetrievedEvidence,
-      }),
-    ).toThrow(z.ZodError);
+    expect(artifact.claims[1]?.evidence.map((reference) => reference.excerpt)).toContain(
+      "Led the Reliable Compiler project.",
+    );
   });
 
   it("rejects unsupported claims and changed factual invariants", () => {

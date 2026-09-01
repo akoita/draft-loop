@@ -15,6 +15,7 @@ import {
 } from "@draft-loop/schemas";
 import { z } from "zod";
 
+import { completeAuthorEvidenceCitations } from "./author-evidence-completion.js";
 import { completeCvProposalIssues } from "./complete-cv.js";
 
 export interface AuthorArtifactBuildContext {
@@ -142,8 +143,11 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
     throw validationError(["executionId"], "execution id must not be empty");
   }
 
-  const proposal = authorArtifactProposalSchema.parse(options.proposal);
   const retrievedEvidence = options.retrievedEvidence ?? [];
+  const proposal = completeAuthorEvidenceCitations(
+    authorArtifactProposalSchema.parse(options.proposal),
+    retrievedEvidence,
+  );
   const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);
   const groundingIssues = completeCvProposalIssues(proposal, retrievedEvidence);
   if (groundingIssues.length > 0) {

@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-08-31<br>
+**Last reviewed:** 2026-09-01<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Four observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Close exact-value citation-completion blocker #272 before another authorized comparison (#75), then release evidence and next decision (#76); #250 remains blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Four observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | Run another authorized comparison (#75) after delivered blocker #272, then release evidence and next decision (#76); #250 remains blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -396,8 +396,10 @@ bounded classification fix. Keep #75 unvalidated; another authorized
 comparison under #271 then reached all three author attempts. Output-token
 excess was followed by three claim-text factual-invariant paths; the final
 corrective attempt reduced them to one repeated path, but no proposal reached
-the critic. Issue #272 is the current bounded exact-value citation-completion
-blocker. Keep #75 unvalidated and #250 blocked pending that result.
+the critic. Issue #272 delivered bounded exact-value citation completion: local
+normalization may append only exact supporting retrieved chunks, while the
+unchanged validator still rejects unsupported values. Keep #75 unvalidated and
+leave #250 blocked pending another authorized comparison.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -499,6 +501,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-01 | Delivered bounded exact-value evidence citation completion in #272. | Omitted provider citations may be completed from exact matching retrieved chunks without changing claim content; unsupported protected values remain rejected. Another authorized #75 comparison is next, and #250 remains blocked pending that result. |
 | 2026-08-31 | Recorded #271 as indeterminate and bounded exact-value evidence citation completion as #272. | Structured recovery reached all three author attempts, but one claim-text factual-invariant path remained after correction. No accepted author or critic result exists; #75 stays open and #250 remains blocked. |
 | 2026-08-31 | Delivered the bounded structured Claude nonzero-exit classification fix in #267. | Structured session errors now retain safe classification without provider output; #75 remains unvalidated, another authorized comparison is next, and #250 remains blocked. |
 | 2026-08-31 | Recorded #266 as indeterminate and bounded structured Claude nonzero-exit classification as #267. | The authenticated author transport returned a structured 429 without quota markers, but the adapter persisted non-retryable `unknown` before parsing it. No author or critic result exists; #75 stays open and #250 remains blocked. |
