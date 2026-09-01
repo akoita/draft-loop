@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-08-31<br>
-**Cases:** Four bounded observations of one consented, anonymized case
+**Recorded:** 2026-09-01<br>
+**Cases:** Five bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -44,6 +44,14 @@ paths. Corrective feedback reduced the final response to one repeated
 claim-text path, but no proposal was accepted and the OpenAI critic was not
 called.
 
+After exact-value citation completion was merged, a fifth observation completed
+the Anthropic author and OpenAI critic on their first attempts. The workflow
+reached the explicit human boundary with an artifact and independent critique,
+but readiness was false. Eight warnings and one unresolved error included six
+uncovered requirements, one omitted transition, one unsupported-claim finding,
+and one section-label mismatch. The run stopped without adjudication, revision,
+approval, export, or submission.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -57,9 +65,10 @@ called.
 | Professional readiness        | Indeterminate |
 | **Overall**                   | **Indeterminate** |
 
-Private thresholds and measurements remain outside the repository. The initial
-draft did not clear readiness, and the corrective observation produced no
-accepted artifact against which to evaluate the gate.
+Private thresholds and scores remain outside the repository. The fifth
+observation produced an accepted draft and independent critique, but it did not
+clear readiness or receive candidate adjudication. The gate therefore remains
+indeterminate rather than treating unresolved findings as accepted facts.
 
 ## Outcome boundary
 
@@ -68,8 +77,8 @@ accepted artifact against which to evaluate the gate.
   corrective observation exhausted three author attempts before critique; the
   grounding-guide observation failed at the Anthropic transport boundary; the
   structured-recovery observation exhausted three author attempts before
-  critique. Provider-reported usage and cost were unavailable for the failed
-  attempts.
+  critique; and the fifth observation completed both roles on their first
+  attempts. Provider-reported cost remained unavailable.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
 - The existing private manual CV was retained as the human baseline. It
@@ -87,6 +96,7 @@ accepted artifact against which to evaluate the gate.
 Keep the workflow-parity outcome unvalidated. Issue #249 records the initial
 observation, #262 records the corrective rerun, and #266 records the
 grounding-guide observation. Issue #271 records the structured-recovery
-observation. The #75 outcome rollup stays open, and release-preparation issue
-issue #250 remains blocked pending a complete consented comparison. Issue #272 must
-complete exact-value evidence citations locally before another authorized run.
+observation, while #275 records the post-citation-completion observation. The
+Issue #75 stays open, and release-preparation issue #250 remains
+blocked. Candidate review of the private findings and an explicit adjudication
+decision are required before any revision, approval, or export.
