@@ -51,6 +51,8 @@ import {
   type WritingPolicyInput,
   writingPolicySchema,
 } from "@draft-loop/schemas";
+import type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
+import { artifactHistoryMigration, artifactVersionFromRow } from "./artifact-history.js";
 
 export type {
   CandidateKnowledgeRetentionClass,
@@ -62,6 +64,7 @@ export {
   candidateKnowledgeRetentionOverrideKinds,
   candidateKnowledgeRetentionRules,
 } from "@draft-loop/domain";
+export type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
 
 export interface StoragePort {
   readonly get: (key: string) => Promise<string | undefined>;
@@ -975,19 +978,6 @@ export interface EvidenceChunkRecord {
   readonly createdAt: string;
 }
 
-export interface ArtifactVersionInput {
-  readonly id: string;
-  readonly workspaceId: string;
-  readonly version: number;
-  readonly parentVersionId: string | null;
-  readonly createdAt: string;
-  readonly payload: JsonValue;
-}
-
-export interface ArtifactVersionRecord extends ArtifactVersionInput {
-  readonly checksum: string;
-}
-
 export type StoredRunState = WorkflowState | "provider-error";
 export type StoredRunStep = "author" | "critic" | "revision" | null;
 export type StoredApprovalStatus = "pending" | "approved" | "rejected";
@@ -1431,7 +1421,7 @@ export class StorageValidationError extends Error {
   }
 }
 
-export const storageSchemaVersion = 25 as const;
+export const storageSchemaVersion = 26 as const;
 
 interface SqliteStatement {
   readonly run: (...parameters: readonly unknown[]) => {
@@ -1467,6 +1457,7 @@ export interface SqliteStorageOpenOptions {
 interface Migration {
   readonly version: number;
   readonly sql: string;
+  readonly requiresForeignKeyRebuild?: boolean;
 }
 
 const migrationOne: Migration = {
@@ -3392,6 +3383,7 @@ const migrations: readonly Migration[] = [
   migrationTwentyThree,
   migrationTwentyFour,
   migrationTwentyFive,
+  artifactHistoryMigration,
 ];
 const sensitiveKeyPattern =
   /(?:api(?:[-_ ]?key)|(?:api|access|refresh|provider|auth)[-_ ]?token|(?:^|[-_.])token$|secret|password|credential|authorization)/iu;
@@ -4288,13 +4280,32 @@ export class SqliteStorage
         }
         continue;
       }
-      const apply = this.database.transaction(() => {
-        this.database.exec(migration.sql);
-        this.database
-          .prepare("INSERT INTO schema_migrations (version, checksum, applied_at) VALUES (?, ?, ?)")
-          .run(migration.version, migrationChecksum, now());
-      });
-      apply();
+      const requiresForeignKeyRebuild = migration.requiresForeignKeyRebuild === true;
+      if (requiresForeignKeyRebuild) this.database.pragma("foreign_keys = OFF");
+      try {
+        const apply = this.database.transaction(() => {
+          this.database.exec(migration.sql);
+          if (requiresForeignKeyRebuild) {
+            const violations = this.database.prepare("PRAGMA foreign_key_check").all();
+            if (violations.length > 0) {
+              throw new StorageConflictError(
+                `migration ${migration.version} would leave invalid foreign keys`,
+              );
+            }
+          }
+          this.database
+            .prepare(
+              "INSERT INTO schema_migrations (version, checksum, applied_at) VALUES (?, ?, ?)",
+            )
+            .run(migration.version, migrationChecksum, now());
+        });
+        apply();
+      } finally {
+        if (requiresForeignKeyRebuild) {
+          this.database.pragma("legacy_alter_table = OFF");
+          this.database.pragma("foreign_keys = ON");
+        }
+      }
     }
   }
 
@@ -11323,7 +11334,7 @@ export class SqliteStorage
         "SELECT id, workspace_id, version, parent_version_id, created_at, payload_json, payload_checksum FROM artifact_versions WHERE id = ?",
       )
       .get(id);
-    return row === undefined ? undefined : artifactFromRow(row);
+    return row === undefined ? undefined : artifactVersionFromRow(row);
   }
 
   public async saveRun(input: RunRecordInput): Promise<RunRecord> {
@@ -14766,18 +14777,6 @@ function evidenceChunkFromRow(row: Record<string, unknown>): EvidenceChunkRecord
     checksum: rowString(row, "checksum"),
     text: rowString(row, "text"),
     createdAt: rowString(row, "created_at"),
-  };
-}
-
-function artifactFromRow(row: Record<string, unknown>): ArtifactVersionRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    version: rowNumber(row, "version"),
-    parentVersionId: rowNullableString(row, "parent_version_id"),
-    createdAt: rowString(row, "created_at"),
-    payload: parse(rowString(row, "payload_json")),
-    checksum: rowString(row, "payload_checksum"),
   };
 }
 
