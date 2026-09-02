@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-01<br>
-**Cases:** Five bounded observations of one consented, anonymized case
+**Recorded:** 2026-09-02<br>
+**Cases:** Six bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -52,6 +52,23 @@ uncovered requirements, one omitted transition, one unsupported-claim finding,
 and one section-label mismatch. The run stopped without adjudication, revision,
 approval, export, or submission.
 
+After exact adjudication staging and active-duration accounting were merged, a
+sixth fresh observation reused the same private scope and model pair. Its first
+two Anthropic author attempts failed local factual-invariant validation on one
+and then two content-free claim paths. The third attempt produced an accepted
+draft, and the OpenAI critic completed on its first attempt. The run reached
+human review after 307 seconds of active time, well inside the 20-minute cap.
+Readiness remained false with eleven warnings and one error across seven
+uncovered requirements, one missing transition entry, and four additional
+coverage or quality findings.
+
+Those findings were materially different from the fifth observation, so its
+confirmed adjudication was not reused. The run stopped without revision,
+approval, export, or submission. After the orchestration snapshot was already
+durable, the typed-history projection rejected the new artifact because an
+earlier run in the same workspace already owned artifact version 1. The
+snapshot remains readable; issue #287 owns this separate storage blocker.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -65,10 +82,11 @@ approval, export, or submission.
 | Professional readiness        | Indeterminate |
 | **Overall**                   | **Indeterminate** |
 
-Private thresholds and scores remain outside the repository. The fifth
-observation produced an accepted draft and independent critique, but it did not
-clear readiness or receive candidate adjudication. The gate therefore remains
-indeterminate rather than treating unresolved findings as accepted facts.
+Private thresholds and scores remain outside the repository. The fifth and
+sixth observations produced accepted drafts and independent critiques, but
+neither cleared readiness or completed an adjudicated revision. The gate
+therefore remains indeterminate rather than treating unresolved findings as
+accepted facts.
 
 ## Outcome boundary
 
@@ -77,8 +95,10 @@ indeterminate rather than treating unresolved findings as accepted facts.
   corrective observation exhausted three author attempts before critique; the
   grounding-guide observation failed at the Anthropic transport boundary; the
   structured-recovery observation exhausted three author attempts before
-  critique; and the fifth observation completed both roles on their first
-  attempts. Provider-reported cost remained unavailable.
+  critique; the fifth observation completed both roles on their first
+  attempts; and the sixth reached an accepted author result on attempt three
+  before the critic completed on attempt one. Provider-reported cost remained
+  unavailable.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
 - The existing private manual CV was retained as the human baseline. It
@@ -97,6 +117,7 @@ Keep the workflow-parity outcome unvalidated. Issue #249 records the initial
 observation, #262 records the corrective rerun, and #266 records the
 grounding-guide observation. Issue #271 records the structured-recovery
 observation, while #275 records the post-citation-completion observation. The
-Issue #75 stays open, and release-preparation issue #250 remains
-blocked. Candidate review of the private findings and an explicit adjudication
-decision are required before any revision, approval, or export.
+sixth observation is recorded by #286, and #287 owns its typed-history storage
+blocker. Issue #75 stays open, and release-preparation issue #250 remains
+blocked. Candidate review of the new private findings and an explicit
+adjudication decision are required before any revision, approval, or export.
