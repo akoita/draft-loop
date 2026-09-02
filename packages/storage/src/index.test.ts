@@ -209,13 +209,17 @@ const chunk = (id: string, text: string, ordinal: number): EvidenceChunkRecord =
   createdAt: "2026-08-12T10:03:00.000Z",
 });
 
-const artifact = (payload: ArtifactVersionInput["payload"]): ArtifactVersionInput => ({
+const artifact = (
+  payload: ArtifactVersionInput["payload"],
+  overrides: Partial<ArtifactVersionInput> = {},
+): ArtifactVersionInput => ({
   id: "artifact-1",
   workspaceId: workspace.id,
   version: 1,
   parentVersionId: null,
   createdAt: "2026-08-12T10:04:00.000Z",
   payload,
+  ...overrides,
 });
 
 const run = (artifactId: string | null = "artifact-1"): RunRecordInput => ({
@@ -418,16 +422,55 @@ function removeMigrationSeven(filename: string): void {
   database.close();
 }
 
+function restoreLegacyArtifactHistory(filename: string): void {
+  const loaded = createRequire(import.meta.url)("better-sqlite3") as {
+    readonly default?: unknown;
+  };
+  const Constructor = loaded.default ?? loaded;
+  const database = new (Constructor as RawSqliteConstructor)(filename);
+  database.exec(`
+    PRAGMA foreign_keys = OFF;
+    PRAGMA legacy_alter_table = ON;
+    DROP TRIGGER artifact_versions_immutable_update;
+    DROP TRIGGER artifact_versions_immutable_delete;
+    ALTER TABLE artifact_versions RENAME TO artifact_versions_current;
+    CREATE TABLE artifact_versions (
+      id TEXT PRIMARY KEY NOT NULL,
+      workspace_id TEXT NOT NULL REFERENCES workspaces(id),
+      version INTEGER NOT NULL,
+      parent_version_id TEXT REFERENCES artifact_versions(id),
+      created_at TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      payload_checksum TEXT NOT NULL,
+      UNIQUE (workspace_id, version)
+    );
+    INSERT INTO artifact_versions (
+      id, workspace_id, version, parent_version_id, created_at, payload_json, payload_checksum
+    )
+    SELECT id, workspace_id, version, parent_version_id, created_at, payload_json, payload_checksum
+    FROM artifact_versions_current;
+    DROP TABLE artifact_versions_current;
+    CREATE TRIGGER artifact_versions_immutable_update
+      BEFORE UPDATE ON artifact_versions
+      BEGIN SELECT RAISE(ABORT, 'artifact versions are immutable'); END;
+    CREATE TRIGGER artifact_versions_immutable_delete
+      BEFORE DELETE ON artifact_versions
+      BEGIN SELECT RAISE(ABORT, 'artifact versions are immutable'); END;
+    DELETE FROM schema_migrations WHERE version = 26;
+  `);
+  database.close();
+}
+
 describe("SQLite storage", () => {
   it("applies migrations idempotently and rejects sensitive key persistence", async () => {
     const storage = openSqliteStorage(":memory:");
 
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     storage.migrate();
     expect(storage.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
 
     await storage.set("ui.language", "en");
@@ -955,7 +998,7 @@ describe("SQLite storage", () => {
     legacy.close();
 
     const upgraded = openSqliteStorage(filename);
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(25);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(26);
     expect(await upgraded.getContextSnapshot(legacySnapshot.id)).toEqual(legacySnapshot);
     expect(await upgraded.getLatestWritingPolicyVersion(workspace.id)).toBeUndefined();
     expect(
@@ -968,7 +1011,7 @@ describe("SQLite storage", () => {
       ),
     ).toEqual([{ count: 0 }]);
     upgraded.migrate();
-    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(25);
+    expect(upgraded.appliedMigrationVersions().at(-1)).toBe(26);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
   });
@@ -1061,7 +1104,7 @@ describe("SQLite storage", () => {
     legacy.close();
 
     const migrated = openSqliteStorage(filename);
-    expect(migrated.appliedMigrationVersions().at(-1)).toBe(25);
+    expect(migrated.appliedMigrationVersions().at(-1)).toBe(26);
     expect(await migrated.getWorkspace(workspace.id)).toEqual(workspace);
     const saved = await migrated.saveOpportunityBrief(workspace.id, opportunityBrief());
     await migrated.close();
@@ -1107,7 +1150,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     const raw = openRawDatabase(filename);
     expect(
@@ -1147,7 +1190,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     expect(
       queryRawDatabase(
@@ -1165,7 +1208,7 @@ describe("SQLite storage", () => {
       },
     ]);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await upgraded.close();
     await rm(directory, { recursive: true, force: true });
@@ -1215,7 +1258,7 @@ describe("SQLite storage", () => {
     removeMigrationTwo(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     const migratedContext = await upgraded.getContextSnapshot(legacyContext.id);
@@ -1223,9 +1266,74 @@ describe("SQLite storage", () => {
     expect(migratedContext?.payload).not.toHaveProperty("candidateKnowledgeSelection");
     upgraded.migrate();
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await upgraded.close();
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("migrates v25 artifact history without losing dependent rows or lineage", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-artifact-history-migration-"));
+    const filename = join(directory, "workspace.sqlite");
+    const backupFilename = join(directory, "workspace-backup.sqlite");
+    const initial = openSqliteStorage(filename);
+    await seedHistory(initial);
+    const child = await initial.saveArtifactVersion(
+      artifact(
+        { value: "child" },
+        {
+          id: "artifact-child",
+          version: 2,
+          parentVersionId: "artifact-1",
+          createdAt: "2026-08-12T10:04:01.000Z",
+        },
+      ),
+    );
+    const rootArtifact = await initial.getArtifactVersion("artifact-1");
+    if (rootArtifact === undefined) throw new Error("The fixture did not produce a root artifact.");
+    await initial.close();
+
+    restoreLegacyArtifactHistory(filename);
+
+    const upgraded = openSqliteStorage(filename);
+    expect(upgraded.appliedMigrationVersions()).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+    ]);
+    await expect(upgraded.getArtifactVersion(rootArtifact.id)).resolves.toEqual(rootArtifact);
+    await expect(upgraded.getArtifactVersion(child.id)).resolves.toEqual(child);
+    await expect(upgraded.getRun("run-1")).resolves.toMatchObject(run());
+    await expect(upgraded.getRound("round-1")).resolves.toMatchObject(round());
+    await expect(upgraded.getExecution("execution-1")).resolves.toMatchObject(execution());
+    await expect(upgraded.listFindings("run-1")).resolves.toHaveLength(1);
+    await expect(upgraded.listDecisions("run-1")).resolves.toHaveLength(1);
+    await expect(upgraded.listExports("run-1")).resolves.toHaveLength(1);
+
+    const raw = openRawDatabase(filename);
+    expect(raw.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+    expect(
+      raw
+        .prepare("PRAGMA index_list(artifact_versions)")
+        .all()
+        .some((index) => index.unique === 1 && index.origin === "u"),
+    ).toBe(false);
+    expect(() =>
+      raw.exec("UPDATE artifact_versions SET payload_json = '{}' WHERE id = 'artifact-1'"),
+    ).toThrow(/immutable/i);
+    expect(() => raw.exec("DELETE FROM artifact_versions WHERE id = 'artifact-1'")).toThrow(
+      /immutable/i,
+    );
+    raw.close();
+
+    await upgraded.backup(backupFilename);
+    await upgraded.close();
+
+    const reopened = openSqliteStorage(backupFilename);
+    await expect(reopened.getArtifactVersion(child.id)).resolves.toEqual(child);
+    await expect(reopened.getRun("run-1")).resolves.toMatchObject(run());
+    await expect(reopened.listFindings("run-1")).resolves.toHaveLength(1);
+    await expect(reopened.listDecisions("run-1")).resolves.toHaveLength(1);
+    await expect(reopened.listExports("run-1")).resolves.toHaveLength(1);
+    await reopened.close();
     await rm(directory, { recursive: true, force: true });
   });
 
@@ -1239,7 +1347,7 @@ describe("SQLite storage", () => {
     removeMigrationFour(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(upgraded.getWorkspace(workspace.id)).resolves.toEqual(workspace);
     await expect(
@@ -1259,7 +1367,7 @@ describe("SQLite storage", () => {
     removeMigrationFive(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(upgraded.getCandidateKnowledgeBase(savedKnowledgeBase.id)).resolves.toEqual(
       savedKnowledgeBase,
@@ -1285,7 +1393,7 @@ describe("SQLite storage", () => {
     removeMigrationSix(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged("ckb-1", "ckb-source-1", legacy.version.id),
@@ -1353,7 +1461,7 @@ describe("SQLite storage", () => {
     removeMigrationSeven(filename);
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(
       upgraded.isCandidateKnowledgeSourceVersionManaged(
@@ -1426,7 +1534,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceOriginBinding("ckb-1", "ckb-source-1"),
@@ -1499,7 +1607,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRefreshObservation("ckb-1", "ckb-source-1"),
@@ -1614,7 +1722,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     await expect(
       upgraded.getCandidateKnowledgeSourceRetirement("ckb-1", "ckb-source-1"),
@@ -1674,7 +1782,7 @@ describe("SQLite storage", () => {
 
     const upgraded = openSqliteStorage(filename);
     expect(upgraded.appliedMigrationVersions()).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
     ]);
     const raw = openRawDatabase(filename);
     expect(() =>
@@ -2722,6 +2830,39 @@ describe("SQLite storage", () => {
     await second.close();
 
     await expect(readFile(filename)).resolves.toBeInstanceOf(Buffer);
+    await rm(directory, { recursive: true, force: true });
+  });
+
+  it("allows independent artifact lineages to start at version one", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "draft-loop-artifact-lineages-"));
+    const filename = join(directory, "workspace.sqlite");
+    const storage = openSqliteStorage(filename);
+    await storage.saveWorkspace(workspace);
+
+    const firstInput = artifact({ value: "first-lineage" });
+    const secondInput = artifact({ value: "second-lineage" }, { id: "artifact-2" });
+    const first = await storage.saveArtifactVersion(firstInput);
+    const second = await storage.saveArtifactVersion(secondInput);
+
+    expect(first.version).toBe(1);
+    expect(second.version).toBe(1);
+    expect(second.id).not.toBe(first.id);
+    await expect(storage.saveArtifactVersion(firstInput)).resolves.toEqual(first);
+    await expect(
+      storage.saveArtifactVersion({ ...firstInput, payload: { value: "changed" } }),
+    ).rejects.toThrow(StorageConflictError);
+    await expect(
+      storage.saveArtifactVersion({
+        ...firstInput,
+        createdAt: "2026-08-12T10:05:00.000Z",
+      }),
+    ).rejects.toThrow(StorageConflictError);
+    await storage.close();
+
+    const reopened = openSqliteStorage(filename);
+    await expect(reopened.getArtifactVersion(first.id)).resolves.toEqual(first);
+    await expect(reopened.getArtifactVersion(second.id)).resolves.toEqual(second);
+    await reopened.close();
     await rm(directory, { recursive: true, force: true });
   });
 

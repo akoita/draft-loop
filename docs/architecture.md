@@ -139,6 +139,15 @@ content-free traces, and provide only opaque chunk references and bounded text
 to author and critic. Legacy workspaces without a CKB selection continue to
 use the earlier workspace evidence index.
 
+SQLite migration 26 corrects the artifact-history uniqueness boundary. An
+artifact ID is the immutable identity of one lineage, so distinct IDs in one
+workspace may each begin at version 1; parent-version IDs continue to link
+later immutable rows. The migration rebuilds `artifact_versions`
+transactionally without the legacy `UNIQUE (workspace_id, version)` constraint,
+preserves dependent run, execution, finding, decision, and export references,
+recreates the immutable update/delete triggers, and validates the final foreign
+key graph before recording the migration.
+
 ## Opportunity brief contract
 
 The #67 components define a provider-independent, versioned opportunity brief

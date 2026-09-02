@@ -397,6 +397,51 @@ describe("local application driver", () => {
     }
   });
 
+  it("persists independent fixture runs as separate version-one artifact lineages", async () => {
+    const root = await providerWorkspace("draft-loop-artifact-lineages-");
+    const silent = { write: () => undefined };
+    try {
+      const driver = createLocalApplicationDriver();
+      await driver.initialize(
+        { root, jobDescription: "job.md", sources: "evidence", fixtureMode: true },
+        silent,
+      );
+
+      const first = await driver.start({ root, allowProviderData: false }, silent);
+      const second = await driver.start({ root, allowProviderData: false }, silent);
+      if (first.artifact === null || second.artifact === null) {
+        throw new Error("The fixture did not produce both artifacts.");
+      }
+      expect(first.artifact.id).not.toBe(second.artifact.id);
+      expect(first.artifact.version).toBe(1);
+      expect(second.artifact.version).toBe(1);
+
+      const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
+      try {
+        await expect(storage.getRun(first.runId)).resolves.toMatchObject({
+          id: first.runId,
+          artifactId: first.artifact.id,
+        });
+        await expect(storage.getRun(second.runId)).resolves.toMatchObject({
+          id: second.runId,
+          artifactId: second.artifact.id,
+        });
+        await expect(storage.getArtifactVersion(first.artifact.id)).resolves.toMatchObject({
+          id: first.artifact.id,
+          version: 1,
+        });
+        await expect(storage.getArtifactVersion(second.artifact.id)).resolves.toMatchObject({
+          id: second.artifact.id,
+          version: 1,
+        });
+      } finally {
+        await storage.close();
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("lets the candidate widen the required sections explicitly", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-required-sections-"));
     try {
