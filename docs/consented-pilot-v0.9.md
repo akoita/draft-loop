@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-02<br>
-**Cases:** Six bounded observations of one consented, anonymized case
+**Cases:** Seven bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -69,6 +69,23 @@ durable, the typed-history projection rejected the new artifact because an
 earlier run in the same workspace already owned artifact version 1. The
 snapshot remains readable; issue #287 owns this separate storage blocker.
 
+After migration 26 removed that blocker, the candidate reviewed all twelve
+findings and confirmed one accept, two rejects, and nine nuanced decisions.
+The exact package was staged locally before provider execution, including one
+bounded accepted effect to restore the documented transition-period entry.
+Both independent version-1 artifacts then persisted in typed history with no
+foreign-key violation.
+
+The seventh observation did not produce a revision. Its first revision attempt
+used the generic CLI's API-key default instead of the declared user-session
+route and failed authentication. The two remaining attempts used the intended
+authenticated Anthropic session but retained the adapter's 120-second default;
+both timed out before returning an accepted artifact. The run exhausted its
+three-attempt boundary after 585 seconds of cumulative active provider time,
+inside the 20-minute case cap. This was an operator timeout-configuration
+error, not a provider credit or quota failure. The run remains immutable and
+no revision, new critique, approval, export, or submission occurred.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -83,10 +100,11 @@ snapshot remains readable; issue #287 owns this separate storage blocker.
 | **Overall**                   | **Indeterminate** |
 
 Private thresholds and scores remain outside the repository. The fifth and
-sixth observations produced accepted drafts and independent critiques, but
-neither cleared readiness or completed an adjudicated revision. The gate
-therefore remains indeterminate rather than treating unresolved findings as
-accepted facts.
+sixth observations produced accepted drafts and independent critiques, while
+the seventh staged the confirmed adjudication but produced no revision. None
+cleared readiness or completed an adjudicated revision. The gate therefore
+remains indeterminate rather than treating unresolved findings as accepted
+facts.
 
 ## Outcome boundary
 
@@ -96,9 +114,10 @@ accepted facts.
   grounding-guide observation failed at the Anthropic transport boundary; the
   structured-recovery observation exhausted three author attempts before
   critique; the fifth observation completed both roles on their first
-  attempts; and the sixth reached an accepted author result on attempt three
-  before the critic completed on attempt one. Provider-reported cost remained
-  unavailable.
+  attempts; the sixth reached an accepted author result on attempt three before
+  the critic completed on attempt one; and the seventh exhausted one
+  authentication failure plus two default-timeout revision attempts before a
+  new artifact existed. Provider-reported cost remained unavailable.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
 - The existing private manual CV was retained as the human baseline. It
@@ -117,7 +136,9 @@ Keep the workflow-parity outcome unvalidated. Issue #249 records the initial
 observation, #262 records the corrective rerun, and #266 records the
 grounding-guide observation. Issue #271 records the structured-recovery
 observation, while #275 records the post-citation-completion observation. The
-sixth observation is recorded by #286, and #287 owns its typed-history storage
-blocker. Issue #75 stays open, and release-preparation issue #250 remains
-blocked. Candidate review of the new private findings and an explicit
-adjudication decision are required before any revision, approval, or export.
+sixth observation is recorded by #286, #287 removed its typed-history storage
+blocker, and #290 records the confirmed but exhausted adjudication
+continuation. Issue #291 owns one fresh same-scope observation with the
+already-supported request timeout explicitly aligned to the declared case
+budget. Issue #75 stays open, and release-preparation issue #250 remains
+blocked. No approval or export is authorized by this result.
