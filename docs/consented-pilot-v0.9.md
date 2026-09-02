@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-02<br>
-**Cases:** Seven bounded observations of one consented, anonymized case
+**Cases:** Eight bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -86,6 +86,23 @@ inside the 20-minute case cap. This was an operator timeout-configuration
 error, not a provider credit or quota failure. The run remains immutable and
 no revision, new critique, approval, export, or submission occurred.
 
+The eighth observation applied the declared 1,200,000 ms timeout to every
+user-session subprocess. Its first two author attempts returned invalid
+structured responses; the third produced an accepted draft, and the critic
+completed on its first attempt. The resulting ten findings were materially
+different from the previously confirmed twelve, so the workflow stopped for
+fresh human review. The candidate then confirmed two accepts, two rejects, and
+six nuanced decisions. That exact package and two bounded accepted effects
+persisted locally before revision execution.
+
+All three revision attempts returned before timeout but failed structured-
+response validation. The run exhausted its revision-attempt boundary after
+959 seconds of cumulative active provider time, inside the 20-minute cap. This
+was not an authentication, timeout, credit, or quota failure. No revised
+artifact, second critique, approval, export, or submission occurred. Issue #293
+owns the bounded content-free classification and correction of this remaining
+revision-validation blocker.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -99,12 +116,12 @@ no revision, new critique, approval, export, or submission occurred.
 | Professional readiness        | Indeterminate |
 | **Overall**                   | **Indeterminate** |
 
-Private thresholds and scores remain outside the repository. The fifth and
-sixth observations produced accepted drafts and independent critiques, while
-the seventh staged the confirmed adjudication but produced no revision. None
-cleared readiness or completed an adjudicated revision. The gate therefore
-remains indeterminate rather than treating unresolved findings as accepted
-facts.
+Private thresholds and scores remain outside the repository. The fifth,
+sixth, and eighth observations produced accepted drafts and independent
+critiques. The seventh and eighth staged exact confirmed adjudications but
+produced no revision. None cleared readiness or completed an adjudicated
+revision. The gate therefore remains indeterminate rather than treating
+unresolved findings as accepted facts.
 
 ## Outcome boundary
 
@@ -117,12 +134,19 @@ facts.
   attempts; the sixth reached an accepted author result on attempt three before
   the critic completed on attempt one; and the seventh exhausted one
   authentication failure plus two default-timeout revision attempts before a
-  new artifact existed. Provider-reported cost remained unavailable.
+  new artifact existed. The eighth reached author success on attempt three and
+  critic success on attempt one, then exhausted three invalid-response revision
+  attempts with the declared timeout in force. Provider-reported cost remained
+  unavailable.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
 - The existing private manual CV was retained as the human baseline. It
   targets a related backend-engineering role rather than the evaluated SDK
-  role, so any future comparison must treat the role mismatch as a limitation.
+  role, so any comparison must treat the role mismatch as a limitation. The
+  eighth draft emphasized API and developer-tool evidence more directly, while
+  the baseline retained a stronger backend-production narrative. Because the
+  draft still lacked an adjudicated revision and approval, the predeclared
+  readiness and review-effort comparison remained unscoreable.
 - Misleading-evidence and prompt-injection behavior were not tested in this
   live case. The provider-free synthetic preflight remains implementation
   evidence only.
@@ -138,7 +162,8 @@ grounding-guide observation. Issue #271 records the structured-recovery
 observation, while #275 records the post-citation-completion observation. The
 sixth observation is recorded by #286, #287 removed its typed-history storage
 blocker, and #290 records the confirmed but exhausted adjudication
-continuation. Issue #291 owns one fresh same-scope observation with the
-already-supported request timeout explicitly aligned to the declared case
-budget. Issue #75 stays open, and release-preparation issue #250 remains
-blocked. No approval or export is authorized by this result.
+continuation. Issue #291 records the declared-timeout observation and its
+freshly confirmed but exhausted adjudication. Issue #293 owns the bounded
+revision-validation blocker before another representative observation. Issue #75
+stays open, and release-preparation issue #250 remains blocked. No approval or
+export is authorized by this result.
