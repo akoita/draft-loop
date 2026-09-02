@@ -44,6 +44,13 @@ import {
 } from "@draft-loop/validation";
 import { buildAuthorAdjudicationPlan } from "./adjudication.js";
 import {
+  activateDurationAccounting,
+  createDurationAccounting,
+  type DurationAccounting,
+  inspectDurationAccounting,
+  settleDurationAccounting,
+} from "./duration-accounting.js";
+import {
   type ApprovedArtifactBinding,
   approvedArtifactBinding,
   assertExactApprovedArtifact,
@@ -209,6 +216,8 @@ export interface RunSnapshot {
   readonly startedAt: string;
   readonly updatedAt: string;
   readonly lastError: RunError | null;
+  /** Active provider/orchestration milliseconds; absent on pre-duration snapshots. */
+  readonly durationAccounting?: DurationAccounting | null;
   /** Optional for snapshots written before the adjudication runtime existed. */
   readonly adjudicationRuntime?: AdjudicationRuntimeState | null;
   /** Optional for snapshots written before approval readiness was persisted. */
@@ -960,6 +969,7 @@ function initialSnapshot(request: OrchestrationRequest, now: string): RunSnapsho
     startedAt: now,
     updatedAt: now,
     lastError: null,
+    durationAccounting: createDurationAccounting(now),
     adjudicationRuntime: null,
     readinessDecision: null,
     approvedArtifact: null,
@@ -1017,6 +1027,41 @@ export function createOrchestrationEngine(
     return saved;
   };
 
+  const activeStates: ReadonlySet<RunState> = new Set(["drafting", "reviewing", "revising"]);
+
+  const settledForTransition = (snapshot: RunSnapshot, now: string): RunSnapshot => {
+    try {
+      return {
+        ...snapshot,
+        durationAccounting: settleDurationAccounting(
+          snapshot.durationAccounting,
+          snapshot.startedAt,
+          now,
+        ),
+      };
+    } catch {
+      // A malformed persisted record must never be interpreted as zero active
+      // time. The budget check fails closed; terminal/recovery transitions can
+      // retain the malformed value without manufacturing a grant of time.
+      return snapshot;
+    }
+  };
+
+  const activatedForTransition = (snapshot: RunSnapshot, now: string): RunSnapshot => {
+    try {
+      return {
+        ...snapshot,
+        durationAccounting: activateDurationAccounting(
+          snapshot.durationAccounting,
+          snapshot.startedAt,
+          now,
+        ),
+      };
+    } catch {
+      return snapshot;
+    }
+  };
+
   const budgetReason = (snapshot: RunSnapshot, now: string): string | undefined => {
     if (snapshot.round > snapshot.budget.maxRounds) return "maximum rounds exhausted";
     if (
@@ -1026,7 +1071,14 @@ export function createOrchestrationEngine(
       return "maximum cost budget exhausted";
     if (
       snapshot.budget.maxDurationMs !== undefined &&
-      Date.parse(now) - Date.parse(snapshot.startedAt) >= snapshot.budget.maxDurationMs
+      (() => {
+        const accounting = inspectDurationAccounting(
+          snapshot.durationAccounting,
+          snapshot.startedAt,
+          now,
+        );
+        return !accounting.valid || accounting.activeDurationMs >= snapshot.budget.maxDurationMs;
+      })()
     )
       return "maximum duration budget exhausted";
     return undefined;
@@ -1035,24 +1087,31 @@ export function createOrchestrationEngine(
   const transitionToAwaitingApproval = async (
     snapshot: RunSnapshot,
     reason: string,
+    now = clock(),
   ): Promise<RunSnapshot> => {
+    const settled = settledForTransition(snapshot, now);
     const updated = {
-      ...snapshot,
+      ...settled,
       state: "awaiting-approval" as const,
       currentStep: null,
       approval: "pending" as const,
-      updatedAt: clock(),
+      updatedAt: now,
       lastError: null,
     };
     await saveAndEmit(updated, "state.changed", { to: "awaiting-approval", reason });
     return updated;
   };
 
-  const recordFailure = async (snapshot: RunSnapshot, failure: RunError): Promise<RunSnapshot> => {
+  const recordFailure = async (
+    snapshot: RunSnapshot,
+    failure: RunError,
+    now = clock(),
+  ): Promise<RunSnapshot> => {
+    const settled = settledForTransition(snapshot, now);
     const updated = {
-      ...snapshot,
+      ...settled,
       state: "provider-error" as const,
-      updatedAt: clock(),
+      updatedAt: now,
       lastError: failure,
     };
     await saveAndEmit(updated, "provider.failed", {
@@ -1069,24 +1128,36 @@ export function createOrchestrationEngine(
   };
 
   const executeStep = async (
-    snapshot: RunSnapshot,
+    initialSnapshot: RunSnapshot,
     context: ContextSnapshot,
     signal?: AbortSignal,
     retryFeedback?: AuthorRetryFeedback,
   ): Promise<RunSnapshot> => {
+    let snapshot = initialSnapshot;
     if (snapshot.currentStep === null) return snapshot;
     const step = snapshot.currentStep;
     const now = clock();
     const reason = budgetReason(snapshot, now);
     if (reason !== undefined) {
       const exhausted = {
-        ...snapshot,
+        ...settledForTransition(snapshot, now),
         state: "budget-exhausted" as const,
         updatedAt: now,
         currentStep: null,
       };
       await saveAndEmit(exhausted, "budget.exhausted", { reason });
-      return transitionToAwaitingApproval(exhausted, reason);
+      return transitionToAwaitingApproval(exhausted, reason, now);
+    }
+
+    // Persist a legacy migration or a paused/error-to-active transition before
+    // invoking a provider so a restart cannot lose the active segment.
+    if (activeStates.has(snapshot.state)) {
+      const activated = activatedForTransition(snapshot, now);
+      if (
+        JSON.stringify(activated.durationAccounting) !== JSON.stringify(snapshot.durationAccounting)
+      ) {
+        snapshot = await save({ ...activated, updatedAt: now });
+      }
     }
 
     let pendingAdjudication: PendingAdjudication | undefined;
@@ -1095,6 +1166,7 @@ export function createOrchestrationEngine(
         step === "revision" ? pendingAdjudicationFor(snapshot, context) : undefined;
     } catch (error) {
       if (!(error instanceof InvalidAdjudicationRuntimeError)) throw error;
+      const failureNow = clock();
       return recordFailure(
         snapshot,
         providerFailure(
@@ -1102,8 +1174,9 @@ export function createOrchestrationEngine(
           context,
           step,
           MAX_ORCHESTRATION_ATTEMPTS,
-          clock(),
+          failureNow,
         ),
+        failureNow,
       );
     }
 
@@ -1127,6 +1200,7 @@ export function createOrchestrationEngine(
       if (pendingAdjudication !== undefined) {
         const runtime = snapshot.adjudicationRuntime;
         if (runtime === undefined || runtime === null || snapshot.artifact === null) {
+          const failureNow = clock();
           return recordFailure(
             snapshot,
             providerFailure(
@@ -1134,8 +1208,9 @@ export function createOrchestrationEngine(
               context,
               step,
               MAX_ORCHESTRATION_ATTEMPTS,
-              clock(),
+              failureNow,
             ),
+            failureNow,
           );
         }
         let trace: AdjudicatedRevisionTrace;
@@ -1160,6 +1235,7 @@ export function createOrchestrationEngine(
             throw new InvalidAdjudicatedRevisionResponseError();
           }
         } catch {
+          const failureNow = clock();
           return recordFailure(
             snapshot,
             providerFailure(
@@ -1167,8 +1243,9 @@ export function createOrchestrationEngine(
               context,
               step,
               MAX_ORCHESTRATION_ATTEMPTS,
-              clock(),
+              failureNow,
             ),
+            failureNow,
           );
         }
         reusableSnapshot = {
@@ -1306,6 +1383,7 @@ export function createOrchestrationEngine(
       // fails after it was saved, let the caller retry/resume and reuse that
       // execution instead of attempting to overwrite it with a failed row.
       if (completedExecutionSaved) throw error;
+      const failureNow = clock();
       const failure = providerFailure(
         error instanceof InvalidAdjudicatedRevisionResponseError
           ? { code: "invalid-response", retryable: false }
@@ -1313,7 +1391,7 @@ export function createOrchestrationEngine(
         context,
         step,
         attempt,
-        clock(),
+        failureNow,
       );
       const failedExecution: ExecutionRecord = {
         id,
@@ -1342,6 +1420,7 @@ export function createOrchestrationEngine(
           executionHistory: [...snapshot.executionHistory, failedExecution],
         },
         failure,
+        failureNow,
       );
     }
   };
@@ -1372,6 +1451,7 @@ export function createOrchestrationEngine(
         },
         ...(context.writingPolicy === undefined ? {} : { writingPolicy: context.writingPolicy }),
       });
+      const now = clock();
       const updated = {
         ...snapshot,
         artifact,
@@ -1380,7 +1460,7 @@ export function createOrchestrationEngine(
         currentStep: "critic" as const,
         readinessDecision: null,
         approvedArtifact: null,
-        updatedAt: clock(),
+        updatedAt: now,
       };
       return saveAndEmit(updated, "state.changed", { to: "reviewing" });
     }
@@ -1412,22 +1492,25 @@ export function createOrchestrationEngine(
         maxRounds: snapshot.budget.maxRounds,
       },
     );
+    const now = clock();
     const updated = {
       ...snapshot,
       findings: combined,
       latestEvaluation: evaluation,
       scoreHistory: [...snapshot.scoreHistory, evaluation.scoreVector],
-      updatedAt: clock(),
+      updatedAt: now,
     };
     if (evaluation.ready)
       return transitionToAwaitingApproval(
         { ...updated, state: "awaiting-approval" as const, currentStep: null },
         "ready",
+        now,
       );
     if (evaluation.shouldStop)
       return transitionToAwaitingApproval(
         { ...updated, state: "awaiting-approval" as const, currentStep: null },
         evaluation.stopReason,
+        now,
       );
     return saveAndEmit(
       {
@@ -1473,17 +1556,22 @@ export function createOrchestrationEngine(
         current.lastError.attempt >= current.lastError.maxAttempts
       )
         return immutable(current);
+      const retryNow = clock();
       if (
         current.lastError.retryNotBefore !== undefined &&
-        Date.parse(current.lastError.retryNotBefore) > Date.parse(clock())
+        Date.parse(current.lastError.retryNotBefore) > Date.parse(retryNow)
       ) {
         return immutable(current);
       }
+      const activated = activatedForTransition(
+        { ...current, state: stepStates[current.currentStep ?? "author"] },
+        retryNow,
+      );
       const resumed = await save({
-        ...current,
+        ...activated,
         state: stepStates[current.currentStep ?? "author"],
         lastError: null,
-        updatedAt: clock(),
+        updatedAt: retryNow,
       });
       await emit(resumed, "state.changed", { to: resumed.state, reason: "retry" });
       current = resumed;
@@ -1609,7 +1697,12 @@ export function createOrchestrationEngine(
       snapshot.state === "provider-error"
     )
       throw new Error("Only an active run can be paused.");
-    const updated = { ...snapshot, state: "paused" as const, updatedAt: clock() };
+    const now = clock();
+    const updated = {
+      ...settledForTransition(snapshot, now),
+      state: "paused" as const,
+      updatedAt: now,
+    };
     await saveAndEmit(updated, "user.paused");
     await emit(updated, "state.changed", { to: "paused" });
     return updated;
@@ -1619,11 +1712,12 @@ export function createOrchestrationEngine(
     const snapshot = await loadForAction(runId);
     if (snapshot.state === "stopped") return snapshot;
     if (terminalStates.has(snapshot.state)) throw new Error("The run is already terminal.");
+    const now = clock();
     const updated = {
-      ...snapshot,
+      ...settledForTransition(snapshot, now),
       state: "stopped" as const,
       currentStep: null,
-      updatedAt: clock(),
+      updatedAt: now,
     };
     await saveAndEmit(updated, "user.stopped");
     await emit(updated, "state.changed", { to: "stopped" });
@@ -1643,12 +1737,13 @@ export function createOrchestrationEngine(
     if (snapshot.artifact === null) {
       throw new Error("A draft artifact is required to return to review.");
     }
+    const now = clock();
     const updated = {
-      ...snapshot,
+      ...settledForTransition(snapshot, now),
       state: "awaiting-approval" as const,
       currentStep: null,
       approval: "pending" as const,
-      updatedAt: clock(),
+      updatedAt: now,
     };
     await saveAndEmit(updated, "provider.recovered", {
       action: "return-to-review",
@@ -1671,6 +1766,7 @@ export function createOrchestrationEngine(
     contextsByRunId.set(runId, context);
     if (snapshot.artifact === null)
       throw new Error("A draft artifact is required before approval.");
+    const now = clock();
     const currentCritiqueFindings = snapshot.executionHistory
       .filter(
         (execution) =>
@@ -1699,13 +1795,13 @@ export function createOrchestrationEngine(
       budget: snapshot.budget,
       priorScoreHistory: snapshot.scoreHistory,
       ...(latestRevisionTrace === undefined ? {} : { latestRevisionTrace }),
-      createdAt: clock(),
+      createdAt: now,
     });
     const reviewed = {
-      ...snapshot,
+      ...settledForTransition(snapshot, now),
       readinessDecision,
       approvedArtifact: null,
-      updatedAt: clock(),
+      updatedAt: now,
     };
     if (!readinessDecision.applicationReady) {
       await save(reviewed);
@@ -1721,7 +1817,7 @@ export function createOrchestrationEngine(
       approval: "approved" as const,
       currentStep: null,
       approvedArtifact: approvedArtifactBinding(snapshot.artifact),
-      updatedAt: clock(),
+      updatedAt: now,
     };
     await saveAndEmit(updated, "user.approved");
     await emit(updated, "state.changed", { to: "approved" });
@@ -1742,11 +1838,12 @@ export function createOrchestrationEngine(
     if (snapshot.state === "exported") return snapshot;
     if (snapshot.approval !== "approved")
       throw new Error("Only an approved run can be marked as exported.");
+    const now = clock();
     const updated = {
-      ...snapshot,
+      ...settledForTransition(snapshot, now),
       state: "exported" as const,
       currentStep: null,
-      updatedAt: clock(),
+      updatedAt: now,
     };
     await saveAndEmit(updated, "user.exported");
     await emit(updated, "state.changed", { to: "exported" });
@@ -1780,6 +1877,7 @@ export function createOrchestrationEngine(
     if (exhaustedReason !== undefined) {
       throw new Error(`Cannot request an adjudicated revision: ${exhaustedReason}.`);
     }
+    const settled = settledForTransition(snapshot, now);
 
     let report: IndependentReadinessReport;
     try {
@@ -1826,14 +1924,15 @@ export function createOrchestrationEngine(
       pendingRevisionRound: null,
     });
     const staged = await save({
-      ...snapshot,
+      ...settled,
       adjudicationRuntime: runtime,
       readinessDecision: null,
       approvedArtifact: null,
       updatedAt: now,
     });
+    const activated = activatedForTransition(staged, now);
     const updated = {
-      ...staged,
+      ...activated,
       state: "revising" as const,
       approval: "rejected" as const,
       round: snapshot.round + 1,
@@ -1869,8 +1968,14 @@ export function createOrchestrationEngine(
         `Maximum round limit reached (${snapshot.budget.maxRounds}). Increase the workspace limit before requesting another revision.`,
       );
     }
+    const now = clock();
+    const exhaustedReason = budgetReason(snapshot, now);
+    if (exhaustedReason !== undefined) {
+      throw new Error(`Cannot request revision: ${exhaustedReason}.`);
+    }
+    const activated = activatedForTransition(snapshot, now);
     const updated = {
-      ...snapshot,
+      ...activated,
       state: "revising" as const,
       approval: "rejected" as const,
       round: snapshot.round + 1,
@@ -1878,7 +1983,7 @@ export function createOrchestrationEngine(
       adjudicationRuntime: null,
       readinessDecision: null,
       approvedArtifact: null,
-      updatedAt: clock(),
+      updatedAt: now,
     };
     await saveAndEmit(updated, "user.revision-requested");
     await emit(updated, "state.changed", { to: "revising" });
@@ -1909,15 +2014,16 @@ export function createOrchestrationEngine(
     ) {
       throw new Error("This run is not eligible for round-limit recovery.");
     }
+    const now = clock();
     const updated = {
-      ...snapshot,
+      ...settledForTransition(snapshot, now),
       round: previousRound,
       state: "awaiting-approval" as const,
       currentStep: null,
       approval: "pending" as const,
       readinessDecision: null,
       approvedArtifact: null,
-      updatedAt: clock(),
+      updatedAt: now,
       lastError: null,
     };
     await saveAndEmit(updated, "user.round-budget-recovered", {
@@ -1951,6 +2057,7 @@ export interface OrchestrationPort {
 }
 
 export * from "./adjudication.js";
+export * from "./duration-accounting.js";
 export type {
   ApprovedArtifactBinding,
   BuildApplicationReadinessDecisionInput,

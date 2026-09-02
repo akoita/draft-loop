@@ -1,5 +1,11 @@
 import { type ContextSnapshot, createContextSnapshot, createWorkspace } from "@draft-loop/domain";
+import { buildIndependentReadinessReport } from "@draft-loop/evaluations";
 import type { DraftArtifact } from "@draft-loop/schemas";
+import {
+  type IndependentReadinessReport,
+  independentReadinessReportSchema,
+  readinessDimensions,
+} from "@draft-loop/schemas";
 import type { JsonValue, RunSnapshotRecordInput } from "@draft-loop/storage";
 import { describe, expect, it, vi } from "vitest";
 
@@ -194,6 +200,55 @@ function engineFixture(
     ...(options.retrieval ? { retrieval: options.retrieval as never } : {}),
   });
   return { engine, author, critic, store };
+}
+
+class FailOnRunSnapshotSaveStore extends InMemoryRunStore {
+  public saveCalls = 0;
+  public failOnSaveCall = Number.POSITIVE_INFINITY;
+
+  public override async saveRun(snapshot: RunSnapshot): Promise<void> {
+    this.saveCalls += 1;
+    if (this.saveCalls === this.failOnSaveCall) {
+      throw new Error("synthetic second run snapshot save failure");
+    }
+    await super.saveRun(snapshot);
+  }
+}
+
+function adjudicationReport(): IndependentReadinessReport {
+  return independentReadinessReportSchema.parse(
+    buildIndependentReadinessReport({
+      metadata: {
+        contextSnapshotId: "context-1",
+        artifact: { id: "artifact-1", version: 1 },
+        createdAt: timestamp,
+      },
+      summary: "A bounded readiness report for the source artifact.",
+      independentReview: {
+        authorLineage: "anthropic:author-test",
+        criticLineage: "openai:critic-test",
+        lineagesDistinct: true,
+        required: true,
+      },
+      inputAssessment: { status: "complete", missingInputs: [] as string[] },
+      evaluation: {
+        scores: readinessDimensions.map((dimension) => ({
+          dimension,
+          score: 0.8,
+          rationale: `Score rationale for ${dimension}.`,
+        })),
+        thresholdResults: readinessDimensions.map((dimension) => ({
+          dimension,
+          score: 0.8,
+          threshold: 0.7,
+          meets: true,
+        })),
+        meetsRubric: true,
+      },
+      deterministicFindings: [],
+      criticFindings: [],
+    }),
+  );
 }
 
 function request(
@@ -1284,5 +1339,224 @@ describe("durable orchestration", () => {
     });
     expect(retrieval.queryEvidence).toHaveBeenCalledOnce();
     expect(author).not.toHaveBeenCalled();
+  });
+
+  it("accounts exact active author and critic time against the duration cap", async () => {
+    let now = timestamp;
+    const { engine, store } = engineFixture({
+      now: () => now,
+      author: async () => {
+        now = "2026-08-12T10:00:00.100Z";
+        return execution(artifact(), "anthropic", "author-test");
+      },
+      critic: async () => {
+        now = "2026-08-12T10:00:00.250Z";
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+
+    const reviewed = await engine.start(request({ budget: { maxRounds: 3, maxDurationMs: 250 } }));
+
+    expect(reviewed).toMatchObject({
+      state: "awaiting-approval",
+      durationAccounting: { activeDurationMs: 250, activeSince: null },
+    });
+    await expect(engine.requestRevision("run-1")).rejects.toThrow(/maximum duration budget/i);
+    expect(await store.loadRun("run-1")).toEqual(reviewed);
+  });
+
+  it("excludes a long approval wait before resuming active revision work", async () => {
+    let now = timestamp;
+    let authorCalls = 0;
+    let criticCalls = 0;
+    const { engine, author, critic } = engineFixture({
+      now: () => now,
+      author: async () => {
+        authorCalls += 1;
+        now = authorCalls === 1 ? "2026-08-12T10:00:00.100Z" : "2026-08-12T11:00:00.050Z";
+        return execution(artifact(), "anthropic", "author-test");
+      },
+      critic: async () => {
+        criticCalls += 1;
+        now = criticCalls === 1 ? "2026-08-12T10:00:00.200Z" : "2026-08-12T11:00:00.050Z";
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+
+    const reviewed = await engine.start(request({ budget: { maxRounds: 3, maxDurationMs: 300 } }));
+    now = "2026-08-12T11:00:00.000Z";
+    const revision = await engine.requestRevision("run-1");
+    expect(revision.durationAccounting).toEqual({
+      activeDurationMs: 200,
+      activeSince: "2026-08-12T11:00:00.000Z",
+    });
+
+    now = "2026-08-12T11:00:00.050Z";
+    const resumed = await engine.resume("run-1", { context: context() });
+
+    expect(reviewed.durationAccounting).toEqual({
+      activeDurationMs: 200,
+      activeSince: null,
+    });
+    expect(resumed).toMatchObject({
+      state: "awaiting-approval",
+      durationAccounting: { activeDurationMs: 250, activeSince: null },
+    });
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(critic).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves duration accounting across pause and a fresh engine instance", async () => {
+    let now = timestamp;
+    const store = new InMemoryRunStore();
+    const first = engineFixture({ store, now: () => now });
+    await first.engine.begin(request({ budget: { maxRounds: 3, maxDurationMs: 300 } }));
+
+    now = "2026-08-12T10:00:00.100Z";
+    const paused = await first.engine.pause("run-1");
+    expect(paused.durationAccounting).toEqual({
+      activeDurationMs: 100,
+      activeSince: null,
+    });
+
+    now = "2026-08-12T10:00:01.000Z";
+    const second = engineFixture({
+      store,
+      now: () => now,
+      author: async () => {
+        now = "2026-08-12T10:00:01.100Z";
+        return execution(artifact(), "anthropic", "author-test");
+      },
+      critic: async () => {
+        now = "2026-08-12T10:00:01.200Z";
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+    const resumed = await second.engine.resume("run-1", { context: context() });
+
+    expect(resumed).toMatchObject({
+      state: "awaiting-approval",
+      durationAccounting: { activeDurationMs: 300, activeSince: null },
+    });
+  });
+
+  it("excludes provider-error retry waits while retaining failed active time", async () => {
+    let now = timestamp;
+    let attempts = 0;
+    const { engine, author } = engineFixture({
+      now: () => now,
+      author: async () => {
+        attempts += 1;
+        if (attempts === 1) {
+          now = "2026-08-12T10:00:00.100Z";
+          throw Object.assign(new Error("temporary failure"), { code: "timeout" });
+        }
+        now = "2026-08-12T10:00:01.100Z";
+        return execution(artifact(), "anthropic", "author-test");
+      },
+      critic: async () => {
+        now = "2026-08-12T10:00:01.200Z";
+        return execution({ findings: [] }, "openai", "critic-test");
+      },
+    });
+
+    const failed = await engine.start(request({ budget: { maxRounds: 3, maxDurationMs: 300 } }));
+    expect(failed).toMatchObject({
+      state: "provider-error",
+      durationAccounting: { activeDurationMs: 100, activeSince: null },
+    });
+
+    now = "2026-08-12T10:00:01.000Z";
+    const recovered = await engine.resume("run-1", { context: context() });
+
+    expect(recovered).toMatchObject({
+      state: "awaiting-approval",
+      durationAccounting: { activeDurationMs: 300, activeSince: null },
+    });
+    expect(author).toHaveBeenCalledTimes(2);
+  });
+
+  it("rejects an over-budget legacy approval snapshot without mutation or provider calls", async () => {
+    const now = "2026-08-12T10:00:01.000Z";
+    const store = new InMemoryRunStore();
+    const legacy: RunSnapshot = {
+      ...pausedSnapshot(),
+      state: "awaiting-approval",
+      currentStep: null,
+      artifact: artifact(),
+      budget: { maxRounds: 3, maxDurationMs: 250 },
+      executionHistory: [critiqueExecution()],
+    };
+    await store.saveRun(legacy);
+    const { engine, author, critic } = engineFixture({ store, now: () => now });
+
+    await expect(engine.requestRevision("run-1")).rejects.toThrow(/maximum duration budget/i);
+    expect(await store.loadRun("run-1")).toEqual(legacy);
+    expect(author).not.toHaveBeenCalled();
+    expect(critic).not.toHaveBeenCalled();
+  });
+
+  it("persists duration accounting through the storage adapter payload", async () => {
+    const values = new Map<string, string>();
+    const snapshots: RunSnapshotRecordInput[] = [];
+    const storage = {
+      get: async (key: string) => values.get(key),
+      set: async (key: string, value: string) => {
+        values.set(key, value);
+      },
+      appendAuditEvent: async () => undefined,
+      listAuditEvents: async () => [],
+      saveRunSnapshot: async (input: RunSnapshotRecordInput) => {
+        snapshots.push(input);
+      },
+    };
+    const snapshot: RunSnapshot = {
+      ...pausedSnapshot(),
+      durationAccounting: { activeDurationMs: 123, activeSince: null },
+    };
+
+    await createStorageRunStore(storage).saveRun(snapshot);
+    const restored = await createStorageRunStore(storage).loadRun("run-1");
+
+    expect(restored).toEqual(snapshot);
+    expect(snapshots[0]?.payload).toMatchObject({
+      durationAccounting: { activeDurationMs: 123, activeSince: null },
+    });
+  });
+
+  it("keeps an adjudicated staging snapshot inactive if the second save fails", async () => {
+    let now = timestamp;
+    const store = new FailOnRunSnapshotSaveStore();
+    const fixture = engineFixture({ store, now: () => now });
+    await fixture.engine.start(request({ budget: { maxRounds: 3, maxDurationMs: 1_000 } }));
+    store.failOnSaveCall = store.saveCalls + 2;
+
+    await expect(
+      fixture.engine.requestAdjudicatedRevision("run-1", {
+        report: adjudicationReport(),
+        decisions: [],
+      }),
+    ).rejects.toThrow(/second run snapshot save failure/i);
+
+    const staged = await store.loadRun("run-1");
+    expect(staged).toMatchObject({
+      state: "awaiting-approval",
+      currentStep: null,
+      durationAccounting: { activeDurationMs: 0, activeSince: null },
+      adjudicationRuntime: { pendingRevisionRound: null },
+    });
+
+    now = "2026-08-12T11:00:00.000Z";
+    const reloaded = engineFixture({ store, now: () => now });
+    const waited = await reloaded.engine.resume("run-1", { context: context() });
+    expect(waited).toMatchObject({
+      state: "awaiting-approval",
+      durationAccounting: { activeDurationMs: 0, activeSince: null },
+    });
+    const revision = await reloaded.engine.requestRevision("run-1");
+    expect(revision).toMatchObject({
+      state: "revising",
+      durationAccounting: { activeDurationMs: 0, activeSince: now },
+    });
   });
 });
