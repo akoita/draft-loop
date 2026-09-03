@@ -286,6 +286,7 @@ function structuredOutput<Output extends JsonValue>(
       "The provider returned invalid JSON output.",
       {
         retryable: false,
+        failureStage: "transport-parsing",
         diagnostics: [{ code: "invalid_json", path }],
       },
     );
@@ -304,6 +305,7 @@ function parseJson<Output extends JsonValue>(
       "The provider returned no structured output.",
       {
         retryable: false,
+        failureStage: "transport-parsing",
         diagnostics: [{ code: "missing_output", path }],
       },
     );
@@ -318,6 +320,7 @@ function parseJson<Output extends JsonValue>(
       "The provider returned invalid JSON output.",
       {
         retryable: false,
+        failureStage: "transport-parsing",
         diagnostics: [{ code: "invalid_json", path }],
       },
     );
@@ -537,7 +540,11 @@ function parseClaudeResult<Output extends JsonValue>(
       "anthropic",
       "invalid-response",
       "The user-session runtime attempted prohibited tool use.",
-      { retryable: false, diagnostics: [{ code: "tool_use_reported", path: "stdout" }] },
+      {
+        retryable: false,
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "tool_use_reported", path: "stdout" }],
+      },
     );
   }
   if (response.is_error === true) {
@@ -557,7 +564,11 @@ function parseClaudeResult<Output extends JsonValue>(
       "anthropic",
       "invalid-response",
       "The user-session runtime returned a malformed response.",
-      { retryable: false, diagnostics: [{ code: "malformed_runtime_response", path: "stdout" }] },
+      {
+        retryable: false,
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "malformed_runtime_response", path: "stdout" }],
+      },
     );
   }
   return {
@@ -702,6 +713,7 @@ function parseCodexEvents(text: string): {
       "The user-session runtime returned no events.",
       {
         retryable: false,
+        failureStage: "transport-parsing",
         diagnostics: [{ code: "missing_events", path: "stdout" }],
       },
     );
@@ -721,7 +733,11 @@ function parseCodexEvents(text: string): {
         "openai",
         "invalid-response",
         "The user-session runtime returned a malformed event.",
-        { retryable: false, diagnostics: [{ code: "malformed_event", path: `stdout.${index}` }] },
+        {
+          retryable: false,
+          failureStage: "transport-parsing",
+          diagnostics: [{ code: "malformed_event", path: `stdout.${index}` }],
+        },
       );
     }
     if (!permittedCodexEventTypes.has(event.type)) {
@@ -729,7 +745,11 @@ function parseCodexEvents(text: string): {
         "openai",
         "invalid-response",
         "The user-session runtime reported a prohibited event.",
-        { retryable: false, diagnostics: [{ code: "prohibited_event", path: `stdout.${index}` }] },
+        {
+          retryable: false,
+          failureStage: "transport-parsing",
+          diagnostics: [{ code: "prohibited_event", path: `stdout.${index}` }],
+        },
       );
     }
     if (event.type === "thread.started") {
@@ -738,7 +758,7 @@ function parseCodexEvents(text: string): {
           "openai",
           "invalid-response",
           "The user-session runtime returned a malformed thread event.",
-          { retryable: false },
+          { retryable: false, failureStage: "transport-parsing" },
         );
       }
       threadId = event.thread_id;
@@ -756,6 +776,7 @@ function parseCodexEvents(text: string): {
           "The user-session runtime reported a prohibited item.",
           {
             retryable: false,
+            failureStage: "transport-parsing",
             diagnostics: [{ code: "prohibited_item", path: `stdout.${index}.item` }],
           },
         );
@@ -775,6 +796,7 @@ function parseCodexEvents(text: string): {
           "The user-session runtime returned malformed usage.",
           {
             retryable: false,
+            failureStage: "transport-parsing",
             diagnostics: [{ code: "malformed_usage", path: `stdout.${index}.usage` }],
           },
         );
@@ -788,7 +810,11 @@ function parseCodexEvents(text: string): {
       "openai",
       "invalid-response",
       "The user-session runtime returned an incomplete event stream.",
-      { retryable: false, diagnostics: [{ code: "incomplete_events", path: "stdout" }] },
+      {
+        retryable: false,
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "incomplete_events", path: "stdout" }],
+      },
     );
   }
   return { inputTokens, outputTokens, threadId };

@@ -93,7 +93,7 @@ import {
 import OpenAI from "openai";
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
-import { buildAuthorArtifact } from "./author-output.js";
+import { buildAuthorArtifact, invalidAuthorProposalError } from "./author-output.js";
 import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
@@ -1969,46 +1969,6 @@ function responseExecution<T>(response: ModelResponse<JsonObject>, output: T): A
     estimatedUsd: response.cost.estimatedUsd,
     completedAt: timestamp(),
   };
-}
-
-function proposalDiagnostics(
-  error: unknown,
-): readonly { readonly code: string; readonly path: string }[] {
-  if (typeof error !== "object" || error === null || !("issues" in error)) return [];
-  const issues = (error as { readonly issues?: unknown }).issues;
-  if (!Array.isArray(issues)) return [];
-  return issues.slice(0, 8).flatMap((issue) => {
-    if (typeof issue !== "object" || issue === null) return [];
-    const candidate = issue as { readonly code?: unknown; readonly path?: unknown };
-    if (typeof candidate.code !== "string" || !Array.isArray(candidate.path)) return [];
-    const path = candidate.path
-      .slice(0, 12)
-      .filter(
-        (segment): segment is string | number =>
-          typeof segment === "number" ||
-          (typeof segment === "string" && /^[A-Za-z][A-Za-z0-9_-]*$/u.test(segment)),
-      )
-      .join(".");
-    return [{ code: candidate.code.slice(0, 64), path: path.slice(0, 160) }];
-  });
-}
-
-function invalidAuthorProposalError(
-  response: ModelResponse<JsonObject>,
-  error: unknown,
-): ProviderAdapterError {
-  return new ProviderAdapterError(
-    response.provider,
-    "invalid-response",
-    "The author returned an invalid content proposal.",
-    response.providerRequestId === null
-      ? { retryable: true, diagnostics: proposalDiagnostics(error) }
-      : {
-          retryable: true,
-          requestId: response.providerRequestId,
-          diagnostics: proposalDiagnostics(error),
-        },
-  );
 }
 
 function invalidCritiqueError(response: ModelResponse<JsonObject>): ProviderAdapterError {

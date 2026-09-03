@@ -3,8 +3,17 @@ import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { extractProtectedValues } from "./author-grounding.js";
 
+export const factualInvariantIssueCodes = [
+  "missing_evidence",
+  "unsupported_claim",
+  "factual_invariant_violation",
+] as const;
+
+export type FactualInvariantIssueCode = (typeof factualInvariantIssueCodes)[number];
+
 export interface CompleteCvProposalIssue {
   readonly path: PropertyKey[];
+  readonly code: FactualInvariantIssueCode;
   readonly message: string;
 }
 
@@ -41,6 +50,7 @@ export function completeCvProposalIssues(
         const path = ["sections", sectionIndex, "blocks", blockIndex, "claims", claimIndex];
         if (claim.evidenceChunkIds.length === 0) {
           issues.push({
+            code: "missing_evidence",
             path: [...path, "evidenceChunkIds"],
             message: "substantive CV claims require candidate evidence",
           });
@@ -52,6 +62,7 @@ export function completeCvProposalIssues(
         const related = meaningfulTokens(claim.text).some((token) => evidence.includes(token));
         if (!related) {
           issues.push({
+            code: "unsupported_claim",
             path: [...path, "evidenceChunkIds"],
             message: "cited evidence does not support the CV claim",
           });
@@ -59,6 +70,7 @@ export function completeCvProposalIssues(
         for (const value of extractProtectedValues(claim.text)) {
           if (!evidence.includes(normalized(value))) {
             issues.push({
+              code: "factual_invariant_violation",
               path: [...path, "text"],
               message: "CV claim changes a factual invariant absent from cited evidence",
             });

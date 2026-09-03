@@ -422,9 +422,12 @@ to every user-session subprocess. Authoring completed on attempt three and the
 critic on attempt one. After the candidate confirmed two accepts, two rejects,
 and six nuanced decisions, all three revision calls returned before timeout but
 failed structured-response validation. The run exhausted after 959 active
-seconds without a revised artifact or second critique. Issue #293 owns
-content-free failure-stage classification and the narrow correction before
-another live observation. Keep #75 unvalidated and leave #250 blocked.
+seconds without a revised artifact or second critique. Issue #293 delivered
+content-free failure-stage classification (`transport-parsing`,
+`response-schema-validation`, `artifact-schema-validation`,
+`factual-invariant-rejection`) and sanitized deterministic 10-finding carrier
+verification before another live observation. Keep #75 unvalidated and leave #250
+blocked.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -526,6 +529,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-04 | Delivered #293 content-free failure-stage classification for adjudicated-revision validation. | The runtime and provider error contracts distinguish transport parsing, response-schema validation, artifact-schema validation, and factual-invariant rejection without exposing prose or private data; sanitized deterministic tests verify the ten-finding carrier shape and safe recovery. Parity comparison #75 and release prep #250 remain unvalidated pending the next live pilot observation. |
 | 2026-09-02 | Recorded #291 as indeterminate after the declared request timeout enabled a complete initial author/critic round but three confirmed-adjudication revision responses failed validation. | The exact two-accept, two-reject, six-nuance package and two accepted effects persisted before provider execution. The run exhausted after 959 active seconds without timeout, authentication, credit, or quota failure. #293 owns safe failure-stage classification and correction; #75 and #250 remain blocked. |
 | 2026-09-02 | Recorded #290 as indeterminate after exact candidate adjudication staged successfully but revision execution exhausted its attempts. | Migration 26 persisted both version-1 artifact lineages and the confirmed one-accept, two-reject, nine-nuance package. One incorrect API-key attempt and two authenticated 120-second defaults produced no revision; this was not a credit failure. #291 must use the existing explicit 20-minute request timeout before #75 or #250 can advance. |
 | 2026-09-02 | Implemented the bounded multi-run artifact-history fix #287; landing remains subject to review. | Distinct immutable artifact IDs can each start at version 1 in one workspace, while migration 26 preserves dependent history and foreign-key/immutability safeguards. After #287 lands, the materially different #286 findings still require review; #75 and #250 remain blocked. |
