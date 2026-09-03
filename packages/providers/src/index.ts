@@ -127,10 +127,20 @@ export type ProviderErrorCode =
   | "policy"
   | "unknown";
 
+export const providerFailureStages = [
+  "transport-parsing",
+  "response-schema-validation",
+  "artifact-schema-validation",
+  "factual-invariant-rejection",
+] as const;
+
+export type ProviderFailureStage = (typeof providerFailureStages)[number];
+
 export interface ProviderErrorMetadata {
   readonly status?: number;
   readonly requestId?: string;
   readonly retryAfterMs?: number;
+  readonly failureStage?: ProviderFailureStage;
   readonly diagnostics?: readonly ProviderValidationDiagnostic[];
 }
 
@@ -146,6 +156,7 @@ export class ProviderAdapterError extends Error {
   readonly status: number | null;
   readonly requestId: string | null;
   readonly retryAfterMs: number | null;
+  readonly failureStage: ProviderFailureStage | null;
   readonly diagnostics: readonly ProviderValidationDiagnostic[];
   readonly metadata: ProviderErrorMetadata;
 
@@ -158,6 +169,7 @@ export class ProviderAdapterError extends Error {
       readonly status?: number;
       readonly requestId?: string;
       readonly retryAfterMs?: number;
+      readonly failureStage?: ProviderFailureStage;
       readonly diagnostics?: readonly ProviderValidationDiagnostic[];
     } = {},
   ) {
@@ -169,11 +181,13 @@ export class ProviderAdapterError extends Error {
     this.status = options.status ?? null;
     this.requestId = options.requestId ?? null;
     this.retryAfterMs = sanitizeRetryAfterMs(options.retryAfterMs) ?? null;
+    this.failureStage = options.failureStage ?? null;
     this.diagnostics = options.diagnostics ?? [];
     this.metadata = {
       ...(options.status === undefined ? {} : { status: options.status }),
       ...(options.requestId === undefined ? {} : { requestId: options.requestId }),
       ...(this.retryAfterMs === null ? {} : { retryAfterMs: this.retryAfterMs }),
+      ...(this.failureStage === null ? {} : { failureStage: this.failureStage }),
       ...(options.diagnostics === undefined ? {} : { diagnostics: options.diagnostics }),
     };
   }
@@ -390,6 +404,7 @@ function parseJson<Output extends JsonValue>(
       "The provider returned no structured output.",
       {
         retryable: false,
+        failureStage: "transport-parsing",
         diagnostics: [{ code: "missing_output", path: outputPath }],
       },
     );
@@ -404,6 +419,7 @@ function parseJson<Output extends JsonValue>(
       "The provider returned invalid JSON output.",
       {
         retryable: false,
+        failureStage: "transport-parsing",
         diagnostics: [{ code: "invalid_json", path: outputPath }],
       },
     );

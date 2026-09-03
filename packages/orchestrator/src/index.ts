@@ -171,6 +171,15 @@ export interface ExecutionRecord<T = DraftArtifact | Critique> {
   readonly adjudicatedRevisionTrace?: AdjudicatedRevisionTrace;
 }
 
+export const runFailureStages = [
+  "transport-parsing",
+  "response-schema-validation",
+  "artifact-schema-validation",
+  "factual-invariant-rejection",
+] as const;
+
+export type RunFailureStage = (typeof runFailureStages)[number];
+
 export interface RunError {
   readonly code: string;
   readonly message: string;
@@ -183,6 +192,8 @@ export interface RunError {
   /** Absolute, content-free time before which a retry must not be attempted. */
   readonly retryNotBefore?: string;
   readonly providerRequestId: string | null;
+  readonly failureStage?: RunFailureStage;
+  readonly failureReason?: RunFailureStage;
   readonly diagnostics?: readonly RunErrorDiagnostic[];
 }
 
@@ -194,6 +205,7 @@ export interface RunErrorDiagnostic {
 /** Content-free feedback from a prior retryable author or revision failure. */
 export interface AuthorRetryFeedback {
   readonly failureCode: string;
+  readonly failureStage?: RunFailureStage;
   readonly diagnostics?: readonly RunErrorDiagnostic[];
 }
 
@@ -510,6 +522,8 @@ function providerFailure(
           readonly retryable?: unknown;
           readonly retryAfterMs?: unknown;
           readonly requestId?: unknown;
+          readonly failureStage?: unknown;
+          readonly failureReason?: unknown;
           readonly diagnostics?: unknown;
         })
       : {};
@@ -528,6 +542,16 @@ function providerFailure(
     candidate.retryAfterMs ?? (code === "rate-limit" ? 5_000 : undefined),
     now,
   );
+  const rawFailureStage =
+    typeof candidate.failureStage === "string"
+      ? candidate.failureStage
+      : typeof candidate.failureReason === "string"
+        ? candidate.failureReason
+        : undefined;
+  const failureStage =
+    rawFailureStage !== undefined && runFailureStages.includes(rawFailureStage as RunFailureStage)
+      ? (rawFailureStage as RunFailureStage)
+      : undefined;
   const diagnostics = Array.isArray(candidate.diagnostics)
     ? candidate.diagnostics.slice(0, 8).flatMap((diagnostic): RunErrorDiagnostic[] => {
         if (typeof diagnostic !== "object" || diagnostic === null) return [];
@@ -556,6 +580,7 @@ function providerFailure(
     retryable,
     ...(retryAt === undefined ? {} : { retryNotBefore: retryAt }),
     providerRequestId: safeProviderRequestId(candidate.requestId),
+    ...(failureStage === undefined ? {} : { failureStage, failureReason: failureStage }),
     diagnostics,
   };
 }
@@ -773,9 +798,15 @@ class InvalidAdjudicationRuntimeError extends Error {
 }
 
 class InvalidAdjudicatedRevisionResponseError extends Error {
-  constructor() {
+  readonly diagnostics: readonly RunErrorDiagnostic[];
+  constructor(
+    diagnostics: readonly RunErrorDiagnostic[] = [
+      { code: "invalid_lineage", path: "revisedArtifact" },
+    ],
+  ) {
     super("The adjudicated revision response is invalid.");
     this.name = "InvalidAdjudicatedRevisionResponseError";
+    this.diagnostics = diagnostics;
   }
 }
 
@@ -787,7 +818,23 @@ function deriveAdjudicatedRevisionTrace(
 ): AdjudicatedRevisionTrace {
   const parsedRevisedArtifact = draftArtifactSchema.safeParse(revisedArtifact);
   if (!parsedRevisedArtifact.success) {
-    throw new InvalidAdjudicatedRevisionResponseError();
+    const diagnostics = parsedRevisedArtifact.error.issues.slice(0, 8).map((issue) => {
+      const code = issue.code.slice(0, 64);
+      const path = issue.path
+        .slice(0, 12)
+        .filter(
+          (segment): segment is string | number =>
+            typeof segment === "number" ||
+            (typeof segment === "string" && /^[A-Za-z][A-Za-z0-9_-]*$/u.test(segment)),
+        )
+        .join(".");
+      return { code, path: path.slice(0, 160) || "revisedArtifact" };
+    });
+    throw new InvalidAdjudicatedRevisionResponseError(
+      diagnostics.length > 0
+        ? diagnostics
+        : [{ code: "invalid_artifact_schema", path: "revisedArtifact" }],
+    );
   }
   try {
     return traceAdjudicatedRevision({
@@ -797,8 +844,18 @@ function deriveAdjudicatedRevisionTrace(
       createdAt,
       acceptedEffectOverrides: pending.acceptedEffectOverrides,
     });
-  } catch {
-    throw new InvalidAdjudicatedRevisionResponseError();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const code = message.includes("override")
+      ? "unused_override"
+      : message.includes("parent")
+        ? "invalid_parent"
+        : message.includes("version")
+          ? "invalid_version"
+          : message.includes("distinct")
+            ? "identical_id"
+            : "invalid_lineage";
+    throw new InvalidAdjudicatedRevisionResponseError([{ code, path: "revisedArtifact" }]);
   }
 }
 
@@ -1386,7 +1443,12 @@ export function createOrchestrationEngine(
       const failureNow = clock();
       const failure = providerFailure(
         error instanceof InvalidAdjudicatedRevisionResponseError
-          ? { code: "invalid-response", retryable: false }
+          ? {
+              code: "invalid-response",
+              retryable: false,
+              failureStage: "artifact-schema-validation",
+              diagnostics: error.diagnostics,
+            }
           : executionFailure(error, signal),
         context,
         step,
@@ -1537,6 +1599,9 @@ export function createOrchestrationEngine(
         const diagnostics = current.lastError.diagnostics;
         retryFeedback = {
           failureCode: current.lastError.code,
+          ...(current.lastError.failureStage === undefined
+            ? {}
+            : { failureStage: current.lastError.failureStage }),
           ...(diagnostics === undefined
             ? {}
             : {

@@ -131,6 +131,7 @@ describe("author evidence citation completion", () => {
     expect(completed.sections[0]?.blocks[0]?.claims[0]?.evidenceChunkIds).toEqual(["chunk-2024"]);
     expect(completeCvProposalIssues(completed, evidence)).toEqual([
       {
+        code: "factual_invariant_violation",
         path: ["sections", 0, "blocks", 0, "claims", 0, "text"],
         message: "CV claim changes a factual invariant absent from cited evidence",
       },

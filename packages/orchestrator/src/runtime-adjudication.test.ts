@@ -643,7 +643,13 @@ describe("adjudicated revision runtime boundary", () => {
     expect(fixture.author).toHaveBeenCalledTimes(4);
     expect(failed).toMatchObject({
       state: "provider-error",
-      lastError: { code: "invalid-response", retryable: false, attempt: 3 },
+      lastError: {
+        code: "invalid-response",
+        failureStage: "artifact-schema-validation",
+        diagnostics: [{ code: "invalid_parent", path: "revisedArtifact" }],
+        retryable: false,
+        attempt: 3,
+      },
     });
     expect(failed.adjudicationRuntime?.trace).toBeNull();
     expect(failed.executionHistory.filter((record) => record.step === "revision")).toEqual(

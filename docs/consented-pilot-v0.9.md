@@ -100,8 +100,10 @@ response validation. The run exhausted its revision-attempt boundary after
 959 seconds of cumulative active provider time, inside the 20-minute cap. This
 was not an authentication, timeout, credit, or quota failure. No revised
 artifact, second critique, approval, export, or submission occurred. Issue #293
-owns the bounded content-free classification and correction of this remaining
-revision-validation blocker.
+delivered content-free failure-stage classification (`transport-parsing`,
+`response-schema-validation`, `artifact-schema-validation`,
+`factual-invariant-rejection`) and sanitized 10-finding deterministic
+verification before another live observation.
 
 ## Predeclared comparison gate
 

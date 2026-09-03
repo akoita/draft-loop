@@ -7,16 +7,105 @@ import {
 } from "@draft-loop/artifacts";
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import {
+  type JsonObject,
+  type ModelResponse,
+  ProviderAdapterError,
+  type ProviderFailureStage,
+  type ProviderValidationDiagnostic,
+} from "@draft-loop/providers";
+import {
   type ArtifactEvidenceReference,
   type AuthorArtifactProposal,
   authorArtifactProposalSchema,
   type DraftArtifact,
   type EvidenceSource,
 } from "@draft-loop/schemas";
+
 import { z } from "zod";
 
 import { completeAuthorEvidenceCitations } from "./author-evidence-completion.js";
 import { completeCvProposalIssues } from "./complete-cv.js";
+
+function proposalFailureStage(error: unknown): ProviderFailureStage {
+  if (typeof error !== "object" || error === null || !("issues" in error)) {
+    return "response-schema-validation";
+  }
+  const issues = (error as { readonly issues?: unknown }).issues;
+  if (!Array.isArray(issues)) return "response-schema-validation";
+  for (const issue of issues) {
+    if (typeof issue === "object" && issue !== null) {
+      const candidate = issue as { readonly params?: { readonly stage?: unknown } };
+      if (candidate.params?.stage === "factual-invariant-rejection") {
+        return "factual-invariant-rejection";
+      }
+      if (candidate.params?.stage === "artifact-schema-validation") {
+        return "artifact-schema-validation";
+      }
+      const issueCandidate = issue as { readonly path?: unknown; readonly message?: unknown };
+      if (
+        Array.isArray(issueCandidate.path) &&
+        issueCandidate.path.includes("evidenceChunkIds") &&
+        typeof issueCandidate.message === "string" &&
+        (issueCandidate.message.includes("not available in retrieved context") ||
+          issueCandidate.message.includes("not available in the evidence manifest"))
+      ) {
+        return "artifact-schema-validation";
+      }
+    }
+  }
+  return "response-schema-validation";
+}
+
+export function proposalDiagnostics(error: unknown): readonly ProviderValidationDiagnostic[] {
+  if (typeof error !== "object" || error === null || !("issues" in error)) return [];
+  const issues = (error as { readonly issues?: unknown }).issues;
+  if (!Array.isArray(issues)) return [];
+  return issues.slice(0, 8).flatMap((issue) => {
+    if (typeof issue !== "object" || issue === null) return [];
+    const candidate = issue as {
+      readonly code?: unknown;
+      readonly path?: unknown;
+      readonly params?: { readonly invariantCode?: unknown };
+    };
+    const issueCode =
+      typeof candidate.params?.invariantCode === "string"
+        ? candidate.params.invariantCode
+        : typeof candidate.code === "string"
+          ? candidate.code
+          : undefined;
+    if (issueCode === undefined || !Array.isArray(candidate.path)) return [];
+    const path = candidate.path
+      .slice(0, 12)
+      .filter(
+        (segment): segment is string | number =>
+          typeof segment === "number" ||
+          (typeof segment === "string" && /^[A-Za-z][A-Za-z0-9_-]*$/u.test(segment)),
+      )
+      .join(".");
+    return [{ code: issueCode.slice(0, 64), path: path.slice(0, 160) }];
+  });
+}
+
+export function invalidAuthorProposalError(
+  response: ModelResponse<JsonObject>,
+  error: unknown,
+): ProviderAdapterError {
+  if (error instanceof ProviderAdapterError) {
+    return error;
+  }
+  const failureStage = proposalFailureStage(error);
+  return new ProviderAdapterError(
+    response.provider,
+    "invalid-response",
+    "The author returned an invalid content proposal.",
+    {
+      retryable: failureStage !== "artifact-schema-validation",
+      ...(response.providerRequestId === null ? {} : { requestId: response.providerRequestId }),
+      failureStage,
+      diagnostics: proposalDiagnostics(error),
+    },
+  );
+}
 
 export interface AuthorArtifactBuildContext {
   readonly language: string;
@@ -31,10 +120,6 @@ export interface BuildAuthorArtifactOptions {
   readonly currentArtifact?: DraftArtifact | null;
   /** Injectable for deterministic tests; live runs use the current timestamp. */
   readonly createdAt?: string;
-}
-
-function validationError(path: PropertyKey[], message: string): z.ZodError {
-  return new z.ZodError([{ code: "custom", path, message }]);
 }
 
 function executionDigest(executionId: string): string {
@@ -74,17 +159,38 @@ function evidenceReference(
   };
 }
 
+function validationError(
+  path: PropertyKey[],
+  message: string,
+  stage: ProviderFailureStage = "artifact-schema-validation",
+  code = "custom",
+): z.ZodError {
+  return new z.ZodError([
+    {
+      code: "custom",
+      path,
+      message,
+      params: { stage, invariantCode: code },
+    },
+  ]);
+}
+
 function normalizeEvidence(
   proposal: AuthorArtifactProposal,
   context: AuthorArtifactBuildContext,
   retrievedEvidence: readonly ScoredEvidenceChunk[],
-): readonly (readonly ArtifactEvidenceReference[])[] {
-  const chunksById = new Map(retrievedEvidence.map((chunk) => [chunk.id, chunk] as const));
+): ArtifactEvidenceReference[][] {
+  const chunksById = new Map(retrievedEvidence.map((chunk) => [chunk.id, chunk]));
   const sourcesById = new Map(
     context.evidenceManifest.map((source) => [source.id, source] as const),
   );
   const evidenceByClaim: ArtifactEvidenceReference[][] = [];
-  const issues: z.core.$ZodIssue[] = [];
+  const issues: Array<{
+    readonly code: "custom";
+    readonly path: PropertyKey[];
+    readonly message: string;
+    readonly params?: { readonly stage: ProviderFailureStage; readonly invariantCode: string };
+  }> = [];
 
   for (const [sectionIndex, section] of proposal.sections.entries()) {
     for (const [blockIndex, block] of section.blocks.entries()) {
@@ -151,7 +257,17 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
   const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);
   const groundingIssues = completeCvProposalIssues(proposal, retrievedEvidence);
   if (groundingIssues.length > 0) {
-    throw new z.ZodError(groundingIssues.map((issue) => ({ code: "custom", ...issue })));
+    throw new z.ZodError(
+      groundingIssues.map((issue) => ({
+        code: "custom",
+        path: issue.path,
+        message: issue.message,
+        params: {
+          stage: "factual-invariant-rejection",
+          invariantCode: issue.code,
+        },
+      })),
+    );
   }
   const executionHash = executionDigest(options.executionId);
   const claimCount = proposal.sections.reduce(
@@ -218,9 +334,23 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
     decisions: [],
   };
 
-  return options.currentArtifact === null || options.currentArtifact === undefined
-    ? createArtifact(input)
-    : createArtifactVersion(options.currentArtifact, input);
+  try {
+    return options.currentArtifact === null || options.currentArtifact === undefined
+      ? createArtifact(input)
+      : createArtifactVersion(options.currentArtifact, input);
+  } catch {
+    throw new z.ZodError([
+      {
+        code: "custom",
+        path: ["revisedArtifact"],
+        message: "The revised artifact could not be created from the proposal.",
+        params: {
+          stage: "artifact-schema-validation",
+          invariantCode: "invalid_artifact_version",
+        },
+      },
+    ]);
+  }
 }
 
 /** Alias emphasizing that the function is the proposal normalization boundary. */
