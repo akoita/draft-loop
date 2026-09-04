@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-02<br>
-**Cases:** Eight bounded observations of one consented, anonymized case
+**Recorded:** 2026-09-04<br>
+**Cases:** Nine bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -105,6 +105,20 @@ delivered content-free failure-stage classification (`transport-parsing`,
 `factual-invariant-rejection`) and sanitized 10-finding deterministic
 verification before another live observation.
 
+The ninth observation under issue #296 exercised the failure-stage
+classification runtime delivered in #293 using the declared 1,200,000 ms timeout
+and standing candidate authorization. The first Anthropic author attempt failed
+local factual-invariant validation on three claim paths, classified as
+`factual-invariant-rejection`. Corrective retry feedback was applied, but attempt
+two failed three different claim paths under the same stage. Corrective feedback
+for attempt three reduced the failure to one repeated claim path, which still
+failed factual-invariant validation. The run exhausted its three author attempts
+after 313 seconds of active provider time, inside the 20-minute cap. The
+content-free failure stage (`factual-invariant-rejection`) and diagnostic
+violation paths were preserved without leaking candidate prose or private data.
+No draft was accepted, so the OpenAI critic was not invoked, and no
+adjudication, revision, approval, or export occurred.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -134,12 +148,13 @@ unresolved findings as accepted facts.
   structured-recovery observation exhausted three author attempts before
   critique; the fifth observation completed both roles on their first
   attempts; the sixth reached an accepted author result on attempt three before
-  the critic completed on attempt one; and the seventh exhausted one
+  the critic completed on attempt one; the seventh exhausted one
   authentication failure plus two default-timeout revision attempts before a
-  new artifact existed. The eighth reached author success on attempt three and
+  new artifact existed; the eighth reached author success on attempt three and
   critic success on attempt one, then exhausted three invalid-response revision
-  attempts with the declared timeout in force. Provider-reported cost remained
-  unavailable.
+  attempts with the declared timeout in force; and the ninth exhausted three
+  author attempts under the newly classified `factual-invariant-rejection`
+  stage. Provider-reported cost remained unavailable.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
 - The existing private manual CV was retained as the human baseline. It
@@ -164,8 +179,8 @@ grounding-guide observation. Issue #271 records the structured-recovery
 observation, while #275 records the post-citation-completion observation. The
 sixth observation is recorded by #286, #287 removed its typed-history storage
 blocker, and #290 records the confirmed but exhausted adjudication
-continuation. Issue #291 records the declared-timeout observation and its
-freshly confirmed but exhausted adjudication. Issue #293 owns the bounded
-revision-validation blocker before another representative observation. Issue #75
-stays open, and release-preparation issue #250 remains blocked. No approval or
-export is authorized by this result.
+continuation. Issue #291 records the declared-timeout observation, #293
+delivered content-free failure-stage classification, and #296 records the
+classified author-exhaustion observation. Issue #75 stays open, and
+release-preparation issue #250 remains blocked. No approval or export is
+authorized by this result.
