@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-04<br>
-**Cases:** Nine bounded observations of one consented, anonymized case
+**Recorded:** 2026-09-05<br>
+**Cases:** Ten bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -119,6 +119,19 @@ violation paths were preserved without leaking candidate prose or private data.
 No draft was accepted, so the OpenAI critic was not invoked, and no
 adjudication, revision, approval, or export occurred.
 
+The tenth observation under issue #298 used the declared 1,200,000 ms timeout
+and standing candidate authorization. The first Anthropic author attempt failed
+local factual-invariant validation on three claim paths (`sections.1.blocks.0.claims.3.text`,
+`sections.1.blocks.0.claims.5.text`, `sections.1.blocks.0.claims.6.text`), classified
+as `factual-invariant-rejection`. The second attempt exceeded the output-token budget
+(`output_token_budget_exceeded`). The third attempt applied concise-output feedback
+and resolved the token excess plus two of the prior factual-invariant violations, but
+failed one remaining claim path (`sections.1.blocks.0.claims.5.text`) under
+`factual-invariant-rejection`. The run exhausted its three author attempts after 412
+seconds of active provider time, inside the 20-minute cap. No draft was accepted, so
+the OpenAI critic was not called, and no adjudication, revision, approval, or export
+occurred.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -152,9 +165,10 @@ unresolved findings as accepted facts.
   authentication failure plus two default-timeout revision attempts before a
   new artifact existed; the eighth reached author success on attempt three and
   critic success on attempt one, then exhausted three invalid-response revision
-  attempts with the declared timeout in force; and the ninth exhausted three
-  author attempts under the newly classified `factual-invariant-rejection`
-  stage. Provider-reported cost remained unavailable.
+  attempts with the declared timeout in force; the ninth exhausted three
+  author attempts under `factual-invariant-rejection`; and the tenth exhausted
+  three author attempts across token-budget excess and `factual-invariant-rejection`.
+  Provider-reported cost remained unavailable.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
 - The existing private manual CV was retained as the human baseline. It
@@ -180,7 +194,7 @@ observation, while #275 records the post-citation-completion observation. The
 sixth observation is recorded by #286, #287 removed its typed-history storage
 blocker, and #290 records the confirmed but exhausted adjudication
 continuation. Issue #291 records the declared-timeout observation, #293
-delivered content-free failure-stage classification, and #296 records the
-classified author-exhaustion observation. Issue #75 stays open, and
-release-preparation issue #250 remains blocked. No approval or export is
-authorized by this result.
+delivered content-free failure-stage classification, #296 records the
+classified author-exhaustion observation, and #298 records the tenth observation.
+Issue #75 stays open, and release-preparation issue #250 remains blocked. No
+approval or export is authorized by this result.
