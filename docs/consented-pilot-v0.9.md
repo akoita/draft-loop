@@ -1,13 +1,13 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-05<br>
-**Cases:** Ten bounded observations of one consented, anonymized case
+**Recorded:** 2026-09-06<br>
+**Cases:** Eleven bounded observations of one consented, anonymized case
 
 ## Result
 
 The predeclared workflow-parity gate remains **INDETERMINATE**. The live
-workflow did not produce a revised, human-approved artifact, so these
+workflow has not produced a human-approved artifact, so these
 observations cannot establish factual parity, professional readiness, or
 reduced review effort.
 It does not validate the v0.9 product outcome and does not authorize release
@@ -132,6 +132,23 @@ seconds of active provider time, inside the 20-minute cap. No draft was accepted
 the OpenAI critic was not called, and no adjudication, revision, approval, or export
 occurred.
 
+The eleventh observation under issue #302 ran after the whole-numeric grounding
+correction in #300, using the same consented scope, model pair, and declared
+timeout. The author, independent critic, automatic revision, and second critic
+each completed on their first attempt. The durable snapshot reached human
+review in round two with artifact version 2 after 239 seconds of active
+provider time. This is the first recorded completed revision in these
+observations; it was an automatic revision, not a candidate-adjudicated one.
+
+Readiness remained false with thirteen warnings and one error: three duplicate-
+content warnings, seven uncovered requirements, an omitted transition, and
+three evidence/quality warnings. After the snapshot was durable, typed-history
+projection failed with `SQLITE_CONSTRAINT_FOREIGNKEY`. The application tried to
+save version 2 before its version-1 parent existed in typed history. The parent
+remains available in the earlier durable snapshot. Issue #303 owns the bounded
+parent-first persistence fix. No new candidate adjudication, approval, export,
+or submission occurred, and the predeclared comparison remains indeterminate.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -146,10 +163,11 @@ occurred.
 | **Overall**                   | **Indeterminate** |
 
 Private thresholds and scores remain outside the repository. The fifth,
-sixth, and eighth observations produced accepted drafts and independent
+sixth, eighth, and eleventh observations produced accepted drafts and independent
 critiques. The seventh and eighth staged exact confirmed adjudications but
-produced no revision. None cleared readiness or completed an adjudicated
-revision. The gate therefore remains indeterminate rather than treating
+produced no revision. The eleventh completed an automatic revision and second
+critique but encountered a typed-history persistence failure. None cleared
+readiness or completed an adjudicated revision. The gate remains indeterminate rather than treating
 unresolved findings as accepted facts.
 
 ## Outcome boundary
@@ -171,6 +189,11 @@ unresolved findings as accepted facts.
   Provider-reported cost remained unavailable.
 - Human approval and export were not completed. Review time, edit count, and
   user confidence were therefore unavailable.
+- The eleventh observation completed both author steps and both critic steps
+  on their first attempts, within the existing 20-minute active-provider cap.
+  It reached human review with a revised artifact preserved in the durable
+  snapshot; typed-history projection failed on the missing parent row. This
+  progress does not establish factual parity or application readiness.
 - The existing private manual CV was retained as the human baseline. It
   targets a related backend-engineering role rather than the evaluated SDK
   role, so any comparison must treat the role mismatch as a limitation. The
@@ -196,5 +219,7 @@ blocker, and #290 records the confirmed but exhausted adjudication
 continuation. Issue #291 records the declared-timeout observation, #293
 delivered content-free failure-stage classification, #296 records the
 classified author-exhaustion observation, and #298 records the tenth observation.
-Issue #75 stays open, and release-preparation issue #250 remains blocked. No
-approval or export is authorized by this result.
+Issue #302 records the eleventh observation after #300's numeric-grounding
+correction. Resolve the artifact-ancestry projection blocker in #303 before
+continuing the preserved run. Issue #75 stays open, and release-preparation
+issue #250 remains blocked. No approval or export is authorized by this result.
