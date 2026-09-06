@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-01<br>
+**Last reviewed:** 2026-09-06<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -384,32 +384,41 @@ approved fresh retry timed out during authoring because the user-session
 adapter's 120-second request limit could not use the 20-minute case budget. No
 revised, approved, or exported artifact was produced. The private manual
 baseline also targets a related but different role, which limits any future
-comparison. The bounded provider-timeout, author-grounding, and corrective
+comparison.
+
+The bounded provider-timeout, author-grounding, and corrective
 retry blockers #256, #258, and #260 are closed. The corrective observation
 under issue #262 is closed as indeterminate: it used all three author attempts,
 with output-token excess followed by two different single claim-text
 factual-invariant failures. No draft reached the critic. The per-evidence
-author-grounding guide blocker #264 then closed. The authorized observation
+author-grounding guide blocker #264 then closed.
+
+The authorized observation
 under #266 repeatedly failed before author output because structured Claude
 nonzero-exit errors were classified generically. Issue #267 delivered the
 bounded classification fix. Keep #75 unvalidated; another authorized
 comparison under #271 then reached all three author attempts. Output-token
 excess was followed by three claim-text factual-invariant paths; the final
 corrective attempt reduced them to one repeated path, but no proposal reached
-the critic. Issue #272 delivered bounded exact-value citation completion: local
+the critic.
+
+Issue #272 delivered bounded exact-value citation completion: local
 normalization may append only exact supporting retrieved chunks, while the
 unchanged validator still rejects unsupported values. The authorized
 post-completion observation under #275 then completed both provider roles on
 their first attempts and reached the human boundary. Readiness remained false
 with eight warnings and one unresolved chronology omission; the unsupported-
 claim finding was a warning rather than a factuality error. No adjudication,
-revision, approval, export, or submission occurred. Issue #277 stages the
+revision, approval, export, or submission occurred.
+
+Issue #277 stages the
 candidate's exact adjudication through the shared application/local boundary,
 and #278 preserves active provider-duration accounting across human waits and
 restart boundaries. The fresh observation under #286 used 307 seconds of
 active time, reached an accepted author draft on attempt three, and completed
 independent critique on attempt one. Its twelve findings were materially
 different from the previously confirmed nine, so no adjudication was applied.
+
 Typed history then rejected the distinct new artifact because another run in
 the workspace already held version 1. Migration 26 under #287 removed that
 storage blocker. Under #290, the candidate then confirmed one accept, two
@@ -417,12 +426,15 @@ rejects, and nine nuanced decisions; the exact package persisted before any
 provider call. The first revision attempt used an incorrect API-key default,
 and the two authenticated user-session attempts retained the 120-second
 per-request default and timed out. No revised artifact or new critique exists.
+
 The fresh observation under #291 applied the explicit 20-minute request timeout
 to every user-session subprocess. Authoring completed on attempt three and the
 critic on attempt one. After the candidate confirmed two accepts, two rejects,
 and six nuanced decisions, all three revision calls returned before timeout but
 failed structured-response validation. The run exhausted after 959 active
-seconds without a revised artifact or second critique. Issue #293 delivered
+seconds without a revised artifact or second critique.
+
+Issue #293 delivered
 content-free failure-stage classification (`transport-parsing`,
 `response-schema-validation`, `artifact-schema-validation`,
 `factual-invariant-rejection`) and sanitized deterministic 10-finding carrier
@@ -431,10 +443,20 @@ exercised that classification during a fresh same-scope author attempt: all
 three author calls returned before timeout but failed local factual-invariant
 checks, correctly classified under `factual-invariant-rejection`. The run
 exhausted after 313 seconds of active provider time without accepted author
-output, so the critic was not called. The tenth observation under #298 also
+output, so the critic was not called.
+
+The tenth observation under #298 also
 exhausted three author attempts across token-budget excess and
 `factual-invariant-rejection` after 412 active seconds. Keep #75 unvalidated and
 leave #250 blocked.
+
+Issue #300 tightens numeric grounding in citation completion and author
+validation: a number must match a whole source value, including its decimal
+part, percentage marker, or magnitude suffix. For example, `2020` cannot
+support a claimed metric of `20`. Deterministic regression coverage establishes
+this bounded safety correction; it does not explain the live author failures
+or change the indeterminate parity result. The next pilot observation remains
+pending, and release preparation stays blocked on #75.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and

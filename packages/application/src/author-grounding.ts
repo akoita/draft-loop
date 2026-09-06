@@ -1,9 +1,11 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 
+const protectedNumberPattern = /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![\p{L}\p{N}])/giu;
+
 const protectedValuePatterns = [
   /https?:\/\/[^\s)]+/giu,
   /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/gu,
-  /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![\p{L}\p{N}])/giu,
+  protectedNumberPattern,
   /\b[\p{Lu}]{2,}(?:[+-][\p{Lu}\p{N}]+)*\b/gu,
   /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu,
   /\b(?:at|for)\s+(\p{Lu}[\p{L}'’-]+)\b/gu,
@@ -23,6 +25,16 @@ interface ProtectedValueMatch {
 
 function normalizedIdentity(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US");
+}
+
+/** Match extracted numeric values as whole tokens, retaining their units. */
+export function supportsProtectedValue(evidence: string, protectedValue: string): boolean {
+  const value = normalizedIdentity(protectedValue);
+  const source = normalizedIdentity(evidence);
+  if (/^\d/u.test(value)) {
+    return [...source.matchAll(protectedNumberPattern)].some((match) => match[0] === value);
+  }
+  return source.includes(value);
 }
 
 /** Extract exact protected values in first-occurrence order without duplicates. */

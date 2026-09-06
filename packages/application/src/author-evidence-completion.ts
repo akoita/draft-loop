@@ -1,11 +1,7 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
-import { extractProtectedValues } from "./author-grounding.js";
-
-function normalizedForComparison(value: string): string {
-  return value.normalize("NFKC").toLocaleLowerCase("en-US");
-}
+import { extractProtectedValues, supportsProtectedValue } from "./author-grounding.js";
 
 function completedEvidenceChunkIds(
   claim: AuthorArtifactProposal["sections"][number]["blocks"][number]["claims"][number],
@@ -25,10 +21,10 @@ function completedEvidenceChunkIds(
   }
 
   for (const chunk of retrievedEvidence) {
-    const supportsProtectedValue = protectedValues.some((value) =>
-      normalizedForComparison(chunk.text).includes(normalizedForComparison(value)),
+    const supportsAnyValue = protectedValues.some((value) =>
+      supportsProtectedValue(chunk.text, value),
     );
-    if (!supportsProtectedValue || seen.has(chunk.id)) continue;
+    if (!supportsAnyValue || seen.has(chunk.id)) continue;
     seen.add(chunk.id);
     completedIds.push(chunk.id);
   }

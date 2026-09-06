@@ -44,6 +44,37 @@ function singleClaimProposal(
 }
 
 describe("author evidence citation completion", () => {
+  it.each(["2020", "120", "20.5", "1,020", "20%", "20k", "20m", "20b"])(
+    "does not ground a metric of 20 with the different numeric value %s",
+    (sourceValue) => {
+      const evidence = [chunk("chunk-number", `delivered ${sourceValue} projects`)];
+      const uncited = singleClaimProposal("delivered 20 projects");
+      expect(completeAuthorEvidenceCitations(uncited, evidence)).toBe(uncited);
+
+      const cited = singleClaimProposal("delivered 20 projects", true, ["chunk-number"]);
+      expect(completeCvProposalIssues(cited, evidence)).toEqual([
+        expect.objectContaining({ code: "factual_invariant_violation" }),
+      ]);
+    },
+  );
+
+  it.each([
+    ["20", "delivered 20 projects."],
+    ["20.5", "delivered 20.5 projects."],
+    ["20%", "delivered 20% of projects."],
+    ["20k", "delivered 20K projects."],
+    ["2020", "delivered projects in 2020-2024."],
+    ["20", "delivered ２０ projects."],
+  ])("retains exact numeric support for %s in %s", (value, sourceText) => {
+    const evidence = [chunk("chunk-number", sourceText)];
+    const completed = completeAuthorEvidenceCitations(
+      singleClaimProposal(`delivered ${value} projects`),
+      evidence,
+    );
+    expect(completed.sections[0]?.blocks[0]?.claims[0]?.evidenceChunkIds).toEqual(["chunk-number"]);
+    expect(completeCvProposalIssues(completed, evidence)).toEqual([]);
+  });
+
   it("matches protected values with exact NFKC and en-US lowercase comparison", () => {
     const text = "Staff Engineer";
     const proposal = singleClaimProposal(text);

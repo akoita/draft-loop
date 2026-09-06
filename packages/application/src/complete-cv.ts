@@ -1,7 +1,7 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
-import { extractProtectedValues } from "./author-grounding.js";
+import { extractProtectedValues, supportsProtectedValue } from "./author-grounding.js";
 
 export const factualInvariantIssueCodes = [
   "missing_evidence",
@@ -68,7 +68,7 @@ export function completeCvProposalIssues(
           });
         }
         for (const value of extractProtectedValues(claim.text)) {
-          if (!evidence.includes(normalized(value))) {
+          if (!supportsProtectedValue(evidence, value)) {
             issues.push({
               code: "factual_invariant_violation",
               path: [...path, "text"],
