@@ -92,7 +92,6 @@ import {
 import OpenAI from "openai";
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
-import { buildAuthorArtifact, invalidAuthorProposalError } from "./author-output.js";
 import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
@@ -137,7 +136,9 @@ import type {
 import { createOpportunityDraft } from "./opportunity-intake.js";
 import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
 import { modelFacingContext } from "./provider-context.js";
+import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
+import { responseExecution } from "./response-execution.js";
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -1956,21 +1957,6 @@ const critiqueOutputSchema: JsonObject = {
   required: ["findings"],
 };
 
-function responseExecution<T>(response: ModelResponse<JsonObject>, output: T): AgentExecution<T> {
-  return {
-    output,
-    provider: response.provider,
-    modelId: response.modelId,
-    providerRequestId: response.providerRequestId,
-    outputChecksum: response.structuredOutputSha256,
-    inputTokens: response.usage.inputTokens,
-    outputTokens: response.usage.outputTokens,
-    totalTokens: response.usage.totalTokens,
-    estimatedUsd: response.cost.estimatedUsd,
-    completedAt: timestamp(),
-  };
-}
-
 function invalidCritiqueError(response: ModelResponse<JsonObject>): ProviderAdapterError {
   return new ProviderAdapterError(
     response.provider,
@@ -2130,6 +2116,7 @@ function providerAgents(
   },
   userSessionRunners?: ProviderUserSessionRunners,
   userSessionTimeoutMs?: number,
+  authorProposalCaptureDirectory?: string,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const dataPolicy = (company: string) =>
     providerDataPolicy(company, allowProviderData, providerAuthModeConfiguration);
@@ -2195,20 +2182,14 @@ function providerAgents(
       };
       const adapter = await createAdapter(config.authorCompany, config.authorModel, "author");
       const response = await adapter.execute(request);
-      try {
-        return responseExecution(
+      return responseExecution(
+        response,
+        await buildAuthorArtifactWithCapture(
           response,
-          buildAuthorArtifact({
-            proposal: response.output,
-            executionId,
-            context,
-            currentArtifact,
-            retrievedEvidence,
-          }),
-        );
-      } catch (error) {
-        throw invalidAuthorProposalError(response, error);
-      }
+          { executionId, context, currentArtifact, retrievedEvidence },
+          authorProposalCaptureDirectory,
+        ),
+      );
     },
   } satisfies AuthorAgent;
   const critic = {
@@ -2288,6 +2269,7 @@ function engine(
   userSessionRunners?: ProviderUserSessionRunners,
   userSessionTimeoutMs?: number,
   retrieval?: RetrievalPort,
+  authorProposalCaptureDirectory?: string,
 ): OrchestrationEngine {
   const agents = needsAgents
     ? config.fixtureMode
@@ -2301,6 +2283,7 @@ function engine(
           providerAuthModeConfiguration,
           userSessionRunners,
           userSessionTimeoutMs,
+          authorProposalCaptureDirectory,
         )
     : noopAgents();
   const store = createStorageRunStore(storage);
@@ -2534,6 +2517,7 @@ interface RunOptions {
   readonly userSessionRunners?: ProviderUserSessionRunners;
   readonly userSessionTimeoutMs?: number;
   readonly signal?: AbortSignal;
+  readonly authorProposalCaptureDirectory?: string;
 }
 type OmitRunOptions<K extends keyof RunOptions> = Omit<RunOptions, K>;
 type BeginStartRunOptions = OmitRunOptions<"runId" | "signal" | "writingPolicyOverrideChecksum">;
@@ -2666,6 +2650,7 @@ async function createRun(
       options.userSessionRunners,
       options.userSessionTimeoutMs,
       candidateRetrieval?.port,
+      options.authorProposalCaptureDirectory,
     );
     const request = {
       runId,
@@ -2732,6 +2717,7 @@ export async function resumeRun(
       options.userSessionRunners,
       options.userSessionTimeoutMs,
       candidateRetrieval?.port,
+      options.authorProposalCaptureDirectory,
     );
     preflight(config, io, budget(config));
     const snapshot = await runEngine.resume(runId, {
@@ -3314,6 +3300,7 @@ export interface LocalApplicationDriverOptions {
   readonly providerClientFactories?: ProviderClientFactories;
   readonly userSessionRunners?: ProviderUserSessionRunners;
   readonly userSessionTimeoutMs?: number;
+  readonly authorProposalCaptureDirectory?: string;
 }
 
 const environmentCredentialResolver: ProviderCredentialResolver = async (provider) =>
@@ -3447,6 +3434,9 @@ export function createLocalApplicationDriver(
       ? {}
       : { providerClientFactories: options.providerClientFactories };
   const authOptions = {
+    ...(options?.authorProposalCaptureDirectory === undefined
+      ? {}
+      : { authorProposalCaptureDirectory: options.authorProposalCaptureDirectory }),
     providerAuthModeConfiguration:
       options?.providerAuthModeConfiguration ?? resolveProviderAuthModes(options?.providerAuthMode),
     ...(options?.userSessionRunners === undefined

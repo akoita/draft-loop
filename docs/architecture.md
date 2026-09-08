@@ -619,6 +619,26 @@ names also appear in the source grounding guide and require whole-token support;
 `SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
 syntactic rule, not general semantic verification.
 
+### Local rejected-author replay
+
+The local driver accepts an optional `authorProposalCaptureDirectory` for
+explicit diagnostic sessions. The selected parent directory must already exist.
+When application validation rejects a parsed author proposal, a new private
+subdirectory contains `replay.json`: the proposal, exact `buildAuthorArtifact`
+validation inputs, provider/model identity, and sanitized failure diagnostics.
+On POSIX, directories use mode `0700` and files use `0600`. Existing captures
+are never overwritten. Capture is disabled by default and has no CLI flag or
+renderer control.
+
+These files contain sensitive candidate material and source paths. The caller
+owns their retention and deletion; keep the directory outside shared repositories.
+Replay locally by passing the saved `validationInputs` to `buildAuthorArtifact`.
+Only a capture success/failure code joins normal error diagnostics; captured
+content stays out of run history and retry feedback. Capture errors preserve the
+original rejection and retry policy. Transport errors and provider token-budget
+rejections occur before this boundary and are not captured. No provider call,
+retry reset, candidate approval, or export is triggered by capture or replay.
+
 ### Author adjudication and revision trace boundary
 
 `packages/schemas` also owns the strict, versioned author-adjudication plan and
