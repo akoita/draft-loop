@@ -24,6 +24,7 @@ import {
   roundLimitRecoveryRequired,
 } from "./model.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
+import { ThemeToggle } from "./theme.js";
 
 interface ReviewWorkspaceProps {
   readonly state: DesktopReviewState;
@@ -415,6 +416,7 @@ function SideRail({
         </>
       )}
       <span className="rail-spacer" />
+      <ThemeToggle />
       <button
         className="rail-button"
         type="button"

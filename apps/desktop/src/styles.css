@@ -6,9 +6,10 @@
    own. Slate surfaces, teal for the loop's signals, amber and red reserved
    for findings. 8px panels, hairline borders, no gradients.
 
-   Two grounds. The desk is dark by default and follows prefers-color-scheme
-   into a light counterpart; the sheet is paper in both. Every rule below reads
-   the tokens, so the light theme is a token override and nothing else.
+   Two grounds. The desk is dark by default and turns light when the renderer
+   writes data-theme="light" onto the document root; the sheet is paper in both.
+   Every rule below reads the tokens, so the light theme is a token override and
+   nothing else.
    ========================================================================= */
 
 :root {
@@ -127,9 +128,13 @@
 /* =========================================================================
    The light desk
 
-   The same instrument under office light. Only token values are redefined
-   here — no component rule belongs in this block — and the paper group above
-   is deliberately absent, because the sheet is paper on either desk.
+   The same instrument under office light. It is selected by attribute, not by
+   prefers-color-scheme: the renderer resolves the in-app theme control — follow
+   the system, light, or dark — and writes the answer to data-theme on the
+   document root, so this one block serves both "the OS is light" and "the user
+   asked for light". Only token values are redefined here — no component rule
+   belongs in this block — and the paper group above is deliberately absent,
+   because the sheet is paper on either desk.
 
    Three things are not inversions:
 
@@ -148,51 +153,49 @@
       going darker rather than lighter.
    ========================================================================= */
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
+:root[data-theme="light"] {
+  color-scheme: light;
 
-    /* Surfaces */
-    --bg: #dfe4ea;
-    --surface: #f4f6f9;
-    --surface-2: #ecf0f4;
-    --surface-3: #dde3ea;
-    --surface-4: #d0d8e1;
-    --surface-inset: #e8ecf1;
-    --border: #ccd4dd;
-    --border-strong: #6f7d8e;
+  /* Surfaces */
+  --bg: #dfe4ea;
+  --surface: #f4f6f9;
+  --surface-2: #ecf0f4;
+  --surface-3: #dde3ea;
+  --surface-4: #d0d8e1;
+  --surface-inset: #e8ecf1;
+  --border: #ccd4dd;
+  --border-strong: #6f7d8e;
 
-    /* Text. The roles are unchanged: --text-1 is the strongest ink, --text-4 the
-       faintest. All four clear 4.5:1 on every desk surface. */
-    --text-1: #0f141a;
-    --text-2: #323b46;
-    --text-3: #4b5663;
-    --text-4: #576270;
+  /* Text. The roles are unchanged: --text-1 is the strongest ink, --text-4 the
+     faintest. All four clear 4.5:1 on every desk surface. */
+  --text-1: #0f141a;
+  --text-2: #323b46;
+  --text-3: #4b5663;
+  --text-4: #576270;
 
-    /* Signals */
-    --teal: #0c7261;
-    --teal-bright: #08574b;
-    --teal-ink: #f2fbf8;
-    --teal-wash: rgba(30, 170, 145, 0.14);
-    --teal-line: rgba(12, 114, 97, 0.4);
+  /* Signals */
+  --teal: #0c7261;
+  --teal-bright: #08574b;
+  --teal-ink: #f2fbf8;
+  --teal-wash: rgba(30, 170, 145, 0.14);
+  --teal-line: rgba(12, 114, 97, 0.4);
 
-    --amber: #7f5205;
-    --amber-ink: #fdf6ea;
-    --amber-wash: rgba(240, 170, 20, 0.18);
-    --amber-line: rgba(150, 100, 10, 0.45);
+  --amber: #7f5205;
+  --amber-ink: #fdf6ea;
+  --amber-wash: rgba(240, 170, 20, 0.18);
+  --amber-line: rgba(150, 100, 10, 0.45);
 
-    --red: #ab221b;
-    --red-wash: rgba(220, 60, 55, 0.13);
-    --red-line: rgba(171, 34, 27, 0.4);
+  --red: #ab221b;
+  --red-wash: rgba(220, 60, 55, 0.13);
+  --red-line: rgba(171, 34, 27, 0.4);
 
-    /* Depth. A shadow tuned to lift white paper off slate reads as dirt on a light
-       desk, so most of the lift becomes an edge and what is left is a short,
-       cool shadow. */
-    --sheet-edge: rgba(15, 23, 33, 0.17);
-    --shadow-sheet: 0 1px 2px rgba(15, 23, 33, 0.07), 0 16px 34px -24px rgba(15, 23, 33, 0.4);
-    --scrim: rgba(24, 32, 42, 0.35);
-    --shadow-modal: 0 24px 60px -26px rgba(15, 23, 33, 0.45);
-  }
+  /* Depth. A shadow tuned to lift white paper off slate reads as dirt on a light
+     desk, so most of the lift becomes an edge and what is left is a short,
+     cool shadow. */
+  --sheet-edge: rgba(15, 23, 33, 0.17);
+  --shadow-sheet: 0 1px 2px rgba(15, 23, 33, 0.07), 0 16px 34px -24px rgba(15, 23, 33, 0.4);
+  --scrim: rgba(24, 32, 42, 0.35);
+  --shadow-modal: 0 24px 60px -26px rgba(15, 23, 33, 0.45);
 }
 
 /* =========================================================================
@@ -3574,6 +3577,18 @@ input[type="checkbox"] {
   width: 26px;
   height: 26px;
   color: var(--teal);
+}
+
+/* The theme control rides at the end of the brand row. It keeps its rail size and its rail ink,
+   so the brand rule above must not claim it. */
+.boot-brand .rail-button {
+  margin-left: auto;
+}
+
+.boot-brand .rail-button svg {
+  width: 18px;
+  height: 18px;
+  color: inherit;
 }
 
 .brand-name {
