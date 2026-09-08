@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Eleven observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | The #302 run completed an automatic revision and second critique; the preserved run was recovered through #303 without provider calls; readiness remains false and #75 and #250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twelve observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | After #303 recovered the run, #306 staged the candidate-approved review plan but exhausted three revision attempts without a new artifact; #75 and #250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -466,8 +466,18 @@ implements checksum-verified, parent-first artifact projection and restores
 earlier round records before executions. The preserved run was recovered through
 the application resume contract with provider transmission disabled: two artifacts
 and four executions were projected, while durable snapshots and execution history
-remained unchanged. It remains in round-two human review with approval pending. No candidate adjudication, approval, or export occurred; #75 remains
-unvalidated and #250 stays blocked.
+remained unchanged. At recovery, it was in round-two human review with approval
+pending. No candidate adjudication, approval, or export had occurred.
+
+The twelfth observation under #306 staged the candidate-approved version-2
+review plan: fourteen accepted decisions, with nine conditional overrides that
+preserve unsupported gaps. Three revision attempts then exhausted the existing
+retry limit: output-token excess, factual-invariant rejection, and output-token
+excess. No new artifact or critic result was accepted. The continuation used
+689 additional active-provider seconds, bringing the run to 928 seconds within
+its unchanged 1,200-second cumulative budget. The approved decisions and
+version-2 draft remain preserved; parity is still indeterminate and release
+preparation remains blocked.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
