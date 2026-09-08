@@ -129,6 +129,7 @@ import {
 } from "./knowledge-base.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
+import { localJobRequirements } from "./local-requirements.js";
 import { saveTypedHistory } from "./local-typed-history.js";
 import type {
   OpportunityExtractionPort,
@@ -1474,15 +1475,6 @@ interface PreparedInputs {
   readonly sources: readonly NormalizedSource[];
 }
 
-function requirementLines(jobDescription: string): readonly string[] {
-  const lines = jobDescription
-    .split(/\r?\n/u)
-    .map((line) => line.replace(/^\s*[-*•]\s*/u, "").trim())
-    .filter((line) => line.split(/\s+/u).length >= 2);
-  if (lines.length > 0) return lines.slice(0, 12);
-  return [jobDescription.trim().slice(0, 240)];
-}
-
 function reviewedOpportunityContext(record: OpportunityBriefVersionRecord): {
   readonly jobDescription: string;
   readonly requirements: readonly {
@@ -1575,14 +1567,7 @@ async function prepareInputs(
       ingestion.issues[0]?.sourcePath ?? sourceWithNoChunks?.source.path ?? files[0] ?? "source",
     );
   }
-  const requirements =
-    reviewedOpportunity?.requirements ??
-    requirementLines(jobDescription).map((text, index) => ({
-      id: `requirement-${index + 1}`,
-      text,
-      priority:
-        index === 0 ? ("critical" as const) : index < 3 ? ("high" as const) : ("medium" as const),
-    }));
+  const requirements = reviewedOpportunity?.requirements ?? localJobRequirements(jobDescription);
   const context = createContextSnapshot({
     id: `context-${randomUUID()}`,
     workspaceId: config.id,
