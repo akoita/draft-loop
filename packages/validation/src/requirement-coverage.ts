@@ -1,5 +1,7 @@
 import type { DraftArtifact, JobRequirement } from "@draft-loop/schemas";
 
+import { explicitDegreeCoverage } from "./degree-coverage.js";
+
 const stopWords = new Set([
   "a",
   "an",
@@ -32,13 +34,18 @@ function tokens(text: string): readonly string[] {
 }
 
 export const requirementCoverageHeuristic =
-  "coverage = at least half of meaningful normalized requirement tokens within one artifact block, with at least one match";
+  "coverage = at least half of meaningful normalized requirement tokens within one artifact block, with at least one match; recognized explicit degree requirements use the strict degree rule";
 
-/** Lexical overlap within one block; not semantic entailment or evidence verification. */
+/** Block-local coverage with a closed degree rule; not general evidence verification. */
 export function isRequirementCoveredByBlock(
   requirement: Pick<JobRequirement, "text">,
   artifact: Pick<DraftArtifact, "sections">,
 ): boolean {
+  const degree = explicitDegreeCoverage(
+    requirement.text,
+    artifact.sections.flatMap((section) => section.blocks.map((block) => block.text)),
+  );
+  if (degree !== undefined) return degree;
   const required = [...new Set(tokens(requirement.text))];
   if (required.length === 0) return false;
   return artifact.sections.some((section) =>

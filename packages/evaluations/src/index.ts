@@ -381,7 +381,7 @@ export function evaluateReadiness(
     {
       dimension: "relevance",
       score: coverage.score,
-      rationale: `${coverage.covered} of ${coverage.total} requirements matched by deterministic tokens within individual blocks`,
+      rationale: `${coverage.covered} of ${coverage.total} requirements matched by deterministic coverage within individual blocks`,
     },
     {
       dimension: "evidence",

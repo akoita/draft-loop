@@ -101,3 +101,37 @@ describe("shared block-local requirement coverage", () => {
     expect(isRequirementCoveredByBlock({ text }, artifact(blocks))).toBe(expected);
   });
 });
+
+describe("degree coverage in validation and readiness", () => {
+  const degree = {
+    id: "degree",
+    text: "Computer-science or quantitative degree preferred.",
+    priority: "low" as const,
+  };
+  const degreeContext = { ...context, requirements: [degree] };
+
+  it.each([
+    ["MSc in Computer Science, Distributed Systems, 2012 to 2014", true],
+    ["Computer science coursework for a quantitative degree", false],
+    ["MSc in Literature", false],
+    ["No degree in Computer Science", false],
+  ] as const)("uses the strict rule consistently for %s", (text, covered) => {
+    const draft = artifact([text]);
+    expect(evaluateReadiness(draft, degreeContext).scoreVector.relevance).toBe(covered ? 1 : 0);
+    const findings = validateDraftArtifact(draft, degreeContext).issues;
+    expect(findings.some((issue) => issue.code === "uncovered-requirement")).toBe(!covered);
+  });
+
+  it("preserves explicit gaps and the configured relevance threshold", () => {
+    const draft = artifact(["MSc in Computer Science"]);
+    const evaluation = evaluateReadiness(draft, degreeContext, {
+      explicitGapRequirementIds: [degree.id],
+    });
+    expect(
+      evaluation.thresholdResults.find((result) => result.dimension === "relevance"),
+    ).toMatchObject({ score: 0, threshold: 0.8, meets: false });
+    expect(validateDraftArtifact(draft, degreeContext, [degree.id]).issues).toContainEqual(
+      expect.objectContaining({ code: "explicit-gap", requirementId: degree.id }),
+    );
+  });
+});

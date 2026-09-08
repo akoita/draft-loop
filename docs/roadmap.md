@@ -558,9 +558,11 @@ The existing context, score, and run remain unchanged; no threshold was lowered.
 Issue #328 prevents deterministic coverage from pooling requirement tokens
 across unrelated CV blocks, with one shared rule for validation and readiness.
 This addresses a demonstrated false match without changing rubric thresholds
-or existing run records. Degree-alternative false misses remain ordered
-follow-up work under #329. Neither correction alone establishes semantic
-coverage or closes the workflow-parity gate.
+or existing run records. Issue #329 adds a closed rule for explicit
+computer-science/quantitative degree alternatives, with negatives for
+coursework, unrelated subjects, and negated or unfinished credentials.
+Unsupported phrasing remains outside that rule. Neither correction alone
+establishes semantic coverage or closes the workflow-parity gate.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
