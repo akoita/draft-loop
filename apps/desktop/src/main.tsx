@@ -21,6 +21,7 @@ import {
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
+import { ThemeToggle } from "./theme.js";
 import "./styles.css";
 
 const runRefreshIntervalMs = 750;
@@ -1045,6 +1046,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           <div className="boot-brand">
             <BrandMark />
             <span className="brand-name">DraftLoop</span>
+            <ThemeToggle />
           </div>
           <p className="eyebrow">First run</p>
           <h1>Set up a review workspace</h1>
@@ -1095,6 +1097,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           <div className="boot-brand">
             <BrandMark />
             <span className="brand-name">DraftLoop</span>
+            <ThemeToggle />
           </div>
           <p className="boot-loading" role="status" aria-live="polite">
             Loading local review workspace…
