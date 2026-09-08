@@ -279,6 +279,34 @@ neutral priority, retaining later criteria, but semantic requirement selection
 still belongs to a reviewed opportunity brief. The pinned context and score
 remain unchanged; no provider call, CV edit, or threshold change occurred.
 
+## Independent review of approved requirements (#332)
+
+After local extraction and coverage corrections, the candidate approved eighteen
+requirements and their priorities in a separate reviewed opportunity context.
+One explicitly authorized OpenAI user-session critic attempt assessed the
+unchanged corrected draft against those criteria and the same eighteen evidence
+chunks. The request did not include prior agent labels or numeric relevance
+scores. It retained a 600,000 ms timeout, a 16,384-output-token cap, and no retries.
+
+The attempt completed in 87,700 ms, reporting 49,018 input tokens and 4,537 output
+tokens. All eighteen criteria were returned exactly once with valid source and
+draft references: seven supported, seven partial, and four not established.
+These are raw critic assessments, not accepted coverage judgments. Reference
+validity establishes input linkage, not semantic entailment.
+
+Local review found two material interpretation problems: small-startup work
+was treated as proof of early-stage experience, and an observability alternative
+was narrowed by adding a production technology condition. The raw response is
+preserved, and no corrected totals or replacement score are asserted. Missing
+SDK-specific experience remains a real limitation; further wording changes
+cannot supply absent evidence.
+
+The original database checksum and artifact are unchanged. No author call,
+retry, accepted application revision, candidate CV approval, or export occurred.
+The existing relevance threshold remains unmet; this diagnostic does not
+replace the predeclared gate. Parity stays indeterminate and #250 stays blocked.
+Full references, response text, and local review remain private.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
