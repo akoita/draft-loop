@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -79,9 +79,11 @@ it("retains the exact author cap and adjudication through token and factuality r
   const driver = createLocalApplicationDriver({
     providerAuthModeConfiguration: { anthropic: "user-session", openai: "user-session" },
     userSessionRunners: { anthropic: author, openai: critic },
+    authorProposalCaptureDirectory: join(root, "captures"),
   });
   try {
     await mkdir(join(root, "evidence"));
+    await mkdir(join(root, "captures"));
     await writeFile(join(root, "job.md"), "TypeScript tools");
     await writeFile(
       join(root, "evidence", "resume.md"),
@@ -137,12 +139,21 @@ it("retains the exact author cap and adjudication through token and factuality r
       diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
     });
     expect(oversized.artifact).toEqual(initial.artifact);
+    expect(await readdir(join(root, "captures"))).toEqual([]);
     const factual = await resume();
     expect(factual.lastError).toMatchObject({
       attempt: 2,
       failureStage: "factual-invariant-rejection",
     });
     expect(factual.artifact).toEqual(initial.artifact);
+    const captures = await readdir(join(root, "captures"));
+    expect(captures).toHaveLength(1);
+    const capture = JSON.parse(
+      await readFile(join(root, "captures", captures[0] ?? "missing", "replay.json"), "utf8"),
+    );
+    expect(capture.validationInputs.proposal.sections[0].blocks[0].text).toContain("999");
+    expect(JSON.stringify(factual)).not.toContain("Built 999");
+    expect(JSON.stringify(factual)).not.toContain(join(root, "captures"));
     const completed = await resume();
     expect(completed.state, JSON.stringify(completed.lastError)).toBe("awaiting-approval");
     expect(completed.artifact?.version).toBe(2);

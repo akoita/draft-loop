@@ -497,6 +497,13 @@ The #306 run remains preserved with retries exhausted. Issue #309 separately
 addresses the synthetic action-verb/protected-name false positive found during
 this verification; it is not established as the private run's failure cause.
 
+Issue #312 adds opt-in local replay capture for author proposals rejected by
+application validation. Inspection confirmed that none of the three failed #306
+outputs was retained, so the private factual rejection cannot be replayed or
+attributed to #309. Future explicitly configured diagnostic sessions retain the
+proposal and exact validation inputs locally. No new live observation has run;
+parity remains indeterminate and release preparation remains blocked.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
