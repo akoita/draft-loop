@@ -619,6 +619,23 @@ names also appear in the source grounding guide and require whole-token support;
 `SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
 syntactic rule, not general semantic verification.
 
+### Chronology in local-source retrieval
+
+For local-source contexts without a CKB selection, author and critic retrieval
+reserves space for dated Markdown headings from the exact pinned source IDs
+and checksums. Headings retain their original text, chunk identity, and source
+references. Ranked evidence fills the remaining slots after duplicate and
+unapproved-source filtering. This keeps explicit career ranges available even
+when their headings contain no job-query terms.
+
+The provider selection allows at most twenty chunks and 128 KiB of serialized
+evidence. The heading scan allows at most one hundred pinned sources and one
+hundred heading chunks per source. Missing or mismatched sources, scan overflow,
+or headings that cannot fit the requested count or byte limit fail retrieval
+before provider execution. The bounded matcher recognizes Markdown headings
+with a year range or an ongoing end marker; it does not infer dates or repair
+artifact chronology. CKB retrieval retains its separate selected-version path.
+
 ### Explicit experience statements
 
 Author grounding recognizes whole statements such as `No GraphQL experience`

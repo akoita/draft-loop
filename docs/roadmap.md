@@ -457,6 +457,13 @@ support a claimed metric of `20`. Deterministic regression coverage establishes
 this bounded safety correction; it does not explain the live author failures
 or change the indeterminate parity result.
 
+Issue #321 preserves dated Markdown headings in local-source provider evidence,
+scoped to the pinned source IDs and checksums. Local reconstruction of #320
+retains both previously omitted chronology headings in eighteen chunks, within
+the twenty-chunk and 128 KiB bounds. Author and critic share this selection;
+CKB retrieval is unchanged. The original run and captured revision remain
+unchanged, and correcting the revision still requires separate work.
+
 Issue #318 keeps approved accepted-effect exceptions conditional. A directly
 observed change remains verified when an exception was supplied, while effects
 without a direct change still need their approved exception. Local replay of
