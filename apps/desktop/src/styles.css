@@ -433,6 +433,7 @@ kbd::after {
 input[type="text"],
 input[type="url"],
 input[type="password"],
+input[type="number"],
 select,
 textarea {
   width: 100%;
@@ -3522,10 +3523,33 @@ input[type="checkbox"] {
    Boot states
    ========================================================================= */
 
+/* First run and loading are their own layout, not the workspace grid. That grid
+   reserves a review-panel column which has nothing to put in it yet, so reusing
+   it here parks the panel in the middle of the left two-thirds of the window
+   and leaves a panel-width dead gutter down the right edge.
+
+   `margin: auto` on the panel — rather than `justify-content: center` on the
+   shell — is what centres it, because a panel taller than the window then
+   scrolls from its own top edge instead of having that edge clipped away. */
+.boot-shell {
+  display: flex;
+  min-height: 100vh;
+  padding: var(--space-8) var(--space-6);
+  overflow-y: auto;
+}
+
 .boot-panel {
-  max-width: 620px;
-  margin: 12vh auto 0;
-  padding: var(--space-7);
+  width: 100%;
+  max-width: 720px;
+  margin: auto;
+  padding: var(--space-7) var(--space-7) var(--space-6);
+  box-shadow: var(--shadow-modal);
+}
+
+/* One line of status text does not need a form's width. */
+.boot-panel-quiet {
+  max-width: 420px;
+  padding: var(--space-6) var(--space-7);
 }
 
 .boot-panel h1 {
@@ -3615,7 +3639,21 @@ input[type="checkbox"] {
 .setup-sides {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: var(--space-3);
+  gap: var(--space-4);
+}
+
+/* The setup form is the whole panel, so its actions close the panel rather than
+   sitting a gap below the last field. Natural-width buttons keep "Create
+   workspace" reading as the primary of three, which stretching them to thirds
+   of a 720px row does not. */
+.setup-form .approval-actions {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-5);
+}
+
+.setup-form .approval-actions .button {
+  flex: 0 0 auto;
 }
 
 .setup-side {
@@ -3625,7 +3663,7 @@ input[type="checkbox"] {
   margin: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 0 var(--space-4) var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-4);
   background: var(--surface-2);
 }
 
@@ -3647,6 +3685,9 @@ input[type="checkbox"] {
   line-height: 1.5;
   text-transform: none;
   overflow-wrap: anywhere;
+  /* Help text keeps a readable measure instead of running the panel's full
+     width under a field only a few characters wide. */
+  max-width: 66ch;
 }
 
 /* How far a filter has narrowed a provider's list, sat directly under the
