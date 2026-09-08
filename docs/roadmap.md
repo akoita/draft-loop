@@ -457,6 +457,14 @@ support a claimed metric of `20`. Deterministic regression coverage establishes
 this bounded safety correction; it does not explain the live author failures
 or change the indeterminate parity result.
 
+Issue #315 corrects the explicit negative-experience false positive identified
+by the captured #314 diagnostic revision. Local replay of that unchanged
+proposal now passes author validation. Focused checks preserve technology-name
+identity and positive/negative meaning, require explicit source support, and
+reject contradictory or qualified evidence. This is local validation only:
+no new provider call, accepted application revision, independent critique,
+approval, or export followed, and the preserved exhausted run is unchanged.
+
 Issue #309 corrects the synthetic action-verb grounding false positive: `Built
 TypeScript tools` can cite `Built local-first TypeScript tools` while still
 requiring support for the technology name. The exception is limited to known

@@ -1,5 +1,11 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 
+import {
+  experienceClaimValues,
+  sourceExperienceValues,
+  supportsExperienceClaim,
+} from "./experience-grounding.js";
+
 const protectedNumberPattern = /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![\p{L}\p{N}])/giu;
 
 // Mixed-case names must also appear in source guides when they stand alone.
@@ -49,6 +55,8 @@ function normalizedIdentity(value: string): string {
 
 /** Match numbers with their units and mixed-case names as whole tokens. */
 export function supportsProtectedValue(evidence: string, protectedValue: string): boolean {
+  const experienceSupport = supportsExperienceClaim(evidence, protectedValue);
+  if (experienceSupport !== undefined) return experienceSupport;
   const value = normalizedIdentity(protectedValue);
   const source = normalizedIdentity(evidence);
   if (/^\d/u.test(value)) {
@@ -77,8 +85,10 @@ function withoutOpeningAction(text: string, matched: string, start: number): str
   return name;
 }
 
-/** Extract exact protected values in first-occurrence order without duplicates. */
+/** Extract protected identities, then append canonical explicit experience statements. */
 export function extractProtectedValues(value: string): readonly string[] {
+  const experienceValues = experienceClaimValues(value);
+  if (experienceValues !== undefined) return Object.freeze([...experienceValues]);
   const matches: ProtectedValueMatch[] = protectedValuePatterns.flatMap((pattern, patternIndex) =>
     [...value.matchAll(pattern)].map((match, matchIndex) => {
       const raw = match[1] ?? match[0];
@@ -106,6 +116,10 @@ export function extractProtectedValues(value: string): readonly string[] {
     if (seen.has(identity)) continue;
     seen.add(identity);
     extracted.push(match.value);
+  }
+  for (const experience of sourceExperienceValues(value)) {
+    if (!seen.has(normalizedIdentity(experience))) extracted.push(experience);
+    seen.add(normalizedIdentity(experience));
   }
   return Object.freeze(extracted);
 }

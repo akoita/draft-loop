@@ -619,6 +619,20 @@ names also appear in the source grounding guide and require whole-token support;
 `SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
 syntactic rule, not general semantic verification.
 
+### Explicit experience statements
+
+Author grounding recognizes whole statements such as `No GraphQL experience`
+and `GraphQL experience` for a single acronym or mixed-case technology name.
+Their protected values preserve both the technology and whether experience is
+present or absent. A cited source must explicitly support that same statement,
+either directly or in an `Experience:` / `No experience:` list. The source guide
+includes these protected statements so the author can use supported word order.
+
+Missing evidence is not evidence of no experience. Conflicting positive and
+negative statements, qualified clauses, and partial technology-name matches do
+not satisfy this bounded rule. Ambiguous names and longer prose retain the
+existing grounding behavior; this is not general semantic factual verification.
+
 ### Local rejected-author replay
 
 The local driver accepts an optional `authorProposalCaptureDirectory` for
