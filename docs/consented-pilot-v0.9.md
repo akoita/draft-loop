@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-06<br>
-**Cases:** Eleven bounded observations of one consented, anonymized case
+**Recorded:** 2026-09-08<br>
+**Cases:** Twelve bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -151,9 +151,38 @@ The #303 recovery on 2026-09-08 used the application resume contract with
 provider transmission disabled after a private database backup. It projected
 both artifacts and all four executions in dependency order. Durable snapshots
 and execution history were unchanged, with zero new provider calls. The run
-remains in round-two human review, readiness false and approval pending. No
+remained in round-two human review, readiness false and approval pending. No
 new candidate adjudication, approval, export, or submission occurred, and the
 predeclared comparison remains indeterminate.
+
+## Approved continuation of the recovered draft (#306)
+
+The candidate approved the exact version-2 review packet on 2026-09-08.
+Fourteen accepted decisions ask the author to restore source-backed chronology,
+clarify staging versus production, reduce repeated wording without losing facts,
+and address coverage only where the selected evidence supports it. Nine explicit
+conditional overrides preserve honest gaps instead of requiring invented
+experience or SDK ownership.
+
+The shared application contract staged these decisions without provider calls.
+The continuation retains the existing Anthropic author, OpenAI critic,
+user-session authentication, 1,200,000 ms request timeout, three-attempt step
+limit, and cumulative 20-minute provider budget. It starts round three with
+238,896 ms already consumed. Candidate approval of the revision instructions
+does not approve the CV or authorize export or submission.
+
+The first revision attempt exceeded the output-token boundary after 306 seconds
+of active provider time. The second returned after another 129 seconds but
+failed local factual-invariant validation. The third exceeded the output-token
+boundary after another 254 seconds. All three permitted attempts were exhausted
+without an accepted revised artifact or a new critic call. The continuation
+used 689 additional active-provider seconds, bringing the preserved run to
+928 seconds within its unchanged 1,200-second cumulative limit.
+
+Artifact version 2 and its fourteen findings remain unchanged. The run is in
+`provider-error` with retries exhausted. The approved adjudication remains
+persisted, but no candidate-adjudicated revision was produced. No final CV
+approval, export, or submission occurred, and parity remains indeterminate.
 
 ## Predeclared comparison gate
 
@@ -227,5 +256,9 @@ delivered content-free failure-stage classification, #296 records the
 classified author-exhaustion observation, and #298 records the tenth observation.
 Issue #302 records the eleventh observation after #300's numeric-grounding
 correction. Issue #303 recovered the preserved run through parent-first
-projection without new provider calls; candidate review remains the next gate. Issue #75 stays open, and release-preparation
-issue #250 remains blocked. No approval or export is authorized by this result.
+projection without new provider calls. Under #306, the candidate approved the
+review plan, but all three continuation attempts failed the output-token or
+factual-invariant boundary. Keep the approved decisions and preserved draft;
+another attempt requires a separately bounded next step rather than resetting
+the exhausted retry limit. Issue #75 stays open, and release preparation
+under #250 remains blocked. No approval or export is authorized by this result.
