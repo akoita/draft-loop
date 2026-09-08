@@ -264,6 +264,21 @@ not been accepted into the original application run. No author call, retry,
 candidate approval, export, or submission occurred. Full findings and candidate
 material remain private.
 
+## Local review of the remaining relevance input (#326)
+
+Subsequent source inspection found that the supplied skills record explicitly
+lists production experience in the technology named by the #324 warning. The
+project-specific staging restriction does not negate that broader source-backed
+history, so the critic warning is not established as a factual violation.
+
+The relevance input has a separate defect: local requirement extraction admitted
+headings and wrapped-line fragments, kept only the first twelve lines, and
+assigned priority from their positions. Its score is therefore not a reliable
+job-fit measure. Issue #326 reconstructs twenty-one complete source units with
+neutral priority, retaining later criteria, but semantic requirement selection
+still belongs to a reviewed opportunity brief. The pinned context and score
+remain unchanged; no provider call, CV edit, or threshold change occurred.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |

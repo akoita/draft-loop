@@ -619,6 +619,22 @@ names also appear in the source grounding guide and require whole-token support;
 `SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
 syntactic rule, not general semantic verification.
 
+### Local job-document requirement units
+
+When a run does not select a reviewed opportunity brief, the application
+extracts complete list items and paragraphs from the local job document. It
+joins wrapped lines, removes Markdown heading structure, preserves later units,
+and assigns neutral `medium` priority. The extraction makes no semantic claim
+that every retained paragraph is a hiring criterion. Selecting substantive
+requirements and assigning priorities belongs to the reviewed opportunity brief.
+
+The fallback rejects documents over 64 KiB, more than one hundred units, units
+over two thousand characters, empty/heading-only input, code fences, and tables
+with an explicit message directing the candidate to a reviewed brief. It does
+not silently truncate source text. Reviewed-brief requirements and priorities
+remain authoritative, and existing pinned contexts are never re-extracted on
+resume. A corrected interpretation requires a new reviewed context.
+
 ### Chronology in local-source retrieval
 
 For local-source contexts without a CKB selection, author and critic retrieval

@@ -547,6 +547,14 @@ warning. The earlier date findings were not repeated. Local readiness remains
 false because the relevance threshold is unmet. The corrected artifact remains
 outside the preserved application run; no acceptance, approval, or export occurred.
 
+Issue #326 corrects local requirement-unit extraction after inspection found
+that the pilot's relevance input included headings and wrapped-line fragments,
+truncated later criteria, and assigned priority by line position. Local
+reconstruction now yields twenty-one complete source units with neutral
+priority, retaining later criteria. These units still require semantic review
+through the opportunity-brief path before interpreting relevance as job fit.
+The existing context, score, and run remain unchanged; no threshold was lowered.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a

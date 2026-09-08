@@ -128,6 +128,14 @@ the exact immutable versions and their checksums in run context; later edits do
 not change a started or resumed run. Starts that predate canonical profiles
 remain supported without a profile selection.
 
+Without a reviewed opportunity brief, a local job document supplies complete
+list items and paragraphs with neutral priority. Markdown headings are excluded,
+wrapped lines are joined, and later units are retained. These are syntactic
+source units, not reviewed job criteria: use an opportunity brief to select
+requirements and priorities before interpreting relevance as job fit. Local
+input limits are 64 KiB, 100 units, and 2,000 characters per unit; overflow,
+code fences, and tables require a reviewed brief instead of silent truncation.
+
 The `profile` command group derives a canonical candidate profile from the
 workspace's configured CKB selection, reloads exact or latest versions, and
 creates immutable edited or reviewed successors. Derivation is the only
