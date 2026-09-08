@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 1,
+  "id": "synthetic-resource-contract-engineer",
+  "provenance": {
+    "kind": "synthetic",
+    "basis": "Candidate-authorized structural lessons from a matched application example",
+    "containsRealCandidateRecord": false,
+    "realApplicationOutcome": null,
+    "providerRunPerformed": false
+  },
+  "careerFacts": [
+    {
+      "id": "f1",
+      "organisation": "Meridian Instruments",
+      "role": "Application Engineer",
+      "period": "Period A",
+      "text": "Maintained a Java equipment registry consumed by scheduling and maintenance applications. Extended the existing registry; did not create it.",
+      "maturity": "production"
+    },
+    {
+      "id": "f2",
+      "organisation": "Meridian Instruments",
+      "role": "Application Engineer",
+      "period": "Period A",
+      "text": "Created an internal schema compiler that generated Kotlin and Java service bindings. Wrote setup examples that another team used without direct assistance.",
+      "maturity": "production"
+    },
+    {
+      "id": "f3",
+      "organisation": "Meridian Instruments",
+      "role": "Application Engineer",
+      "period": "Period A",
+      "text": "Compared two persistence approaches and presented a migration proposal. The migration was not carried out.",
+      "maturity": "study"
+    },
+    {
+      "id": "f4",
+      "organisation": "Orchard Software",
+      "role": "Protocol Engineer",
+      "period": "Period B",
+      "text": "Implemented Solidity reservation contracts for shared computing capacity. The team released one deployment; the candidate owned upgrade checks and contract test tooling.",
+      "maturity": "production"
+    },
+    {
+      "id": "f5",
+      "organisation": "Orchard Software",
+      "role": "Protocol Engineer",
+      "period": "Period B",
+      "text": "Added property-based tests for reservation ownership and fuzz tests for release rules. The team adopted the checks in its build.",
+      "maturity": "production"
+    },
+    {
+      "id": "f6",
+      "organisation": "Orchard Software",
+      "role": "Protocol Engineer",
+      "period": "Period B",
+      "text": "Fixed API authorisation defects reported by an external security firm. Another engineer coordinated the review. The report did not cover smart contracts.",
+      "maturity": "production"
+    },
+    {
+      "id": "f7",
+      "organisation": "Independent projects",
+      "role": "Personal project",
+      "period": "Period C",
+      "text": "Built a voucher escrow experiment with refund deadlines and approval policies. Cross-network messages were tested using a local simulator; no live cross-network transfer is established.",
+      "maturity": "prototype"
+    },
+    {
+      "id": "f8",
+      "organisation": "Independent projects",
+      "role": "Personal project",
+      "period": "Period C",
+      "text": "Built a local change-review tool with model-generated suggestions, a separate critique step, and human acceptance. It is an experimental personal project.",
+      "maturity": "prototype"
+    },
+    {
+      "id": "f9",
+      "organisation": "Education",
+      "role": "Graduate",
+      "period": "Before Period A",
+      "text": "Completed an MSc in Computer Science. Additional training covered software architecture and secure application development.",
+      "maturity": "education"
+    }
+  ],
+  "opportunity": {
+    "organisation": "Harbor Compute Cooperative",
+    "title": "Smart Contract Engineer",
+    "description": "Build contract-based allocation workflows for a shared compute service. Collaborate with application engineers and security reviewers.",
+    "requirements": [
+      {
+        "id": "r1",
+        "text": "Implement and maintain Solidity contracts for a resource-allocation service.",
+        "priority": "high"
+      },
+      {
+        "id": "r2",
+        "text": "Write property-based and fuzz tests for ownership and release invariants.",
+        "priority": "high"
+      },
+      {
+        "id": "r3",
+        "text": "Prepare smart contracts for external audit and remediate findings.",
+        "priority": "high"
+      },
+      {
+        "id": "r4",
+        "text": "Use AI-assisted implementation with explicit human review.",
+        "priority": "medium"
+      },
+      {
+        "id": "r5",
+        "text": "Computer-science or quantitative degree preferred.",
+        "priority": "low"
+      }
+    ]
+  },
+  "referenceCv": {
+    "kind": "synthetic-editorial-reference",
+    "candidate": "Fictional Candidate",
+    "headline": "Software Engineer | Solidity | Application Reliability",
+    "statements": [
+      {
+        "id": "s1",
+        "text": "Engineer combining production application maintenance with Solidity contract delivery.",
+        "sourceFactIds": ["f1", "f4"]
+      },
+      {
+        "id": "s2",
+        "text": "Extended an existing equipment registry serving scheduling and maintenance applications.",
+        "sourceFactIds": ["f1"]
+      },
+      {
+        "id": "s3",
+        "text": "Built an internal service-binding generator and setup examples adopted by another team.",
+        "sourceFactIds": ["f2"]
+      },
+      {
+        "id": "s4",
+        "text": "Presented a persistence migration study; implementation remained outside the assignment.",
+        "sourceFactIds": ["f3"]
+      },
+      {
+        "id": "s5",
+        "text": "Implemented reservation contracts and owned upgrade checks within a team production release.",
+        "sourceFactIds": ["f4"]
+      },
+      {
+        "id": "s6",
+        "text": "Added ownership properties and release-rule fuzz tests to the team build.",
+        "sourceFactIds": ["f5"]
+      },
+      {
+        "id": "s7",
+        "text": "Remediated API authorisation findings from an external security review; audit coordination belonged to another engineer.",
+        "sourceFactIds": ["f6"]
+      },
+      {
+        "id": "s8",
+        "text": "Prototyped voucher escrow with a simulated cross-network transport, without claiming a live transfer.",
+        "sourceFactIds": ["f7"]
+      },
+      {
+        "id": "s9",
+        "text": "Built an experimental AI change-review tool with a separate critique step and human acceptance.",
+        "sourceFactIds": ["f8"]
+      },
+      {
+        "id": "s10",
+        "text": "MSc in Computer Science; training in software architecture and secure application development.",
+        "sourceFactIds": ["f9"]
+      }
+    ]
+  },
+  "reviewExpectations": {
+    "requiredFacts": ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9"],
+    "coverage": [
+      {
+        "requirementId": "r1",
+        "status": "supported",
+        "sourceFactIds": ["f4"],
+        "rationale": "Actual contract implementation and upgrade responsibility are supplied."
+      },
+      {
+        "requirementId": "r2",
+        "status": "supported",
+        "sourceFactIds": ["f5"],
+        "rationale": "Both test forms and their invariant targets are explicit."
+      },
+      {
+        "requirementId": "r3",
+        "status": "partial",
+        "sourceFactIds": ["f6"],
+        "rationale": "API audit remediation is adjacent experience; contract audit preparation and liaison are not established."
+      },
+      {
+        "requirementId": "r4",
+        "status": "partial",
+        "sourceFactIds": ["f8"],
+        "rationale": "Human-reviewed AI suggestions are established in an experiment, not contract-specific implementation."
+      },
+      {
+        "requirementId": "r5",
+        "status": "supported",
+        "sourceFactIds": ["f9"],
+        "rationale": "The degree satisfies the computer-science alternative."
+      }
+    ],
+    "forbiddenClaims": [
+      "Created the inherited equipment registry",
+      "Executed the proposed persistence migration",
+      "Delivered the team system alone",
+      "Coordinated the external audit",
+      "Completed a professional smart-contract audit",
+      "Performed live cross-network transfers",
+      "Launched the personal review tool into production"
+    ],
+    "humanReviewChecks": [
+      "Preserve distinct assignments and project maturity.",
+      "Explain ownership and technical mechanisms instead of listing keywords.",
+      "Keep supported strengths prominent while qualifying adjacent experience.",
+      "Do not infer semantic coverage from lexical overlap."
+    ]
+  },
+  "limitations": [
+    "No historical dates, numerical outcomes, source URLs, or contact details are included.",
+    "All names, employers, domains of projects, and career sequencing are fictional.",
+    "This reference is not an EvaluationCase execution or evidence of workflow parity.",
+    "Review expectations are authored labels, not measured or candidate-specific outcomes."
+  ]
+}
