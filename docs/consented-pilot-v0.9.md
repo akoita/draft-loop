@@ -145,9 +145,15 @@ content warnings, seven uncovered requirements, an omitted transition, and
 three evidence/quality warnings. After the snapshot was durable, typed-history
 projection failed with `SQLITE_CONSTRAINT_FOREIGNKEY`. The application tried to
 save version 2 before its version-1 parent existed in typed history. The parent
-remains available in the earlier durable snapshot. Issue #303 owns the bounded
-parent-first persistence fix. No new candidate adjudication, approval, export,
-or submission occurred, and the predeclared comparison remains indeterminate.
+remained available in the earlier durable snapshot.
+
+The #303 recovery on 2026-09-08 used the application resume contract with
+provider transmission disabled after a private database backup. It projected
+both artifacts and all four executions in dependency order. Durable snapshots
+and execution history were unchanged, with zero new provider calls. The run
+remains in round-two human review, readiness false and approval pending. No
+new candidate adjudication, approval, export, or submission occurred, and the
+predeclared comparison remains indeterminate.
 
 ## Predeclared comparison gate
 
@@ -220,6 +226,6 @@ continuation. Issue #291 records the declared-timeout observation, #293
 delivered content-free failure-stage classification, #296 records the
 classified author-exhaustion observation, and #298 records the tenth observation.
 Issue #302 records the eleventh observation after #300's numeric-grounding
-correction. Resolve the artifact-ancestry projection blocker in #303 before
-continuing the preserved run. Issue #75 stays open, and release-preparation
+correction. Issue #303 recovered the preserved run through parent-first
+projection without new provider calls; candidate review remains the next gate. Issue #75 stays open, and release-preparation
 issue #250 remains blocked. No approval or export is authorized by this result.

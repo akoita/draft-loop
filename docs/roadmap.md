@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-06<br>
+**Last reviewed:** 2026-09-08<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Eleven observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | The #302 run completed an automatic revision and second critique; readiness remains false and artifact-ancestry persistence is blocked by #303; #75 and #250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Eleven observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | The #302 run completed an automatic revision and second critique; the preserved run was recovered through #303 without provider calls; readiness remains false and #75 and #250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -462,8 +462,11 @@ and second critic on their first attempts, reaching human review after 239
 active seconds. Readiness remained false with thirteen warnings and one error.
 The durable snapshot retains artifact version 2, but typed-history projection
 failed because its version-1 parent had not been persisted first. Issue #303
-owns the bounded ancestry-ordering correction before the preserved run can
-continue. No candidate adjudication, approval, or export occurred; #75 remains
+implements checksum-verified, parent-first artifact projection and restores
+earlier round records before executions. The preserved run was recovered through
+the application resume contract with provider transmission disabled: two artifacts
+and four executions were projected, while durable snapshots and execution history
+remained unchanged. It remains in round-two human review with approval pending. No candidate adjudication, approval, or export occurred; #75 remains
 unvalidated and #250 stays blocked.
 
 **Exit criterion:** The representative comparison records no factual-invariant

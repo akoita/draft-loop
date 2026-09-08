@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
-
 import Anthropic from "@anthropic-ai/sdk";
 import {
   createArtifact,
@@ -130,6 +129,7 @@ import {
 } from "./knowledge-base.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
+import { saveTypedHistory } from "./local-typed-history.js";
 import type {
   OpportunityExtractionPort,
   OpportunityExtractionRequest,
@@ -2414,116 +2414,6 @@ async function ensureWorkspaceRecord(storage: SqliteStorage, workspaceId: string
     updatedAt: now,
   };
   await storage.saveWorkspace(record);
-}
-
-async function saveTypedHistory(
-  storage: SqliteStorage,
-  config: WorkspaceConfig,
-  snapshot: RunSnapshot,
-): Promise<void> {
-  if (snapshot.artifact !== null) {
-    if ((await storage.getArtifactVersion(snapshot.artifact.id)) === undefined) {
-      await storage.saveArtifactVersion({
-        id: snapshot.artifact.id,
-        workspaceId: config.id,
-        version: snapshot.artifact.version,
-        parentVersionId: snapshot.artifact.parentVersionId,
-        createdAt: snapshot.artifact.createdAt,
-        payload: asJsonObject(snapshot.artifact),
-      });
-    }
-  }
-  if ((await storage.getRun(snapshot.runId)) === undefined) {
-    await storage.saveRun({
-      id: snapshot.runId,
-      workspaceId: config.id,
-      contextSnapshotId: snapshot.contextSnapshotId,
-      state: snapshot.state,
-      round: snapshot.round,
-      currentStep: snapshot.currentStep,
-      budget: asJsonObject(snapshot.budget),
-      artifactId: snapshot.artifact?.id ?? null,
-      approval: snapshot.approval,
-      totalCostUsd: snapshot.totalCostUsd,
-      startedAt: snapshot.startedAt,
-      updatedAt: snapshot.updatedAt,
-      lastError: snapshot.lastError === null ? null : asJsonObject(snapshot.lastError),
-      payload: { executionCount: snapshot.executionHistory.length },
-    });
-  }
-  const roundId = `${snapshot.runId}:round:${snapshot.round}`;
-  if ((await storage.getRound(roundId)) === undefined) {
-    await storage.saveRound({
-      id: roundId,
-      workspaceId: config.id,
-      runId: snapshot.runId,
-      number: snapshot.round,
-      state:
-        snapshot.state === "drafting" ||
-        snapshot.state === "reviewing" ||
-        snapshot.state === "revising" ||
-        snapshot.state === "budget-exhausted" ||
-        snapshot.state === "provider-error" ||
-        snapshot.state === "paused" ||
-        snapshot.state === "stopped" ||
-        snapshot.state === "awaiting-approval"
-          ? snapshot.state
-          : "awaiting-approval",
-      startedAt: snapshot.startedAt,
-      completedAt: snapshot.updatedAt,
-      evaluation:
-        snapshot.latestEvaluation === null ? null : asJsonObject(snapshot.latestEvaluation),
-      payload: { executionCount: snapshot.executionHistory.length },
-    });
-  }
-  for (const executionRecord of snapshot.executionHistory) {
-    if ((await storage.getExecution(executionRecord.id)) !== undefined) continue;
-    await storage.saveExecution({
-      id: executionRecord.id,
-      workspaceId: config.id,
-      runId: snapshot.runId,
-      roundId: `${snapshot.runId}:round:${executionRecord.round}`,
-      contextSnapshotId: executionRecord.contextSnapshotId,
-      artifactId: snapshot.artifact?.id ?? null,
-      attempt: Number(executionRecord.id.split(":attempt:")[1] ?? 1),
-      step: executionRecord.step,
-      status: executionRecord.status,
-      provider: executionRecord.provider,
-      modelId: executionRecord.modelId,
-      providerRequestId: executionRecord.providerRequestId,
-      outputChecksum: executionRecord.outputChecksum ?? null,
-      inputTokens: executionRecord.inputTokens,
-      outputTokens: executionRecord.outputTokens,
-      totalTokens: executionRecord.totalTokens,
-      estimatedUsd: executionRecord.estimatedUsd,
-      startedAt: snapshot.startedAt,
-      completedAt: executionRecord.completedAt,
-      errorCode: executionRecord.errorCode ?? null,
-      output: executionRecord.output === undefined ? null : asJsonObject(executionRecord.output),
-      payload: { source: "phase-zero-cli" },
-    });
-  }
-  for (const [findingIndex, finding] of snapshot.findings.entries()) {
-    const findingId = `${snapshot.runId}:round:${snapshot.round}:finding:${findingIndex}:${finding.code}`;
-    if ((await storage.getFinding(findingId)) !== undefined) continue;
-    await storage.saveFinding({
-      id: findingId,
-      workspaceId: config.id,
-      runId: snapshot.runId,
-      roundId,
-      executionId: null,
-      artifactId: snapshot.artifact?.id ?? null,
-      code: finding.code,
-      category: finding.category ?? "quality",
-      severity: finding.severity,
-      message: finding.message,
-      claimId: finding.claimId ?? null,
-      sectionId: finding.sectionId ?? null,
-      requirementId: finding.requirementId ?? null,
-      createdAt: snapshot.updatedAt,
-      payload: { source: "phase-zero-cli" },
-    });
-  }
 }
 
 function preflight(config: WorkspaceConfig, io: CliIo, runBudget: RunBudget): void {

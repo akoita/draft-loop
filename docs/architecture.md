@@ -148,6 +148,14 @@ preserves dependent run, execution, finding, decision, and export references,
 recreates the immutable update/delete triggers, and validates the final foreign
 key graph before recording the migration.
 
+The application projects artifact ancestry from checksum-verified durable run
+snapshots before inserting the latest artifact into typed history. It checks
+workspace and context identity, rejects missing or conflicting ancestors, and
+replays the immutable chain parent-first. Earlier round records are also
+projected before their executions. Repeating the projection is idempotent; an
+already-reviewed run can complete it through resume without another provider
+call or changes to its earlier snapshots.
+
 ## Opportunity brief contract
 
 The #67 components define a provider-independent, versioned opportunity brief
