@@ -1,4 +1,5 @@
 import {
+  type CSSProperties,
   type ReactNode,
   type RefObject,
   useCallback,
@@ -9,6 +10,7 @@ import {
   useState,
 } from "react";
 import type { CredentialStatus, ProviderAuthMode, ProviderAuthModeStatus } from "./bridge.js";
+import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { type DiffOp, diffWords } from "./diff.js";
 import {
   type DesktopReviewState,
@@ -1301,6 +1303,7 @@ export function ReviewWorkspace({
   // manuscript. Position is measured, never guessed, so a note never drifts off its sentence.
   const sheetRef = useRef<HTMLElement | null>(null);
   const marginColumnRef = useRef<HTMLDivElement | null>(null);
+  const docGridRef = useRef<HTMLDivElement | null>(null);
   const marginNoteRefs = useRef(new Map<string, HTMLLIElement>());
   const [marginLayout, setMarginLayout] = useState<MarginNoteLayout | null>(null);
   // Which finding the reviewer is pointing at, wherever they are pointing at it from.
@@ -1360,6 +1363,7 @@ export function ReviewWorkspace({
   // Nothing to compare against on a first version, so the redline is unavailable, not empty.
   const showChanges = hasPreviousArtifact && draftView === "changes";
   const compareVisible = hasPreviousArtifact && compareOpen;
+  const [compareSplit, setCompareSplit] = useCompareSplit();
   const draftSections = useMemo(
     () => pairDraftSections(state.artifact, state.previousArtifact),
     [state.artifact, state.previousArtifact],
@@ -3057,7 +3061,11 @@ export function ReviewWorkspace({
               </span>
             </div>
 
-            <div className={`doc-grid${compareVisible ? " doc-grid-compare" : ""}`}>
+            <div
+              className={`doc-grid${compareVisible ? " doc-grid-compare" : ""}`}
+              ref={docGridRef}
+              style={{ "--compare-split": compareSplit } as CSSProperties}
+            >
               {compareVisible && state.previousArtifact !== null ? (
                 <div className="diff-column">
                   <div className="pane-heading">
@@ -3077,6 +3085,13 @@ export function ReviewWorkspace({
                     ))}
                   </article>
                 </div>
+              ) : null}
+              {compareVisible && state.previousArtifact !== null ? (
+                <CompareSplitHandle
+                  split={compareSplit}
+                  onSplitChange={setCompareSplit}
+                  gridRef={docGridRef}
+                />
               ) : null}
               <div className="diff-column diff-column-current">
                 <div className="pane-heading">
