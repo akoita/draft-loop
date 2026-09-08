@@ -139,8 +139,11 @@ code fences, and tables require a reviewed brief instead of silent truncation.
 Deterministic relevance uses lexical overlap within individual CV blocks: at
 least half of a requirement’s meaningful tokens must appear in one block.
 Words scattered across unrelated blocks cannot jointly satisfy a requirement.
-This remains a lexical signal, not evidence of semantic coverage; degree
-alternatives and other equivalent phrasing can still be missed.
+A narrow exception recognizes explicit degree entries for standalone
+computer-science/quantitative degree requirements. It rejects coursework and
+negated or unfinished credentials; see the [coverage contract](docs/architecture.md#degree-coverage).
+Other equivalent phrasing can still be missed, and these signals do not
+establish semantic coverage or verify a credential.
 
 The `profile` command group derives a canonical candidate profile from the
 workspace's configured CKB selection, reloads exact or latest versions, and

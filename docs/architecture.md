@@ -583,14 +583,40 @@ tokens, with at least one match, must occur within one artifact block. Matches
 are never pooled across blocks or sections; section titles and claim-only text do
 not count. Explicit gaps still override lexical matches, and priority weights
 and rubric thresholds are unchanged. This does not infer negation, credential
-equivalence, or semantic entailment. Existing stored contexts and scores are
-not rewritten; a new evaluation can yield a different result.
+equivalence, or semantic entailment outside the explicit degree rule below.
+Existing stored contexts and scores are not rewritten; a new evaluation can
+yield a different result.
 
 The default author and critic use different companies, with provider and model
 versions recorded in run history. The orchestrator stops at configured round,
 cost, or time limits, when quality is stable, or when the user reviews early.
 It never loops indefinitely to optimize a subjective score. See [ADR
 0003](adr/0003-evidence-grounded-evaluator-optimizer.md).
+
+### Degree coverage
+
+Standalone requirements of the form `[a] <subject> [or <subject>] degree
+[preferred|required]` use a closed degree rule instead of lexical overlap.
+Subjects are `computer science` (also hyphenated) and `quantitative`. A trailing
+period is allowed. Both alternatives are permitted; they need not both appear
+in the CV. Other requirement phrasing retains the ordinary lexical heuristic.
+
+A qualifying block must start with a supported credential followed by `in`
+and a permitted subject: BS/BSc, MS/MSc, PhD, Bachelor/Master of Science,
+Doctor of Philosophy, bachelor's/master's/doctoral degree, or degree. The
+optional prefixes are `earned`, `completed`, or `holds`, with an optional
+article. A comma-separated alphabetic specialization and comma-separated year
+or year range may follow. Case, whitespace, typographic apostrophes, and the
+computer-science hyphen are normalized. Quantitative field/discipline labels
+are accepted literally; mathematics or other subjects are not automatically
+classified as quantitative.
+
+Negated, coursework-only, or status-qualified entries (such as expected,
+incomplete, candidate, honorary, or revoked) do not establish an attained
+degree. A recognized requirement that fails this rule cannot fall back to
+lexical overlap. Dotted abbreviations, free-form credential prose, degree-level
+requirements, and general subject equivalence are outside this rule. Explicit
+gaps still override a match. This is text matching, not credential verification.
 
 ### Independent-readiness report boundary
 
