@@ -564,6 +564,14 @@ coursework, unrelated subjects, and negated or unfinished credentials.
 Unsupported phrasing remains outside that rule. Neither correction alone
 establishes semantic coverage or closes the workflow-parity gate.
 
+Issue #332 records one independent assessment of eighteen candidate-reviewed
+criteria: seven supported, seven partial, and four not established, with valid
+input references. Local review identified an unsupported startup-stage inference
+and an added condition on an explicit alternative. These remain raw diagnostic
+judgments, not accepted coverage or a replacement score. The original run,
+artifact, and thresholds are unchanged; parity remains indeterminate and #250
+remains blocked. See the [pilot record](consented-pilot-v0.9.md) for limits.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
