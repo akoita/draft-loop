@@ -698,6 +698,19 @@ the current artifact model.
 
 ## Author–critic loop
 
+Every live author request carries the same 8,192-token output cap in its
+model-facing budget and transport configuration. The prompt asks for compact,
+schema-only JSON while preserving supported facts, required sections, chronology,
+and citations. Initial drafts, ordinary revisions, and adjudicated revisions all
+retain this guidance, including retries whose latest failure concerns factuality.
+The critic has its own independent output contract.
+
+The existing provider usage checks still enforce the cap. Claude reports
+[cumulative usage across a call](https://code.claude.com/docs/en/agent-sdk/cost-tracking),
+so a token-budget failure alone does not establish the size of the final JSON.
+Prompt guidance is not a guarantee of compliance; live effectiveness requires a
+separate observation.
+
 1. Create a workspace with a job description, local evidence directory,
    instructions, truthfulness policy, and readiness rubric.
 2. Ingest and normalize selected sources into a canonical evidence base.

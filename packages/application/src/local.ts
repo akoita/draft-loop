@@ -2189,7 +2189,7 @@ function providerAgents(
           retrievedEvidence.map(({ id }) => id),
         ) as JsonObject,
         outputName: "author_artifact_proposal",
-        maxOutputTokens: 8192,
+        maxOutputTokens: authorPrompt.providerInput.outputBudget.maxOutputTokens,
         dataPolicy: dataPolicy(config.authorCompany),
         ...(signal === undefined ? {} : { signal }),
       };

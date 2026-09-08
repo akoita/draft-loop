@@ -479,6 +479,15 @@ its unchanged 1,200-second cumulative budget. The approved decisions and
 version-2 draft remain preserved; parity is still indeterminate and release
 preparation remains blocked.
 
+Issue #308 exposes the unchanged author output cap in every model-facing request
+and retains compact-output instructions across all retries. Deterministic
+provider-handoff coverage preserves the cap and adjudication through token-budget
+and factual-invariant failures. This corrects a missing prompt contract; it does
+not establish the cause of cumulative usage overages or validate a live revision.
+The #306 run remains preserved with retries exhausted. Issue #309 separately
+addresses the synthetic action-verb/protected-name false positive found during
+this verification; it is not established as the private run's failure cause.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
