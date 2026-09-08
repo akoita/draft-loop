@@ -1040,7 +1040,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     const createWorkspace = nativeActions.create;
     const createDemoWorkspace = nativeActions.createDemo;
     return (
-      <main className="app-shell">
+      <main className="boot-shell">
         <section className="panel boot-panel">
           <div className="boot-brand">
             <BrandMark />
@@ -1090,8 +1090,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   }
   if (state === null) {
     return (
-      <main className="app-shell">
-        <section className="panel boot-panel">
+      <main className="boot-shell">
+        <section className="panel boot-panel boot-panel-quiet">
           <div className="boot-brand">
             <BrandMark />
             <span className="brand-name">DraftLoop</span>
