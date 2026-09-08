@@ -525,6 +525,14 @@ name. Issue #315 owns that bounded correction. The original run is unchanged;
 no critic or accepted application revision followed. Parity remains
 indeterminate and release preparation remains blocked.
 
+Issue #320 records one independent critic review of the locally validated #314
+revision after #315 and #318. It completed in eighteen seconds with two date
+errors and two warnings; local readiness remains false. Source inspection found
+that retrieval omitted two chronology headings: one generated range matches an
+omitted heading, while the transition range differs from its explicit source.
+Issue #321 owns bounded preservation of approved chronology in provider evidence.
+The original run is unchanged, with no acceptance, candidate approval, or export.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
