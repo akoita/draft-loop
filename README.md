@@ -136,6 +136,12 @@ requirements and priorities before interpreting relevance as job fit. Local
 input limits are 64 KiB, 100 units, and 2,000 characters per unit; overflow,
 code fences, and tables require a reviewed brief instead of silent truncation.
 
+Deterministic relevance uses lexical overlap within individual CV blocks: at
+least half of a requirement’s meaningful tokens must appear in one block.
+Words scattered across unrelated blocks cannot jointly satisfy a requirement.
+This remains a lexical signal, not evidence of semantic coverage; degree
+alternatives and other equivalent phrasing can still be missed.
+
 The `profile` command group derives a canonical candidate profile from the
 workspace's configured CKB selection, reloads exact or latest versions, and
 creates immutable edited or reviewed successors. Derivation is the only

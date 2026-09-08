@@ -8,6 +8,13 @@ import type {
   WritingPolicyRule,
 } from "@draft-loop/schemas";
 
+import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
+
+export {
+  isRequirementCoveredByBlock,
+  requirementCoverageHeuristic,
+} from "./requirement-coverage.js";
+
 export type ValidationSeverity = "error" | "warning";
 
 export const validationCategories = [
@@ -86,34 +93,8 @@ export interface DeterministicValidationOptions {
   readonly explicitGapRequirementIds?: readonly string[];
 }
 
-const stopWords = new Set([
-  "a",
-  "an",
-  "and",
-  "as",
-  "at",
-  "be",
-  "by",
-  "for",
-  "from",
-  "in",
-  "into",
-  "of",
-  "on",
-  "or",
-  "the",
-  "to",
-  "with",
-]);
-
 function normalizeText(value: string): string {
   return value.normalize("NFKC").toLowerCase().replace(/\s+/gu, " ").trim();
-}
-
-function tokens(value: string): readonly string[] {
-  return [...normalizeText(value).matchAll(/[\p{L}\p{N}]+/gu)]
-    .map((match) => match[0])
-    .filter((token) => token.length > 1 && !stopWords.has(token));
 }
 
 function artifactText(artifact: DraftArtifact): string {
@@ -346,25 +327,6 @@ function hasDateConflict(claimText: string, evidenceText: string): boolean {
   return [...claimYears].every((year) => !evidenceYears.has(year));
 }
 
-/**
- * A requirement is covered when at least half of its meaningful normalized
- * tokens (and at least one token) occur in the normalized artifact text. This
- * intentionally favors a small, explainable lexical signal over semantic
- * inference; stop words and one-character tokens are ignored.
- */
-export const requirementCoverageHeuristic =
-  "coverage = at least half of meaningful normalized requirement tokens, with at least one match";
-
-function isRequirementCovered(requirement: Pick<JobRequirement, "text">, text: string): boolean {
-  const requirementTokens = [...new Set(tokens(requirement.text))];
-  if (requirementTokens.length === 0) {
-    return false;
-  }
-  const artifactTokens = new Set(tokens(text));
-  const matches = requirementTokens.filter((token) => artifactTokens.has(token)).length;
-  return matches > 0 && matches / requirementTokens.length >= 0.5;
-}
-
 function freezeResult(issues: readonly ValidationIssue[]): ValidationResult {
   const frozenIssues = Object.freeze(
     issues.map((issue) =>
@@ -544,7 +506,7 @@ export function validateDraftArtifact(
       });
       continue;
     }
-    if (!isRequirementCovered(requirement, text)) {
+    if (!isRequirementCoveredByBlock(requirement, artifact)) {
       addIssue(issues, {
         code: "uncovered-requirement",
         category: "coverage",

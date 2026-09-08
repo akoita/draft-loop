@@ -1,0 +1,103 @@
+import type { DraftArtifact, JobRequirement } from "@draft-loop/schemas";
+import { isRequirementCoveredByBlock, validateDraftArtifact } from "@draft-loop/validation";
+import { describe, expect, it } from "vitest";
+import { evaluateReadiness } from "./index.js";
+
+function artifact(texts: readonly string[]): DraftArtifact {
+  return {
+    schemaVersion: 1,
+    id: "coverage-artifact",
+    version: 1,
+    parentVersionId: null,
+    createdAt: "2026-08-12T10:00:00.000Z",
+    language: "en",
+    claims: [],
+    decisions: [],
+    sections: texts.map((text, i) => ({
+      id: `section-${i}`,
+      title: "Experience",
+      kind: "experience",
+      order: i,
+      blocks: [{ id: `block-${i}`, type: "bullet", text, claimIds: [] }],
+    })),
+  };
+}
+
+const requirement: JobRequirement = {
+  id: "docs",
+  text: "Write public library documentation, integration guides, and migration paths.",
+  priority: "critical",
+};
+const context = {
+  requirements: [requirement],
+  outputConstraints: { requiredSections: [] },
+  readinessRubric: {
+    relevance: 0.8,
+    evidence: 0,
+    accuracy: 0,
+    differentiation: 0,
+    clarity: 0,
+    format: 0,
+    credibility: 0,
+  },
+};
+
+function relevance(draft: DraftArtifact, gaps: readonly string[] = []) {
+  return evaluateReadiness(draft, context, { explicitGapRequirementIds: gaps }).scoreVector
+    .relevance;
+}
+
+const unrelated = [
+  "Maintained a public library catalog.",
+  "Prepared internal documentation and integration checks.",
+  "Planned infrastructure migration paths.",
+];
+
+describe("shared block-local requirement coverage", () => {
+  it("does not pool unrelated matches across sections or blocks", () => {
+    const draft = artifact(unrelated);
+    expect(relevance(draft)).toBe(0);
+    expect(validateDraftArtifact(draft, context).issues).toContainEqual(
+      expect.objectContaining({
+        code: "uncovered-requirement",
+        requirementId: "docs",
+        severity: "error",
+      }),
+    );
+    const combined = {
+      ...draft,
+      sections: [{ ...draft.sections[0]!, blocks: draft.sections.flatMap((s) => s.blocks) }],
+    };
+    expect(relevance(combined)).toBe(0);
+    expect(isRequirementCoveredByBlock(requirement, combined)).toBe(false);
+  });
+
+  it("matches coherent documentation work in both validation and scoring", () => {
+    const draft = artifact([
+      "Wrote public library documentation, integration guides, and migration paths.",
+    ]);
+    expect(relevance(draft)).toBe(1);
+    expect(
+      validateDraftArtifact(draft, context).issues.filter((i) => i.category === "coverage"),
+    ).toEqual([]);
+  });
+
+  it("preserves explicit gap precedence over matching text", () => {
+    const draft = artifact([requirement.text]);
+    expect(relevance(draft, [requirement.id])).toBe(0);
+    expect(validateDraftArtifact(draft, context, [requirement.id]).issues).toContainEqual(
+      expect.objectContaining({ code: "explicit-gap", requirementId: requirement.id }),
+    );
+  });
+
+  it.each([
+    ["Python systems", ["ＰＹＴＨＯＮ services"], true],
+    ["Python Python Python systems", ["Systems"], true],
+    ["Python systems cloud", ["Python"], false],
+    ["and the or", ["and the or"], false],
+    ["Python", [], false],
+    ["Python systems", ["Python\nsystems"], true],
+  ] as const)("retains normalized half-token matching for %s", (text, blocks, expected) => {
+    expect(isRequirementCoveredByBlock({ text }, artifact(blocks))).toBe(expected);
+  });
+});

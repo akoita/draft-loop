@@ -8,6 +8,8 @@ import {
   readinessDimensions as schemaReadinessDimensions,
 } from "@draft-loop/schemas";
 
+import { isRequirementCoveredByBlock } from "@draft-loop/validation";
+
 export * from "./pilot.js";
 export * from "./pilot-comparison-gate.js";
 export * from "./readiness-report.js";
@@ -129,16 +131,6 @@ function tokens(value: string): readonly string[] {
     .filter((token) => token.length > 1 && !stopWords.has(token));
 }
 
-function isRequirementCovered(requirement: Pick<JobRequirement, "text">, text: string): boolean {
-  const requirementTokens = [...new Set(tokens(requirement.text))];
-  if (requirementTokens.length === 0) {
-    return false;
-  }
-  const artifactTokens = new Set(tokens(text));
-  const matches = requirementTokens.filter((token) => artifactTokens.has(token)).length;
-  return matches > 0 && matches / requirementTokens.length >= 0.5;
-}
-
 function artifactText(artifact: DraftArtifact): string {
   return artifact.sections
     .flatMap((section) => section.blocks.map((block) => block.text))
@@ -159,7 +151,6 @@ function weightedCoverage(
   requirements: ReadinessEvaluationContext["requirements"],
   explicitGapIds: ReadonlySet<string>,
 ): { readonly score: number; readonly covered: number; readonly total: number } {
-  const text = artifactText(artifact);
   let coveredWeight = 0;
   let totalWeight = 0;
   let covered = 0;
@@ -167,7 +158,7 @@ function weightedCoverage(
     const weight =
       requirement.priority === "critical" ? 2 : requirement.priority === "high" ? 1.5 : 1;
     totalWeight += weight;
-    if (!explicitGapIds.has(requirement.id) && isRequirementCovered(requirement, text)) {
+    if (!explicitGapIds.has(requirement.id) && isRequirementCoveredByBlock(requirement, artifact)) {
       coveredWeight += weight;
       covered += 1;
     }
@@ -390,7 +381,7 @@ export function evaluateReadiness(
     {
       dimension: "relevance",
       score: coverage.score,
-      rationale: `${coverage.covered} of ${coverage.total} requirements matched by deterministic tokens`,
+      rationale: `${coverage.covered} of ${coverage.total} requirements matched by deterministic tokens within individual blocks`,
     },
     {
       dimension: "evidence",

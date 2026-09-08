@@ -577,6 +577,15 @@ sections, or source locators where possible. A critic can identify a problem
 but cannot establish truth by itself; user evidence and human decisions remain
 authoritative.
 
+Validation and readiness share the block-local lexical coverage matcher in
+`packages/validation`. At least half of the distinct meaningful requirement
+tokens, with at least one match, must occur within one artifact block. Matches
+are never pooled across blocks or sections; section titles and claim-only text do
+not count. Explicit gaps still override lexical matches, and priority weights
+and rubric thresholds are unchanged. This does not infer negation, credential
+equivalence, or semantic entailment. Existing stored contexts and scores are
+not rewritten; a new evaluation can yield a different result.
+
 The default author and critic use different companies, with provider and model
 versions recorded in run history. The orchestrator stops at configured round,
 cost, or time limits, when quality is stable, or when the user reviews early.
