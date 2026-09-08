@@ -501,8 +501,13 @@ Issue #312 adds opt-in local replay capture for author proposals rejected by
 application validation. Inspection confirmed that none of the three failed #306
 outputs was retained, so the private factual rejection cannot be replayed or
 attributed to #309. Future explicitly configured diagnostic sessions retain the
-proposal and exact validation inputs locally. No new live observation has run;
-parity remains indeterminate and release preparation remains blocked.
+proposal and exact validation inputs locally. The separately authorized #314 diagnostic revision used the preserved draft
+and approved inputs for one author attempt capped at ten minutes. After 135
+seconds, local capture and replay identified a source-backed negative-experience
+statement rejected because its opening negation was grouped with a technology
+name. Issue #315 owns that bounded correction. The original run is unchanged;
+no critic or accepted application revision followed. Parity remains
+indeterminate and release preparation remains blocked.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
