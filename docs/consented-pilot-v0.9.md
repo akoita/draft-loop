@@ -184,6 +184,31 @@ Artifact version 2 and its fourteen findings remain unchanged. The run is in
 persisted, but no candidate-adjudicated revision was produced. No final CV
 approval, export, or submission occurred, and parity remains indeterminate.
 
+## Single diagnostic revision with local capture (#314)
+
+On 2026-09-08, the candidate authorized one standalone author revision attempt
+on revision `39c0a71999900269d5e1f581b2a771b188fdd4b9`. It used the preserved
+version-2 draft, pinned context, sixteen retrieved evidence chunks, and the
+exact approved report, fourteen decisions, and nine conditional overrides.
+The Anthropic user-session author retained the 8,192-token cap, with a separate
+600,000 ms timeout and no retries. This diagnostic request stopped at author
+validation; it did not resume or reset the exhausted application run.
+
+The attempt returned after 134,527 ms and failed one factual-invariant check.
+Local capture succeeded. Replaying the captured validation inputs reproduced
+the failure: the protected-name extractor grouped an opening negation with a
+technology name, rejecting a lack-of-experience statement explicitly supported
+by the cited source in a different word order. A synthetic reproduction uses
+source `No experience: GraphQL.` and claim `No GraphQL experience`; the extracted
+`No GraphQL` name fails exact matching, while the source wording passes.
+These technology examples are synthetic, not candidate evidence.
+
+Issue #315 owns the bounded grounding correction. The result explains this
+captured rejection, not the uncaptured #306 failure. The original database
+checksum is unchanged, with version 2 and exhausted retries preserved. No
+critic call, accepted application revision, candidate approval, export, or
+submission occurred. Parity remains indeterminate and #250 remains blocked.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -245,20 +270,17 @@ unresolved findings as accepted facts.
 
 ## Decision
 
-Keep the workflow-parity outcome unvalidated. Issue #249 records the initial
-observation, #262 records the corrective rerun, and #266 records the
-grounding-guide observation. Issue #271 records the structured-recovery
-observation, while #275 records the post-citation-completion observation. The
-sixth observation is recorded by #286, #287 removed its typed-history storage
-blocker, and #290 records the confirmed but exhausted adjudication
-continuation. Issue #291 records the declared-timeout observation, #293
-delivered content-free failure-stage classification, #296 records the
-classified author-exhaustion observation, and #298 records the tenth observation.
-Issue #302 records the eleventh observation after #300's numeric-grounding
-correction. Issue #303 recovered the preserved run through parent-first
-projection without new provider calls. Under #306, the candidate approved the
-review plan, but all three continuation attempts failed the output-token or
-factual-invariant boundary. Keep the approved decisions and preserved draft;
-another attempt requires a separately bounded next step rather than resetting
-the exhausted retry limit. Issue #75 stays open, and release preparation
-under #250 remains blocked. No approval or export is authorized by this result.
+Keep the workflow-parity outcome unvalidated. The observations above document
+progress through drafting, independent critique, automatic revision, and
+recovery, but none completed the approved candidate-adjudicated revision or
+cleared the predeclared comparison gate.
+
+The #303 recovery preserved the #302 draft. All three #306 continuation
+attempts then failed the output-token or factual-invariant boundary. The
+separately authorized #314 diagnostic attempt captured a source-backed
+negative-experience false positive; #315 owns its correction. Keep the approved
+decisions and version-2 draft, with the original run's exhausted retries intact.
+
+Issue #75 stays open, and release preparation under #250 remains blocked.
+No final candidate approval, export, or submission is authorized by these
+results. Any further live attempt needs its own bounded authorization.
