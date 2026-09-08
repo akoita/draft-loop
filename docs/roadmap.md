@@ -572,6 +572,11 @@ judgments, not accepted coverage or a replacement score. The original run,
 artifact, and thresholds are unchanged; parity remains indeterminate and #250
 remains blocked. See the [pilot record](consented-pilot-v0.9.md) for limits.
 
+Issue #335 adds a [synthetic matched application reference](../packages/evaluations/fixtures/matched-application/README.md)
+for testing substantive selection, source corrections, and maturity boundaries.
+It contains fictional facts and authored review expectations, not private
+candidate records or a measured parity result.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
