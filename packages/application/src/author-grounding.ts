@@ -2,6 +2,25 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 
 const protectedNumberPattern = /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![\p{L}\p{N}])/giu;
 
+// Mixed-case names must also appear in source guides when they stand alone.
+const mixedCaseNamePattern = /\b\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*\b/gu;
+const singleTechnologyNamePattern =
+  /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
+const softwareObjectPattern =
+  /^[ \t]+(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/u;
+const openingActionVerbs = new Set([
+  "Built",
+  "Implemented",
+  "Developed",
+  "Automated",
+  "Deployed",
+  "Migrated",
+  "Optimized",
+  "Refactored",
+  "Integrated",
+  "Tested",
+]);
+
 const protectedValuePatterns = [
   /https?:\/\/[^\s)]+/giu,
   /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/gu,
@@ -9,6 +28,7 @@ const protectedValuePatterns = [
   /\b[\p{Lu}]{2,}(?:[+-][\p{Lu}\p{N}]+)*\b/gu,
   /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu,
   /\b(?:at|for)\s+(\p{Lu}[\p{L}'’-]+)\b/gu,
+  mixedCaseNamePattern,
 ] as const;
 
 export interface AuthorGroundingGuideEntry {
@@ -27,22 +47,43 @@ function normalizedIdentity(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US");
 }
 
-/** Match extracted numeric values as whole tokens, retaining their units. */
+/** Match numbers with their units and mixed-case names as whole tokens. */
 export function supportsProtectedValue(evidence: string, protectedValue: string): boolean {
   const value = normalizedIdentity(protectedValue);
   const source = normalizedIdentity(evidence);
   if (/^\d/u.test(value)) {
     return [...source.matchAll(protectedNumberPattern)].some((match) => match[0] === value);
   }
+  if (/^\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*$/u.test(protectedValue)) {
+    return (source.match(/[\p{L}\p{N}]+/gu) ?? []).some((token) => token === value);
+  }
   return source.includes(value);
+}
+
+/** Split only an opening action, one technical name, and a software-object noun. */
+function withoutOpeningAction(text: string, matched: string, start: number): string {
+  if (text.slice(0, start).trim() !== "") return matched;
+  const parts = matched.split(/\s+/u);
+  const [verb, name] = parts;
+  if (
+    parts.length !== 2 ||
+    verb === undefined ||
+    name === undefined ||
+    !openingActionVerbs.has(verb) ||
+    !singleTechnologyNamePattern.test(name) ||
+    !softwareObjectPattern.test(text.slice(start + matched.length))
+  )
+    return matched;
+  return name;
 }
 
 /** Extract exact protected values in first-occurrence order without duplicates. */
 export function extractProtectedValues(value: string): readonly string[] {
   const matches: ProtectedValueMatch[] = protectedValuePatterns.flatMap((pattern, patternIndex) =>
     [...value.matchAll(pattern)].map((match, matchIndex) => {
-      const extracted = match[1] ?? match[0];
-      const captureOffset = match[1] === undefined ? 0 : match[0].indexOf(match[1]);
+      const raw = match[1] ?? match[0];
+      const extracted = withoutOpeningAction(value, raw, match.index ?? 0);
+      const captureOffset = match[0].indexOf(extracted);
       return {
         value: extracted,
         start: (match.index ?? 0) + Math.max(captureOffset, 0),

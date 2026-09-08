@@ -607,6 +607,7 @@ describe("local application driver", () => {
         {
           evidenceChunkId: expect.any(String),
           protectedValues: [
+            "TypeScript",
             "Staff Engineer",
             "Example Systems",
             "Example",
