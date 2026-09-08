@@ -239,6 +239,31 @@ approval, export, or submission occurred. Local structural validation did not
 prevent the date error; the revision requires correction and parity remains
 indeterminate. Candidate material and full findings remain private.
 
+## Independent review after the local chronology correction (#324)
+
+The candidate authorized one more standalone critic attempt on 2026-09-08,
+using revision `1ef3f3f16015c5d9a3faa9d852e54fd6f4ad2f63`. The local correction
+replaced the transition range with its exact approved source range and added
+explicit source citations for both chronology entries. The corrected artifact
+passed author validation and adjudication tracing with all nine original
+exceptions. The OpenAI user-session critic received eighteen approved evidence
+chunks, including the previously omitted headings, and seven deterministic
+findings. The single attempt retained the 16,384-token cap and 600,000 ms timeout.
+
+The review completed in 12,655 ms with no errors and one factuality warning.
+The critic did not repeat the earlier date findings. Its remaining warning
+concerns summary wording that groups a staging technology with production
+systems, potentially overstating production experience. Local inspection
+confirmed that the summary uses this grouped wording; the source distinguishes
+staging work from production delivery. The local readiness projection remains
+false solely because the relevance rubric threshold is unmet.
+
+This is a narrower remaining review surface, not a validated parity outcome.
+The original database checksum is unchanged, and the corrected artifact has
+not been accepted into the original application run. No author call, retry,
+candidate approval, export, or submission occurred. Full findings and candidate
+material remain private.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -314,6 +339,10 @@ decisions and version-2 draft, with the original run's exhausted retries intact.
 The #320 independent critic review found a chronology error and missing source
 context after local validation passed. Issue #321 owns the evidence-selection
 correction; the current revised artifact remains unapproved.
+
+After the local chronology correction, #324 returned one staging-versus-production
+warning and no errors. The relevance threshold remains unmet, so further
+candidate review must preserve honest coverage gaps rather than invent experience.
 
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
