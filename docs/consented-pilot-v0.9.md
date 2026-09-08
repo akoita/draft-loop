@@ -209,6 +209,36 @@ checksum is unchanged, with version 2 and exhausted retries preserved. No
 critic call, accepted application revision, candidate approval, export, or
 submission occurred. Parity remains indeterminate and #250 remains blocked.
 
+## Independent critic review of the local revision (#320)
+
+On 2026-09-08, the candidate authorized one standalone OpenAI user-session
+critic attempt on revision `6c332e901895a4dedf38e648a1197b03feaa2a1c`. The
+version-3 artifact rebuilt from the unchanged #314 capture passed local author
+validation and adjudication tracing with all nine approved exceptions. The
+critic received the same sixteen retrieved evidence chunks, pinned context,
+and seven current deterministic findings. The attempt retained the existing
+16,384-token critic cap, with a separate 600,000 ms timeout and no retries.
+
+The critic completed in 17,731 ms, returning two unsupported-date errors, one
+section-content warning, and one anonymity warning. The local readiness
+projection remains false, with report errors, a disputed dimension, and an
+unmet rubric threshold. This diagnostic review did not accept the artifact
+into the original application run or authorize candidate approval or export.
+
+Local source inspection distinguishes the date errors. One range is explicitly
+supported by an indexed source heading that was absent from retrieved evidence.
+The other differs from the source's explicit transition range and instead uses
+adjacent employment boundaries. Both relevant headings were omitted from the
+sixteen selected chunks. Issue #321 owns bounded chronology preservation in
+provider evidence. The section-content warning overlaps known conditional
+coverage gaps; the anonymity warning is a critic concern, not an established
+violation of an explicit city-exclusion policy.
+
+The original database checksum is unchanged. No author call, retry, candidate
+approval, export, or submission occurred. Local structural validation did not
+prevent the date error; the revision requires correction and parity remains
+indeterminate. Candidate material and full findings remain private.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -280,6 +310,10 @@ attempts then failed the output-token or factual-invariant boundary. The
 separately authorized #314 diagnostic attempt captured a source-backed
 negative-experience false positive; #315 owns its correction. Keep the approved
 decisions and version-2 draft, with the original run's exhausted retries intact.
+
+The #320 independent critic review found a chronology error and missing source
+context after local validation passed. Issue #321 owns the evidence-selection
+correction; the current revised artifact remains unapproved.
 
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
