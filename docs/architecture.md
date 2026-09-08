@@ -670,8 +670,13 @@ version linked to its source parent, records strict claim/section/artifact
 diff IDs, and marks accepted effects verified only when the current diff proves
 them. Evidence, requirement, and rubric effects remain missing unless an
 explicit, bounded effect override records a concise rationale; rejected and nuanced
-findings remain `disagreement-preserved`. A trace is valid only when no
-accepted effect is missing, and it never exposes a `resolved` flag.
+findings remain `disagreement-preserved`.
+
+Approved overrides are conditional: a direct effect takes precedence and remains `verified`, even when an override
+was supplied. The persisted approved override is retained; duplicate, unknown,
+malformed, and non-accepted overrides still fail validation. A trace is valid
+only when no accepted effect is missing. Verification records structural
+changes, not semantic resolution of findings; it never exposes a `resolved` flag.
 
 The orchestrator exposes a `requestAdjudicatedRevision` runtime carrier. It
 persists the exact report, canonical plan, accepted-effect overrides, and

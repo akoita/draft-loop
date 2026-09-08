@@ -457,6 +457,14 @@ support a claimed metric of `20`. Deterministic regression coverage establishes
 this bounded safety correction; it does not explain the live author failures
 or change the indeterminate parity result.
 
+Issue #318 keeps approved accepted-effect exceptions conditional. A directly
+observed change remains verified when an exception was supplied, while effects
+without a direct change still need their approved exception. Local replay of
+the unchanged #314 capture with all nine original exceptions now yields a valid
+trace: seven verified effects and seven overridden effects. This establishes
+structural trace validity, not semantic resolution of findings. The original
+run and approved plan remain unchanged, with no provider calls or acceptance.
+
 Issue #315 corrects the explicit negative-experience false positive identified
 by the captured #314 diagnostic revision. Local replay of that unchanged
 proposal now passes author validation. Focused checks preserve technology-name

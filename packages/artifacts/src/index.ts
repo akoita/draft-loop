@@ -447,11 +447,6 @@ export function traceAdjudicatedRevision(
         `Accepted effect override ${override.findingId} requires an accepted adjudication decision.`,
       );
     }
-    if (directEffectForFinding(decision, diff)) {
-      throw new Error(
-        `Accepted effect override ${override.findingId} is unused because its effect is already verified.`,
-      );
-    }
     overrides.set(override.findingId, override);
   }
 
