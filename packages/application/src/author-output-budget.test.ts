@@ -26,8 +26,9 @@ it("retains the exact author cap and adjudication through token and factuality r
     expect(system).toContain("including factuality corrections");
     expect(system).toContain("required sections, chronology, and evidence citations");
     expect(system).toContain("never invent facts absent from supplied material");
-    const evidence = input.retrievedEvidence as { id: string }[];
-    const id = evidence[0]?.id;
+    const evidence = input.retrievedEvidence as { id: string; text: string }[];
+    expect(evidence.some((chunk) => chunk.text.includes("June 2005 to December 2006"))).toBe(true);
+    const id = evidence.find((chunk) => chunk.text.includes("Built local-first"))?.id;
     if (!id) throw new Error("Missing selected evidence");
     const text =
       inputs.length === 3
@@ -64,6 +65,7 @@ it("retains the exact author cap and adjudication through token and factuality r
   });
   const critic = vi.fn<UserSessionProcessRunner>(async (_command, args, options) => {
     expect(options.stdin).not.toContain('"outputBudget"');
+    expect(options.stdin).toContain("June 2005 to December 2006");
     const outputPath = args[args.indexOf("--output-last-message") + 1];
     if (!outputPath) throw new Error("Missing output path");
     await writeFile(outputPath, JSON.stringify({ findings: [] }));
@@ -87,7 +89,7 @@ it("retains the exact author cap and adjudication through token and factuality r
     await writeFile(join(root, "job.md"), "TypeScript tools");
     await writeFile(
       join(root, "evidence", "resume.md"),
-      "Built local-first TypeScript tools with deterministic testing.",
+      "## Transition - June 2005 to December 2006\n\nBuilt local-first TypeScript tools with deterministic testing.",
     );
     await driver.initialize(
       { root, jobDescription: "job.md", sources: "evidence", maxRounds: 2 },

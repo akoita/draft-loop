@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-
 import {
   type CandidateKnowledgeBaseState,
   type CandidateKnowledgeLexicalChunk,
@@ -53,6 +52,11 @@ import {
 } from "@draft-loop/schemas";
 import type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
 import { artifactHistoryMigration, artifactVersionFromRow } from "./artifact-history.js";
+import {
+  type ApprovedEvidenceSources,
+  readApprovedChronology,
+  readEvidenceSource,
+} from "./chronology-evidence.js";
 
 export type {
   CandidateKnowledgeRetentionClass,
@@ -11183,12 +11187,14 @@ export class SqliteStorage
 
   public async getEvidenceSource(id: string): Promise<EvidenceSourceRecord | undefined> {
     this.ensureOpen();
-    const row = this.database
-      .prepare(
-        "SELECT id, workspace_id, path, media_type, checksum, created_at FROM evidence_sources WHERE id = ?",
-      )
-      .get(id);
-    return row === undefined ? undefined : evidenceSourceFromRow(row);
+    return readEvidenceSource(this.database, id);
+  }
+  public async readApprovedChronology(
+    workspaceId: string,
+    sources: ApprovedEvidenceSources,
+  ): Promise<readonly ScoredEvidenceChunk[]> {
+    this.ensureOpen();
+    return readApprovedChronology(this.database, workspaceId, sources);
   }
 
   public async saveEvidenceChunk(record: EvidenceChunkRecord): Promise<void> {
@@ -14753,17 +14759,6 @@ function writingPolicyVersionFromRow(row: Record<string, unknown>): WritingPolic
     }
     throw new StorageValidationError("The stored writing policy could not be read.");
   }
-}
-
-function evidenceSourceFromRow(row: Record<string, unknown>): EvidenceSourceRecord {
-  return {
-    id: rowString(row, "id"),
-    workspaceId: rowString(row, "workspace_id"),
-    path: rowString(row, "path"),
-    mediaType: rowString(row, "media_type"),
-    checksum: rowString(row, "checksum"),
-    createdAt: rowString(row, "created_at"),
-  };
 }
 
 function evidenceChunkFromRow(row: Record<string, unknown>): EvidenceChunkRecord {

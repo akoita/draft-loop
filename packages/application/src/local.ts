@@ -102,6 +102,7 @@ import type {
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
+import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import type {
@@ -138,7 +139,7 @@ import { createOpportunityPersistenceService } from "./opportunity-persistence.j
 import { modelFacingContext } from "./provider-context.js";
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
-import { responseExecution } from "./response-execution.js";
+import { responseExecution, timestamp } from "./response-execution.js";
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -146,7 +147,6 @@ const databaseFilename = "history.sqlite";
 const writingPolicyFilename = "writing-policy.md";
 const maximumWritingPolicyBytes = 64 * 1024;
 const writingPolicyChecksumPattern = /^[a-f0-9]{64}$/u;
-const timestamp = (): string => new Date().toISOString();
 const recognizedWritingPolicyPunctuation = "‐‑‒–—―‘’“”";
 type WithoutWritingPolicyRuleId<T> = T extends unknown ? Omit<T, "id"> : never;
 type UnidentifiedWritingPolicyRule = WithoutWritingPolicyRuleId<WritingPolicyRule>;
@@ -2291,7 +2291,7 @@ function engine(
     author: agents.author,
     critic: agents.critic,
     store,
-    retrieval: retrieval ?? storage,
+    retrieval: retrieval ?? createChronologyRetrieval(storage, context),
     contextResolver: async (contextSnapshotId) => {
       const record = await storage.getContextSnapshot(contextSnapshotId);
       return record === undefined

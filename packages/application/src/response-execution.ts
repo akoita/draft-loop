@@ -15,6 +15,8 @@ export function responseExecution<T>(
     outputTokens: response.usage.outputTokens,
     totalTokens: response.usage.totalTokens,
     estimatedUsd: response.cost.estimatedUsd,
-    completedAt: new Date().toISOString(),
+    completedAt: timestamp(),
   };
 }
+
+export const timestamp = (): string => new Date().toISOString();
