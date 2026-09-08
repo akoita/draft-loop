@@ -555,6 +555,13 @@ priority, retaining later criteria. These units still require semantic review
 through the opportunity-brief path before interpreting relevance as job fit.
 The existing context, score, and run remain unchanged; no threshold was lowered.
 
+Issue #328 prevents deterministic coverage from pooling requirement tokens
+across unrelated CV blocks, with one shared rule for validation and readiness.
+This addresses a demonstrated false match without changing rubric thresholds
+or existing run records. Degree-alternative false misses remain ordered
+follow-up work under #329. Neither correction alone establishes semantic
+coverage or closes the workflow-parity gate.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
