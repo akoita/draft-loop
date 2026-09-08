@@ -540,6 +540,13 @@ omitted heading, while the transition range differs from its explicit source.
 Issue #321 owns bounded preservation of approved chronology in provider evidence.
 The original run is unchanged, with no acceptance, candidate approval, or export.
 
+Issue #324 records one independent review after the local source-backed chronology
+correction. With eighteen approved evidence chunks, the critic completed in
+thirteen seconds and returned no errors and one staging-versus-production
+warning. The earlier date findings were not repeated. Local readiness remains
+false because the relevance threshold is unmet. The corrected artifact remains
+outside the preserved application run; no acceptance, approval, or export occurred.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
