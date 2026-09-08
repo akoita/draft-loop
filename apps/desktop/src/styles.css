@@ -1338,40 +1338,54 @@ input[type="checkbox"] {
   gap: var(--space-4);
 }
 
-/* Comparing is a two-column read, so both versions take the same measure: the same
-   sentence then lands in the same place on both sides, which is the whole point of
-   putting them next to each other. The old 0.85/1.15 split existed to buy room for
-   the margin notes, and it made the previous version the wider column while the
-   draft you are actually editing was the narrower one.
+/* Comparing is a two-column read, and how the width is split between the two versions is
+   the reader's call, not the layout's: someone reading mostly the new draft wants a wide
+   right side, someone auditing what was removed wants a wide left. The divider between
+   them is a control, and `--compare-split` is the fraction it holds — the previous
+   version's share of the row. The middle track is the handle itself.
 
-   The margin steps aside instead. It is anchored to the current draft's blocks and
-   has no meaning against the previous version, and it already has a supported
-   hidden state — below 1280px it is removed and the findings queue is the only view
-   of findings, which the layout effect handles by way of `offsetParent`.
+   The old 0.85/1.15 split existed to buy room for the margin notes, and it made the
+   previous version the wider column while the draft you are actually editing was the
+   narrower one. The margin steps aside instead. It is anchored to the current draft's
+   blocks and has no meaning against the previous version, and it already has a supported
+   hidden state — below 1280px it is removed and the findings queue is the only view of
+   findings, which the layout effect handles by way of `offsetParent`.
 
-   The measure is capped so a very wide window does not stretch prose into a line no
-   one can track back from; under the cap the pair simply fills the desk. */
+   The handle is the gutter rather than something sitting inside one, so the column gap goes
+   to zero here and the fraction is taken of the width the two versions actually share.
+   Otherwise the gutter would come out of the right-hand track alone and an even split would
+   not be even.
+
+   Nothing caps the measure here: `.main-column > *` already bounds the line length, and a
+   per-pane cap would only fight the splitter for the same decision. */
 .doc-grid-compare {
-  --compare-measure: 720px;
-  grid-template-columns: repeat(2, minmax(0, var(--compare-measure)));
-  justify-content: center;
+  --compare-handle-width: calc(2 * var(--space-4));
+  grid-template-columns:
+    minmax(0, calc(var(--compare-split, 0.5) * (100% - var(--compare-handle-width))))
+    var(--compare-handle-width)
+    minmax(0, 1fr);
+  column-gap: 0;
 }
 
-.doc-grid-compare .sheet-margin {
-  display: none;
+/* The divider. It is the gutter between the two versions: a hairline rule with the whole
+   gap around it as the grip, so it is comfortable to grab without becoming a bar of its
+   own. It stretches the full height of the row, because the reader takes hold of it
+   wherever their eye already is. */
+.compare-split-handle {
+  --compare-split-rule: var(--border);
+  align-self: stretch;
+  width: var(--compare-handle-width, 32px);
+  border: 0;
+  background:
+    linear-gradient(to right, var(--compare-split-rule), var(--compare-split-rule)) center / 1px
+    100% no-repeat;
+  cursor: col-resize;
+  touch-action: none;
 }
 
-/* Both panes fill their own track, so the two measures are equal by construction
-   rather than by a pair of hand-tuned fractions. */
-.doc-grid-compare .sheet {
-  flex: 1 1 auto;
-  max-width: none;
-}
-
-/* The heading is framed to the paper, and while comparing the paper has no margin
-   to be framed with. */
-.doc-grid-compare .diff-column-current .pane-heading {
-  max-width: none;
+.compare-split-handle:hover,
+.compare-split-handle:focus-visible {
+  --compare-split-rule: var(--teal);
 }
 
 /* Each side is a labelled column: the label stays on the desk, the pane sits
@@ -1762,6 +1776,29 @@ input[type="checkbox"] {
   .sheet-margin {
     display: block;
   }
+}
+
+/* What the compare view does to the sheet and its margin. These sit after the rules they
+   override rather than beside the compare grid, because a lower-specificity selector that
+   comes later cannot take effect and reading them in source order should not suggest it
+   might.
+
+   Both panes fill their own track, so the two measures are equal by construction rather
+   than by a pair of hand-tuned fractions. The margin steps aside: it is anchored to the
+   current draft's blocks and has no meaning against the previous version, and the layout
+   effect already treats a hidden margin as "nothing to place". The heading is framed to
+   the paper, and while comparing the paper has no margin to be framed with. */
+.doc-grid-compare .sheet {
+  flex: 1 1 auto;
+  max-width: none;
+}
+
+.doc-grid-compare .sheet-margin {
+  display: none;
+}
+
+.doc-grid-compare .diff-column-current .pane-heading {
+  max-width: none;
 }
 
 .margin-notes {
@@ -3849,6 +3886,11 @@ input[type="checkbox"] {
 
   .doc-grid-compare {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The versions stack here, so a vertical divider has nothing left to divide. */
+  .compare-split-handle {
+    display: none;
   }
 }
 
