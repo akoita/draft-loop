@@ -475,6 +475,35 @@ describe("adjudicated revision runtime boundary", () => {
     });
   });
 
+  it("retains a conditional override when the revision directly changes its target", async () => {
+    const fixture = await reviewed();
+    const request = input({
+      report: report([finding("finding-artifact", { kind: "artifact", id: "artifact-1" })]),
+      decisions: [
+        {
+          findingId: "finding-artifact",
+          disposition: "accept",
+          rationale: "Revise when supported.",
+        },
+      ],
+      acceptedEffectOverrides: [
+        {
+          findingId: "finding-artifact",
+          rationale: "Preserve the gap if no supported edit exists.",
+        },
+      ],
+    });
+    const staged = await fixture.engine.requestAdjudicatedRevision("run-1", request);
+    const completed = await fixture.engine.resume("run-1", { context: context() });
+    expect(completed.adjudicationRuntime?.acceptedEffectOverrides).toEqual(
+      staged.adjudicationRuntime?.acceptedEffectOverrides,
+    );
+    expect(completed.adjudicationRuntime?.trace).toMatchObject({
+      valid: true,
+      effects: [{ findingId: "finding-artifact", status: "verified" }],
+    });
+  });
+
   it("records a missing accepted effect as an invalid trace without inventing success", async () => {
     const onlyExternalFinding = finding("finding-requirement", {
       kind: "requirement",

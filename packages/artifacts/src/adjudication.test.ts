@@ -353,6 +353,31 @@ describe("adjudicated artifact revisions", () => {
     ).toThrow(/duplicated/i);
   });
 
+  it("still validates redundant exceptions before choosing direct effects", () => {
+    const source = sourceArtifact();
+    const args = {
+      plan: plan(source),
+      sourceArtifact: source,
+      revisedArtifact: revisedArtifact(source),
+      createdAt: "2026-08-25T10:07:00.000Z",
+    };
+    expect(() =>
+      traceAdjudicatedRevision({
+        ...args,
+        acceptedEffectOverrides: [
+          { findingId: "finding-claim", rationale: "First." },
+          { findingId: "finding-claim", rationale: "Second." },
+        ],
+      }),
+    ).toThrow(/duplicated/i);
+    expect(() =>
+      traceAdjudicatedRevision({
+        ...args,
+        acceptedEffectOverrides: [{ findingId: "finding-claim", rationale: "" }],
+      }),
+    ).toThrow();
+  });
+
   it("rejects backwards artifact and trace chronology", () => {
     const source = sourceArtifact();
     const revised = revisedArtifact(source);
@@ -377,26 +402,21 @@ describe("adjudicated artifact revisions", () => {
     ).toThrow(/revision trace createdAt/i);
   });
 
-  it("rejects unused overrides and returns a deterministic deeply immutable trace", () => {
+  it("prefers direct effects to conditional overrides and preserves an immutable trace", () => {
     const source = sourceArtifact();
     const revised = revisedArtifact(source);
-    expect(() =>
-      traceAdjudicatedRevision({
-        plan: plan(source),
-        sourceArtifact: source,
-        revisedArtifact: revised,
-        createdAt: "2026-08-25T10:07:00.000Z",
-        acceptedEffectOverrides: [
-          { findingId: "finding-claim", rationale: "This must not replace direct proof." },
-        ],
-      }),
-    ).toThrow(/unused/i);
+    const overrides = [
+      { findingId: "finding-claim", rationale: "Use only if no direct effect is observed." },
+    ];
+    const original = structuredClone(overrides);
     const result = traceAdjudicatedRevision({
       plan: plan(source),
       sourceArtifact: source,
       revisedArtifact: revised,
       createdAt: "2026-08-25T10:07:00.000Z",
+      acceptedEffectOverrides: overrides,
     });
+    expect(overrides).toEqual(original);
 
     expect(result).toEqual(traceAdjudicatedRevisionAgain(plan(source), source, revised));
     expect(result.effects[0]).toEqual({ findingId: "finding-claim", status: "verified" });
