@@ -457,6 +457,15 @@ support a claimed metric of `20`. Deterministic regression coverage establishes
 this bounded safety correction; it does not explain the live author failures
 or change the indeterminate parity result.
 
+Issue #309 corrects the synthetic action-verb grounding false positive: `Built
+TypeScript tools` can cite `Built local-first TypeScript tools` while still
+requiring support for the technology name. The exception is limited to known
+opening past-tense verbs, single acronyms or mixed-case names, and recognized
+software-object nouns. Negative checks retain protection for changed names,
+titles, credentials, dates, and metrics. This does not establish the cause of
+the private #306 rejection or validate a live revision; that run remains
+preserved with retries exhausted.
+
 The eleventh observation under #302 completed author, critic, automatic revision,
 and second critic on their first attempts, reaching human review after 239
 active seconds. Readiness remained false with thirteen warnings and one error.

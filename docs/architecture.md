@@ -610,6 +610,15 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
+Author grounding treats a narrow English action phrase such as `Built TypeScript
+tools` as an action plus the protected technology name. The exception requires a
+known opening past-tense verb, one acronym or mixed-case name, and a recognized
+software-object noun. Headings, ambiguous title words, employer statements, and
+multi-word names keep their existing full-span checks. Standalone mixed-case
+names also appear in the source grounding guide and require whole-token support;
+`SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
+syntactic rule, not general semantic verification.
+
 ### Author adjudication and revision trace boundary
 
 `packages/schemas` also owns the strict, versioned author-adjudication plan and
