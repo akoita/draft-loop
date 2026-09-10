@@ -343,6 +343,7 @@ function assertOutputWithinLimit(
     "The user-session runtime exceeded the requested output-token budget.",
     {
       retryable: false,
+      failureStage: "output-token-budget-exceeded",
       diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
     },
   );

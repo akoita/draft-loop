@@ -689,6 +689,57 @@ describe("durable orchestration", () => {
     expect((await engine.events("run-1")).map((event) => event.type)).toContain("provider.failed");
   });
 
+  it("normalizes and persists output-token budget failures for a safe retry", async () => {
+    let attempts = 0;
+    const authorRequests: unknown[] = [];
+    const { engine, author, store } = engineFixture({
+      author: async (request) => {
+        authorRequests.push(request);
+        attempts += 1;
+        if (attempts === 1) {
+          throw Object.assign(new Error("private provider output-token details"), {
+            code: "invalid-response",
+            retryable: false,
+            failureStage: "output-token-budget-exceeded",
+            diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
+          });
+        }
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+
+    const failed = await engine.start(request());
+    expect(failed).toMatchObject({
+      state: "provider-error",
+      currentStep: "author",
+      lastError: {
+        code: "invalid-response",
+        message: "The provider request failed. You can retry safely.",
+        attempt: 1,
+        maxAttempts: 3,
+        retryable: true,
+        failureStage: "output-token-budget-exceeded",
+        failureReason: "output-token-budget-exceeded",
+        diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
+      },
+    });
+    expect(JSON.stringify(failed)).not.toContain("private provider output-token details");
+    expect(await store.loadRun("run-1")).toEqual(failed);
+
+    const recovered = await engine.resume("run-1", { context: context() });
+
+    expect(recovered.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(authorRequests[1]).toMatchObject({
+      retryFeedback: {
+        failureCode: "invalid-response",
+        failureStage: "output-token-budget-exceeded",
+        diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
+      },
+    });
+    expect(JSON.stringify(recovered)).not.toContain("private provider output-token details");
+  });
+
   it("retries a failed critic without rerunning the author", async () => {
     const savedArtifact = artifact();
     let criticAttempts = 0;

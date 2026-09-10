@@ -3,12 +3,19 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { ContextSnapshot } from "@draft-loop/domain";
-import { buildApplicationReadinessStoppingDecision } from "@draft-loop/orchestrator";
-import type { UserSessionProcessRunner } from "@draft-loop/providers";
+import {
+  buildApplicationReadinessStoppingDecision,
+  runFailureStages,
+} from "@draft-loop/orchestrator";
+import { providerFailureStages, type UserSessionProcessRunner } from "@draft-loop/providers";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { expect, it, vi } from "vitest";
 
 import { createLocalApplicationDriver } from "./local.js";
+
+it("keeps provider and orchestrator failure stages identical", () => {
+  expect(providerFailureStages).toEqual(runFailureStages);
+});
 
 it("retains the exact author cap and adjudication through token and factuality retries", async () => {
   const root = await mkdtemp(join(tmpdir(), "author-output-budget-"));
@@ -138,6 +145,9 @@ it("retains the exact author cap and adjudication through token and factuality r
     const oversized = await resume();
     expect(oversized.lastError).toMatchObject({
       attempt: 1,
+      failureStage: "output-token-budget-exceeded",
+      failureReason: "output-token-budget-exceeded",
+      retryable: true,
       diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
     });
     expect(oversized.artifact).toEqual(initial.artifact);

@@ -132,6 +132,7 @@ export const providerFailureStages = [
   "response-schema-validation",
   "artifact-schema-validation",
   "factual-invariant-rejection",
+  "output-token-budget-exceeded",
 ] as const;
 
 export type ProviderFailureStage = (typeof providerFailureStages)[number];

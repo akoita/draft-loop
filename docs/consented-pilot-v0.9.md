@@ -103,7 +103,9 @@ artifact, second critique, approval, export, or submission occurred. Issue #293
 delivered content-free failure-stage classification (`transport-parsing`,
 `response-schema-validation`, `artifact-schema-validation`,
 `factual-invariant-rejection`) and sanitized 10-finding deterministic
-verification before another live observation.
+verification before another live observation. Issue #348 extends that
+vocabulary with `output-token-budget-exceeded` for future output-token budget
+overruns; existing observation records retain their original classifications.
 
 The ninth observation under issue #296 exercised the failure-stage
 classification runtime delivered in #293 using the declared 1,200,000 ms timeout
@@ -318,8 +320,10 @@ active-provider cap. None was raised mid-run.
 
 The first author attempt failed after 247 seconds, returning no output tokens,
 with the content-free diagnostic `output_token_budget_exceeded`. It carried no
-failure stage, so the recurring output-budget path is still unclassified even
-though #293 defined the stage vocabulary. The second attempt failed under
+failure stage in that historical observation, so the recurring output-budget
+path was unclassified there even though #293 defined the stage vocabulary.
+Issue #348 classifies future occurrences as `output-token-budget-exceeded`
+without rewriting this historical observation record. The second attempt failed under
 `factual-invariant-rejection`. The third produced an accepted eight-section
 artifact, and the independent critic completed on its first attempt. The run
 reached the human review boundary in 462 seconds of active provider time, well
