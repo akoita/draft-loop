@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-08<br>
+**Last reviewed:** 2026-09-10<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -460,6 +460,11 @@ checks, correctly classified under `factual-invariant-rejection`. The run
 exhausted after 313 seconds of active provider time without accepted author
 output, so the critic was not called.
 
+Issue #348 extends the failure-stage vocabulary with
+`output-token-budget-exceeded` for future output-token budget overruns. Existing
+observation records retain their original classifications; the unclassified
+overrun recorded under #346 is not rewritten.
+
 The tenth observation under #298 also
 exhausted three author attempts across token-budget excess and
 `factual-invariant-rejection` after 412 active seconds. Keep #75 unvalidated and
@@ -714,6 +719,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-10 | Delivered #348 output-token budget failure-stage classification. | Future user-session output-token overruns persist as `output-token-budget-exceeded` in both failure-stage fields while retaining content-free diagnostics and bounded retry behavior; historical observation records, including #346, remain unchanged. |
 | 2026-09-05 | Recorded #298 as indeterminate after the fresh observation exhausted three author attempts across token-budget excess and `factual-invariant-rejection`. | The run exhausted after 412 active seconds within the 1,200,000 ms budget; attempt two exceeded output tokens, while attempts one and three failed factual-invariant checks without leaking private data. No proposal reached the critic. Parity comparison #75 and release prep #250 remain unvalidated. |
 | 2026-09-04 | Recorded #296 as indeterminate after the fresh observation exhausted three author attempts under `factual-invariant-rejection`. | The newly delivered failure-stage classification accurately identified factual invariant violations across all three author attempts without exposing candidate prose or private data. The run exhausted after 313 active seconds within the 1,200,000 ms budget; no proposal reached the critic. Parity comparison #75 and release prep #250 remain unvalidated. |
 | 2026-09-04 | Delivered #293 content-free failure-stage classification for adjudicated-revision validation. | The runtime and provider error contracts distinguish transport parsing, response-schema validation, artifact-schema validation, and factual-invariant rejection without exposing prose or private data; sanitized deterministic tests verify the ten-finding carrier shape and safe recovery. Parity comparison #75 and release prep #250 remain unvalidated pending the next live pilot observation. |
