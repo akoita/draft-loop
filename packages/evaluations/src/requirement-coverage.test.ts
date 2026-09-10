@@ -1,4 +1,6 @@
+import { readFileSync } from "node:fs";
 import type { DraftArtifact, JobRequirement } from "@draft-loop/schemas";
+import { jobRequirementSchema } from "@draft-loop/schemas";
 import { isRequirementCoveredByBlock, validateDraftArtifact } from "@draft-loop/validation";
 import { describe, expect, it } from "vitest";
 import { evaluateReadiness } from "./index.js";
@@ -212,5 +214,60 @@ describe("alternative and maturity coverage in validation and readiness", () => 
     expect(
       evaluateReadiness(draft, { ...context, requirements: [single] }).scoreVector.relevance,
     ).toBe(0);
+  });
+});
+
+/**
+ * Provider-free measurement of the shared rule against the synthetic
+ * matched-application fixture. The fixture's coverage labels are authored review
+ * expectations, not a rubric, threshold, or measured parity result. This check
+ * records what the rule actually decides for that reference CV and names where
+ * the measurement diverges from the authored labels.
+ */
+describe("synthetic matched-application fixture coverage", () => {
+  // The fixture lives outside this project's `src` include, so it is read at run
+  // time rather than imported as a typed module.
+  const matchedApplication = JSON.parse(
+    readFileSync(new URL("../fixtures/matched-application/case.json", import.meta.url), "utf8"),
+  ) as {
+    opportunity: { requirements: readonly { id: string; text: string; priority: string }[] };
+    referenceCv: { statements: readonly { id: string; text: string }[] };
+    reviewExpectations: { coverage: readonly { requirementId: string; status: string }[] };
+  };
+  const { requirements } = matchedApplication.opportunity;
+  const draft = artifact(matchedApplication.referenceCv.statements.map((s) => s.text));
+
+  const measured: Readonly<Record<string, boolean>> = {
+    // Known miss. The fixture labels r1 `supported`, but `implement`/`implemented`
+    // and `contract`/`contracts` are distinct tokens, so no single statement
+    // reaches half of the requirement's tokens. Stemming is out of scope: the
+    // divergence is recorded here rather than resolved.
+    r1: false,
+    r2: true,
+    r3: false,
+    r4: false,
+    // The degree clause of s10 is read without its trailing training clause.
+    r5: true,
+  };
+
+  function agree(requirement: JobRequirement, covered: boolean): void {
+    const fixtureContext = { ...context, requirements: [requirement] };
+    expect(isRequirementCoveredByBlock(requirement, draft)).toBe(covered);
+    expect(evaluateReadiness(draft, fixtureContext).scoreVector.relevance).toBe(covered ? 1 : 0);
+    const findings = validateDraftArtifact(draft, fixtureContext).issues;
+    expect(findings.some((issue) => issue.code === "uncovered-requirement")).toBe(!covered);
+  }
+
+  it.each(requirements)("measures $id consistently in both consumers", (requirement) => {
+    expect(measured).toHaveProperty(requirement.id);
+    agree(jobRequirementSchema.parse(requirement), measured[requirement.id] === true);
+  });
+
+  it("keeps the divergence from the authored labels visible", () => {
+    const supported = matchedApplication.reviewExpectations.coverage
+      .filter((label) => label.status === "supported")
+      .map((label) => label.requirementId);
+    expect(supported).toEqual(["r1", "r2", "r5"]);
+    expect(supported.filter((id) => measured[id] !== true)).toEqual(["r1"]);
   });
 });
