@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-08<br>
-**Cases:** Thirteen bounded observations of one consented, anonymized case
+**Recorded:** 2026-09-11<br>
+**Cases:** Fourteen bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -357,6 +357,45 @@ requirements is the expected output for an honest CV against a role the
 candidate largely does not match. Further coverage-rule work cannot close that
 gap on this case.
 
+## Matched-backend observation (#350)
+
+One fresh case used a backend role selected for direct overlap with the
+candidate's established Java, distributed-systems, transactional, platform,
+and engineering-support experience. The career source and manual CV for the
+same role remained private, and the manual CV was withheld from generation.
+The comparison gate, provider pair, three-round limit, 1,200,000 ms request
+timeout, and 1,200-second active-provider cap were declared before generation.
+
+The first author attempt exceeded the output-token budget after 261 seconds.
+The runtime persisted `output-token-budget-exceeded` and the existing
+content-free diagnostic, confirming #348 in live use. The bounded corrective
+retry produced a seven-section artifact with 35 claims and 137 evidence
+references. The independent critic completed on its first attempt. Total active
+provider time was 355 seconds, and provider-reported dollar cost remained
+unavailable.
+
+The draft reached the human boundary with one error and seventeen warnings.
+Relevance was 0.28: five of eighteen extracted requirements were covered by
+the deterministic rule. Evidence and accuracy scored 1.0, differentiation
+0.99, clarity 0.80, format 1.0, and credibility 1.0. The blocking error was a
+required gap disclosure absent from the draft. Warnings included thirteen
+uncovered requirements, duplicate content, weak project content, unsupported
+skill evidence, and missing role evidence.
+
+Read-only review found that source-backed education, certification, and
+language material had been replaced with unavailable-data placeholders. Recent
+roles and the required projects section also lost substantive source content.
+Issue #351 owns the bounded required-section evidence correction. The private
+manual baseline contains the omitted categories and remains available for a
+later comparison after that correction.
+
+The same review found substantive prose broader than its extracted claim span.
+The narrower claim was supported, allowing evidence and accuracy to score 1.0
+while adjacent wording escaped claim-level validation. Issue #352 owns that
+separate claim-coverage correction. Because factual safety cannot be concluded
+from the current score and no adjudication, revision, approval, or export
+occurred, the matched case remains indeterminate.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -445,10 +484,16 @@ corrections merged since #332 did not lift relevance, which is consistent with a
 genuine role mismatch rather than a defect. No adjudication, approval, or export
 followed.
 
+The #350 matched-backend observation reached an accepted author draft on its
+second attempt and completed independent critique. It exposed source-backed
+required-section omissions (#351) and substantive prose outside the validated
+claim graph (#352). These defects prevent factual-safety and completeness
+claims even though the artifact reached the review boundary.
+
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
 results. Any further live attempt needs its own bounded authorization.
 
-The evidence now points at the case rather than the pipeline. Closing #75 on
-this case would require a role the candidate materially matches; the alternative
-is to record the mismatch and decide #75 on that basis.
+The first case remains limited by role mismatch. The matched case now provides
+better product evidence and points back to bounded retrieval and validation
+defects rather than absent candidate experience.
