@@ -587,6 +587,18 @@ does not establish semantic coverage, no threshold was lowered, and existing
 contexts, scores, and run records are unchanged. Parity remains indeterminate
 and #250 remains blocked.
 
+Issue #344 corrects the granularity of the closed degree rule: its grammar is
+evaluated per clause, so a stated degree is no longer lost when the same block
+adds an unrelated clause. Measuring the #335 synthetic reference against the
+shared rule now records four of five requirements as the rule decides them and
+keeps one known miss visible: `Implement and maintain Solidity contracts…`
+stays uncovered because `implement`/`implemented` and `contract`/`contracts`
+are distinct tokens, and stemming remains out of scope. That measurement is
+provider-free synthetic evidence, not a parity result and not a threshold: no
+threshold was lowered, the fixture's authored labels were not turned into a
+gate, and existing contexts, scores, and run records are unchanged. Parity
+remains indeterminate and #250 remains blocked.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a

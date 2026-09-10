@@ -585,8 +585,12 @@ not count. Explicit gaps still override lexical matches, and priority weights
 and rubric thresholds are unchanged. Three closed lexical rules refine that
 match: the degree rule, permitted alternatives, and organisation-maturity
 qualifiers, each described below. None of them infers negation, credential
-equivalence, or semantic entailment. Existing stored contexts and scores are
-not rewritten; a new evaluation can yield a different result.
+equivalence, or semantic entailment. Tokens are also compared literally, so
+inflected forms are distinct: `implement` does not match `implemented`, and
+`contract` does not match `contracts`. A block can therefore restate a
+requirement in another grammatical form and still fall below the half-token
+rule. Existing stored contexts and scores are not rewritten; a new evaluation
+can yield a different result.
 
 The default author and critic use different companies, with provider and model
 versions recorded in run history. The orchestrator stops at configured round,
@@ -602,7 +606,23 @@ Subjects are `computer science` (also hyphenated) and `quantitative`. A trailing
 period is allowed. Both alternatives are permitted; they need not both appear
 in the CV. Other requirement phrasing retains the ordinary lexical heuristic.
 
-A qualifying block must start with a supported credential followed by `in`
+The grammar is evaluated per clause, not per block. A block is split on `;` and
+on a sentence-final `.`, never on commas, because the credential grammar uses
+commas for specialization and year ranges and because a qualifier such as `, not
+completed` belongs to the credential it disqualifies. A block covers the
+requirement when one clause states a permitted attained degree on its own, so
+`MSc in Computer Science; training in software architecture.` qualifies. An
+uncertain clause is never rescued by a neighbouring one: `Pursuing an MSc in
+Computer Science; interested in secure development` does not qualify.
+
+Punctuation alone cannot detach a disqualifier from what it disqualifies. A
+following clause that carries a status term but states no topic of its own —
+`; not completed`, `; expected 2027` — is read as part of the credential clause
+beside it, so it behaves exactly like the comma form `, not completed`. A later
+clause that does state its own topic, such as `; training in software
+architecture`, is independent and neither rescues nor disqualifies.
+
+A qualifying clause must start with a supported credential followed by `in`
 and a permitted subject: BS/BSc, MS/MSc, PhD, Bachelor/Master of Science,
 Doctor of Philosophy, bachelor's/master's/doctoral degree, or degree. The
 optional prefixes are `earned`, `completed`, or `holds`, with an optional

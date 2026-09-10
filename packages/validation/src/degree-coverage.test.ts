@@ -16,6 +16,42 @@ describe("explicit degree alternatives", () => {
   });
 
   it.each([
+    "MSc in Computer Science; training in software architecture and secure application development.",
+    "MSc in Computer Science. Trained in secure development.",
+    "MSc in Computer Science",
+  ])("reads the credential clause without the rest of the block: %s", (text) => {
+    expect(explicitDegreeCoverage(requirement, [text])).toBe(true);
+  });
+
+  it.each([
+    "MSc in Computer Science, not completed",
+    "No degree in Computer Science",
+    "Computer science coursework for a quantitative degree",
+    "Coursework in Computer Science; MSc in Literature",
+    "Pursuing an MSc in Computer Science; interested in secure development",
+  ])("never lets one clause rescue an uncertain or unpermitted clause: %s", (text) => {
+    expect(explicitDegreeCoverage(requirement, [text])).toBe(false);
+  });
+
+  it.each([
+    "MSc in Computer Science; not completed",
+    "MSc in Computer Science; incomplete",
+    "MSc in Computer Science; withdrawn",
+    "MSc in Computer Science; expected 2027",
+    "MSc in Computer Science. Not completed.",
+  ])("keeps a status fragment attached to the credential it qualifies: %s", (text) => {
+    expect(explicitDegreeCoverage(requirement, [text])).toBe(false);
+  });
+
+  it("still reads a later clause that states its own topic", () => {
+    expect(
+      explicitDegreeCoverage(requirement, [
+        "Coursework in Computer Science; MSc in Computer Science",
+      ]),
+    ).toBe(true);
+  });
+
+  it.each([
     "MSc in Literature",
     "Computer science coursework for a quantitative degree",
     "No degree in Computer Science",
