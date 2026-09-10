@@ -582,10 +582,11 @@ Validation and readiness share the block-local lexical coverage matcher in
 tokens, with at least one match, must occur within one artifact block. Matches
 are never pooled across blocks or sections; section titles and claim-only text do
 not count. Explicit gaps still override lexical matches, and priority weights
-and rubric thresholds are unchanged. This does not infer negation, credential
-equivalence, or semantic entailment outside the explicit degree rule below.
-Existing stored contexts and scores are not rewritten; a new evaluation can
-yield a different result.
+and rubric thresholds are unchanged. Three closed lexical rules refine that
+match: the degree rule, permitted alternatives, and organisation-maturity
+qualifiers, each described below. None of them infers negation, credential
+equivalence, or semantic entailment. Existing stored contexts and scores are
+not rewritten; a new evaluation can yield a different result.
 
 The default author and critic use different companies, with provider and model
 versions recorded in run history. The orchestrator stops at configured round,
@@ -617,6 +618,48 @@ degree. A recognized requirement that fails this rule cannot fall back to
 lexical overlap. Dotted abbreviations, free-form credential prose, degree-level
 requirements, and general subject equivalence are outside this rule. Explicit
 gaps still override a match. This is text matching, not credential verification.
+
+### Permitted alternatives
+
+A requirement that lists permitted alternatives is matched once per alternative
+instead of as one long token list, so naming more alternatives can no longer
+make a requirement harder to satisfy. `Experience with Prometheus or
+OpenTelemetry.` and `Experience with Prometheus, OpenTelemetry, or Datadog.`
+are each satisfied by a block that names one of them. Every condition stated
+outside the enumeration is kept in each branch, so `Production experience with
+Prometheus or OpenTelemetry.` still requires production wording in the same
+block. Branch matches are never combined: one block must satisfy the half-token
+rule for one branch on its own.
+
+The grammar is deliberately closed. It reads `A or B` and comma lists ending in
+`or`, with up to five single-word alternatives and exactly one `or` in the
+requirement. Compound `and` conditions, `and/or`, several enumerations in one
+requirement, and multi-word alternatives such as `Google Cloud or AWS` are not
+recognized and fall back to ordinary matching unchanged. A capitalized word
+directly beside the enumeration is read as a possible multi-word alternative
+and stops the rule rather than splitting the phrase.
+
+### Organisation-maturity qualifiers
+
+When a requirement literally states an organisation-maturity qualifier, the
+block that matches it must state that qualifier too. The vocabulary is a closed
+list: early stage, seed stage, pre-seed, series A/B/C, growth stage, late
+stage, scale-up, and startup stage, with hyphen, spacing, and case variants
+normalized. `Early-stage startup experience.` is therefore not covered by
+`Built internal tools at a 40-person startup, gaining broad experience.`
+
+Maturity is never inferred. The rule builds no taxonomy of company stages and
+derives nothing from headcount, funding amounts, or organisation type; on its
+own, `startup` is an organisation type rather than a qualifier. The qualifier
+must appear in the same block that matches, not in a neighbouring block.
+Requirements without such a qualifier keep the ordinary lexical rule.
+
+The guard applies per alternative branch, so `Early-stage or growth-stage
+experience.` is covered by a block stating either stage rather than requiring
+both. Where the alternatives rule cannot split a requirement, every stated
+qualifier is required together: `Series A or Series B experience.` is a
+multi-word enumeration, so it stays uncovered by a block naming only one
+series. That is a known conservative false negative, not an accepted match.
 
 ### Independent-readiness report boundary
 

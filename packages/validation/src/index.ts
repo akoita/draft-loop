@@ -10,6 +10,8 @@ import type {
 
 import { isRequirementCoveredByBlock } from "./requirement-coverage.js";
 
+export { alternativeRequirementBranches } from "./alternative-coverage.js";
+export { requiredMaturityQualifiers } from "./maturity-coverage.js";
 export {
   isRequirementCoveredByBlock,
   requirementCoverageHeuristic,

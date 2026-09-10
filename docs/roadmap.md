@@ -577,6 +577,16 @@ for testing substantive selection, source corrections, and maturity boundaries.
 It contains fictional facts and authored review expectations, not private
 candidate records or a measured parity result.
 
+Issue #341 corrects the two coverage defects that #332 observed. Deterministic
+coverage no longer treats organisation type as an organisation-maturity
+qualifier, and a requirement listing permitted alternatives is now matched once
+per alternative instead of becoming harder to satisfy with each added
+alternative. Both rules are closed lexical rules in their own modules, shared
+by validation and readiness. This is a bounded deterministic correction: it
+does not establish semantic coverage, no threshold was lowered, and existing
+contexts, scores, and run records are unchanged. Parity remains indeterminate
+and #250 remains blocked.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
