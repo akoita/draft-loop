@@ -135,3 +135,82 @@ describe("degree coverage in validation and readiness", () => {
     );
   });
 });
+
+describe("alternative and maturity coverage in validation and readiness", () => {
+  function agree(text: string, block: string, covered: boolean): void {
+    const single = { id: "single", text, priority: "low" as const };
+    const singleContext = { ...context, requirements: [single] };
+    const draft = artifact([block]);
+    expect(evaluateReadiness(draft, singleContext).scoreVector.relevance).toBe(covered ? 1 : 0);
+    const findings = validateDraftArtifact(draft, singleContext).issues;
+    expect(findings.some((issue) => issue.code === "uncovered-requirement")).toBe(!covered);
+    expect(isRequirementCoveredByBlock(single, draft)).toBe(covered);
+  }
+
+  it.each([
+    [
+      "Early-stage startup experience.",
+      "Built internal tools at a 40-person startup, gaining broad experience.",
+      false,
+    ],
+    [
+      "Experience with Prometheus or OpenTelemetry.",
+      "Instrumented services with OpenTelemetry.",
+      true,
+    ],
+    [
+      "Experience with Prometheus, OpenTelemetry, or Datadog.",
+      "Instrumented services with OpenTelemetry.",
+      true,
+    ],
+    [
+      "Production experience with Prometheus or OpenTelemetry.",
+      "Instrumented production services with OpenTelemetry.",
+      true,
+    ],
+  ] as const)("resolves %s consistently in both consumers", (text, block, covered) => {
+    agree(text, block, covered);
+  });
+
+  it.each([
+    ["Early-stage startup experience.", "Joined an early-stage startup as employee five.", true],
+    [
+      "Seed-stage company experience.",
+      "Worked at a large enterprise company, gaining experience.",
+      false,
+    ],
+    ["Experience with Prometheus or Datadog.", "Instrumented services with OpenTelemetry.", false],
+    ["Experience with Prometheus or OpenTelemetry.", "Maintained a public library catalog.", false],
+  ] as const)("keeps %s conservative in both consumers", (text, block, covered) => {
+    agree(text, block, covered);
+  });
+
+  it.each([
+    [
+      "Early-stage or growth-stage experience.",
+      "Joined an early-stage startup, gaining experience.",
+      true,
+    ],
+    [
+      "Early-stage or growth-stage experience.",
+      "Joined a large enterprise, gaining experience.",
+      false,
+    ],
+    ["Series A or Series B experience.", "Joined a Series A company, gaining experience.", false],
+  ] as const)("guards %s per alternative branch", (text, block, covered) => {
+    agree(text, block, covered);
+  });
+
+  it("does not pool one branch's tokens with another block's match", () => {
+    const single = {
+      id: "single",
+      text: "Production experience with Prometheus or OpenTelemetry.",
+      priority: "low" as const,
+    };
+    const draft = artifact(["Ran production services.", "Read the OpenTelemetry specification."]);
+    expect(isRequirementCoveredByBlock(single, draft)).toBe(false);
+    expect(
+      evaluateReadiness(draft, { ...context, requirements: [single] }).scoreVector.relevance,
+    ).toBe(0);
+  });
+});

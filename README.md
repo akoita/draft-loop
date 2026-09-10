@@ -139,11 +139,16 @@ code fences, and tables require a reviewed brief instead of silent truncation.
 Deterministic relevance uses lexical overlap within individual CV blocks: at
 least half of a requirement’s meaningful tokens must appear in one block.
 Words scattered across unrelated blocks cannot jointly satisfy a requirement.
-A narrow exception recognizes explicit degree entries for standalone
-computer-science/quantitative degree requirements. It rejects coursework and
-negated or unfinished credentials; see the [coverage contract](docs/architecture.md#degree-coverage).
-Other equivalent phrasing can still be missed, and these signals do not
-establish semantic coverage or verify a credential.
+Three narrow rules refine that match. Explicit degree entries answer standalone
+computer-science/quantitative degree requirements while coursework and negated
+or unfinished credentials are rejected. A requirement listing permitted
+alternatives, such as `Prometheus or OpenTelemetry`, is satisfied by a block
+naming one of them, with any surrounding condition still required. A stated
+maturity qualifier, such as `early-stage`, must appear in the matching block
+and is never inferred from headcount, funding, or the word `startup`. See the
+[coverage contract](docs/architecture.md#degree-coverage). Other equivalent
+phrasing can still be missed, and these signals do not establish semantic
+coverage or verify a credential.
 
 The `profile` command group derives a canonical candidate profile from the
 workspace's configured CKB selection, reloads exact or latest versions, and
