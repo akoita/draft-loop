@@ -239,6 +239,21 @@ Milestone 3 contains the six remaining MVP capabilities and their satisfied
 prerequisites. Their issue bodies define bounded exits; standalone architecture
 programs and generalized infrastructure are deferred until after the MVP.
 
+Issue #346 records one bounded observation of the corrected revision, run to
+the first human review boundary under predeclared limits. The first author
+attempt exceeded the output-token budget with no failure stage recorded, the
+second was rejected on a factual invariant, and the third produced an accepted
+eight-section artifact; the independent critic completed on its first attempt,
+after 462 seconds of active provider time. Evidence, accuracy, differentiation,
+format, and credibility scored 1.0 and clarity 0.80, so the draft carried no
+factual-invariant violation and no unsupported model-added claim. Relevance
+scored 0.29, covering six of the twenty-one requirements #326 now extracts, and
+one content-omission error remains. Uncovered counts are not comparable with
+earlier observations because the requirement set changed. No threshold was
+lowered and no adjudication, approval, or export occurred. Parity remains
+indeterminate and #250 remains blocked, and the evidence now points at a genuine
+role mismatch rather than a pipeline defect.
+
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
 source versions produce a reviewed profile and opportunity brief; CKB-scoped

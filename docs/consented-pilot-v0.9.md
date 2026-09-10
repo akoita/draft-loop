@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-08<br>
-**Cases:** Twelve bounded observations of one consented, anonymized case
+**Cases:** Thirteen bounded observations of one consented, anonymized case
 
 ## Result
 
@@ -307,6 +307,52 @@ The existing relevance threshold remains unmet; this diagnostic does not
 replace the predeclared gate. Parity stays indeterminate and #250 stays blocked.
 Full references, response text, and local review remain private.
 
+## Full observation on the corrected revision (#346)
+
+One fresh run exercised every correction merged since the last live attempt
+(#315, #318, #321, #324, #326, #328, #329, #341, and #344) under the standing
+authorization and the unchanged model pair. Bounds were predeclared: stop at the
+first human review boundary, at most three author attempts and one critic
+attempt, a 1,200,000 ms per-request timeout, and a 1,200-second cumulative
+active-provider cap. None was raised mid-run.
+
+The first author attempt failed after 247 seconds, returning no output tokens,
+with the content-free diagnostic `output_token_budget_exceeded`. It carried no
+failure stage, so the recurring output-budget path is still unclassified even
+though #293 defined the stage vocabulary. The second attempt failed under
+`factual-invariant-rejection`. The third produced an accepted eight-section
+artifact, and the independent critic completed on its first attempt. The run
+reached the human review boundary in 462 seconds of active provider time, well
+inside the cap.
+
+Local readiness is false on one dimension only. Evidence, accuracy,
+differentiation, format, and credibility each score 1.0, and clarity scores 0.80,
+all at or above their 0.80 thresholds. Relevance scores 0.29: six of the
+twenty-one requirements that #326 now extracts are covered, leaving fifteen
+uncovered-requirement warnings. One `experience-content-omitted` coverage error
+remains; the `missing-transition` errors seen in earlier observations did not
+recur.
+
+The uncovered count is not comparable with earlier observations. #326 replaced a
+truncated requirement list with twenty-one complete units, so the denominator
+changed; the earlier fourteen-warning figure was measured against a different
+set. What the corrections demonstrably did not do is lift relevance.
+
+Accuracy and credibility at 1.0 mean the accepted draft introduced no
+factual-invariant violation and no unsupported model-added claim. Those are the
+gate's fixed requirements, and at this boundary they hold. The gate is still not
+met: relevance is far below its threshold, and no adjudication, revision,
+approval, export, or submission occurred, so bounded review effort, edit count,
+and confidence remain unmeasured.
+
+This result is consistent with the #332 conclusion that missing SDK-specific
+experience is a real limitation rather than a wording problem. The case plan
+itself records no established maintenance of a widely adopted public SDK as a
+known gap for an SDK role. A high-accuracy draft that covers six of twenty-one
+requirements is the expected output for an honest CV against a role the
+candidate largely does not match. Further coverage-rule work cannot close that
+gap on this case.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -387,6 +433,18 @@ After the local chronology correction, #324 returned one staging-versus-producti
 warning and no errors. The relevance threshold remains unmet, so further
 candidate review must preserve honest coverage gaps rather than invent experience.
 
+The #346 observation then ran the corrected revision end to end to the human
+review boundary. It reached an accepted draft and an independent critique with
+no factual-invariant violation and no unsupported model-added claim, but
+relevance covered six of twenty-one requirements against a 0.80 threshold. The
+corrections merged since #332 did not lift relevance, which is consistent with a
+genuine role mismatch rather than a defect. No adjudication, approval, or export
+followed.
+
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
 results. Any further live attempt needs its own bounded authorization.
+
+The evidence now points at the case rather than the pipeline. Closing #75 on
+this case would require a role the candidate materially matches; the alternative
+is to record the mismatch and decide #75 on that basis.
