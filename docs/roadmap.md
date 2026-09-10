@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twelve observations of one consented case are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | After #303 recovered the run, #306 staged the candidate-approved review plan but exhausted three revision attempts without a new artifact; #75 and #250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Fourteen observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | The matched case exposed required-section evidence loss (#351) and substantive prose outside claim validation (#352); #75 and #250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -253,6 +253,20 @@ earlier observations because the requirement set changed. No threshold was
 lowered and no adjudication, approval, or export occurred. Parity remains
 indeterminate and #250 remains blocked, and the evidence now points at a genuine
 role mismatch rather than a pipeline defect.
+
+Issue #350 records the first bounded observation against a materially matched
+backend role. The first author attempt exceeded its output-token budget and was
+correctly classified under the new #348 stage. The corrective retry produced a
+seven-section artifact, and the independent critic completed on its first
+attempt after 355 seconds of cumulative active provider time.
+
+The matched artifact still failed the product boundary. Deterministic relevance
+was 0.28, covering five of eighteen requirements, with one blocking disclosure
+error and seventeen warnings. Read-only review found source-backed required
+sections replaced with unavailable placeholders (#351) and substantive prose
+outside the extracted claim graph despite perfect evidence and accuracy scores
+(#352). No adjudication, revision, approval, export, or submission occurred.
+The result remains indeterminate and #250 remains blocked.
 
 **Exit criterion:** One default and optional additional isolated CKBs can be
 maintained and explicitly selected without source or retrieval leakage; selected
@@ -719,6 +733,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-11 | Recorded #350 as an indeterminate matched-backend observation and bounded two product defects. | The author recovered from one classified output-budget failure and the critic completed, but source-backed required content was omitted (#351) and substantive prose escaped claim validation (#352). No approval or export occurred; #75 and #250 remain blocked. |
 | 2026-09-10 | Delivered #348 output-token budget failure-stage classification. | Future user-session output-token overruns persist as `output-token-budget-exceeded` in both failure-stage fields while retaining content-free diagnostics and bounded retry behavior; historical observation records, including #346, remain unchanged. |
 | 2026-09-05 | Recorded #298 as indeterminate after the fresh observation exhausted three author attempts across token-budget excess and `factual-invariant-rejection`. | The run exhausted after 412 active seconds within the 1,200,000 ms budget; attempt two exceeded output tokens, while attempts one and three failed factual-invariant checks without leaking private data. No proposal reached the critic. Parity comparison #75 and release prep #250 remain unvalidated. |
 | 2026-09-04 | Recorded #296 as indeterminate after the fresh observation exhausted three author attempts under `factual-invariant-rejection`. | The newly delivered failure-stage classification accurately identified factual invariant violations across all three author attempts without exposing candidate prose or private data. The run exhausted after 313 active seconds within the 1,200,000 ms budget; no proposal reached the critic. Parity comparison #75 and release prep #250 remain unvalidated. |
