@@ -153,6 +153,11 @@ an entire broader assertion. Uncovered text fails with a content-free
 labels, and explicit missing-data notices do not require factual citations.
 This is a structural coverage check, not independent factual verification.
 
+Protected multi-word values may differ only in whitespace wrapping within a
+single cited chunk. Validation does not assemble a name or credential across
+separate chunks, and explicit experience contradictions remain checked across
+all cited chunks. Numbers, punctuation, and factual wording stay protected.
+
 SQLite migration 26 corrects the artifact-history uniqueness boundary. An
 artifact ID is the immutable identity of one lineage, so distinct IDs in one
 workspace may each begin at version 1; parent-version IDs continue to link

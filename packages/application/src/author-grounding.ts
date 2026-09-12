@@ -65,7 +65,21 @@ export function supportsProtectedValue(evidence: string, protectedValue: string)
   if (/^\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*$/u.test(protectedValue)) {
     return (source.match(/[\p{L}\p{N}]+/gu) ?? []).some((token) => token === value);
   }
+  if (/\s/u.test(value)) {
+    return source.replace(/\s+/gu, " ").includes(value.replace(/\s+/gu, " "));
+  }
   return source.includes(value);
+}
+
+/** Keep wrapped identities within a chunk, but detect experience contradictions across chunks. */
+export function supportsProtectedValueInChunks(
+  evidenceChunks: readonly string[],
+  protectedValue: string,
+): boolean {
+  return (
+    supportsExperienceClaim(evidenceChunks.join("\n"), protectedValue) ??
+    evidenceChunks.some((chunk) => supportsProtectedValue(chunk, protectedValue))
+  );
 }
 
 /** Split only an opening action, one technical name, and a software-object noun. */
