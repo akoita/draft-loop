@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-12<br>
-**Cases:** Eighteen bounded observations across two consented, anonymized cases
+**Recorded:** 2026-09-13<br>
+**Cases:** Nineteen bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -13,11 +13,13 @@ reduced review effort.
 It does not validate the v0.9 product outcome and does not authorize release
 preparation.
 
-The eighteenth observation (#364) reused the matched-backend gate. All three
-Anthropic author executions failed with the generic `invalid-response` code;
-the final durable run classification was `output-token-budget-exceeded`. No
-artifact or independent review existed, so it adds no product-quality evidence
-and does not change the indeterminate result.
+The nineteenth observation (#368) reused the matched-backend gate. All three
+Anthropic author executions failed with generic `invalid-response` codes.
+Attempts one and two had `output-token-budget-exceeded` failures; attempt three
+had `factual-invariant-rejection` and exhausted the cap. The #366 thinking
+bound was exercised but did not eliminate output-budget failures. No artifact
+or independent review existed, so the observation adds no product-quality
+evidence and does not change the indeterminate result.
 
 The initial attempt completed one Anthropic author step and one independent
 OpenAI critic step. Its revision call timed out. Under the candidate-approved
@@ -393,8 +395,9 @@ language material had been replaced with unavailable-data placeholders. Recent
 roles and the required projects section also lost substantive source content.
 Issue #351 owns the bounded required-section evidence correction. The private
 manual baseline contains the omitted categories and remained available after
-that correction. The baseline was reused but withheld from generation for
-observations #358, #360, #362, and #364; none produced an artifact.
+that correction. The baseline was reused but withheld from generation for the
+matched-backend observations #358, #360, #362, #364, and #368; none produced an
+artifact.
 
 The same review found substantive prose broader than its extracted claim span.
 The narrower claim was supported, allowing evidence and accuracy to score 1.0
@@ -513,6 +516,39 @@ product-quality evidence and does not establish a product defect. Parity
 remains indeterminate, and #75 and #250 remain blocked. Any later live attempt
 needs its own bounded authorization.
 
+## Bounded matched-backend observation (#368)
+
+On 2026-09-13, explicit authorization for provider transmission preceded
+execution. It reused the same private matched-role case, baseline-withheld v1
+gate, model pair, and fixed limits used by #350, #358, #360, #362, and #364
+after #366. Anthropic `claude-sonnet-4-5` remained the author and OpenAI
+`gpt-5.6-luna` the critic through user-session authentication; both probes
+passed.
+
+The limits remained at most three author attempts and one critic attempt before
+the first review boundary, a 1,200,000 ms request timeout, a 1,200-second
+cumulative active-provider cap, and three rounds.
+
+All three Anthropic author attempts failed with generic `invalid-response`.
+Attempts one and two had `failureStage` and `failureReason`
+`output-token-budget-exceeded` and were retryable. Attempt three had
+`failureStage` and `failureReason` `factual-invariant-rejection`, with eight
+content-free diagnostics; it was non-retryable and exhausted the three-attempt
+cap. The #366 thinking bound was exercised, but output-token-budget failures
+still occurred on the first two attempts, so this observation does not show that
+the failure mode is eliminated.
+
+Persisted `activeDurationMs` was 598,380. Each failed execution record has zero
+input, output, and total tokens and `estimatedUsd: null`. The workspace
+`totalCostUsd` was persisted as `0`, but provider-reported cost was unavailable;
+this value is not an actual provider-cost measurement.
+
+No artifact, critic call, findings, readiness decision, review, adjudication,
+approval, export, submission, or release occurred. The observation adds no
+product-quality evidence and does not establish a product defect. Parity
+remains indeterminate, and #75 and #250 remain blocked. Any later live attempt
+needs separate bounded authorization.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -561,10 +597,13 @@ unresolved findings as accepted facts.
 - The earlier SDK-role comparison used the existing private manual CV as its
   baseline, but the roles differ. The eighth draft emphasized API and
   developer-tool evidence more directly, while the baseline retained a stronger
-  backend-production narrative. Matched-backend observations #350, #358, #360,
-  #362, and #364 used a separate matched-role case and manual baseline. #358,
-  #360, #362, and #364 reused those private inputs, with the baseline withheld
-  from generation, but produced no artifact to compare.
+  backend-production narrative. A separate matched-role case and manual
+  baseline were used for the matched-backend observations. Their issue numbers
+  are #350, #358, #360, #362, #364, and #368. The five later runs reused private
+  inputs with the baseline withheld from generation; none produced an artifact
+  to compare.
+  The nineteenth run exercised the #366 thinking bound, but output-budget
+  failures persisted, so it does not show that failure mode resolved.
 - Misleading-evidence and prompt-injection behavior were not tested in these
   live observations. The provider-free synthetic preflight remains
   implementation evidence only.
@@ -639,11 +678,32 @@ were `output-token-budget-exceeded` with one diagnostic. Active duration was
 Provider-reported cost was unavailable. No artifact or review boundary
 occurred, so #364 adds no product-quality evidence.
 
+The nineteenth observation under #368 reused the same matched-backend case,
+gate, models, and fixed limits after issue #366, with separate explicit
+provider-transmission authorization before execution. Both Anthropic and OpenAI
+user-session authentication probes passed. All three Anthropic author attempts
+failed with generic `invalid-response`: attempts one and two had
+`failureStage` and `failureReason` `output-token-budget-exceeded` and were
+retryable; attempt three had `factual-invariant-rejection` with eight
+content-free diagnostics, was non-retryable, and exhausted the cap. The #366
+thinking bound was exercised but did not eliminate output-budget failures.
+Persisted `activeDurationMs` was 598,380. Every failed execution record has
+zero input, output, and total tokens and `estimatedUsd: null`. The workspace
+`totalCostUsd` was persisted as `0`, but provider-reported cost was unavailable;
+this is not an actual provider-cost measurement.
+
+No artifact, critic call, findings, readiness decision, review, adjudication,
+approval, export, submission, or release occurred. The result remains
+indeterminate, #75 and #250 remain blocked, and any later live attempt needs
+separate bounded authorization.
+
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
 results. Any further live attempt needs its own bounded authorization.
 
 The first case remains limited by role mismatch. The matched case provides
 product evidence from #350 about required content and claim validation. The
-provider failures in #358, #360, #362, and #364 added no product-quality
-evidence and do not change the indeterminate outcome.
+provider failures in #358, #360, #362, #364, and #368 added no product-quality
+evidence and do not change the indeterminate outcome. The #366 thinking bound
+was exercised in #368, but output-budget failures remained; this does not show
+that failure mode fully resolved.
