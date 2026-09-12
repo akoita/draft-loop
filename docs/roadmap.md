@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-12<br>
+**Last reviewed:** 2026-09-13<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Eighteen observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed matched-case corrections #351 and #352, which merged with #356 before #358; #358 and #360 returned author rate-limit failures, and #362 and #364 returned three invalid-response failures before a draft, adding no product-outcome evidence; #75 and #250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Nineteen observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed matched-case corrections #351 and #352, which merged with #356 before #358; #358 and #360 returned author rate-limit failures, while #362, #364, and #368 returned invalid-response failures before a draft; #368 exercised #366 but output-budget failures remained; #75 and #250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -684,8 +684,23 @@ half of the declared output-token budget to Sonnet 4.5's manual extended
 thinking, leaving the remainder for the structured proposal. Requests too
 small for Anthropic's minimum thinking allocation disable thinking explicitly,
 and ambient Claude thinking settings cannot override either policy. This is a
-provider-free transport correction, not product-quality evidence; #75 and #250
-remain blocked pending a separately authorized matched-backend observation.
+provider-free transport correction, not product-quality evidence.
+
+The nineteenth bounded observation under #368 exercised the #366 thinking
+bound after separate explicit provider-transmission authorization on
+2026-09-13. Both user-session authentication probes passed. It reused the same
+private matched-backend inputs, baseline-withheld v1 gate, model pair, and fixed
+limits as #350, #358, #360, #362, and #364. All three Anthropic author attempts
+failed with generic `invalid-response`: attempts one and two had
+`output-token-budget-exceeded` failures and were retryable; attempt three had
+`factual-invariant-rejection` with eight content-free diagnostics and exhausted
+the cap non-retryably. The thinking bound did not eliminate output-budget
+failures, so this observation does not show that failure mode fully resolved.
+Active duration was 598,380 ms; execution token counts were zero and
+`estimatedUsd` was null. Provider-reported cost was unavailable. No artifact,
+critic call, or review occurred; #75 and #250 remain blocked. Any later live
+attempt needs separate bounded authorization. See the [consented pilot
+report](consented-pilot-v0.9.md) for the full record.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -787,7 +802,8 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-12 | Bounded Claude user-session thinking under #366. | The adapter reserves at least half of each declared output-token budget for structured response content and disables thinking when the budget cannot satisfy Anthropic's minimum manual-thinking allocation. This provider-free correction addresses the repeated #362/#364 output-budget failure mode without changing the pilot threshold. |
+| 2026-09-13 | Recorded #368 as an indeterminate nineteenth observation. | The authorized post-#366 matched-backend run passed both user-session authentication probes, but all three author attempts returned generic `invalid-response`. Attempts one and two were retryable `output-token-budget-exceeded` failures; attempt three was non-retryable, failed `factual-invariant-rejection` with eight diagnostics, and exhausted the cap. The thinking bound did not eliminate output-budget failures. No artifact or review occurred; provider-reported cost is unavailable, and #75/#250 remain blocked. |
+| 2026-09-12 | Bounded Claude user-session thinking under #366. | The adapter caps thinking at half the output-token budget and disables it below Anthropic's minimum manual-thinking allocation. This provider-free control was exercised by #368; output-budget failures persisted, so the failure mode is not shown resolved and the pilot threshold remains unchanged. |
 | 2026-09-12 | Recorded #364 as an indeterminate eighteenth observation. | The authorized matched-backend run passed both user-session authentication probes but exhausted three Anthropic author attempts. Attempt two had a factual-invariant rejection; the final durable failure was `output-token-budget-exceeded`. No artifact or review occurred, and provider-reported cost was unavailable; #75 and #250 remain blocked. |
 | 2026-09-12 | Recorded #362 as an indeterminate seventeenth observation. | The separately authorized matched-backend run passed both user-session authentication probes but exhausted three author attempts on generic `invalid-response`; its final durable failure classification was `output-token-budget-exceeded`. No artifact or review existed and provider-reported cost was unavailable; #75 and #250 remain blocked. |
 | 2026-09-12 | Recorded #360 as an indeterminate sixteenth observation. | The explicitly authorized matched-backend run passed both authentication probes but exhausted three author attempts on content-free rate-limit failures before an artifact or review. It adds no product-outcome evidence; #75 and #250 remain blocked. |
