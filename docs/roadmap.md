@@ -678,6 +678,15 @@ boundary occurred, so #364 adds no product-outcome evidence; #75 and #250
 remain blocked. See the [consented pilot report](consented-pilot-v0.9.md) for
 the detailed record.
 
+Issue #366 bounds the provider-side cause exposed by #362 and #364 before any
+later live attempt. The Anthropic user-session adapter now allocates at most
+half of the declared output-token budget to Sonnet 4.5's manual extended
+thinking, leaving the remainder for the structured proposal. Requests too
+small for Anthropic's minimum thinking allocation disable thinking explicitly,
+and ambient Claude thinking settings cannot override either policy. This is a
+provider-free transport correction, not product-quality evidence; #75 and #250
+remain blocked pending a separately authorized matched-backend observation.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
@@ -778,6 +787,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-12 | Bounded Claude user-session thinking under #366. | The adapter reserves at least half of each declared output-token budget for structured response content and disables thinking when the budget cannot satisfy Anthropic's minimum manual-thinking allocation. This provider-free correction addresses the repeated #362/#364 output-budget failure mode without changing the pilot threshold. |
 | 2026-09-12 | Recorded #364 as an indeterminate eighteenth observation. | The authorized matched-backend run passed both user-session authentication probes but exhausted three Anthropic author attempts. Attempt two had a factual-invariant rejection; the final durable failure was `output-token-budget-exceeded`. No artifact or review occurred, and provider-reported cost was unavailable; #75 and #250 remain blocked. |
 | 2026-09-12 | Recorded #362 as an indeterminate seventeenth observation. | The separately authorized matched-backend run passed both user-session authentication probes but exhausted three author attempts on generic `invalid-response`; its final durable failure classification was `output-token-budget-exceeded`. No artifact or review existed and provider-reported cost was unavailable; #75 and #250 remain blocked. |
 | 2026-09-12 | Recorded #360 as an indeterminate sixteenth observation. | The explicitly authorized matched-backend run passed both authentication probes but exhausted three author attempts on content-free rate-limit failures before an artifact or review. It adds no product-outcome evidence; #75 and #250 remain blocked. |

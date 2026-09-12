@@ -109,6 +109,8 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       expect(options.env).toMatchObject({ HOME: "/login-store", KEEP: "yes" });
       expectEnvironmentWithoutNames(options.env, anthropicSecretEnvironmentNames);
       expect(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("20");
+      expect(options.env.MAX_THINKING_TOKENS).toBe("0");
+      expect(options.env.CLAUDE_CODE_DISABLE_THINKING).toBe("1");
       expect(options.env.CLAUDE_CODE_MAX_RETRIES).toBe("0");
       expect(options.env.MAX_STRUCTURED_OUTPUT_RETRIES).toBe("0");
       expect((await stat(options.cwd)).mode & 0o777).toBe(0o700);
@@ -153,6 +155,74 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       cost: { estimatedUsd: null },
     });
   });
+
+  it.each([
+    {
+      maxOutputTokens: 2_047,
+      ambientMaxThinkingTokens: "8192",
+      ambientDisableThinking: "0",
+      expectedMaxThinkingTokens: "0",
+      expectedDisableThinking: "1",
+    },
+    {
+      maxOutputTokens: 2_048,
+      ambientMaxThinkingTokens: "0",
+      ambientDisableThinking: "1",
+      expectedMaxThinkingTokens: "1024",
+      expectedDisableThinking: undefined,
+    },
+    {
+      maxOutputTokens: 8_192,
+      ambientMaxThinkingTokens: "1024",
+      ambientDisableThinking: "1",
+      expectedMaxThinkingTokens: "4096",
+      expectedDisableThinking: undefined,
+    },
+  ])(
+    "derives a bounded Claude thinking environment from the output cap",
+    async ({
+      maxOutputTokens,
+      ambientMaxThinkingTokens,
+      ambientDisableThinking,
+      expectedMaxThinkingTokens,
+      expectedDisableThinking,
+    }) => {
+      const runner = vi.fn<UserSessionProcessRunner>(async (_command, _args, options) => {
+        expect(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe(String(maxOutputTokens));
+        expect(options.env.MAX_THINKING_TOKENS).toBe(expectedMaxThinkingTokens);
+        if (expectedDisableThinking === undefined) {
+          expectEnvironmentWithoutNames(options.env, ["CLAUDE_CODE_DISABLE_THINKING"]);
+        } else {
+          expect(options.env.CLAUDE_CODE_DISABLE_THINKING).toBe(expectedDisableThinking);
+        }
+        return {
+          exitCode: 0,
+          stdout: JSON.stringify({
+            type: "result",
+            subtype: "success",
+            is_error: false,
+            session_id: "claude-session",
+            structured_output: { answer: "yes" },
+            usage: { input_tokens: 1, output_tokens: 1 },
+            permission_denials: [],
+          }),
+          stderr: "",
+        };
+      });
+      const adapter = new AnthropicClaudeUserSessionAdapter({
+        configuredModel: anthropicModel,
+        runner,
+        environment: {
+          MAX_THINKING_TOKENS: ambientMaxThinkingTokens,
+          CLAUDE_CODE_DISABLE_THINKING: ambientDisableThinking,
+        },
+      });
+
+      await expect(
+        adapter.execute(request(anthropicModel, { maxOutputTokens })),
+      ).resolves.toMatchObject({ output: { answer: "yes" } });
+    },
+  );
 
   it("rejects reported tool use", async () => {
     const runner: UserSessionProcessRunner = async () => ({

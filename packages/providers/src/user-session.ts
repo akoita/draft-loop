@@ -19,11 +19,18 @@ export const maximumUserSessionTimeoutMs = 1_200_000;
 const defaultMaxOutputBytes = 1_048_576;
 const maximumMaxOutputTokens = 32_768;
 const defaultMaxOutputTokens = 4_096;
+const minimumAnthropicThinkingTokens = 1_024;
+const minimumClaudeOutputTokensWithThinking = minimumAnthropicThinkingTokens * 2;
 
 const anthropicSecretEnvironmentNames = [
   "ANTHROPIC_API_KEY",
   "ANTHROPIC_AUTH_TOKEN",
   "ANTHROPIC_BASE_URL",
+] as const;
+const anthropicControlledEnvironmentNames = [
+  ...anthropicSecretEnvironmentNames,
+  "MAX_THINKING_TOKENS",
+  "CLAUDE_CODE_DISABLE_THINKING",
 ] as const;
 const openAISecretEnvironmentNames = [
   "OPENAI_API_KEY",
@@ -241,6 +248,11 @@ function resolveOutputTokenLimit(
     );
   }
   return limit;
+}
+
+function resolveClaudeThinkingTokenLimit(maxOutputTokens: number): number {
+  if (maxOutputTokens < minimumClaudeOutputTokensWithThinking) return 0;
+  return Math.floor(maxOutputTokens / 2);
 }
 
 function resolveUserSessionTimeout(
@@ -604,6 +616,7 @@ export class AnthropicClaudeUserSessionAdapter<
     assertExactModel(this.provider, this.options.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
     const maxOutputTokens = resolveOutputTokenLimit(this.provider, request.maxOutputTokens);
+    const maxThinkingTokens = resolveClaudeThinkingTokenLimit(maxOutputTokens);
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
@@ -635,13 +648,15 @@ export class AnthropicClaudeUserSessionAdapter<
         ];
         const environment = sanitizedEnvironment(
           this.options.environment ?? process.env,
-          anthropicSecretEnvironmentNames,
+          anthropicControlledEnvironmentNames,
         );
         const result = await this.options.runner(this.options.command, args, {
           cwd: directory,
           env: {
             ...environment,
             CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(maxOutputTokens),
+            MAX_THINKING_TOKENS: String(maxThinkingTokens),
+            ...(maxThinkingTokens === 0 ? { CLAUDE_CODE_DISABLE_THINKING: "1" } : {}),
             CLAUDE_CODE_MAX_RETRIES: "0",
             MAX_STRUCTURED_OUTPUT_RETRIES: "0",
           },
