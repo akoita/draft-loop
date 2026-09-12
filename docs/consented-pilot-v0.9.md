@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-12<br>
-**Cases:** Fifteen bounded observations across two consented, anonymized cases
+**Cases:** Sixteen bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -13,10 +13,10 @@ reduced review effort.
 It does not validate the v0.9 product outcome and does not authorize release
 preparation.
 
-The fifteenth observation (#358) exhausted its three author attempts on
-content-free provider rate-limit failures. It produced no artifact or
-independent review, so it adds no product-quality evidence and does not change
-the indeterminate result.
+The sixteenth observation (#360) repeated the content-free provider rate-limit
+outcome on the matched-backend gate. All three author attempts failed before an
+artifact or independent review existed, so it adds no product-quality evidence
+and does not change the indeterminate result.
 
 The initial attempt completed one Anthropic author step and one independent
 OpenAI critic step. Its revision call timed out. Under the candidate-approved
@@ -392,8 +392,8 @@ language material had been replaced with unavailable-data placeholders. Recent
 roles and the required projects section also lost substantive source content.
 Issue #351 owns the bounded required-section evidence correction. The private
 manual baseline contains the omitted categories and remained available after
-that correction. It was reused but withheld from generation in #358, which
-produced no artifact.
+that correction. It was reused but withheld from generation in #358 and #360;
+neither produced an artifact.
 
 The same review found substantive prose broader than its extracted claim span.
 The narrower claim was supported, allowing evidence and accuracy to score 1.0
@@ -427,6 +427,31 @@ readiness scores, human review boundary, adjudication, or revision. No approval,
 export, release, or submission occurred. The rate limit is not evidence of a
 product defect. This observation adds no outcome evidence, so parity remains
 indeterminate and #75 and #250 remain blocked.
+
+## Bounded matched-backend observation (#360)
+
+On 2026-09-12, the user explicitly authorized provider transmission before
+execution. The run reused the same private matched-backend inputs, manual
+baseline, and v1 comparison gate as #350 and #358; the baseline was withheld
+from generation. Anthropic `claude-sonnet-4-5` remained the author and OpenAI
+`gpt-5.6-luna` the critic, through authenticated user sessions. Both
+authentication probes passed.
+
+The fixed limits were at most three author attempts and one critic attempt
+before the first review boundary, a 1,200,000 ms request timeout, a 1,200-second
+cumulative active-provider cap, and three rounds.
+
+All three author attempts returned content-free rate-limit failures. Attempts
+one and two were retryable; attempt three exhausted the author cap and was
+non-retryable. Persisted active duration was 7,508 ms and all token counts were
+zero. Per-execution `estimatedUsd` was `null`; the workspace aggregate remained
+$0 because no billable usage was reported.
+
+No artifact, critic call, findings, readiness decision, human review,
+adjudication, revision, approval, export, submission, or release occurred. The
+rate limit is not evidence of a product defect. This observation adds no
+product-quality evidence, so parity remains indeterminate and #75 and #250
+remain blocked. Any further live attempt needs its own bounded authorization.
 
 ## Predeclared comparison gate
 
@@ -476,10 +501,10 @@ unresolved findings as accepted facts.
 - The earlier SDK-role comparison used the existing private manual CV as its
   baseline, but the roles differ. The eighth draft emphasized API and
   developer-tool evidence more directly, while the baseline retained a stronger
-  backend-production narrative. Matched-backend observations #350 and #358 used
-  a separate matched-role case and manual baseline. #358 reused those private
-  inputs, with the baseline withheld from generation, but produced no artifact
-  to compare.
+  backend-production narrative. Matched-backend observations #350, #358, and
+  #360 used a separate matched-role case and manual baseline. #358 and #360
+  reused those private inputs, with the baseline withheld from generation, but
+  produced no artifact to compare.
 - Misleading-evidence and prompt-injection behavior were not tested in these
   live observations. The provider-free synthetic preflight remains
   implementation evidence only.
@@ -529,11 +554,17 @@ content-free rate-limit responses before an artifact existed. No quality gate
 was exercised, so this provider outcome supports no product-defect claim and
 does not validate the merged corrections.
 
+The sixteenth observation under #360 reused the same matched-backend inputs and
+gate with explicit provider-transmission authorization. Both authentication
+probes passed, but all three author attempts again failed with content-free
+rate-limit responses before an artifact existed. It also exercised no quality
+gate and adds no product-quality evidence.
+
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
 results. Any further live attempt needs its own bounded authorization.
 
 The first case remains limited by role mismatch. The matched case provides
 product evidence from #350 about required content and claim validation. The
-rate limit in #358 added no product-quality evidence and does not change the
-indeterminate outcome.
+rate limits in #358 and #360 added no product-quality evidence and do not
+change the indeterminate outcome.
