@@ -117,6 +117,7 @@ export interface BuildAuthorArtifactOptions {
   readonly executionId: string;
   readonly context: AuthorArtifactBuildContext;
   readonly retrievedEvidence?: readonly ScoredEvidenceChunk[];
+  readonly requiredSections?: readonly string[];
   readonly currentArtifact?: DraftArtifact | null;
   /** Injectable for deterministic tests; live runs use the current timestamp. */
   readonly createdAt?: string;
@@ -255,7 +256,11 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
     retrievedEvidence,
   );
   const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);
-  const groundingIssues = completeCvProposalIssues(proposal, retrievedEvidence);
+  const groundingIssues = completeCvProposalIssues(
+    proposal,
+    retrievedEvidence,
+    options.requiredSections ?? [],
+  );
   if (groundingIssues.length > 0) {
     throw new z.ZodError(
       groundingIssues.map((issue) => ({

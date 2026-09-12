@@ -785,13 +785,17 @@ describe("local application driver", () => {
         const traces = await history.listCandidateKnowledgeRetrievalTraces(
           (await readWorkspace(root)).id,
         );
-        expect(traces).toHaveLength(1);
-        expect(traces[0]).toMatchObject({
-          purpose: "achievement-recall",
-          status: "matched",
-          selectedChunkCount: 1,
-          selectedSourceCount: 1,
-        });
+        expect(traces).toHaveLength(5);
+        expect(traces).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              purpose: "achievement-recall",
+              status: "matched",
+              selectedChunkCount: 1,
+              selectedSourceCount: 1,
+            }),
+          ]),
+        );
         const serialized = JSON.stringify(traces);
         expect(serialized).not.toContain("Private selection bytes");
         expect(serialized).not.toContain("Build TypeScript local-first tools");
