@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Sixteen observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed matched-case corrections #351 and #352, which merged with #356 before #358; #358 and #360 returned author rate-limit failures before a draft, adding no product-outcome evidence; #75 and #250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Seventeen observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed matched-case corrections #351 and #352, which merged with #356 before #358; #358 and #360 returned author rate-limit failures, and #362 returned three invalid-response failures before a draft, adding no product-outcome evidence; #75 and #250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -649,8 +649,19 @@ passed, but all three author attempts returned content-free rate-limit
 failures; the first two were retryable and the third exhausted the cap. The run
 persisted 7,508 ms of active duration with zero token counts and no artifact or
 review boundary. It adds no product-outcome evidence; #75 and #250 remain
-blocked. Any further live attempt needs its own bounded authorization. See the
-[consented pilot report](consented-pilot-v0.9.md) for execution and cost details.
+blocked. That authorization did not extend to later live attempts.
+
+The seventeenth bounded observation under #362 reused the same private
+matched-backend inputs, baseline-withheld v1 gate, model pair, and fixed limits,
+with separate explicit authorization before execution. Both user-session
+authentication probes passed. All three Anthropic author executions failed
+with generic `invalid-response`; attempts one and two were retryable, and the
+third exhausted the cap. The final durable failure stage and reason were
+`output-token-budget-exceeded`. Active duration was 1,033,665 ms; all execution
+token counts were zero and `estimatedUsd` was null. Provider-reported cost was
+unavailable. No artifact or review boundary occurred, so #362 adds no
+product-outcome evidence; #75 and #250 remain blocked. See the [consented pilot
+report](consented-pilot-v0.9.md) for the detailed record.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -752,6 +763,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-12 | Recorded #362 as an indeterminate seventeenth observation. | The separately authorized matched-backend run passed both user-session authentication probes but exhausted three author attempts on generic `invalid-response`; its final durable failure classification was `output-token-budget-exceeded`. No artifact or review existed and provider-reported cost was unavailable; #75 and #250 remain blocked. |
 | 2026-09-12 | Recorded #360 as an indeterminate sixteenth observation. | The explicitly authorized matched-backend run passed both authentication probes but exhausted three author attempts on content-free rate-limit failures before an artifact or review. It adds no product-outcome evidence; #75 and #250 remain blocked. |
 | 2026-09-12 | Recorded #358 as an indeterminate fifteenth observation. | After #351, #352, and #356 merged, the explicitly authorized matched-backend run exhausted three bounded author attempts on content-free rate-limit responses before producing a draft or reaching review. It adds no product-outcome evidence; #75 and #250 remain blocked. |
 | 2026-09-11 | Recorded #350 as an indeterminate matched-backend observation and bounded two product defects. | The author recovered from one classified output-budget failure and the critic completed, but source-backed required content was omitted (#351) and substantive prose escaped claim validation (#352). No approval or export occurred; #75 and #250 remain blocked. |
