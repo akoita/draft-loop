@@ -51,6 +51,7 @@ function evidenceChunkId(serialized: string): string {
 function authorProposal(chunkId: string): JsonRecord {
   const summary = "TypeScript engineer building local-first tools with deterministic testing.";
   const experience = "Built local-first TypeScript tools with deterministic testing.";
+  const skills = "TypeScript tools and deterministic testing.";
   return {
     sections: [
       {
@@ -78,12 +79,18 @@ function authorProposal(chunkId: string): JsonRecord {
       {
         title: "Education",
         kind: "education",
-        blocks: [{ type: "bullet", text: "Studied software engineering.", claims: [] }],
+        blocks: [{ type: "bullet", text: "Education information unavailable", claims: [] }],
       },
       {
         title: "Skills",
         kind: "skills",
-        blocks: [{ type: "bullet", text: "TypeScript, Node.js, automated testing.", claims: [] }],
+        blocks: [
+          {
+            type: "bullet",
+            text: skills,
+            claims: [{ text: skills, substantive: true, evidenceChunkIds: [chunkId] }],
+          },
+        ],
       },
     ],
   };

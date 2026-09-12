@@ -2,6 +2,7 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { extractProtectedValues, supportsProtectedValue } from "./author-grounding.js";
+import { claimCoverageIssues } from "./claim-coverage.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
 
 export const factualInvariantIssueCodes = [
@@ -9,6 +10,7 @@ export const factualInvariantIssueCodes = [
   "unsupported_claim",
   "factual_invariant_violation",
   "required_section_evidence_omitted",
+  "substantive_text_uncovered",
 ] as const;
 
 export type FactualInvariantIssueCode = (typeof factualInvariantIssueCodes)[number];
@@ -85,6 +87,7 @@ export function completeCvProposalIssues(
   }
   return [
     ...issues,
+    ...claimCoverageIssues(proposal),
     ...requiredSectionProposalIssues(proposal, requiredSections, retrievedEvidence),
   ];
 }
