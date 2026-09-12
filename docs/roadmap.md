@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-10<br>
+**Last reviewed:** 2026-09-12<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Fourteen observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | The matched case exposed required-section evidence loss (#351) and substantive prose outside claim validation (#352); #75 and #250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Fifteen observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed matched-case corrections #351 and #352, which merged with #356 before #358; #358 returned author rate-limit failures before a draft, adding no product-outcome evidence; #75 and #250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -633,6 +633,15 @@ threshold was lowered, the fixture's authored labels were not turned into a
 gate, and existing contexts, scores, and run records are unchanged. Parity
 remains indeterminate and #250 remains blocked.
 
+Issues #351, #352, and #356 merged before the fifteenth bounded observation
+under #358. On 2026-09-12, after explicit authorization for provider
+transmission, the matched-backend run reused the private v1 comparison gate and
+private case inputs; its manual baseline was withheld from generation. All
+three author attempts returned content-free rate-limit failures, with the third
+exhausting the author cap. No artifact, critic call, or review boundary
+occurred. This adds no product-outcome evidence and establishes no product
+defect; #75 remains open and #250 remains blocked.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
@@ -733,6 +742,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-12 | Recorded #358 as an indeterminate fifteenth observation. | After #351, #352, and #356 merged, the explicitly authorized matched-backend run exhausted three bounded author attempts on content-free rate-limit responses before producing a draft or reaching review. It adds no product-outcome evidence; #75 and #250 remain blocked. |
 | 2026-09-11 | Recorded #350 as an indeterminate matched-backend observation and bounded two product defects. | The author recovered from one classified output-budget failure and the critic completed, but source-backed required content was omitted (#351) and substantive prose escaped claim validation (#352). No approval or export occurred; #75 and #250 remain blocked. |
 | 2026-09-10 | Delivered #348 output-token budget failure-stage classification. | Future user-session output-token overruns persist as `output-token-budget-exceeded` in both failure-stage fields while retaining content-free diagnostics and bounded retry behavior; historical observation records, including #346, remain unchanged. |
 | 2026-09-05 | Recorded #298 as indeterminate after the fresh observation exhausted three author attempts across token-budget excess and `factual-invariant-rejection`. | The run exhausted after 412 active seconds within the 1,200,000 ms budget; attempt two exceeded output tokens, while attempts one and three failed factual-invariant checks without leaking private data. No proposal reached the critic. Parity comparison #75 and release prep #250 remain unvalidated. |
