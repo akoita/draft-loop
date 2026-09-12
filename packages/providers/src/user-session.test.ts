@@ -34,6 +34,10 @@ const anthropicSecretEnvironmentNames = [
   "ANTHROPIC_AUTH_TOKEN",
   "ANTHROPIC_BASE_URL",
 ] as const;
+const claudeAuxiliaryTrafficEnvironmentNames = [
+  "CLAUDE_CODE_DISABLE_TERMINAL_TITLE",
+  "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+] as const;
 const openAISecretEnvironmentNames = [
   "OPENAI_API_KEY",
   "CODEX_API_KEY",
@@ -92,6 +96,8 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
         "--mcp-config",
         '{"mcpServers":{}}',
         "--disable-slash-commands",
+        "--prompt-suggestions",
+        "false",
         "--no-chrome",
         "--no-session-persistence",
         "--permission-mode",
@@ -108,6 +114,17 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       expect(options.stdin).toBe('{"question":"answer?"}');
       expect(options.env).toMatchObject({ HOME: "/login-store", KEEP: "yes" });
       expectEnvironmentWithoutNames(options.env, anthropicSecretEnvironmentNames);
+      expect(options.env.CLAUDE_CODE_DISABLE_TERMINAL_TITLE).toBe("1");
+      expect(options.env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC).toBe("1");
+      expect(
+        Object.keys(options.env)
+          .filter((name) =>
+            claudeAuxiliaryTrafficEnvironmentNames.some(
+              (expected) => expected.toLowerCase() === name.toLowerCase(),
+            ),
+          )
+          .sort(),
+      ).toEqual([...claudeAuxiliaryTrafficEnvironmentNames].sort());
       expect(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("20");
       expect(options.env.MAX_THINKING_TOKENS).toBe("0");
       expect(options.env.CLAUDE_CODE_DISABLE_THINKING).toBe("1");
@@ -142,6 +159,10 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
         Anthropic_Auth_Token: "mixed-case-secret",
         ANTHROPIC_BASE_URL: "https://override.invalid",
         aNtHrOpIc_BaSe_Url: "https://mixed-case-override.invalid",
+        CLAUDE_CODE_DISABLE_TERMINAL_TITLE: "0",
+        claude_code_disable_terminal_title: "0",
+        CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "0",
+        Claude_Code_Disable_Nonessential_Traffic: "0",
       },
     });
 

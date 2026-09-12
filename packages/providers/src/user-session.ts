@@ -27,8 +27,13 @@ const anthropicSecretEnvironmentNames = [
   "ANTHROPIC_AUTH_TOKEN",
   "ANTHROPIC_BASE_URL",
 ] as const;
+const claudeAuxiliaryTrafficEnvironmentNames = [
+  "CLAUDE_CODE_DISABLE_TERMINAL_TITLE",
+  "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC",
+] as const;
 const anthropicControlledEnvironmentNames = [
   ...anthropicSecretEnvironmentNames,
+  ...claudeAuxiliaryTrafficEnvironmentNames,
   "MAX_THINKING_TOKENS",
   "CLAUDE_CODE_DISABLE_THINKING",
 ] as const;
@@ -633,6 +638,8 @@ export class AnthropicClaudeUserSessionAdapter<
           "--mcp-config",
           '{"mcpServers":{}}',
           "--disable-slash-commands",
+          "--prompt-suggestions",
+          "false",
           "--no-chrome",
           "--no-session-persistence",
           "--permission-mode",
@@ -654,6 +661,8 @@ export class AnthropicClaudeUserSessionAdapter<
           cwd: directory,
           env: {
             ...environment,
+            CLAUDE_CODE_DISABLE_TERMINAL_TITLE: "1",
+            CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
             CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(maxOutputTokens),
             MAX_THINKING_TOKENS: String(maxThinkingTokens),
             ...(maxThinkingTokens === 0 ? { CLAUDE_CODE_DISABLE_THINKING: "1" } : {}),
