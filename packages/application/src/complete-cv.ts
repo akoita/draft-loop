@@ -2,11 +2,13 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { extractProtectedValues, supportsProtectedValue } from "./author-grounding.js";
+import { requiredSectionProposalIssues } from "./required-section-evidence.js";
 
 export const factualInvariantIssueCodes = [
   "missing_evidence",
   "unsupported_claim",
   "factual_invariant_violation",
+  "required_section_evidence_omitted",
 ] as const;
 
 export type FactualInvariantIssueCode = (typeof factualInvariantIssueCodes)[number];
@@ -39,6 +41,7 @@ function meaningfulTokens(value: string): readonly string[] {
 export function completeCvProposalIssues(
   proposal: AuthorArtifactProposal,
   retrievedEvidence: readonly ScoredEvidenceChunk[],
+  requiredSections: readonly string[] = [],
 ): readonly CompleteCvProposalIssue[] {
   const evidenceById = new Map(retrievedEvidence.map((chunk) => [chunk.id, chunk.text] as const));
   const issues: CompleteCvProposalIssue[] = [];
@@ -80,5 +83,8 @@ export function completeCvProposalIssues(
       }
     }
   }
-  return issues;
+  return [
+    ...issues,
+    ...requiredSectionProposalIssues(proposal, requiredSections, retrievedEvidence),
+  ];
 }

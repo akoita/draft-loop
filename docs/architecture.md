@@ -139,6 +139,13 @@ content-free traces, and provide only opaque chunk references and bounded text
 to author and critic. Legacy workspaces without a CKB selection continue to
 use the earlier workspace evidence index.
 
+Before CKB evidence reaches the author, bounded supplementary searches reserve
+content for required CV sections. If a supplementary result fills its search
+limit without establishing section content, drafting fails visibly because
+the search cannot establish absence. Author validation rejects empty sections
+and unavailable placeholders when supplied evidence establishes content;
+missing individual details, such as a graduation date, may remain explicit.
+
 SQLite migration 26 corrects the artifact-history uniqueness boundary. An
 artifact ID is the immutable identity of one lineage, so distinct IDs in one
 workspace may each begin at version 1; parent-version IDs continue to link

@@ -9,7 +9,6 @@ import {
 } from "@draft-loop/artifacts";
 import {
   assertIndependentReview,
-  type CandidateKnowledgeRetrievalSourceVersionReference,
   type ContextSnapshot,
   createContextSnapshot,
   createWorkspace,
@@ -93,6 +92,11 @@ import OpenAI from "openai";
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
 import {
+  candidateKnowledgeEvidenceChecksum,
+  candidateKnowledgeEvidenceSourceId,
+  candidateKnowledgeRuntimeRetrieval,
+} from "./candidate-knowledge-retrieval.js";
+import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
   createCanonicalCandidateProfileDerivationService,
@@ -122,8 +126,6 @@ import type {
   WritingPolicyVersionView,
 } from "./index.js";
 import {
-  type CandidateKnowledgeRetrievalResult,
-  createCandidateKnowledgeStoreService,
   createKnowledgeSelectionSnapshot,
   type KnowledgeSelectionSnapshot,
 } from "./knowledge-base.js";
@@ -706,37 +708,6 @@ function selectionSnapshotsMatch(
     historical.schemaVersion === current.schemaVersion &&
     JSON.stringify(historical.entries) === JSON.stringify(current.entries)
   );
-}
-
-function candidateKnowledgeEvidenceIdentity(
-  reference: CandidateKnowledgeRetrievalSourceVersionReference,
-): string {
-  return JSON.stringify([
-    reference.storeId,
-    reference.knowledgeBaseId,
-    reference.sourceId,
-    reference.versionId,
-  ]);
-}
-
-function candidateKnowledgeEvidenceSourceId(
-  reference: CandidateKnowledgeRetrievalSourceVersionReference,
-): string {
-  return `ckb-source-${createHash("sha256")
-    .update(candidateKnowledgeEvidenceIdentity(reference), "utf8")
-    .digest("hex")
-    .slice(0, 32)}`;
-}
-
-function candidateKnowledgeEvidenceChecksum(
-  reference: CandidateKnowledgeRetrievalSourceVersionReference,
-): string {
-  return createHash("sha256")
-    .update(
-      `candidate-knowledge-version\u0000${candidateKnowledgeEvidenceIdentity(reference)}`,
-      "utf8",
-    )
-    .digest("hex");
 }
 
 /**
@@ -2171,7 +2142,13 @@ function providerAgents(
         response,
         await buildAuthorArtifactWithCapture(
           response,
-          { executionId, context, currentArtifact, retrievedEvidence },
+          {
+            executionId,
+            context,
+            currentArtifact,
+            retrievedEvidence,
+            requiredSections: context.outputConstraints.requiredSections,
+          },
           authorProposalCaptureDirectory,
         ),
       );
@@ -2285,87 +2262,6 @@ function engine(
     },
   });
 }
-function candidateKnowledgeRuntimeRetrieval(
-  storage: SqliteStorage,
-  config: WorkspaceConfig,
-  context: ContextSnapshot,
-):
-  | {
-      readonly port: RetrievalPort;
-      readonly inspect: (query: string) => Promise<CandidateKnowledgeRetrievalResult>;
-    }
-  | undefined {
-  const binding = config.candidateKnowledgeSelection;
-  const selection = context.candidateKnowledgeSelection;
-  if (binding === undefined || selection === undefined) return undefined;
-  const service = createCandidateKnowledgeStoreService();
-  const cache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
-  const query = (text: string, limit = 20): Promise<CandidateKnowledgeRetrievalResult> => {
-    const key = JSON.stringify([text, limit]);
-    const existing = cache.get(key);
-    if (existing !== undefined) return existing;
-    const pending = (async () => {
-      const startedAt = Date.now();
-      const operationId = `ckb-retrieval-${randomUUID()}`;
-      const result = await service.queryCandidateKnowledge({
-        selections: binding.entries.map(({ storeRoot, knowledgeBaseId }) => ({
-          storeRoot,
-          knowledgeBaseId,
-        })),
-        ...(binding.combinationApproved === undefined
-          ? {}
-          : { combinationApproved: binding.combinationApproved }),
-        purpose: "achievement-recall",
-        query: text,
-        limit,
-      });
-      const createdAt = timestamp();
-      const queryChecksum = createHash("sha256").update(text, "utf8").digest("hex");
-      const latencyMs = Math.max(0, Date.now() - startedAt);
-      for (const diagnostic of result.diagnostics) {
-        await storage.appendCandidateKnowledgeRetrievalTrace({
-          id: `trace-${randomUUID()}`,
-          workspaceId: config.id,
-          operationId,
-          purpose: "achievement-recall",
-          queryChecksum,
-          scope: diagnostic.scope,
-          index: diagnostic.index,
-          status: diagnostic.status,
-          indexedChunkCount: diagnostic.indexedChunkCount,
-          selectedChunkCount: diagnostic.selectedChunkCount,
-          selectedSourceCount: diagnostic.selectedSourceCount,
-          latencyMs,
-          selectedChunks: diagnostic.selectedChunks,
-          createdAt,
-        });
-      }
-      return result;
-    })();
-    cache.set(key, pending);
-    return pending;
-  };
-  return {
-    inspect: (text) => query(text),
-    port: {
-      queryEvidence: async (text, options) => {
-        const result = await query(text, options?.limit);
-        return result.hits.map((hit) => ({
-          id: hit.chunkId,
-          workspaceId: config.id,
-          sourceId: candidateKnowledgeEvidenceSourceId(hit.metadata.provenance),
-          ordinal: hit.ordinal,
-          lineStart: hit.lineStart,
-          lineEnd: hit.lineEnd,
-          checksum: candidateKnowledgeEvidenceChecksum(hit.metadata.provenance),
-          text: hit.text,
-          rank: hit.bm25Rank,
-        }));
-      },
-    },
-  };
-}
-
 async function openStorage(root: string): Promise<SqliteStorage> {
   await mkdir(join(root, configDirectory), { recursive: true });
   return openSqliteStorage(databasePath(root));
