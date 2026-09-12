@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-12<br>
-**Cases:** Seventeen bounded observations across two consented, anonymized cases
+**Cases:** Eighteen bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -13,7 +13,7 @@ reduced review effort.
 It does not validate the v0.9 product outcome and does not authorize release
 preparation.
 
-The seventeenth observation (#362) reused the matched-backend gate. All three
+The eighteenth observation (#364) reused the matched-backend gate. All three
 Anthropic author executions failed with the generic `invalid-response` code;
 the final durable run classification was `output-token-budget-exceeded`. No
 artifact or independent review existed, so it adds no product-quality evidence
@@ -393,8 +393,8 @@ language material had been replaced with unavailable-data placeholders. Recent
 roles and the required projects section also lost substantive source content.
 Issue #351 owns the bounded required-section evidence correction. The private
 manual baseline contains the omitted categories and remained available after
-that correction. It was reused but withheld from generation in #358, #360,
-and #362; none produced an artifact.
+that correction. The baseline was reused but withheld from generation for
+observations #358, #360, #362, and #364; none produced an artifact.
 
 The same review found substantive prose broader than its extracted claim span.
 The narrower claim was supported, allowing evidence and accuracy to score 1.0
@@ -479,6 +479,37 @@ an actual provider-cost measurement.
 No artifact, critic call, findings, readiness decision, review, adjudication,
 approval, export, submission, or release occurred. The observation adds no
 product-quality evidence and does not establish a product defect. Parity
+remains indeterminate, and #75 and #250 remain blocked. That authorization did
+not extend to later live attempts.
+
+## Bounded matched-backend observation (#364)
+
+On 2026-09-12, after Claude reauthentication, explicit authorization for
+provider transmission preceded execution. The observation reused the same
+private matched-backend case, baseline-withheld v1 gate, model pair, and fixed
+limits as #350, #358, #360, and #362. Anthropic `claude-sonnet-4-5` remained the
+author and OpenAI `gpt-5.6-luna` the critic through user-session authentication;
+both probes passed.
+
+The limits remained at most three author attempts and one critic attempt before
+the first review boundary, a 1,200,000 ms request timeout, a 1,200-second
+cumulative active-provider cap, and three rounds.
+
+All three Anthropic author executions failed with the generic
+`invalid-response` code. Attempts one and two were retryable; attempt three was
+non-retryable and exhausted the three-attempt cap. Attempt two was observed
+with `failureStage` and `failureReason` set to `factual-invariant-rejection`,
+with eight content-free diagnostics. The final durable run record has
+`failureStage` and `failureReason` set to `output-token-budget-exceeded`, with
+one content-free diagnostic. Persisted `activeDurationMs` was 504,772. Each
+execution record has zero input, output, and total tokens and
+`estimatedUsd: null`. The workspace `totalCostUsd` was persisted as `0`, but
+provider-reported cost was unavailable; this value is not an actual
+provider-cost measurement.
+
+No artifact, critic call, findings, readiness decision, review, adjudication,
+approval, export, submission, or release occurred. The observation adds no
+product-quality evidence and does not establish a product defect. Parity
 remains indeterminate, and #75 and #250 remain blocked. Any later live attempt
 needs its own bounded authorization.
 
@@ -531,9 +562,9 @@ unresolved findings as accepted facts.
   baseline, but the roles differ. The eighth draft emphasized API and
   developer-tool evidence more directly, while the baseline retained a stronger
   backend-production narrative. Matched-backend observations #350, #358, #360,
-  and #362 used a separate matched-role case and manual baseline. #358, #360,
-  and #362 reused those private inputs, with the baseline withheld from
-  generation, but produced no artifact to compare.
+  #362, and #364 used a separate matched-role case and manual baseline. #358,
+  #360, #362, and #364 reused those private inputs, with the baseline withheld
+  from generation, but produced no artifact to compare.
 - Misleading-evidence and prompt-injection behavior were not tested in these
   live observations. The provider-free synthetic preflight remains
   implementation evidence only.
@@ -597,11 +628,22 @@ stage and reason were `output-token-budget-exceeded`. It produced no artifact or
 review boundary, and provider-reported cost was unavailable. It adds no
 product-quality evidence.
 
+The eighteenth observation under #364 reused the same matched-backend inputs
+and gate after Claude reauthentication, with explicit provider-transmission
+authorization before execution. Both user-session authentication probes passed.
+All three Anthropic author executions failed with generic `invalid-response`;
+attempt two was observed under `factual-invariant-rejection` with eight
+content-free diagnostics, while the final durable failure stage and reason
+were `output-token-budget-exceeded` with one diagnostic. Active duration was
+504,772 ms; all execution token counts were zero and `estimatedUsd` was null.
+Provider-reported cost was unavailable. No artifact or review boundary
+occurred, so #364 adds no product-quality evidence.
+
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
 results. Any further live attempt needs its own bounded authorization.
 
 The first case remains limited by role mismatch. The matched case provides
 product evidence from #350 about required content and claim validation. The
-provider failures in #358, #360, and #362 added no product-quality evidence and
-do not change the indeterminate outcome.
+provider failures in #358, #360, #362, and #364 added no product-quality
+evidence and do not change the indeterminate outcome.
