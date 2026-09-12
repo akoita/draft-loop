@@ -1,7 +1,7 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
-import { extractProtectedValues, supportsProtectedValue } from "./author-grounding.js";
+import { extractProtectedValues, supportsProtectedValueInChunks } from "./author-grounding.js";
 import { claimCoverageIssues } from "./claim-coverage.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
 
@@ -61,9 +61,8 @@ export function completeCvProposalIssues(
           });
           continue;
         }
-        const evidence = normalized(
-          claim.evidenceChunkIds.map((id) => evidenceById.get(id) ?? "").join("\n"),
-        );
+        const evidenceChunks = claim.evidenceChunkIds.map((id) => evidenceById.get(id) ?? "");
+        const evidence = normalized(evidenceChunks.join("\n"));
         const related = meaningfulTokens(claim.text).some((token) => evidence.includes(token));
         if (!related) {
           issues.push({
@@ -73,7 +72,7 @@ export function completeCvProposalIssues(
           });
         }
         for (const value of extractProtectedValues(claim.text)) {
-          if (!supportsProtectedValue(evidence, value)) {
+          if (!supportsProtectedValueInChunks(evidenceChunks, value)) {
             issues.push({
               code: "factual_invariant_violation",
               path: [...path, "text"],
