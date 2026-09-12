@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-11<br>
-**Cases:** Fourteen bounded observations across two consented, anonymized cases
+**Recorded:** 2026-09-12<br>
+**Cases:** Fifteen bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -12,6 +12,11 @@ observations cannot establish factual parity, professional readiness, or
 reduced review effort.
 It does not validate the v0.9 product outcome and does not authorize release
 preparation.
+
+The fifteenth observation (#358) exhausted its three author attempts on
+content-free provider rate-limit failures. It produced no artifact or
+independent review, so it adds no product-quality evidence and does not change
+the indeterminate result.
 
 The initial attempt completed one Anthropic author step and one independent
 OpenAI critic step. Its revision call timed out. Under the candidate-approved
@@ -386,15 +391,42 @@ Read-only review found that source-backed education, certification, and
 language material had been replaced with unavailable-data placeholders. Recent
 roles and the required projects section also lost substantive source content.
 Issue #351 owns the bounded required-section evidence correction. The private
-manual baseline contains the omitted categories and remains available for a
-later comparison after that correction.
+manual baseline contains the omitted categories and remained available after
+that correction. It was reused but withheld from generation in #358, which
+produced no artifact.
 
 The same review found substantive prose broader than its extracted claim span.
 The narrower claim was supported, allowing evidence and accuracy to score 1.0
 while adjacent wording escaped claim-level validation. Issue #352 owns that
 separate claim-coverage correction. Because factual safety cannot be concluded
-from the current score and no adjudication, revision, approval, or export
-occurred, the matched case remains indeterminate.
+from the #350 score and no adjudication, revision, approval, or export occurred,
+that matched-backend observation remains indeterminate.
+
+## Bounded matched-backend observation (#358)
+
+On 2026-09-12, after issues #351, #352, and #356 merged, the user explicitly
+authorized provider transmission before the run. It reused the existing private
+v1 comparison gate and the matched-backend private inputs and manual baseline;
+the baseline was withheld from generation. The pair remained Anthropic
+`claude-sonnet-4-5` as author and OpenAI `gpt-5.6-luna` as critic, using
+authenticated user-session transports.
+
+The existing limits remained fixed: at most three author attempts and one
+critic attempt before the first review boundary, a 1,200,000 ms request timeout,
+a 1,200-second cumulative active-provider cap, and three rounds. No thresholds
+or inputs changed.
+
+All three author attempts failed with a content-free `rate-limit` code.
+Attempts one and two were retryable; attempt three exhausted the author cap and
+was non-retryable. Persisted active duration was 14,339 ms and token counts were
+zero. Provider-reported cost was unavailable (`null`); the workspace aggregate
+remained $0 because no billable usage was reported.
+
+No author artifact or critic call occurred, so there were no findings,
+readiness scores, human review boundary, adjudication, or revision. No approval,
+export, release, or submission occurred. The rate limit is not evidence of a
+product defect. This observation adds no outcome evidence, so parity remains
+indeterminate and #75 and #250 remain blocked.
 
 ## Predeclared comparison gate
 
@@ -441,16 +473,16 @@ unresolved findings as accepted facts.
   It reached human review with a revised artifact preserved in the durable
   snapshot; typed-history projection failed on the missing parent row. This
   progress does not establish factual parity or application readiness.
-- The existing private manual CV was retained as the human baseline. It
-  targets a related backend-engineering role rather than the evaluated SDK
-  role, so any comparison must treat the role mismatch as a limitation. The
-  eighth draft emphasized API and developer-tool evidence more directly, while
-  the baseline retained a stronger backend-production narrative. Because the
-  draft still lacked an adjudicated revision and approval, the predeclared
-  readiness and review-effort comparison remained unscoreable.
-- Misleading-evidence and prompt-injection behavior were not tested in this
-  live case. The provider-free synthetic preflight remains implementation
-  evidence only.
+- The earlier SDK-role comparison used the existing private manual CV as its
+  baseline, but the roles differ. The eighth draft emphasized API and
+  developer-tool evidence more directly, while the baseline retained a stronger
+  backend-production narrative. Matched-backend observations #350 and #358 used
+  a separate matched-role case and manual baseline. #358 reused those private
+  inputs, with the baseline withheld from generation, but produced no artifact
+  to compare.
+- Misleading-evidence and prompt-injection behavior were not tested in these
+  live observations. The provider-free synthetic preflight remains
+  implementation evidence only.
 - Candidate material, opportunity content, provider responses, private gate
   values, credentials, source paths, and identifying values remain outside the
   repository and CI artifacts.
@@ -490,10 +522,18 @@ required-section omissions (#351) and substantive prose outside the validated
 claim graph (#352). These defects prevent factual-safety and completeness
 claims even though the artifact reached the review boundary.
 
+The fifteenth observation under #358 reused the matched-backend gate after
+issues #351, #352, and #356 merged, with explicit provider-transmission
+authorization before execution. All three author attempts failed with
+content-free rate-limit responses before an artifact existed. No quality gate
+was exercised, so this provider outcome supports no product-defect claim and
+does not validate the merged corrections.
+
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
 results. Any further live attempt needs its own bounded authorization.
 
-The first case remains limited by role mismatch. The matched case now provides
-better product evidence and points back to bounded retrieval and validation
-defects rather than absent candidate experience.
+The first case remains limited by role mismatch. The matched case provides
+product evidence from #350 about required content and claim validation. The
+rate limit in #358 added no product-quality evidence and does not change the
+indeterminate outcome.
