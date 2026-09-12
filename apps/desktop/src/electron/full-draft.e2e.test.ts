@@ -117,7 +117,13 @@ function authorProposal(version: number, chunkId: string): JsonRecord {
           {
             type: "bullet",
             text: "Studied software engineering with a focus on testing and accessibility.",
-            claims: [],
+            claims: [
+              {
+                text: "Studied software engineering with a focus on testing and accessibility.",
+                substantive: true,
+                evidenceChunkIds: [chunkId],
+              },
+            ],
           },
         ],
       },
@@ -128,7 +134,13 @@ function authorProposal(version: number, chunkId: string): JsonRecord {
           {
             type: "bullet",
             text: "TypeScript, Node.js, automated testing, accessibility, technical writing.",
-            claims: [],
+            claims: [
+              {
+                text: "TypeScript, Node.js, automated testing, accessibility, technical writing.",
+                substantive: true,
+                evidenceChunkIds: [chunkId],
+              },
+            ],
           },
         ],
       },
@@ -233,7 +245,7 @@ describe("full real-mode native host draft workflow", () => {
     );
     await writeFile(
       candidatePath,
-      "Sanitized candidate evidence: Built TypeScript local-first tools with deterministic testing.\n",
+      "Sanitized candidate evidence: Built TypeScript local-first tools with deterministic testing. Studied software engineering with a focus on testing and accessibility. Skills: TypeScript, Node.js, automated testing, accessibility, technical writing.\n",
       "utf8",
     );
 

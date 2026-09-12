@@ -18,6 +18,9 @@ const authorRetryInstructions =
 const authorGroundingGuideInstructions =
   " The groundingGuide is the exact allowlist for protected factual values: use a protected value only when it appears exactly in the protectedValues for a cited evidenceChunkId. Each protected value used in a substantive claim requires citation of its corresponding evidence chunk(s). Do not use protected values absent from the guide; omit them rather than paraphrase or invent them.";
 
+const claimCoverageInstructions =
+  " Cover every factual span of block text with substantive claims using the same contiguous wording. A narrower claim cannot stand in for a broader sentence. Only section labels and explicit missing-data notices may remain outside claims. For substantive_text_uncovered retry feedback, cover the entire supported assertion or remove unsupported prose from the block; do not merely edit the claim list to hide it.";
+
 type PendingAdjudication = NonNullable<AuthorRequest["pendingAdjudication"]>;
 
 export interface AuthorAdjudicationPrompt {
@@ -38,7 +41,7 @@ export function createAuthorAdjudicationPrompt(
 ): AuthorAdjudicationPrompt {
   if (pendingAdjudication === undefined) {
     return {
-      systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
+      systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${claimCoverageInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
       providerInput: {
         outputBudget: authorOutputBudget,
         groundingGuide,
@@ -48,7 +51,7 @@ export function createAuthorAdjudicationPrompt(
   }
 
   return {
-    systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${adjudicatedRevisionInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
+    systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${claimCoverageInstructions}${adjudicatedRevisionInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
     providerInput: {
       outputBudget: authorOutputBudget,
       groundingGuide,
