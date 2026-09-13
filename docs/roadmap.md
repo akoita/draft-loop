@@ -710,6 +710,14 @@ re-enable those paths. This provider-free control makes the selected author
 model the only intended generation call; it does not reinterpret the usage
 record from observation #368 or add product-quality evidence.
 
+Issue #372 adds provider-free, content-free attribution to any later Claude
+output-budget failure. The adapter retains its existing failure stage while
+categorizing the result as single-turn, cumulative multi-turn, or unavailable
+and recording only an allowlisted final stop-reason category. It persists no
+provider prose, exact counts, or private material and changes neither the
+budget nor retry policy. This diagnostic work does not reinterpret #368 or
+authorize another live attempt.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
@@ -810,6 +818,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-13 | Added safe Claude output-budget attribution under #372. | Later output-budget failures retain their existing classification while fixed diagnostics distinguish single-turn from cumulative multi-turn usage and categorize only allowlisted stop reasons. No provider text or exact counts persist, and neither retry policy nor the pilot threshold changes. |
 | 2026-09-13 | Suppressed auxiliary Claude user-session traffic under #370. | The adapter explicitly disables terminal-title generation, prompt suggestions, and other nonessential Claude Code traffic so the selected author model remains the only intended generation call. This provider-free attribution control does not reinterpret #368 or advance the pilot threshold; #75/#250 remain blocked. |
 | 2026-09-13 | Recorded #368 as an indeterminate nineteenth observation. | The authorized post-#366 matched-backend run passed both user-session authentication probes, but all three author attempts returned generic `invalid-response`. Attempts one and two were retryable `output-token-budget-exceeded` failures; attempt three was non-retryable, failed `factual-invariant-rejection` with eight diagnostics, and exhausted the cap. The thinking bound did not eliminate output-budget failures. No artifact or review occurred; provider-reported cost is unavailable, and #75/#250 remain blocked. |
 | 2026-09-12 | Bounded Claude user-session thinking under #366. | The adapter caps thinking at half the output-token budget and disables it below Anthropic's minimum manual-thinking allocation. This provider-free control was exercised by #368; output-budget failures persisted, so the failure mode is not shown resolved and the pilot threshold remains unchanged. |

@@ -348,10 +348,61 @@ function responseHash(value: JsonValue): string {
   return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
 }
 
+function claudeTurnCountDiagnostic(numTurns: unknown): {
+  readonly code: string;
+  readonly path: string;
+} {
+  if (typeof numTurns !== "number" || !Number.isSafeInteger(numTurns) || numTurns < 1) {
+    return { code: "claude_turn_count_unavailable", path: "num_turns" };
+  }
+  return {
+    code: numTurns === 1 ? "claude_single_turn_usage" : "claude_multi_turn_cumulative_usage",
+    path: "num_turns",
+  };
+}
+
+function claudeStopReasonDiagnostic(stopReason: unknown): {
+  readonly code: string;
+  readonly path: string;
+} {
+  switch (stopReason) {
+    case undefined:
+    case null:
+      return { code: "claude_stop_reason_unavailable", path: "stop_reason" };
+    case "end_turn":
+      return { code: "claude_stop_reason_end_turn", path: "stop_reason" };
+    case "max_tokens":
+      return { code: "claude_stop_reason_max_tokens", path: "stop_reason" };
+    case "stop_sequence":
+      return { code: "claude_stop_reason_stop_sequence", path: "stop_reason" };
+    case "tool_use":
+      return { code: "claude_stop_reason_tool_use", path: "stop_reason" };
+    case "pause_turn":
+      return { code: "claude_stop_reason_pause_turn", path: "stop_reason" };
+    case "refusal":
+      return { code: "claude_stop_reason_refusal", path: "stop_reason" };
+    case "model_context_window_exceeded":
+      return {
+        code: "claude_stop_reason_model_context_window_exceeded",
+        path: "stop_reason",
+      };
+    default:
+      return { code: "claude_stop_reason_unrecognized", path: "stop_reason" };
+  }
+}
+
+function claudeOutputBudgetDiagnostics(
+  numTurns: unknown,
+  stopReason: unknown,
+): readonly { readonly code: string; readonly path: string }[] {
+  return [claudeTurnCountDiagnostic(numTurns), claudeStopReasonDiagnostic(stopReason)];
+}
+
 function assertOutputWithinLimit(
   provider: "anthropic" | "openai",
   outputTokens: number,
   limit: number,
+  additionalDiagnostics: readonly { readonly code: string; readonly path: string }[] = [],
 ): void {
   if (outputTokens <= limit) return;
   throw new ProviderAdapterError(
@@ -361,7 +412,10 @@ function assertOutputWithinLimit(
     {
       retryable: false,
       failureStage: "output-token-budget-exceeded",
-      diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
+      diagnostics: [
+        { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+        ...additionalDiagnostics,
+      ],
     },
   );
 }
@@ -471,6 +525,8 @@ interface ClaudeJsonResult {
   readonly is_error?: unknown;
   readonly api_error_status?: unknown;
   readonly result?: unknown;
+  readonly num_turns?: unknown;
+  readonly stop_reason?: unknown;
   readonly session_id?: unknown;
   readonly structured_output?: unknown;
   readonly usage?: unknown;
@@ -544,6 +600,8 @@ function parseClaudeResult<Output extends JsonValue>(
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly sessionId: string;
+  readonly numTurns: unknown;
+  readonly stopReason: unknown;
 } {
   const response = parseJson<JsonValue>("anthropic", text, "stdout") as ClaudeJsonResult;
   const usage = response.usage as
@@ -594,6 +652,8 @@ function parseClaudeResult<Output extends JsonValue>(
     inputTokens: usage.input_tokens,
     outputTokens: usage.output_tokens,
     sessionId: response.session_id,
+    numTurns: response.num_turns,
+    stopReason: response.stop_reason,
   };
 }
 
@@ -681,7 +741,12 @@ export class AnthropicClaudeUserSessionAdapter<
         }
         resultOrError(this.provider, result);
         const parsed = parseClaudeResult<Output>(result.stdout);
-        assertOutputWithinLimit(this.provider, parsed.outputTokens, maxOutputTokens);
+        assertOutputWithinLimit(
+          this.provider,
+          parsed.outputTokens,
+          maxOutputTokens,
+          claudeOutputBudgetDiagnostics(parsed.numTurns, parsed.stopReason),
+        );
         const totalTokens = parsed.inputTokens + parsed.outputTokens;
         request.onProgress?.({
           stage: "completed",

@@ -148,7 +148,11 @@ it("retains the exact author cap and adjudication through token and factuality r
       failureStage: "output-token-budget-exceeded",
       failureReason: "output-token-budget-exceeded",
       retryable: true,
-      diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
+      diagnostics: [
+        { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+        { code: "claude_turn_count_unavailable", path: "num_turns" },
+        { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+      ],
     });
     expect(oversized.artifact).toEqual(initial.artifact);
     expect(await readdir(join(root, "captures"))).toEqual([]);
@@ -174,7 +178,11 @@ it("retains the exact author cap and adjudication through token and factuality r
     for (const input of inputs.slice(1))
       expect(input.pendingAdjudication).toEqual(inputs[1]?.pendingAdjudication);
     expect(inputs[2]?.retryFeedback).toMatchObject({
-      diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
+      diagnostics: [
+        { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+        { code: "claude_turn_count_unavailable", path: "num_turns" },
+        { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+      ],
     });
     expect(inputs[3]?.retryFeedback).toMatchObject({ failureStage: "factual-invariant-rejection" });
     expect(critic).toHaveBeenCalledTimes(2);

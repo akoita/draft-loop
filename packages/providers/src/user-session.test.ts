@@ -70,6 +70,43 @@ function request(model: ModelSelection, overrides: Partial<ModelRequest> = {}): 
   };
 }
 
+async function claudeOutputBudgetError(
+  resultFields: Readonly<Record<string, unknown>> = {},
+): Promise<ProviderAdapterError> {
+  const adapter = new AnthropicClaudeUserSessionAdapter({
+    configuredModel: anthropicModel,
+    runner: async () => ({
+      exitCode: 0,
+      stdout: JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: "claude-session",
+        structured_output: { answer: "yes" },
+        usage: { input_tokens: 1_337, output_tokens: 21 },
+        ...resultFields,
+      }),
+      stderr: "",
+    }),
+  });
+
+  try {
+    await adapter.execute(request(anthropicModel));
+  } catch (error) {
+    expect(error).toBeInstanceOf(ProviderAdapterError);
+    const providerError = error as ProviderAdapterError;
+    expect(providerError).toMatchObject({
+      code: "invalid-response",
+      message: "The user-session runtime exceeded the requested output-token budget.",
+      retryable: false,
+      failureStage: "output-token-budget-exceeded",
+    });
+    return providerError;
+  }
+
+  throw new Error("expected output-token budget rejection");
+}
+
 function expectEnvironmentWithoutNames(
   environment: Readonly<Record<string, string | undefined>>,
   names: readonly string[],
@@ -81,7 +118,7 @@ function expectEnvironmentWithoutNames(
 }
 
 describe("AnthropicClaudeUserSessionAdapter", () => {
-  it("uses the locked-down Claude argv, private cwd, scrubbed environment, and structured result", async () => {
+  it("accepts malformed optional metadata in a locked-down Claude success result", async () => {
     const runner = vi.fn<UserSessionProcessRunner>(async (command, args, options) => {
       expect(command).toBe("claude-test");
       expect(options.timeoutMs).toBe(defaultUserSessionTimeoutMs);
@@ -141,6 +178,8 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
           session_id: "claude-session",
           structured_output: { answer: "yes" },
           usage: { input_tokens: 9, output_tokens: 4 },
+          num_turns: "not-a-number",
+          stop_reason: { unexpected: "future-stop" },
           permission_denials: [],
         }),
         stderr: "",
@@ -175,6 +214,105 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       usage: { inputTokens: 9, outputTokens: 4, totalTokens: 13 },
       cost: { estimatedUsd: null },
     });
+  });
+
+  it.each([
+    {
+      numTurns: 1,
+      stopReason: "max_tokens",
+      turnCode: "claude_single_turn_usage",
+      stopCode: "claude_stop_reason_max_tokens",
+    },
+    {
+      numTurns: 3,
+      stopReason: "end_turn",
+      turnCode: "claude_multi_turn_cumulative_usage",
+      stopCode: "claude_stop_reason_end_turn",
+    },
+    {
+      numTurns: 3,
+      stopReason: "stop_sequence",
+      turnCode: "claude_multi_turn_cumulative_usage",
+      stopCode: "claude_stop_reason_stop_sequence",
+    },
+    {
+      numTurns: 3,
+      stopReason: "tool_use",
+      turnCode: "claude_multi_turn_cumulative_usage",
+      stopCode: "claude_stop_reason_tool_use",
+    },
+    {
+      numTurns: 3,
+      stopReason: "pause_turn",
+      turnCode: "claude_multi_turn_cumulative_usage",
+      stopCode: "claude_stop_reason_pause_turn",
+    },
+    {
+      numTurns: 3,
+      stopReason: "refusal",
+      turnCode: "claude_multi_turn_cumulative_usage",
+      stopCode: "claude_stop_reason_refusal",
+    },
+    {
+      numTurns: 3,
+      stopReason: "model_context_window_exceeded",
+      turnCode: "claude_multi_turn_cumulative_usage",
+      stopCode: "claude_stop_reason_model_context_window_exceeded",
+    },
+  ] as const)(
+    "diagnoses Claude stop_reason=$stopReason with $numTurns turns when over budget",
+    async ({ numTurns, stopReason, turnCode, stopCode }) => {
+      const error = await claudeOutputBudgetError({ num_turns: numTurns, stop_reason: stopReason });
+
+      expect(error.diagnostics).toEqual([
+        { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+        { code: turnCode, path: "num_turns" },
+        { code: stopCode, path: "stop_reason" },
+      ]);
+    },
+  );
+
+  it("marks missing or null optional budget metadata unavailable", async () => {
+    const nullFieldsError = await claudeOutputBudgetError({ num_turns: null, stop_reason: null });
+    const missingFieldsError = await claudeOutputBudgetError();
+
+    for (const error of [nullFieldsError, missingFieldsError]) {
+      expect(error.diagnostics).toEqual([
+        { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+        { code: "claude_turn_count_unavailable", path: "num_turns" },
+        { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+      ]);
+    }
+  });
+
+  it("uses fixed diagnostics for malformed and unknown metadata without leaking values", async () => {
+    const marker = "sensitive-claude-budget-marker";
+    const error = await claudeOutputBudgetError({
+      num_turns: marker,
+      stop_reason: marker,
+      result: `${marker}-provider-text`,
+      session_id: `${marker}-session-id`,
+      structured_output: { answer: `${marker}-structured-output` },
+    });
+
+    expect(error.diagnostics).toEqual([
+      { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+      { code: "claude_turn_count_unavailable", path: "num_turns" },
+      { code: "claude_stop_reason_unrecognized", path: "stop_reason" },
+    ]);
+    for (const sensitiveValue of [
+      marker,
+      `${marker}-provider-text`,
+      `${marker}-session-id`,
+      `${marker}-structured-output`,
+      "1337",
+      "21",
+    ]) {
+      expect(error.message).not.toContain(sensitiveValue);
+      expect(JSON.stringify(error.diagnostics)).not.toContain(sensitiveValue);
+      expect(JSON.stringify(error.metadata)).not.toContain(sensitiveValue);
+      expect(JSON.stringify(error)).not.toContain(sensitiveValue);
+    }
   });
 
   it.each([
