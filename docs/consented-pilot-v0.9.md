@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-13<br>
-**Cases:** Nineteen bounded observations across two consented, anonymized cases
+**Cases:** Twenty bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -20,6 +20,13 @@ had `factual-invariant-rejection` and exhausted the cap. The #366 thinking
 bound was exercised but did not eliminate output-budget failures. No artifact
 or independent review existed, so the observation adds no product-quality
 evidence and does not change the indeterminate result.
+
+The twentieth observation (#374), after #370 and #372 merged, also failed
+before a draft. Its three author attempts ended in output-budget, factuality,
+and output-budget failures; the final attempt exhausted the cap. The new fixed
+diagnostics indicate cumulative multi-turn usage ending in `tool_use`, but do
+not establish the cause. No artifact or independent review existed, so #374
+adds no product-quality evidence and does not change the indeterminate result.
 
 The initial attempt completed one Anthropic author step and one independent
 OpenAI critic step. Its revision call timed out. Under the candidate-approved
@@ -549,6 +556,44 @@ product-quality evidence and does not establish a product defect. Parity
 remains indeterminate, and #75 and #250 remain blocked. Any later live attempt
 needs separate bounded authorization.
 
+## Bounded matched-backend observation (#374)
+
+On 2026-09-13, explicit provider-transmission authorization preceded this
+twentieth observation. It reused the same private matched-role case,
+baseline-withheld v1 gate, models, and fixed limits as #368, after #370 and
+issue #372 merged. The non-fixture workspace preflight matched Anthropic
+`claude-sonnet-4-5` as author and OpenAI `gpt-5.6-luna` as critic, with three
+rounds and a 1,200,000 ms maximum active duration. Both 20-second user-session
+authentication probes passed.
+
+Attempt one returned a generic Anthropic `invalid-response`, was retryable,
+and had `failureStage` and `failureReason` `output-token-budget-exceeded`. Its
+cumulative `activeDurationMs` was 235,974. Its fixed diagnostics were
+`output_token_budget_exceeded`, `claude_multi_turn_cumulative_usage`, and
+`claude_stop_reason_tool_use`.
+
+Attempt two was a retryable `factual-invariant-rejection` at cumulative
+`activeDurationMs` 350,419. It had eight content-free diagnostics: two
+`factual_invariant_violation` and six `substantive_text_uncovered`.
+
+Attempt three was non-retryable and exhausted the author cap at
+`output-token-budget-exceeded`. Final cumulative `activeDurationMs` was
+553,728, and its diagnostics had the same three fixed categories as attempt
+one.
+
+Each failed execution record had zero input, output, and total tokens and
+`estimatedUsd: null`. The workspace `totalCostUsd` persisted as `0`, but
+provider-reported cost is unavailable; this value is not a measured provider
+cost.
+
+The fixed diagnostics indicate that the reported output-budget results were
+cumulative multi-turn usage ending in `tool_use`. They do not establish the
+underlying cause or reinterpret earlier observations. No artifact, critic
+call, findings, readiness decision, review, adjudication, approval, export,
+submission, or release occurred. Parity remains indeterminate; #75 stays open,
+and release preparation under #250 remains blocked. The authorization is
+exhausted and does not extend to another live attempt.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -599,9 +644,10 @@ unresolved findings as accepted facts.
   developer-tool evidence more directly, while the baseline retained a stronger
   backend-production narrative. A separate matched-role case and manual
   baseline were used for the matched-backend observations. Their issue numbers
-  are #350, #358, #360, #362, #364, and #368. The five later runs reused private
-  inputs with the baseline withheld from generation; none produced an artifact
-  to compare.
+  are #350, #358, #360, #362, #364, #368, and #374. The six later runs reused
+  private inputs with the baseline withheld from generation; none produced an
+  artifact to compare. The twentieth observation (#374) reused that case after
+  #370 and #372 merged; its authorization is exhausted.
   The nineteenth run exercised the #366 thinking bound, but output-budget
   failures persisted, so it does not show that failure mode resolved.
 - Misleading-evidence and prompt-injection behavior were not tested in these
@@ -692,18 +738,24 @@ zero input, output, and total tokens and `estimatedUsd: null`. The workspace
 `totalCostUsd` was persisted as `0`, but provider-reported cost was unavailable;
 this is not an actual provider-cost measurement.
 
+The twentieth observation (#374) is recorded above; its explicit authorization
+is exhausted.
+
 No artifact, critic call, findings, readiness decision, review, adjudication,
-approval, export, submission, or release occurred. The result remains
-indeterminate, #75 and #250 remain blocked, and any later live attempt needs
-separate bounded authorization.
+approval, export, submission, or release occurred in #368 or #374. Parity
+remains indeterminate, and #75 and #250 remain blocked. Any later live attempt
+needs separate bounded authorization.
 
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
-results. Any further live attempt needs its own bounded authorization.
+results. Authorization for #374 is exhausted and does not extend to another
+live attempt. A future attempt requires separate bounded authorization.
 
 The first case remains limited by role mismatch. The matched case provides
 product evidence from #350 about required content and claim validation. The
-provider failures in #358, #360, #362, #364, and #368 added no product-quality
-evidence and do not change the indeterminate outcome. The #366 thinking bound
-was exercised in #368, but output-budget failures remained; this does not show
-that failure mode fully resolved.
+provider failures in #358, #360, #362, #364, #368, and #374 added no
+product-quality evidence and do not change the indeterminate outcome. The #366
+thinking bound was exercised in #368, but output-budget failures remained;
+this does not show that failure mode fully resolved. The #374 diagnostics do
+not establish the cause of its reported output-budget failures or reinterpret
+earlier runs.
