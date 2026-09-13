@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-13<br>
-**Cases:** Twenty bounded observations across two consented, anonymized cases
+**Cases:** Twenty-one bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -27,6 +27,13 @@ and output-budget failures; the final attempt exhausted the cap. The new fixed
 diagnostics indicate cumulative multi-turn usage ending in `tool_use`, but do
 not establish the cause. No artifact or independent review existed, so #374
 adds no product-quality evidence and does not change the indeterminate result.
+
+The twenty-first observation (#378) followed the exact merged revision that
+includes #376, but one non-retryable Anthropic author attempt failed with code
+`unknown` before a draft. It did not exercise or validate #376's corrected
+cumulative-usage acceptance in live use. No artifact or independent review
+existed, so #378 adds no product-quality evidence and does not change the
+indeterminate result.
 
 The initial attempt completed one Anthropic author step and one independent
 OpenAI critic step. Its revision call timed out. Under the candidate-approved
@@ -594,6 +601,32 @@ submission, or release occurred. Parity remains indeterminate; #75 stays open,
 and release preparation under #250 remains blocked. The authorization is
 exhausted and does not extend to another live attempt.
 
+## Bounded matched-backend observation (#378)
+
+On 2026-09-13, explicit provider-transmission authorization preceded this
+twenty-first observation on merged revision
+`04609d4583c7ed8c32ed779bc97ecb6d677c9ee0`, which included #376. It reused the
+same private matched-role case and baseline-withheld v1 gate, with Anthropic
+`claude-sonnet-4-5` as author and OpenAI `gpt-5.6-luna` as critic. The workspace
+preflight was non-fixture and matched three rounds, a 1,200,000 ms request
+duration, and a 1,200,000 ms maximum active duration. Both 20-second
+user-session authentication probes passed.
+
+The run made one Anthropic author attempt. It failed after cumulative
+`activeDurationMs` 14,405 with code `unknown`, was non-retryable, and had no
+`failureStage`, `failureReason`, or diagnostics. Execution input, output, and
+total token counts were zero and `estimatedUsd` was null. The workspace
+`totalCostUsd` persisted as `0`, but provider-reported cost was unavailable;
+zero is not a measured provider cost.
+
+No artifact, critic call, findings, readiness decision, review, adjudication,
+approval, export, submission, release preparation, or release occurred. The
+non-retryable run cannot resume, and its authorization is exhausted; another
+run would require new explicit authorization. This observation does not
+exercise or validate #376's corrected cumulative-usage acceptance in live use
+and adds no product-quality evidence. Parity remains indeterminate; #75 stays
+open, and release preparation under #250 remains blocked.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -644,10 +677,13 @@ unresolved findings as accepted facts.
   developer-tool evidence more directly, while the baseline retained a stronger
   backend-production narrative. A separate matched-role case and manual
   baseline were used for the matched-backend observations. Their issue numbers
-  are #350, #358, #360, #362, #364, #368, and #374. The six later runs reused
-  private inputs with the baseline withheld from generation; none produced an
-  artifact to compare. The twentieth observation (#374) reused that case after
-  #370 and #372 merged; its authorization is exhausted.
+  are #350, #358, #360, #362, #364, #368, #374, and #378. The seven later runs
+  reused private inputs with the baseline withheld from generation; none
+  produced an artifact to compare. The twentieth observation (#374) reused
+  that case after #370 and #372 merged; its authorization is exhausted. The
+  twenty-first observation (#378) followed #376 but its single non-retryable
+  author failure neither reached an artifact nor validated the corrected
+  cumulative-usage acceptance; its authorization is also exhausted.
   The nineteenth run exercised the #366 thinking bound, but output-budget
   failures persisted, so it does not show that failure mode resolved.
 - Misleading-evidence and prompt-injection behavior were not tested in these
@@ -739,23 +775,26 @@ zero input, output, and total tokens and `estimatedUsd: null`. The workspace
 this is not an actual provider-cost measurement.
 
 The twentieth observation (#374) is recorded above; its explicit authorization
-is exhausted.
+is exhausted. The twenty-first observation (#378) is also recorded above. Its
+non-retryable author failure cannot resume, and its authorization is exhausted.
 
 No artifact, critic call, findings, readiness decision, review, adjudication,
-approval, export, submission, or release occurred in #368 or #374. Parity
-remains indeterminate, and #75 and #250 remain blocked. Any later live attempt
-needs separate bounded authorization.
+approval, export, submission, or release occurred in #368, #374, or #378.
+Parity remains indeterminate, and #75 and #250 remain blocked. Any later live
+attempt needs separate bounded authorization.
 
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
-results. Authorization for #374 is exhausted and does not extend to another
-live attempt. A future attempt requires separate bounded authorization.
+results. Authorization for #374 and #378 is exhausted and does not extend to
+another live attempt. The #378 run cannot resume; a new run requires separate
+explicit bounded authorization.
 
 The first case remains limited by role mismatch. The matched case provides
 product evidence from #350 about required content and claim validation. The
-provider failures in #358, #360, #362, #364, #368, and #374 added no
+provider failures in #358, #360, #362, #364, #368, #374, and #378 added no
 product-quality evidence and do not change the indeterminate outcome. The #366
 thinking bound was exercised in #368, but output-budget failures remained;
 this does not show that failure mode fully resolved. The #374 diagnostics do
 not establish the cause of its reported output-budget failures or reinterpret
-earlier runs.
+earlier runs. The #378 failure does not validate #376's corrected cumulative-
+usage acceptance in live use.
