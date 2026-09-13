@@ -467,6 +467,8 @@ interface ClaudeJsonResult {
   readonly is_error?: unknown;
   readonly api_error_status?: unknown;
   readonly result?: unknown;
+  readonly terminal_reason?: unknown;
+  readonly stop_reason?: unknown;
   readonly session_id?: unknown;
   readonly structured_output?: unknown;
   readonly usage?: unknown;
@@ -475,12 +477,86 @@ interface ClaudeJsonResult {
   readonly tool_uses?: unknown;
 }
 
+const claudeErrorSubtypeDiagnosticCodes = new Map([
+  ["error_max_turns", "claude_error_subtype_error_max_turns"],
+  ["error_during_execution", "claude_error_subtype_error_during_execution"],
+  ["error_max_budget_usd", "claude_error_subtype_error_max_budget_usd"],
+  [
+    "error_max_structured_output_retries",
+    "claude_error_subtype_error_max_structured_output_retries",
+  ],
+]);
+
+const claudeTerminalReasonDiagnosticCodes = new Map([
+  ["completed", "claude_terminal_reason_completed"],
+  ["max_turns", "claude_terminal_reason_max_turns"],
+  ["tool_deferred", "claude_terminal_reason_tool_deferred"],
+  ["aborted_streaming", "claude_terminal_reason_aborted_streaming"],
+  ["aborted_tools", "claude_terminal_reason_aborted_tools"],
+  ["hook_stopped", "claude_terminal_reason_hook_stopped"],
+  ["stop_hook_prevented", "claude_terminal_reason_stop_hook_prevented"],
+  ["blocking_limit", "claude_terminal_reason_blocking_limit"],
+  ["rapid_refill_breaker", "claude_terminal_reason_rapid_refill_breaker"],
+  ["prompt_too_long", "claude_terminal_reason_prompt_too_long"],
+  ["image_error", "claude_terminal_reason_image_error"],
+  ["model_error", "claude_terminal_reason_model_error"],
+]);
+
+const claudeStopReasonDiagnosticCodes = new Map([
+  ["end_turn", "claude_stop_reason_end_turn"],
+  ["max_tokens", "claude_stop_reason_max_tokens"],
+  ["stop_sequence", "claude_stop_reason_stop_sequence"],
+  ["tool_use", "claude_stop_reason_tool_use"],
+  ["pause_turn", "claude_stop_reason_pause_turn"],
+  ["refusal", "claude_stop_reason_refusal"],
+  ["model_context_window_exceeded", "claude_stop_reason_model_context_window_exceeded"],
+]);
+
+function claudeFieldDiagnostic(
+  value: unknown,
+  path: string,
+  prefix: string,
+  allowlistedCodes: ReadonlyMap<string, string>,
+): { readonly code: string; readonly path: string } {
+  if (value === undefined || value === null) {
+    return { code: `${prefix}_unavailable`, path };
+  }
+  const code = typeof value === "string" ? allowlistedCodes.get(value) : undefined;
+  return { code: code ?? `${prefix}_unrecognized`, path };
+}
+
+function claudeStructuredErrorDiagnostics(
+  response: ClaudeJsonResult,
+): readonly { readonly code: string; readonly path: string }[] {
+  return [
+    claudeFieldDiagnostic(
+      response.subtype,
+      "subtype",
+      "claude_error_subtype",
+      claudeErrorSubtypeDiagnosticCodes,
+    ),
+    claudeFieldDiagnostic(
+      response.terminal_reason,
+      "terminal_reason",
+      "claude_terminal_reason",
+      claudeTerminalReasonDiagnosticCodes,
+    ),
+    claudeFieldDiagnostic(
+      response.stop_reason,
+      "stop_reason",
+      "claude_stop_reason",
+      claudeStopReasonDiagnosticCodes,
+    ),
+  ];
+}
+
 function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterError {
   const status =
     typeof response.api_error_status === "number" && Number.isFinite(response.api_error_status)
       ? response.api_error_status
       : undefined;
   const statusMetadata = status === undefined ? {} : { status };
+  const diagnostics = claudeStructuredErrorDiagnostics(response);
   const safeResult = typeof response.result === "string" ? response.result.toLowerCase() : "";
   if (status === 429) {
     const quota =
@@ -493,7 +569,7 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
       quota
         ? "The user-session provider quota is exhausted."
         : "The user-session provider rate limit was reached.",
-      { ...statusMetadata, retryable: !quota },
+      { ...statusMetadata, retryable: !quota, diagnostics },
     );
   }
   if (status === 401 || status === 403) {
@@ -501,7 +577,7 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
       "anthropic",
       "authentication",
       "The user-session provider is not authenticated.",
-      { ...statusMetadata, retryable: false },
+      { ...statusMetadata, retryable: false, diagnostics },
     );
   }
   if (status !== undefined && status >= 500) {
@@ -509,14 +585,14 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
       "anthropic",
       "transient",
       "The user-session provider encountered a transient error.",
-      { ...statusMetadata, retryable: true },
+      { ...statusMetadata, retryable: true, diagnostics },
     );
   }
   return new ProviderAdapterError(
     "anthropic",
     "unknown",
     "The user-session provider request failed.",
-    { ...statusMetadata, retryable: false },
+    { ...statusMetadata, retryable: false, diagnostics },
   );
 }
 

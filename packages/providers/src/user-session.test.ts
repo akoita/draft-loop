@@ -55,6 +55,88 @@ const policy = {
   sensitiveData: false,
   sensitiveDataAcknowledged: false,
 } as const;
+const claudeErrorDiagnosticCases = [
+  {
+    field: "subtype",
+    value: "error_max_turns",
+    code: "claude_error_subtype_error_max_turns",
+  },
+  {
+    field: "subtype",
+    value: "error_during_execution",
+    code: "claude_error_subtype_error_during_execution",
+  },
+  {
+    field: "subtype",
+    value: "error_max_budget_usd",
+    code: "claude_error_subtype_error_max_budget_usd",
+  },
+  {
+    field: "subtype",
+    value: "error_max_structured_output_retries",
+    code: "claude_error_subtype_error_max_structured_output_retries",
+  },
+  { field: "terminal_reason", value: "completed", code: "claude_terminal_reason_completed" },
+  { field: "terminal_reason", value: "max_turns", code: "claude_terminal_reason_max_turns" },
+  {
+    field: "terminal_reason",
+    value: "tool_deferred",
+    code: "claude_terminal_reason_tool_deferred",
+  },
+  {
+    field: "terminal_reason",
+    value: "aborted_streaming",
+    code: "claude_terminal_reason_aborted_streaming",
+  },
+  {
+    field: "terminal_reason",
+    value: "aborted_tools",
+    code: "claude_terminal_reason_aborted_tools",
+  },
+  {
+    field: "terminal_reason",
+    value: "hook_stopped",
+    code: "claude_terminal_reason_hook_stopped",
+  },
+  {
+    field: "terminal_reason",
+    value: "stop_hook_prevented",
+    code: "claude_terminal_reason_stop_hook_prevented",
+  },
+  {
+    field: "terminal_reason",
+    value: "blocking_limit",
+    code: "claude_terminal_reason_blocking_limit",
+  },
+  {
+    field: "terminal_reason",
+    value: "rapid_refill_breaker",
+    code: "claude_terminal_reason_rapid_refill_breaker",
+  },
+  {
+    field: "terminal_reason",
+    value: "prompt_too_long",
+    code: "claude_terminal_reason_prompt_too_long",
+  },
+  { field: "terminal_reason", value: "image_error", code: "claude_terminal_reason_image_error" },
+  { field: "terminal_reason", value: "model_error", code: "claude_terminal_reason_model_error" },
+  { field: "stop_reason", value: "end_turn", code: "claude_stop_reason_end_turn" },
+  { field: "stop_reason", value: "max_tokens", code: "claude_stop_reason_max_tokens" },
+  { field: "stop_reason", value: "stop_sequence", code: "claude_stop_reason_stop_sequence" },
+  { field: "stop_reason", value: "tool_use", code: "claude_stop_reason_tool_use" },
+  { field: "stop_reason", value: "pause_turn", code: "claude_stop_reason_pause_turn" },
+  { field: "stop_reason", value: "refusal", code: "claude_stop_reason_refusal" },
+  {
+    field: "stop_reason",
+    value: "model_context_window_exceeded",
+    code: "claude_stop_reason_model_context_window_exceeded",
+  },
+] as const;
+const claudeErrorFieldPrefixes = [
+  ["subtype", "claude_error_subtype"],
+  ["terminal_reason", "claude_terminal_reason"],
+  ["stop_reason", "claude_stop_reason"],
+] as const;
 
 function request(model: ModelSelection, overrides: Partial<ModelRequest> = {}): ModelRequest {
   return {
@@ -68,6 +150,27 @@ function request(model: ModelSelection, overrides: Partial<ModelRequest> = {}): 
     dataPolicy: policy,
     ...overrides,
   };
+}
+
+async function captureClaudeStructuredError(
+  fields: Readonly<Record<string, unknown>> = {},
+  options: { readonly exitCode?: number | null; readonly stderr?: string } = {},
+): Promise<ProviderAdapterError> {
+  const adapter = new AnthropicClaudeUserSessionAdapter({
+    configuredModel: anthropicModel,
+    runner: async () => ({
+      exitCode: options.exitCode ?? 1,
+      stdout: JSON.stringify({ type: "result", is_error: true, ...fields }),
+      stderr: options.stderr ?? "",
+    }),
+  });
+  try {
+    await adapter.execute(request(anthropicModel));
+  } catch (error) {
+    if (error instanceof ProviderAdapterError) return error;
+    throw error;
+  }
+  throw new Error("Expected the Claude structured error to reject.");
 }
 
 function expectEnvironmentWithoutNames(
@@ -331,51 +434,188 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
   });
 
   it.each([
-    [429, "temporary service response", "success", "rate-limit", true],
-    [429, "usage limit reached", "error", "quota-exhausted", false],
-    [401, "authentication response", "error", "authentication", false],
-    [403, "permission response", "error", "authentication", false],
-    [500, "temporary service response", "error", "transient", true],
-    [529, "temporary service response", "error", "transient", true],
+    [
+      429,
+      "temporary service response",
+      "rate-limit",
+      true,
+      "The user-session provider rate limit was reached.",
+    ],
+    [
+      429,
+      "usage limit reached",
+      "quota-exhausted",
+      false,
+      "The user-session provider quota is exhausted.",
+    ],
+    [
+      401,
+      "authentication response",
+      "authentication",
+      false,
+      "The user-session provider is not authenticated.",
+    ],
+    [
+      403,
+      "permission response",
+      "authentication",
+      false,
+      "The user-session provider is not authenticated.",
+    ],
+    [
+      500,
+      "temporary service response",
+      "transient",
+      true,
+      "The user-session provider encountered a transient error.",
+    ],
+    [
+      529,
+      "temporary service response",
+      "transient",
+      true,
+      "The user-session provider encountered a transient error.",
+    ],
   ] as const)(
     "maps a nonzero structured Claude status %s without exposing envelope content",
-    async (status, resultText, subtype, code, retryable) => {
+    async (status, resultText, code, retryable, message) => {
       const stdoutMarker = `synthetic-stdout-${status}`;
       const resultMarker = `synthetic-result-${status}`;
       const stderrMarker = `synthetic-stderr-${status}`;
-      const adapter = new AnthropicClaudeUserSessionAdapter({
-        configuredModel: anthropicModel,
-        runner: async () => ({
-          exitCode: 1,
-          stdout: JSON.stringify({
-            type: "result",
-            subtype,
-            is_error: true,
-            api_error_status: status,
-            result: `${resultText} ${resultMarker} ${stdoutMarker}`,
-          }),
-          stderr: stderrMarker,
-        }),
-      });
+      const errorsMarker = `synthetic-errors-${status}`;
+      const sessionMarker = `synthetic-session-${status}`;
+      const countMarker = `private-count-${status}-424242`;
+      const privateDataMarker = `synthetic-private-data-${status}`;
+      const error = await captureClaudeStructuredError(
+        {
+          subtype: "error_max_structured_output_retries",
+          api_error_status: status,
+          result: `${resultText} ${resultMarker} ${stdoutMarker}`,
+          terminal_reason: "model_error",
+          stop_reason: "max_tokens",
+          errors: [errorsMarker],
+          session_id: sessionMarker,
+          num_turns: countMarker,
+          private_data: privateDataMarker,
+        },
+        { exitCode: 1, stderr: stderrMarker },
+      );
 
-      try {
-        await adapter.execute(request(anthropicModel));
-        throw new Error("expected rejection");
-      } catch (error) {
-        expect(error).toBeInstanceOf(ProviderAdapterError);
-        expect(error).toMatchObject({
-          code,
-          retryable,
-          status,
-          metadata: { status },
-        });
-        for (const marker of [stdoutMarker, resultMarker, stderrMarker]) {
-          expect((error as Error).message).not.toContain(marker);
-          expect(JSON.stringify((error as ProviderAdapterError).metadata)).not.toContain(marker);
-          expect(JSON.stringify((error as ProviderAdapterError).diagnostics)).not.toContain(marker);
-          expect(JSON.stringify(error)).not.toContain(marker);
-        }
+      expect(error).toMatchObject({ code, retryable, status, metadata: { status } });
+      expect(error.message).toBe(message);
+      expect(error.diagnostics).toEqual([
+        {
+          code: "claude_error_subtype_error_max_structured_output_retries",
+          path: "subtype",
+        },
+        { code: "claude_terminal_reason_model_error", path: "terminal_reason" },
+        { code: "claude_stop_reason_max_tokens", path: "stop_reason" },
+      ]);
+      for (const marker of [
+        stdoutMarker,
+        resultMarker,
+        stderrMarker,
+        errorsMarker,
+        sessionMarker,
+        countMarker,
+        privateDataMarker,
+      ]) {
+        expect(error.message).not.toContain(marker);
+        expect(JSON.stringify(error.metadata)).not.toContain(marker);
+        expect(JSON.stringify(error.diagnostics)).not.toContain(marker);
+        expect(JSON.stringify(error)).not.toContain(marker);
       }
+    },
+  );
+
+  it("maps statusless documented error fields to fixed diagnostics without retaining content", async () => {
+    const resultMarker = "private-result-prose-marker";
+    const errorsMarker = "private-errors-array-marker";
+    const stderrMarker = "private-stderr-marker";
+    const sessionMarker = "private-session-marker";
+    const error = await captureClaudeStructuredError(
+      {
+        subtype: "error_max_turns",
+        terminal_reason: "prompt_too_long",
+        stop_reason: "tool_use",
+        result: resultMarker,
+        errors: [errorsMarker],
+        session_id: sessionMarker,
+      },
+      { exitCode: 0, stderr: stderrMarker },
+    );
+
+    expect(error).toMatchObject({
+      code: "unknown",
+      retryable: false,
+      status: null,
+    });
+    expect(error.message).toBe("The user-session provider request failed.");
+    expect(error.diagnostics).toEqual([
+      { code: "claude_error_subtype_error_max_turns", path: "subtype" },
+      { code: "claude_terminal_reason_prompt_too_long", path: "terminal_reason" },
+      { code: "claude_stop_reason_tool_use", path: "stop_reason" },
+    ]);
+    for (const marker of [resultMarker, errorsMarker, stderrMarker, sessionMarker]) {
+      expect(error.message).not.toContain(marker);
+      expect(JSON.stringify(error.metadata)).not.toContain(marker);
+      expect(JSON.stringify(error.diagnostics)).not.toContain(marker);
+      expect(JSON.stringify(error)).not.toContain(marker);
+    }
+  });
+
+  it.each(claudeErrorDiagnosticCases)(
+    "maps allowlisted Claude error $field value $value to a fixed diagnostic",
+    async ({ field, value, code }) => {
+      const error = await captureClaudeStructuredError({ [field]: value });
+
+      expect(error).toMatchObject({ code: "unknown", retryable: false, status: null });
+      expect(error.diagnostics).toHaveLength(3);
+      expect(error.diagnostics).toContainEqual({ code, path: field });
+      expect(error.diagnostics?.map(({ path }) => path)).toEqual([
+        "subtype",
+        "terminal_reason",
+        "stop_reason",
+      ]);
+    },
+  );
+
+  it.each([
+    ["omitted", {}],
+    ["null", { subtype: null, terminal_reason: null, stop_reason: null }],
+  ] as const)(
+    "uses fixed unavailable diagnostics for %s Claude error fields",
+    async (_case, fields) => {
+      const error = await captureClaudeStructuredError(fields);
+
+      expect(error).toMatchObject({ code: "unknown", retryable: false, status: null });
+      expect(error.diagnostics).toEqual([
+        { code: "claude_error_subtype_unavailable", path: "subtype" },
+        { code: "claude_terminal_reason_unavailable", path: "terminal_reason" },
+        { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+      ]);
+    },
+  );
+
+  it.each(claudeErrorFieldPrefixes)(
+    "uses an unrecognized diagnostic for malformed Claude error field %s",
+    async (field, prefix) => {
+      const marker = `malformed-${field}-sensitive-marker`;
+      const error = await captureClaudeStructuredError({ [field]: { marker } });
+
+      expect(error.diagnostics).toContainEqual({ code: `${prefix}_unrecognized`, path: field });
+      expect(JSON.stringify(error)).not.toContain(marker);
+    },
+  );
+
+  it.each(claudeErrorFieldPrefixes)(
+    "uses an unrecognized diagnostic for future Claude error field %s values",
+    async (field, prefix) => {
+      const marker = `future-${field}-sensitive-marker`;
+      const error = await captureClaudeStructuredError({ [field]: marker });
+
+      expect(error.diagnostics).toContainEqual({ code: `${prefix}_unrecognized`, path: field });
+      expect(JSON.stringify(error)).not.toContain(marker);
     },
   );
 
