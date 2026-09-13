@@ -61,7 +61,7 @@ export interface ModelRequest<Input extends JsonValue = JsonValue> {
   readonly input: Input;
   readonly outputSchema: JsonSchema;
   readonly outputName: string;
-  /** Maximum number of output tokens the provider may generate. */
+  /** Maximum output tokens for each provider generation; SDK usage may accumulate across steps. */
   readonly maxOutputTokens?: number;
   readonly dataPolicy: DataExposurePolicy;
   readonly onProgress?: StreamingProgressCallback;
