@@ -17,7 +17,7 @@ it("keeps provider and orchestrator failure stages identical", () => {
   expect(providerFailureStages).toEqual(runFailureStages);
 });
 
-it("retains the exact author cap and adjudication through token and factuality retries", async () => {
+it("retains the exact per-generation cap and adjudication through a factuality retry", async () => {
   const root = await mkdtemp(join(tmpdir(), "author-output-budget-"));
   const silent = { write: () => undefined };
   const inputs: Record<string, unknown>[] = [];
@@ -38,11 +38,9 @@ it("retains the exact author cap and adjudication through token and factuality r
     const id = evidence.find((chunk) => chunk.text.includes("Built local-first"))?.id;
     if (!id) throw new Error("Missing selected evidence");
     const text =
-      inputs.length === 3
+      inputs.length === 2
         ? "Built 999 TypeScript tools with deterministic testing."
-        : inputs.length === 4
-          ? "Built local-first TypeScript tools; deterministic testing."
-          : "Built local-first TypeScript tools with deterministic testing.";
+        : "Built local-first TypeScript tools with deterministic testing.";
     return {
       exitCode: 0,
       stderr: "",
@@ -52,6 +50,7 @@ it("retains the exact author cap and adjudication through token and factuality r
         is_error: false,
         session_id: `author-${inputs.length}`,
         usage: { input_tokens: 100, output_tokens: inputs.length === 2 ? cap + 1 : 200 },
+        ...(inputs.length === 2 ? { num_turns: 3, stop_reason: "tool_use" } : {}),
         structured_output: {
           sections: [
             {
@@ -142,24 +141,11 @@ it("retains the exact author cap and adjudication through token and factuality r
     );
     const resume = () =>
       driver.resume({ root, runId: initial.runId, allowProviderData: true }, silent);
-    const oversized = await resume();
-    expect(oversized.lastError).toMatchObject({
-      attempt: 1,
-      failureStage: "output-token-budget-exceeded",
-      failureReason: "output-token-budget-exceeded",
-      retryable: true,
-      diagnostics: [
-        { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
-        { code: "claude_turn_count_unavailable", path: "num_turns" },
-        { code: "claude_stop_reason_unavailable", path: "stop_reason" },
-      ],
-    });
-    expect(oversized.artifact).toEqual(initial.artifact);
-    expect(await readdir(join(root, "captures"))).toEqual([]);
     const factual = await resume();
     expect(factual.lastError).toMatchObject({
-      attempt: 2,
+      attempt: 1,
       failureStage: "factual-invariant-rejection",
+      failureReason: "factual-invariant-rejection",
     });
     expect(factual.artifact).toEqual(initial.artifact);
     const captures = await readdir(join(root, "captures"));
@@ -173,18 +159,11 @@ it("retains the exact author cap and adjudication through token and factuality r
     const completed = await resume();
     expect(completed.state, JSON.stringify(completed.lastError)).toBe("awaiting-approval");
     expect(completed.artifact?.version).toBe(2);
-    expect(inputs).toHaveLength(4);
+    expect(inputs).toHaveLength(3);
     expect(inputs[0]).not.toHaveProperty("pendingAdjudication");
     for (const input of inputs.slice(1))
       expect(input.pendingAdjudication).toEqual(inputs[1]?.pendingAdjudication);
-    expect(inputs[2]?.retryFeedback).toMatchObject({
-      diagnostics: [
-        { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
-        { code: "claude_turn_count_unavailable", path: "num_turns" },
-        { code: "claude_stop_reason_unavailable", path: "stop_reason" },
-      ],
-    });
-    expect(inputs[3]?.retryFeedback).toMatchObject({ failureStage: "factual-invariant-rejection" });
+    expect(inputs[2]?.retryFeedback).toMatchObject({ failureStage: "factual-invariant-rejection" });
     expect(critic).toHaveBeenCalledTimes(2);
   } finally {
     await rm(root, { recursive: true, force: true });
