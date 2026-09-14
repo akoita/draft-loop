@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import type { ModelSelection } from "@draft-loop/domain";
 
+import { captureUnknownClaudeCategories } from "./claude-category-capture.js";
 import {
   assertDataExposureAllowed,
   type JsonValue,
@@ -170,6 +171,10 @@ export interface UserSessionAdapterOptions {
   readonly timeoutMs?: number;
   readonly maxOutputBytes?: number;
   readonly environment?: Readonly<Record<string, string | undefined>>;
+}
+
+export interface AnthropicClaudeUserSessionAdapterOptions extends UserSessionAdapterOptions {
+  readonly localClaudeCategoryCaptureParent?: string;
 }
 
 export interface UserSessionLoginStatus {
@@ -502,6 +507,14 @@ const claudeTerminalReasonDiagnosticCodes = new Map([
   ["model_error", "claude_terminal_reason_model_error"],
 ]);
 
+const claudeCategoryCaptureKnownSubtypes = new Set([
+  ...claudeErrorSubtypeDiagnosticCodes.keys(),
+  "success",
+]);
+const claudeCategoryCaptureKnownTerminalReasons = new Set(
+  claudeTerminalReasonDiagnosticCodes.keys(),
+);
+
 const claudeStopReasonDiagnosticCodes = new Map([
   ["end_turn", "claude_stop_reason_end_turn"],
   ["max_tokens", "claude_stop_reason_max_tokens"],
@@ -596,6 +609,41 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
   );
 }
 
+async function mapClaudeStructuredErrorWithLocalCapture(
+  response: ClaudeJsonResult,
+  captureParent: string | undefined,
+): Promise<ProviderAdapterError> {
+  const error = mapClaudeStructuredError(response);
+  if (captureParent === undefined) return error;
+
+  const outcome = await captureUnknownClaudeCategories({
+    captureParent,
+    subtype: response.subtype,
+    terminalReason: response.terminal_reason,
+    knownSubtypes: claudeCategoryCaptureKnownSubtypes,
+    knownTerminalReasons: claudeCategoryCaptureKnownTerminalReasons,
+  });
+  if (outcome === "not-needed") return error;
+
+  return new ProviderAdapterError(error.provider, error.code, error.message, {
+    retryable: error.retryable,
+    ...(error.status === null ? {} : { status: error.status }),
+    ...(error.requestId === null ? {} : { requestId: error.requestId }),
+    ...(error.retryAfterMs === null ? {} : { retryAfterMs: error.retryAfterMs }),
+    ...(error.failureStage === null ? {} : { failureStage: error.failureStage }),
+    diagnostics: [
+      ...error.diagnostics,
+      {
+        code:
+          outcome === "saved"
+            ? "local_claude_category_capture_saved"
+            : "local_claude_category_capture_failed",
+        path: "local_claude_category_capture",
+      },
+    ],
+  });
+}
+
 function parseClaudeStructuredError(text: string): ClaudeJsonResult | undefined {
   let parsed: unknown;
   try {
@@ -609,14 +657,15 @@ function parseClaudeStructuredError(text: string): ClaudeJsonResult | undefined 
   return response;
 }
 
-function parseClaudeResult<Output extends JsonValue>(
+async function parseClaudeResult<Output extends JsonValue>(
   text: string,
-): {
+  captureParent: string | undefined,
+): Promise<{
   readonly output: Output;
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly sessionId: string;
-} {
+}> {
   const response = parseJson<JsonValue>("anthropic", text, "stdout") as ClaudeJsonResult;
   const usage = response.usage as
     | { readonly input_tokens?: unknown; readonly output_tokens?: unknown }
@@ -638,7 +687,7 @@ function parseClaudeResult<Output extends JsonValue>(
     );
   }
   if (response.is_error === true) {
-    throw mapClaudeStructuredError(response);
+    throw await mapClaudeStructuredErrorWithLocalCapture(response, captureParent);
   }
   if (
     response.type !== "result" ||
@@ -677,9 +726,10 @@ export class AnthropicClaudeUserSessionAdapter<
   private readonly options: Required<
     Pick<UserSessionAdapterOptions, "command" | "maxOutputBytes" | "runner" | "timeoutMs">
   > &
-    Pick<UserSessionAdapterOptions, "configuredModel" | "environment">;
+    Pick<UserSessionAdapterOptions, "configuredModel" | "environment"> &
+    Pick<AnthropicClaudeUserSessionAdapterOptions, "localClaudeCategoryCaptureParent">;
 
-  constructor(options: UserSessionAdapterOptions) {
+  constructor(options: AnthropicClaudeUserSessionAdapterOptions) {
     this.options = {
       ...options,
       runner: options.runner ?? runUserSessionProcess,
@@ -749,10 +799,18 @@ export class AnthropicClaudeUserSessionAdapter<
         assertBoundedResult(this.provider, result, this.options.maxOutputBytes);
         if (result.exitCode !== 0) {
           const structuredError = parseClaudeStructuredError(result.stdout);
-          if (structuredError !== undefined) throw mapClaudeStructuredError(structuredError);
+          if (structuredError !== undefined) {
+            throw await mapClaudeStructuredErrorWithLocalCapture(
+              structuredError,
+              this.options.localClaudeCategoryCaptureParent,
+            );
+          }
         }
         resultOrError(this.provider, result);
-        const parsed = parseClaudeResult<Output>(result.stdout);
+        const parsed = await parseClaudeResult<Output>(
+          result.stdout,
+          this.options.localClaudeCategoryCaptureParent,
+        );
         const totalTokens = parsed.inputTokens + parsed.outputTokens;
         request.onProgress?.({
           stage: "completed",

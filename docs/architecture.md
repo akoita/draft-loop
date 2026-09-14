@@ -803,6 +803,26 @@ original rejection and retry policy. Transport errors and provider token-budget
 rejections occur before this boundary and are not captured. No provider call,
 retry reset, candidate approval, or export is triggered by capture or replay.
 
+### Local unknown Claude category capture
+
+The Anthropic user-session adapter accepts an optional
+`localClaudeCategoryCaptureParent` for explicit diagnostic sessions. Capture is
+disabled by default, has no CLI or renderer control, and requires a
+caller-selected parent directory that already exists. When a structured Claude
+error contains an unrecognized category-shaped `subtype` or `terminal_reason`,
+the adapter writes only those exact strings to a new `categories.json` file in
+an unpredictable private subdirectory. Each value is limited to 128 UTF-8
+bytes; an oversized value prevents any partial capture. On POSIX, the directory
+uses mode `0700` and the file uses `0600`.
+
+The capture excludes stop reasons, provider prose, prompts and outputs, errors,
+session and usage data, model content, paths, URLs, credentials, and environment
+values. Neither the capture path nor captured strings enter the provider error
+or run history. A fixed capture success/failure diagnostic is appended without
+changing the original error code, message, status, retryability, or failure
+stage. Capture never triggers a provider call or changes retry behavior; the
+caller owns retention and deletion of the local file.
+
 ### Author adjudication and revision trace boundary
 
 `packages/schemas` also owns the strict, versioned author-adjudication plan and

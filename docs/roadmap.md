@@ -755,6 +755,15 @@ stop-reason categories. Missing, malformed, or future values receive fixed
 fallback diagnostics, and free-form provider errors remain excluded. This does
 not reinterpret #378 or authorize another live attempt.
 
+Issue #393 adds opt-in, local-only capture for unrecognized Claude result
+subtype and terminal-reason category strings. Capture is disabled by default
+and writes only bounded category-shaped values to a new `0600` JSON file inside
+an unpredictable `0700` subdirectory of a caller-selected existing parent.
+Stop reasons, provider prose, prompts, outputs, paths, credentials, and other
+private material remain excluded; durable diagnostics record only fixed
+capture-saved or capture-failed codes. This provider-free diagnostic does not
+reinterpret #384 or authorize another live attempt.
+
 The twenty-second bounded observation under #382 used revision
 `349388de4820eca30543492d8ad1266199cdda3e` after explicit provider-transmission
 authorization. Both 20-second authentication probes passed, but three
@@ -877,6 +886,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-14 | Added opt-in local capture for unknown Claude categories under #393. | Explicit diagnostic sessions can preserve only bounded, category-shaped unknown result subtype and terminal-reason strings in a private caller-owned file. Capture is disabled by default, durable history remains content-free, provider behavior is unchanged, and no live attempt is authorized. |
 | 2026-09-13 | Recorded #384 as an indeterminate twenty-third matched-backend observation. | After explicit authorization, both 20-second authentication probes passed, but one Anthropic author attempt failed non-retryably with `unknown` after 351,508 ms. Fixed diagnostics classify only result subtype, terminal reason, and stop reason; no artifact or review occurred, and authorization is exhausted. This adds no product-quality evidence; #75/#250 remain blocked. |
 | 2026-09-13 | Recorded #382 as an indeterminate twenty-second matched-backend observation. | After explicit authorization, both 20-second auth probes passed, but three Anthropic author attempts failed with generic `invalid-response`; the first two were retryable and the final attempt was non-retryable with factual-invariant rejection. No artifact or review occurred; authorization is exhausted and #75/#250 remain blocked. |
 | 2026-09-13 | Added content-free Claude result-error attribution under #380. | Statusless structured failures retain their existing safe classification and retryability while allowlisted result, terminal, and stop categories make later failures diagnosable without provider prose or private material. This does not reinterpret #378 or authorize another live attempt. |

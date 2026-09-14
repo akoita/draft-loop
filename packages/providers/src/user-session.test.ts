@@ -1,5 +1,6 @@
-import { stat, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 import type { ModelSelection } from "@draft-loop/domain";
 import { describe, expect, it, vi } from "vitest";
@@ -154,10 +155,19 @@ function request(model: ModelSelection, overrides: Partial<ModelRequest> = {}): 
 
 async function captureClaudeStructuredError(
   fields: Readonly<Record<string, unknown>> = {},
-  options: { readonly exitCode?: number | null; readonly stderr?: string } = {},
+  options: {
+    readonly captureParent?: string;
+    readonly environment?: Readonly<Record<string, string | undefined>>;
+    readonly exitCode?: number | null;
+    readonly stderr?: string;
+  } = {},
 ): Promise<ProviderAdapterError> {
   const adapter = new AnthropicClaudeUserSessionAdapter({
     configuredModel: anthropicModel,
+    ...(options.captureParent === undefined
+      ? {}
+      : { localClaudeCategoryCaptureParent: options.captureParent }),
+    ...(options.environment === undefined ? {} : { environment: options.environment }),
     runner: async () => ({
       exitCode: options.exitCode ?? 1,
       stdout: JSON.stringify({ type: "result", is_error: true, ...fields }),
@@ -618,6 +628,182 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       expect(JSON.stringify(error)).not.toContain(marker);
     },
   );
+
+  it.each([0, 1] as const)(
+    "captures only unknown Claude categories under an explicit private parent (exit %i)",
+    async (exitCode) => {
+      const captureParent = await mkdtemp(join(tmpdir(), "draft-loop-claude-capture-test-"));
+      const markers = [
+        "private-stop-reason-marker",
+        "private-result-prose-marker",
+        "private-errors-array-marker",
+        "private-session-id-marker",
+        "private-usage-marker",
+        "private-structured-output-marker",
+        "private-prompt-marker",
+        "private-stdout-marker",
+        "private-stderr-marker",
+        "private-environment-marker",
+        "synthetic-secret-credential-marker",
+      ];
+      try {
+        const subtype = "future_error_category";
+        const terminalReason = "future_terminal_category";
+        const error = await captureClaudeStructuredError(
+          {
+            subtype,
+            terminal_reason: terminalReason,
+            stop_reason: markers[0],
+            result: markers[1],
+            errors: [markers[2]],
+            session_id: markers[3],
+            usage: { private: markers[4] },
+            structured_output: { private: markers[5] },
+            prompt: markers[6],
+            stdout: markers[7],
+            env: markers[8],
+            api_key: markers[10],
+            path: "/synthetic/private/path-marker",
+            url: "https://private.invalid/private-marker",
+            api_error_status: 503,
+          },
+          {
+            captureParent,
+            stderr: "private-stderr-marker",
+            exitCode,
+            environment: {
+              ANTHROPIC_API_KEY: markers[10],
+              PRIVATE_ENV: markers[9],
+            },
+          },
+        );
+
+        const directories = await readdir(captureParent);
+        expect(directories).toHaveLength(1);
+        const captureDirectoryName = directories[0];
+        if (captureDirectoryName === undefined) throw new Error("Expected a capture directory.");
+        const captureDirectory = join(captureParent, captureDirectoryName);
+        const captureFile = join(captureDirectory, "categories.json");
+        const capturedText = await readFile(captureFile, "utf8");
+        const captured = JSON.parse(capturedText) as Record<string, unknown>;
+
+        expect(captureDirectoryName).toMatch(/^claude-category-[0-9a-f-]{36}$/u);
+        expect((await stat(captureDirectory)).mode & 0o777).toBe(0o700);
+        expect((await stat(captureFile)).mode & 0o777).toBe(0o600);
+        expect(captured).toEqual({ subtype, terminal_reason: terminalReason });
+        expect(error.diagnostics).toEqual([
+          { code: "claude_error_subtype_unrecognized", path: "subtype" },
+          { code: "claude_terminal_reason_unrecognized", path: "terminal_reason" },
+          { code: "claude_stop_reason_unrecognized", path: "stop_reason" },
+          {
+            code: "local_claude_category_capture_saved",
+            path: "local_claude_category_capture",
+          },
+        ]);
+        expect(error).toMatchObject({
+          code: "transient",
+          retryable: true,
+          status: 503,
+          metadata: { status: 503 },
+        });
+        expect(error.message).toBe("The user-session provider encountered a transient error.");
+        expect(JSON.stringify(error)).not.toContain(captureParent);
+        expect(JSON.stringify(error)).not.toContain(captureDirectoryName);
+        expect(JSON.stringify(error)).not.toContain(subtype);
+        expect(JSON.stringify(error)).not.toContain(terminalReason);
+        expect(capturedText).not.toContain("/synthetic/private/path-marker");
+        expect(capturedText).not.toContain("https://private.invalid/private-marker");
+        for (const marker of markers) {
+          expect(capturedText).not.toContain(marker);
+          expect(error.message).not.toContain(marker);
+          expect(JSON.stringify(error)).not.toContain(marker);
+        }
+      } finally {
+        await rm(captureParent, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it("does not capture unknown categories unless an explicit parent is configured", async () => {
+    const subtype = "future_private_category_marker";
+    const error = await captureClaudeStructuredError({ subtype });
+
+    expect(error.diagnostics).toContainEqual({
+      code: "claude_error_subtype_unrecognized",
+      path: "subtype",
+    });
+    expect(error.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: expect.stringMatching(/^local_claude_category_capture_/u) }),
+    );
+    expect(error.message).not.toContain(subtype);
+    expect(JSON.stringify(error)).not.toContain(subtype);
+  });
+
+  it.each([
+    ["known categories", { subtype: "error_max_turns", terminal_reason: "model_error" }],
+    ["missing and non-string categories", { terminal_reason: null }],
+    [
+      "malformed categories",
+      { subtype: { marker: "private-malformed-marker" }, terminal_reason: "provider prose" },
+    ],
+  ] as const)("does not capture %s", async (_case, fields) => {
+    const captureParent = await mkdtemp(join(tmpdir(), "draft-loop-claude-capture-test-"));
+    try {
+      const error = await captureClaudeStructuredError(fields, { captureParent });
+
+      expect(await readdir(captureParent)).toEqual([]);
+      expect(error.diagnostics).not.toContainEqual(
+        expect.objectContaining({
+          code: expect.stringMatching(/^local_claude_category_capture_/u),
+        }),
+      );
+      expect(JSON.stringify(error)).not.toContain("private-malformed-marker");
+    } finally {
+      await rm(captureParent, { recursive: true, force: true });
+    }
+  });
+
+  it("fails closed without copying an oversized category or partially saving another", async () => {
+    const captureParent = await mkdtemp(join(tmpdir(), "draft-loop-claude-capture-test-"));
+    const oversized = `future_${"x".repeat(128)}`;
+    try {
+      const error = await captureClaudeStructuredError(
+        { subtype: "future_safe_category", terminal_reason: oversized },
+        { captureParent },
+      );
+
+      expect(await readdir(captureParent)).toEqual([]);
+      expect(error.diagnostics).toContainEqual({
+        code: "local_claude_category_capture_failed",
+        path: "local_claude_category_capture",
+      });
+      expect(error.message).not.toContain(oversized);
+      expect(JSON.stringify(error)).not.toContain(oversized);
+    } finally {
+      await rm(captureParent, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a fixed failure when the selected capture parent does not exist", async () => {
+    const temporaryParent = await mkdtemp(join(tmpdir(), "draft-loop-claude-capture-test-"));
+    const missingParent = join(temporaryParent, "not-created");
+    try {
+      const error = await captureClaudeStructuredError(
+        { subtype: "future_category" },
+        { captureParent: missingParent },
+      );
+
+      expect(await readdir(temporaryParent)).toEqual([]);
+      expect(error.diagnostics).toContainEqual({
+        code: "local_claude_category_capture_failed",
+        path: "local_claude_category_capture",
+      });
+      expect(error.message).not.toContain(missingParent);
+      expect(JSON.stringify(error)).not.toContain(missingParent);
+    } finally {
+      await rm(temporaryParent, { recursive: true, force: true });
+    }
+  });
 
   it.each(["malformed", "array", "scalar", "unrecognized", "success-shaped"] as const)(
     "uses the existing safe generic fallback for nonzero %s Claude output",
