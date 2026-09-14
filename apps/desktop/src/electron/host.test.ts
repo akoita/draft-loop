@@ -45,6 +45,34 @@ function pdfWithLiteral(literal: string): string {
   return `%PDF-1.4\n1 0 obj\n<< /Length 64 >>\nstream\nBT\n(${literal}) Tj\nET\nendstream\nendobj\n%%EOF`;
 }
 
+type CompleteDirectoryImportResult = {
+  readonly ok: true;
+  readonly value: {
+    readonly status: "complete";
+    readonly directoryId: string;
+    readonly sources: readonly unknown[];
+  };
+};
+
+function isCompleteDirectoryImportResult(value: unknown): value is CompleteDirectoryImportResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "ok" in value &&
+    value.ok === true &&
+    "value" in value &&
+    typeof value.value === "object" &&
+    value.value !== null &&
+    "status" in value.value &&
+    value.value.status === "complete" &&
+    "directoryId" in value.value &&
+    typeof value.value.directoryId === "string" &&
+    value.value.directoryId.trim() !== "" &&
+    "sources" in value.value &&
+    Array.isArray(value.value.sources)
+  );
+}
+
 /** What the fixture workspace's author/critic pairing records for a run. */
 const recordedIndependence: IndependentReviewRecord = {
   authorLineage: "anthropic:claude-sonnet-4-5",
@@ -3766,8 +3794,10 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify(imported)).not.toContain("career.md");
       expect(JSON.stringify(imported)).not.toContain("projects.txt");
       expect(JSON.stringify(imported)).not.toContain("Private career evidence");
-      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
-      const directoryId = (imported.value as { directoryId: string }).directoryId;
+      if (!(imported.ok && isCompleteDirectoryImportResult(imported))) {
+        throw new Error("Expected a complete directory intake.");
+      }
+      const directoryId = imported.value.directoryId;
 
       await expect(
         host.invoke({
@@ -3929,8 +3959,11 @@ describe("candidate knowledge native controls", () => {
         type: "knowledge.import-directory",
         input: { storeId, knowledgeBaseId, selection: "native-dialog" },
       });
-      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
-      const directoryId = (imported.value as { directoryId: string }).directoryId;
+      expect(imported).toMatchObject({ ok: true, value: { status: "complete" } });
+      if (!(imported.ok && isCompleteDirectoryImportResult(imported))) {
+        throw new Error("Expected a complete directory intake.");
+      }
+      const directoryId = imported.value.directoryId;
       const input = { storeId, knowledgeBaseId, directoryId };
 
       await expect(
@@ -4018,8 +4051,10 @@ describe("candidate knowledge native controls", () => {
         type: "knowledge.import-directory",
         input: { storeId, knowledgeBaseId, selection: "native-dialog" },
       });
-      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
-      const directoryId = (imported.value as { directoryId: string }).directoryId;
+      if (!(imported.ok && isCompleteDirectoryImportResult(imported))) {
+        throw new Error("Expected a complete directory intake.");
+      }
+      const directoryId = imported.value.directoryId;
       await writeFile(newSourcePath, "Private new career evidence.\n", "utf8");
       const input = { storeId, knowledgeBaseId, directoryId };
 
@@ -4095,14 +4130,21 @@ describe("candidate knowledge native controls", () => {
         type: "knowledge.import-directory",
         input: { storeId, knowledgeBaseId, selection: "native-dialog" },
       });
-      if (!imported.ok) throw new Error("Expected directory intake to succeed.");
-      const importedValue = imported.value as {
-        directoryId: string;
-        sources: readonly { sourceId: string }[];
-      };
-      const directoryId = importedValue.directoryId;
-      const sourceId = importedValue.sources[0]?.sourceId;
-      if (sourceId === undefined) throw new Error("Expected one imported source.");
+      expect(imported).toMatchObject({ ok: true, value: { status: "complete" } });
+      if (!(imported.ok && isCompleteDirectoryImportResult(imported))) {
+        throw new Error("Expected a complete directory intake.");
+      }
+      const directoryId = imported.value.directoryId;
+      const firstImportedSource = imported.value.sources[0];
+      if (
+        typeof firstImportedSource !== "object" ||
+        firstImportedSource === null ||
+        !("sourceId" in firstImportedSource) ||
+        typeof firstImportedSource.sourceId !== "string"
+      ) {
+        throw new Error("Expected one imported source.");
+      }
+      const sourceId = firstImportedSource.sourceId;
       await rename(originalPath, movedPath);
       const input = { storeId, knowledgeBaseId, directoryId };
       const preview = await host.invoke({ type: "knowledge.directory-moved-candidates", input });
