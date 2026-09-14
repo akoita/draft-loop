@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve } from "node:path";
-import Anthropic from "@anthropic-ai/sdk";
 import {
   createArtifact,
   createArtifactVersion,
@@ -50,19 +49,10 @@ import {
   type RunSnapshot,
 } from "@draft-loop/orchestrator";
 import {
-  AnthropicAdapter,
-  AnthropicClaudeUserSessionAdapter,
-  type AnthropicClient,
   type JsonObject,
-  type LocalClient,
-  LocalModelAdapter,
   type ModelRequest,
   type ModelResponse,
-  OpenAIAdapter,
-  type OpenAIClient,
-  OpenAICodexUserSessionAdapter,
   ProviderAdapterError,
-  type UserSessionProcessRunner,
 } from "@draft-loop/providers";
 import {
   extensionForFormat,
@@ -88,7 +78,6 @@ import {
   type WorkspaceRecord,
   type WritingPolicyVersionRecord,
 } from "@draft-loop/storage";
-import OpenAI from "openai";
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createAuthorGroundingGuide } from "./author-grounding.js";
 import {
@@ -131,6 +120,12 @@ import {
 } from "./knowledge-base.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
+import type {
+  ProviderClientFactories,
+  ProviderCredentialResolver,
+  ProviderUserSessionRunners,
+} from "./local-provider-adapter.js";
+import { createProviderAdapter } from "./local-provider-adapter.js";
 import { localJobRequirements } from "./local-requirements.js";
 import { saveTypedHistory } from "./local-typed-history.js";
 import type {
@@ -143,6 +138,15 @@ import { modelFacingContext } from "./provider-context.js";
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
+
+export type {
+  AnthropicClient,
+  LocalClient,
+  OpenAIClient,
+  ProviderClientFactories,
+  ProviderCredentialResolver,
+  ProviderUserSessionRunners,
+} from "./local-provider-adapter.js";
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -1978,88 +1982,6 @@ function providerDataPolicy(
   };
 }
 
-/** Resolve the literal transport company; model lineage remains a separate concern. */
-function providerId(company: string): "anthropic" | "openai" | "local" {
-  if (company === "anthropic" || company === "openai" || company === "local") return company;
-  throw new ProviderAdapterError(
-    "anthropic",
-    "invalid-request",
-    "The workspace provider configuration is unsupported.",
-    { retryable: false },
-  );
-}
-
-async function createProviderAdapter(
-  config: WorkspaceConfig,
-  model: ModelSelection,
-  allowProviderData: boolean,
-  resolveCredential: ProviderCredentialResolver,
-  providerClientFactories?: ProviderClientFactories,
-  providerAuthModeConfiguration: ProviderAuthModeConfiguration = {
-    anthropic: "api-key",
-    openai: "api-key",
-  },
-  userSessionRunners?: ProviderUserSessionRunners,
-  userSessionTimeoutMs?: number,
-) {
-  const provider = providerId(model.company);
-  if (!allowProviderData) {
-    throw new ProviderAdapterError(
-      provider,
-      "policy",
-      "Provider transmission is not approved for this request.",
-      { retryable: false },
-    );
-  }
-  if (provider === "local") {
-    const client: LocalClient =
-      providerClientFactories?.local?.(config.localEndpoint) ??
-      (config.localEndpoint === undefined ? {} : { endpoint: config.localEndpoint });
-    return new LocalModelAdapter<JsonObject, JsonObject>(client, { configuredModel: model });
-  }
-  if (provider === "anthropic") {
-    if (providerAuthModeConfiguration.anthropic === "user-session") {
-      return new AnthropicClaudeUserSessionAdapter<JsonObject, JsonObject>({
-        configuredModel: model,
-        ...(userSessionRunners?.anthropic === undefined
-          ? {}
-          : { runner: userSessionRunners.anthropic }),
-        ...(userSessionTimeoutMs === undefined ? {} : { timeoutMs: userSessionTimeoutMs }),
-      });
-    }
-    const apiKey = await resolveCredential("anthropic");
-    if (apiKey === undefined || apiKey.trim() === "") {
-      throw new ProviderAdapterError(
-        provider,
-        "authentication",
-        "The provider credential is not configured.",
-        { retryable: false },
-      );
-    }
-    const client =
-      providerClientFactories?.anthropic?.(apiKey) ??
-      (new Anthropic({ apiKey, maxRetries: 0 }) as unknown as AnthropicClient);
-    return new AnthropicAdapter<JsonObject, JsonObject>(client, { configuredModel: model });
-  }
-  if (providerAuthModeConfiguration.openai === "user-session") {
-    return new OpenAICodexUserSessionAdapter<JsonObject, JsonObject>({
-      configuredModel: model,
-      ...(userSessionRunners?.openai === undefined ? {} : { runner: userSessionRunners.openai }),
-      ...(userSessionTimeoutMs === undefined ? {} : { timeoutMs: userSessionTimeoutMs }),
-    });
-  }
-  const apiKey = await resolveCredential("openai");
-  if (apiKey === undefined || apiKey.trim() === "") {
-    throw new ProviderAdapterError(
-      provider,
-      "authentication",
-      "The provider credential is not configured.",
-      { retryable: false },
-    );
-  }
-  const client = providerClientFactories?.openai?.(apiKey) ?? new OpenAI({ apiKey, maxRetries: 0 });
-  return new OpenAIAdapter<JsonObject, JsonObject>(client, { configuredModel: model });
-}
 function providerAgents(
   config: WorkspaceConfig,
   context: ContextSnapshot,
@@ -2073,6 +1995,7 @@ function providerAgents(
   userSessionRunners?: ProviderUserSessionRunners,
   userSessionTimeoutMs?: number,
   authorProposalCaptureDirectory?: string,
+  localClaudeCategoryCaptureParent?: string,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
   const dataPolicy = (company: string) =>
     providerDataPolicy(company, allowProviderData, providerAuthModeConfiguration);
@@ -2086,6 +2009,7 @@ function providerAgents(
       providerAuthModeConfiguration,
       userSessionRunners,
       userSessionTimeoutMs,
+      localClaudeCategoryCaptureParent,
     );
   }
   const promptContext = modelFacingContext(context);
@@ -2232,6 +2156,7 @@ function engine(
   userSessionTimeoutMs?: number,
   retrieval?: RetrievalPort,
   authorProposalCaptureDirectory?: string,
+  localClaudeCategoryCaptureParent?: string,
 ): OrchestrationEngine {
   const agents = needsAgents
     ? config.fixtureMode
@@ -2246,6 +2171,7 @@ function engine(
           userSessionRunners,
           userSessionTimeoutMs,
           authorProposalCaptureDirectory,
+          localClaudeCategoryCaptureParent,
         )
     : noopAgents();
   const store = createStorageRunStore(storage);
@@ -2399,6 +2325,7 @@ interface RunOptions {
   readonly userSessionTimeoutMs?: number;
   readonly signal?: AbortSignal;
   readonly authorProposalCaptureDirectory?: string;
+  readonly localClaudeCategoryCaptureParent?: string;
 }
 type OmitRunOptions<K extends keyof RunOptions> = Omit<RunOptions, K>;
 type BeginStartRunOptions = OmitRunOptions<"runId" | "signal" | "writingPolicyOverrideChecksum">;
@@ -2532,6 +2459,7 @@ async function createRun(
       options.userSessionTimeoutMs,
       candidateRetrieval?.port,
       options.authorProposalCaptureDirectory,
+      options.localClaudeCategoryCaptureParent,
     );
     const request = {
       runId,
@@ -2599,6 +2527,7 @@ export async function resumeRun(
       options.userSessionTimeoutMs,
       candidateRetrieval?.port,
       options.authorProposalCaptureDirectory,
+      options.localClaudeCategoryCaptureParent,
     );
     preflight(config, io, budget(config));
     const snapshot = await runEngine.resume(runId, {
@@ -3152,28 +3081,6 @@ export async function inspectWorkspaceEvidenceRetrieval(
   }
 }
 
-/** Concrete local driver shared by CLI and the native desktop host. */
-export type ProviderCredentialResolver = (
-  provider: "anthropic" | "openai",
-) => Promise<string | undefined>;
-
-export interface ProviderClientFactories {
-  readonly anthropic?: (apiKey: string) => AnthropicClient;
-  readonly openai?: (apiKey: string) => OpenAIClient;
-  /**
-   * Builds the local transport. Receives the workspace's configured endpoint,
-   * or `undefined` when the workspace leaves the adapter default in place.
-   */
-  readonly local?: (endpoint: string | undefined) => LocalClient;
-}
-
-export interface ProviderUserSessionRunners {
-  readonly anthropic?: UserSessionProcessRunner;
-  readonly openai?: UserSessionProcessRunner;
-}
-
-export type { AnthropicClient, LocalClient, OpenAIClient };
-
 export interface LocalApplicationDriverOptions {
   readonly providerAuthMode?: ProviderAuthMode;
   readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
@@ -3182,6 +3089,7 @@ export interface LocalApplicationDriverOptions {
   readonly userSessionRunners?: ProviderUserSessionRunners;
   readonly userSessionTimeoutMs?: number;
   readonly authorProposalCaptureDirectory?: string;
+  readonly localClaudeCategoryCaptureParent?: string;
 }
 
 const environmentCredentialResolver: ProviderCredentialResolver = async (provider) =>
@@ -3332,6 +3240,12 @@ export function createLocalApplicationDriver(
     ...providerClientOptions,
     ...authOptions,
   };
+  const runProviderOptions = {
+    ...providerOpportunityOptions,
+    ...(options?.localClaudeCategoryCaptureParent === undefined
+      ? {}
+      : { localClaudeCategoryCaptureParent: options.localClaudeCategoryCaptureParent }),
+  };
   return {
     initialize: async (command, io) =>
       await workspaceDescriptor(resolve(command.root), await initWorkspace(command, io)),
@@ -3369,9 +3283,7 @@ export function createLocalApplicationDriver(
           ...(command.writingPolicyOverrideChecksum === undefined
             ? {}
             : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),
-          ...credentialOptions,
-          ...providerClientOptions,
-          ...authOptions,
+          ...runProviderOptions,
         },
         io,
       ),
@@ -3391,9 +3303,7 @@ export function createLocalApplicationDriver(
           ...(command.writingPolicyOverrideChecksum === undefined
             ? {}
             : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),
-          ...credentialOptions,
-          ...providerClientOptions,
-          ...authOptions,
+          ...runProviderOptions,
         },
         io,
       ),
@@ -3406,9 +3316,7 @@ export function createLocalApplicationDriver(
             ? {}
             : { allowProviderData: command.allowProviderData }),
           ...(command.signal === undefined ? {} : { signal: command.signal }),
-          ...credentialOptions,
-          ...providerClientOptions,
-          ...authOptions,
+          ...runProviderOptions,
         },
         io,
       ),

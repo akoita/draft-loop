@@ -805,9 +805,10 @@ retry reset, candidate approval, or export is triggered by capture or replay.
 
 ### Local unknown Claude category capture
 
-The Anthropic user-session adapter accepts an optional
-`localClaudeCategoryCaptureParent` for explicit diagnostic sessions. Capture is
-disabled by default, has no CLI or renderer control, and requires a
+The local application driver accepts an optional
+`localClaudeCategoryCaptureParent` for explicit diagnostic sessions and passes
+it only to Anthropic user-session adapters constructed for run execution.
+Capture is disabled by default, has no CLI or renderer control, and requires a
 caller-selected parent directory that already exists. When a structured Claude
 error contains an unrecognized category-shaped `subtype` or `terminal_reason`,
 the adapter writes only those exact strings to a new `categories.json` file in
