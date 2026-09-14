@@ -30,7 +30,9 @@ export default defineConfig({
     // These three filesystem/SQLite integration suites pass alone but have
     // failed at varying assertions when scheduled alongside other files. Keep
     // them in a serial group before the rest of the suite; other files retain
-    // Vitest's normal parallel scheduling.
+    // Vitest's normal parallel scheduling. Vitest sends isolated, single-worker
+    // projects at the default groupOrder 0 to a trailing serial group, so use
+    // explicit nonzero orders to make the intended sequence effective.
     projects: [
       {
         extends: true,
@@ -38,7 +40,7 @@ export default defineConfig({
           name: "load-sensitive-integration",
           include: loadSensitiveIntegrationFiles,
           maxWorkers: 1,
-          sequence: { groupOrder: 0 },
+          sequence: { groupOrder: 1 },
         },
       },
       {
@@ -46,7 +48,7 @@ export default defineConfig({
         test: {
           name: "parallel-suite",
           exclude: [...testExclusions, ...loadSensitiveIntegrationFiles],
-          sequence: { groupOrder: 1 },
+          sequence: { groupOrder: 2 },
         },
       },
     ],
