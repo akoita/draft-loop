@@ -13,6 +13,13 @@ import {
 } from "@draft-loop/application";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  type BridgeCapability,
+  type BridgeErrorCode,
+  type BridgeResult,
+  bridgeCapabilities,
+  safeBridgeError,
+} from "../bridge.js";
 import type { DesktopReviewState } from "../model.js";
 import {
   createMemoryCredentialStore,
@@ -72,6 +79,154 @@ function isCompleteDirectoryImportResult(value: unknown): value is CompleteDirec
     Array.isArray(value.value.sources)
   );
 }
+
+const safeHostResultStatuses = [
+  "applied",
+  "complete",
+  "current",
+  "inaccessible",
+  "missing",
+  "moved",
+  "partial",
+  "refreshed",
+  "unbound",
+] as const;
+
+type SafeHostResultSummary =
+  | {
+      readonly ok: false;
+      readonly code: BridgeErrorCode;
+      readonly capability?: BridgeCapability;
+    }
+  | {
+      readonly ok: true;
+      readonly status?: (typeof safeHostResultStatuses)[number] | "unrecognized";
+    };
+
+function projectHostResult(result: BridgeResult<unknown>): SafeHostResultSummary {
+  if (!result.ok) {
+    const capability = result.error.capability;
+    const safeError = safeBridgeError(
+      result.error,
+      typeof capability === "string" && bridgeCapabilities.includes(capability as BridgeCapability)
+        ? capability
+        : undefined,
+    );
+    return {
+      ok: false,
+      code: safeError.code,
+      ...(safeError.capability === undefined ? {} : { capability: safeError.capability }),
+    };
+  }
+
+  if (
+    typeof result.value !== "object" ||
+    result.value === null ||
+    !Object.hasOwn(result.value, "status")
+  ) {
+    return { ok: true };
+  }
+
+  const status = (result.value as { readonly status?: unknown }).status;
+  return {
+    ok: true,
+    status:
+      typeof status === "string" &&
+      safeHostResultStatuses.includes(status as (typeof safeHostResultStatuses)[number])
+        ? (status as (typeof safeHostResultStatuses)[number])
+        : "unrecognized",
+  };
+}
+
+describe("safe host result projection", () => {
+  const sensitiveMarkers = {
+    path: "/private/sensitive-path-marker-390",
+    url: "https://sensitive.example.test/?token=url-marker-390",
+    id: "sensitive-id-marker-390",
+    filename: "sensitive-filename-marker-390.md",
+    content: "sensitive-content-marker-390",
+    checksum: "sensitive-checksum-marker-390",
+    cause: "sensitive-cause-marker-390",
+    arbitrary: "sensitive-arbitrary-marker-390",
+  } as const;
+
+  function expectNoSensitiveMarkers(value: SafeHostResultSummary): void {
+    const serialized = JSON.stringify(value);
+    for (const marker of Object.values(sensitiveMarkers)) {
+      expect(serialized).not.toContain(marker);
+    }
+  }
+
+  it("projects only sanitized bridge failure fields", () => {
+    const result = {
+      ok: false,
+      error: {
+        code: "operation-failed",
+        message: sensitiveMarkers.content,
+        capability: "knowledge.refresh-url",
+        cause: sensitiveMarkers.cause,
+      },
+      path: sensitiveMarkers.path,
+      url: sensitiveMarkers.url,
+      sourceId: sensitiveMarkers.id,
+      filename: sensitiveMarkers.filename,
+      content: sensitiveMarkers.content,
+      checksum: sensitiveMarkers.checksum,
+      arbitrary: sensitiveMarkers.arbitrary,
+    } as unknown as BridgeResult<unknown>;
+
+    const projected = projectHostResult(result);
+    expect(projected).toEqual({
+      ok: false,
+      code: "operation-failed",
+      capability: "knowledge.refresh-url",
+    });
+    expectNoSensitiveMarkers(projected);
+
+    const invalidBridgeFields = projectHostResult({
+      ok: false,
+      error: {
+        code: sensitiveMarkers.arbitrary,
+        message: sensitiveMarkers.content,
+        capability: sensitiveMarkers.path,
+        cause: sensitiveMarkers.cause,
+      },
+    } as unknown as BridgeResult<unknown>);
+    expect(invalidBridgeFields).toEqual({ ok: false, code: "operation-failed" });
+    expectNoSensitiveMarkers(invalidBridgeFields);
+  });
+
+  it("allows known statuses and replaces unknown statuses with a fixed value", () => {
+    const knownStatus = projectHostResult({
+      ok: true,
+      value: {
+        status: "refreshed",
+        path: sensitiveMarkers.path,
+        url: sensitiveMarkers.url,
+        sourceId: sensitiveMarkers.id,
+        filename: sensitiveMarkers.filename,
+        content: sensitiveMarkers.content,
+        checksum: sensitiveMarkers.checksum,
+        cause: sensitiveMarkers.cause,
+        arbitrary: sensitiveMarkers.arbitrary,
+      },
+    });
+    expect(knownStatus).toEqual({ ok: true, status: "refreshed" });
+    expectNoSensitiveMarkers(knownStatus);
+
+    const unknownStatus = projectHostResult({
+      ok: true,
+      value: {
+        status: sensitiveMarkers.arbitrary,
+        content: sensitiveMarkers.content,
+        cause: sensitiveMarkers.cause,
+      },
+    });
+    expect(unknownStatus).toEqual({ ok: true, status: "unrecognized" });
+    expectNoSensitiveMarkers(unknownStatus);
+    expect(projectHostResult({ ok: true, value: {} })).toEqual({ ok: true });
+  });
+});
 
 /** What the fixture workspace's author/critic pairing records for a run. */
 const recordedIndependence: IndependentReviewRecord = {
@@ -3966,9 +4121,12 @@ describe("candidate knowledge native controls", () => {
       const directoryId = imported.value.directoryId;
       const input = { storeId, knowledgeBaseId, directoryId };
 
-      await expect(
-        host.invoke({ type: "knowledge.directory-refresh-preview", input }),
-      ).resolves.toMatchObject({
+      const initialPreview = await host.invoke({
+        type: "knowledge.directory-refresh-preview",
+        input,
+      });
+      expect(projectHostResult(initialPreview)).toEqual({ ok: true });
+      expect(initialPreview).toMatchObject({
         ok: true,
         value: {
           ...input,
@@ -3980,6 +4138,7 @@ describe("candidate knowledge native controls", () => {
       });
       await writeFile(sourcePath, "Updated private career evidence.\n", "utf8");
       const preview = await host.invoke({ type: "knowledge.directory-refresh-preview", input });
+      expect(projectHostResult(preview)).toEqual({ ok: true });
       expect(preview).toMatchObject({
         ok: true,
         value: { ...input, members: [{ status: "changed" }], memberCount: 1 },
@@ -3988,18 +4147,26 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify(preview)).not.toContain("career.md");
       expect(JSON.stringify(preview)).not.toContain("Updated private career evidence");
 
-      await expect(
-        host.invoke({
-          type: "knowledge.directory-refresh-apply",
-          input: { ...input, confirmed: false },
-        }),
-      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      const deniedApply = await host.invoke({
+        type: "knowledge.directory-refresh-apply",
+        input: { ...input, confirmed: false },
+      });
+      expect(projectHostResult(deniedApply)).toEqual({
+        ok: false,
+        code: "permission-denied",
+        capability: "knowledge.directory-refresh-apply",
+      });
+      expect(deniedApply).toMatchObject({
+        ok: false,
+        error: { code: "permission-denied" },
+      });
       expect(applyRefresh).not.toHaveBeenCalled();
 
       const applied = await host.invoke({
         type: "knowledge.directory-refresh-apply",
         input: { ...input, confirmed: true },
       });
+      expect(projectHostResult(applied)).toEqual({ ok: true, status: "complete" });
       expect(applied).toMatchObject({
         ok: true,
         value: {
@@ -4058,18 +4225,23 @@ describe("candidate knowledge native controls", () => {
       await writeFile(newSourcePath, "Private new career evidence.\n", "utf8");
       const input = { storeId, knowledgeBaseId, directoryId };
 
-      await expect(
-        host.invoke({
-          type: "knowledge.directory-add-members",
-          input: { ...input, confirmed: false },
-        }),
-      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      const deniedAdd = await host.invoke({
+        type: "knowledge.directory-add-members",
+        input: { ...input, confirmed: false },
+      });
+      expect(projectHostResult(deniedAdd)).toEqual({
+        ok: false,
+        code: "permission-denied",
+        capability: "knowledge.directory-add-members",
+      });
+      expect(deniedAdd).toMatchObject({ ok: false, error: { code: "permission-denied" } });
       expect(addMembers).not.toHaveBeenCalled();
 
       const added = await host.invoke({
         type: "knowledge.directory-add-members",
         input: { ...input, confirmed: true },
       });
+      expect(projectHostResult(added)).toEqual({ ok: true, status: "complete" });
       expect(added).toMatchObject({
         ok: true,
         value: {
@@ -4148,6 +4320,7 @@ describe("candidate knowledge native controls", () => {
       await rename(originalPath, movedPath);
       const input = { storeId, knowledgeBaseId, directoryId };
       const preview = await host.invoke({ type: "knowledge.directory-moved-candidates", input });
+      expect(projectHostResult(preview)).toEqual({ ok: true });
       expect(preview).toMatchObject({
         ok: true,
         value: {
@@ -4159,26 +4332,31 @@ describe("candidate knowledge native controls", () => {
       });
       expect(JSON.stringify(preview)).not.toContain(parent);
       expect(JSON.stringify(preview)).not.toContain("renamed-career.md");
-      await expect(
-        host.invoke({
-          type: "knowledge.directory-member-move",
-          input: { ...input, sourceId, confirmed: false },
-        }),
-      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      const deniedMove = await host.invoke({
+        type: "knowledge.directory-member-move",
+        input: { ...input, sourceId, confirmed: false },
+      });
+      expect(projectHostResult(deniedMove)).toEqual({
+        ok: false,
+        code: "permission-denied",
+        capability: "knowledge.directory-member-move",
+      });
+      expect(deniedMove).toMatchObject({ ok: false, error: { code: "permission-denied" } });
       expect(applyMove).not.toHaveBeenCalled();
       const moved = await host.invoke({
         type: "knowledge.directory-member-move",
         input: { ...input, sourceId, confirmed: true },
       });
+      expect(projectHostResult(moved)).toEqual({ ok: true, status: "moved" });
       expect(moved).toMatchObject({ ok: true, value: { ...input, sourceId, status: "moved" } });
       expect(JSON.stringify(moved)).not.toContain(parent);
       expect(JSON.stringify(moved)).not.toContain("renamed-career.md");
-      await expect(
-        host.invoke({
-          type: "knowledge.directory-member-move",
-          input: { ...input, sourceId, confirmed: true },
-        }),
-      ).resolves.toMatchObject({ ok: true, value: { status: "current" } });
+      const currentMove = await host.invoke({
+        type: "knowledge.directory-member-move",
+        input: { ...input, sourceId, confirmed: true },
+      });
+      expect(projectHostResult(currentMove)).toEqual({ ok: true, status: "current" });
+      expect(currentMove).toMatchObject({ ok: true, value: { status: "current" } });
       await rm(movedPath);
       await expect(
         host.invoke({ type: "knowledge.directory-reconciliation-preview", input }),
@@ -4352,6 +4530,7 @@ describe("candidate knowledge native controls", () => {
         type: "knowledge.append-file-version",
         input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
       });
+      expect(projectHostResult(appended)).toEqual({ ok: true });
       expect(appended).toMatchObject({
         ok: true,
         value: {
@@ -4367,21 +4546,25 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify(appended)).not.toContain("changed-private-resume.md");
       expect(JSON.stringify(appended)).not.toContain("Changed private evidence");
 
-      await expect(
-        host.invoke({
-          type: "knowledge.append-file-version",
-          input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
-        }),
-      ).resolves.toMatchObject({
+      const unchangedAppend = await host.invoke({
+        type: "knowledge.append-file-version",
+        input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+      });
+      expect(projectHostResult(unchangedAppend)).toEqual({ ok: true });
+      expect(unchangedAppend).toMatchObject({
         ok: true,
         value: { sourceId, kind: "file", version: 2, created: false },
       });
-      await expect(
-        host.invoke({
-          type: "knowledge.append-file-version",
-          input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
-        }),
-      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      const deniedAppend = await host.invoke({
+        type: "knowledge.append-file-version",
+        input: { storeId, knowledgeBaseId, sourceId, selection: "native-dialog" },
+      });
+      expect(projectHostResult(deniedAppend)).toEqual({
+        ok: false,
+        code: "permission-denied",
+        capability: "knowledge.append-file-version",
+      });
+      expect(deniedAppend).toMatchObject({ ok: false, error: { code: "permission-denied" } });
 
       const chooseKnowledgeSourceFile = vi.fn(async () => changedPath);
       const reopenedRoots = [storeRoot];
@@ -4463,6 +4646,7 @@ describe("candidate knowledge native controls", () => {
       expect(JSON.stringify(changed)).not.toContain("private-resume.md");
 
       const refreshed = await host.invoke({ type: "knowledge.refresh-file", input });
+      expect(projectHostResult(refreshed)).toEqual({ ok: true, status: "refreshed" });
       expect(refreshed).toMatchObject({
         ok: true,
         value: { ...input, status: "refreshed", versionId: expect.any(String) },
@@ -4485,7 +4669,9 @@ describe("candidate knowledge native controls", () => {
       await expect(
         host.invoke({ type: "knowledge.source-origin-status", input }),
       ).resolves.toMatchObject({ ok: true, value: { ...input, status: "missing" } });
-      await expect(host.invoke({ type: "knowledge.refresh-file", input })).resolves.toMatchObject({
+      const missingRefresh = await host.invoke({ type: "knowledge.refresh-file", input });
+      expect(projectHostResult(missingRefresh)).toEqual({ ok: true, status: "missing" });
+      expect(missingRefresh).toMatchObject({
         ok: true,
         value: { ...input, status: "missing" },
       });
@@ -4652,29 +4838,33 @@ describe("candidate knowledge native controls", () => {
       if (!imported.ok) throw new Error("Expected candidate knowledge URL intake to succeed.");
       const sourceId = (imported.value as { sourceId: string }).sourceId;
       const refreshInput = { storeId, knowledgeBaseId, sourceId };
-      await expect(
-        host.invoke({
-          type: "knowledge.refresh-url",
-          input: { ...refreshInput, approved: false },
-        }),
-      ).resolves.toMatchObject({ ok: false, error: { code: "invalid-input" } });
+      const deniedRefresh = await host.invoke({
+        type: "knowledge.refresh-url",
+        input: { ...refreshInput, approved: false },
+      });
+      expect(projectHostResult(deniedRefresh)).toEqual({
+        ok: false,
+        code: "invalid-input",
+      });
+      expect(deniedRefresh).toMatchObject({ ok: false, error: { code: "invalid-input" } });
       expect(fetchUrl).toHaveBeenCalledOnce();
       const refreshed = await host.invoke({
         type: "knowledge.refresh-url",
         input: { ...refreshInput, approved: true },
       });
+      expect(projectHostResult(refreshed)).toEqual({ ok: true, status: "refreshed" });
       expect(refreshed).toMatchObject({
         ok: true,
         value: { ...refreshInput, status: "refreshed", versionId: expect.any(String) },
       });
       expect(JSON.stringify(refreshed)).not.toContain(sensitiveUrl);
       expect(JSON.stringify(refreshed)).not.toContain("Updated candidate evidence");
-      await expect(
-        host.invoke({
-          type: "knowledge.refresh-url",
-          input: { ...refreshInput, approved: true },
-        }),
-      ).resolves.toMatchObject({
+      const currentRefresh = await host.invoke({
+        type: "knowledge.refresh-url",
+        input: { ...refreshInput, approved: true },
+      });
+      expect(projectHostResult(currentRefresh)).toEqual({ ok: true, status: "current" });
+      expect(currentRefresh).toMatchObject({
         ok: true,
         value: { ...refreshInput, status: "current" },
       });
@@ -4682,6 +4872,7 @@ describe("candidate knowledge native controls", () => {
         type: "knowledge.refresh-url",
         input: { ...refreshInput, approved: true },
       });
+      expect(projectHostResult(inaccessible)).toEqual({ ok: true, status: "inaccessible" });
       expect(inaccessible).toMatchObject({
         ok: true,
         value: { ...refreshInput, status: "inaccessible" },
