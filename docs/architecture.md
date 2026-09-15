@@ -824,6 +824,15 @@ changing the original error code, message, status, retryability, or failure
 stage. Capture never triggers a provider call or changes retry behavior; the
 caller owns retention and deletion of the local file.
 
+The allowlist recognizes Claude's `api_error` terminal reason and the `success`
+result subtype, including the documented case where a result is still marked
+`is_error: true`. A structured `api_error` without a finite numeric API status
+is classified as a retryable transient provider failure with fixed diagnostics
+and a generic message. When a numeric status is present, status mapping takes
+precedence, so authentication, quota, rate-limit, server-error, and other
+status-bearing behavior remains unchanged. Dynamic provider prose is never
+used for this statusless classification or retained in diagnostics.
+
 ### Author adjudication and revision trace boundary
 
 `packages/schemas` also owns the strict, versioned author-adjudication plan and

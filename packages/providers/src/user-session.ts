@@ -483,6 +483,7 @@ interface ClaudeJsonResult {
 }
 
 const claudeErrorSubtypeDiagnosticCodes = new Map([
+  ["success", "claude_error_subtype_success"],
   ["error_max_turns", "claude_error_subtype_error_max_turns"],
   ["error_during_execution", "claude_error_subtype_error_during_execution"],
   ["error_max_budget_usd", "claude_error_subtype_error_max_budget_usd"],
@@ -493,6 +494,7 @@ const claudeErrorSubtypeDiagnosticCodes = new Map([
 ]);
 
 const claudeTerminalReasonDiagnosticCodes = new Map([
+  ["api_error", "claude_terminal_reason_api_error"],
   ["completed", "claude_terminal_reason_completed"],
   ["max_turns", "claude_terminal_reason_max_turns"],
   ["tool_deferred", "claude_terminal_reason_tool_deferred"],
@@ -507,10 +509,7 @@ const claudeTerminalReasonDiagnosticCodes = new Map([
   ["model_error", "claude_terminal_reason_model_error"],
 ]);
 
-const claudeCategoryCaptureKnownSubtypes = new Set([
-  ...claudeErrorSubtypeDiagnosticCodes.keys(),
-  "success",
-]);
+const claudeCategoryCaptureKnownSubtypes = new Set(claudeErrorSubtypeDiagnosticCodes.keys());
 const claudeCategoryCaptureKnownTerminalReasons = new Set(
   claudeTerminalReasonDiagnosticCodes.keys(),
 );
@@ -599,6 +598,14 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
       "transient",
       "The user-session provider encountered a transient error.",
       { ...statusMetadata, retryable: true, diagnostics },
+    );
+  }
+  if (status === undefined && response.terminal_reason === "api_error") {
+    return new ProviderAdapterError(
+      "anthropic",
+      "transient",
+      "The user-session provider encountered a transient error.",
+      { retryable: true, diagnostics },
     );
   }
   return new ProviderAdapterError(

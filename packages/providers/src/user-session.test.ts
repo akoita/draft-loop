@@ -57,6 +57,7 @@ const policy = {
   sensitiveDataAcknowledged: false,
 } as const;
 const claudeErrorDiagnosticCases = [
+  { field: "subtype", value: "success", code: "claude_error_subtype_success" },
   {
     field: "subtype",
     value: "error_max_turns",
@@ -78,6 +79,7 @@ const claudeErrorDiagnosticCases = [
     code: "claude_error_subtype_error_max_structured_output_retries",
   },
   { field: "terminal_reason", value: "completed", code: "claude_terminal_reason_completed" },
+  { field: "terminal_reason", value: "api_error", code: "claude_terminal_reason_api_error" },
   { field: "terminal_reason", value: "max_turns", code: "claude_terminal_reason_max_turns" },
   {
     field: "terminal_reason",
@@ -574,12 +576,88 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
     }
   });
 
+  it.each([0, 1] as const)(
+    "maps statusless api_error results on Claude process exit %i to a retryable transient error",
+    async (exitCode) => {
+      const captureParent = await mkdtemp(join(tmpdir(), "draft-loop-claude-api-error-test-"));
+      const resultMarker = `private-api-error-result-${exitCode}`;
+      const errorsMarker = `private-api-error-errors-${exitCode}`;
+      const sessionMarker = `private-api-error-session-${exitCode}`;
+      const stderrMarker = `private-api-error-stderr-${exitCode}`;
+      try {
+        const error = await captureClaudeStructuredError(
+          {
+            subtype: "success",
+            terminal_reason: "api_error",
+            result: resultMarker,
+            errors: [errorsMarker],
+            session_id: sessionMarker,
+          },
+          { captureParent, exitCode, stderr: stderrMarker },
+        );
+
+        expect(error).toMatchObject({ code: "transient", retryable: true, status: null });
+        expect(error.message).toBe("The user-session provider encountered a transient error.");
+        expect(error.diagnostics).toEqual([
+          { code: "claude_error_subtype_success", path: "subtype" },
+          { code: "claude_terminal_reason_api_error", path: "terminal_reason" },
+          { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+        ]);
+        expect(await readdir(captureParent)).toEqual([]);
+        expect(error.diagnostics).not.toContainEqual(
+          expect.objectContaining({
+            code: expect.stringMatching(/^local_claude_category_capture_/u),
+          }),
+        );
+        for (const marker of [resultMarker, errorsMarker, sessionMarker, stderrMarker]) {
+          expect(error.message).not.toContain(marker);
+          expect(JSON.stringify(error.metadata)).not.toContain(marker);
+          expect(JSON.stringify(error.diagnostics)).not.toContain(marker);
+          expect(JSON.stringify(error)).not.toContain(marker);
+        }
+      } finally {
+        await rm(captureParent, { recursive: true, force: true });
+      }
+    },
+  );
+
+  it.each([
+    [400, "unknown", false, "The user-session provider request failed."],
+    [401, "authentication", false, "The user-session provider is not authenticated."],
+    [403, "authentication", false, "The user-session provider is not authenticated."],
+    [429, "rate-limit", true, "The user-session provider rate limit was reached."],
+    [500, "transient", true, "The user-session provider encountered a transient error."],
+  ] as const)(
+    "keeps numeric Claude status %i ahead of api_error terminal reason",
+    async (status, code, retryable, message) => {
+      const resultMarker = `private-numeric-api-error-result-${status}`;
+      const error = await captureClaudeStructuredError(
+        {
+          subtype: "success",
+          terminal_reason: "api_error",
+          api_error_status: status,
+          result: resultMarker,
+        },
+        { stderr: `private-numeric-api-error-stderr-${status}` },
+      );
+
+      expect(error).toMatchObject({ code, retryable, status, metadata: { status } });
+      expect(error.message).toBe(message);
+      expect(error.diagnostics).toEqual([
+        { code: "claude_error_subtype_success", path: "subtype" },
+        { code: "claude_terminal_reason_api_error", path: "terminal_reason" },
+        { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+      ]);
+      expect(JSON.stringify(error)).not.toContain(resultMarker);
+      expect(JSON.stringify(error)).not.toContain(`private-numeric-api-error-stderr-${status}`);
+    },
+  );
+
   it.each(claudeErrorDiagnosticCases)(
     "maps allowlisted Claude error $field value $value to a fixed diagnostic",
     async ({ field, value, code }) => {
       const error = await captureClaudeStructuredError({ [field]: value });
 
-      expect(error).toMatchObject({ code: "unknown", retryable: false, status: null });
       expect(error.diagnostics).toHaveLength(3);
       expect(error.diagnostics).toContainEqual({ code, path: field });
       expect(error.diagnostics?.map(({ path }) => path)).toEqual([

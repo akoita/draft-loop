@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-13<br>
+**Last reviewed:** 2026-09-15<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twenty-four observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed corrections #351/#352; later attempts repeatedly failed before a draft. #376 corrects per-generation cap accounting, #380 adds fixed result diagnostics, and #393/#395 add private category capture. #397 again failed non-retryably on its first author attempt; capture established terminal reason `api_error` but no cause or product-quality evidence. #398 owns classification before another live attempt. #75/#250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twenty-four observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed corrections #351/#352; later attempts repeatedly failed before a draft. #376 corrects per-generation cap accounting, #380 adds fixed result diagnostics, and #393/#395 add private category capture. #397 established terminal reason `api_error`; #398 classifies a statusless structured occurrence as bounded and retryable without consuming provider prose. A later live observation still requires fresh authorization. #75/#250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -800,9 +800,13 @@ failed non-retryably with `unknown`, no failure stage or reason, and no artifact
 or critic call. Fixed diagnostics retained only category classifications; the
 private local capture established terminal reason `api_error` and retained no
 subtype. Official Agent SDK sources document this terminal category, while a
-`success` subtype is only an inference here. Issue #398 owns the provider-free
-classification change. Authorization is exhausted, parity remains
-indeterminate, and #75/#250 remain blocked.
+`success` subtype is only an inference here. Issue #398 implements the provider-free
+classification change: a structured `api_error` without a finite numeric API
+status is now retryable within the existing orchestration cap, while fixed
+diagnostics and status-first handling retain the privacy and failure bounds.
+Authorization is exhausted, parity remains indeterminate, and #75/#250 remain
+blocked. A later live observation requires a fresh bounded issue and explicit
+authorization.
 
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
@@ -904,6 +908,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-15 | Classified statusless structured Claude API errors under #398. | The documented `api_error` terminal reason and error-result `success` subtype now produce fixed diagnostics. Without a finite numeric status, the failure is transient and retryable only within existing orchestration caps; numeric statuses retain precedence, provider prose remains excluded, and no live attempt is authorized. |
 | 2026-09-15 | Recorded #397 as an indeterminate twenty-fourth matched-backend observation. | Both authentication probes passed, but one Anthropic author attempt failed non-retryably with `unknown`. Private bounded capture established terminal reason `api_error` but no subtype or underlying cause; no artifact or critic review occurred. Authorization is exhausted, #398 owns classification, and #75/#250 remain blocked. |
 | 2026-09-15 | Routed opt-in Claude category capture through the local run boundary under #395. | A programmatic diagnostic caller can pass the private capture parent to Anthropic user-session run adapters without enabling capture for default, API-key, OpenAI, CLI, renderer, or persisted workspace paths. This provider-free plumbing does not authorize a live attempt. |
 | 2026-09-14 | Added opt-in local capture for unknown Claude categories under #393. | Explicit diagnostic sessions can preserve only bounded, category-shaped unknown result subtype and terminal-reason strings in a private caller-owned file. Capture is disabled by default, durable history remains content-free, provider behavior is unchanged, and no live attempt is authorized. |
