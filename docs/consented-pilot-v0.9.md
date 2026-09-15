@@ -2,7 +2,7 @@
 
 **Status:** Indeterminate<br>
 **Recorded:** 2026-09-15<br>
-**Cases:** Twenty-four bounded observations across two consented, anonymized cases
+**Cases:** Twenty-five bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -55,6 +55,14 @@ code `unknown`; the private capture established `api_error` as the terminal
 reason while retaining no subtype. No draft or independent review was produced,
 so #397 adds no product-quality evidence and leaves the parity outcome
 indeterminate. Issue #398 owns the separate provider classification change.
+
+The twenty-fifth observation (#401) followed the merged #398 classification.
+Both user-session authentication probes passed, but all three Anthropic author
+responses failed local factual and substantive-coverage validation. Attempts
+one and two were retryable; attempt three exhausted the author cap. No draft or
+independent review was persisted, and no statusless API error occurred. The
+classification branch from #398 was therefore not exercised. #401 adds no
+product-quality evidence and leaves the parity outcome indeterminate.
 
 The initial attempt completed one Anthropic author step and one independent
 OpenAI critic step. Its revision call timed out. Under the candidate-approved
@@ -740,6 +748,36 @@ non-retryable failure cannot resume, and the authorization is exhausted; a new
 live run requires separate explicit authorization. Parity remains
 indeterminate; #75 stays open, and #250 remains blocked.
 
+## Bounded post-classification observation (#401)
+
+On 2026-09-15, explicit authorization covered both authentication probes and
+this twenty-fifth observation on revision
+`10bed45cf577e1d8bc2697571c86ae453ce1bce9`. It reused the same private
+matched-role case and baseline-withheld v1 gate, with Anthropic
+`claude-sonnet-4-5` as author and OpenAI `gpt-5.6-luna` as critic through their
+authenticated user sessions. The clean non-fixture preflight matched three
+rounds, a 1,200,000 ms request timeout, and a 1,200,000 ms maximum active
+duration. Both 20-second authentication probes passed. The optional category
+capture parent was outside the repository with mode `0700`.
+
+The fresh run used all three Anthropic author attempts. Each response reached
+local validation and failed with generic `invalid-response`, zero reported
+tokens, and `factual-invariant-rejection` as both failure stage and reason.
+Attempt one recorded one factual-invariant and seven substantive-coverage
+diagnostics. Attempts two and three each recorded two factual-invariant and six
+substantive-coverage diagnostics. The first two failures were retryable; the
+third was non-retryable because it exhausted the three-attempt cap. Persisted
+active duration was 598,833 ms. Provider-reported cost was unavailable; the
+persisted workspace zero is not an actual cost measurement.
+
+No statusless structured API error occurred, so this observation did not
+exercise #398's retry classification. No unknown category was captured. No
+artifact, critic call, findings, readiness decision, review, adjudication,
+approval, export, submission, release preparation, or release occurred. The
+authorization is exhausted; a later live run requires separate explicit
+authorization. Parity remains indeterminate; #75 stays open, and #250 remains
+blocked.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -790,8 +828,8 @@ unresolved findings as accepted facts.
   developer-tool evidence more directly, while the baseline retained a stronger
   backend-production narrative. A separate matched-role case and manual
   baseline were used for the matched-backend observations. Their issue numbers
-  are #350, #358, #360, #362, #364, #368, #374, #378, #382, #384, and #397.
-  The ten later runs
+  are #350, #358, #360, #362, #364, #368, #374, #378, #382, #384, #397, and
+  #401. The eleven later runs
   reused private inputs with the baseline withheld from generation; none
   produced an artifact to compare. The twentieth observation (#374) reused
   that case after #370 and #372 merged; its authorization is exhausted. The
@@ -806,6 +844,10 @@ unresolved findings as accepted facts.
   The twenty-fourth observation (#397) captured `api_error` as the terminal
   reason for the same one-attempt boundary; it produced no artifact or review,
   and its authorization is exhausted.
+  The twenty-fifth observation (#401) exhausted three author attempts on local
+  factual and substantive-coverage validation; it produced no artifact or
+  review, did not exercise #398's API-error branch, and its authorization is
+  exhausted.
   The nineteenth run exercised the #366 thinking bound, but output-budget
   failures persisted, so it does not show that failure mode resolved.
 - Misleading-evidence and prompt-injection behavior were not tested in these
@@ -905,24 +947,26 @@ The twenty-third observation (#384) ended in a non-retryable author failure;
 its authorization is exhausted.
 The twenty-fourth observation (#397) ended in a non-retryable author failure;
 its authorization is exhausted.
+The twenty-fifth observation (#401) exhausted its three-author-attempt cap; its
+authorization is exhausted.
 
 No artifact, critic call, findings, readiness decision, review, adjudication,
-approval, export, submission, or release occurred in #368, #374, #378, #382, #384,
-or #397.
+approval, export, submission, or release occurred in #368, #374, #378, #382,
+the #384 and #397 observations, or #401.
 Parity remains indeterminate, and #75 and #250 remain blocked. Any later live
 attempt needs separate bounded authorization.
 
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
-results. Authorization for #374, #378, #382, #384, and #397 is exhausted and
-does not extend to another live attempt. The #378, #382, #384, and #397 runs
-cannot resume; a new run requires separate explicit bounded authorization.
+results. Authorization for #374, #378, #382, #384, #397, and #401 is exhausted
+and does not extend to another live attempt. None of those runs can resume; a
+new run requires separate explicit bounded authorization.
 
 The first case remains limited by role mismatch. The matched case provides
 product evidence from #350 about required content and claim validation. The
 provider failures in #358, #360, #362, #364, #368, #374, #378, #382, #384,
-and #397 added no product-quality evidence and do not change the indeterminate
-outcome. The #366
+and #397, plus the local-validation failures in #401, added no product-quality
+evidence and do not change the indeterminate outcome. The #366
 thinking bound was exercised in #368, but output-budget failures remained;
 this does not show that failure mode fully resolved. The #374 diagnostics do
 not establish the cause of its reported output-budget failures or reinterpret
@@ -932,5 +976,7 @@ their generic invalid-response classifications and failure stage do not add
 product-quality evidence. The #384 diagnostics add safe error attribution but
 do not establish its underlying cause or add product-quality evidence. The
 capture under #397 establishes only the `api_error` terminal category, not the
-underlying API failure or exact result subtype.
+underlying API failure or exact result subtype. The #401 observation did not
+encounter a statusless API error and therefore does not validate #398 in live
+use.
 Provider-reported cost was unavailable.
