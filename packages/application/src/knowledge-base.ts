@@ -76,6 +76,7 @@ import {
   restoreCandidateKnowledgePortableBackup,
 } from "@draft-loop/storage/knowledge-store";
 import { StorageWriterLeaseError } from "@draft-loop/storage/writer-lease";
+import { monotonicTimestamp } from "./monotonic-timestamp.js";
 
 export type {
   CandidateKnowledgeBase,
@@ -3856,8 +3857,7 @@ async function useWriterHandle<T>(
 ): Promise<T> {
   return useHandle(acquire, (handle) => {
     if (typeof handle.withWriterLease !== "function") {
-      // Narrow compatibility seam for unit-test adapters. Production handles
-      // always expose the coordinated writer contract.
+      // Narrow compatibility seam for unit-test adapters; production handles expose this contract.
       return callback(handle);
     }
     return handle.withWriterLease(operation, () => callback(handle));
@@ -3869,7 +3869,7 @@ function resolveDependencies(
 ): ResolvedDependencies {
   return {
     generateId: dependencies.generateId ?? randomUUID,
-    now: dependencies.now ?? (() => new Date().toISOString()),
+    now: monotonicTimestamp(dependencies.now ?? (() => new Date().toISOString())),
     initialize: dependencies.initialize ?? initializeCandidateKnowledgeStore,
     open: dependencies.open ?? openCandidateKnowledgeStore,
     exportPortableBackup:
