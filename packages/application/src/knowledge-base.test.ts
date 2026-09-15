@@ -6218,6 +6218,16 @@ describe("candidate knowledge store application service", () => {
     expect(current).toEqual({ sourceId: "source-uuid", checkedAt: changedAt, status: "current" });
     expect(generateId).not.toHaveBeenCalled();
     expect(now).toHaveBeenCalledOnce();
+    now.mockReturnValue(createdAt);
+    now.mockClear();
+    await expect(
+      service.refreshKnowledgeSourceFromOrigin({
+        storeRoot,
+        knowledgeBaseId: "default-ckb-uuid",
+        sourceId: "source-uuid",
+      }),
+    ).resolves.toEqual({ sourceId: "source-uuid", checkedAt: changedAt, status: "current" });
+    expect(now).toHaveBeenCalledOnce();
     const refreshState = await service.getKnowledgeSourceRefreshState({
       storeRoot,
       knowledgeBaseId: "default-ckb-uuid",
