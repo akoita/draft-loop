@@ -874,6 +874,11 @@ adding missing full-span claim metadata only when an already-cited retrieved
 chunk contains the entire block text. The factual-invariant rejection remains;
 no provider prose, evidence, or validation rule is rewritten or weakened.
 
+Issue #418 compares production SQLite FTS5/BM25 retrieval with the existing
+local term-frequency/RRF hybrid on three queries over one sanitized corpus. The
+candidate ties the lexical baseline on every recorded metric, so hybrid remains
+disabled; a passing non-regression gate alone is not evidence of improvement.
+
 **Exit criterion:** Retrieval or provider changes measurably improve coverage or
 evidence accuracy without increasing unsupported claims, and failure/recovery
 behavior is demonstrated in the packaged app.
@@ -960,6 +965,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Kept hybrid retrieval disabled after the sanitized comparison under #418. | Across three queries, lexical and local term-frequency/RRF hybrid retrieval tie at 2/3 citation accuracy, full requirement coverage, 1/3 irrelevant-context ratio, zero unsupported claims, and reciprocal rank 1. No measured gain justifies changing the default. |
 | 2026-09-19 | Completed exactly supported block coverage under #416. | On the unchanged three-case sanitized corpus, acceptance improves from one to two while the unsupported factual-inflation case remains rejected. The former substantive-coverage diagnostic is removed only by exact, already-cited evidence. |
 | 2026-09-19 | Recorded a three-case sanitized rejected-author baseline under #414. | The provider-free reference produces one acceptance and two rejections, split across one factual-invariant and one substantive-coverage diagnostic. It establishes a comparison point without claiming improvement or live-provider quality. |
 | 2026-09-19 | Added bounded rejected-author replay summaries under #412. | Up to one hundred private replay inputs can produce deterministic acceptance and structural-diagnostic counts without returning case content or identity, creating a provider-free measurement primitive for later comparisons. |

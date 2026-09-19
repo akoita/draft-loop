@@ -186,6 +186,10 @@ importers:
       '@draft-loop/validation':
         specifier: workspace:*
         version: link:../validation
+    devDependencies:
+      '@draft-loop/storage':
+        specifier: workspace:*
+        version: link:../storage
 
   packages/evidence:
     dependencies:

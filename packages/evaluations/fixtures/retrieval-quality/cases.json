@@ -1,0 +1,72 @@
+{
+  "workspaceId": "sanitized-retrieval-workspace",
+  "sourceId": "sanitized-retrieval-source",
+  "corpus": [
+    {
+      "id": "platform",
+      "text": "Built reliable TypeScript and Node.js distributed services.",
+      "ordinal": 0
+    },
+    {
+      "id": "cloud",
+      "text": "Operated Kubernetes clusters with Helm deployment pipelines.",
+      "ordinal": 1
+    },
+    {
+      "id": "data",
+      "text": "Developed Python Airflow analytics pipelines for reporting.",
+      "ordinal": 2
+    },
+    {
+      "id": "frontend",
+      "text": "Designed accessible React components and CSS design systems.",
+      "ordinal": 3
+    },
+    {
+      "id": "hobby",
+      "text": "Built a TypeScript hobby game and repaired vintage audio equipment.",
+      "ordinal": 4
+    }
+  ],
+  "cases": [
+    {
+      "id": "platform-query",
+      "query": "TypeScript distributed services",
+      "groundTruthEvidenceIds": ["platform"],
+      "requirements": [{ "id": "platform-requirement", "text": "TypeScript services" }],
+      "draftClaims": [
+        {
+          "id": "platform-claim",
+          "text": "Built distributed TypeScript services.",
+          "evidenceIds": ["platform"]
+        }
+      ]
+    },
+    {
+      "id": "cloud-query",
+      "query": "Kubernetes Helm deployment",
+      "groundTruthEvidenceIds": ["cloud"],
+      "requirements": [{ "id": "cloud-requirement", "text": "Kubernetes deployment" }],
+      "draftClaims": [
+        {
+          "id": "cloud-claim",
+          "text": "Operated Kubernetes deployments.",
+          "evidenceIds": ["cloud"]
+        }
+      ]
+    },
+    {
+      "id": "data-query",
+      "query": "Python Airflow analytics pipelines",
+      "groundTruthEvidenceIds": ["data"],
+      "requirements": [{ "id": "data-requirement", "text": "Python analytics pipelines" }],
+      "draftClaims": [
+        {
+          "id": "data-claim",
+          "text": "Developed Python analytics pipelines.",
+          "evidenceIds": ["data"]
+        }
+      ]
+    }
+  ]
+}

@@ -19,5 +19,8 @@
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
     "@draft-loop/validation": "workspace:*"
+  },
+  "devDependencies": {
+    "@draft-loop/storage": "workspace:*"
   }
 }
