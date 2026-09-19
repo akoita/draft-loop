@@ -879,6 +879,11 @@ local term-frequency/RRF hybrid on three queries over one sanitized corpus. The
 candidate ties the lexical baseline on every recorded metric, so hybrid remains
 disabled; a passing non-regression gate alone is not evidence of improvement.
 
+Issue #420 makes the outer cross-platform installed-app gate require the
+existing progress, cancellation, restart-resume, and interrupted-run evidence.
+The packaged acceptance workflow now fails closed if any recovery proof is
+missing or false, rather than trusting the inner report implicitly.
+
 **Exit criterion:** Retrieval or provider changes measurably improve coverage or
 evidence accuracy without increasing unsupported claims, and failure/recovery
 behavior is demonstrated in the packaged app.
@@ -965,6 +970,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Required packaged failure-and-recovery evidence under #420. | Cross-platform installed-app acceptance now fails unless its sanitized report explicitly confirms observable progress, in-flight cancellation, restart resume, and interrupted-run explanation. This closes an enforcement gap without adding provider calls or changing recovery behavior. |
 | 2026-09-19 | Kept hybrid retrieval disabled after the sanitized comparison under #418. | Across three queries, lexical and local term-frequency/RRF hybrid retrieval tie at 2/3 citation accuracy, full requirement coverage, 1/3 irrelevant-context ratio, zero unsupported claims, and reciprocal rank 1. No measured gain justifies changing the default. |
 | 2026-09-19 | Completed exactly supported block coverage under #416. | On the unchanged three-case sanitized corpus, acceptance improves from one to two while the unsupported factual-inflation case remains rejected. The former substantive-coverage diagnostic is removed only by exact, already-cited evidence. |
 | 2026-09-19 | Recorded a three-case sanitized rejected-author baseline under #414. | The provider-free reference produces one acceptance and two rejections, split across one factual-invariant and one substantive-coverage diagnostic. It establishes a comparison point without claiming improvement or live-provider quality. |

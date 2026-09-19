@@ -4,6 +4,7 @@ import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 
 const phases = ["prepare", "resume"];
 const jobUrl = "https://jobs.example.test/roles/typescript-systems-engineer";
@@ -12,6 +13,25 @@ const candidateContent =
   "Target role: TypeScript systems engineer\n" +
   "Experience: Built local-first TypeScript tools with automated tests and clear documentation.\n" +
   "Skills: TypeScript, React, Node.js, testing, accessibility, and technical writing.\n";
+const requiredChecks = Object.freeze([
+  "installLaunch",
+  "workspaceCreation",
+  "candidateImport",
+  "approvedJobUrl",
+  "provenance",
+  "providerPreflight",
+  "authorCriticRun",
+  "observableProgress",
+  "inFlightCancellation",
+  "revision",
+  "restartResume",
+  "interruptedRunExplanation",
+  "approval",
+  "exportMarkdown",
+  "exportDocx",
+  "exportPdf",
+  "durableHistory",
+]);
 
 async function requireFile(filename, label) {
   const details = await stat(filename);
@@ -51,6 +71,17 @@ function launch(executable, phase, paths, artifactChecksum) {
   });
 }
 
+export function assertAcceptanceReport(report, artifactChecksum) {
+  if (report?.artifactChecksum !== artifactChecksum) {
+    throw new Error("Installed-app acceptance reported the wrong artifact checksum.");
+  }
+  for (const check of requiredChecks) {
+    if (report?.checks?.[check] !== true) {
+      throw new Error(`Installed-app acceptance did not pass check ${check}.`);
+    }
+  }
+}
+
 export async function runAcceptance(executableInput, evidenceInput) {
   const executable = resolve(executableInput);
   const evidence = resolve(evidenceInput);
@@ -78,30 +109,7 @@ export async function runAcceptance(executableInput, evidenceInput) {
     }
 
     const report = JSON.parse(await readFile(evidence, "utf8"));
-    if (report.artifactChecksum !== artifactChecksum) {
-      throw new Error("Installed-app acceptance reported the wrong artifact checksum.");
-    }
-    const requiredChecks = [
-      "installLaunch",
-      "workspaceCreation",
-      "candidateImport",
-      "approvedJobUrl",
-      "provenance",
-      "providerPreflight",
-      "authorCriticRun",
-      "revision",
-      "restartResume",
-      "approval",
-      "exportMarkdown",
-      "exportDocx",
-      "exportPdf",
-      "durableHistory",
-    ];
-    for (const check of requiredChecks) {
-      if (report.checks?.[check] !== true) {
-        throw new Error(`Installed-app acceptance did not pass check ${check}.`);
-      }
-    }
+    assertAcceptanceReport(report, artifactChecksum);
     const sanitized = {
       ...report,
       runnerChecks: {
@@ -119,21 +127,28 @@ export async function runAcceptance(executableInput, evidenceInput) {
   }
 }
 
-const inputs = process.argv.slice(2);
-const normalizedInputs = inputs[0] === "--" ? inputs.slice(1) : inputs;
-if (normalizedInputs.length !== 2) {
-  process.stderr.write(
-    "Usage: node scripts/desktop-acceptance.mjs <packaged-executable> <evidence.json>\n",
-  );
-  process.exitCode = 2;
-} else {
-  try {
-    await runAcceptance(normalizedInputs[0], normalizedInputs[1]);
-    process.stdout.write(`installed-app acceptance passed: ${resolve(normalizedInputs[1])}\n`);
-  } catch (error) {
+function isMainModule() {
+  const entryPoint = process.argv[1];
+  return entryPoint !== undefined && pathToFileURL(resolve(entryPoint)).href === import.meta.url;
+}
+
+if (isMainModule()) {
+  const inputs = process.argv.slice(2);
+  const normalizedInputs = inputs[0] === "--" ? inputs.slice(1) : inputs;
+  if (normalizedInputs.length !== 2) {
     process.stderr.write(
-      `${error instanceof Error ? error.message : "Installed-app acceptance failed."}\n`,
+      "Usage: node scripts/desktop-acceptance.mjs <packaged-executable> <evidence.json>\n",
     );
-    process.exitCode = 1;
+    process.exitCode = 2;
+  } else {
+    try {
+      await runAcceptance(normalizedInputs[0], normalizedInputs[1]);
+      process.stdout.write(`installed-app acceptance passed: ${resolve(normalizedInputs[1])}\n`);
+    } catch (error) {
+      process.stderr.write(
+        `${error instanceof Error ? error.message : "Installed-app acceptance failed."}\n`,
+      );
+      process.exitCode = 1;
+    }
   }
 }
