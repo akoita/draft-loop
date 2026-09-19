@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-19<br>
-**Current stage:** Broader real-application pilot
+**Current stage:** Author-draft acceptance reliability
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -179,7 +179,8 @@ applications.
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
 | Previous | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Ended indeterminate and unreleased](evaluation/consented-pilot-v0.9.md); twenty-six observations across two consented cases | Demonstrate the complete application-grade workflow and publish evidence              | Exit criterion not met; no v0.9.0 release exists. #75 closed unmet, and #76/#250/#251 closed as not pursued. |
 | Previous | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md); no release or live-provider outcome | Improve evidence selection and dependable bounded generation                          | Exit criteria met on sanitized replay/retrieval cases and cross-platform packaged recovery evidence; limitations retained |
-| Now      | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | Cohort gate in progress; not outcome-validated        | Test factuality, quality, and effort across more cases                                | Predeclare the multi-case gate, then create bounded consented cases with calibrated measures, stop conditions, and explicit provider authorization |
+| Previous | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early; exit unmet](evaluation/broader-real-application-pilot.md); no release | Test factuality, quality, and effort across more cases                                | Case A produced no accepted draft; cases B/C were not pursued because the fixed all-cases-pass cohort could no longer pass |
+| Now      | Author-draft acceptance reliability                                                                               | Deterministic replay available; live case A rejected  | Produce complete, supported drafts reliably enough to justify a new cohort            | Improve sanitized replay acceptance for factual, unsupported-claim, and substantive-coverage failures without weakening validation |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -901,7 +902,7 @@ acceptance gate. See the canonical
 [stage evidence](evaluation/retrieval-provider-quality.md). The result does not
 validate a live-provider or real-application outcome.
 
-### Now — Broader real-application pilot
+### Ended — Broader real-application pilot
 
 Run a small, consented pilot comparing first drafts, revised drafts, and manual
 baselines. Measure unsupported claims, critical-requirement coverage, useful
@@ -928,6 +929,24 @@ error; two further attempts failed local factual and coverage validation. No
 critic, approval, or export occurred. Because the fixed cohort rule requires
 every case gate to pass, the declared cohort can no longer satisfy its exit
 criterion. See the [sanitized pilot record](evaluation/broader-real-application-pilot.md).
+
+Cases B and C were not run because their predeclared stop conditions applied:
+additional observations could not restore the fixed all-cases-pass result. The
+stage ended early with its exit criterion unmet, no product validation, and no
+release.
+
+### Now — Author-draft acceptance reliability
+
+Improve the provider-independent author-validation boundary using sanitized
+replay cases derived from the observed structural failure classes. Changes must
+increase complete-draft acceptance without permitting factual violations,
+unsupported claims, uncovered substantive text, or reduced required-section
+coverage. Live provider calls are outside this stage unless a later milestone
+and bounded issue explicitly authorize them.
+
+**Exit criterion:** An expanded sanitized replay corpus shows a material
+complete-draft acceptance gain while factual, unsupported-claim, coverage, and
+required-section gates remain unchanged or stronger.
 
 ### Later — Production-ready beta
 
@@ -998,6 +1017,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Ended the broader real-application pilot early under #433. | Case A was indeterminate with no accepted draft, and the fixed all-cases-pass contract made the declared cohort exit impossible; cases B/C were not pursued. The exit criterion is unmet, no validation or release exists, and the next decision returns to provider-free author-draft acceptance reliability. |
 | 2026-09-19 | Recorded broader-pilot case A under #430 as indeterminate. | Both authentication probes passed, but the three-attempt author cap ended with no accepted draft: one retryable structured API error, then two local factual/coverage rejections. No critic, approval, or export occurred, so the fixed all-cases-pass cohort can no longer pass. |
 | 2026-09-19 | Required completed adversarial observations under #429. | A cohort remains indeterminate when any misleading-evidence or prompt-injection observation is `not-tested`; bounded `observed` and `not-observed` states count as completed evidence without exposing private details. |
 | 2026-09-19 | Started the broader real-application pilot under #426. | Milestone 7 begins with provider-independent cohort gate #427: more than one case, predeclared fixed aggregate rules, and bounded sanitized results are required before any new consented provider observation can count. No provider call is authorized. |

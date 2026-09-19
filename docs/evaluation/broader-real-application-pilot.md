@@ -1,6 +1,6 @@
 # Broader real-application pilot
 
-**Status:** Case A indeterminate; declared cohort cannot pass
+**Status:** Ended early; exit criterion unmet; product outcome not validated
 **Milestone:** [Broader real-application pilot](https://github.com/akoita/draft-loop/milestone/7)
 **Case issue:** #430
 **Revision:** `5f5071d9ea66757c5a3674883092f2c189b35fe8`
@@ -52,3 +52,22 @@ case gate to pass, so this result makes a passing three-case cohort impossible.
 The issue #430 authorization is exhausted. This record does not authorize a
 retry, cases B or C, another provider call, a release, or application
 submission.
+
+## Stage decision
+
+Issues #431 and #432 were closed without authentication probes or provider
+calls. Their predeclared stop conditions applied because neither case could
+restore the fixed all-cases-pass cohort result. The planned aggregate decision
+therefore has one indeterminate case and two cases not pursued, rather than a
+three-case measurement set.
+
+The broader-pilot exit criterion is unmet. DraftLoop has not demonstrated
+factual non-regression, improved quality, reduced user effort, completed
+approval/export, or completed adversarial observations across representative
+consented cases. Milestone 7 ends without validation or release.
+
+The next product decision is provider-free author-draft acceptance reliability:
+use sanitized replay and deterministic validation to reduce factual,
+unsupported-claim, and substantive-coverage rejection before considering a new
+cohort. Any future provider-backed pilot requires a new milestone, fresh
+predeclared gates, consent, and explicit authorization.
