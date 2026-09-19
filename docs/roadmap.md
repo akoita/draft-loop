@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-15<br>
+**Last reviewed:** 2026-09-19<br>
 **Current stage:** Workflow parity and release (v0.9.0)
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -177,7 +177,7 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](releases/stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twenty-five observations across two consented cases are indeterminate](evaluation/consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed corrections #351/#352; later attempts repeatedly failed before a draft. #376 corrects per-generation cap accounting, #380 adds fixed result diagnostics, and #393/#395 add private category capture. #397 established terminal reason `api_error`, and #398 added its bounded statusless classification. #401 then exhausted three author attempts on local factual and coverage validation without an artifact or review. #389 keeps application-generated mutation timestamps monotonic while retaining storage rollback rejection. Any later live observation requires fresh authorization. #75/#250 remain blocked |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twenty-six observations across two consented cases are indeterminate](evaluation/consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed corrections #351/#352; later attempts repeatedly failed before a draft. #376 corrects per-generation cap accounting, #380 adds fixed result diagnostics, and #393/#395 add private category capture. #397 established terminal reason `api_error`, and #398 added its bounded statusless classification. #401 and #405 then exhausted three author attempts on local factual and coverage validation without an artifact or review. #389 keeps application-generated mutation timestamps monotonic while retaining storage rollback rejection. Any later live observation requires fresh authorization. #75/#250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -819,6 +819,18 @@ was unavailable, and authorization is exhausted. Parity remains indeterminate;
 issues #75/#250 remain blocked, and another live attempt requires a new bounded
 issue and explicit authorization.
 
+The twenty-sixth bounded observation under #405 used exact clean main revision
+`9e0f62d1183b0b060cea350c5bcc36bef7be85b9` after explicit authorization.
+Both 20-second user-session authentication probes passed. All three Anthropic
+author attempts returned `invalid-response` and failed
+`factual-invariant-rejection` validation: attempts one and two were retryable,
+with factual/substantive diagnostic counts of 4/4 and 3/5, while attempt three
+exhausted the cap with counts of 6/2. Persisted active duration was 622,328 ms;
+execution token counts were zero and no provider cost was reported. No artifact,
+critic call, findings, review, or release action occurred. Authorization is
+exhausted, parity remains indeterminate, and any later provider call requires a
+fresh bounded issue and explicit authorization.
+
 **Exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
@@ -919,6 +931,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Recorded #405 as an indeterminate twenty-sixth matched-backend observation. | Both user-session authentication probes passed on the exact clean main revision, but three Anthropic author attempts failed local factual and substantive-coverage validation. The attempt cap was exhausted without an artifact or critic review; authorization is exhausted and #75/#250 remain blocked. |
 | 2026-09-15 | Made candidate-knowledge application timestamps monotonic under #389. | A deterministic backward-clock case reproduced the captured `StorageValidationError`. Candidate-knowledge services now retain their latest valid generated timestamp across wall-clock regressions, while storage anti-rollback validation and invalid-timestamp rejection remain unchanged. |
 | 2026-09-15 | Recorded #401 as an indeterminate twenty-fifth matched-backend observation. | Both user-session authentication probes passed, but three Anthropic author responses failed local factual and substantive-coverage validation before an artifact or critic review. The run did not exercise #398's API-error branch. Authorization is exhausted, and #75/#250 remain blocked. |
 | 2026-09-15 | Classified statusless structured Claude API errors under #398. | The documented `api_error` terminal reason and error-result `success` subtype now produce fixed diagnostics. Without a finite numeric status, the failure is transient and retryable only within existing orchestration caps; numeric statuses retain precedence, provider prose remains excluded, and no live attempt is authorized. |
