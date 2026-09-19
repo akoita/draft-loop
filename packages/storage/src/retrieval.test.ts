@@ -172,6 +172,29 @@ describe("SQLite FTS5 / BM25 Evidence Retrieval", () => {
     await storage.close();
   });
 
+  it("removes single-term distractors only when a stronger multi-term hit exists", async () => {
+    const storage = openSqliteStorage(":memory:");
+    await storage.saveWorkspace(workspace("ws-1"));
+    await storage.saveEvidenceSource(source("src-1", "ws-1"));
+    await storage.saveEvidenceChunk(
+      chunk("precise", "Built TypeScript distributed services.", 0, "ws-1", "src-1"),
+    );
+    await storage.saveEvidenceChunk(
+      chunk("distractor", "Built a TypeScript hobby game.", 1, "ws-1", "src-1"),
+    );
+
+    await expect(
+      storage.queryEvidence("TypeScript distributed services", { workspaceId: "ws-1" }),
+    ).resolves.toMatchObject([{ id: "precise" }]);
+    await expect(
+      storage.queryEvidence("TypeScript", { workspaceId: "ws-1" }),
+    ).resolves.toHaveLength(2);
+    await expect(
+      storage.queryEvidence("TypeScript Kubernetes", { workspaceId: "ws-1" }),
+    ).resolves.toHaveLength(2);
+    await storage.close();
+  });
+
   it("retrieves relevant evidence from a long multi-sentence job description", async () => {
     const dir = await mkdtemp(join(tmpdir(), "draft-loop-retrieval-long-query-"));
     const storage = openSqliteStorage(join(dir, "workspace.sqlite"));

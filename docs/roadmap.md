@@ -884,6 +884,13 @@ existing progress, cancellation, restart-resume, and interrupted-run evidence.
 The packaged acceptance workflow now fails closed if any recovery proof is
 missing or false, rather than trusting the inner report implicitly.
 
+Issue #422 improves the unchanged sanitized retrieval corpus by preferring
+multi-term BM25 hits only when at least one exists. Lexical citation accuracy
+rises from two-thirds to one and irrelevant context falls from one-third to
+zero, while coverage, unsupported claims, reciprocal rank, sparse-query recall,
+fallback, order, limits, and workspace isolation remain unchanged. Hybrid now
+fails the comparison gate and remains disabled.
+
 **Exit criterion:** Retrieval or provider changes measurably improve coverage or
 evidence accuracy without increasing unsupported claims, and failure/recovery
 behavior is demonstrated in the packaged app.
@@ -970,6 +977,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Improved lexical precision with a recall-preserving multi-term preference under #422. | On the unchanged three-query corpus, citation accuracy rises from 2/3 to 1 and irrelevant context falls from 1/3 to 0 without changing coverage, unsupported claims, or reciprocal rank. Hybrid now regresses against lexical and remains disabled. |
 | 2026-09-19 | Required packaged failure-and-recovery evidence under #420. | Cross-platform installed-app acceptance now fails unless its sanitized report explicitly confirms observable progress, in-flight cancellation, restart resume, and interrupted-run explanation. This closes an enforcement gap without adding provider calls or changing recovery behavior. |
 | 2026-09-19 | Kept hybrid retrieval disabled after the sanitized comparison under #418. | Across three queries, lexical and local term-frequency/RRF hybrid retrieval tie at 2/3 citation accuracy, full requirement coverage, 1/3 irrelevant-context ratio, zero unsupported claims, and reciprocal rank 1. No measured gain justifies changing the default. |
 | 2026-09-19 | Completed exactly supported block coverage under #416. | On the unchanged three-case sanitized corpus, acceptance improves from one to two while the unsupported factual-inflation case remains rejected. The former substantive-coverage diagnostic is removed only by exact, already-cited evidence. |

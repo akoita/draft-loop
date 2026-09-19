@@ -57,6 +57,7 @@ import {
   readApprovedChronology,
   readEvidenceSource,
 } from "./chronology-evidence.js";
+import { evidenceQueryTerms, preferMultiTermEvidenceHits } from "./evidence-retrieval-precision.js";
 
 export type {
   CandidateKnowledgeRetentionClass,
@@ -1348,54 +1349,6 @@ export interface AuditEvent extends AuditEventInput {
 export type { RetrievalOptions, RetrievalPort, ScoredEvidenceChunk };
 export type EvidenceSearchHit = ScoredEvidenceChunk;
 export type EvidenceSearchOptions = RetrievalOptions;
-
-const maximumEvidenceQueryTerms = 48;
-const evidenceQueryStopWords = new Set([
-  "a",
-  "an",
-  "and",
-  "are",
-  "as",
-  "at",
-  "be",
-  "by",
-  "for",
-  "from",
-  "in",
-  "is",
-  "it",
-  "of",
-  "on",
-  "or",
-  "our",
-  "that",
-  "the",
-  "their",
-  "this",
-  "to",
-  "we",
-  "will",
-  "with",
-  "you",
-  "your",
-]);
-
-function evidenceQueryTerms(query: string): readonly string[] {
-  const rawTokens = query.trim().match(/[\p{L}\p{N}_-]+/gu);
-  if (rawTokens === null) return [];
-  const seen = new Set<string>();
-  const terms: string[] = [];
-  for (const token of rawTokens) {
-    const normalized = token.toLocaleLowerCase("en-US");
-    if (normalized.length < 2 || evidenceQueryStopWords.has(normalized) || seen.has(normalized)) {
-      continue;
-    }
-    seen.add(normalized);
-    terms.push(token);
-    if (terms.length === maximumEvidenceQueryTerms) break;
-  }
-  return terms;
-}
 
 export class StorageUnavailableError extends Error {
   constructor(message: string, options?: { readonly cause?: unknown }) {
@@ -11988,6 +11941,7 @@ export class SqliteStorage
       )
       .all(ftsQuery, workspaceId, workspaceId, limit)
       .map((row) => ({ ...evidenceChunkFromRow(row), rank: Number(row.rank) }));
+    hits = [...preferMultiTermEvidenceHits(queryTerms, hits)];
     const status = hits.length > 0 ? "matched" : "fallback";
     if (hits.length === 0) {
       hits = this.database
