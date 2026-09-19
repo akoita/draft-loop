@@ -178,8 +178,8 @@ applications.
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
 | Previous | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Ended indeterminate and unreleased](evaluation/consented-pilot-v0.9.md); twenty-six observations across two consented cases | Demonstrate the complete application-grade workflow and publish evidence              | Exit criterion not met; no v0.9.0 release exists. #75 closed unmet, and #76/#250/#251 closed as not pursued. |
-| Now      | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | Integrated lexical baseline; provider-free rejected-author replay implemented by #410 | Improve evidence selection and dependable bounded generation                          | Use sanitized replay cases and deterministic measures to demonstrate an author-validation improvement before another consented run |
-| Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
+| Previous | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md); no release or live-provider outcome | Improve evidence selection and dependable bounded generation                          | Exit criteria met on sanitized replay/retrieval cases and cross-platform packaged recovery evidence; limitations retained |
+| Now      | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Create bounded consented cases with calibrated measures, stop conditions, and explicit provider authorization             |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -843,7 +843,7 @@ violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
 professionally usable artifact after bounded human review.
 
-### Now — Retrieval and provider quality
+### Completed — Retrieval and provider quality
 
 Preserve the provider-independent retrieval port and workspace-scoped lexical
 baseline. Compare local embeddings and hybrid retrieval against citation
@@ -895,7 +895,13 @@ fails the comparison gate and remains disabled.
 evidence accuracy without increasing unsupported claims, and failure/recovery
 behavior is demonstrated in the packaged app.
 
-### Later — Broader real-application pilot
+This criterion is met by the provider-free author-validation and lexical
+retrieval gains recorded above and by the strengthened cross-platform packaged
+acceptance gate. See the canonical
+[stage evidence](evaluation/retrieval-provider-quality.md). The result does not
+validate a live-provider or real-application outcome.
+
+### Now — Broader real-application pilot
 
 Run a small, consented pilot comparing first drafts, revised drafts, and manual
 baselines. Measure unsupported claims, critical-requirement coverage, useful
@@ -977,6 +983,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Completed retrieval and provider quality under #409. | Sanitized replay acceptance improved from 1/3 to 2/3; lexical citation accuracy improved from 2/3 to 1 while irrelevant context fell from 1/3 to 0; and packaged recovery evidence passed on Linux, macOS, and Windows. No live provider ran, no release was created, and any pilot still requires consent and explicit authorization. |
 | 2026-09-19 | Improved lexical precision with a recall-preserving multi-term preference under #422. | On the unchanged three-query corpus, citation accuracy rises from 2/3 to 1 and irrelevant context falls from 1/3 to 0 without changing coverage, unsupported claims, or reciprocal rank. Hybrid now regresses against lexical and remains disabled. |
 | 2026-09-19 | Required packaged failure-and-recovery evidence under #420. | Cross-platform installed-app acceptance now fails unless its sanitized report explicitly confirms observable progress, in-flight cancellation, restart resume, and interrupted-run explanation. This closes an enforcement gap without adding provider calls or changing recovery behavior. |
 | 2026-09-19 | Kept hybrid retrieval disabled after the sanitized comparison under #418. | Across three queries, lexical and local term-frequency/RRF hybrid retrieval tie at 2/3 citation accuracy, full requirement coverage, 1/3 irrelevant-context ratio, zero unsupported claims, and reciprocal rank 1. No measured gain justifies changing the default. |
