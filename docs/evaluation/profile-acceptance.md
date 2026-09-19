@@ -38,7 +38,7 @@ pnpm validate
 ```
 
 The executable evidence is
-[`candidate-profile-acceptance.test.ts`](../packages/application/src/candidate-profile-acceptance.test.ts).
+[`candidate-profile-acceptance.test.ts`](../../packages/application/src/candidate-profile-acceptance.test.ts).
 Existing storage tests separately cover migrations, immutable history,
 whole-workspace backup and restore, retention, and preservation of approved
 exports. Retrieval now indexes the exact source versions selected by the

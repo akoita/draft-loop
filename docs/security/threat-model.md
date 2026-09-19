@@ -184,9 +184,9 @@ path-free status and refresh-state results omit origins and provenance.
 
 No application run retrieves CKB content yet, so the existing workspace
 evidence boundary remains authoritative. See
-[ADR 0007](adr/0007-portable-candidate-knowledge-store.md),
-[ADR 0008](adr/0008-ckb-scoped-lexical-retrieval.md),
-[privacy policy](privacy-and-evaluation.md), and [architecture](architecture.md)
+[ADR 0007](../adr/0007-portable-candidate-knowledge-store.md),
+[ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md),
+[privacy policy](privacy-and-evaluation.md), and [architecture](../architecture/overview.md)
 for ownership and exact contracts.
 
 One-file origin rebind keeps the replacement path in runtime CLI input or the
@@ -375,7 +375,7 @@ The following remain open during the **Evidence-backed CV drafting** stage:
   new review.
 
 See [privacy and evaluation](privacy-and-evaluation.md) for retention,
-redaction, logging, and evaluation policy. See [ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
-for the CKB implementation contract, [ADR 0004](adr/0004-desktop-credential-boundary.md)
-for desktop credentials, and [architecture](architecture.md) for system
+redaction, logging, and evaluation policy. See [ADR 0007](../adr/0007-portable-candidate-knowledge-store.md)
+for the CKB implementation contract, [ADR 0004](../adr/0004-desktop-credential-boundary.md)
+for desktop credentials, and [architecture](../architecture/overview.md) for system
 boundaries.

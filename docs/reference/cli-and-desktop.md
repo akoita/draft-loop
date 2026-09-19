@@ -1,7 +1,7 @@
 # CLI and desktop operations reference
 
 This reference documents the source-only CLI command groups and the equivalent
-desktop operations. Start from the [developer quick start](../README.md#developer-quick-start)
+desktop operations. Start from the [developer quick start](../../README.md#developer-quick-start)
 for installation and the fixture demo; run any command below from the
 repository root with Node.js 24.5.0 and pnpm 10.18.3.
 
@@ -59,7 +59,7 @@ alternatives, such as `Prometheus or OpenTelemetry`, is satisfied by a block
 naming one of them, with any surrounding condition still required. A stated
 maturity qualifier, such as `early-stage`, must appear in the matching block
 and is never inferred from headcount, funding, or the word `startup`. See the
-[coverage contract](architecture.md#degree-coverage). Other equivalent
+[coverage contract](../architecture/drafting-and-review.md#degree-coverage). Other equivalent
 phrasing can still be missed, including inflected forms such as `implemented`
 for `implement`, and these signals do not establish semantic coverage or verify
 a credential.

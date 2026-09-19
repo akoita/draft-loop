@@ -154,7 +154,7 @@ material in the synthetic gate.
 
 This gate is a release step and not a development loop. Day-to-day work on the
 author-critic flow belongs in fixture mode, which spends nothing — see
-[CONTRIBUTING.md](../CONTRIBUTING.md). Running the gate during ordinary
+[CONTRIBUTING.md](../../CONTRIBUTING.md). Running the gate during ordinary
 iteration is what exhausts the provider budget this release validation depends
 on.
 

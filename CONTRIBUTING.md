@@ -30,7 +30,7 @@ Iterate here.
 **The live-provider gate is a release step, not a development step.**
 `pnpm test:e2e:live` sends the synthetic material to real Anthropic and OpenAI
 endpoints and bills real usage on every run. Run it deliberately, before a
-release, as described in [docs/releasing.md](docs/releasing.md).
+release, as described in [docs/operations/releasing.md](docs/operations/releasing.md).
 
 Reaching for the live gate during ordinary iteration is the quickest way to
 exhaust a provider budget, and an exhausted budget blocks the release
