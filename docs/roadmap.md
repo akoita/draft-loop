@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-19<br>
-**Current stage:** Workflow parity and release (v0.9.0)
+**Current stage:** Retrieval and provider quality
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -177,8 +177,8 @@ applications.
 | Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](releases/stage-evidence-v0.6.0.md)                          |
 | Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twenty-six observations across two consented cases are indeterminate](evaluation/consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed corrections #351/#352; later attempts repeatedly failed before a draft. #376 corrects per-generation cap accounting, #380 adds fixed result diagnostics, and #393/#395 add private category capture. #397 established terminal reason `api_error`, and #398 added its bounded statusless classification. #401 and #405 then exhausted three author attempts on local factual and coverage validation without an artifact or review. #389 keeps application-generated mutation timestamps monotonic while retaining storage rollback rejection. Any later live observation requires fresh authorization. #75/#250 remain blocked |
-| Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
+| Previous | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Ended indeterminate and unreleased](evaluation/consented-pilot-v0.9.md); twenty-six observations across two consented cases | Demonstrate the complete application-grade workflow and publish evidence              | Exit criterion not met; no v0.9.0 release exists. #75 closed unmet, and #76/#250/#251 closed as not pursued. |
+| Now      | Retrieval and provider quality                                                                                    | Integrated lexical baseline; repeated author-validation failures observed | Improve evidence selection and dependable bounded generation                          | Use provider-free fixtures, captured/replayable validation inputs, and deterministic measures to demonstrate an author-validation improvement before another consented run |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
@@ -391,12 +391,12 @@ and traceable revision; unresolved disagreements remain visible; deterministic
 factuality, completeness, chronology, ATS, and approval gates prevent a
 regressed artifact from being labelled application-ready.
 
-### Now — Workflow parity and release (v0.9)
+### Previous — Workflow parity and release (v0.9, unreleased)
 
-After v0.8.0-alpha.1 publication, compare the complete workflow with the
+After v0.8.0-alpha.1 publication, the project compared the complete workflow with the
 consented private manual baseline using predeclared factuality, completeness, recall, coverage, effort, cost,
-confidence, and usability measures (#75), then publish evidence, artifacts,
-manifests, checksums, platform results, limitations, and the next decision
+confidence, and usability measures (#75), with release evidence, artifacts,
+manifests, checksums, platform results, limitations, and the next decision gated by
 (#76).
 
 Issues #75 and #76 remain outcome rollups rather than executable sprint units.
@@ -831,12 +831,19 @@ critic call, findings, review, or release action occurred. Authorization is
 exhausted, parity remains indeterminate, and any later provider call requires a
 fresh bounded issue and explicit authorization.
 
-**Exit criterion:** The representative comparison records no factual-invariant
+The project ended this stage on 2026-09-19. Twenty-six bounded observations did
+not produce a human-approved artifact or satisfy the parity gate. Issue #75
+therefore closed unmet, while release rollup #76 and release children #250 and
+issue #251 closed as not pursued. No v0.9.0 release candidate, tag, artifacts, or
+release evidence exists. This is a negative stage decision, not a release or a
+validation claim.
+
+**Unmet exit criterion:** The representative comparison records no factual-invariant
 violations or unsupported model-added facts, preserves required sections and
 chronology, meets the agreed relevance and coverage thresholds, and produces a
 professionally usable artifact after bounded human review.
 
-### Later — Retrieval and provider quality
+### Now — Retrieval and provider quality
 
 Preserve the provider-independent retrieval port and workspace-scoped lexical
 baseline. Compare local embeddings and hybrid retrieval against citation
@@ -844,8 +851,11 @@ accuracy, recall, irrelevant context, and unsupported claims on representative
 cases. Demonstrate index deletion, rebuild, retention, workspace isolation,
 and provenance before enabling vector retrieval by default. Integrate bounded
 cancellation, timeout, retry, rate-limit recovery, progress, and reproducible
-run manifests into the packaged path. Any additional transport or provider
-needs its own architecture, privacy, billing, and release decision.
+run manifests into the packaged path. Before another consented provider run,
+use provider-free fixtures and captured or replayable validation inputs to
+demonstrate a measurable improvement at the author-validation boundary. Any
+additional transport or provider needs its own architecture, privacy, billing,
+and release decision.
 
 **Exit criterion:** Retrieval or provider changes measurably improve coverage or
 evidence accuracy without increasing unsupported claims, and failure/recovery
@@ -921,16 +931,19 @@ or Released.
 
 ## Review cadence and change log
 
-Review this roadmap after each stage exit, material pilot evidence, or at least
+Review this roadmap after each stage decision, material pilot evidence, or at least
 monthly while active development continues. A material change states what
 changed, why, and what moved out to make room. Every stage exit also produces a
-versioned release using [the release procedure](operations/releasing.md).
+versioned release using [the release procedure](operations/releasing.md) only
+when its release criteria are satisfied. A stage ended with unmet criteria
+records that negative decision explicitly and does not create a release.
 
 The entries below record material product and stage decisions. Git history and
 issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Ended v0.9 as indeterminate and unreleased under #407. | Twenty-six bounded observations did not satisfy workflow parity or produce a human-approved artifact. #75 closed unmet; #76/#250/#251 closed as not pursued. The project moves to provider-free and replay-first retrieval/provider-quality work before any new consented run. |
 | 2026-09-19 | Recorded #405 as an indeterminate twenty-sixth matched-backend observation. | Both user-session authentication probes passed on the exact clean main revision, but three Anthropic author attempts failed local factual and substantive-coverage validation. The attempt cap was exhausted without an artifact or critic review; authorization is exhausted and #75/#250 remain blocked. |
 | 2026-09-15 | Made candidate-knowledge application timestamps monotonic under #389. | A deterministic backward-clock case reproduced the captured `StorageValidationError`. Candidate-knowledge services now retain their latest valid generated timestamp across wall-clock regressions, while storage anti-rollback validation and invalid-timestamp rejection remain unchanged. |
 | 2026-09-15 | Recorded #401 as an indeterminate twenty-fifth matched-backend observation. | Both user-session authentication probes passed, but three Anthropic author responses failed local factual and substantive-coverage validation before an artifact or critic review. The run did not exercise #398's API-error branch. Authorization is exhausted, and #75/#250 remain blocked. |

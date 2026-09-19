@@ -1,6 +1,7 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
+**Stage decision:** Ended without a v0.9.0 release<br>
 **Recorded:** 2026-09-19<br>
 **Cases:** Twenty-six bounded observations across two consented, anonymized cases
 
@@ -12,6 +13,13 @@ observations cannot establish factual parity, professional readiness, or
 reduced review effort.
 It does not validate the v0.9 product outcome and does not authorize release
 preparation.
+
+On 2026-09-19, the project ended the v0.9 stage with this indeterminate result.
+The parity exit criterion was not met, so no v0.9.0 release candidate, tag, or
+release evidence was produced. The decision preserves the observations as
+negative product evidence and stops repeated paid runs until provider-free or
+replay-first work demonstrates a credible improvement at the author-validation
+boundary.
 
 The nineteenth observation (#368) reused the matched-backend gate. All three
 Anthropic author executions failed with generic `invalid-response` codes.
@@ -994,10 +1002,11 @@ its authorization is exhausted.
 No artifact, critic call, findings, readiness decision, review, adjudication,
 approval, export, submission, or release occurred in #368, #374, #378, #382,
 the #384 and #397 observations, or #401 and #405.
-Parity remains indeterminate, and #75 and #250 remain blocked. Any later live
-attempt needs separate bounded authorization.
+Parity remains indeterminate. Issue #75 closed without satisfying its exit
+criteria; #76, #250, and #251 closed as not pursued because release
+prerequisites were not met. Any later live attempt needs a new bounded issue
+and separate explicit authorization.
 
-Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
 results. Authorization for #374, #378, #382, #384, #397, #401, and #405 is exhausted
 and does not extend to another live attempt. None of those runs can resume; a
