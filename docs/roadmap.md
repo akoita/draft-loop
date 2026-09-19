@@ -918,8 +918,9 @@ Roadmap rollup #426 owns the stage. Its first bounded prerequisite, #427,
 requires a provider-independent multi-case gate before any new consented run:
 the cohort size and fixed decision rules must be declared before the first
 draft, one case cannot pass the stage, and sanitized output remains limited to
-bounded statuses and reason codes. This prerequisite does not authorize an
-authentication probe or provider call.
+bounded statuses and reason codes. Issue #429 additionally requires completed
+misleading-evidence and prompt-injection observations before a cohort can pass.
+These prerequisites do not authorize an authentication probe or provider call.
 
 ### Later — Production-ready beta
 
@@ -990,6 +991,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Required completed adversarial observations under #429. | A cohort remains indeterminate when any misleading-evidence or prompt-injection observation is `not-tested`; bounded `observed` and `not-observed` states count as completed evidence without exposing private details. |
 | 2026-09-19 | Started the broader real-application pilot under #426. | Milestone 7 begins with provider-independent cohort gate #427: more than one case, predeclared fixed aggregate rules, and bounded sanitized results are required before any new consented provider observation can count. No provider call is authorized. |
 | 2026-09-19 | Completed retrieval and provider quality under #409. | Sanitized replay acceptance improved from 1/3 to 2/3; lexical citation accuracy improved from 2/3 to 1 while irrelevant context fell from 1/3 to 0; and packaged recovery evidence passed on Linux, macOS, and Windows. No live provider ran, no release was created, and any pilot still requires consent and explicit authorization. |
 | 2026-09-19 | Improved lexical precision with a recall-preserving multi-term preference under #422. | On the unchanged three-query corpus, citation accuracy rises from 2/3 to 1 and irrelevant context falls from 1/3 to 0 without changing coverage, unsupported claims, or reciprocal rank. Hybrid now regresses against lexical and remains disabled. |
