@@ -23,6 +23,7 @@ import {
 
 import { z } from "zod";
 
+import { completeAuthorClaimCoverage } from "./author-claim-coverage-completion.js";
 import { completeAuthorEvidenceCitations } from "./author-evidence-completion.js";
 import { completeCvProposalIssues } from "./complete-cv.js";
 
@@ -251,10 +252,11 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
   }
 
   const retrievedEvidence = options.retrievedEvidence ?? [];
-  const proposal = completeAuthorEvidenceCitations(
+  const proposalWithCitations = completeAuthorEvidenceCitations(
     authorArtifactProposalSchema.parse(options.proposal),
     retrievedEvidence,
   );
+  const proposal = completeAuthorClaimCoverage(proposalWithCitations, retrievedEvidence);
   const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);
   const groundingIssues = completeCvProposalIssues(
     proposal,

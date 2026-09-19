@@ -869,6 +869,11 @@ cases produce one acceptance, two rejections, one factual-invariant diagnostic,
 and one substantive-coverage diagnostic. This is a deterministic reference,
 not evidence of an improvement or of live-provider quality.
 
+Issue #416 improves that same corpus to two acceptances and one rejection by
+adding missing full-span claim metadata only when an already-cited retrieved
+chunk contains the entire block text. The factual-invariant rejection remains;
+no provider prose, evidence, or validation rule is rewritten or weakened.
+
 **Exit criterion:** Retrieval or provider changes measurably improve coverage or
 evidence accuracy without increasing unsupported claims, and failure/recovery
 behavior is demonstrated in the packaged app.
@@ -955,6 +960,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Completed exactly supported block coverage under #416. | On the unchanged three-case sanitized corpus, acceptance improves from one to two while the unsupported factual-inflation case remains rejected. The former substantive-coverage diagnostic is removed only by exact, already-cited evidence. |
 | 2026-09-19 | Recorded a three-case sanitized rejected-author baseline under #414. | The provider-free reference produces one acceptance and two rejections, split across one factual-invariant and one substantive-coverage diagnostic. It establishes a comparison point without claiming improvement or live-provider quality. |
 | 2026-09-19 | Added bounded rejected-author replay summaries under #412. | Up to one hundred private replay inputs can produce deterministic acceptance and structural-diagnostic counts without returning case content or identity, creating a provider-free measurement primitive for later comparisons. |
 | 2026-09-19 | Started retrieval and provider quality with provider-free rejected-author replay under #410. | Private capture inputs can be replayed through the live local validator while results expose only fixed structural diagnostics. This creates a deterministic baseline for improvement before another consented provider run. |
