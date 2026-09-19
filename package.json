@@ -21,7 +21,7 @@
     "architecture:hotspots": "node scripts/architecture-hotspots.mjs",
     "typecheck": "tsc -b",
     "test": "vitest run && pnpm test:release",
-    "test:release": "node --test scripts/architecture-hotspots.test.mjs scripts/release.test.mjs scripts/release-local-preflight.test.mjs scripts/security.test.mjs scripts/desktop-live-e2e.test.mjs",
+    "test:release": "node --test scripts/architecture-hotspots.test.mjs scripts/desktop-acceptance.test.mjs scripts/desktop-live-e2e.test.mjs scripts/release.test.mjs scripts/release-local-preflight.test.mjs scripts/security.test.mjs",
     "release:check": "node scripts/release.mjs check",
     "release:preflight": "node scripts/release-local-preflight.mjs",
     "release:manifest": "node scripts/release.mjs manifest",
