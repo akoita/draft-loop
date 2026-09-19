@@ -1,8 +1,8 @@
 # v0.9 consented workflow-parity result
 
 **Status:** Indeterminate<br>
-**Recorded:** 2026-09-15<br>
-**Cases:** Twenty-five bounded observations across two consented, anonymized cases
+**Recorded:** 2026-09-19<br>
+**Cases:** Twenty-six bounded observations across two consented, anonymized cases
 
 ## Result
 
@@ -63,6 +63,12 @@ one and two were retryable; attempt three exhausted the author cap. No draft or
 independent review was persisted, and no statusless API error occurred. The
 classification branch from #398 was therefore not exercised. #401 adds no
 product-quality evidence and leaves the parity outcome indeterminate.
+
+The twenty-sixth observation (#405) also used the matched-backend gate. Both
+user-session authentication probes passed, but all three Anthropic author
+attempts failed local factual and substantive-coverage validation before an
+artifact or review. #405 adds no product-quality evidence and leaves the parity
+outcome indeterminate.
 
 The initial attempt completed one Anthropic author step and one independent
 OpenAI critic step. Its revision call timed out. Under the candidate-approved
@@ -778,6 +784,35 @@ authorization is exhausted; a later live run requires separate explicit
 authorization. Parity remains indeterminate; #75 stays open, and #250 remains
 blocked.
 
+## Bounded matched-backend observation (#405)
+
+On 2026-09-19, authorization covered both 20-second user-session
+authentication probes and the bounded workflow on exact clean main revision
+`9e0f62d1183b0b060cea350c5bcc36bef7be85b9`. Both the Anthropic Claude and
+OpenAI Codex user-session probes passed. The workflow reused the same private
+matched-role case and baseline-withheld v1 gate, with Anthropic
+`claude-sonnet-4-5` as author and OpenAI `gpt-5.6-luna` as critic. It retained
+`maxRounds=3`, `requestTimeoutMs=1,200,000`, and `maxDurationMs=1,200,000`.
+The capture parent was outside the repository with mode `0700`; no category
+file was captured.
+
+The fresh run used all three Anthropic author attempts. Each returned generic
+`invalid-response` and was classified with `factual-invariant-rejection` as
+both failure stage and reason. Attempt one was retryable with four
+`factual_invariant_violation` and four `substantive_text_uncovered`
+diagnostics. Attempt two was retryable with three
+`factual_invariant_violation` and five `substantive_text_uncovered`
+diagnostics. Attempt three was non-retryable because the three-attempt cap was
+exhausted, with six `factual_invariant_violation` and two
+`substantive_text_uncovered` diagnostics. All executions reported zero tokens
+and no provider cost; persisted `activeDurationMs` was 622,328.
+
+No artifact, critic call, findings or review, readiness decision, adjudication,
+approval, export, submission, release preparation, or release occurred. The
+result remains indeterminate; #75 and #250 remain blocked. Authorization is
+exhausted, and any later provider call requires a fresh bounded issue and
+explicit authorization.
+
 ## Predeclared comparison gate
 
 | Dimension                     | Status        |
@@ -829,7 +864,7 @@ unresolved findings as accepted facts.
   backend-production narrative. A separate matched-role case and manual
   baseline were used for the matched-backend observations. Their issue numbers
   are #350, #358, #360, #362, #364, #368, #374, #378, #382, #384, #397, and
-  #401. The eleven later runs
+  #401, and #405. The twelve later runs
   reused private inputs with the baseline withheld from generation; none
   produced an artifact to compare. The twentieth observation (#374) reused
   that case after #370 and #372 merged; its authorization is exhausted. The
@@ -848,6 +883,9 @@ unresolved findings as accepted facts.
   factual and substantive-coverage validation; it produced no artifact or
   review, did not exercise #398's API-error branch, and its authorization is
   exhausted.
+  The twenty-sixth observation (#405) exhausted three author attempts on local
+  factual and substantive-coverage validation; it produced no artifact or
+  review, and its authorization is exhausted.
   The nineteenth run exercised the #366 thinking bound, but output-budget
   failures persisted, so it does not show that failure mode resolved.
 - Misleading-evidence and prompt-injection behavior were not tested in these
@@ -950,22 +988,25 @@ its authorization is exhausted.
 The twenty-fifth observation (#401) exhausted its three-author-attempt cap; its
 authorization is exhausted.
 
+The twenty-sixth observation (#405) exhausted its three-author-attempt cap;
+its authorization is exhausted.
+
 No artifact, critic call, findings, readiness decision, review, adjudication,
 approval, export, submission, or release occurred in #368, #374, #378, #382,
-the #384 and #397 observations, or #401.
+the #384 and #397 observations, or #401 and #405.
 Parity remains indeterminate, and #75 and #250 remain blocked. Any later live
 attempt needs separate bounded authorization.
 
 Issue #75 stays open, and release preparation under #250 remains blocked.
 No final candidate approval, export, or submission is authorized by these
-results. Authorization for #374, #378, #382, #384, #397, and #401 is exhausted
+results. Authorization for #374, #378, #382, #384, #397, #401, and #405 is exhausted
 and does not extend to another live attempt. None of those runs can resume; a
 new run requires separate explicit bounded authorization.
 
 The first case remains limited by role mismatch. The matched case provides
 product evidence from #350 about required content and claim validation. The
 provider failures in #358, #360, #362, #364, #368, #374, #378, #382, #384,
-and #397, plus the local-validation failures in #401, added no product-quality
+and #397, plus the local-validation failures in #401 and #405, added no product-quality
 evidence and do not change the indeterminate outcome. The #366
 thinking bound was exercised in #368, but output-budget failures remained;
 this does not show that failure mode fully resolved. The #374 diagnostics do
@@ -978,5 +1019,6 @@ do not establish its underlying cause or add product-quality evidence. The
 capture under #397 establishes only the `api_error` terminal category, not the
 underlying API failure or exact result subtype. The #401 observation did not
 encounter a statusless API error and therefore does not validate #398 in live
-use.
+use. The #405 observation likewise exhausted its author cap on local validation
+before an artifact or review.
 Provider-reported cost was unavailable.
