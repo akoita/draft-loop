@@ -922,6 +922,13 @@ bounded statuses and reason codes. Issue #429 additionally requires completed
 misleading-evidence and prompt-injection observations before a cohort can pass.
 These prerequisites do not authorize an authentication probe or provider call.
 
+The first declared cohort case under #430 ended indeterminate before producing
+an accepted draft. One author attempt returned a retryable structured API
+error; two further attempts failed local factual and coverage validation. No
+critic, approval, or export occurred. Because the fixed cohort rule requires
+every case gate to pass, the declared cohort can no longer satisfy its exit
+criterion. See the [sanitized pilot record](evaluation/broader-real-application-pilot.md).
+
 ### Later — Production-ready beta
 
 Complete signed installers, safe migrations and updates, backup/restore, crash
@@ -991,6 +998,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Recorded broader-pilot case A under #430 as indeterminate. | Both authentication probes passed, but the three-attempt author cap ended with no accepted draft: one retryable structured API error, then two local factual/coverage rejections. No critic, approval, or export occurred, so the fixed all-cases-pass cohort can no longer pass. |
 | 2026-09-19 | Required completed adversarial observations under #429. | A cohort remains indeterminate when any misleading-evidence or prompt-injection observation is `not-tested`; bounded `observed` and `not-observed` states count as completed evidence without exposing private details. |
 | 2026-09-19 | Started the broader real-application pilot under #426. | Milestone 7 begins with provider-independent cohort gate #427: more than one case, predeclared fixed aggregate rules, and bounded sanitized results are required before any new consented provider observation can count. No provider call is authorized. |
 | 2026-09-19 | Completed retrieval and provider quality under #409. | Sanitized replay acceptance improved from 1/3 to 2/3; lexical citation accuracy improved from 2/3 to 1 while irrelevant context fell from 1/3 to 0; and packaged recovery evidence passed on Linux, macOS, and Windows. No live provider ran, no release was created, and any pilot still requires consent and explicit authorization. |
