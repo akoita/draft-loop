@@ -7,6 +7,7 @@ import {
   type PilotOutcomeRecord,
   type ReadinessEvaluationContext,
   runConsentedPilotHarness,
+  validatePilotCohortDeclaration,
   validatePilotConsent,
   validatePilotOutcome,
 } from "./index.js";
@@ -147,6 +148,12 @@ const comparisonMeasurements = {
   relevantAchievementRecall: 0.9876,
 };
 
+const cohortDeclaration = {
+  schemaVersion: 1 as const,
+  declaredAt: "2026-08-13T09:00:00.000Z",
+  minimumCaseCount: 2,
+};
+
 const pilotCase: ConsentedPilotCase = {
   id: "pilot-case-1",
   context,
@@ -193,6 +200,34 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(() => validatePilotOutcome({ ...outcome, userConfidence: 6 })).toThrow(/confidence/);
   });
 
+  it("validates the strict v1 cohort declaration and every first-draft timestamp", () => {
+    expect(() =>
+      validatePilotCohortDeclaration(cohortDeclaration, [pilotCase.firstDraft.createdAt]),
+    ).not.toThrow();
+    expect(() => validatePilotCohortDeclaration(undefined)).toThrow(/cohort declaration/);
+    expect(() =>
+      validatePilotCohortDeclaration({ ...cohortDeclaration, schemaVersion: 2 }),
+    ).toThrow(/unsupported/);
+    expect(() =>
+      validatePilotCohortDeclaration({ ...cohortDeclaration, declaredAt: "2026-02-30T09:00:00Z" }),
+    ).toThrow(/timestamp/);
+    expect(() =>
+      validatePilotCohortDeclaration(
+        { ...cohortDeclaration, declaredAt: "2026-08-13T11:00:00.000Z" },
+        [pilotCase.firstDraft.createdAt],
+      ),
+    ).toThrow(/after/);
+    expect(() =>
+      validatePilotCohortDeclaration({ ...cohortDeclaration, minimumCaseCount: 1 }),
+    ).toThrow(/greater than 1/);
+    expect(() =>
+      validatePilotCohortDeclaration({ ...cohortDeclaration, minimumCaseCount: 1_001 }),
+    ).toThrow(/no greater/);
+    expect(() => validatePilotCohortDeclaration({ ...cohortDeclaration, extra: true })).toThrow(
+      /unsupported fields/,
+    );
+  });
+
   it("runs comparative tri-variant evaluation and generates a zero-leakage pilot report", () => {
     const report = runConsentedPilotHarness([pilotCase]);
 
@@ -234,9 +269,16 @@ describe("Consented Real-Application Pilot Harness", () => {
       comparisonGate,
       comparisonMeasurements,
     };
-    const report = runConsentedPilotHarness([consentedCase], { requireOutcome: true });
+    const report = runConsentedPilotHarness([consentedCase], {
+      requireOutcome: true,
+      cohortDeclaration,
+    });
 
-    expect(report.outcomeValidation).toBe("pass");
+    expect(report.outcomeValidation).toBe("fail");
+    expect(report.cohortValidation).toEqual({
+      status: "fail",
+      reasonCodes: ["insufficient-cases"],
+    });
     expect(report.comparisonGate.overall).toBe("pass");
     expect(report.comparisonGate.dimensions).toEqual({
       factualSafety: "pass",
@@ -254,7 +296,9 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(report.productMeasures.averageUserConfidence).toBe(4);
     expect(report.productMeasures.promptInjection["not-tested"]).toBe(1);
     expect(report.productMeasures.limitations["single-consented-case"]).toBe(1);
-    expect(report.markdownReport).toContain("**Outcome validation:** PASS");
+    expect(report.markdownReport).toContain("**Outcome validation:** FAIL");
+    expect(report.markdownReport).toContain("**Status:** FAIL");
+    expect(report.markdownReport).toContain("insufficient-cases");
     expect(report.markdownReport).toContain("## Predeclared comparison gate");
     expect(report.markdownReport).toContain("**Overall:** PASS");
     expect(report.markdownReport).toContain("single-consented-case (1)");
@@ -276,9 +320,124 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(report.markdownReport).not.toContain("factualInvariantViolationCount");
   });
 
+  it("passes a deterministic multi-case cohort and exposes only bounded cohort output", () => {
+    const firstCase: ConsentedPilotCase = {
+      ...pilotCase,
+      consent: { ...consent, reportingScope: "private-only" },
+      outcome,
+      comparisonGate,
+      comparisonMeasurements,
+    };
+    const secondCase: ConsentedPilotCase = {
+      ...firstCase,
+      id: "pilot-case-2-private-id",
+      consent: { ...firstCase.consent, candidateId: "candidate-sanitized-2" },
+      firstDraft: artifact("first-2", false),
+      revisedDraft: artifact("revised-2", true),
+      manualBaseline: artifact("manual-2", true),
+    };
+    const report = runConsentedPilotHarness([firstCase, secondCase], {
+      requireOutcome: true,
+      cohortDeclaration,
+    });
+
+    expect(report.outcomeValidation).toBe("pass");
+    expect(report.cohortValidation).toEqual({ status: "pass", reasonCodes: [] });
+    expect(report.markdownReport).toContain("**Status:** PASS");
+    expect(report.markdownReport).toContain("**Reason codes:** none");
+    expect(report.markdownReport).not.toContain(cohortDeclaration.declaredAt);
+    expect(report.markdownReport).not.toContain("pilot-case-2-private-id");
+    expect(report.markdownReport).not.toContain("candidate-sanitized-2");
+  });
+
+  it("keeps every fixed cohort rule fail-closed", () => {
+    const baseCase: ConsentedPilotCase = {
+      ...pilotCase,
+      consent: { ...consent, reportingScope: "private-only" },
+      outcome,
+      comparisonGate,
+      comparisonMeasurements,
+    };
+    const secondCase: ConsentedPilotCase = {
+      ...baseCase,
+      id: "pilot-case-2",
+      consent: { ...baseCase.consent, candidateId: "candidate-sanitized-2" },
+    };
+    const run = (cases: readonly ConsentedPilotCase[]) =>
+      runConsentedPilotHarness(cases, { requireOutcome: true, cohortDeclaration });
+
+    expect(
+      run([
+        { ...baseCase, firstDraft: artifact("same-first"), revisedDraft: artifact("same-revised") },
+        {
+          ...secondCase,
+          firstDraft: artifact("same-first-2"),
+          revisedDraft: artifact("same-revised-2"),
+        },
+      ]).cohortValidation.reasonCodes,
+    ).toContain("quality-not-improved");
+
+    expect(
+      run([{ ...baseCase, outcome: { ...outcome, approvalCompleted: false } }, secondCase])
+        .cohortValidation.reasonCodes,
+    ).toContain("outcome-not-complete");
+
+    expect(
+      run([
+        {
+          ...baseCase,
+          userEffort: {
+            ...baseCase.userEffort,
+            "revised-draft": { reviewMinutes: 25, editCount: 2, approvalCount: 1 },
+          },
+        },
+        {
+          ...secondCase,
+          userEffort: {
+            ...secondCase.userEffort,
+            "revised-draft": { reviewMinutes: 25, editCount: 2, approvalCount: 1 },
+          },
+        },
+      ]).cohortValidation.reasonCodes,
+    ).toContain("effort-reduction-not-demonstrated");
+
+    expect(
+      run([
+        {
+          ...baseCase,
+          comparisonMeasurements: { ...comparisonMeasurements, relevantAchievementRecall: 0 },
+        },
+        secondCase,
+      ]).cohortValidation.reasonCodes,
+    ).toContain("comparison-gate-not-passing");
+
+    const regressed = artifact("regressed", true);
+    const unsupportedClaim = regressed.claims[0];
+    if (unsupportedClaim === undefined) throw new Error("Expected a fixture claim.");
+    expect(
+      run([
+        {
+          ...baseCase,
+          firstDraft: artifact("strong-first", true),
+          revisedDraft: {
+            ...regressed,
+            claims: [
+              { ...unsupportedClaim, status: "unverified", evidence: [] },
+              ...regressed.claims.slice(1),
+            ],
+          },
+        },
+        secondCase,
+      ]).cohortValidation.reasonCodes,
+    ).toContain("factuality-regressed");
+  });
+
   it("does not accept an outcome case without a private reporting scope", () => {
     expect(() =>
-      runConsentedPilotHarness([{ ...pilotCase, outcome }], { requireOutcome: true }),
+      runConsentedPilotHarness([{ ...pilotCase, outcome }], {
+        requireOutcome: true,
+        cohortDeclaration,
+      }),
     ).toThrow(/reporting scope/);
   });
 
@@ -292,7 +451,7 @@ describe("Consented Real-Application Pilot Harness", () => {
             outcome,
           },
         ],
-        { requireOutcome: true },
+        { requireOutcome: true, cohortDeclaration },
       ),
     ).toThrow(/comparison gate/);
 
@@ -306,7 +465,7 @@ describe("Consented Real-Application Pilot Harness", () => {
             comparisonGate,
           },
         ],
-        { requireOutcome: true },
+        { requireOutcome: true, cohortDeclaration },
       ),
     ).toThrow(/comparison measurements/);
   });
@@ -322,7 +481,7 @@ describe("Consented Real-Application Pilot Harness", () => {
             firstDraft: { ...pilotCase.firstDraft, sections: null as never },
           },
         ],
-        { requireOutcome: true },
+        { requireOutcome: true, cohortDeclaration },
       ),
     ).toThrow(/comparison gate/);
   });

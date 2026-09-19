@@ -10,6 +10,7 @@ import {
   enclosingRepository,
   generateSanitizedPilotReport,
   PilotReportUserError,
+  parsePilotCaseFile,
   parsePilotCases,
 } from "./pilot-report.js";
 
@@ -116,6 +117,12 @@ const validCase: ConsentedPilotCase = {
   },
 };
 
+const cohortDeclaration = {
+  schemaVersion: 1 as const,
+  declaredAt: "2026-08-17T09:00:00.000Z",
+  minimumCaseCount: 2,
+};
+
 const silentIo = { write: () => {} };
 
 describe("consented pilot report runner", () => {
@@ -195,6 +202,13 @@ describe("consented pilot report runner", () => {
     expect(parsePilotCases('{"cases":[{"id":"a","consent":{}}]}')).toHaveLength(1);
   });
 
+  it("preserves a cohort declaration from the private case-file envelope", () => {
+    const file = parsePilotCaseFile(JSON.stringify({ cases: [validCase], cohortDeclaration }));
+
+    expect(file.cases).toHaveLength(1);
+    expect(file.cohortDeclaration).toEqual(cohortDeclaration);
+  });
+
   it("rejects an empty case list", () => {
     expect(() => parsePilotCases("[]")).toThrow(/no cases/i);
   });
@@ -243,7 +257,7 @@ describe("consented pilot report runner", () => {
       const caseDirectory = join(root, "private");
       await mkdir(caseDirectory, { recursive: true });
       const casePath = join(caseDirectory, "case.json");
-      await writeFile(casePath, JSON.stringify([validCase]), "utf8");
+      await writeFile(casePath, JSON.stringify({ cases: [validCase], cohortDeclaration }), "utf8");
 
       const outputPath = await generateSanitizedPilotReport({ casePath }, silentIo);
 
@@ -261,7 +275,7 @@ describe("consented pilot report runner", () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-pilot-explicit-output-"));
     try {
       const casePath = join(root, "case.json");
-      await writeFile(casePath, JSON.stringify([validCase]), "utf8");
+      await writeFile(casePath, JSON.stringify({ cases: [validCase], cohortDeclaration }), "utf8");
       const repository = join(root, "repo");
       await mkdir(join(repository, ".git"), { recursive: true });
       const requested = join(repository, "chosen-report.md");
