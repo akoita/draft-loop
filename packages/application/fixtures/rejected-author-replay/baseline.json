@@ -1,0 +1,170 @@
+[
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-19T15:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Built reliable TypeScript tools.",
+                "claims": [
+                  {
+                    "text": "Built reliable TypeScript tools.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["accepted-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-accepted-case",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "accepted-source",
+            "path": "fixture://sanitized/accepted-profile",
+            "checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "accepted-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "accepted-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "text": "Built reliable TypeScript tools.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-19T15:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-19T15:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Built 999 reliable TypeScript tools.",
+                "claims": [
+                  {
+                    "text": "Built 999 reliable TypeScript tools.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["inflated-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-inflated-case",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "inflated-source",
+            "path": "fixture://sanitized/inflated-profile",
+            "checksum": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "inflated-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "inflated-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+          "text": "Built reliable TypeScript tools.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-19T15:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-19T15:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Built reliable TypeScript tools across regulated industries.",
+                "claims": [
+                  {
+                    "text": "Built reliable TypeScript tools.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["coverage-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-coverage-case",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "coverage-source",
+            "path": "fixture://sanitized/coverage-profile",
+            "checksum": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "coverage-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "coverage-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+          "text": "Built reliable TypeScript tools across regulated industries.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-19T15:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  }
+]
