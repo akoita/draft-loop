@@ -1,10 +1,11 @@
 # Consented outcome pilot protocol
 
-This protocol supports the real-application comparison in roadmap issue #75;
-the enforceable comparison-gate contract is implemented in issue #248. It is
+This protocol supports the broader real-application pilot in roadmap rollup
+426. The per-case comparison gate was introduced by #248, and #427 adds the
+cohort gate required before a broader outcome can pass. The protocol is
 deliberately split into a private record and a sanitized report: the private
-record may identify the participant and retain the local run, while the
-repository report contains only aggregate measures and bounded status values.
+record may identify participants and retain local runs, while the repository
+report contains only aggregate measures and bounded status values.
 
 ## Before the run
 
@@ -19,9 +20,27 @@ repository report contains only aggregate measures and bounded status values.
    retention choice, budget, and explicit acknowledgement before a live run.
 4. Use a representative application and record whether a manual baseline is
    available. Do not replace a missing baseline with a synthetic fixture.
-5. After consent and before creating the first draft, declare the private v1
-   comparison gate described below. Keep its declaration timestamp no later
-   than the first-draft timestamp.
+5. Before the first case creates a first draft, declare the private v1 cohort
+   gate described below. After each participant consents and before that case
+   creates its first draft, declare its private v1 comparison gate.
+
+## Private cohort gate
+
+Every broader real-outcome case file passed to the harness with
+`requireOutcome: true` must use an envelope containing `cases` and one
+`cohortDeclaration`. The v1 declaration records `schemaVersion: 1`,
+`declaredAt`, and a bounded `minimumCaseCount` greater than one. The declaration
+must precede every first-draft timestamp. Missing, late, unsupported, malformed,
+or extra declaration fields fail before draft comparison.
+
+The v1 decision is fixed. A cohort passes only when it meets its predeclared
+minimum size, every per-case comparison gate passes, every counted outcome
+records approval and export completion, factuality does not regress, aggregate
+revised-draft quality improves over first drafts, and measured review effort is
+lower than the candidate-authored manual baselines. A single case cannot pass
+the broader pilot. The sanitized report exposes only `pass`, `fail`, or
+`indeterminate` and fixed reason codes; it does not expose the declaration,
+case identifiers, timestamps, thresholds, or private inputs.
 
 ## Private comparison gate
 
@@ -57,7 +76,7 @@ gate and comparison measurements remain in the private case file:
 - every limitation that applies, including a single-case sample or an
   unavailable cost, confidence, or adversarial observation.
 
-Assemble the private case file outside the repository, then run:
+Assemble the private case-file envelope outside the repository, then run:
 
 ```text
 pnpm --filter @draft-loop/cli start pilot-report <private-case-file> [output.md]
@@ -99,7 +118,7 @@ credentials, employer names, or free-form private notes.
 
 Do not call the stage validated when the report is `INDETERMINATE`, when any
 comparison-gate dimension fails or is indeterminate, when approval or export
-is incomplete, or when the sample is only synthetic. A passing report supports
-one consented outcome observation; it does not prove generalization. Record
-the remaining limitations and the next decision in `docs/roadmap.md` and the
-stage evidence before preparing the release.
+is incomplete, or when the sample is only synthetic. A passing cohort report
+supports only the bounded sample it contains; it does not prove generalization.
+Record the remaining limitations and the next decision in `docs/roadmap.md`
+and the stage evidence before preparing any release.

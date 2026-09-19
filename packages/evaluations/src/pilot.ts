@@ -37,6 +37,37 @@ export type PilotLimitationCode = (typeof pilotLimitationCodes)[number];
 
 export type PilotReportingScope = "private-only" | "anonymized-public";
 
+export const pilotCohortDeclarationSchemaVersion = 1 as const;
+/**
+ * A cohort must contain more than one case.  The upper bound keeps a private
+ * declaration from becoming an unbounded batch request while retaining the
+ * same conservative 1,000-observation limit used by the evaluation fixtures.
+ */
+export const pilotCohortMaximumCaseCount = 1_000 as const;
+
+export interface PilotCohortDeclaration {
+  readonly schemaVersion: typeof pilotCohortDeclarationSchemaVersion;
+  readonly declaredAt: string;
+  readonly minimumCaseCount: number;
+}
+
+export const pilotCohortReasonCodes = [
+  "insufficient-cases",
+  "comparison-gate-not-passing",
+  "outcome-not-complete",
+  "factuality-regressed",
+  "quality-not-improved",
+  "effort-reduction-not-demonstrated",
+] as const;
+export type PilotCohortReasonCode = (typeof pilotCohortReasonCodes)[number];
+
+export interface PilotCohortSummary {
+  /** Only the bounded decision status is safe to expose from a report. */
+  readonly status: PilotHypothesisResult;
+  /** Fixed, content-free reasons for a non-passing cohort decision. */
+  readonly reasonCodes: readonly PilotCohortReasonCode[];
+}
+
 export interface PilotConsentRecord {
   readonly candidateId: string;
   readonly consentedAt: string;
@@ -111,6 +142,8 @@ export interface PilotSummaryReport {
     readonly recommendations: readonly string[];
   };
   readonly outcomeValidation: PilotHypothesisResult;
+  /** Bounded cohort status and reason codes; declaration data stays private. */
+  readonly cohortValidation: PilotCohortSummary;
   /** Bounded statuses only; gate thresholds and per-case measurements stay private. */
   readonly comparisonGate: PilotComparisonGateSummary;
   readonly productMeasures: {
@@ -176,6 +209,107 @@ export function validatePilotOutcome(outcome: PilotOutcomeRecord): void {
     !pilotObservationStates.includes(outcome.promptInjection)
   ) {
     throw new Error("Pilot adversarial observations must use a supported observation state.");
+  }
+}
+
+interface PilotCohortRecord {
+  readonly [key: string]: unknown;
+}
+
+function isPilotCohortRecord(value: unknown): value is PilotCohortRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function assertPilotCohortKeys(value: PilotCohortRecord): void {
+  const supported = new Set(["schemaVersion", "declaredAt", "minimumCaseCount"]);
+  if (Object.keys(value).some((key) => !supported.has(key))) {
+    throw new Error("Pilot cohort declaration contains unsupported fields.");
+  }
+}
+
+function parsePilotCohortTimestamp(value: unknown): number {
+  if (typeof value !== "string") {
+    throw new TypeError("Pilot cohort declaration declaredAt must be a strict ISO timestamp.");
+  }
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/u.exec(value);
+  if (!match) {
+    throw new TypeError("Pilot cohort declaration declaredAt must be a strict ISO timestamp.");
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hours = Number(match[4]);
+  const minutes = Number(match[5]);
+  const seconds = Number(match[6]);
+  const timezone = match[8];
+  if (timezone === undefined) {
+    throw new TypeError("Pilot cohort declaration declaredAt must be a strict ISO timestamp.");
+  }
+  const timezoneHours = timezone === "Z" ? 0 : Number(timezone.slice(1, 3));
+  const timezoneMinutes = timezone === "Z" ? 0 : Number(timezone.slice(4, 6));
+  const maximumDay =
+    month === 2
+      ? 28 + (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0) ? 1 : 0)
+      : [4, 6, 9, 11].includes(month)
+        ? 30
+        : 31;
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > maximumDay ||
+    hours > 23 ||
+    minutes > 59 ||
+    seconds > 59 ||
+    timezoneHours > 23 ||
+    timezoneMinutes > 59
+  ) {
+    throw new TypeError("Pilot cohort declaration declaredAt must be a strict ISO timestamp.");
+  }
+
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) {
+    throw new TypeError("Pilot cohort declaration declaredAt must be a strict ISO timestamp.");
+  }
+  return parsed;
+}
+
+/**
+ * Validates the provider-independent v1 declaration for a real-outcome
+ * cohort.  The optional first-draft timestamps are supplied by the harness so
+ * malformed or late declarations fail before any draft is evaluated.
+ */
+export function validatePilotCohortDeclaration(
+  declaration: unknown,
+  firstDraftCreatedAt?: readonly unknown[],
+): asserts declaration is PilotCohortDeclaration {
+  if (!isPilotCohortRecord(declaration)) {
+    throw new Error("A pilot cohort declaration is required for a real outcome run.");
+  }
+  assertPilotCohortKeys(declaration);
+  if (declaration.schemaVersion !== pilotCohortDeclarationSchemaVersion) {
+    throw new Error("Pilot cohort declaration schema version is unsupported.");
+  }
+  const declaredAt = parsePilotCohortTimestamp(declaration.declaredAt);
+  if (
+    typeof declaration.minimumCaseCount !== "number" ||
+    !Number.isSafeInteger(declaration.minimumCaseCount) ||
+    declaration.minimumCaseCount <= 1 ||
+    declaration.minimumCaseCount > pilotCohortMaximumCaseCount
+  ) {
+    throw new RangeError(
+      `Pilot cohort minimumCaseCount must be an integer greater than 1 and no greater than ${pilotCohortMaximumCaseCount}.`,
+    );
+  }
+
+  if (firstDraftCreatedAt !== undefined) {
+    for (const firstDraft of firstDraftCreatedAt) {
+      if (declaredAt > parsePilotCohortTimestamp(firstDraft)) {
+        throw new Error("Pilot cohort declaration falls after a first-draft timestamp.");
+      }
+    }
   }
 }
 
@@ -411,6 +545,127 @@ function evaluateComparisonGateSummary(
   return aggregatePilotComparisonGateStatuses(evaluations);
 }
 
+function emptyPilotCohortSummary(): PilotCohortSummary {
+  return { status: "indeterminate", reasonCodes: [] };
+}
+
+function resultForVariant(
+  comparison: ReturnType<typeof compareEvaluationCase>,
+  variant: EvaluationVariant,
+): ReturnType<typeof compareEvaluationCase>["results"][number] {
+  const result = comparison.results.find((candidate) => candidate.variant === variant);
+  if (result === undefined) {
+    throw new Error("Pilot cohort comparison results are incomplete.");
+  }
+  return result;
+}
+
+function averageScoredQuality(
+  comparisons: readonly ReturnType<typeof compareEvaluationCase>[],
+  variant: EvaluationVariant,
+): number {
+  if (comparisons.length === 0) return 0;
+  let total = 0;
+  for (const comparison of comparisons) {
+    const result = resultForVariant(comparison, variant);
+    for (const dimension of readinessDimensions) {
+      total += result.evaluation.scoreVector[dimension];
+    }
+  }
+  return total / (comparisons.length * readinessDimensions.length);
+}
+
+function cohortEffortStatus(cases: readonly ConsentedPilotCase[]): PilotHypothesisResult {
+  const measurements = cases.map((pilotCase) => ({
+    revised: pilotCase.userEffort?.["revised-draft"]?.reviewMinutes,
+    manual: pilotCase.userEffort?.["manual-baseline"]?.reviewMinutes,
+  }));
+  if (
+    measurements.some(
+      ({ revised, manual }) =>
+        revised === undefined ||
+        manual === undefined ||
+        !Number.isFinite(revised) ||
+        revised < 0 ||
+        !Number.isFinite(manual) ||
+        manual < 0,
+    )
+  ) {
+    return "indeterminate";
+  }
+  const revisedMinutes = measurements.reduce(
+    (total, measurement) => total + (measurement.revised ?? 0),
+    0,
+  );
+  const manualMinutes = measurements.reduce(
+    (total, measurement) => total + (measurement.manual ?? 0),
+    0,
+  );
+  return revisedMinutes < manualMinutes ? "pass" : "fail";
+}
+
+function evaluatePilotCohort(
+  declaration: PilotCohortDeclaration,
+  cases: readonly ConsentedPilotCase[],
+  comparisons: readonly ReturnType<typeof compareEvaluationCase>[],
+  comparisonGate: PilotComparisonGateSummary,
+): PilotCohortSummary {
+  const reasons: PilotCohortReasonCode[] = [];
+  const failedRules: PilotCohortReasonCode[] = [];
+  const indeterminateRules: PilotCohortReasonCode[] = [];
+
+  if (cases.length < declaration.minimumCaseCount || cases.length < 2) {
+    reasons.push("insufficient-cases");
+    failedRules.push("insufficient-cases");
+  }
+
+  if (comparisonGate.overall !== "pass") {
+    reasons.push("comparison-gate-not-passing");
+    (comparisonGate.overall === "fail" ? failedRules : indeterminateRules).push(
+      "comparison-gate-not-passing",
+    );
+  }
+
+  const outcomesComplete = cases.every(
+    (pilotCase) =>
+      pilotCase.outcome?.approvalCompleted === true && pilotCase.outcome.exportCompleted === true,
+  );
+  if (!outcomesComplete) {
+    reasons.push("outcome-not-complete");
+    failedRules.push("outcome-not-complete");
+  }
+
+  const factualityRegressed = comparisons.some((comparison) => {
+    const first = resultForVariant(comparison, "first-draft").evaluation.scoreVector;
+    const revised = resultForVariant(comparison, "revised-draft").evaluation.scoreVector;
+    return revised.accuracy < first.accuracy || revised.evidence < first.evidence;
+  });
+  if (factualityRegressed) {
+    reasons.push("factuality-regressed");
+    failedRules.push("factuality-regressed");
+  }
+
+  if (
+    averageScoredQuality(comparisons, "revised-draft") <=
+    averageScoredQuality(comparisons, "first-draft")
+  ) {
+    reasons.push("quality-not-improved");
+    failedRules.push("quality-not-improved");
+  }
+
+  const effortStatus = cohortEffortStatus(cases);
+  if (effortStatus !== "pass") {
+    reasons.push("effort-reduction-not-demonstrated");
+    (effortStatus === "fail" ? failedRules : indeterminateRules).push(
+      "effort-reduction-not-demonstrated",
+    );
+  }
+
+  const status: PilotHypothesisResult =
+    failedRules.length > 0 ? "fail" : indeterminateRules.length > 0 ? "indeterminate" : "pass";
+  return { status, reasonCodes: reasons };
+}
+
 export function generatePilotMarkdownReport(
   report: Omit<PilotSummaryReport, "markdownReport">,
 ): string {
@@ -473,6 +728,14 @@ export function generatePilotMarkdownReport(
       lines.push(`- ${rec}`);
     }
   }
+
+  lines.push("");
+  lines.push("## Cohort validation");
+  lines.push("");
+  lines.push(`- **Status:** ${report.cohortValidation.status.toUpperCase()}`);
+  lines.push(
+    `- **Reason codes:** ${report.cohortValidation.reasonCodes.length > 0 ? report.cohortValidation.reasonCodes.join(", ") : "none"}`,
+  );
 
   lines.push("");
   lines.push("## Predeclared comparison gate");
@@ -544,6 +807,8 @@ export function generatePilotMarkdownReport(
 export interface PilotHarnessOptions extends EvaluationHarnessOptions {
   /** Require private scope and outcome measures for every supplied case. */
   readonly requireOutcome?: boolean;
+  /** Required v1 declaration for a real-outcome cohort. */
+  readonly cohortDeclaration?: PilotCohortDeclaration;
 }
 
 export function runConsentedPilotHarness(
@@ -554,6 +819,7 @@ export function runConsentedPilotHarness(
     throw new Error("A consented pilot requires at least one case.");
   }
 
+  const cohortDeclaration = options?.cohortDeclaration;
   for (const pilotCase of cases) {
     if (options?.requireOutcome) {
       validatePilotOutcomeCase(pilotCase);
@@ -566,10 +832,27 @@ export function runConsentedPilotHarness(
     }
   }
 
+  if (options?.requireOutcome) {
+    // Cohort validation is deliberately completed before any draft reaches
+    // compareEvaluationCase, including all first-draft chronology checks.
+    validatePilotCohortDeclaration(
+      cohortDeclaration,
+      cases.map((pilotCase) => pilotCase.firstDraft.createdAt),
+    );
+  }
+
   const comparisons = cases.map((pilotCase) => compareEvaluationCase(pilotCase, options));
   const comparisonGate = options?.requireOutcome
     ? evaluateComparisonGateSummary(cases, comparisons)
     : emptyComparisonGateSummary();
+  const cohortValidation = options?.requireOutcome
+    ? evaluatePilotCohort(
+        cohortDeclaration as PilotCohortDeclaration,
+        cases,
+        comparisons,
+        comparisonGate,
+      )
+    : emptyPilotCohortSummary();
 
   const variants: Record<EvaluationVariant, PilotVariantSummary> = {
     "first-draft": computeVariantSummary("first-draft", comparisons),
@@ -632,16 +915,13 @@ export function runConsentedPilotHarness(
   const allOutcomesComplete =
     outcomeCaseCount === cases.length &&
     outcomes.every((outcome) => outcome.approvalCompleted && outcome.exportCompleted);
-  const outcomeValidation: PilotHypothesisResult =
-    outcomeCaseCount === 0
+  const outcomeValidation: PilotHypothesisResult = options?.requireOutcome
+    ? cohortValidation.status
+    : outcomeCaseCount === 0
       ? "indeterminate"
       : !allOutcomesComplete || factualityPreservedOrImproved !== "pass"
         ? "fail"
-        : options?.requireOutcome && comparisonGate.overall === "indeterminate"
-          ? "indeterminate"
-          : !options?.requireOutcome || comparisonGate.overall === "pass"
-            ? "pass"
-            : "fail";
+        : "pass";
   const misleadingEvidence = emptyObservationCounts();
   const promptInjection = emptyObservationCounts();
   const limitations = emptyLimitationCounts();
@@ -705,6 +985,7 @@ export function runConsentedPilotHarness(
       recommendations,
     },
     outcomeValidation,
+    cohortValidation,
     comparisonGate,
     productMeasures,
   };

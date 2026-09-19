@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-19<br>
-**Current stage:** Retrieval and provider quality
+**Current stage:** Broader real-application pilot
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -179,7 +179,7 @@ applications.
 | Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
 | Previous | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Ended indeterminate and unreleased](evaluation/consented-pilot-v0.9.md); twenty-six observations across two consented cases | Demonstrate the complete application-grade workflow and publish evidence              | Exit criterion not met; no v0.9.0 release exists. #75 closed unmet, and #76/#250/#251 closed as not pursued. |
 | Previous | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md); no release or live-provider outcome | Improve evidence selection and dependable bounded generation                          | Exit criteria met on sanitized replay/retrieval cases and cross-platform packaged recovery evidence; limitations retained |
-| Now      | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Create bounded consented cases with calibrated measures, stop conditions, and explicit provider authorization             |
+| Now      | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | Cohort gate in progress; not outcome-validated        | Test factuality, quality, and effort across more cases                                | Predeclare the multi-case gate, then create bounded consented cases with calibrated measures, stop conditions, and explicit provider authorization |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -914,6 +914,13 @@ cases before treating a passing score as readiness.
 measures over first drafts, and reduce meaningful user effort on representative
 consented cases.
 
+Roadmap rollup #426 owns the stage. Its first bounded prerequisite, #427,
+requires a provider-independent multi-case gate before any new consented run:
+the cohort size and fixed decision rules must be declared before the first
+draft, one case cannot pass the stage, and sanitized output remains limited to
+bounded statuses and reason codes. This prerequisite does not authorize an
+authentication probe or provider call.
+
 ### Later — Production-ready beta
 
 Complete signed installers, safe migrations and updates, backup/restore, crash
@@ -983,6 +990,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Started the broader real-application pilot under #426. | Milestone 7 begins with provider-independent cohort gate #427: more than one case, predeclared fixed aggregate rules, and bounded sanitized results are required before any new consented provider observation can count. No provider call is authorized. |
 | 2026-09-19 | Completed retrieval and provider quality under #409. | Sanitized replay acceptance improved from 1/3 to 2/3; lexical citation accuracy improved from 2/3 to 1 while irrelevant context fell from 1/3 to 0; and packaged recovery evidence passed on Linux, macOS, and Windows. No live provider ran, no release was created, and any pilot still requires consent and explicit authorization. |
 | 2026-09-19 | Improved lexical precision with a recall-preserving multi-term preference under #422. | On the unchanged three-query corpus, citation accuracy rises from 2/3 to 1 and irrelevant context falls from 1/3 to 0 without changing coverage, unsupported claims, or reciprocal rank. Hybrid now regresses against lexical and remains disabled. |
 | 2026-09-19 | Required packaged failure-and-recovery evidence under #420. | Cross-platform installed-app acceptance now fails unless its sanitized report explicitly confirms observable progress, in-flight cancellation, restart resume, and interrupted-run explanation. This closes an enforcement gap without adding provider calls or changing recovery behavior. |

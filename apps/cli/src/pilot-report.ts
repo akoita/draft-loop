@@ -2,7 +2,11 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 
 import { CliUserError } from "@draft-loop/application";
-import { type ConsentedPilotCase, runConsentedPilotHarness } from "@draft-loop/evaluations";
+import {
+  type ConsentedPilotCase,
+  type PilotCohortDeclaration,
+  runConsentedPilotHarness,
+} from "@draft-loop/evaluations";
 
 /**
  * A user-correctable problem. Never carries case-file content.
@@ -77,7 +81,12 @@ export async function enclosingRepository(path: string): Promise<string | undefi
  * validation, and its messages are better than anything repeated here. Errors
  * never quote the file, because it holds candidate material.
  */
-export function parsePilotCases(raw: string): readonly ConsentedPilotCase[] {
+export interface PilotCaseFile {
+  readonly cases: readonly ConsentedPilotCase[];
+  readonly cohortDeclaration?: PilotCohortDeclaration;
+}
+
+export function parsePilotCaseFile(raw: string): PilotCaseFile {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
@@ -106,7 +115,23 @@ export function parsePilotCases(raw: string): readonly ConsentedPilotCase[] {
       );
     }
   }
-  return cases as readonly ConsentedPilotCase[];
+  const hasCohortDeclaration =
+    typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)
+      ? Object.hasOwn(parsed, "cohortDeclaration")
+      : false;
+  return {
+    cases: cases as readonly ConsentedPilotCase[],
+    ...(hasCohortDeclaration
+      ? {
+          cohortDeclaration: (parsed as { readonly cohortDeclaration: PilotCohortDeclaration })
+            .cohortDeclaration,
+        }
+      : {}),
+  };
+}
+
+export function parsePilotCases(raw: string): readonly ConsentedPilotCase[] {
+  return parsePilotCaseFile(raw).cases;
 }
 
 /**
@@ -136,8 +161,13 @@ export async function generateSanitizedPilotReport(
     throw new PilotReportUserError("The private case file could not be read.");
   }
 
-  const cases = parsePilotCases(raw);
-  const report = runConsentedPilotHarness(cases, { requireOutcome: true });
+  const caseFile = parsePilotCaseFile(raw);
+  const report = runConsentedPilotHarness(caseFile.cases, {
+    requireOutcome: true,
+    ...(caseFile.cohortDeclaration === undefined
+      ? {}
+      : { cohortDeclaration: caseFile.cohortDeclaration }),
+  });
   const outputPath =
     options.outputPath === undefined
       ? join(dirname(casePath), "pilot-report.md")
