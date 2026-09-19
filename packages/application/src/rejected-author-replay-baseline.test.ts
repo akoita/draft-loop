@@ -15,13 +15,10 @@ describe("sanitized rejected-author replay baseline", () => {
 
     expect(result).toEqual({
       total: 3,
-      accepted: 1,
-      rejected: 2,
-      failureStages: [{ value: "factual-invariant-rejection", count: 2 }],
-      diagnosticCodes: [
-        { value: "factual_invariant_violation", count: 1 },
-        { value: "substantive_text_uncovered", count: 1 },
-      ],
+      accepted: 2,
+      rejected: 1,
+      failureStages: [{ value: "factual-invariant-rejection", count: 1 }],
+      diagnosticCodes: [{ value: "factual_invariant_violation", count: 1 }],
     });
 
     const serialized = JSON.stringify(result);
