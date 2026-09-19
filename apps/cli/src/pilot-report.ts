@@ -102,7 +102,7 @@ export function parsePilotCases(raw: string): readonly ConsentedPilotCase[] {
     }
     if (!("consent" in entry)) {
       throw new PilotReportUserError(
-        "Every consented case must carry a consent record. See docs/pilot-protocol.md.",
+        "Every consented case must carry a consent record. See docs/evaluation/pilot-protocol.md.",
       );
     }
   }

@@ -4,8 +4,8 @@ _Product concept — starting wedge: job-specific CV creation_
 
 > **Historical concept:** This document records the project's initial product
 > thesis. It is not a description of current behavior. See the
-> [README](README.md), [roadmap](docs/roadmap.md), and
-> [architecture](docs/architecture.md) for the current product and its limits.
+> [README](../../README.md), [roadmap](../roadmap.md), and
+> [architecture](../architecture/overview.md) for the current product and its limits.
 
 ## The idea in one sentence
 

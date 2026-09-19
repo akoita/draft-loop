@@ -167,8 +167,8 @@ approved managed bytes. An application workspace may bind an explicit CKB
 selection and record its path-free source/version identities in new immutable
 run contexts. Runs with that selection query only its exact source versions and
 send only the selected bounded excerpts with opaque chunk IDs to providers.
-[ADR 0007](adr/0007-portable-candidate-knowledge-store.md)
-defines the storage contract. [ADR 0008](adr/0008-ckb-scoped-lexical-retrieval.md)
+[ADR 0007](../adr/0007-portable-candidate-knowledge-store.md)
+defines the storage contract. [ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md)
 defines the retrieval boundary. SQLite migration 25 implements the replaceable
 exact-source-version CKB index and immutable content-free workspace trace
 stores. Multi-CKB queries open only the explicit workspace selection and expose
@@ -368,7 +368,7 @@ is persisted by the Electron main process. The host prefers `safeStorage`; when
 unavailable it uses local AES-256-GCM ciphertext and a separate local key
 protected by file permissions. The fallback is not equivalent to an OS-backed
 secret store. Credentials never enter workspace history, backups, diagnostics,
-or provider content. See [ADR 0004](adr/0004-desktop-credential-boundary.md).
+or provider content. See [ADR 0004](../adr/0004-desktop-credential-boundary.md).
 
 Experimental local user-session mode delegates a structured request to an
 installed Codex or Claude runtime without extracting or persisting its OAuth
@@ -376,7 +376,7 @@ credentials. The runtime, authentication mode, and provider-default retention
 are visible in the approved endpoint identity. Tools, repository instructions,
 extensions, MCP servers, web search, and local session persistence are disabled
 where supported; an observed tool event fails the request. See
-[ADR 0006](adr/0006-provider-authentication-modes.md).
+[ADR 0006](../adr/0006-provider-authentication-modes.md).
 
 ## Retention, deletion, and backups
 
@@ -475,9 +475,9 @@ approval/export completion, round count, provider cost, user confidence,
 misleading-evidence observations, prompt-injection observations,
 critical-requirement coverage, and unsupported-claim counts. A synthetic
 fixture or incomplete outcome is indeterminate evidence. The provider-free
-[synthetic scenario preflight](synthetic-scenario-preflight.md) documents
+[synthetic scenario preflight](../evaluation/synthetic-scenario-preflight.md) documents
 implementation evidence that cannot replace the [consented outcome pilot
-protocol](pilot-protocol.md).
+protocol](../evaluation/pilot-protocol.md).
 
 Fixtures must be synthetic and contain no real candidate documents, provider
 responses, credentials, employer secrets, or hidden reasoning. A quality

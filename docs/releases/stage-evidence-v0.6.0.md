@@ -20,12 +20,12 @@ reproducible baseline for v0.7; it does not relabel the stage as Validated.
 
 | Exit area | Evidence | Current status | Limitation |
 | --- | --- | --- | --- |
-| Shared local workflow | [Architecture and workflow contracts](architecture.md); repository `pnpm validate` | Integrated | The automated fixture is not a real candidate outcome |
-| Installed desktop acceptance | [Installed-app protocol](installed-app-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393103) | Integrated with sanitized inputs; Linux x64, macOS arm64, and Windows x64 passed | Real candidate files and a real job URL have not been published as evidence |
-| Credential lifecycle and preflight | [Credential protocol](credential-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393186) | Integrated automated lifecycle matrix passed on all three targets | Synthetic canaries do not prove every user environment or provider account |
+| Shared local workflow | [Architecture and workflow contracts](../architecture/overview.md); repository `pnpm validate` | Integrated | The automated fixture is not a real candidate outcome |
+| Installed desktop acceptance | [Installed-app protocol](../evaluation/installed-app-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393103) | Integrated with sanitized inputs; Linux x64, macOS arm64, and Windows x64 passed | Real candidate files and a real job URL have not been published as evidence |
+| Credential lifecycle and preflight | [Credential protocol](../evaluation/credential-acceptance.md); [matrix run](https://github.com/akoita/draft-loop/actions/runs/31852393186) | Integrated automated lifecycle matrix passed on all three targets | Synthetic canaries do not prove every user environment or provider account |
 | Provider failure recovery | [Recovery implementation PR](https://github.com/akoita/draft-loop/pull/110); repository recovery tests | Implemented and integrated | No live provider outage is claimed by this record |
-| Consent and sanitized outcome reporting | [Pilot protocol](pilot-protocol.md); [outcome-reporting PR](https://github.com/akoita/draft-loop/pull/114); [issue 104](https://github.com/akoita/draft-loop/issues/104) | One private representative workflow reached approval and export; outcome failed the quality baseline | The result omitted required CV structure and chronology, changed a factual invariant, and introduced unsupported content; private inputs and outputs remain local |
-| Release artifacts and manifest | [Release procedure](releasing.md); [release v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0); [publication run 32435727961](https://github.com/akoita/draft-loop/actions/runs/32435727961) | Released on Linux x64, macOS arm64, and Windows x64 with manifest, checksums, and CycloneDX SBOM | Artifacts are unsigned alpha ZIPs; Windows remains 148.6 MiB, and provenance was not requested because repository-plan support was not established |
+| Consent and sanitized outcome reporting | [Pilot protocol](../evaluation/pilot-protocol.md); [outcome-reporting PR](https://github.com/akoita/draft-loop/pull/114); [issue 104](https://github.com/akoita/draft-loop/issues/104) | One private representative workflow reached approval and export; outcome failed the quality baseline | The result omitted required CV structure and chronology, changed a factual invariant, and introduced unsupported content; private inputs and outputs remain local |
+| Release artifacts and manifest | [Release procedure](../operations/releasing.md); [release v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0); [publication run 32435727961](https://github.com/akoita/draft-loop/actions/runs/32435727961) | Released on Linux x64, macOS arm64, and Windows x64 with manifest, checksums, and CycloneDX SBOM | Artifacts are unsigned alpha ZIPs; Windows remains 148.6 MiB, and provenance was not requested because repository-plan support was not established |
 
 ## Release-candidate review
 
@@ -80,7 +80,7 @@ leaving approval correctly blocked but without an available revision action.
 These are bounded observations from one case, not claims about provider quality
 in general. Candidate files, workspace databases, prompts, responses,
 credentials, exports, employer details, and the manual baseline remain outside
-the repository and CI artifacts under the [pilot protocol](pilot-protocol.md).
+the repository and CI artifacts under the [pilot protocol](../evaluation/pilot-protocol.md).
 
 ## Final decision and carry-forward
 

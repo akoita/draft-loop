@@ -104,7 +104,7 @@ renderer can submit an API key only through the allowlisted credential command;
 the host validates it and owns encryption, status, removal, and environment
 fallback. Browser mode has no native filesystem or persistent credential
 capabilities and keeps a deterministic fixture fallback. See [ADR
-0004](adr/0004-desktop-credential-boundary.md).
+0004](../adr/0004-desktop-credential-boundary.md).
 
 ## Package and data ownership
 
@@ -125,7 +125,7 @@ author and critic requests. Local vector and hybrid implementations remain
 evaluation components until deletion, retention, isolation, provenance, and
 quality are validated for the product path.
 
-[ADR 0008](adr/0008-ckb-scoped-lexical-retrieval.md) defines the CKB cutover:
+[ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md) defines the CKB cutover:
 each portable store owns its replaceable exact-source-version lexical index,
 while the application fans out only across the workspace's explicit selection
 and persists content-free retrieval traces in workspace history. This keeps
@@ -615,7 +615,7 @@ The default author and critic use different companies, with provider and model
 versions recorded in run history. The orchestrator stops at configured round,
 cost, or time limits, when quality is stable, or when the user reviews early.
 It never loops indefinitely to optimize a subjective score. See [ADR
-0003](adr/0003-evidence-grounded-evaluator-optimizer.md).
+0003](../adr/0003-evidence-grounded-evaluator-optimizer.md).
 
 ### Degree coverage
 
@@ -1010,8 +1010,8 @@ require an explicit data policy, and local retention settings are visible per
 workspace. Human approval is mandatory; job discovery, application submission,
 and uncontrolled external research are outside the MVP.
 
-See [the threat model](threat-model.md) and [privacy and evaluation
-policy](privacy-and-evaluation.md) for current trust boundaries, redaction
+See [the threat model](../security/threat-model.md) and [privacy and evaluation
+policy](../security/privacy-and-evaluation.md) for current trust boundaries, redaction
 rules, retention defaults, and deterministic evaluation gates.
 
 ### Application adapter boundary
@@ -1059,7 +1059,7 @@ artifact/template versions, timestamp, format, MIME type, and checksum.
 Additional artifact schemas, multilingual templates, portfolio ingestion, and a
 local endpoint adapter reuse these boundaries at component level. They are not
 integrated or outcome-validated merely because contracts and tests exist; the
-[roadmap](roadmap.md) records each evidence level.
+[roadmap](../roadmap.md) records each evidence level.
 
 The `pilot` CLI command uses synthetic local fixtures to exercise ingestion,
 authoring, independent criticism, one bounded revision, approval, export,
@@ -1067,4 +1067,4 @@ typed local history, and audit events. Its report contains only safe counts and
 identifiers. It validates workflow mechanics, not the quality hypothesis on
 real applications.
 
-[adr-0007]: adr/0007-portable-candidate-knowledge-store.md
+[adr-0007]: ../adr/0007-portable-candidate-knowledge-store.md

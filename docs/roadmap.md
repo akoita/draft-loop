@@ -84,22 +84,22 @@ The product status is easiest to read by outcome:
 
 | Outcome                            | Current evidence                      | What is true now                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | ---------------------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Integrated author–critic workspace | [Released v0.8.0-alpha.1](stage-evidence-v0.8.0-alpha.1.md); representative outcome not recorded | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
+| Integrated author–critic workspace | [Released v0.8.0-alpha.1](releases/stage-evidence-v0.8.0-alpha.1.md); representative outcome not recorded | CLI and packaged Electron use the shared application driver for local file and approved URL intake, provenance, SQLite run history, bounded orchestration, review decisions, restart recovery, and Markdown/DOCX/PDF export. Desktop provider preflight, credential handling, and Anthropic/OpenAI live paths have focused cross-platform checks.                                                                                            |
 | Application-grade quality          | v0.6 release; validation failed       | The sanitized representative run exported, but omitted major CV sections and chronology, changed seniority, and introduced unsupported quantification. v0.6.0 is an explicitly non-validated alpha baseline; this failure is the defining input to v0.7.                                                                                                                                                                                     |
 | Workspace retrieval and policy     | Policy and CKB lexical runtime integrated | Explicit CKB selections rebuild and query exact source-version indexes, fail visibly on unavailable retrieval, persist immutable content-free traces, and provide only selected opaque chunk references and bounded text to live author/critic requests. Legacy unselected workspaces retain the earlier evidence path. Writing policies remain integrated with immutable lineage and shared controls. |
 | Opportunity brief                  | Integrated reviewed-version handoff      | A strict provider-independent contract and shared CLI/packaged-desktop host workflows assemble approved URLs, selected files, pasted content, and typed local candidate instructions into immutable draft/review versions with honest provenance and visible failures. New runs can pin one exact checksum-verified reviewed version; resume reuses the immutable context. Provider extraction and run transmission each retain explicit approval boundaries.                    |
-| Portable CKB                       | [Released Sprint 2 checkpoint](stage-evidence-v0.7.0-alpha.2.md); [Released alpha.3 checkpoint](stage-evidence-v0.7.0-alpha.3.md); #78 accepted; v0.7 incomplete/unvalidated | The reusable CKB foundation is complete: stable source identity and immutable versions, explicit lifecycle/readiness evidence, isolated application/run selection, shared CLI/desktop controls, coordinated recovery, retention, backup/restore, exact-plan deletion, and exact-version lexical retrieval. |
+| Portable CKB                       | [Released Sprint 2 checkpoint](releases/stage-evidence-v0.7.0-alpha.2.md); [Released alpha.3 checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md); #78 accepted; v0.7 incomplete/unvalidated | The reusable CKB foundation is complete: stable source identity and immutable versions, explicit lifecycle/readiness evidence, isolated application/run selection, shared CLI/desktop controls, coordinated recovery, retention, backup/restore, exact-plan deletion, and exact-version lexical retrieval. |
 | CKB directory recovery             | Implemented bounded components        | Root rebind and one-source member move are guarded, one-scan operations. The #135 reconciliation contract partitions every member path-free, requires explicit retirement selections, and processes them in deterministic source-ID order. Each marker is atomic; a later failure returns explicit partial progress. No operation accepts or returns a path.                  |
-| Product CKB workflow               | [Released alpha.3 checkpoint](stage-evidence-v0.7.0-alpha.3.md); #111 accepted | Shared CLI/desktop controls create, open, select, rename, archive, preview/delete, export, inspect, and restore CKB stores without projecting roots through the renderer. Workspace bindings produce immutable path-free source-version snapshots for new runs, survive restart and legacy migration, and block lifecycle drift before provider execution. Retrieval, reactivation, visual lifecycle UI, and provider use remain outside the product path. |
+| Product CKB workflow               | [Released alpha.3 checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md); #111 accepted | Shared CLI/desktop controls create, open, select, rename, archive, preview/delete, export, inspect, and restore CKB stores without projecting roots through the renderer. Workspace bindings produce immutable path-free source-version snapshots for new runs, survive restart and legacy migration, and block lifecycle drift before provider execution. Retrieval, reactivation, visual lifecycle UI, and provider use remain outside the product path. |
 
-The CKB foundation has a [Released Sprint 2 checkpoint](stage-evidence-v0.7.0-alpha.2.md),
-and v0.7.0-alpha.3 is a [Released drafting and review foundations checkpoint](stage-evidence-v0.7.0-alpha.3.md), not a v0.7
+The CKB foundation has a [Released Sprint 2 checkpoint](releases/stage-evidence-v0.7.0-alpha.2.md),
+and v0.7.0-alpha.3 is a [Released drafting and review foundations checkpoint](releases/stage-evidence-v0.7.0-alpha.3.md), not a v0.7
 stage exit. It freezes the post-alpha.2 confirmed-deletion slice,
 provider-independent readiness/adjudication/stopping/layout foundations, the
 first dormant runtime carrier, and Windows user-session environment hardening.
 The v0.7 stage remains incomplete and unvalidated; profile, opportunity,
 retrieval, planning, complete CV, writing-policy, runtime/UI integration, and
-representative validation remain. The [Released v0.7.0-alpha.4 checkpoint](stage-evidence-v0.7.0-alpha.4.md)
+representative validation remain. The [Released v0.7.0-alpha.4 checkpoint](releases/stage-evidence-v0.7.0-alpha.4.md)
 carries forward Windows user-session environment hardening
 and adds packaged-desktop OpenAI authentication selection (API key or
 authenticated Codex/ChatGPT session), independent per-provider persisted
@@ -107,17 +107,17 @@ preferences, strict environment precedence, restart-required/no-silent-fallback
 behavior, and Codex reasoning lifecycle compatibility while continuing to
 reject tool events and ignore reasoning content.
 
-The [Released v0.7.0-alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md)
+The [Released v0.7.0-alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md)
 follows merged feature PR [#202](https://github.com/akoita/draft-loop/pull/202)
 and release prep PR [#203](https://github.com/akoita/draft-loop/pull/203). It
 carries forward alpha.4 authentication selection and fixes Windows/session
 critic compatibility by accepting and discarding passive `todo_list` and
 `item.updated` lifecycle output while commands, mutations, search, tool, error,
 and unknown event/item types remain fail-closed. The v0.7 implementation history
-is retained here; the current release candidate is documented below. See [the architecture](architecture.md) for stable boundaries and
+is retained here; the current release candidate is documented below. See [the architecture](architecture/overview.md) for stable boundaries and
 [ADR 0007](adr/0007-portable-candidate-knowledge-store.md) for the canonical
-CKB contract. The [privacy and evaluation policy](privacy-and-evaluation.md)
-and [threat model](threat-model.md) remain authoritative for their concerns.
+CKB contract. The [privacy and evaluation policy](security/privacy-and-evaluation.md)
+and [threat model](security/threat-model.md) remain authoritative for their concerns.
 
 ## Reference workflow and parity target
 
@@ -174,10 +174,10 @@ applications.
 
 | Horizon  | Stage                                                                                                             | Evidence status                                      | Outcome                                                                               | Remaining gate                                                                                                          |
 | -------- | ----------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](stage-evidence-v0.6.0.md)                          |
-| Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
-| Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
-| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twenty-five observations across two consented cases are indeterminate](consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed corrections #351/#352; later attempts repeatedly failed before a draft. #376 corrects per-generation cap accounting, #380 adds fixed result diagnostics, and #393/#395 add private category capture. #397 established terminal reason `api_error`, and #398 added its bounded statusless classification. #401 then exhausted three author attempts on local factual and coverage validation without an artifact or review. #389 keeps application-generated mutation timestamps monotonic while retaining storage rollback rejection. Any later live observation requires fresh authorization. #75/#250 remain blocked |
+| Previous | Integration hardening and outcome validation ([v0.6.0](https://github.com/akoita/draft-loop/releases/tag/v0.6.0)) | Released; validation failed                          | Preserve a reproducible integrated baseline without overstating application readiness | Failed representative result carried into v0.7; see [stage evidence](releases/stage-evidence-v0.6.0.md)                          |
+| Previous | Evidence-backed CV drafting (v0.7 program) | [Released alpha.5 checkpoint](releases/stage-evidence-v0.7.0-alpha.5.md); implementation history carried forward; outcome not validated | Produce a complete factual, source-traceable application draft | v0.8 candidate evidence now covers the bounded drafting and review vertical |
+| Previous | Usable CV MVP ([v0.8.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.8.0-alpha.1)) | [Released alpha](releases/stage-evidence-v0.8.0-alpha.1.md); 17/17 issues closed; representative outcome not recorded | Produce one complete, factual, reviewed, human-approved, ATS-readable CV | Representative outcome evidence remains without overstating DOCX visual coverage |
+| Now      | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Twenty-five observations across two consented cases are indeterminate](evaluation/consented-pilot-v0.9.md); parity not validated | Demonstrate the complete application-grade workflow and publish evidence              | #350 informed corrections #351/#352; later attempts repeatedly failed before a draft. #376 corrects per-generation cap accounting, #380 adds fixed result diagnostics, and #393/#395 add private category capture. #397 established terminal reason `api_error`, and #398 added its bounded statusless classification. #401 then exhausted three author attempts on local factual and coverage validation without an artifact or review. #389 keeps application-generated mutation timestamps monotonic while retaining storage rollback rejection. Any later live observation requires fresh authorization. #75/#250 remain blocked |
 | Later    | Retrieval and provider quality                                                                                    | Integrated lexical baseline; partial components      | Improve evidence selection and dependable live runs                                   | Vector/hybrid comparison, cancellation, and provider recovery in the packaged path                                      |
 | Later    | Broader real-application pilot                                                                                    | Implemented harness; not outcome-validated           | Test factuality, quality, and effort across more cases                                | Consented cases, calibrated measures, and recorded limitations                                                          |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
@@ -193,7 +193,7 @@ chronology were omitted, seniority changed, and unsupported quantification was
 introduced despite successful technical export.
 
 The release is therefore explicitly non-validated. The [stage-evidence
-record](stage-evidence-v0.6.0.md) carries the negative result into v0.7; it is
+record](releases/stage-evidence-v0.6.0.md) carries the negative result into v0.7; it is
 not waived by the integration or packaging evidence.
 
 ### Previous — Evidence-backed CV drafting (v0.7)
@@ -227,7 +227,7 @@ Optional user-approved research (#79) and vector/hybrid evaluation (#114) are
 outside this critical path. Source lifecycle work through #136, workspace/run
 binding slices under #111, and the shared path-safe CLI/desktop controls rolled
 up by #112 are implemented. Sprint 1 is complete, #160 is closed, and the CKB
-foundation is a [Released checkpoint](stage-evidence-v0.7.0-alpha.1.md).
+foundation is a [Released checkpoint](releases/stage-evidence-v0.7.0-alpha.1.md).
 
 Sprint 2 is complete with writer coordination, interrupted-write recovery,
 retention, backup export, and collision-safe restore. Its five feature PRs
@@ -353,7 +353,7 @@ references, and approved exports remain intact. Whole-workspace backup and
 retention preserve those records; #80 owns removal and rebuild of derived index
 rows. The collecting desktop workspace now provides a dedicated profile
 history, edit, review, derivation-approval, and exact run-selection surface.
-The [sanitized representative acceptance](profile-acceptance.md) now proves
+The [sanitized representative acceptance](evaluation/profile-acceptance.md) now proves
 12-of-12 category preservation, exact candidate-source provenance, private
 project handling without public proof, visible unresolved conflicts,
 duplicates and omissions, path-free schema round trips, and SQLite restart.
@@ -407,7 +407,7 @@ release candidate after #75 closes (#250) and publishes the release evidence
 and next decision (#251) before closing #76. Each child keeps one primary
 boundary, focused verification, and a one-PR exit.
 
-The [consented result](consented-pilot-v0.9.md) remains indeterminate. An
+The [consented result](evaluation/consented-pilot-v0.9.md) remains indeterminate. An
 initial run reached independent critique but timed out during revision; the one
 approved fresh retry timed out during authoring because the user-session
 adapter's 120-second request limit could not use the 20-minute case budget. No
@@ -604,7 +604,7 @@ input references. Local review identified an unsupported startup-stage inference
 and an added condition on an explicit alternative. These remain raw diagnostic
 judgments, not accepted coverage or a replacement score. The original run,
 artifact, and thresholds are unchanged; parity remains indeterminate and #250
-remains blocked. See the [pilot record](consented-pilot-v0.9.md) for limits.
+remains blocked. See the [pilot record](evaluation/consented-pilot-v0.9.md) for limits.
 
 Issue #335 adds a [synthetic matched application reference](../packages/evaluations/fixtures/matched-application/README.md)
 for testing substantive selection, source corrections, and maturity boundaries.
@@ -661,7 +661,7 @@ third exhausted the cap. The final durable failure stage and reason were
 token counts were zero and `estimatedUsd` was null. Provider-reported cost was
 unavailable. No artifact or review boundary occurred, so #362 adds no
 product-outcome evidence; #75 and #250 remain blocked. See the [consented pilot
-report](consented-pilot-v0.9.md) for the detailed record.
+report](evaluation/consented-pilot-v0.9.md) for the detailed record.
 
 The eighteenth bounded observation under #364 reused the same private
 matched-backend inputs, baseline-withheld v1 gate, model pair, and fixed limits.
@@ -675,7 +675,7 @@ exhausted the cap. The final durable failure stage and reason were
 duration was 504,772 ms; execution token counts were zero and `estimatedUsd`
 was null. Provider-reported cost was unavailable. No artifact or review
 boundary occurred, so #364 adds no product-outcome evidence; #75 and #250
-remain blocked. See the [consented pilot report](consented-pilot-v0.9.md) for
+remain blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md) for
 the detailed record.
 
 Issue #366 bounds the provider-side cause exposed by #362 and #364 before any
@@ -700,7 +700,7 @@ Active duration was 598,380 ms; execution token counts were zero and
 `estimatedUsd` was null. Provider-reported cost was unavailable. No artifact,
 critic call, or review occurred; #75 and #250 remain blocked. Any later live
 attempt needs separate bounded authorization. See the [consented pilot
-report](consented-pilot-v0.9.md) for the full record.
+report](evaluation/consented-pilot-v0.9.md) for the full record.
 
 Issue #370 bounds a provider-transport attribution gap before any later live
 attempt. The Anthropic user-session adapter suppresses Claude Code's
@@ -727,7 +727,7 @@ failures. The fixed diagnostics indicate cumulative multi-turn usage ending in
 artifact, critic call, or review occurred; parity remains indeterminate, #75
 and #250 remain blocked, and the authorization is exhausted. Any later live
 attempt needs separate bounded authorization. See the [consented pilot
-report](consented-pilot-v0.9.md) for details.
+report](evaluation/consented-pilot-v0.9.md) for details.
 
 Issue #376 corrects the provider-side accounting mismatch exposed by #374.
 Claude Code applies `CLAUDE_CODE_MAX_OUTPUT_TOKENS` to each model generation,
@@ -745,7 +745,7 @@ passed, but the single Anthropic author attempt failed non-retryably with
 artifact, critic call, or review occurred. This run does not exercise or
 validate #376's corrected cumulative-usage acceptance in live use and adds no
 product-quality evidence. The authorization is exhausted; #75 and #250 remain
-blocked. See the [consented pilot report](consented-pilot-v0.9.md) for the
+blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md) for the
 complete sanitized record.
 
 Issue #380 adds provider-free attribution for statusless Claude result errors.
@@ -779,7 +779,7 @@ were retryable, while the third was non-retryable with
 `factual-invariant-rejection` as its failure stage and reason. No artifact,
 critic call, or review occurred. Cumulative `activeDurationMs` was 670,049 and
 provider-reported cost was unavailable; authorization is exhausted, and #75/#250
-remain blocked. See the [consented pilot report](consented-pilot-v0.9.md) for
+remain blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md) for
 the sanitized record.
 
 The twenty-third bounded observation under #384 used revision
@@ -790,7 +790,7 @@ failure stage or reason. The fixed diagnostics classify subtype and terminal
 reason as unrecognized and stop reason as `stop_sequence`; they do not explain
 the underlying cause. No artifact or review occurred, provider-reported cost
 was unavailable, and authorization is exhausted. Parity remains
-indeterminate; #75/#250 remain blocked. See the [consented pilot report](consented-pilot-v0.9.md)
+indeterminate; #75/#250 remain blocked. See the [consented pilot report](evaluation/consented-pilot-v0.9.md)
 for the sanitized record.
 
 The twenty-fourth bounded observation under #397 used revision
@@ -912,7 +912,7 @@ or Released.
 Review this roadmap after each stage exit, material pilot evidence, or at least
 monthly while active development continues. A material change states what
 changed, why, and what moved out to make room. Every stage exit also produces a
-versioned release using [the release procedure](releasing.md).
+versioned release using [the release procedure](operations/releasing.md).
 
 The entries below record material product and stage decisions. Git history and
 issues retain implementation chronology.
@@ -996,9 +996,9 @@ issues retain implementation chronology.
 | 2026-08-27 | Accepted the #78 reusable CKB foundation after its source-lifecycle, selection, product-control, and storage-safety deliveries passed the program audit. | Candidates can maintain and explicitly select isolated CKBs through shared CLI/desktop contracts; immutable run snapshots retain exact source versions, while lifecycle, retention, backup/restore, and deletion preserve provenance and unknown data. #80 remains the sole owner of retrieval/index construction, freshness, and query enforcement. |
 | 2026-08-27 | Accepted the delivered #113 storage-safety boundary after auditing all six leaf outcomes and the current validation gate. | Store-wide leases and prospective journals make owned mutations recoverable; six retention classes are explicit, with classes not yet supplied by #80 reported as not materialized. Portable backup/restore preserves logical provenance without machine-origin continuity, and exact-plan deletion retains an immutable content-free audit while preserving unknown or unowned data. |
 | 2026-08-27 | Accepted the delivered #111 CKB-selection boundary after a criterion-by-criterion audit and a green repository validation gate. | One default and optional isolated CKBs can be selected only through explicit local action; immutable path-free source-version snapshots persist in new runs, survive restart and legacy migration, and fail closed on lifecycle drift. Retrieval/index versions, freshness, and query enforcement remain owned by #80. |
-| 2026-08-26 | Published [v0.7.0-alpha.3](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.3) with [checkpoint evidence](stage-evidence-v0.7.0-alpha.3.md) after release prep PR [#197](https://github.com/akoita/draft-loop/pull/197). | The released checkpoint freezes the post-alpha.2 confirmed-deletion slice, provider-independent readiness/adjudication/stopping/layout foundations, the first dormant runtime carrier, and Windows user-session environment hardening. It does not validate or complete v0.7; profile, opportunity, retrieval, planning, complete-CV, writing-policy, runtime/UI integration, and representative validation remain. |
-| 2026-08-26 | Published [v0.7.0-alpha.4](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.4) with [checkpoint evidence](stage-evidence-v0.7.0-alpha.4.md) after feature PR [#199](https://github.com/akoita/draft-loop/pull/199) and release prep PR [#200](https://github.com/akoita/draft-loop/pull/200). | The released checkpoint carries forward Windows user-session environment hardening and adds packaged-desktop OpenAI authentication selection (API key or authenticated Codex/ChatGPT session), independent per-provider persisted preferences, strict environment precedence, restart-required/no-silent-fallback behavior, and Codex reasoning lifecycle compatibility while continuing to reject tool events and ignore reasoning content. It does not validate or complete v0.7; profile, opportunity, CKB retrieval/reactivation, planning, complete CV, writing policy, runtime review/readiness/rendering integration, and representative validation remain, with signing, updates, and CLI packaging incomplete. |
-| 2026-08-26 | Published [v0.7.0-alpha.5](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.5) with [checkpoint evidence](stage-evidence-v0.7.0-alpha.5.md) after feature PR [#202](https://github.com/akoita/draft-loop/pull/202) and release prep PR [#203](https://github.com/akoita/draft-loop/pull/203). | The released checkpoint carries forward alpha.4's packaged-desktop OpenAI authentication selection and fixes Windows/session critic compatibility by accepting and discarding passive `todo_list` and `item.updated` lifecycle output while commands, mutations, search, tool, error, and unknown event/item types remain fail-closed. It does not validate or complete v0.7; profile, opportunity, CKB retrieval/reactivation, planning, complete CV, writing policy, runtime review/readiness/rendering integration, and representative validation remain. |
+| 2026-08-26 | Published [v0.7.0-alpha.3](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.3) with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.3.md) after release prep PR [#197](https://github.com/akoita/draft-loop/pull/197). | The released checkpoint freezes the post-alpha.2 confirmed-deletion slice, provider-independent readiness/adjudication/stopping/layout foundations, the first dormant runtime carrier, and Windows user-session environment hardening. It does not validate or complete v0.7; profile, opportunity, retrieval, planning, complete-CV, writing-policy, runtime/UI integration, and representative validation remain. |
+| 2026-08-26 | Published [v0.7.0-alpha.4](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.4) with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.4.md) after feature PR [#199](https://github.com/akoita/draft-loop/pull/199) and release prep PR [#200](https://github.com/akoita/draft-loop/pull/200). | The released checkpoint carries forward Windows user-session environment hardening and adds packaged-desktop OpenAI authentication selection (API key or authenticated Codex/ChatGPT session), independent per-provider persisted preferences, strict environment precedence, restart-required/no-silent-fallback behavior, and Codex reasoning lifecycle compatibility while continuing to reject tool events and ignore reasoning content. It does not validate or complete v0.7; profile, opportunity, CKB retrieval/reactivation, planning, complete CV, writing policy, runtime review/readiness/rendering integration, and representative validation remain, with signing, updates, and CLI packaging incomplete. |
+| 2026-08-26 | Published [v0.7.0-alpha.5](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.5) with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.5.md) after feature PR [#202](https://github.com/akoita/draft-loop/pull/202) and release prep PR [#203](https://github.com/akoita/draft-loop/pull/203). | The released checkpoint carries forward alpha.4's packaged-desktop OpenAI authentication selection and fixes Windows/session critic compatibility by accepting and discarding passive `todo_list` and `item.updated` lifecycle output while commands, mutations, search, tool, error, and unknown event/item types remain fail-closed. It does not validate or complete v0.7; profile, opportunity, CKB retrieval/reactivation, planning, complete CV, writing policy, runtime review/readiness/rendering integration, and representative validation remain. |
 | 2026-08-26 | Added packaged-desktop provider authentication mode selection for OpenAI API keys or an authenticated Codex/ChatGPT session. | Windows subscription-backed provider authentication is now represented in the desktop preference and UI; focused checks cover the boundary, while representative Windows validation and release support remain open. |
 | 2026-08-26 | Made milestone 3 dependency-closed and ordered its open prerequisites before the review/readiness outcomes. | #66–#70, #78, #80, #111, and #113 joined the sprint. Work now proceeds #111 → #113 → #78; #67/#70; #66 → #80 → #68; #69; then #72 → #73 → #74, without leaving the sprint for an open blocker. |
 | 2026-08-26 | Implemented confirmed deletion #166 as an independently closable prerequisite on the #69 dependency chain. | An archived non-default CKB can be deleted only with an exact fresh-plan token under the store-wide lease. Verified managed data is staged and recoverable, blockers fail closed, unknown or unowned entries are preserved, and CLI/desktop results stay path-free. |
@@ -1006,14 +1006,14 @@ issues retain implementation chronology.
 | 2026-08-26 | Integrated #73 application-readiness stopping decisions into the approval and export boundary. | Approval freshly evaluates the current artifact and persists the strict decision plus exact content/version binding; deterministic/report errors, unmet thresholds, disputed dimensions, incomplete independence or inputs, and missing accepted revision effects block approval. Revision or artifact replacement clears the binding, and export verifies the exact application-ready approval. Provider, presentation, rendering-QA, and broader #69/#70/#72 integration remain open. |
 | 2026-08-26 | Added the first #72 author-adjudication and artifact-revision trace component behind strict provider-independent contracts. | The contract requires one explicit accept/reject/nuance rationale for each report finding; accepted effects are proven only by bounded artifact diffs or explicit effect overrides, while disagreements remain visible. The separate runtime-carrier slice is limited to existing snapshots and revision execution; report generation, provider prompt, CLI, and desktop integration remain gated by #69. |
 | 2026-08-26 | Added the first #72 runtime-carrier slice in the dormant orchestrator boundary. | Existing run snapshots retain the exact report, canonical plan, accepted-effect overrides, and derived trace across restart; only the matching revision author receives the pending carrier. Report generation, persistence tables, provider prompt integration, UI controls, approval/export wiring, and complete #69/#70/#72 integration remain out of scope. |
-| 2026-08-25 | Published [v0.7.0-alpha.2](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.2) with [Sprint 2 checkpoint evidence](stage-evidence-v0.7.0-alpha.2.md). | The released storage-safety foundation does not complete or validate the v0.7 drafting outcome. |
+| 2026-08-25 | Published [v0.7.0-alpha.2](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.2) with [Sprint 2 checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.2.md). | The released storage-safety foundation does not complete or validate the v0.7 drafting outcome. |
 | 2026-08-25 | Ended Sprint 2 after #161–#165 and returned confirmed deletion #166 to the unmilestoned backlog following a capacity audit. | Five storage feature PRs added 10,365 lines across 71 file-changes. Future sprint work must be admitted from measured, independently closable units rather than broad feature narratives. |
 | 2026-08-25 | Bounded portable CKB restore to new destinations with an explicit fail-if-existing collision policy. | Restore re-inspects and migrates a package transactionally, preserves logical IDs and safe provenance, publishes only a validated store, and deliberately recreates no machine origin or active ownership; merge and rename modes remain out of scope. |
 | 2026-08-24 | Defined portable CKB backup as a strict directory package with a logical manifest and checksum-addressed managed objects. | Export requires destination approval, complete ownership evidence, self-inspection, and no-replace manifest-last publication; machine-local origins, locks, journals, credentials, and workspace data stay out, while #165 owns restore. |
 | 2026-08-24 | Defined append-only CKB retention policy and deterministic effective-revision planning across six explicit data classes. | Legacy data remains retained by default; holds override expiry, only proven managed raw versions can become eligible, and #166 retains the separate confirmation and physical-deletion boundary. |
 | 2026-08-24 | Made new managed CKB writes recoverable from versioned owned journal records under the store-wide lease. | Restart reconciliation rolls back verified pre-commit artifacts or completes verified committed cleanup, reports only path-free operation status, and preserves legacy, unknown, unjournaled, or mismatched data. |
 | 2026-08-24 | Started Sprint 2 with #161's recoverable store-wide writer lease and fenced, content-free conflict contract. | Current direct and multi-step CKB mutations share one exclusive command scope; a private coordinator remains separate from replaceable CKB data so #164–#166 can reuse it for backup, restore, and deletion. |
-| 2026-08-24 | Completed Sprint 1 by closing #160 and published [v0.7.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.1), with [checkpoint evidence](stage-evidence-v0.7.0-alpha.1.md). | The CKB foundation is a Released checkpoint; the v0.7 stage remains incomplete and unvalidated, with Sprint 2 planned but not started. |
+| 2026-08-24 | Completed Sprint 1 by closing #160 and published [v0.7.0-alpha.1](https://github.com/akoita/draft-loop/releases/tag/v0.7.0-alpha.1), with [checkpoint evidence](releases/stage-evidence-v0.7.0-alpha.1.md). | The CKB foundation is a Released checkpoint; the v0.7 stage remains incomplete and unvalidated, with Sprint 2 planned but not started. |
 | 2026-08-24 | Reframed GitHub milestones as bounded delivery sprints: Sprint 1 closes the CKB foundation with #160, while Sprint 2 delivers storage safety through #161–#166; broad issues #66–#70, #80, #111, and #113 remain unmilestoned epics. | Milestone progress now measures independently closable outcomes instead of PR volume inside long-lived epics. Closing #112 records the delivered shared lifecycle surface while its storage, retrieval, and migration residuals remain explicit in their leaf issues. |
 | 2026-08-24 | Exposed confirmed directory add-members through shared CLI and desktop contracts.                                                                                                                                          | One bounded scan appends unmatched files in deterministic order; complete or partial results contain capped opaque source identities and counts while roots, paths, labels, hashes, checksums, and content remain local.                                                       |
 | 2026-08-24 | Exposed directory reconciliation preview and confirmed retirement apply through shared CLI and desktop contracts.                                                                                                         | Complete scans partition member state path-free; apply acts only on explicitly approved missing source IDs, preserves deterministic partial progress, and refuses incomplete scans through the shared application contract.                                                    |
