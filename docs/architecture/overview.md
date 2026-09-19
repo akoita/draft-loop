@@ -45,7 +45,7 @@ flowchart TB
     subgraph Infrastructure["Local and provider adapters"]
         direction LR
         WorkspaceStore[("Application workspace store<br/>SQLite · FTS/BM25 · run history")]
-        CKBStore[("Portable CKB store<br/>raw blobs · metadata · local origins · journal")]
+        CKBStore[("Portable CKB store<br/>raw blobs · metadata · local origins · journal<br/>+ exact-version lexical index")]
         Providers["Provider adapters<br/>data-policy enforcement"]
         Credentials["Credential store<br/>main-process owned"]
     end
@@ -68,7 +68,7 @@ flowchart TB
     Domain --> WorkspaceStore
     Knowledge --> WorkspaceStore
     App -->|"explicit CKB commands"| CKBStore
-    CKBStore -.->|"selection snapshot bound; retrieval pending"| Knowledge
+    CKBStore -->|"exact selected source-version lexical retrieval"| Knowledge
     Orchestrator --> Providers
     Host --> Credentials
     Credentials -.->|"key lookup; never projected back"| Providers
@@ -93,9 +93,11 @@ flowchart TB
 Solid arrows show application data or control flow. The dotted credential edge
 is lookup-only: stored keys are never projected to the renderer. Network and
 export edges require visible approval. The solid CKB edge covers the explicit
-file, URL, and bounded-directory commands described below. The dotted edge
-marks the path-free selection evidence now bound to new run contexts; CKB
-content retrieval remains unintegrated.
+file, URL, and bounded-directory commands documented in
+[Candidate evidence](candidate-evidence.md). It also represents exact selected
+source-version lexical retrieval through the CKB-owned index; selection is
+explicit and does not imply implicit workspace access. See the [CKB integration
+status](candidate-evidence.md#ckb-integration-status) for remaining limits.
 
 The renderer receives bounded projections for workspace and run state. Native
 dialogs, workspace paths, SQLite handles, credential persistence, provider SDK
@@ -119,6 +121,22 @@ capabilities and keeps a deterministic fixture fallback. See [ADR
 | `packages/providers`                             | Provider identity, SDK translation, policy enforcement, and model calls                            | Domain workflow decisions                                            |
 | `packages/application`, CLI, and desktop host    | Adapter-neutral use cases and shared user-facing contracts                                         | A second domain layer or provider SDKs in the UI                     |
 
+## Key flow
+
+The CLI and desktop host call the shared application contracts. Those contracts
+assemble approved local inputs, selected evidence, and immutable context
+snapshots before handing provider-independent work to the orchestrator. The
+orchestrator coordinates authoring, independent critique, bounded revision,
+deterministic checks, approval, and local export through ports.
+
+The provider adapters are the only model-facing boundary. They enforce the
+approved data policy and record provider and model identity. The application
+and storage boundaries retain path-free run references, evidence links, typed
+findings, artifact history, and user decisions without storing hidden
+chain-of-thought or raw provider payloads.
+
+## Data and quality contracts
+
 Retrieval is workspace-scoped behind a provider-independent port. SQLite
 FTS/BM25 is the integrated lexical baseline and supplies selected chunks to live
 author and critic requests. Local vector and hybrid implementations remain
@@ -128,943 +146,66 @@ quality are validated for the product path.
 [ADR 0008](../adr/0008-ckb-scoped-lexical-retrieval.md) defines the CKB cutover:
 each portable store owns its replaceable exact-source-version lexical index,
 while the application fans out only across the workspace's explicit selection
-and persists content-free retrieval traces in workspace history. This keeps
-active derived rows inside the lifecycle boundary that can delete or rebuild
-them. SQLite migration 25 supplies the separate CKB chunk/FTS projection,
-manifest freshness inspection, deterministic exact-scope query and fallback,
-whole-projection invalidation on source-version deletion, and immutable
-workspace trace persistence. Runs with an explicit CKB selection now rebuild
-the exact selected projection, query it through application fan-out, persist
-content-free traces, and provide only opaque chunk references and bounded text
-to author and critic. Legacy workspaces without a CKB selection continue to
-use the earlier workspace evidence index.
+and persists content-free retrieval traces in workspace history. The exact
+selected projection stays inside the lifecycle boundary that can delete or
+rebuild it. Migration 25 supplies the CKB chunk/FTS projection, freshness
+inspection, exact-scope query and fallback, whole-projection invalidation on
+source-version deletion, and immutable workspace traces. Runs with an explicit
+CKB selection provide only opaque chunk references and bounded text to author
+and critic; legacy workspaces without a CKB selection keep the earlier
+workspace evidence index. CKB selection remains explicit and path-free in run
+contexts.
 
-Before CKB evidence reaches the author, bounded supplementary searches reserve
-content for required CV sections. If a supplementary result fills its search
-limit without establishing section content, drafting fails visibly because
-the search cannot establish absence. Author validation rejects empty sections
-and unavailable placeholders when supplied evidence establishes content;
-missing individual details, such as a graduation date, may remain explicit.
+Before evidence reaches the author, bounded supplementary searches reserve
+content for required CV sections. If a search limit is reached without
+establishing section content, drafting fails visibly because the search cannot
+establish absence. Author validation rejects empty sections and unavailable
+placeholders when supplied evidence establishes content; missing individual
+details may remain explicit.
 
-Author-output validation also requires factual block text to be covered by
-contiguous substantive claim spans. A supported fragment cannot stand in for
-an entire broader assertion. Uncovered text fails with a content-free
+Author-output validation requires factual block text to be covered by contiguous
+substantive claim spans. A supported fragment cannot stand in for a broader
+assertion. Uncovered text fails with the content-free
 `substantive_text_uncovered` diagnostic for bounded author retry; headings,
 labels, and explicit missing-data notices do not require factual citations.
-This is a structural coverage check, not independent factual verification.
-
-Protected multi-word values may differ only in whitespace wrapping within a
-single cited chunk. Validation does not assemble a name or credential across
-separate chunks, and explicit experience contradictions remain checked across
-all cited chunks. Numbers, punctuation, and factual wording stay protected.
-
-SQLite migration 26 corrects the artifact-history uniqueness boundary. An
-artifact ID is the immutable identity of one lineage, so distinct IDs in one
-workspace may each begin at version 1; parent-version IDs continue to link
-later immutable rows. The migration rebuilds `artifact_versions`
-transactionally without the legacy `UNIQUE (workspace_id, version)` constraint,
-preserves dependent run, execution, finding, decision, and export references,
-recreates the immutable update/delete triggers, and validates the final foreign
-key graph before recording the migration.
-
-The application projects artifact ancestry from checksum-verified durable run
-snapshots before inserting the latest artifact into typed history. It checks
-workspace and context identity, rejects missing or conflicting ancestors, and
-replays the immutable chain parent-first. Earlier round records are also
-projected before their executions. Repeating the projection is idempotent; an
-already-reviewed run can complete it through resume without another provider
-call or changes to its earlier snapshots.
-
-## Opportunity brief contract
-
-The #67 components define a provider-independent, versioned opportunity brief
-with durable local persistence and application-level intake. A brief distinguishes job
-postings, social announcements, company context, and candidate instructions;
-records approved-URL, local-file, pasted-content, or direct-input provenance;
-and keeps role, employer, responsibilities, requirements, priorities, and
-candidate instructions source-linked. Opportunity requirements are employer
-context, never candidate facts.
-
-Draft briefs may retain inaccessible, unsupported, failed, partial, stale,
-duplicate, or contradictory source issues. A reviewed brief requires the
-minimum structured opportunity fields and no open issue; acknowledged source
-limitations remain visible. Candidate-instruction sources may support only the
-instruction fields, while opportunity facts may not cite them. The contract
-stores bounded structured fields and checksums, not raw source content or host
-paths, and preserves human-authored ordering.
-
-The next #67 component connects that contract to application-level source
-intake. One draft may include explicitly approved HTTPS URLs, selected local
-files, pasted content, and direct candidate instructions. Existing bounded
-ingestion controls remain authoritative. Captured sources retain checksums;
-failed or inaccessible sources retain a visible status and issue without a
-fabricated checksum. The draft contains provenance metadata, not raw intake
-content or host paths. Duplicate captured bytes remain visible for review.
-
-Edits and review create immutable successive brief versions. Review still
-requires the minimum structured opportunity fields and no open issue; editing
-a reviewed brief creates a new draft rather than changing the reviewed value.
-SQLite schema v22 persists those versions under a workspace-scoped composite
-identity with canonical payload checksums, immediate-parent enforcement, and
-immutable update/delete guards. Identical writes are idempotent; latest-version
-lookup does not create a mutable current pointer. Audit events retain only an
-opaque brief identity, version, status, and checksum rather than brief content
-or source provenance.
-
-An adapter-neutral application service reloads validated, deeply frozen
-versions after restart and applies edits or review only to an explicitly
-expected latest version. Reload never refetches URLs or local files. Provider
-extraction uses the configured author model through the existing
-Anthropic/OpenAI/local adapter boundary and requires the same explicit data
-approval as drafting. Only sanitized opportunity source records cross that
-boundary; candidate inputs, URLs, paths, and provenance remain local. Provider
-output is schema-checked and citation-checked before application-owned IDs are
-created, while failures become fixed content-free draft issues. Shared
-application operations now create, reload, list, edit, and review durable
-versions. The CLI accepts runtime-only JSON manifests; the desktop host owns
-native file selection and returns a bounded path- and URL-free projection
-through its strict capability bridge. A new run may select one exact reviewed
-brief ID and version. The application verifies its stored checksum, derives the
-opportunity context only from that reviewed record, and persists a safe
-ID/version/checksum reference in the immutable run context. Resume reuses that
-snapshot; it cannot select a different opportunity version. Source URLs, paths,
-raw text, and provenance remain outside provider-facing context.
-
-## Writing policy enforcement
-
-Writing policies are local, immutable, checksum-addressed versions. Activating
-a Markdown or text file appends it to the workspace's SQLite policy history and
-makes it the default for future runs. Importing appends a version without
-changing that default. Existing managed files are migrated lazily, and direct
-managed-file changes are versioned before the next run rather than silently
-overwriting history.
-
-The policy compiler recognizes bounded forbidden-term and
-forbidden-punctuation rules, tone, spelling locale, verbosity, a one- or
-two-page target, section order, emphasis areas, and transparent anti-formulaic
-defaults. The defaults are ordinary forbidden-term rules and can be disabled
-explicitly in the policy. Older content-only policy snapshots remain readable.
-Preferences are advisory model context: locale is not a spell checker, page
-target is not a rendering profile, and emphasis does not authorize new facts.
-
-`packages/validation` evaluates the deterministic rules in artifact section
-and block order. Each finding carries a stable rule identity and content-free
-block location; messages do not copy the forbidden term, matched draft text,
-source paths, or surrounding content. The orchestrator applies the exact policy
-from the immutable context during normal draft validation before independent
-critique.
-
-Section-order validation is deterministic and reports stable, content-free
-section and block locations. Page targets and emphasis areas remain advisory;
-rendering QA separately verifies the produced document.
-
-A reviewed opportunity may select one imported policy version as a complete
-run-specific override. The application verifies both immutable versions,
-records base and override checksums in the run context, and supplies the
-effective policy to both author and critic. The selection never changes the
-active workspace policy. CLI and desktop projections expose safe version and
-lineage metadata; exact policy content is available only through an explicit
-local content-read action.
-
-## Portable Candidate Knowledge Base
-
-### Workspace versus portable CKB
-
-An application workspace contains opportunity context, run snapshots, review
-decisions, artifacts, exports, and application-specific SQLite history. A
-portable CKB is a separate local SQLite store for reusable candidate material.
-The CKB has a logical UUID independent of its selected filesystem path. A
-workspace does not implicitly read CKB content. Its local manifest may bind
-explicitly named CKBs by runtime store root and pinned logical store/CKB IDs.
-
-Before each new run, the shared application boundary reopens those stores,
-checks their logical identities and lifecycle readiness, and embeds a freshly
-canonicalized, path-free selection snapshot in the immutable run context.
-Existing runs continue to use the snapshot they originally recorded. Before a
-provider-capable start, resume, or revision transition, the application reopens
-the current local binding and compares its complete canonical entries with that
-record. Missing, replaced, unready, or changed evidence fails with a path-free
-review-required error before provider execution or run-state mutation.
-
-The portable store is local and plaintext. Restrictive filesystem permissions
-are best-effort and are not encryption or protection from another process run
-by the same user. A SQLite-only copy is not a complete CKB backup because raw
-managed bytes live beneath the store's opaque `sources/` layout.
-
-### Source and version model
-
-A source has a stable CKB-scoped logical ID, a `file` or `url` kind, and a local
-label. An immutable ordered version records SHA-256, media type, byte size,
-creation time, and parent lineage. Checksums are integrity metadata and a
-duplicate signal, not source identity. A read-only duplicate projection emits
-only deterministic source/version IDs; it does not merge, prefer, or remove
-evidence.
-
-Approved local files are regular files no larger than 20 MiB in the five
-supported media types: plain text, Markdown, HTML, PDF, and DOCX. Extraction,
-stable-file, and managed-copy checks must succeed before persistence. The store
-copies exact bytes under an opaque ID-derived name. A changed append creates
-the next parent-linked version; identical current bytes are a no-op and do not
-advance time or imply freshness.
-
-Approved URL intake reuses the HTTPS-only boundary, including public-address
-resolution, manual redirects, response and extraction limits, and usable-text
-checks. It stores exact response bytes and sensitive per-version provenance for
-the approved original URL, validated final redirect, fetch time, and bounded
-URL kind. URL refresh is explicit, reuses only the stored original URL, and
-records changed bytes as a new version. Redirect-only drift is a no-op; failures
-after approved preflight record only a URL-free inaccessible observation.
-
-### Origins, refresh, and lifecycle
-
-A successful managed file create may remember its canonical verified origin path
-in a sensitive local-only binding table. Manual append paths are runtime-only;
-they never replace the binding. An explicit status check returns only
-`unbound`, `current`, `changed`, `missing`, or `inaccessible`, without the path
-or observed file metadata. Explicit refresh can append changed bytes from the
-remembered origin and records a path-free observation tied to the examined
-version. Explicit rebind replaces only the sensitive path after an exact
-media-type, checksum, and size match with the latest version. None of these
-operations runs in the background or exposes an origin to a provider.
-
-Retirement is an immutable logical `user-requested` marker. It blocks later
-version, rebind, and refresh-observation writes while preserving source/version
-metadata, managed bytes, bindings, observations, and journal evidence. It is
-not physical deletion, index cleanup, or reactivation.
-
-Lifecycle readiness is a CKB-scoped read projection over one consistent SQLite
-snapshot. Each source exposes its latest version identity, `ready` or `blocked`
-state, bounded reasons, and a structured revision containing only safe IDs,
-timestamps, booleans, and numeric current-directory revisions. The revision
-changes when eligibility-relevant persisted evidence changes. Labels, paths,
-URLs, relative-path hashes, content checksums, media types, sizes, and bytes are
-excluded. Fresh intake is eligible without a refresh observation; adverse or
-stale observations block without creating a TTL or live-filesystem claim.
-
-### Selection snapshot contract
-
-An explicit application selection produces an immutable schema-versioned
-snapshot containing the portable store ID, CKB ID, exact selected source and
-version IDs, and each source's safe structured lifecycle revision. A single CKB
-needs no additional combination approval; selecting more than one requires an
-explicit approval before any store is opened. Archived, empty, or blocked CKBs
-fail closed.
-
-Entries and sources are canonicalized in lexical order. The snapshot excludes
-store roots, display labels, paths, filenames, URLs, hashes, checksums, media
-types, byte sizes, and content. It can be embedded in an immutable context
-snapshot without breaking older context records that predate the optional
-field. The local workspace binding retains runtime roots only so future runs can
-revalidate the pinned identities; descriptors, context snapshots, run history,
-diagnostics, and provider requests expose only the path-free record. The record
-does not authorize provider transmission or establish retrieval-index
-freshness.
-
-### Directory and member lifecycle
-
-Directory intake is a bounded selector over ordinary managed file sources, not
-a directory source kind. The selected root must be a real non-symlink directory
-outside the CKB store. Traversal is deterministic by lexical relative path and
-preflights extraction before writes. Limits are depth 32, 1,024 scanned entries,
-256 accepted files, 256 MiB aggregate accepted bytes, and the 20 MiB per-file
-limit. Dot-prefixed entries/subtrees, unsupported files, special entries, and
-child symlinks are skipped and counted. A complete import records a sensitive
-root binding and immutable SHA-256 hashes of normalized relative member paths.
-
-The current bounded operations are summarized here; their full contract and
-privacy invariants are canonical in [ADR 0007][adr-0007].
-
-| Operation                     | Scope and result                                                                                                                                           | Writes                                                                                                          |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Inventory and refresh preview | Count-only store inventory; path-free member states (`current`, `changed`, `missing`, `retired`, `origin-conflict`) and unmatched-file count               | None                                                                                                            |
-| Add members                   | Confirm and append unmatched accepted files as independent sources in lexical order through shared CLI/desktop controls                                    | Each candidate's source, version, origin binding, managed bytes, journal event, and immutable member atomically |
-| Observation / applied refresh | Record path-free observations, or append changed bytes for existing active same-member files in source-ID order                                            | Observation batch is atomic; applied refresh may return path-free partial progress after a later member failure |
-| Member retirement             | Approve one active same-member `missing` member with root/member/version/origin guards                                                                    | Existing immutable `user-requested` retirement marker only; bytes and membership remain                         |
-| Root rebind                   | Reuse one complete scan, verify every historical member, and update all origins                                                                            | Guarded append-only root revision with path-free `rebound` counts, or path-free `current` no-op                 |
-| Moved-candidate preview       | Compare exact media type, checksum, and size for same-member missing sources and unmatched files                                                           | None; ambiguous matches are omitted                                                                             |
-| One-source member move        | Reuse exactly one bounded scan for one selected source; accept a unique exact-integrity missing-member match or the scanned current member for idempotency | Verified append-only member revision, or guarded no-op; result is frozen, path-free `moved`/`current`           |
-| Missing-member reconciliation | Partition one complete scan into path-free current, changed, moved-candidate, missing, already-retired, conflicted, and unmatched/new state; apply only explicitly selected retirements in source-ID order | Each retirement marker is atomic; all-success returns `applied`/`current`, while a later failure returns frozen path-free partial IDs |
-
-The explicit move command accepts no target path. It forwards a runtime-only
-match through the verified member handle and does not change source identity,
-version, observation, retirement, blob, journal, or baseline membership
-evidence. Root rebind and one-source member move are exposed through shared
-CLI and desktop adapters; moved-candidate preview is read-only, while move
-requires confirmation and returns only opaque identity, time, and status.
-Neither infers renames automatically or reconciles all removals.
-
-Automatic move inference, indexing, and background refresh remain deferred
-under their owning roadmap issues.
-Historical membership is not rewritten by later source versions, explicit
-origin rebinds, retirement, or readiness projection.
-
-### Managed publication and journal
-
-Managed publication verifies bytes before committing metadata. The database
-marker and opaque file must agree on checksum and size; publication is
-no-replace, file first, database second. Crashes or concurrent losers may leave
-unreferenced opaque entries, but shape or matching bytes do not authenticate
-DraftLoop ownership.
-
-The append-only journal records opaque intent, target resolution, publication,
-managed-marker/database commit, and completion for new managed writes. Versioned
-ownership, expected integrity, immutable staging-file identity, and
-writer-generation fields remain sensitive local state. Recovery first records a
-durable claim with its newer generation, which fences stale journal and commit
-transactions before artifact inspection and remains retryable after cleanup
-failure. These fields authorize only deterministic restart recovery of that exact
-operation and never cross application or provider boundaries. Legacy,
-unjournaled, mismatched, and unrecognized entries remain unknown and untouched.
-
-All current CKB mutation commands use one store-wide exclusive writer lease.
-Its private SQLite coordinator is separate from the replaceable CKB data
-database and records only scope, opaque ownership, a safe operation code,
-timestamps, and a monotonically increasing fencing generation. Heartbeat,
-atomic stale takeover, nested fencing checks, and owner-generation-guarded
-release prevent concurrent commands from interleaving. Conflict diagnostics
-identify only the active operation and scope; they never include roots, paths,
-source identity, or content. Reads remain unleased. Store opening uses the same
-lease to roll back verified incomplete publication or finish verified committed
-cleanup, with idempotent path-free reports.
-
-The CKB retention contract enumerates raw sources, normalized facts, indexes,
-run snapshots, exports, and backups. All six default to retention until explicit
-deletion. Append-only policy revisions may set bounded day-based expiry, while
-append-only legal-hold and manual-preservation events override expiry. Plans are
-keyed by policy revision, override revision, and an explicit evaluation time.
-They expose only bounded counts and effective states. Current ownership proof
-can mark committed managed raw-source versions eligible; unmanaged, unknown,
-and not-yet-materialized classes remain preserved. Planning never deletes data.
-
-Portable backup export holds the same store-wide lease while it builds a
-versioned directory package outside the source store. The package contains a
-strict logical manifest plus checksum-addressed managed source objects; it
-fails closed when ownership inventory is incomplete or a required managed
-version cannot be verified. Machine-local origins, directory roots, writer
-coordination, recovery journals, application/provider credentials, and
-unrelated workspace data are not exported. A manifest checksum and per-object
-hashes detect corruption or modification but do not authenticate who created a
-package. Export requires an explicit destination approval and publishes with no
-replacement only after the package passes its own inspector.
-
-Portable restore repeats complete package inspection before any destination
-write, imports into a fully staged current-schema store, validates the restored graph and
-managed bytes, and then publishes to an approved new directory without replacing
-an existing entry. The only supported collision decision is
-`fail-if-destination-exists`; restore never merges stores, renames logical
-identities, or claims continuity with the exporting host. Restored URL evidence
-keeps only its safe fetched-at and kind fields. Original URLs and all file and
-directory bindings remain absent.
-
-Confirmed deletion accepts only an archived non-default CKB after a separate
-path-free preview. Its exact token binds the store graph, effective retention
-and override revisions, managed-object integrity, and bounded physical
-inventory. The command revalidates that state under the store-wide writer
-lease, stages verified managed blobs before committing the logical deletion,
-and uses a durable v21 operation journal to recover safely across interruption.
-Legal hold, manual preservation, unmanaged database records, missing or
-mismatched managed blobs, and unknown deletion state block the operation.
-Unknown or unowned filesystem entries are preserved. The retained completion
-audit is content-free; external backups, exports, and copied stores are not
-deleted.
-
-The package deliberately represents every restored source as unbound. It does
-not preserve directory-root/member relationships or host-binding history, and
-a valid legacy store containing unmanaged source versions cannot be described
-as a complete package, so export refuses it rather than silently omitting
-provenance.
-
-The schema currently preserves append-only source/version, origin, observation,
-retirement, URL, restored path-free URL provenance, directory-root, and
-directory-member history. [ADR 0007][adr-0007] records the compact v6–v21
-schema-evolution summary and the invariants that
-motivated each boundary.
-
-### Canonical candidate profile contract
-
-The first #66 component defines a provider-independent, immutable canonical
-profile aggregate without replacing the legacy profile identity used by older
-contexts. A profile version binds an exact path-free CKB selection and stores
-bounded normalized facts for identity, contact, employment and dates,
-achievements, projects, skills, certifications, education, languages, and
-approved links. Every fact cites an exact selected store, CKB, source, and
-source version and requires candidate-provided provenance; public
-corroboration is optional.
-
-Conflicts, possible duplicates, and omissions remain explicit issues rather
-than silently selecting a value. Every issue must be handled before reviewed
-status. The strict schema and framework-free constructor enforce version
-lineage, review timestamps, source membership, bounded collections, stable
-identifiers, canonical ordering, deep immutability, and path-free JSON round
-trips.
-
-The second #66 component adds workspace-local, append-only profile history in
-SQLite migration 24. Canonical payload checksums, immediate parent lineage,
-monotonic update timestamps, immutable triggers, strict reload validation, and
-content-free audit events protect every version. A provider-independent
-application service supports optimistic fact/issue edits and creates a new
-reviewed version only after the domain review blockers pass.
-
-Profiles may combine explicitly selected CKBs, so their history does not belong
-to any one portable CKB package and is not included in CKB backup/restore. This
-component now also has a provider-independent derivation boundary. CKB storage
-returns fresh bytes plus safe version metadata after one-handle size, checksum,
-and file-identity verification; it never exposes the managed path. The
-application revalidates the exact lifecycle snapshot after normalization and
-again after extraction before persistence, requires explicit provider-data
-approval, and sends only
-bounded normalized text, media types, checksums, and application-owned opaque
-source IDs through a strict extraction port.
-
-The strict provider proposal can describe all canonical fact categories and
-relationships but cannot choose persisted IDs, provenance kinds, review state,
-severity, or messages. Each proposed fact must include an evidence quote that
-occurs in its cited normalized source and contains the proposed value; the quote
-is checked locally and is not persisted. The application maps valid citations back to exact selected CKB
-versions, generates deterministic IDs, keeps conflicting and duplicate facts,
-adds visible category omissions, builds a draft, and appends it through the
-shared history service. The configured-provider adapter uses the workspace's
-author model and existing API-key, authenticated user-session, or local
-transport. Its system prompt treats source text as untrusted data, and the
-strict proposal schema remains the only accepted response shape.
-
-Shared application and local-driver operations derive from the workspace's
-validated, pinned CKB selection and provide exact/latest reads, immutable
-history, optimistic edits, and candidate review. Store roots remain inside the
-local driver rather than entering adapter-neutral commands or results. The CLI
-and packaged desktop host expose the shared five-operation workflow without
-accepting a CKB store root; only derivation has a provider-transmission approval
-flag. The desktop bridge returns an explicit bounded profile projection and
-does not expose the stored selection snapshot.
-
-New runs may select one exact reviewed profile version. The local driver
-verifies its persisted checksum and requires its CKB selection to match the
-workspace's current lifecycle-ready selection before recording a safe profile
-ID, version, and checksum reference in immutable context. Resume accepts no
-replacement selection, so later profile edits cannot change an existing run.
-Legacy starts without a canonical profile remain readable. Source lifecycle
-changes preserve immutable profile and run history, but the same selection
-check blocks stale drafts from becoming reviewed and blocks unavailable
-profiles from new runs. Whole-workspace backup and retention preserve profile
-and approved-export records; a portable single-CKB backup does not claim a
-cross-CKB workspace profile. #80 owns removal or rebuilding of derived index
-rows when these dependencies become unavailable. A visual profile editor in
-the collecting desktop workspace uses only the bounded host projection. It
-loads exact history, preserves provenance while editing fact values and issue
-statuses, requires explicit transmission approval for derivation, and injects
-the selected reviewed ID/version pair into the existing run-dispatch boundary.
-Historical and reviewed versions remain read-only in that surface.
-
-### CKB integration gap
-
-The CKB does not yet implement its newly defined lexical index, retrieval-index
-drift enforcement, provider transmission scope, missing-blob repair, or general
-cleanup beyond confirmed deletion of ownership-proven data. Vector and hybrid
-indexes remain deferred.
-Until those contracts are
-integrated and validated, the workspace-scoped evidence and retrieval path
-remains authoritative for application runs.
-
-## Evidence-grounded evaluator–optimizer
-
-DraftLoop applies the evaluator–optimizer pattern to a factual, evidence-backed
-workflow. The author is the optimizer's generator, the independent critic is
-the evaluator, and each revision is a bounded optimization step against a
-visible rubric. The product uses author–critic language in the UI because it is
-clearer to candidates.
-
-```text
-canonical inputs + rubric
-          |
-          v
-     author draft ---------> structured artifact + evidence links
-          ^                                      |
-          |                                      v
-   bounded revision <----- independent evaluator + deterministic checks
-          |
-          v
-  stable / budget exhausted / user review early
-          |
-          v
-       human approval -> local export
-```
-
-The rubric covers factuality, evidence support, requirement coverage, and
-quality. Deterministic validators handle checks that do not need a model.
-Findings are structured, actionable, severity-rated, and linked to claims,
-sections, or source locators where possible. A critic can identify a problem
-but cannot establish truth by itself; user evidence and human decisions remain
-authoritative.
-
-Validation and readiness share the block-local lexical coverage matcher in
-`packages/validation`. At least half of the distinct meaningful requirement
-tokens, with at least one match, must occur within one artifact block. Matches
-are never pooled across blocks or sections; section titles and claim-only text do
-not count. Explicit gaps still override lexical matches, and priority weights
-and rubric thresholds are unchanged. Three closed lexical rules refine that
-match: the degree rule, permitted alternatives, and organisation-maturity
-qualifiers, each described below. None of them infers negation, credential
-equivalence, or semantic entailment. Tokens are also compared literally, so
-inflected forms are distinct: `implement` does not match `implemented`, and
-`contract` does not match `contracts`. A block can therefore restate a
-requirement in another grammatical form and still fall below the half-token
-rule. Existing stored contexts and scores are not rewritten; a new evaluation
-can yield a different result.
-
-The default author and critic use different companies, with provider and model
-versions recorded in run history. The orchestrator stops at configured round,
-cost, or time limits, when quality is stable, or when the user reviews early.
-It never loops indefinitely to optimize a subjective score. See [ADR
-0003](../adr/0003-evidence-grounded-evaluator-optimizer.md).
-
-### Degree coverage
-
-Standalone requirements of the form `[a] <subject> [or <subject>] degree
-[preferred|required]` use a closed degree rule instead of lexical overlap.
-Subjects are `computer science` (also hyphenated) and `quantitative`. A trailing
-period is allowed. Both alternatives are permitted; they need not both appear
-in the CV. Other requirement phrasing retains the ordinary lexical heuristic.
-
-The grammar is evaluated per clause, not per block. A block is split on `;` and
-on a sentence-final `.`, never on commas, because the credential grammar uses
-commas for specialization and year ranges and because a qualifier such as `, not
-completed` belongs to the credential it disqualifies. A block covers the
-requirement when one clause states a permitted attained degree on its own, so
-`MSc in Computer Science; training in software architecture.` qualifies. An
-uncertain clause is never rescued by a neighbouring one: `Pursuing an MSc in
-Computer Science; interested in secure development` does not qualify.
-
-Punctuation alone cannot detach a disqualifier from what it disqualifies. A
-following clause that carries a status term but states no topic of its own —
-`; not completed`, `; expected 2027` — is read as part of the credential clause
-beside it, so it behaves exactly like the comma form `, not completed`. A later
-clause that does state its own topic, such as `; training in software
-architecture`, is independent and neither rescues nor disqualifies.
-
-A qualifying clause must start with a supported credential followed by `in`
-and a permitted subject: BS/BSc, MS/MSc, PhD, Bachelor/Master of Science,
-Doctor of Philosophy, bachelor's/master's/doctoral degree, or degree. The
-optional prefixes are `earned`, `completed`, or `holds`, with an optional
-article. A comma-separated alphabetic specialization and comma-separated year
-or year range may follow. Case, whitespace, typographic apostrophes, and the
-computer-science hyphen are normalized. Quantitative field/discipline labels
-are accepted literally; mathematics or other subjects are not automatically
-classified as quantitative.
-
-Negated, coursework-only, or status-qualified entries (such as expected,
-incomplete, candidate, honorary, or revoked) do not establish an attained
-degree. A recognized requirement that fails this rule cannot fall back to
-lexical overlap. Dotted abbreviations, free-form credential prose, degree-level
-requirements, and general subject equivalence are outside this rule. Explicit
-gaps still override a match. This is text matching, not credential verification.
-
-### Permitted alternatives
-
-A requirement that lists permitted alternatives is matched once per alternative
-instead of as one long token list, so naming more alternatives can no longer
-make a requirement harder to satisfy. `Experience with Prometheus or
-OpenTelemetry.` and `Experience with Prometheus, OpenTelemetry, or Datadog.`
-are each satisfied by a block that names one of them. Every condition stated
-outside the enumeration is kept in each branch, so `Production experience with
-Prometheus or OpenTelemetry.` still requires production wording in the same
-block. Branch matches are never combined: one block must satisfy the half-token
-rule for one branch on its own.
-
-The grammar is deliberately closed. It reads `A or B` and comma lists ending in
-`or`, with up to five single-word alternatives and exactly one `or` in the
-requirement. Compound `and` conditions, `and/or`, several enumerations in one
-requirement, and multi-word alternatives such as `Google Cloud or AWS` are not
-recognized and fall back to ordinary matching unchanged. A capitalized word
-directly beside the enumeration is read as a possible multi-word alternative
-and stops the rule rather than splitting the phrase.
-
-### Organisation-maturity qualifiers
-
-When a requirement literally states an organisation-maturity qualifier, the
-block that matches it must state that qualifier too. The vocabulary is a closed
-list: early stage, seed stage, pre-seed, series A/B/C, growth stage, late
-stage, scale-up, and startup stage, with hyphen, spacing, and case variants
-normalized. `Early-stage startup experience.` is therefore not covered by
-`Built internal tools at a 40-person startup, gaining broad experience.`
-
-Maturity is never inferred. The rule builds no taxonomy of company stages and
-derives nothing from headcount, funding amounts, or organisation type; on its
-own, `startup` is an organisation type rather than a qualifier. The qualifier
-must appear in the same block that matches, not in a neighbouring block.
-Requirements without such a qualifier keep the ordinary lexical rule.
-
-The guard applies per alternative branch, so `Early-stage or growth-stage
-experience.` is covered by a block stating either stage rather than requiring
-both. Where the alternatives rule cannot split a requirement, every stated
-qualifier is required together: `Series A or Series B experience.` is a
-multi-word enumeration, so it stays uncovered by a block naming only one
-series. That is a known conservative false negative, not an accepted match.
-
-### Independent-readiness report boundary
-
-`packages/schemas` owns the strict, versioned
-`independentReadinessReport` contract. It records the context and artifact
-identity, independent-review record, input completeness, all seven rubric
-dimensions, and provenance-preserving deterministic and critic findings. The
-pure assembler in `packages/evaluations` orders enriched findings, assigns
-their origin, validates the complete report, and returns a deeply immutable
-projection without provider payloads or hidden reasoning.
-
-This first v0.8 component is a contract slice only. It does not call providers,
-persist reports, wire the CLI or desktop, establish approval semantics, or
-derive application-ready status or stopping decisions. Runtime integration is
-gated on the complete drafting and writing-policy work in #69 and #70.
-
-### Complete CV composition boundary
-
-The live author contract represents header, summary, experience, projects,
-skills, education, certifications, and languages as semantic sections. The
-author includes each section supported by retrieved candidate evidence and
-preserves authored section and entry order through the canonical artifact and
-Markdown, DOCX, and PDF exporters. Before provider output becomes an artifact,
-the application rejects substantive claims without evidence, unrelated
-citations, and changed exact invariants such as dates, metrics, credentials,
-links, employers, and multi-word titles. Missing configured sections remain
-visible to the existing deterministic completeness check.
-
-Author grounding treats a narrow English action phrase such as `Built TypeScript
-tools` as an action plus the protected technology name. The exception requires a
-known opening past-tense verb, one acronym or mixed-case name, and a recognized
-software-object noun. Headings, ambiguous title words, employer statements, and
-multi-word names keep their existing full-span checks. Standalone mixed-case
-names also appear in the source grounding guide and require whole-token support;
-`SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
-syntactic rule, not general semantic verification.
-
-### Local job-document requirement units
-
-When a run does not select a reviewed opportunity brief, the application
-extracts complete list items and paragraphs from the local job document. It
-joins wrapped lines, removes Markdown heading structure, preserves later units,
-and assigns neutral `medium` priority. The extraction makes no semantic claim
-that every retained paragraph is a hiring criterion. Selecting substantive
-requirements and assigning priorities belongs to the reviewed opportunity brief.
-
-The fallback rejects documents over 64 KiB, more than one hundred units, units
-over two thousand characters, empty/heading-only input, code fences, and tables
-with an explicit message directing the candidate to a reviewed brief. It does
-not silently truncate source text. Reviewed-brief requirements and priorities
-remain authoritative, and existing pinned contexts are never re-extracted on
-resume. A corrected interpretation requires a new reviewed context.
-
-### Chronology in local-source retrieval
-
-For local-source contexts without a CKB selection, author and critic retrieval
-reserves space for dated Markdown headings from the exact pinned source IDs
-and checksums. Headings retain their original text, chunk identity, and source
-references. Ranked evidence fills the remaining slots after duplicate and
-unapproved-source filtering. This keeps explicit career ranges available even
-when their headings contain no job-query terms.
-
-The provider selection allows at most twenty chunks and 128 KiB of serialized
-evidence. The heading scan allows at most one hundred pinned sources and one
-hundred heading chunks per source. Missing or mismatched sources, scan overflow,
-or headings that cannot fit the requested count or byte limit fail retrieval
-before provider execution. The bounded matcher recognizes Markdown headings
-with a year range or an ongoing end marker; it does not infer dates or repair
-artifact chronology. CKB retrieval retains its separate selected-version path.
-
-### Explicit experience statements
-
-Author grounding recognizes whole statements such as `No GraphQL experience`
-and `GraphQL experience` for a single acronym or mixed-case technology name.
-Their protected values preserve both the technology and whether experience is
-present or absent. A cited source must explicitly support that same statement,
-either directly or in an `Experience:` / `No experience:` list. The source guide
-includes these protected statements so the author can use supported word order.
-
-Missing evidence is not evidence of no experience. Conflicting positive and
-negative statements, qualified clauses, and partial technology-name matches do
-not satisfy this bounded rule. Ambiguous names and longer prose retain the
-existing grounding behavior; this is not general semantic factual verification.
-
-### Local rejected-author replay
-
-The local driver accepts an optional `authorProposalCaptureDirectory` for
-explicit diagnostic sessions. The selected parent directory must already exist.
-When application validation rejects a parsed author proposal, a new private
-subdirectory contains `replay.json`: the proposal, exact `buildAuthorArtifact`
-validation inputs, provider/model identity, and sanitized failure diagnostics.
-On POSIX, directories use mode `0700` and files use `0600`. Existing captures
-are never overwritten. Capture is disabled by default and has no CLI flag or
-renderer control.
-
-These files contain sensitive candidate material and source paths. The caller
-owns their retention and deletion; keep the directory outside shared repositories.
-Replay locally by passing the saved `validationInputs` to `buildAuthorArtifact`.
-Only a capture success/failure code joins normal error diagnostics; captured
-content stays out of run history and retry feedback. Capture errors preserve the
-original rejection and retry policy. Transport errors and provider token-budget
-rejections occur before this boundary and are not captured. No provider call,
-retry reset, candidate approval, or export is triggered by capture or replay.
-
-### Local unknown Claude category capture
-
-The local application driver accepts an optional
-`localClaudeCategoryCaptureParent` for explicit diagnostic sessions and passes
-it only to Anthropic user-session adapters constructed for run execution.
-Capture is disabled by default, has no CLI or renderer control, and requires a
-caller-selected parent directory that already exists. When a structured Claude
-error contains an unrecognized category-shaped `subtype` or `terminal_reason`,
-the adapter writes only those exact strings to a new `categories.json` file in
-an unpredictable private subdirectory. Each value is limited to 128 UTF-8
-bytes; an oversized value prevents any partial capture. On POSIX, the directory
-uses mode `0700` and the file uses `0600`.
-
-The capture excludes stop reasons, provider prose, prompts and outputs, errors,
-session and usage data, model content, paths, URLs, credentials, and environment
-values. Neither the capture path nor captured strings enter the provider error
-or run history. A fixed capture success/failure diagnostic is appended without
-changing the original error code, message, status, retryability, or failure
-stage. Capture never triggers a provider call or changes retry behavior; the
-caller owns retention and deletion of the local file.
-
-The allowlist recognizes Claude's `api_error` terminal reason and the `success`
-result subtype, including the documented case where a result is still marked
-`is_error: true`. A structured `api_error` without a finite numeric API status
-is classified as a retryable transient provider failure with fixed diagnostics
-and a generic message. When a numeric status is present, status mapping takes
-precedence, so authentication, quota, rate-limit, server-error, and other
-status-bearing behavior remains unchanged. Dynamic provider prose is never
-used for this statusless classification or retained in diagnostics.
-
-### Author adjudication and revision trace boundary
-
-`packages/schemas` also owns the strict, versioned author-adjudication plan and
-adjudicated-revision trace contracts. A plan binds one explicit `accept`,
-`reject`, or `nuance` decision and concise rationale to every finding in one
-readiness report, snapshots only the finding metadata needed for audit, and
-derives whether a revision is required or a disagreement must remain visible.
-The pure `buildAuthorAdjudicationPlan` helper in `packages/orchestrator`
-validates the report/source-artifact identity, target references, complete
-decision coverage, and deterministic report order.
-
-`packages/artifacts` owns the pure `diffArtifacts` and
-`traceAdjudicatedRevision` helpers. A trace requires a distinct next artifact
-version linked to its source parent, records strict claim/section/artifact
-diff IDs, and marks accepted effects verified only when the current diff proves
-them. Evidence, requirement, and rubric effects remain missing unless an
-explicit, bounded effect override records a concise rationale; rejected and nuanced
-findings remain `disagreement-preserved`.
-
-Approved overrides are conditional: a direct effect takes precedence and remains `verified`, even when an override
-was supplied. The persisted approved override is retained; duplicate, unknown,
-malformed, and non-accepted overrides still fail validation. A trace is valid
-only when no accepted effect is missing. Verification records structural
-changes, not semantic resolution of findings; it never exposes a `resolved` flag.
-
-The orchestrator exposes a `requestAdjudicatedRevision` runtime carrier. It
-persists the exact report, canonical plan, accepted-effect overrides, and
-nullable derived trace in the existing run snapshot, and passes that carrier
-only to the matching revision author execution. The application author
-adapter now transmits that exact content-safe carrier only on that matching
-revision and adds explicit instructions to apply accepted findings, preserve
-rejected or nuanced disagreements, and retain the evidence and factuality
-safeguards above. Legacy revision requests remain separate, and invalid
-provider lineage fails closed without a trace. This #72 runtime slice does not
-generate reports, add persistence tables or migrations, or change approval and
-stopping semantics. The #277 application/local boundary now stages that exact
-report and complete adjudication through the shared application driver, using
-the existing provider-independent runtime validation and durable run history
-without opening a provider. CLI and desktop controls and report generation
-remain deferred. It stores no raw prompts, raw responses, or hidden reasoning;
-duration accounting issue #278 remains ordered after this staging prerequisite.
-
-### Application-readiness stopping decision boundary
-
-`packages/schemas` owns the strict, versioned application-readiness stopping
-decision contract. It binds one #71 readiness report, an optional latest #72
-revision trace, the exact artifact and context identities, artifact creation
-and parent-version chronology, canonical per-dimension agreements,
-content-free deterministic checks, blockers, limitations, embedded loop
-context, and derived stop fields. Human approval remains a required literal in
-the contract; application readiness never means that approval was given.
-
-The pure `evaluateApplicationReadinessStoppingDecision` helper in
-`packages/evaluations` validates the artifact, report, and trace, reruns local
-deterministic validation, and applies conservative readiness blockers and
-bounded stop-reason precedence. It stores no diagnostic messages, source
-excerpts, provider payloads, or hidden reasoning in its deterministic
-projection.
-
-The #73 runtime boundary assembles a fresh current-artifact report at human
-approval, persists the readiness decision and an exact artifact checksum
-binding, clears that binding on revision or artifact replacement, and requires
-the same application-ready binding before export. Older snapshots may omit
-these optional fields and fail closed at export until a new approval records
-them. Provider, CLI, and desktop presentation remain owned by their respective
-boundaries; export invokes the rendering-QA contract after this binding passes.
-
-### Rendering and rendering-QA boundary (#74)
-
-`packages/rendering` owns two controlled A4 layout profiles:
-`compact-one-page` and `standard-two-page` (the default). The selected profile
-is recorded with the source-content and rendered-byte checksums, and is applied
-consistently to the minimal HTML, PDF, and DOCX implementations. Content is
-never truncated, reordered, summarized, or rewritten to satisfy a page target;
-an overflowing PDF is a deterministic QA failure signal.
-
-`buildRenderingQaReport` produces a strict, immutable, content-free report of
-exact visible-content integrity, section/block order, active-content signatures,
-and inspectable PDF page counts. The application builds this report after exact
-approval and before writing any export, and persists it with export history.
-Markdown uses deterministic QA; PDF and DOCX use the named controlled byte
-inspectors, which recover text and report bounded page/layout failures.
-
-The PDF inspector checks page targets, blank pages, text coordinates, and
-orphaned section starts where a page boundary makes them determinable. The DOCX
-inspector checks OOXML text order, explicit page breaks, package integrity, and
-relationship targets. OOXML bytes cannot establish true office pagination or
-visual clipping, so that limitation remains explicit; this is not exhaustive
-cross-viewer certification. Structured links and images remain unsupported by
-the current artifact model.
-
-## Author–critic loop
-
-Every live author request carries the same 8,192-token output cap in its
-model-facing budget and transport configuration. The prompt asks for compact,
-schema-only JSON while preserving supported facts, required sections, chronology,
-and citations. Initial drafts, ordinary revisions, and adjudicated revisions all
-retain this guidance, including retries whose latest failure concerns factuality.
-The critic has its own independent output contract.
-
-The existing provider usage checks still enforce the cap. Claude reports
-[cumulative usage across a call](https://code.claude.com/docs/en/agent-sdk/cost-tracking),
-so a token-budget failure alone does not establish the size of the final JSON.
-Prompt guidance is not a guarantee of compliance; live effectiveness requires a
-separate observation.
-
-1. Create a workspace with a job description, local evidence directory,
-   instructions, truthfulness policy, and readiness rubric.
-2. Ingest and normalize selected sources into a canonical evidence base.
-3. Ask the author for a draft with evidence references on important claims.
-4. Give the independent critic the same canonical inputs, draft, and rubric;
-   it returns structured findings rather than an untracked rewrite.
-5. Ask the author to revise each finding or record a user-visible rejection.
-6. Repeat within configured round and cost/time budgets.
-7. Run deterministic checks, surface unresolved disagreements, and require
-   explicit approval before export.
-
-The default pairing is one Anthropic model and one OpenAI model, with roles
-configurable and swappable. Same-company pairings must be visible and warned
-about. Provider identity and model version are part of run history.
-
-## Workflow state machine
-
-Each transition emits an auditable event and retains relevant inputs, outputs,
-evidence links, and user decisions.
-
-| State               | Meaning                                                            | Allowed next states                                                                                                                           |
-| ------------------- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `collecting`        | Workspace inputs are being assembled.                              | `ingesting`, `paused`, `stopped`                                                                                                              |
-| `ingesting`         | Selected local material is being normalized.                       | `drafting`, `collecting`, `paused`, `stopped`                                                                                                 |
-| `drafting`          | The configured author is creating a draft.                         | `reviewing`, `paused`, `stopped`, `budget-exhausted`                                                                                          |
-| `reviewing`         | The independent critic is producing structured findings.           | `revising`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                                      |
-| `revising`          | The author is addressing accepted findings.                        | `reviewing`, `awaiting-approval`, `paused`, `stopped`, `budget-exhausted`                                                                     |
-| `provider-error`    | A provider request failed and safe recovery metadata is available. | Corresponding active step on explicit retry (at most three attempts), `awaiting-approval` when an artifact can return to review, or `stopped` |
-| `awaiting-approval` | Checks are complete and the user must decide.                      | `approved`, `revising`, `paused`, `stopped`                                                                                                   |
-| `approved`          | The user approved the current artifact.                            | `exported`, `revising`                                                                                                                        |
-| `exported`          | An approved artifact was rendered locally.                         | —                                                                                                                                             |
-| `paused`            | The user temporarily suspended the run.                            | `collecting`, `drafting`, `reviewing`, `revising`, `awaiting-approval`, `stopped`                                                             |
-| `stopped`           | The user ended the run.                                            | —                                                                                                                                             |
-| `budget-exhausted`  | A round, cost, or time budget ended the loop.                      | `awaiting-approval`, `revising`, `stopped`                                                                                                    |
-
-The loop enters `awaiting-approval` when readiness criteria are met, quality is
-stable across configured rounds, the user reviews early, or a budget ends. It
-must not claim readiness with unresolved high-severity factuality issues,
-unaddressed critical requirements without an explicit gap, or newly introduced
-unsupported claims. `provider-error` stays distinct across application and
-desktop boundaries. Retry does not silently broaden the acknowledged
-transmission scope.
-
-### Active provider-duration accounting
-
-When `maxDurationMs` is configured, each `RunSnapshot` persists an optional
-`durationAccounting` record with accumulated active milliseconds and an
-`activeSince` timestamp (or `null`). New runs start active at `startedAt`.
-Drafting, reviewing, and revising accrue time; awaiting human approval,
-explicit pause, provider-error retry waits, budget exhaustion, and terminal
-states do not. Leaving active work settles the segment, and retry/resume or a
-revision request starts a new segment. Provider calls remain inside the active
-segment, so their elapsed time is counted without timers or cancellation.
-
-Snapshots written before this record existed use conservative wall-clock time
-from `startedAt` until a safe transition persists the migrated accounting.
-Malformed accounting fails closed at the duration budget boundary, and clock
-regressions never reduce accumulated active time. This accounting changes only
-duration measurement; round, cost, retry, and cancellation semantics remain
-unchanged.
-
-## Trust and privacy controls
-
-The system keeps evidence links, structured findings, approved artifact
-versions, revisions, decisions, provider/model identity, usage, and checksums
-recoverable without storing hidden chain-of-thought. Raw prompts and raw
-provider responses are not operational-log or audit payloads. Provider calls
-require an explicit data policy, and local retention settings are visible per
-workspace. Human approval is mandatory; job discovery, application submission,
-and uncontrolled external research are outside the MVP.
-
-See [the threat model](../security/threat-model.md) and [privacy and evaluation
-policy](../security/privacy-and-evaluation.md) for current trust boundaries, redaction
-rules, retention defaults, and deterministic evaluation gates.
-
-### Application adapter boundary
-
-The CLI and packaged desktop host are adapters over the shared application
-driver. The driver stores a workspace manifest beside application SQLite
-history, ingests selected local sources, constructs context snapshots, and
-drives orchestration.
-
-Across CKB commands, the adapters differ only at the user-interaction edge:
-
-- **CLI:** accepts intentional runtime-only file and directory paths.
-- **Desktop:** owns native pickers in the host and projects only path-free,
-  bounded results to the renderer.
-- **Shared application boundary:** applies the same approvals, lifecycle guards,
-  network policy, deterministic ordering, and complete-or-partial result
-  contracts to both adapters.
-
-Opportunity commands follow the same split. The CLI reads source manifests and
-edit patches from intentional runtime-only JSON files. The desktop renderer can
-provide approved URLs, pasted text, and typed candidate instructions, but asks
-the host to resolve every local file through a native picker. Both adapters use
-the same immutable application operations; provider extraction is enabled only
-by an explicit per-create approval.
-
-Store setup, selection, inspection, intake, refresh, rebind, retirement, and
-directory maintenance all follow this split. Read-only inspection calls are
-fresh reads rather than a cross-command snapshot. Mutation results expose only
-the opaque identities, statuses, timestamps, counts, and bounded partial
-progress required by the caller. The detailed CKB contracts are documented in
-[Portable Candidate Knowledge Base](#portable-candidate-knowledge-base) and are
-canonical in [ADR 0007][adr-0007].
-
-Archiving a CKB and other destructive or externally visible operations require
-explicit confirmation. Adapter commands do not silently rewrite workspace
-selection or broaden an approved source, URL, or provider scope.
-
-### Provider and export boundary
-
-Live provider execution is opt-in and the provider boundary enforces the
-request data policy before the SDK call. Approved artifacts render locally to
-Markdown, controlled DOCX, or controlled PDF; immutable export records retain
-artifact/template versions, timestamp, format, MIME type, and checksum.
-
-Additional artifact schemas, multilingual templates, portfolio ingestion, and a
-local endpoint adapter reuse these boundaries at component level. They are not
-integrated or outcome-validated merely because contracts and tests exist; the
-[roadmap](../roadmap.md) records each evidence level.
-
-The `pilot` CLI command uses synthetic local fixtures to exercise ingestion,
-authoring, independent criticism, one bounded revision, approval, export,
-typed local history, and audit events. Its report contains only safe counts and
-identifiers. It validates workflow mechanics, not the quality hypothesis on
-real applications.
-
-[adr-0007]: ../adr/0007-portable-candidate-knowledge-store.md
+This is structural coverage, not independent factual verification. Protected
+multi-word values remain within one cited chunk, and numbers, punctuation,
+factual wording, and explicit experience contradictions remain protected.
+
+SQLite migration 26 preserves the artifact-history boundary: each immutable
+artifact ID may begin its own version-1 lineage, later rows link by parent
+version, and dependent run, execution, finding, decision, and export references
+remain valid. The migration rebuilds the version table transactionally,
+recreates immutable update/delete triggers, and validates the foreign-key graph.
+The application checks workspace and context identity, rejects missing or
+conflicting ancestors, then projects checksum-verified ancestry from durable
+run snapshots parent-first and idempotently before inserting the latest
+artifact, including earlier round records. Resume can complete an
+already-reviewed projection without another provider call or changing earlier
+snapshots.
+
+## Detailed current-system views
+
+This page is the stable external entry point. The detailed views below are the
+canonical homes for the current-state material that would otherwise make this
+overview a file tour:
+
+- [Candidate evidence](candidate-evidence.md) covers opportunity briefs,
+  writing policy enforcement, portable CKB lifecycle, canonical candidate
+  profiles, and CKB integration boundaries.
+- [Drafting and review](drafting-and-review.md) covers the
+  evaluator–optimizer workflow, requirement matching, author grounding,
+  independent readiness, adjudication, stopping decisions, and rendering QA.
+- [Runtime and trust](runtime-and-trust.md) covers the author–critic loop,
+  workflow states, duration accounting, application adapters, provider controls,
+  and export boundaries.
+
+## Current limitations
+
+Portable CKB retrieval is explicit and scoped to selected source versions;
+index synchronization and lifecycle checks run before results are used. Local
+vector and hybrid retrieval remain evaluation components. Rendering QA is
+bounded: OOXML cannot establish true office pagination or visual clipping, and
+structured links and images are unsupported by the current artifact model.
+DraftLoop prepares local artifacts but does not submit applications, publish
+documents, send messages, or perform uncontrolled web research.

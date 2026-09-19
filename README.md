@@ -142,8 +142,9 @@ flowchart LR
 The portable Candidate Knowledge Base (CKB) component can store approved local
 source versions. CLI and desktop adapters can create, open, list, and inspect
 stores; workspaces can also bind explicit store/base snapshots with drift
-checks. Retrieval does not yet consume those snapshots, so the existing
-workspace evidence path remains authoritative for application runs.
+checks. The integrated path synchronizes and queries exact selected source
+versions through each CKB's local lexical index, while legacy workspaces
+without a CKB selection continue to use the workspace evidence path.
 
 ## Trust boundary
 
@@ -159,8 +160,8 @@ workspace evidence path remains authoritative for application runs.
 ## Documentation
 
 - [Documentation map](docs/README.md) · [Roadmap and current status](docs/roadmap.md) · [Release history](https://github.com/akoita/draft-loop/releases)
-- [Architecture](docs/architecture/overview.md) · [Architecture decision records](docs/adr/)
-- [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
+- [Architecture overview](docs/architecture/overview.md) · [Candidate evidence](docs/architecture/candidate-evidence.md) · [Drafting and review](docs/architecture/drafting-and-review.md)
+- [Runtime and trust](docs/architecture/runtime-and-trust.md) · [Architecture decision records](docs/adr/) · [CLI and desktop operations reference](docs/reference/cli-and-desktop.md)
 - [Privacy and evaluation](docs/security/privacy-and-evaluation.md) · [Threat model](docs/security/threat-model.md)
 - [Contributing](CONTRIBUTING.md) · [Releasing](docs/operations/releasing.md)
 

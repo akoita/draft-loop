@@ -59,7 +59,7 @@ alternatives, such as `Prometheus or OpenTelemetry`, is satisfied by a block
 naming one of them, with any surrounding condition still required. A stated
 maturity qualifier, such as `early-stage`, must appear in the matching block
 and is never inferred from headcount, funding, or the word `startup`. See the
-[coverage contract](../architecture/overview.md#degree-coverage). Other equivalent
+[coverage contract](../architecture/drafting-and-review.md#degree-coverage). Other equivalent
 phrasing can still be missed, including inflected forms such as `implemented`
 for `implement`, and these signals do not establish semantic coverage or verify
 a credential.
