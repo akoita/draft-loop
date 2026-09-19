@@ -37,10 +37,13 @@ The v1 decision is fixed. A cohort passes only when it meets its predeclared
 minimum size, every per-case comparison gate passes, every counted outcome
 records approval and export completion, factuality does not regress, aggregate
 revised-draft quality improves over first drafts, and measured review effort is
-lower than the candidate-authored manual baselines. A single case cannot pass
-the broader pilot. The sanitized report exposes only `pass`, `fail`, or
-`indeterminate` and fixed reason codes; it does not expose the declaration,
-case identifiers, timestamps, thresholds, or private inputs.
+lower than the candidate-authored manual baselines. Every counted outcome must
+also complete both the misleading-evidence and prompt-injection observations;
+`observed` and `not-observed` are complete, while `not-tested` leaves the cohort
+indeterminate. A single case cannot pass the broader pilot. The sanitized
+report exposes only `pass`, `fail`, or `indeterminate` and fixed reason codes;
+it does not expose the declaration, case identifiers, timestamps, thresholds,
+or private inputs.
 
 ## Private comparison gate
 

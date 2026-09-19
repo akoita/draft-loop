@@ -126,7 +126,7 @@ const outcome: PilotOutcomeRecord = {
   providerCostUsd: 0.04,
   userConfidence: 4,
   misleadingEvidence: "not-observed",
-  promptInjection: "not-tested",
+  promptInjection: "not-observed",
   limitations: ["single-consented-case", "adversarial-observation-unavailable"],
 };
 
@@ -294,7 +294,7 @@ describe("Consented Real-Application Pilot Harness", () => {
     expect(report.productMeasures.exportCompletionRate).toBe(1);
     expect(report.productMeasures.totalProviderCostUsd).toBe(0.04);
     expect(report.productMeasures.averageUserConfidence).toBe(4);
-    expect(report.productMeasures.promptInjection["not-tested"]).toBe(1);
+    expect(report.productMeasures.promptInjection["not-observed"]).toBe(1);
     expect(report.productMeasures.limitations["single-consented-case"]).toBe(1);
     expect(report.markdownReport).toContain("**Outcome validation:** FAIL");
     expect(report.markdownReport).toContain("**Status:** FAIL");
@@ -430,6 +430,57 @@ describe("Consented Real-Application Pilot Harness", () => {
         secondCase,
       ]).cohortValidation.reasonCodes,
     ).toContain("factuality-regressed");
+  });
+
+  it("requires completed adversarial observations from every cohort case", () => {
+    const baseCase: ConsentedPilotCase = {
+      ...pilotCase,
+      consent: { ...consent, reportingScope: "private-only" },
+      outcome,
+      comparisonGate,
+      comparisonMeasurements,
+    };
+    const secondCase: ConsentedPilotCase = {
+      ...baseCase,
+      id: "pilot-case-2",
+      consent: { ...baseCase.consent, candidateId: "candidate-sanitized-2" },
+      firstDraft: artifact("first-2", false),
+      revisedDraft: artifact("revised-2", true),
+      manualBaseline: artifact("manual-2", true),
+    };
+    const run = (cases: readonly ConsentedPilotCase[]) =>
+      runConsentedPilotHarness(cases, { requireOutcome: true, cohortDeclaration });
+
+    const misleadingUntested = run([
+      {
+        ...baseCase,
+        outcome: { ...outcome, misleadingEvidence: "not-tested" },
+      },
+      secondCase,
+    ]);
+    expect(misleadingUntested.cohortValidation).toEqual({
+      status: "indeterminate",
+      reasonCodes: ["misleading-evidence-not-tested"],
+    });
+
+    const promptInjectionUntested = run([
+      baseCase,
+      {
+        ...secondCase,
+        outcome: { ...outcome, promptInjection: "not-tested" },
+      },
+    ]);
+    expect(promptInjectionUntested.cohortValidation).toEqual({
+      status: "indeterminate",
+      reasonCodes: ["prompt-injection-not-tested"],
+    });
+
+    const completed = run([
+      { ...baseCase, outcome: { ...outcome, misleadingEvidence: "observed" } },
+      { ...secondCase, outcome: { ...outcome, promptInjection: "observed" } },
+    ]);
+    expect(completed.cohortValidation).toEqual({ status: "pass", reasonCodes: [] });
+    expect(completed.markdownReport).not.toContain("candidate-sanitized-2");
   });
 
   it("does not accept an outcome case without a private reporting scope", () => {

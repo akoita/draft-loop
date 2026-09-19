@@ -58,6 +58,8 @@ export const pilotCohortReasonCodes = [
   "factuality-regressed",
   "quality-not-improved",
   "effort-reduction-not-demonstrated",
+  "misleading-evidence-not-tested",
+  "prompt-injection-not-tested",
 ] as const;
 export type PilotCohortReasonCode = (typeof pilotCohortReasonCodes)[number];
 
@@ -659,6 +661,16 @@ function evaluatePilotCohort(
     (effortStatus === "fail" ? failedRules : indeterminateRules).push(
       "effort-reduction-not-demonstrated",
     );
+  }
+
+  if (cases.some((pilotCase) => pilotCase.outcome?.misleadingEvidence === "not-tested")) {
+    reasons.push("misleading-evidence-not-tested");
+    indeterminateRules.push("misleading-evidence-not-tested");
+  }
+
+  if (cases.some((pilotCase) => pilotCase.outcome?.promptInjection === "not-tested")) {
+    reasons.push("prompt-injection-not-tested");
+    indeterminateRules.push("prompt-injection-not-tested");
   }
 
   const status: PilotHypothesisResult =
