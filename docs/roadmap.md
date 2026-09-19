@@ -859,8 +859,10 @@ and release decision.
 
 The first bounded slice under #410 replays the existing private rejected-author
 capture shape through the live local validation boundary without a provider
-call. It returns only accepted/rejected status and fixed structural diagnostics;
-private proposal and evidence content remain caller-owned and outside results.
+call. Issue #412 adds a bounded batch summary with accepted/rejected totals and
+deterministic failure-stage and diagnostic-code counts. Private proposal,
+evidence, source, provider, and model content remain caller-owned and outside
+results.
 
 **Exit criterion:** Retrieval or provider changes measurably improve coverage or
 evidence accuracy without increasing unsupported claims, and failure/recovery
@@ -948,6 +950,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | Added bounded rejected-author replay summaries under #412. | Up to one hundred private replay inputs can produce deterministic acceptance and structural-diagnostic counts without returning case content or identity, creating a provider-free measurement primitive for later comparisons. |
 | 2026-09-19 | Started retrieval and provider quality with provider-free rejected-author replay under #410. | Private capture inputs can be replayed through the live local validator while results expose only fixed structural diagnostics. This creates a deterministic baseline for improvement before another consented provider run. |
 | 2026-09-19 | Ended v0.9 as indeterminate and unreleased under #407. | Twenty-six bounded observations did not satisfy workflow parity or produce a human-approved artifact. #75 closed unmet; #76/#250/#251 closed as not pursued. The project moves to provider-free and replay-first retrieval/provider-quality work before any new consented run. |
 | 2026-09-19 | Recorded #405 as an indeterminate twenty-sixth matched-backend observation. | Both user-session authentication probes passed on the exact clean main revision, but three Anthropic author attempts failed local factual and substantive-coverage validation. The attempt cap was exhausted without an artifact or critic review; authorization is exhausted and #75/#250 remain blocked. |
