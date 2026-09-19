@@ -112,9 +112,9 @@ describe("production lexical retrieval baseline", () => {
         candidateMode: "hybrid",
         caseCount: 3,
         baselineMetrics: {
-          citationAccuracy: 2 / 3,
+          citationAccuracy: 1,
           requirementCoverage: 1,
-          irrelevantContextRatio: 1 / 3,
+          irrelevantContextRatio: 0,
           unsupportedClaimCount: 0,
           meanReciprocalRank: 1,
         },
@@ -126,14 +126,14 @@ describe("production lexical retrieval baseline", () => {
           meanReciprocalRank: 1,
         },
         deltas: {
-          citationAccuracyDelta: 0,
+          citationAccuracyDelta: -0.33333333333333337,
           requirementCoverageDelta: 0,
-          irrelevantContextRatioDelta: 0,
+          irrelevantContextRatioDelta: 1 / 3,
           unsupportedClaimDelta: 0,
           meanReciprocalRankDelta: 0,
         },
-        passed: true,
-        regressionReasons: [],
+        passed: false,
+        regressionReasons: ["Citation accuracy dropped by 0.3333"],
       });
       await expect(
         storage.queryEvidence("TypeScript", { workspaceId: "other-workspace", limit: 3 }),
