@@ -80,6 +80,14 @@ function retryFeedback(): NonNullable<AuthorRequest["retryFeedback"]> {
   return {
     failureCode: "output_token_budget_exceeded",
     diagnostics: [{ code: "custom", path: "sections.0.blocks.0.claims.0.evidenceChunkIds.0" }],
+    corrections: [
+      {
+        kind: "invalid-evidence-reference",
+        path: "sections.0.blocks.0.claims.0.evidenceChunkIds.0",
+        instruction:
+          "Replace this reference with an approved retrievedEvidence ID that supports the claim, or omit the claim.",
+      },
+    ],
   };
 }
 
@@ -176,10 +184,10 @@ describe("author adjudication provider handoff", () => {
       "output_token_budget_exceeded means return a materially more concise proposal",
     );
     expect(prompt.systemPrompt).toContain(
-      "Claim/evidence diagnostic paths mean correct that exact boundary",
+      "Apply each retryFeedback.corrections instruction only at its exact path",
     );
     expect(prompt.systemPrompt).toContain(
-      "citing all supporting chunks, splitting the claim, or omitting unsupported protected values",
+      "an invalid-evidence-reference correction requires an approved retrievedEvidence ID",
     );
     expect(prompt.systemPrompt).toContain("Never reconstruct or request rejected content.");
   });
