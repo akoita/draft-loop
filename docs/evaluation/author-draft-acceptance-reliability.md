@@ -1,10 +1,36 @@
 # Author-draft acceptance reliability
 
-The provider-free author-draft acceptance stage is in progress. Its unchanged
-six-case corpus now records three accepted cases and three rejected cases,
-compared with a frozen baseline of two accepted and four rejected. This is a
-deterministic validator result, not a claim of live-model or real-application
-quality.
+The provider-free author-draft acceptance stage met its predeclared exit. Its
+unchanged six-case corpus records three accepted cases and three rejected
+cases, compared with a frozen baseline of two accepted and four rejected. This
+is a deterministic validator result, not a claim of live-model or
+real-application quality.
+
+## Decision
+
+The stage exit is **met**. One supported false rejection moved to acceptance,
+all negative controls retained their intended rejection, and the bounded retry
+fixture reached an accepted artifact only after receiving all three structural
+correction families. No threshold, retry cap, required-section rule,
+chronology rule, evidence-ownership rule, or unsupported-claim rule was
+weakened.
+
+The result is sufficient to admit a separately gated representative
+author-draft revalidation. It does not authorize a provider call, a cohort,
+candidate approval, export, release, or application submission.
+
+## Evidence chain
+
+| Issue and PR | Measured outcome |
+| --- | --- |
+| [#438](https://github.com/akoita/draft-loop/issues/438), [PR #442](https://github.com/akoita/draft-loop/pull/442) | Froze six sanitized cases at two accepted and four rejected, including one supported false rejection and three negative-control families. |
+| [#439](https://github.com/akoita/draft-loop/issues/439), [PR #443](https://github.com/akoita/draft-loop/pull/443) | Moved only the evidence-equivalent percentage case to acceptance; changed quantity, unavailable evidence, and uncovered text remained rejected. |
+| [#440](https://github.com/akoita/draft-loop/issues/440), [PR #444](https://github.com/akoita/draft-loop/pull/444) | Made factual text, invalid evidence reference, and uncovered text feedback structurally actionable; the deterministic retry fixture then succeeded within the unchanged cap. |
+
+The replay input file SHA-256 is
+`13b578342aabff116e72044723cb1102227b77f567adcae46477ceef43187fb2`
+at both baseline and final measurement. Only the separate expected-result
+manifest changed for the corrected positive case.
 
 ## Frozen baseline
 
@@ -71,3 +97,10 @@ correction; absent or incomplete corrections leave the fixture rejected. The
 workflow retains the existing retry cap, timeout, cancellation, persistence,
 and no-silent-fallback behavior. This provider-free result demonstrates the
 contract boundary, not live-model correction quality.
+
+Invented fixtures and deterministic agents do not establish live author
+behavior, real-application quality, or reduced candidate effort. The stage did
+not run authentication probes or providers and did not use private candidate
+material. A representative revalidation requires a new bounded issue with
+consent, explicit provider authorization, predeclared acceptance and stop
+conditions, and a visible first-review boundary.
