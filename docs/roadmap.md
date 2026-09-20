@@ -1,8 +1,8 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-19<br>
-**Current stage:** Author-draft acceptance reliability
+**Last reviewed:** 2026-09-20<br>
+**Current stage:** Representative author-draft revalidation
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -180,7 +180,8 @@ applications.
 | Previous | Workflow parity and release ([milestone v0.9.0](https://github.com/akoita/draft-loop/milestone/4)) | [Ended indeterminate and unreleased](evaluation/consented-pilot-v0.9.md); twenty-six observations across two consented cases | Demonstrate the complete application-grade workflow and publish evidence              | Exit criterion not met; no v0.9.0 release exists. #75 closed unmet, and #76/#250/#251 closed as not pursued. |
 | Previous | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md); no release or live-provider outcome | Improve evidence selection and dependable bounded generation                          | Exit criteria met on sanitized replay/retrieval cases and cross-platform packaged recovery evidence; limitations retained |
 | Previous | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early; exit unmet](evaluation/broader-real-application-pilot.md); no release | Test factuality, quality, and effort across more cases                                | Case A produced no accepted draft; cases B/C were not pursued because the fixed all-cases-pass cohort could no longer pass |
-| Now      | Author-draft acceptance reliability                                                                               | [Provider-free corrections](evaluation/author-draft-acceptance-reliability.md) move the unchanged replay corpus from 2/6 to 3/6 accepted and make bounded retry feedback actionable | Produce complete, supported drafts reliably enough to justify a new cohort            | Record the measured stage decision without adding provider observations |
+| Previous | Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded | Reduce known structural false rejection without weakening negative controls           | Live-model and real-application quality remain unproven |
+| Now      | Representative author-draft revalidation                                                                          | Designed; no provider observation authorized         | Determine whether the corrected boundary can produce one accepted representative draft | Create a separately gated issue with consent, explicit provider authorization, fixed acceptance and stop conditions, and a first-review boundary |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
