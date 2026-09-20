@@ -1,0 +1,32 @@
+[
+  {
+    "executionId": "sanitized-accepted-case",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-inflated-case",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-coverage-case",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-supported-paraphrase-case",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-unsupported-evidence-case",
+    "status": "rejected",
+    "diagnosticCodes": ["custom"]
+  },
+  {
+    "executionId": "sanitized-mixed-coverage-case",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  }
+]
