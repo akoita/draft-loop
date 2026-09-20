@@ -166,5 +166,173 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-19T15:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Reduced processing time by 25%.",
+                "claims": [
+                  {
+                    "text": "Reduced processing time by 25%.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["paraphrase-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-supported-paraphrase-case",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "paraphrase-source",
+            "path": "fixture://sanitized/paraphrase-profile",
+            "checksum": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "paraphrase-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "paraphrase-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "2222222222222222222222222222222222222222222222222222222222222222",
+          "text": "Reduced processing time by 25 percent.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-19T15:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-19T15:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Reduced processing time by 25 percent.",
+                "claims": [
+                  {
+                    "text": "Reduced processing time by 25 percent.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["unavailable-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-unsupported-evidence-case",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "unsupported-source",
+            "path": "fixture://sanitized/unsupported-profile",
+            "checksum": "3333333333333333333333333333333333333333333333333333333333333333"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "unsupported-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "unsupported-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "4444444444444444444444444444444444444444444444444444444444444444",
+          "text": "Reduced processing time by 25 percent.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-19T15:00:00.000Z"
+    },
+    "failureStage": "artifact-schema-validation",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-19T15:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Reduced processing time by 25 percent and coached a delivery team.",
+                "claims": [
+                  {
+                    "text": "Reduced processing time by 25 percent",
+                    "substantive": true,
+                    "evidenceChunkIds": ["mixed-coverage-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-mixed-coverage-case",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "mixed-coverage-source",
+            "path": "fixture://sanitized/mixed-coverage-profile",
+            "checksum": "5555555555555555555555555555555555555555555555555555555555555555"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "mixed-coverage-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "mixed-coverage-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "6666666666666666666666666666666666666666666666666666666666666666",
+          "text": "Reduced processing time by 25 percent.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-19T15:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]
