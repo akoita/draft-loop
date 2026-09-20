@@ -55,3 +55,19 @@ controls retain their original rejection and diagnostic families. The final
 aggregate is three accepted and three rejected, with one factual-invariant,
 one artifact-schema, and one substantive-coverage diagnostic. Required-section
 and chronology behavior are outside the narrow rule and remain unchanged.
+
+## Structured retry feedback
+
+Author retries now receive bounded, path-scoped corrections for three exact
+diagnostic families: unsupported factual claim text, invalid evidence chunk
+references, and substantive block text lacking claim coverage. Each correction
+uses a fixed instruction and a sanitized proposal path. Unknown codes, unsafe
+paths, near-match structures, candidate prose, evidence excerpts, and local
+paths are excluded.
+
+A deterministic fixture author first fails with all three diagnostic families.
+Its next permitted attempt succeeds only when it receives every structured
+correction; absent or incomplete corrections leave the fixture rejected. The
+workflow retains the existing retry cap, timeout, cancellation, persistence,
+and no-silent-fallback behavior. This provider-free result demonstrates the
+contract boundary, not live-model correction quality.

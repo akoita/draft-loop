@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   type AgentExecution,
+  type AuthorRequest,
   type Critique,
   createOrchestrationEngine,
   createStorageRunStore,
@@ -855,6 +856,103 @@ describe("durable orchestration", () => {
     const resumed = await engine.resume("run-1", { context: context() });
     expect(resumed.state).toBe("awaiting-approval");
     expect(author).toHaveBeenCalledTimes(2);
+  });
+
+  it("uses all three structured correction families to accept the next author attempt", async () => {
+    const expectedKinds = [
+      "factual-claim-text",
+      "invalid-evidence-reference",
+      "uncovered-substantive-text",
+    ];
+    const hasActionableCorrections = (request: Pick<AuthorRequest, "retryFeedback">): boolean => {
+      const corrections = request.retryFeedback?.corrections;
+      return (
+        corrections?.map(({ kind }) => kind).join(",") === expectedKinds.join(",") &&
+        corrections.every(({ instruction }) => instruction !== "corrupted")
+      );
+    };
+    let attempts = 0;
+    const authorRequests: AuthorRequest[] = [];
+    const { engine, author } = engineFixture({
+      author: async (request) => {
+        const authorRequest = request as AuthorRequest;
+        authorRequests.push(authorRequest);
+        attempts += 1;
+        if (attempts === 1) {
+          throw Object.assign(new Error("private rejected proposal"), {
+            code: "invalid-response",
+            retryable: true,
+            failureStage: "factual-invariant-rejection",
+            diagnostics: [
+              {
+                code: "factual_invariant_violation",
+                path: "sections.0.blocks.0.claims.0.text",
+              },
+              {
+                code: "custom",
+                path: "sections.0.blocks.1.claims.0.evidenceChunkIds.0",
+              },
+              { code: "substantive_text_uncovered", path: "sections.0.blocks.2.text" },
+            ],
+          });
+        }
+        if (!hasActionableCorrections(authorRequest)) {
+          throw Object.assign(new Error("structured correction feedback required"), {
+            code: "invalid-response",
+            retryable: true,
+          });
+        }
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+
+    const failed = await engine.start(request());
+    expect(failed).toMatchObject({
+      state: "provider-error",
+      lastError: {
+        diagnostics: [
+          { code: "factual_invariant_violation" },
+          { code: "custom" },
+          { code: "substantive_text_uncovered" },
+        ],
+      },
+    });
+
+    const recovered = await engine.resume("run-1", { context: context() });
+    expect(recovered.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(2);
+    expect(authorRequests[1]?.retryFeedback?.corrections).toEqual([
+      expect.objectContaining({ kind: "factual-claim-text" }),
+      expect.objectContaining({ kind: "invalid-evidence-reference" }),
+      expect.objectContaining({ kind: "uncovered-substantive-text" }),
+    ]);
+    expect(hasActionableCorrections({})).toBe(false);
+    expect(
+      hasActionableCorrections({
+        retryFeedback: {
+          failureCode: "invalid-response",
+          corrections: [
+            {
+              kind: "factual-claim-text",
+              path: "sections.0.blocks.0.claims.0.text",
+              instruction: "corrupted",
+            },
+            {
+              kind: "invalid-evidence-reference",
+              path: "sections.0.blocks.1.claims.0.evidenceChunkIds.0",
+              instruction: "corrupted",
+            },
+            {
+              kind: "uncovered-substantive-text",
+              path: "sections.0.blocks.2.text",
+              instruction: "corrupted",
+            },
+          ],
+        },
+      }),
+    ).toBe(false);
+    expect(JSON.stringify(recovered)).not.toContain("retryFeedback");
+    expect(JSON.stringify(authorRequests[1])).not.toContain("private rejected proposal");
   });
 
   it("persists an absolute retry time and blocks resume until the provider delay passes", async () => {

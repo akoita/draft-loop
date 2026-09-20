@@ -42,7 +42,12 @@ import {
   type ValidationIssue,
   validateDraftArtifact,
 } from "@draft-loop/validation";
+
 import { buildAuthorAdjudicationPlan } from "./adjudication.js";
+import {
+  type AuthorRetryCorrection,
+  buildAuthorRetryCorrections,
+} from "./author-retry-feedback.js";
 import {
   activateDurationAccounting,
   createDurationAccounting,
@@ -58,6 +63,7 @@ import {
 } from "./readiness.js";
 
 export type RunState = WorkflowState | "provider-error";
+export type { AuthorRetryCorrection, AuthorRetryCorrectionKind } from "./author-retry-feedback.js";
 export type OrchestrationStep = "author" | "critic" | "revision" | null;
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 export type ExecutionStatus = "completed" | "failed";
@@ -208,6 +214,7 @@ export interface AuthorRetryFeedback {
   readonly failureCode: string;
   readonly failureStage?: RunFailureStage;
   readonly diagnostics?: readonly RunErrorDiagnostic[];
+  readonly corrections?: readonly AuthorRetryCorrection[];
 }
 
 export interface RunSnapshot {
@@ -1598,6 +1605,7 @@ export function createOrchestrationEngine(
       if (current.lastError?.retryable !== true) return immutable(current);
       if (current.currentStep === "author" || current.currentStep === "revision") {
         const diagnostics = current.lastError.diagnostics;
+        const corrections = buildAuthorRetryCorrections(diagnostics ?? []);
         retryFeedback = {
           failureCode: current.lastError.code,
           ...(current.lastError.failureStage === undefined
@@ -1607,6 +1615,7 @@ export function createOrchestrationEngine(
             ? {}
             : {
                 diagnostics: diagnostics.slice(0, 8).map(({ code, path }) => ({ code, path })),
+                ...(corrections.length === 0 ? {} : { corrections }),
               }),
         };
       }
