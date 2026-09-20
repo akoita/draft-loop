@@ -1,9 +1,10 @@
 # Author-draft acceptance reliability
 
-The provider-free author-draft acceptance stage is in progress. Its frozen
-six-case replay baseline records two accepted cases and four rejected cases.
-It establishes a correction target without changing validation rules or
-claiming live-model or real-application quality.
+The provider-free author-draft acceptance stage is in progress. Its unchanged
+six-case corpus now records three accepted cases and three rejected cases,
+compared with a frozen baseline of two accepted and four rejected. This is a
+deterministic validator result, not a claim of live-model or real-application
+quality.
 
 ## Frozen baseline
 
@@ -36,6 +37,21 @@ fixture prose and identities. The baseline makes no provider call, changes no
 threshold, and does not establish author quality outside these deterministic
 fixtures.
 
-The supported paraphrase remains rejected intentionally at baseline. A later
-bounded correction may accept that case only if changed quantities and every
-other negative control remain rejected.
+The supported paraphrase is intentionally rejected in this frozen baseline.
+The correction below changes its result only while every negative control
+remains rejected.
+
+## Supported-paraphrase correction
+
+The validator now recognizes only the corpus's bounded percentage spelling
+equivalence: a claim using `N%` may cite approved evidence using `N percent`.
+The quantity must match exactly. The rule does not normalize dates, employers,
+seniority, technologies, scope, unsupported evidence identifiers, or other
+wording.
+
+On the unchanged corpus, the declared supported-paraphrase case moves to
+accepted. The changed-quantity, unavailable-evidence, and uncovered-text
+controls retain their original rejection and diagnostic families. The final
+aggregate is three accepted and three rejected, with one factual-invariant,
+one artifact-schema, and one substantive-coverage diagnostic. Required-section
+and chronology behavior are outside the narrow rule and remain unchanged.
