@@ -50,15 +50,15 @@ describe("sanitized rejected-author replay baseline", () => {
 
     expect(result).toEqual({
       total: 6,
-      accepted: 2,
-      rejected: 4,
+      accepted: 3,
+      rejected: 3,
       failureStages: [
         { value: "artifact-schema-validation", count: 1 },
-        { value: "factual-invariant-rejection", count: 3 },
+        { value: "factual-invariant-rejection", count: 2 },
       ],
       diagnosticCodes: [
         { value: "custom", count: 1 },
-        { value: "factual_invariant_violation", count: 2 },
+        { value: "factual_invariant_violation", count: 1 },
         { value: "substantive_text_uncovered", count: 1 },
       ],
     });

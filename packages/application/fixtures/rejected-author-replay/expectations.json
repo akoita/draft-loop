@@ -16,8 +16,8 @@
   },
   {
     "executionId": "sanitized-supported-paraphrase-case",
-    "status": "rejected",
-    "diagnosticCodes": ["factual_invariant_violation"]
+    "status": "accepted",
+    "diagnosticCodes": []
   },
   {
     "executionId": "sanitized-unsupported-evidence-case",

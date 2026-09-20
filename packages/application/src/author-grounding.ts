@@ -5,6 +5,7 @@ import {
   sourceExperienceValues,
   supportsExperienceClaim,
 } from "./experience-grounding.js";
+import { supportsProtectedValueParaphrase } from "./protected-value-equivalence.js";
 
 const protectedNumberPattern = /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![\p{L}\p{N}])/giu;
 
@@ -60,7 +61,10 @@ export function supportsProtectedValue(evidence: string, protectedValue: string)
   const value = normalizedIdentity(protectedValue);
   const source = normalizedIdentity(evidence);
   if (/^\d/u.test(value)) {
-    return [...source.matchAll(protectedNumberPattern)].some((match) => match[0] === value);
+    return (
+      [...source.matchAll(protectedNumberPattern)].some((match) => match[0] === value) ||
+      supportsProtectedValueParaphrase(source, value)
+    );
   }
   if (/^\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*$/u.test(protectedValue)) {
     return (source.match(/[\p{L}\p{N}]+/gu) ?? []).some((token) => token === value);
