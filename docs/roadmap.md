@@ -182,7 +182,7 @@ applications.
 | Previous | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early; exit unmet](evaluation/broader-real-application-pilot.md); no release | Test factuality, quality, and effort across more cases                                | Case A produced no accepted draft; cases B/C were not pursued because the fixed all-cases-pass cohort could no longer pass |
 | Previous | Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded | Reduce known structural false rejection without weakening negative controls           | Live-model and real-application quality remain unproven |
 | Previous | Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))      | [Ended indeterminate](evaluation/representative-author-draft-revalidation.md); no draft reached validation | Determine whether the corrected boundary can produce one accepted representative draft | All three author attempts ended with a provider `api_error`; the sign-in probe did not exercise the model |
-| Now      | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Designed; #449 implements a synthetic model-level preflight | Prove the declared author model can answer before candidate material is sent          | #449 merged, then one separately authorized synthetic preflight reports `available` or diagnoses the blocker |
+| Now      | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Synthetic preflight `available` on the declared author model; real author requests still unexplained | Prove the declared author route can answer and make its request-level failures diagnosable | #453 adds a bounded cause code for status-less `api_error` results before any new gated observation |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -984,9 +984,19 @@ order:
 - One synthetic preflight on the declared author model, with no candidate
   material, requires a separate user authorization.
 
-**Exit criterion:** The preflight reports `available` for the declared author
-model, or the blocker is diagnosed and a bounded fix or model re-declaration
-is proposed. Only then may a new gated observation issue be created.
+The authorized #449 preflight reported `available` for `claude-sonnet-4-5` in
+about five seconds, using the author output budget. The model, sign-in, and
+author settings therefore work; the #446 failures depend on the real author
+request. Case A's retry once produced a draft from a nearly identical request,
+so the failure may also be intermittent.
+
+The adapter currently discards the result text of a status-less `api_error`,
+so its cause is invisible. #453 adds a bounded, allowlisted cause code without
+copying any text.
+
+**Exit criterion:** The declared author model passes the synthetic preflight,
+and a status-less `api_error` reports a bounded cause. Only then may a new
+gated observation issue be created.
 
 ### Later — Production-ready beta
 
@@ -1057,6 +1067,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-22 | Recorded the authorized #449 author preflight as `available` and added #453 to milestone 10. | The declared model answers a synthetic request with the author settings, so the observed `api_error` is request-specific. A bounded cause code must exist before another consented observation spends attempts. |
 | 2026-09-22 | Ended representative author-draft revalidation as indeterminate under #447 and admitted author route readiness. | The #446 observation produced no draft: every author attempt ended with a provider `api_error` that the sign-in probe cannot detect. Milestone 10 (#449) requires a synthetic model-level preflight before any further consented observation. |
 | 2026-09-22 | Planned milestone 9 for representative author-draft revalidation as #446 and #447. | One consented observation reuses case A inputs with predeclared pass, fail, and indeterminate rules and ends at first review. No provider call is authorized until a later instruction names #446. |
 | 2026-09-19 | Ended the broader real-application pilot early under #433. | Case A was indeterminate with no accepted draft, and the fixed all-cases-pass contract made the declared cohort exit impossible; cases B/C were not pursued. The exit criterion is unmet, no validation or release exists, and the next decision returns to provider-free author-draft acceptance reliability. |
