@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-22<br>
-**Current stage:** Author-draft revalidation retry
+**Current stage:** Author correction reliability
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -183,7 +183,8 @@ applications.
 | Previous | Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded | Reduce known structural false rejection without weakening negative controls           | Live-model and real-application quality remain unproven |
 | Previous | Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))      | [Ended indeterminate](evaluation/representative-author-draft-revalidation.md); no draft reached validation | Determine whether the corrected boundary can produce one accepted representative draft | All three author attempts ended with a provider `api_error`; the sign-in probe did not exercise the model |
 | Previous | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Exit met: synthetic preflight `available`; status-less `api_error` results carry bounded cause codes | Prove the declared author route can answer and make its request-level failures diagnosable | No real author request has succeeded since the fixes; the #446 cause remains unobserved |
-| Now      | Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                   | Designed; no provider observation authorized         | Obtain the first real validator verdict on a representative author draft              | #456 predeclares the unchanged #446 case, bounds, and rules; it needs explicit user authorization naming it |
+| Previous | Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                  | [Failed](evaluation/representative-author-draft-revalidation.md#retry-observation): both validated drafts were rejected | Obtain the first real validator verdict on a representative author draft              | Structured retry feedback did not produce an accepted draft; one of three attempts ended with an unexplained `api_error` |
+| Now      | Author correction reliability                                                                                     | Not yet planned into a milestone                     | Make real author drafts pass factual, evidence, and coverage validation without weakening those gates | Uncapped content-free diagnostic counts, then sanitized replay cases seeded from the #456 failure classes |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1003,7 +1004,7 @@ The exit is met. #449 and #453 are merged, and the authorized preflight
 returned `available`. The milestone sent no candidate material, and it neither
 explains nor reproduces the #446 failures.
 
-### Now — Author-draft revalidation retry
+### Ended — Author-draft revalidation retry
 
 Obtain the first real validator verdict on a representative author draft.
 [Milestone 11](https://github.com/akoita/draft-loop/milestone/11) has one
@@ -1020,6 +1021,30 @@ in the same PR as the stage decision. A pass admits a separately gated
 multi-case cohort. A fail returns to provider-free replay work. An
 indeterminate result with a cause code opens one bounded fix; without a cause
 code, the route question goes to the user.
+
+The exit is met with a **fail**. The author preflight returned `available`,
+but the validator rejected both drafts the run produced. The first author
+attempt ended with an `api_error` after about eight minutes, and no cause code
+was recorded. See the
+[retry observation](evaluation/representative-author-draft-revalidation.md#retry-observation).
+
+### Now — Author correction reliability
+
+Make real author drafts pass the unchanged factual-invariant, evidence, and
+substantive-coverage gates. The #456 drafts failed all three gates even with
+structured retry feedback, so the next work is provider-free.
+
+1. Record full per-family diagnostic counts, which are content-free. The
+   current eight-item cap hides the true size of each rejection.
+2. Build sanitized replay cases from the #456 failure classes.
+3. Change the author prompt or retry feedback only where a replay shows a
+   measured gain.
+
+No live observation belongs to this stage. The unexplained `api_error` remains
+an open risk for any later one.
+
+**Exit criterion:** A replay corpus that includes the #456 failure classes
+shows a material acceptance gain while every negative control stays rejected.
 
 ### Later — Production-ready beta
 
@@ -1090,6 +1115,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-22 | Recorded the #456 retry observation as a fail and admitted author correction reliability. | The corrected validator rejected both real drafts for factual, unsupported-claim, and coverage reasons despite structured retry feedback. The next stage is provider-free and starts with uncapped diagnostic counts; no cohort is admitted. |
 | 2026-09-22 | Completed author route readiness (#449, #453) and admitted the revalidation retry as milestone 11 (#456). | The author route passes a synthetic preflight, and status-less `api_error` failures now report a bounded cause. The retry reuses the #446 rules unchanged and requires a separate authorization naming #456. |
 | 2026-09-22 | Recorded the authorized #449 author preflight as `available` and added #453 to milestone 10. | The declared model answers a synthetic request with the author settings, so the observed `api_error` is request-specific. A bounded cause code must exist before another consented observation spends attempts. |
 | 2026-09-22 | Ended representative author-draft revalidation as indeterminate under #447 and admitted author route readiness. | The #446 observation produced no draft: every author attempt ended with a provider `api_error` that the sign-in probe cannot detect. Milestone 10 (#449) requires a synthetic model-level preflight before any further consented observation. |
