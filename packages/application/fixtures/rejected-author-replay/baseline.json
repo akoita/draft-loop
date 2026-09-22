@@ -1712,5 +1712,453 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Built streaming pipelines with Kafka.",
+                "claims": [
+                  {
+                    "text": "Built streaming pipelines with Kafka.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-tool-sentence-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-tool-sentence",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-tool-sentence-source",
+            "path": "fixture://sanitized/sanitized-h466-tool-sentence",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000035"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-tool-sentence-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-tool-sentence-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000036",
+          "text": "- Built streaming pipelines with Kafka.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Built streaming pipelines with Kafka.",
+                "claims": [
+                  {
+                    "text": "Built streaming pipelines with Kafka.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-tool-sentence-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-tool-sentence-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-tool-sentence-control-source",
+            "path": "fixture://sanitized/sanitized-h466-tool-sentence-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000037"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-tool-sentence-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-tool-sentence-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000038",
+          "text": "- Built streaming pipelines with Pulsar.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "TypeScript, Kafka",
+                "claims": [
+                  {
+                    "text": "TypeScript, Kafka",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-tool-list-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-tool-list",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-tool-list-source",
+            "path": "fixture://sanitized/sanitized-h466-tool-list",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000039"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-tool-list-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-tool-list-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000003a",
+          "text": "Languages: TypeScript, Python\nMessaging: Kafka, RabbitMQ",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "TypeScript, Kafka",
+                "claims": [
+                  {
+                    "text": "TypeScript, Kafka",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-tool-list-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-tool-list-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-tool-list-control-source",
+            "path": "fixture://sanitized/sanitized-h466-tool-list-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000003b"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-tool-list-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-tool-list-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000003c",
+          "text": "Languages: TypeScript, Python\nInfrastructure: Terraform",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Migrated the Globex billing platform to managed queues.",
+                "claims": [
+                  {
+                    "text": "Migrated the Globex billing platform to managed queues.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-organisation-sentence-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-organisation-sentence-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-organisation-sentence-control-source",
+            "path": "fixture://sanitized/sanitized-h466-organisation-sentence-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000003d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-organisation-sentence-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-organisation-sentence-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000003e",
+          "text": "- Migrated the Initech billing platform to managed queues.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Opened the engineering office in Berlin.",
+                "claims": [
+                  {
+                    "text": "Opened the engineering office in Berlin.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-place-sentence-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-place-sentence-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-place-sentence-control-source",
+            "path": "fixture://sanitized/sanitized-h466-place-sentence-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000003f"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-place-sentence-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-place-sentence-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000040",
+          "text": "- Opened the engineering office in Lisbon.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Maintained the billing platform at Globex.",
+                "claims": [
+                  {
+                    "text": "Maintained the billing platform at Globex.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-organisation-at-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-organisation-at-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-organisation-at-control-source",
+            "path": "fixture://sanitized/sanitized-h466-organisation-at-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000041"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-organisation-at-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-organisation-at-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000042",
+          "text": "- Maintained the billing platform at Initech.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Kafka",
+                "claims": [
+                  {
+                    "text": "Kafka",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h466-standalone-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h466-standalone-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h466-standalone-control-source",
+            "path": "fixture://sanitized/sanitized-h466-standalone-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000043"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h466-standalone-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h466-standalone-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000044",
+          "text": "Languages: TypeScript, Python",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]

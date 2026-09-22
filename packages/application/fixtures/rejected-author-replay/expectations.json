@@ -128,5 +128,45 @@
     "executionId": "sanitized-h461-d-per-value-claims-control",
     "status": "rejected",
     "diagnosticCodes": ["factual_invariant_violation", "unsupported_claim"]
+  },
+  {
+    "executionId": "sanitized-h466-tool-sentence",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h466-tool-sentence-control",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h466-tool-list",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h466-tool-list-control",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h466-organisation-sentence-control",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h466-place-sentence-control",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h466-organisation-at-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h466-standalone-control",
+    "status": "rejected",
+    "diagnosticCodes": ["unsupported_claim"]
   }
 ]

@@ -17,6 +17,10 @@ const intentText = readFileSync(
   new URL("../fixtures/rejected-author-replay/h461-intent.json", import.meta.url),
   "utf8",
 );
+const h466IntentText = readFileSync(
+  new URL("../fixtures/rejected-author-replay/h466-intent.json", import.meta.url),
+  "utf8",
+);
 
 interface ReplayCapture {
   readonly validationInputs: { readonly executionId: string };
@@ -34,9 +38,15 @@ interface ReplayIntent {
   readonly intent: "supported" | "control";
 }
 
+interface SingleWordNameIntent {
+  readonly executionId: string;
+  readonly intent: "supported" | "control";
+}
+
 const captures = JSON.parse(fixtureText) as readonly ReplayCapture[];
 const expectations = JSON.parse(expectationText) as readonly ReplayExpectation[];
 const intents = JSON.parse(intentText) as readonly ReplayIntent[];
+const h466Intents = JSON.parse(h466IntentText) as readonly SingleWordNameIntent[];
 
 function replayById(executionId: string) {
   const capture = captures.find(
@@ -68,18 +78,18 @@ describe("sanitized rejected-author replay baseline", () => {
     const result = summarizeRejectedAuthorReplays(captures);
 
     expect(result).toEqual({
-      total: 26,
-      accepted: 11,
-      rejected: 15,
+      total: 34,
+      accepted: 17,
+      rejected: 17,
       failureStages: [
         { value: "artifact-schema-validation", count: 1 },
-        { value: "factual-invariant-rejection", count: 14 },
+        { value: "factual-invariant-rejection", count: 16 },
       ],
       diagnosticCodes: [
         { value: "custom", count: 1 },
-        { value: "factual_invariant_violation", count: 11 },
+        { value: "factual_invariant_violation", count: 12 },
         { value: "substantive_text_uncovered", count: 3 },
-        { value: "unsupported_claim", count: 3 },
+        { value: "unsupported_claim", count: 4 },
       ],
     });
 
@@ -104,6 +114,10 @@ describe("sanitized rejected-author replay baseline", () => {
       "Brightfield Logistics",
       "Harbor Lane Software",
       "PostgreSQL",
+      "sanitized-h466",
+      "Kafka",
+      "Globex",
+      "Berlin",
     ]) {
       expect(serialized).not.toContain(privateFixtureValue);
     }
@@ -149,6 +163,45 @@ describe("sanitized rejected-author replay baseline", () => {
     ]);
   });
 
+  it("classifies every #466 single-word name case exactly once as supported or control", () => {
+    const h466Ids = captures
+      .map((capture) => capture.validationInputs.executionId)
+      .filter((executionId) => executionId.startsWith("sanitized-h466-"));
+
+    expect(h466Intents.map((intent) => intent.executionId)).toEqual(h466Ids);
+    for (const intent of h466Intents) {
+      expect(intent.executionId.endsWith("-control"), intent.executionId).toBe(
+        intent.intent === "control",
+      );
+    }
+  });
+
+  it("accepts every #466 case whose single-word name appears in the cited evidence", () => {
+    const supported = h466Intents.filter((intent) => intent.intent === "supported");
+
+    expect(supported).toHaveLength(2);
+    for (const intent of supported) {
+      expect(replayById(intent.executionId).status, intent.executionId).toBe("accepted");
+    }
+  });
+
+  it("records the unsupported single-word name controls the validator currently accepts", () => {
+    const acceptedControls = h466Intents
+      .filter((intent) => intent.intent === "control")
+      .filter((intent) => replayById(intent.executionId).status === "accepted")
+      .map((intent) => intent.executionId);
+
+    // Known gaps: a single capitalised name outside an "at"/"for" phrase is not
+    // a protected value. Change this list only deliberately, with the validator
+    // change that explains the difference.
+    expect(acceptedControls).toEqual([
+      "sanitized-h466-tool-sentence-control",
+      "sanitized-h466-tool-list-control",
+      "sanitized-h466-organisation-sentence-control",
+      "sanitized-h466-place-sentence-control",
+    ]);
+  });
+
   it("contains only invented local fixture identities", () => {
     expect(fixtureText).not.toContain("anthropic");
     expect(fixtureText).not.toContain("openai");
@@ -156,5 +209,6 @@ describe("sanitized rejected-author replay baseline", () => {
     expect(fixtureText).not.toContain("@draft-loop");
     expect(expectationText).not.toContain("fixture://");
     expect(intentText).not.toContain("fixture://");
+    expect(h466IntentText).not.toContain("fixture://");
   });
 });

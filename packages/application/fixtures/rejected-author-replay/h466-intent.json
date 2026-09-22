@@ -1,0 +1,34 @@
+[
+  {
+    "executionId": "sanitized-h466-tool-sentence",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h466-tool-sentence-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h466-tool-list",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h466-tool-list-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h466-organisation-sentence-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h466-place-sentence-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h466-organisation-at-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h466-standalone-control",
+    "intent": "control"
+  }
+]
