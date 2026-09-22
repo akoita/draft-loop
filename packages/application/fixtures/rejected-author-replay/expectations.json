@@ -28,5 +28,105 @@
     "executionId": "sanitized-mixed-coverage-case",
     "status": "rejected",
     "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h461-a-joining-words",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h461-a-joining-words-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation", "substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h461-a-multi-sentence-claim",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-a-multi-sentence-claim-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-a-whitespace-punctuation",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-a-whitespace-punctuation-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-b-date-range-dash",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-b-date-range-dash-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-b-open-range-present",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-b-open-range-present-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-b-month-abbreviation",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-b-month-abbreviation-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-b-at-phrasing",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-b-at-phrasing-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-d-partial-citation",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-d-partial-citation-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-d-multi-chunk",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h461-d-multi-chunk-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h461-d-per-value-claims",
+    "status": "rejected",
+    "diagnosticCodes": ["unsupported_claim"]
+  },
+  {
+    "executionId": "sanitized-h461-d-per-value-claims-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation", "unsupported_claim"]
   }
 ]

@@ -74,3 +74,49 @@ later fix targets author guidance rather than the validator.
   is confirmed as a false rejection.
 - Recovering the true failures would require saving rejected proposals locally
   and running another authorized observation. Neither is part of this issue.
+
+## Replay baseline for the hypotheses
+
+Issue #461 added twenty invented cases to the rejected-author replay corpus:
+ten supported variants, each paired with a control that changes one real fact.
+Each supported variant was written once, as the most natural form an author
+would produce, and its current result was frozen without tuning.
+
+The corpus now holds 26 cases: 11 accepted and 15 rejected. The six earlier
+cases are unchanged. Their input bytes are identical, and the fixture SHA-256
+changed from `13b57834…` to `7e9fcca1…` only because cases were appended.
+
+| Hypothesis | Supported variants | Currently rejected | Controls rejected |
+| ---------- | ------------------ | ------------------ | ----------------- |
+| A. Opening prose coverage | 3 | 1 | 3 of 3 |
+| B. Entry heading formatting | 4 | 0 | 4 of 4 |
+| D. Evidence for list claims | 3 | 1 | 3 of 3 |
+
+### Candidate false rejections
+
+- **A, joining words.** A summary that joins two supported sentences with a
+  relative word ("who") fails coverage, because only "and" is exempt. The code
+  and position match the real class A rejections.
+- **D, one claim per list value.** Splitting a skills list into one claim per
+  value fails for a value with no token of three or more characters, such as
+  "Go". The author guidance to split compound claims leads to this shape. The
+  variant was written after reading the validator, so its result was
+  predictable.
+
+### Already handled
+
+- **B is not supported.** Dash, spacing, "to" versus dash, present-tense
+  endings, abbreviated months, and "at" versus comma headings are all
+  accepted. Real class B rejections were therefore probably changed facts,
+  which is an author error.
+- **A:** claims spanning two sentences and whitespace-only or
+  punctuation-only differences are accepted.
+- **D:** partial citations are completed from retrieved evidence, and
+  multi-chunk citations are accepted.
+
+### Open question
+
+Reading the grounding code suggests that a single capitalised proper noun,
+such as an unsupported tool name, may not be a protected value. Issue #466
+checks this with fixtures before any correction, because an undetected gap
+would make the controls look stronger than they are.
