@@ -185,7 +185,7 @@ applications.
 | Previous | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Exit met: synthetic preflight `available`; status-less `api_error` results carry bounded cause codes | Prove the declared author route can answer and make its request-level failures diagnosable | No real author request has succeeded since the fixes; the #446 cause remains unobserved |
 | Previous | Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                  | [Failed](evaluation/representative-author-draft-revalidation.md#retry-observation): both validated drafts were rejected | Obtain the first real validator verdict on a representative author draft              | Structured retry feedback did not produce an accepted draft; one of three attempts ended with an unexplained `api_error` |
 | Previous | Author correction reliability ([milestone](https://github.com/akoita/draft-loop/milestone/12))                   | [Exit met on replay](evaluation/author-correction-reliability.md#stage-decision): both wrongly rejected supported cases accepted; all 21 controls rejected | Make real author drafts pass factual, evidence, and coverage validation without weakening those gates | Invented cases only; live author quality is unproven |
-| Now      | Live author revalidation                                                                                          | Not yet planned into a milestone                     | Test the corrected validator on one real author draft                                 | A gated observation on unchanged case A with the preflight and local capture of rejected proposals |
+| Now      | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | Designed; no provider observation authorized         | Test the corrected validator on one real author draft                                 | #476 predeclares the unchanged case, bounds, rules, preflight, and local capture; it needs explicit user authorization naming it |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1057,8 +1057,21 @@ runs the synthetic author preflight and saves rejected proposals locally, so
 any failure can be re-validated and classified from real structure. The
 unexplained author `api_error` remains an open risk.
 
-This stage has no milestone or issue yet, and creating one authorizes no
-provider call.
+[Milestone 13](https://github.com/akoita/draft-loop/milestone/13) has one
+execution issue, #476. Its evidence and stage decision land in one PR. On a
+fail, a local script re-validates the captured proposals and reports only
+codes, paths, section kinds, and counts.
+
+Creating #476 authorizes no provider call. The observation requires a later
+user instruction that names it.
+
+**Exit criterion:** The #476 result is recorded against its predeclared rules,
+and the roadmap names the next stage:
+
+- **Pass:** a separately gated multi-case cohort.
+- **Fail:** a provider-free milestone seeded from the captured proposals.
+- **Indeterminate with a cause code:** one bounded fix.
+- **Indeterminate without a cause code:** the route question goes to the user.
 
 ### Later — Production-ready beta
 
@@ -1129,6 +1142,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-22 | Planned milestone 13 for live author revalidation as #476. | The observation reuses the #446/#456 rules and adds local capture of rejected proposals, so a fail can be analysed from real structure. No provider call is authorized until a later instruction names #476. |
 | 2026-09-22 | Completed author correction reliability under #462 and named live author revalidation. | The replay corpus accepts both wrongly rejected supported cases and rejects all 21 controls, with the factual gate strengthened by #469. The next live observation must save rejected proposals locally. |
 | 2026-09-22 | Planned milestone 12 for author correction reliability as #459–#462. | The stage starts with uncapped counts and a local, content-free classification of the #456 drafts before any replay fixture or author change. No provider call belongs to it. |
 | 2026-09-22 | Recorded the #456 retry observation as a fail and admitted author correction reliability. | The corrected validator rejected both real drafts for factual, unsupported-claim, and coverage reasons despite structured retry feedback. The next stage is provider-free and starts with uncapped diagnostic counts; no cohort is admitted. |
