@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-22<br>
-**Current stage:** Author route readiness
+**Current stage:** Author-draft revalidation retry
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -182,7 +182,8 @@ applications.
 | Previous | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early; exit unmet](evaluation/broader-real-application-pilot.md); no release | Test factuality, quality, and effort across more cases                                | Case A produced no accepted draft; cases B/C were not pursued because the fixed all-cases-pass cohort could no longer pass |
 | Previous | Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded | Reduce known structural false rejection without weakening negative controls           | Live-model and real-application quality remain unproven |
 | Previous | Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))      | [Ended indeterminate](evaluation/representative-author-draft-revalidation.md); no draft reached validation | Determine whether the corrected boundary can produce one accepted representative draft | All three author attempts ended with a provider `api_error`; the sign-in probe did not exercise the model |
-| Now      | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Synthetic preflight `available` on the declared author model; real author requests still unexplained | Prove the declared author route can answer and make its request-level failures diagnosable | #453 adds a bounded cause code for status-less `api_error` results before any new gated observation |
+| Previous | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Exit met: synthetic preflight `available`; status-less `api_error` results carry bounded cause codes | Prove the declared author route can answer and make its request-level failures diagnosable | No real author request has succeeded since the fixes; the #446 cause remains unobserved |
+| Now      | Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                   | Designed; no provider observation authorized         | Obtain the first real validator verdict on a representative author draft              | #456 predeclares the unchanged #446 case, bounds, and rules; it needs explicit user authorization naming it |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -970,7 +971,7 @@ review, approval, or export occurred. The result neither confirms nor refutes
 the milestone 8 corrections. See the
 [sanitized record](evaluation/representative-author-draft-revalidation.md).
 
-### Now — Author route readiness
+### Completed — Author route readiness
 
 Prove that the declared author model can answer through the authenticated user
 session before any candidate material is sent. The sign-in probe only checks
@@ -997,6 +998,28 @@ copying any text.
 **Exit criterion:** The declared author model passes the synthetic preflight,
 and a status-less `api_error` reports a bounded cause. Only then may a new
 gated observation issue be created.
+
+The exit is met. #449 and #453 are merged, and the authorized preflight
+returned `available`. The milestone sent no candidate material, and it neither
+explains nor reproduces the #446 failures.
+
+### Now — Author-draft revalidation retry
+
+Obtain the first real validator verdict on a representative author draft.
+[Milestone 11](https://github.com/akoita/draft-loop/milestone/11) has one
+execution issue, #456. It reuses the #446 case, models, bounds, and decision
+rules unchanged, and adds two things: a synthetic author preflight that must
+report `available` before any candidate material is sent, and recorded
+`claude_api_error_*` cause codes.
+
+Creating #456 authorizes no provider call. The observation requires a later
+user instruction that names it.
+
+**Exit criterion:** The #456 result is recorded against its predeclared rules
+in the same PR as the stage decision. A pass admits a separately gated
+multi-case cohort. A fail returns to provider-free replay work. An
+indeterminate result with a cause code opens one bounded fix; without a cause
+code, the route question goes to the user.
 
 ### Later — Production-ready beta
 
@@ -1067,6 +1090,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-22 | Completed author route readiness (#449, #453) and admitted the revalidation retry as milestone 11 (#456). | The author route passes a synthetic preflight, and status-less `api_error` failures now report a bounded cause. The retry reuses the #446 rules unchanged and requires a separate authorization naming #456. |
 | 2026-09-22 | Recorded the authorized #449 author preflight as `available` and added #453 to milestone 10. | The declared model answers a synthetic request with the author settings, so the observed `api_error` is request-specific. A bounded cause code must exist before another consented observation spends attempts. |
 | 2026-09-22 | Ended representative author-draft revalidation as indeterminate under #447 and admitted author route readiness. | The #446 observation produced no draft: every author attempt ended with a provider `api_error` that the sign-in probe cannot detect. Milestone 10 (#449) requires a synthetic model-level preflight before any further consented observation. |
 | 2026-09-22 | Planned milestone 9 for representative author-draft revalidation as #446 and #447. | One consented observation reuses case A inputs with predeclared pass, fail, and indeterminate rules and ends at first review. No provider call is authorized until a later instruction names #446. |
