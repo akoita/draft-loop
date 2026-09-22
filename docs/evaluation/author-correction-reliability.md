@@ -180,3 +180,19 @@ only gap is "who". The other 39 earlier cases are unchanged:
 - **Accepted:** two new supported cases ("while", "as well as").
 - **Rejected for coverage:** two new controls ("who led", and an unclaimed
   trailing clause).
+
+## Short names
+
+Issue #471 adds a narrow fallback to the related-token check. A claim with no
+token of three or more characters, such as a skills claim of just "Go" or
+"R", is related only when every short capitalised token in it appears as a
+case-sensitive whole word in its cited evidence. Claims with a longer token
+behave exactly as before.
+
+The #461 one-claim-per-value case is now accepted, and the pinned list of
+supported cases the validator rejects is empty. The other 44 earlier cases
+are unchanged:
+
+- **Accepted:** a new supported "R" case.
+- **Rejected with `unsupported_claim`:** two new controls, one where "Go"
+  appears only as the lowercase verb and one where it is absent.
