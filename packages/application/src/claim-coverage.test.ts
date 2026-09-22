@@ -62,6 +62,39 @@ describe("substantive block claim coverage", () => {
     expect(claimCoverageIssues(proposal(text, claims))).toEqual([]);
   });
 
+  it.each([
+    ["Built tools who led teams.", ["Built tools", "led teams"]],
+    ["Built tools which led teams.", ["Built tools", "led teams"]],
+    ["Built tools that led teams.", ["Built tools", "led teams"]],
+    ["Built tools while leading teams.", ["Built tools", "leading teams"]],
+    ["Built tools where teams shipped.", ["Built tools", "teams shipped"]],
+    ["Built tools with teams.", ["Built tools", "teams"]],
+    ["Built tools including dashboards.", ["Built tools", "dashboards"]],
+    ["Built tools as well as dashboards.", ["Built tools", "dashboards"]],
+    ["Built tools, and while leading teams.", ["Built tools", "leading teams"]],
+    ["Built tools with and including dashboards.", ["Built tools", "dashboards"]],
+  ])("accepts a joining-word gap between covered spans: %s", (text, claims) => {
+    expect(claimCoverageIssues(proposal(text, claims))).toEqual([]);
+  });
+
+  it.each([
+    ["Built tools who led teams.", ["Built tools", "teams"]],
+    ["Built tools as well dashboards.", ["Built tools", "dashboards"]],
+    ["Who built tools.", ["built tools"]],
+    ["Built tools while", ["Built tools"]],
+    ["Built tools while leading teams.", ["Built tools"]],
+    ["Built tools and while", ["Built tools"]],
+  ])("keeps a gap uncovered unless it only joins covered spans: %s", (text, claims) => {
+    expect(claimCoverageIssues(proposal(text, claims))).toHaveLength(1);
+  });
+
+  it.each([
+    ["And built tools.", ["built tools"]],
+    ["Built tools and", ["Built tools"]],
+  ])("keeps an uncovered 'and' exempt anywhere: %s", (text, claims) => {
+    expect(claimCoverageIssues(proposal(text, claims))).toEqual([]);
+  });
+
   it("classifies partial claims for author retry without exposing prose", () => {
     try {
       buildAuthorArtifact({

@@ -25,6 +25,10 @@ const h469IntentText = readFileSync(
   new URL("../fixtures/rejected-author-replay/h469-intent.json", import.meta.url),
   "utf8",
 );
+const h470IntentText = readFileSync(
+  new URL("../fixtures/rejected-author-replay/h470-intent.json", import.meta.url),
+  "utf8",
+);
 
 interface ReplayCapture {
   readonly validationInputs: { readonly executionId: string };
@@ -52,6 +56,7 @@ const expectations = JSON.parse(expectationText) as readonly ReplayExpectation[]
 const intents = JSON.parse(intentText) as readonly ReplayIntent[];
 const h466Intents = JSON.parse(h466IntentText) as readonly SingleWordNameIntent[];
 const h469Intents = JSON.parse(h469IntentText) as readonly SingleWordNameIntent[];
+const h470Intents = JSON.parse(h470IntentText) as readonly SingleWordNameIntent[];
 
 function replayById(executionId: string) {
   const capture = captures.find(
@@ -83,12 +88,12 @@ describe("sanitized rejected-author replay baseline", () => {
     const result = summarizeRejectedAuthorReplays(captures);
 
     expect(result).toEqual({
-      total: 41,
-      accepted: 19,
-      rejected: 22,
+      total: 45,
+      accepted: 22,
+      rejected: 23,
       failureStages: [
         { value: "artifact-schema-validation", count: 1 },
-        { value: "factual-invariant-rejection", count: 21 },
+        { value: "factual-invariant-rejection", count: 22 },
       ],
       diagnosticCodes: [
         { value: "custom", count: 1 },
@@ -126,6 +131,10 @@ describe("sanitized rejected-author replay baseline", () => {
       "sanitized-h469",
       "Redis",
       "deployment dashboard",
+      "sanitized-h470",
+      "logistics software",
+      "migration projects",
+      "on-call rotations",
     ]) {
       expect(serialized).not.toContain(privateFixtureValue);
     }
@@ -165,10 +174,7 @@ describe("sanitized rejected-author replay baseline", () => {
 
     // Candidate false rejections. Change this list only deliberately, with the
     // validator or author-guidance change that explains the difference.
-    expect(rejectedSupported).toEqual([
-      "sanitized-h461-a-joining-words",
-      "sanitized-h461-d-per-value-claims",
-    ]);
+    expect(rejectedSupported).toEqual(["sanitized-h461-d-per-value-claims"]);
   });
 
   it("classifies every #466 single-word name case exactly once as supported or control", () => {
@@ -236,6 +242,42 @@ describe("sanitized rejected-author replay baseline", () => {
     }
   });
 
+  it("classifies every #470 joining-word case exactly once as supported or control", () => {
+    const h470Ids = captures
+      .map((capture) => capture.validationInputs.executionId)
+      .filter((executionId) => executionId.startsWith("sanitized-h470-"));
+
+    expect(h470Intents.map((intent) => intent.executionId)).toEqual(h470Ids);
+    for (const intent of h470Intents) {
+      expect(intent.executionId.endsWith("-control"), intent.executionId).toBe(
+        intent.intent === "control",
+      );
+    }
+  });
+
+  it("accepts every #470 summary joined by a listed joining phrase", () => {
+    const supported = h470Intents.filter((intent) => intent.intent === "supported");
+
+    expect(supported).toHaveLength(2);
+    for (const intent of supported) {
+      expect(replayById(intent.executionId).status, intent.executionId).toBe("accepted");
+    }
+  });
+
+  it("rejects every #470 joining-word control as uncovered text", () => {
+    const controls = h470Intents.filter((intent) => intent.intent === "control");
+
+    expect(controls).toHaveLength(2);
+    for (const control of controls) {
+      const result = replayById(control.executionId);
+      expect(result.status, control.executionId).toBe("rejected");
+      expect(
+        result.status === "rejected" ? result.diagnostics.map((diagnostic) => diagnostic.code) : [],
+        control.executionId,
+      ).toContain("substantive_text_uncovered");
+    }
+  });
+
   it("contains only invented local fixture identities", () => {
     expect(fixtureText).not.toContain("anthropic");
     expect(fixtureText).not.toContain("openai");
@@ -245,5 +287,6 @@ describe("sanitized rejected-author replay baseline", () => {
     expect(intentText).not.toContain("fixture://");
     expect(h466IntentText).not.toContain("fixture://");
     expect(h469IntentText).not.toContain("fixture://");
+    expect(h470IntentText).not.toContain("fixture://");
   });
 });

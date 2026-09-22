@@ -1,5 +1,7 @@
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
+import { coverJoiningGaps } from "./joining-words.js";
+
 function tokens(text: string): readonly string[] {
   return (
     text
@@ -51,7 +53,8 @@ export function claimCoverageIssues(proposal: AuthorArtifactProposal): readonly 
           }
         }
       }
-      const uncovered = words.some((word, index) => !covered[index] && word !== "and");
+      const joined = coverJoiningGaps(words, covered);
+      const uncovered = words.some((word, index) => !joined[index] && word !== "and");
       if (uncovered)
         issues.push({
           path: ["sections", sectionIndex, "blocks", blockIndex, "text"],

@@ -164,3 +164,19 @@ cases cover the exemptions, completion, and possessives:
 
 A name substituted as the first word of a sentence is still not caught by this
 rule.
+
+## Joining-word coverage
+
+Issue #470 lets a gap between two claim-covered spans pass coverage when it is
+made only of joining phrases: `who`, `which`, `that`, `while`, `where`,
+`with`, `including`, and `as well as`, optionally with "and". A gap with any
+other word, or a joining word at the start or end of a block, stays uncovered.
+The existing "and" exemption is unchanged.
+
+The #461 joining-words case is now accepted. Its paired control is still
+rejected for its changed fact, but no longer also for coverage, because its
+only gap is "who". The other 39 earlier cases are unchanged:
+
+- **Accepted:** two new supported cases ("while", "as well as").
+- **Rejected for coverage:** two new controls ("who led", and an unclaimed
+  trailing clause).

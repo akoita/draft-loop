@@ -1,0 +1,18 @@
+[
+  {
+    "executionId": "sanitized-h470-while",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h470-as-well-as",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h470-who-led-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h470-trailing-clause-control",
+    "intent": "control"
+  }
+]
