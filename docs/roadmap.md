@@ -1,7 +1,7 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-20<br>
+**Last reviewed:** 2026-09-22<br>
 **Current stage:** Representative author-draft revalidation
 
 This document describes product direction, not fixed delivery dates. **Now** is
@@ -181,7 +181,7 @@ applications.
 | Previous | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md); no release or live-provider outcome | Improve evidence selection and dependable bounded generation                          | Exit criteria met on sanitized replay/retrieval cases and cross-platform packaged recovery evidence; limitations retained |
 | Previous | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early; exit unmet](evaluation/broader-real-application-pilot.md); no release | Test factuality, quality, and effort across more cases                                | Case A produced no accepted draft; cases B/C were not pursued because the fixed all-cases-pass cohort could no longer pass |
 | Previous | Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded | Reduce known structural false rejection without weakening negative controls           | Live-model and real-application quality remain unproven |
-| Now      | Representative author-draft revalidation                                                                          | Designed; no provider observation authorized         | Determine whether the corrected boundary can produce one accepted representative draft | Create a separately gated issue with consent, explicit provider authorization, fixed acceptance and stop conditions, and a first-review boundary |
+| Now      | Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))           | Designed; no provider observation authorized         | Determine whether the corrected boundary can produce one accepted representative draft | #446 predeclares the case, bounds, and decision rules; it needs explicit user authorization before any provider call, then #447 records the decision |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -936,18 +936,45 @@ additional observations could not restore the fixed all-cases-pass result. The
 stage ended early with its exit criterion unmet, no product validation, and no
 release.
 
-### Now — Author-draft acceptance reliability
+### Completed — Author-draft acceptance reliability
 
 Improve the provider-independent author-validation boundary using sanitized
-replay cases derived from the observed structural failure classes. Changes must
-increase complete-draft acceptance without permitting factual violations,
-unsupported claims, uncovered substantive text, or reduced required-section
-coverage. Live provider calls are outside this stage unless a later milestone
-and bounded issue explicitly authorize them.
+replay cases derived from the observed structural failure classes, without
+permitting factual violations, unsupported claims, uncovered substantive text,
+or reduced required-section coverage.
 
 **Exit criterion:** An expanded sanitized replay corpus shows a material
 complete-draft acceptance gain while factual, unsupported-claim, coverage, and
 required-section gates remain unchanged or stronger.
+
+The exit is met. On the unchanged six-case corpus, accepted drafts rose from
+two to three, every negative control kept its intended rejection, and the
+bounded retry fixture succeeded. See the canonical
+[stage evidence](evaluation/author-draft-acceptance-reliability.md). The result
+does not establish live-model or real-application quality.
+
+### Now — Representative author-draft revalidation
+
+Determine whether the corrected boundary produces one accepted author draft on
+a consented representative case, verified by the candidate's first review.
+The stage reuses broader-pilot case A inputs unchanged, so the result reflects
+the boundary change rather than an easier case.
+
+[Milestone 9](https://github.com/akoita/draft-loop/milestone/9) runs two
+issues in order:
+
+- #446 records one bounded observation under pass, fail, and indeterminate
+  rules fixed before execution. It ends at the candidate's first review, with
+  no approval, export, or second run.
+- #447 records the stage decision and names the next stage from the result.
+
+Creating these issues authorizes no authentication probe or provider call.
+The observation requires a later user instruction that names #446.
+
+**Exit criterion:** The #446 result is recorded against its predeclared rules,
+and the roadmap names the next stage. A pass admits a separately gated
+multi-case cohort; a fail returns to provider-free replay work seeded by the
+new failure classes.
 
 ### Later — Production-ready beta
 
@@ -1018,6 +1045,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-22 | Planned milestone 9 for representative author-draft revalidation as #446 and #447. | One consented observation reuses case A inputs with predeclared pass, fail, and indeterminate rules and ends at first review. No provider call is authorized until a later instruction names #446. |
 | 2026-09-19 | Ended the broader real-application pilot early under #433. | Case A was indeterminate with no accepted draft, and the fixed all-cases-pass contract made the declared cohort exit impossible; cases B/C were not pursued. The exit criterion is unmet, no validation or release exists, and the next decision returns to provider-free author-draft acceptance reliability. |
 | 2026-09-19 | Recorded broader-pilot case A under #430 as indeterminate. | Both authentication probes passed, but the three-attempt author cap ended with no accepted draft: one retryable structured API error, then two local factual/coverage rejections. No critic, approval, or export occurred, so the fixed all-cases-pass cohort can no longer pass. |
 | 2026-09-19 | Required completed adversarial observations under #429. | A cohort remains indeterminate when any misleading-evidence or prompt-injection observation is `not-tested`; bounded `observed` and `not-observed` states count as completed evidence without exposing private details. |
