@@ -1,0 +1,102 @@
+[
+  {
+    "executionId": "sanitized-h461-a-joining-words",
+    "hypothesis": "A",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-a-joining-words-control",
+    "hypothesis": "A",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-a-multi-sentence-claim",
+    "hypothesis": "A",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-a-multi-sentence-claim-control",
+    "hypothesis": "A",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-a-whitespace-punctuation",
+    "hypothesis": "A",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-a-whitespace-punctuation-control",
+    "hypothesis": "A",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-b-date-range-dash",
+    "hypothesis": "B",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-b-date-range-dash-control",
+    "hypothesis": "B",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-b-open-range-present",
+    "hypothesis": "B",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-b-open-range-present-control",
+    "hypothesis": "B",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-b-month-abbreviation",
+    "hypothesis": "B",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-b-month-abbreviation-control",
+    "hypothesis": "B",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-b-at-phrasing",
+    "hypothesis": "B",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-b-at-phrasing-control",
+    "hypothesis": "B",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-d-partial-citation",
+    "hypothesis": "D",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-d-partial-citation-control",
+    "hypothesis": "D",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-d-multi-chunk",
+    "hypothesis": "D",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-d-multi-chunk-control",
+    "hypothesis": "D",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h461-d-per-value-claims",
+    "hypothesis": "D",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h461-d-per-value-claims-control",
+    "hypothesis": "D",
+    "intent": "control"
+  }
+]

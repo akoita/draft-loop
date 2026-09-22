@@ -334,5 +334,1383 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Backend engineer with 8 years of experience in payment systems who builds reliable data pipelines in Python.",
+                "claims": [
+                  {
+                    "text": "Backend engineer with 8 years of experience in payment systems",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-joining-words-chunk"]
+                  },
+                  {
+                    "text": "builds reliable data pipelines in Python",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-joining-words-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-a-joining-words",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-a-joining-words-source",
+            "path": "fixture://sanitized/sanitized-h461-a-joining-words",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000001"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-a-joining-words-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-a-joining-words-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000002",
+          "text": "Backend engineer with 8 years of experience in payment systems.\nBuilds reliable data pipelines in Python.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Backend engineer with 12 years of experience in payment systems who builds reliable data pipelines in Python.",
+                "claims": [
+                  {
+                    "text": "Backend engineer with 12 years of experience in payment systems",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-joining-words-control-chunk"]
+                  },
+                  {
+                    "text": "builds reliable data pipelines in Python",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-joining-words-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-a-joining-words-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-a-joining-words-control-source",
+            "path": "fixture://sanitized/sanitized-h461-a-joining-words-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000003"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-a-joining-words-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-a-joining-words-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000004",
+          "text": "Backend engineer with 8 years of experience in payment systems.\nBuilds reliable data pipelines in Python.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Platform engineer at Harbor Lane Software since 2019. Leads a team of 6 engineers.",
+                "claims": [
+                  {
+                    "text": "Platform engineer at Harbor Lane Software since 2019. Leads a team of 6 engineers.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-multi-sentence-claim-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-a-multi-sentence-claim",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-a-multi-sentence-claim-source",
+            "path": "fixture://sanitized/sanitized-h461-a-multi-sentence-claim",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000005"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-a-multi-sentence-claim-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-a-multi-sentence-claim-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000006",
+          "text": "Platform engineer at Harbor Lane Software since 2019.\nLeads a team of 6 engineers.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Platform engineer at Harbor Lane Software since 2019. Leads a team of 9 engineers.",
+                "claims": [
+                  {
+                    "text": "Platform engineer at Harbor Lane Software since 2019. Leads a team of 9 engineers.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-multi-sentence-claim-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-a-multi-sentence-claim-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-a-multi-sentence-claim-control-source",
+            "path": "fixture://sanitized/sanitized-h461-a-multi-sentence-claim-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000007"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-a-multi-sentence-claim-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-a-multi-sentence-claim-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000008",
+          "text": "Platform engineer at Harbor Lane Software since 2019.\nLeads a team of 6 engineers.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Data engineer focused on streaming analytics for 3 retail brands,\nwith an emphasis on cost-aware platform design.",
+                "claims": [
+                  {
+                    "text": "Data engineer focused on streaming analytics for 3 retail brands, with an emphasis on cost-aware platform design",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-whitespace-punctuation-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-a-whitespace-punctuation",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-a-whitespace-punctuation-source",
+            "path": "fixture://sanitized/sanitized-h461-a-whitespace-punctuation",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000009"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-a-whitespace-punctuation-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-a-whitespace-punctuation-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000000a",
+          "text": "Data engineer focused on streaming analytics for 3 retail brands, with an emphasis on cost-aware platform design.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Data engineer focused on streaming analytics for 4 retail brands,\nwith an emphasis on cost-aware platform design.",
+                "claims": [
+                  {
+                    "text": "Data engineer focused on streaming analytics for 4 retail brands, with an emphasis on cost-aware platform design",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-a-whitespace-punctuation-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-a-whitespace-punctuation-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-a-whitespace-punctuation-control-source",
+            "path": "fixture://sanitized/sanitized-h461-a-whitespace-punctuation-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000000b"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-a-whitespace-punctuation-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-a-whitespace-punctuation-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000000c",
+          "text": "Data engineer focused on streaming analytics for 3 retail brands, with an emphasis on cost-aware platform design.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Senior Software Engineer, Brightfield Logistics, 2019 – 2023",
+                "claims": [
+                  {
+                    "text": "Senior Software Engineer, Brightfield Logistics, 2019 – 2023",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-date-range-dash-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Migrated billing services to a managed queue.",
+                "claims": [
+                  {
+                    "text": "Migrated billing services to a managed queue.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-date-range-dash-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-date-range-dash",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-date-range-dash-source",
+            "path": "fixture://sanitized/sanitized-h461-b-date-range-dash",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000000d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-date-range-dash-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-date-range-dash-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000000e",
+          "text": "Senior Software Engineer, Brightfield Logistics, 2019-2023\n- Migrated billing services to a managed queue.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Senior Software Engineer, Brightfield Logistics, 2018 – 2023",
+                "claims": [
+                  {
+                    "text": "Senior Software Engineer, Brightfield Logistics, 2018 – 2023",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-date-range-dash-control-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Migrated billing services to a managed queue.",
+                "claims": [
+                  {
+                    "text": "Migrated billing services to a managed queue.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-date-range-dash-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-date-range-dash-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-date-range-dash-control-source",
+            "path": "fixture://sanitized/sanitized-h461-b-date-range-dash-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000000f"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-date-range-dash-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-date-range-dash-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000010",
+          "text": "Senior Software Engineer, Brightfield Logistics, 2019-2023\n- Migrated billing services to a managed queue.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Staff Engineer, Harbor Lane Software, March 2021 – Present",
+                "claims": [
+                  {
+                    "text": "Staff Engineer, Harbor Lane Software, March 2021 – Present",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-open-range-present-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Designed the internal deployment dashboard.",
+                "claims": [
+                  {
+                    "text": "Designed the internal deployment dashboard.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-open-range-present-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-open-range-present",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-open-range-present-source",
+            "path": "fixture://sanitized/sanitized-h461-b-open-range-present",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000011"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-open-range-present-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-open-range-present-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000012",
+          "text": "Staff Engineer, Harbor Lane Software, March 2021 to present\n- Designed the internal deployment dashboard.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Principal Engineer, Harbor Lane Software, March 2021 – Present",
+                "claims": [
+                  {
+                    "text": "Principal Engineer, Harbor Lane Software, March 2021 – Present",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-open-range-present-control-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Designed the internal deployment dashboard.",
+                "claims": [
+                  {
+                    "text": "Designed the internal deployment dashboard.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-open-range-present-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-open-range-present-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-open-range-present-control-source",
+            "path": "fixture://sanitized/sanitized-h461-b-open-range-present-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000013"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-open-range-present-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-open-range-present-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000014",
+          "text": "Staff Engineer, Harbor Lane Software, March 2021 to present\n- Designed the internal deployment dashboard.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Platform Engineer, Quillmark Systems, Jan 2016 – Dec 2018",
+                "claims": [
+                  {
+                    "text": "Platform Engineer, Quillmark Systems, Jan 2016 – Dec 2018",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-month-abbreviation-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Automated nightly database backups.",
+                "claims": [
+                  {
+                    "text": "Automated nightly database backups.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-month-abbreviation-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-month-abbreviation",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-month-abbreviation-source",
+            "path": "fixture://sanitized/sanitized-h461-b-month-abbreviation",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000015"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-month-abbreviation-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-month-abbreviation-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000016",
+          "text": "Platform Engineer, Quillmark Systems, January 2016 - December 2018\n- Automated nightly database backups.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Platform Engineer, Quillmark Labs, Jan 2016 – Dec 2018",
+                "claims": [
+                  {
+                    "text": "Platform Engineer, Quillmark Labs, Jan 2016 – Dec 2018",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-month-abbreviation-control-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Automated nightly database backups.",
+                "claims": [
+                  {
+                    "text": "Automated nightly database backups.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-month-abbreviation-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-month-abbreviation-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-month-abbreviation-control-source",
+            "path": "fixture://sanitized/sanitized-h461-b-month-abbreviation-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000017"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-month-abbreviation-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-month-abbreviation-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000018",
+          "text": "Platform Engineer, Quillmark Systems, January 2016 - December 2018\n- Automated nightly database backups.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Senior Data Analyst at Copperleaf Health, 2014–2016",
+                "claims": [
+                  {
+                    "text": "Senior Data Analyst at Copperleaf Health, 2014–2016",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-at-phrasing-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Built weekly retention reports.",
+                "claims": [
+                  {
+                    "text": "Built weekly retention reports.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-at-phrasing-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-at-phrasing",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-at-phrasing-source",
+            "path": "fixture://sanitized/sanitized-h461-b-at-phrasing",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000019"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-at-phrasing-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-at-phrasing-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000001a",
+          "text": "Senior Data Analyst, Copperleaf Health, 2014-2016\n- Built weekly retention reports.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Senior Data Analyst at Copperleaf Health, 2013–2016",
+                "claims": [
+                  {
+                    "text": "Senior Data Analyst at Copperleaf Health, 2013–2016",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-at-phrasing-control-chunk"]
+                  }
+                ]
+              },
+              {
+                "type": "bullet",
+                "text": "Built weekly retention reports.",
+                "claims": [
+                  {
+                    "text": "Built weekly retention reports.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-b-at-phrasing-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-b-at-phrasing-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-b-at-phrasing-control-source",
+            "path": "fixture://sanitized/sanitized-h461-b-at-phrasing-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000001b"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-b-at-phrasing-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-b-at-phrasing-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000001c",
+          "text": "Senior Data Analyst, Copperleaf Health, 2014-2016\n- Built weekly retention reports.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "TypeScript, PostgreSQL, AWS",
+                "claims": [
+                  {
+                    "text": "TypeScript, PostgreSQL, AWS",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-partial-citation-languages"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-d-partial-citation",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-d-partial-citation-source",
+            "path": "fixture://sanitized/sanitized-h461-d-partial-citation",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000001d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-d-partial-citation-languages",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-partial-citation-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000001e",
+          "text": "Languages: TypeScript, Python, Go",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h461-d-partial-citation-data",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-partial-citation-source",
+          "ordinal": 1,
+          "lineStart": 11,
+          "lineEnd": 11,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000001f",
+          "text": "Data stores: PostgreSQL, Redis",
+          "rank": 1
+        },
+        {
+          "id": "sanitized-h461-d-partial-citation-cloud",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-partial-citation-source",
+          "ordinal": 2,
+          "lineStart": 21,
+          "lineEnd": 21,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000020",
+          "text": "Cloud: AWS, Terraform",
+          "rank": 2
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "TypeScript, PostgreSQL, GCP",
+                "claims": [
+                  {
+                    "text": "TypeScript, PostgreSQL, GCP",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-partial-citation-control-languages"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-d-partial-citation-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-d-partial-citation-control-source",
+            "path": "fixture://sanitized/sanitized-h461-d-partial-citation-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000021"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-d-partial-citation-control-languages",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-partial-citation-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000022",
+          "text": "Languages: TypeScript, Python, Go",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h461-d-partial-citation-control-data",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-partial-citation-control-source",
+          "ordinal": 1,
+          "lineStart": 11,
+          "lineEnd": 11,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000023",
+          "text": "Data stores: PostgreSQL, Redis",
+          "rank": 1
+        },
+        {
+          "id": "sanitized-h461-d-partial-citation-control-cloud",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-partial-citation-control-source",
+          "ordinal": 2,
+          "lineStart": 21,
+          "lineEnd": 21,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000024",
+          "text": "Cloud: AWS, Terraform",
+          "rank": 2
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "TypeScript, Python, PostgreSQL, Redis, AWS, Terraform",
+                "claims": [
+                  {
+                    "text": "TypeScript, Python, PostgreSQL, Redis, AWS, Terraform",
+                    "substantive": true,
+                    "evidenceChunkIds": [
+                      "sanitized-h461-d-multi-chunk-languages",
+                      "sanitized-h461-d-multi-chunk-data",
+                      "sanitized-h461-d-multi-chunk-cloud"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-d-multi-chunk",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-d-multi-chunk-source",
+            "path": "fixture://sanitized/sanitized-h461-d-multi-chunk",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000025"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-d-multi-chunk-languages",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-multi-chunk-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000026",
+          "text": "Languages: TypeScript, Python, Go",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h461-d-multi-chunk-data",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-multi-chunk-source",
+          "ordinal": 1,
+          "lineStart": 11,
+          "lineEnd": 11,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000027",
+          "text": "Data stores: PostgreSQL, Redis",
+          "rank": 1
+        },
+        {
+          "id": "sanitized-h461-d-multi-chunk-cloud",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-multi-chunk-source",
+          "ordinal": 2,
+          "lineStart": 21,
+          "lineEnd": 21,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000028",
+          "text": "Cloud: AWS, Terraform",
+          "rank": 2
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "TypeScript, Python, DynamoDB, Redis, AWS, Terraform",
+                "claims": [
+                  {
+                    "text": "TypeScript, Python, DynamoDB, Redis, AWS, Terraform",
+                    "substantive": true,
+                    "evidenceChunkIds": [
+                      "sanitized-h461-d-multi-chunk-control-languages",
+                      "sanitized-h461-d-multi-chunk-control-data",
+                      "sanitized-h461-d-multi-chunk-control-cloud"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-d-multi-chunk-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-d-multi-chunk-control-source",
+            "path": "fixture://sanitized/sanitized-h461-d-multi-chunk-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000029"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-d-multi-chunk-control-languages",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-multi-chunk-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000002a",
+          "text": "Languages: TypeScript, Python, Go",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h461-d-multi-chunk-control-data",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-multi-chunk-control-source",
+          "ordinal": 1,
+          "lineStart": 11,
+          "lineEnd": 11,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000002b",
+          "text": "Data stores: PostgreSQL, Redis",
+          "rank": 1
+        },
+        {
+          "id": "sanitized-h461-d-multi-chunk-control-cloud",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-multi-chunk-control-source",
+          "ordinal": 2,
+          "lineStart": 21,
+          "lineEnd": 21,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000002c",
+          "text": "Cloud: AWS, Terraform",
+          "rank": 2
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Go, TypeScript, PostgreSQL",
+                "claims": [
+                  {
+                    "text": "Go",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-per-value-claims-languages"]
+                  },
+                  {
+                    "text": "TypeScript",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-per-value-claims-languages"]
+                  },
+                  {
+                    "text": "PostgreSQL",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-per-value-claims-data"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-d-per-value-claims",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-d-per-value-claims-source",
+            "path": "fixture://sanitized/sanitized-h461-d-per-value-claims",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000002d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-d-per-value-claims-languages",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-per-value-claims-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000002e",
+          "text": "Languages: TypeScript, Python, Go",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h461-d-per-value-claims-data",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-per-value-claims-source",
+          "ordinal": 1,
+          "lineStart": 11,
+          "lineEnd": 11,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000002f",
+          "text": "Data stores: PostgreSQL, Redis",
+          "rank": 1
+        },
+        {
+          "id": "sanitized-h461-d-per-value-claims-cloud",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-per-value-claims-source",
+          "ordinal": 2,
+          "lineStart": 21,
+          "lineEnd": 21,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000030",
+          "text": "Cloud: AWS, Terraform",
+          "rank": 2
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Go, TypeScript, MongoDB",
+                "claims": [
+                  {
+                    "text": "Go",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-per-value-claims-control-languages"]
+                  },
+                  {
+                    "text": "TypeScript",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-per-value-claims-control-languages"]
+                  },
+                  {
+                    "text": "MongoDB",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h461-d-per-value-claims-control-data"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h461-d-per-value-claims-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h461-d-per-value-claims-control-source",
+            "path": "fixture://sanitized/sanitized-h461-d-per-value-claims-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000031"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h461-d-per-value-claims-control-languages",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-per-value-claims-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000032",
+          "text": "Languages: TypeScript, Python, Go",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h461-d-per-value-claims-control-data",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-per-value-claims-control-source",
+          "ordinal": 1,
+          "lineStart": 11,
+          "lineEnd": 11,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000033",
+          "text": "Data stores: PostgreSQL, Redis",
+          "rank": 1
+        },
+        {
+          "id": "sanitized-h461-d-per-value-claims-control-cloud",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h461-d-per-value-claims-control-source",
+          "ordinal": 2,
+          "lineStart": 21,
+          "lineEnd": 21,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000034",
+          "text": "Cloud: AWS, Terraform",
+          "rank": 2
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]
