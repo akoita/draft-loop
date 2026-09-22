@@ -138,3 +138,29 @@ sentence therefore lets a substituted tool, organisation, or place through.
 This is a factuality gap in the validator, not an author-guidance problem. The
 four accepted controls are pinned as known gaps, so a fix must change that
 list deliberately. Every supported case in the corpus must keep its result.
+
+### Gap closed
+
+Issue #469 closes the gap. In a substantive claim, each capitalised single
+word must now appear as a whole word, case-insensitively, in a cited chunk.
+These are exempt:
+
+- the first word of a sentence;
+- words inside an already protected value;
+- month and weekday names, `Present`, and `I`.
+
+A possessive ("Globex's") is supported by its base name. A name found only in
+a retrieved but uncited chunk gets that citation added, as protected values
+already did.
+
+All six #466 controls are now rejected. The other 30 earlier cases keep their
+results, including both pinned #461 false rejections. Seven new invented
+cases cover the exemptions, completion, and possessives:
+
+- **Accepted:** calendar words, case differences, mid-list names,
+  sentence-initial common words, uncited names that get a citation added, and
+  possessives.
+- **Rejected:** the uncited-name control.
+
+A name substituted as the first word of a sentence is still not caught by this
+rule.

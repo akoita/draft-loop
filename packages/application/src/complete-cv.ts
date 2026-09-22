@@ -4,6 +4,7 @@ import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 import { extractProtectedValues, supportsProtectedValueInChunks } from "./author-grounding.js";
 import { claimCoverageIssues } from "./claim-coverage.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
+import { unsupportedSingleWordNames } from "./single-word-name-grounding.js";
 
 export const factualInvariantIssueCodes = [
   "missing_evidence",
@@ -38,7 +39,7 @@ function meaningfulTokens(value: string): readonly string[] {
 /**
  * Fail closed when a live CV proposal cites no evidence, unrelated evidence,
  * or evidence that changes exact factual invariants such as dates, metrics,
- * credentials, links, employers, and multi-word titles.
+ * credentials, links, employers, multi-word titles, and single-word names.
  */
 export function completeCvProposalIssues(
   proposal: AuthorArtifactProposal,
@@ -71,15 +72,16 @@ export function completeCvProposalIssues(
             message: "cited evidence does not support the CV claim",
           });
         }
-        for (const value of extractProtectedValues(claim.text)) {
-          if (!supportsProtectedValueInChunks(evidenceChunks, value)) {
-            issues.push({
-              code: "factual_invariant_violation",
-              path: [...path, "text"],
-              message: "CV claim changes a factual invariant absent from cited evidence",
-            });
-            break;
-          }
+        const changesFactualInvariant =
+          extractProtectedValues(claim.text).some(
+            (value) => !supportsProtectedValueInChunks(evidenceChunks, value),
+          ) || unsupportedSingleWordNames(claim.text, evidenceChunks).length > 0;
+        if (changesFactualInvariant) {
+          issues.push({
+            code: "factual_invariant_violation",
+            path: [...path, "text"],
+            message: "CV claim changes a factual invariant absent from cited evidence",
+          });
         }
       }
     }

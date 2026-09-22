@@ -21,6 +21,10 @@ const h466IntentText = readFileSync(
   new URL("../fixtures/rejected-author-replay/h466-intent.json", import.meta.url),
   "utf8",
 );
+const h469IntentText = readFileSync(
+  new URL("../fixtures/rejected-author-replay/h469-intent.json", import.meta.url),
+  "utf8",
+);
 
 interface ReplayCapture {
   readonly validationInputs: { readonly executionId: string };
@@ -47,6 +51,7 @@ const captures = JSON.parse(fixtureText) as readonly ReplayCapture[];
 const expectations = JSON.parse(expectationText) as readonly ReplayExpectation[];
 const intents = JSON.parse(intentText) as readonly ReplayIntent[];
 const h466Intents = JSON.parse(h466IntentText) as readonly SingleWordNameIntent[];
+const h469Intents = JSON.parse(h469IntentText) as readonly SingleWordNameIntent[];
 
 function replayById(executionId: string) {
   const capture = captures.find(
@@ -78,16 +83,16 @@ describe("sanitized rejected-author replay baseline", () => {
     const result = summarizeRejectedAuthorReplays(captures);
 
     expect(result).toEqual({
-      total: 34,
-      accepted: 17,
-      rejected: 17,
+      total: 41,
+      accepted: 19,
+      rejected: 22,
       failureStages: [
         { value: "artifact-schema-validation", count: 1 },
-        { value: "factual-invariant-rejection", count: 16 },
+        { value: "factual-invariant-rejection", count: 21 },
       ],
       diagnosticCodes: [
         { value: "custom", count: 1 },
-        { value: "factual_invariant_violation", count: 12 },
+        { value: "factual_invariant_violation", count: 17 },
         { value: "substantive_text_uncovered", count: 3 },
         { value: "unsupported_claim", count: 4 },
       ],
@@ -118,6 +123,9 @@ describe("sanitized rejected-author replay baseline", () => {
       "Kafka",
       "Globex",
       "Berlin",
+      "sanitized-h469",
+      "Redis",
+      "deployment dashboard",
     ]) {
       expect(serialized).not.toContain(privateFixtureValue);
     }
@@ -191,15 +199,41 @@ describe("sanitized rejected-author replay baseline", () => {
       .filter((intent) => replayById(intent.executionId).status === "accepted")
       .map((intent) => intent.executionId);
 
-    // Known gaps: a single capitalised name outside an "at"/"for" phrase is not
-    // a protected value. Change this list only deliberately, with the validator
+    // Known gaps: none since #469 checks capitalised single words against the
+    // cited evidence. Change this list only deliberately, with the validator
     // change that explains the difference.
-    expect(acceptedControls).toEqual([
-      "sanitized-h466-tool-sentence-control",
-      "sanitized-h466-tool-list-control",
-      "sanitized-h466-organisation-sentence-control",
-      "sanitized-h466-place-sentence-control",
-    ]);
+    expect(acceptedControls).toEqual([]);
+  });
+
+  it("classifies every #469 single-word name case exactly once as supported or control", () => {
+    const h469Ids = captures
+      .map((capture) => capture.validationInputs.executionId)
+      .filter((executionId) => executionId.startsWith("sanitized-h469-"));
+
+    expect(h469Intents.map((intent) => intent.executionId)).toEqual(h469Ids);
+    for (const intent of h469Intents) {
+      expect(intent.executionId.endsWith("-control"), intent.executionId).toBe(
+        intent.intent === "control",
+      );
+    }
+  });
+
+  it("accepts every #469 supported capitalised-word case", () => {
+    const supported = h469Intents.filter((intent) => intent.intent === "supported");
+
+    expect(supported).toHaveLength(6);
+    for (const intent of supported) {
+      expect(replayById(intent.executionId).status, intent.executionId).toBe("accepted");
+    }
+  });
+
+  it("rejects every #469 single-word name control", () => {
+    const controls = h469Intents.filter((intent) => intent.intent === "control");
+
+    expect(controls).toHaveLength(1);
+    for (const control of controls) {
+      expect(replayById(control.executionId).status, control.executionId).toBe("rejected");
+    }
   });
 
   it("contains only invented local fixture identities", () => {
@@ -210,5 +244,6 @@ describe("sanitized rejected-author replay baseline", () => {
     expect(expectationText).not.toContain("fixture://");
     expect(intentText).not.toContain("fixture://");
     expect(h466IntentText).not.toContain("fixture://");
+    expect(h469IntentText).not.toContain("fixture://");
   });
 });

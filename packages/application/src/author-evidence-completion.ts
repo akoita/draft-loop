@@ -2,6 +2,10 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { extractProtectedValues, supportsProtectedValue } from "./author-grounding.js";
+import {
+  supportsSingleWordName,
+  unsupportedSingleWordNames,
+} from "./single-word-name-grounding.js";
 
 function completedEvidenceChunkIds(
   claim: AuthorArtifactProposal["sections"][number]["blocks"][number]["claims"][number],
@@ -10,7 +14,11 @@ function completedEvidenceChunkIds(
   if (!claim.substantive) return null;
 
   const protectedValues = extractProtectedValues(claim.text);
-  if (protectedValues.length === 0) return null;
+  const citedTexts = claim.evidenceChunkIds.map(
+    (id) => retrievedEvidence.find((chunk) => chunk.id === id)?.text ?? "",
+  );
+  const uncitedNames = unsupportedSingleWordNames(claim.text, citedTexts);
+  if (protectedValues.length === 0 && uncitedNames.length === 0) return null;
 
   const completedIds: string[] = [];
   const seen = new Set<string>();
@@ -21,9 +29,9 @@ function completedEvidenceChunkIds(
   }
 
   for (const chunk of retrievedEvidence) {
-    const supportsAnyValue = protectedValues.some((value) =>
-      supportsProtectedValue(chunk.text, value),
-    );
+    const supportsAnyValue =
+      protectedValues.some((value) => supportsProtectedValue(chunk.text, value)) ||
+      uncitedNames.some((name) => supportsSingleWordName(chunk.text, name));
     if (!supportsAnyValue || seen.has(chunk.id)) continue;
     seen.add(chunk.id);
     completedIds.push(chunk.id);
@@ -39,7 +47,8 @@ function completedEvidenceChunkIds(
 }
 
 /**
- * Complete omitted exact-value citations using only the retrieved evidence.
+ * Complete omitted exact-value and single-word-name citations using only the
+ * retrieved evidence.
  * Claim and surrounding proposal content remain provider-owned and unchanged.
  */
 export function completeAuthorEvidenceCitations(

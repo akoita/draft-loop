@@ -2160,5 +2160,419 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Maintained the deployment dashboard since March.",
+                "claims": [
+                  {
+                    "text": "Maintained the deployment dashboard since March.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h469-calendar-word-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h469-calendar-word",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h469-calendar-word-source",
+            "path": "fixture://sanitized/sanitized-h469-calendar-word",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000045"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h469-calendar-word-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-calendar-word-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000046",
+          "text": "- Maintained the deployment dashboard since Mar 2021.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Built streaming pipelines with Kafka.",
+                "claims": [
+                  {
+                    "text": "Built streaming pipelines with Kafka.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h469-name-case-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h469-name-case",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h469-name-case-source",
+            "path": "fixture://sanitized/sanitized-h469-name-case",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000047"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h469-name-case-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-name-case-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000048",
+          "text": "- built streaming pipelines with kafka.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Python, Kafka, Redis",
+                "claims": [
+                  {
+                    "text": "Python, Kafka, Redis",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h469-list-middle-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h469-list-middle",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h469-list-middle-source",
+            "path": "fixture://sanitized/sanitized-h469-list-middle",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000049"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h469-list-middle-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-list-middle-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 3,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000004a",
+          "text": "Languages: Python\nMessaging: Kafka\nData stores: Redis",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Migrated billing services to a managed queue. Also automated nightly database backups.",
+                "claims": [
+                  {
+                    "text": "Migrated billing services to a managed queue. Also automated nightly database backups.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h469-second-sentence-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h469-second-sentence",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h469-second-sentence-source",
+            "path": "fixture://sanitized/sanitized-h469-second-sentence",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000004b"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h469-second-sentence-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-second-sentence-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000004c",
+          "text": "- Migrated billing services to a managed queue.\n- Automated nightly database backups.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Built streaming pipelines with Kafka.",
+                "claims": [
+                  {
+                    "text": "Built streaming pipelines with Kafka.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h469-uncited-name-chunk-0"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h469-uncited-name",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h469-uncited-name-source",
+            "path": "fixture://sanitized/sanitized-h469-uncited-name",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000004d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h469-uncited-name-chunk-0",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-uncited-name-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000004e",
+          "text": "- Built streaming pipelines for the billing platform.",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h469-uncited-name-chunk-1",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-uncited-name-source",
+          "ordinal": 1,
+          "lineStart": 2,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000004f",
+          "text": "Messaging: Kafka, RabbitMQ",
+          "rank": 1
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Built streaming pipelines with Kafka.",
+                "claims": [
+                  {
+                    "text": "Built streaming pipelines with Kafka.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h469-uncited-name-control-chunk-0"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h469-uncited-name-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h469-uncited-name-control-source",
+            "path": "fixture://sanitized/sanitized-h469-uncited-name-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000050"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h469-uncited-name-control-chunk-0",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-uncited-name-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000051",
+          "text": "- Built streaming pipelines for the billing platform.",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h469-uncited-name-control-chunk-1",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-uncited-name-control-source",
+          "ordinal": 1,
+          "lineStart": 2,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000052",
+          "text": "Messaging: Pulsar, RabbitMQ",
+          "rank": 1
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Scaled the billing platform used by Globex's customers.",
+                "claims": [
+                  {
+                    "text": "Scaled the billing platform used by Globex's customers.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h469-possessive-chunk-0"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h469-possessive",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h469-possessive-source",
+            "path": "fixture://sanitized/sanitized-h469-possessive",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000053"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h469-possessive-chunk-0",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h469-possessive-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000054",
+          "text": "- Scaled the billing platform used by Globex customers.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]

@@ -136,8 +136,8 @@
   },
   {
     "executionId": "sanitized-h466-tool-sentence-control",
-    "status": "accepted",
-    "diagnosticCodes": []
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
   },
   {
     "executionId": "sanitized-h466-tool-list",
@@ -146,18 +146,18 @@
   },
   {
     "executionId": "sanitized-h466-tool-list-control",
-    "status": "accepted",
-    "diagnosticCodes": []
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
   },
   {
     "executionId": "sanitized-h466-organisation-sentence-control",
-    "status": "accepted",
-    "diagnosticCodes": []
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
   },
   {
     "executionId": "sanitized-h466-place-sentence-control",
-    "status": "accepted",
-    "diagnosticCodes": []
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
   },
   {
     "executionId": "sanitized-h466-organisation-at-control",
@@ -168,5 +168,40 @@
     "executionId": "sanitized-h466-standalone-control",
     "status": "rejected",
     "diagnosticCodes": ["unsupported_claim"]
+  },
+  {
+    "executionId": "sanitized-h469-calendar-word",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h469-name-case",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h469-list-middle",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h469-second-sentence",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h469-uncited-name",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h469-uncited-name-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h469-possessive",
+    "status": "accepted",
+    "diagnosticCodes": []
   }
 ]
