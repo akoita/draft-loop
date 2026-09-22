@@ -1,0 +1,30 @@
+[
+  {
+    "executionId": "sanitized-h469-calendar-word",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h469-name-case",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h469-list-middle",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h469-second-sentence",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h469-uncited-name",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h469-uncited-name-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h469-possessive",
+    "intent": "supported"
+  }
+]
