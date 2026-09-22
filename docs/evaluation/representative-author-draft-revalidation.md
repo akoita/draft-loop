@@ -1,6 +1,6 @@
 # Representative author-draft revalidation
 
-**Status:** Ended indeterminate; no author draft reached validation
+**Status:** First observation indeterminate; retry observation failed
 **Milestone:** [Representative author-draft revalidation](https://github.com/akoita/draft-loop/milestone/9)
 **Observation issue:** #446
 **Revision:** `ff8fa1892dc472d9bfe666c44976d260a2a5da60`
@@ -87,3 +87,52 @@ second authorized model check was not needed.
 The declared model and author settings therefore work. The #446 failures
 belong to the real author request, and #453 makes their cause visible before
 another observation.
+
+## Retry observation
+
+**Issue:** #456 · **Revision:** `d116b2e76d9103926692d5baa3cb630687c9e003`
+
+The candidate authorized #456 in their own words: both sign-in probes, one
+synthetic author preflight, and one bounded run on the unchanged case A
+material, with the same models, bounds, and first-review boundary as #446.
+Both probes passed, and the synthetic author preflight on `claude-sonnet-4-5`
+returned `available` before any candidate material was sent.
+
+| Attempt | Result | Active provider time | Sanitized diagnostics (at most eight kept) |
+| ------- | ------ | -------------------- | ------------------------------------------ |
+| 1 | Retryable provider error | 479,236 ms | `claude_terminal_reason_api_error`, `claude_error_subtype_success`, `claude_stop_reason_stop_sequence`; no `claude_api_error_*` cause code |
+| 2 | Retryable local rejection | 228,605 ms | Two factual-invariant and six substantive-coverage diagnostics |
+| 3 | Final local rejection | 233,020 ms | Four unsupported-claim, two factual-invariant, and two substantive-coverage diagnostics |
+
+Total active provider time was 940,861 milliseconds, and persisted accounted
+duration was 952,332 milliseconds. No critic call, first review, approval, or
+export occurred. Provider-reported cost was unavailable.
+
+### Retry result
+
+The retry observation **fails** under the rules fixed in #456. The validator
+returned a verdict on both attempts that produced a draft and rejected each.
+The provider error on attempt 1 consumed one attempt but did not leave the run
+without a validator verdict, so the indeterminate rule does not apply. The
+rules were not changed after the result.
+
+### Findings
+
+- **The milestone 8 corrections did not produce an accepted draft on this
+  case.** With structured retry feedback, attempt 3 still failed, and its
+  rejection added unsupported-claim diagnostics that attempt 2 did not have.
+- **Diagnostic counts are lower bounds.** The orchestrator keeps at most eight
+  diagnostics per attempt. The case A counts under #430 were capped the same
+  way, so the two runs cannot be compared exactly.
+- **The author `api_error` persists and differs from #446.** It arrived after
+  about eight minutes rather than eight seconds, and the result text contained
+  none of the allowlisted cause tokens. Two of the four author requests on this
+  case now fail this way.
+
+## Retry stage decision
+
+Recorded under #456. The fail rule applies, so the next stage is provider-free
+replay work seeded by these failure classes, not a cohort. The stage should
+start by recording the full content-free diagnostic counts per family, so later
+comparisons are not hidden by the eight-item cap. The unexplained `api_error`
+remains an open risk for any later observation.
