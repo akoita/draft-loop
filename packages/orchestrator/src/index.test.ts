@@ -1,3 +1,7 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { type ContextSnapshot, createContextSnapshot, createWorkspace } from "@draft-loop/domain";
 import { buildIndependentReadinessReport } from "@draft-loop/evaluations";
 import type { DraftArtifact } from "@draft-loop/schemas";
@@ -6,7 +10,11 @@ import {
   independentReadinessReportSchema,
   readinessDimensions,
 } from "@draft-loop/schemas";
-import type { JsonValue, RunSnapshotRecordInput } from "@draft-loop/storage";
+import {
+  type JsonValue,
+  openSqliteStorage,
+  type RunSnapshotRecordInput,
+} from "@draft-loop/storage";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -1707,5 +1715,287 @@ describe("durable orchestration", () => {
       state: "revising",
       durationAccounting: { activeDurationMs: 0, activeSince: now },
     });
+  });
+});
+
+describe("uncapped diagnostic counts", () => {
+  function rejectedAuthorError(extra: Record<string, unknown>) {
+    return Object.assign(new Error("private rejected proposal"), {
+      code: "invalid-response",
+      retryable: true,
+      failureStage: "factual-invariant-rejection",
+      diagnostics: Array.from({ length: 11 }, (_, index) => ({
+        code: index < 6 ? "unsupported_claim" : index < 9 ? "missing_evidence" : "custom",
+        path: `sections.0.blocks.${index}`,
+      })),
+      ...extra,
+    });
+  }
+
+  async function failThenRecover(extra: Record<string, unknown>) {
+    let attempts = 0;
+    const authorRequests: unknown[] = [];
+    const fixture = engineFixture({
+      author: async (authorRequest) => {
+        authorRequests.push(authorRequest);
+        attempts += 1;
+        if (attempts === 1) throw rejectedAuthorError(extra);
+        return execution(artifact(), "anthropic", "author-test");
+      },
+    });
+    const failed = await fixture.engine.start(request());
+    const resumed = await fixture.engine.resume("run-1", { context: context() });
+    return { ...fixture, failed, resumed, authorRequests };
+  }
+
+  it("records exact counts beside the capped diagnostics without changing retry feedback", async () => {
+    const counts = [
+      { code: "unsupported_claim", count: 6 },
+      { code: "missing_evidence", count: 3 },
+      { code: "custom", count: 2 },
+    ];
+    const counted = await failThenRecover({ diagnosticCounts: counts });
+    const uncounted = await failThenRecover({});
+
+    expect(counted.failed.lastError).toMatchObject({
+      code: "invalid-response",
+      attempt: 1,
+      maxAttempts: 3,
+      retryable: true,
+      failureStage: "factual-invariant-rejection",
+    });
+    expect(counted.failed.lastError?.diagnostics).toHaveLength(8);
+    expect(counted.failed.lastError?.diagnosticCounts).toEqual(counts);
+    const { diagnosticCounts: _counts, ...withoutCounts } = counted.failed.lastError ?? {};
+    expect(withoutCounts).toEqual(uncounted.failed.lastError);
+
+    expect(counted.resumed.state).toBe("awaiting-approval");
+    expect(counted.author).toHaveBeenCalledTimes(2);
+    const retryFeedback = (counted.authorRequests[1] as { retryFeedback?: unknown }).retryFeedback;
+    expect(retryFeedback).toBeDefined();
+    expect(retryFeedback).not.toHaveProperty("diagnosticCounts");
+    expect(retryFeedback).toEqual(
+      (uncounted.authorRequests[1] as { retryFeedback?: unknown }).retryFeedback,
+    );
+  });
+
+  it("reads counts from provider error metadata", async () => {
+    const { engine } = engineFixture({
+      author: async () => {
+        throw rejectedAuthorError({
+          metadata: { diagnosticCounts: [{ code: "custom", count: 11 }] },
+        });
+      },
+    });
+
+    const failed = await engine.start(request());
+
+    expect(failed.lastError?.diagnosticCounts).toEqual([{ code: "custom", count: 11 }]);
+  });
+
+  it("drops invalid count entries individually, never renames them, and keeps the first repeat", async () => {
+    const { engine } = engineFixture({
+      author: async () => {
+        throw rejectedAuthorError({
+          diagnosticCounts: [
+            { code: "custom", count: 0 },
+            { code: "unsupported_claim", count: 6 },
+            { code: "candidate secret text!", count: 4 },
+            { code: `x${"a".repeat(64)}`, count: 1 },
+            { code: "negative", count: -1 },
+            { code: "fractional", count: 1.5 },
+            { code: "huge", count: 100_001 },
+            { code: "text", count: "3" },
+            { code: "extra", count: 2, message: "private detail" },
+            { code: "missing" },
+            ["tuple", 2],
+            null,
+            "custom=2",
+            Object.assign(Object.create({ inherited: true }), { code: "proto", count: 2 }),
+            { code: "unsupported_claim", count: 9 },
+            { code: "missing_evidence", count: 100_000 },
+            { code: "custom", count: 2 },
+          ],
+        });
+      },
+    });
+
+    const failed = await engine.start(request());
+
+    expect(failed.lastError?.diagnosticCounts).toEqual([
+      { code: "missing_evidence", count: 100_000 },
+      { code: "unsupported_claim", count: 6 },
+      { code: "custom", count: 2 },
+    ]);
+    const serialized = JSON.stringify(failed);
+    expect(serialized).not.toContain("candidate secret text");
+    expect(serialized).not.toContain("private detail");
+  });
+
+  it("keeps at most 32 counted codes, highest counts first", async () => {
+    const counts = Array.from({ length: 40 }, (_, index) => ({
+      code: `code_${String(index).padStart(2, "0")}`,
+      count: index === 39 ? 5 : 1,
+    }));
+    const { engine } = engineFixture({
+      author: async () => {
+        throw rejectedAuthorError({ diagnosticCounts: counts });
+      },
+    });
+
+    const failed = await engine.start(request());
+    const codes = (failed.lastError?.diagnosticCounts ?? []).map((entry) => entry.code);
+
+    expect(codes).toHaveLength(32);
+    expect(new Set(codes).size).toBe(32);
+    expect(codes[0]).toBe("code_39");
+    expect(codes[1]).toBe("code_00");
+    expect(codes).not.toContain("code_31");
+  });
+
+  it("omits the field when no valid counts remain", async () => {
+    for (const diagnosticCounts of [
+      undefined,
+      [],
+      [
+        { code: "unsafe code", count: 2 },
+        { code: "zero", count: 0 },
+      ],
+      { custom: 2 },
+      "custom=2",
+      new Map([["custom", 2]]),
+    ]) {
+      const { engine } = engineFixture({
+        author: async () => {
+          throw rejectedAuthorError(diagnosticCounts === undefined ? {} : { diagnosticCounts });
+        },
+      });
+
+      const failed = await engine.start(request());
+
+      expect(failed.lastError?.diagnostics).toHaveLength(8);
+      expect(failed.lastError).not.toHaveProperty("diagnosticCounts");
+    }
+  });
+
+  it("round-trips persisted counts and resumes a legacy snapshot without them", async () => {
+    const values = new Map<string, string>();
+    const storage = {
+      get: async (key: string) => values.get(key),
+      set: async (key: string, value: string) => {
+        values.set(key, value);
+      },
+      appendAuditEvent: async () => undefined,
+      listAuditEvents: async () => [],
+    };
+    const legacyError = {
+      code: "invalid-response",
+      message: "The provider request failed. You can retry safely.",
+      provider: "anthropic",
+      modelId: "author-test",
+      step: "author" as const,
+      attempt: 1,
+      maxAttempts: 3,
+      retryable: true,
+      providerRequestId: null,
+      diagnostics: [{ code: "custom", path: "sections.0" }],
+    };
+    const counted: RunSnapshot = {
+      ...pausedSnapshot(),
+      state: "provider-error",
+      lastError: { ...legacyError, diagnosticCounts: [{ code: "custom", count: 11 }] },
+    };
+
+    await createStorageRunStore(storage).saveRun(counted);
+    expect(await createStorageRunStore(storage).loadRun("run-1")).toEqual(counted);
+
+    const legacy: RunSnapshot = {
+      ...pausedSnapshot(),
+      state: "provider-error",
+      lastError: legacyError,
+    };
+    await createStorageRunStore(storage).saveRun(legacy);
+    const store = createStorageRunStore(storage);
+    const author = vi.fn(async (_request: AuthorRequest) =>
+      execution(artifact(), "anthropic", "author-test"),
+    );
+    const engine = createOrchestrationEngine({
+      author: { execute: author },
+      critic: { execute: async () => execution({ findings: [] }, "openai", "critic-test") },
+      store,
+      now: () => timestamp,
+    });
+
+    const resumed = await engine.resume("run-1", { context: context() });
+
+    expect(resumed.state).toBe("awaiting-approval");
+    expect(author).toHaveBeenCalledTimes(1);
+    expect(author.mock.calls[0]?.[0]).toMatchObject({
+      retryFeedback: {
+        failureCode: "invalid-response",
+        diagnostics: [{ code: "custom", path: "sections.0" }],
+      },
+    });
+  });
+
+  it("persists codes that storage key filters reject because codes are values, not keys", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-diagnostic-counts-"));
+    const storage = openSqliteStorage(join(root, "history.sqlite"));
+    try {
+      await storage.saveWorkspace({
+        id: "workspace-1",
+        state: "collecting",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      });
+      await storage.saveContextSnapshot({
+        id: "context-1",
+        workspaceId: "workspace-1",
+        schemaVersion: 1,
+        createdAt: timestamp,
+        payload: { fixture: true },
+      });
+      const failed: RunSnapshot = {
+        ...pausedSnapshot(),
+        state: "provider-error",
+        lastError: {
+          code: "invalid-response",
+          message: "The provider request failed. You can retry safely.",
+          provider: "anthropic",
+          modelId: "author-test",
+          step: "author",
+          attempt: 1,
+          maxAttempts: 3,
+          retryable: true,
+          providerRequestId: null,
+          diagnostics: [{ code: "missing_prompt", path: "sections.0" }],
+          diagnosticCounts: [
+            { code: "missing_prompt", count: 4 },
+            { code: "x_response", count: 2 },
+          ],
+        },
+      };
+
+      await createStorageRunStore(storage).saveRun(failed);
+
+      expect(await createStorageRunStore(storage).loadRun("run-1")).toEqual(failed);
+      expect((await storage.getLatestRunSnapshot("run-1"))?.lastError).toMatchObject({
+        diagnosticCounts: [
+          { code: "missing_prompt", count: 4 },
+          { code: "x_response", count: 2 },
+        ],
+      });
+      // The same codes as object keys would be refused by the storage filter.
+      await expect(
+        createStorageRunStore(storage).saveRun({
+          ...failed,
+          runId: "run-keyed",
+          lastError: { ...failed.lastError, diagnosticCounts: { x_response: 2 } } as never,
+        }),
+      ).rejects.toThrow(/x_response/u);
+    } finally {
+      await storage.close();
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

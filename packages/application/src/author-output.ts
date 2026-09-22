@@ -24,6 +24,11 @@ import {
 import { z } from "zod";
 
 import { completeAuthorClaimCoverage } from "./author-claim-coverage-completion.js";
+import {
+  proposalDiagnosticCounts,
+  proposalIssueCode,
+  proposalIssues,
+} from "./author-diagnostic-counts.js";
 import { completeAuthorEvidenceCitations } from "./author-evidence-completion.js";
 import { completeCvProposalIssues } from "./complete-cv.js";
 
@@ -58,33 +63,23 @@ function proposalFailureStage(error: unknown): ProviderFailureStage {
 }
 
 export function proposalDiagnostics(error: unknown): readonly ProviderValidationDiagnostic[] {
-  if (typeof error !== "object" || error === null || !("issues" in error)) return [];
-  const issues = (error as { readonly issues?: unknown }).issues;
-  if (!Array.isArray(issues)) return [];
-  return issues.slice(0, 8).flatMap((issue) => {
-    if (typeof issue !== "object" || issue === null) return [];
-    const candidate = issue as {
-      readonly code?: unknown;
-      readonly path?: unknown;
-      readonly params?: { readonly invariantCode?: unknown };
-    };
-    const issueCode =
-      typeof candidate.params?.invariantCode === "string"
-        ? candidate.params.invariantCode
-        : typeof candidate.code === "string"
-          ? candidate.code
-          : undefined;
-    if (issueCode === undefined || !Array.isArray(candidate.path)) return [];
-    const path = candidate.path
-      .slice(0, 12)
-      .filter(
-        (segment): segment is string | number =>
-          typeof segment === "number" ||
-          (typeof segment === "string" && /^[A-Za-z][A-Za-z0-9_-]*$/u.test(segment)),
-      )
-      .join(".");
-    return [{ code: issueCode.slice(0, 64), path: path.slice(0, 160) }];
-  });
+  return proposalIssues(error)
+    .slice(0, 8)
+    .flatMap((issue) => {
+      const issueCode = proposalIssueCode(issue);
+      if (issueCode === undefined) return [];
+      const issuePath = (issue as { readonly path?: unknown }).path;
+      if (!Array.isArray(issuePath)) return [];
+      const path = issuePath
+        .slice(0, 12)
+        .filter(
+          (segment): segment is string | number =>
+            typeof segment === "number" ||
+            (typeof segment === "string" && /^[A-Za-z][A-Za-z0-9_-]*$/u.test(segment)),
+        )
+        .join(".");
+      return [{ code: issueCode, path: path.slice(0, 160) }];
+    });
 }
 
 export function invalidAuthorProposalError(
@@ -95,6 +90,7 @@ export function invalidAuthorProposalError(
     return error;
   }
   const failureStage = proposalFailureStage(error);
+  const diagnosticCounts = proposalDiagnosticCounts(error);
   return new ProviderAdapterError(
     response.provider,
     "invalid-response",
@@ -104,6 +100,7 @@ export function invalidAuthorProposalError(
       ...(response.providerRequestId === null ? {} : { requestId: response.providerRequestId }),
       failureStage,
       diagnostics: proposalDiagnostics(error),
+      ...(diagnosticCounts.length === 0 ? {} : { diagnosticCounts }),
     },
   );
 }

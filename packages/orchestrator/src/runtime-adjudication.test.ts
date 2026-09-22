@@ -11,7 +11,11 @@ import type {
   IndependentReadinessReportInputAssessment,
   IndependentReview,
 } from "@draft-loop/schemas";
-import { independentReadinessReportSchema, readinessDimensions } from "@draft-loop/schemas";
+import {
+  draftArtifactSchema,
+  independentReadinessReportSchema,
+  readinessDimensions,
+} from "@draft-loop/schemas";
 import type { JsonValue } from "@draft-loop/storage";
 import { describe, expect, it, vi } from "vitest";
 
@@ -687,6 +691,30 @@ describe("adjudicated revision runtime boundary", () => {
       ]),
     );
     expect(bounded).toEqual(failed);
+  });
+
+  it("counts every schema issue of an invalid revised artifact beside the capped diagnostics", async () => {
+    const invalidRevision = {
+      ...revisedArtifact(),
+      claims: Array.from({ length: 12 }, () => ({ text: 1 })),
+    } as unknown as DraftArtifact;
+    const fixture = await reviewed({
+      author: async (request) =>
+        execution(request.round === 1 ? sourceArtifact() : invalidRevision),
+    });
+    await fixture.engine.requestAdjudicatedRevision("run-1", input());
+
+    const failed = await fixture.engine.resume("run-1", { context: context() });
+    const issueCount = draftArtifactSchema.safeParse(invalidRevision).error?.issues.length ?? 0;
+
+    expect(issueCount).toBeGreaterThan(8);
+    expect(failed.lastError).toMatchObject({
+      code: "invalid-response",
+      failureStage: "artifact-schema-validation",
+    });
+    expect(failed.lastError?.diagnostics).toHaveLength(8);
+    const counts = failed.lastError?.diagnosticCounts ?? [];
+    expect(counts.reduce((total, entry) => total + entry.count, 0)).toBe(issueCount);
   });
 
   it("fails closed on an unexpected persisted runtime field before invoking the author", async () => {
