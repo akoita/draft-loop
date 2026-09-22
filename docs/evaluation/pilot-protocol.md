@@ -18,6 +18,11 @@ report contains only aggregate measures and bounded status values.
    CI artifacts.
 3. Confirm the provider transmission preflight, provider/model identities,
    retention choice, budget, and explicit acknowledgement before a live run.
+   The sign-in probes only confirm that each CLI is logged in. Before sending
+   candidate material, also run `preflightAnthropicClaudeAuthorModel` with the
+   declared author model. It sends one fixed synthetic request, and the run
+   stops unless the status is `available`. This synthetic call needs the same
+   explicit authorization as the observation.
 4. Use a representative application and record whether a manual baseline is
    available. Do not replace a missing baseline with a synthetic fixture.
 5. Before the first case creates a first draft, declare the private v1 cohort
