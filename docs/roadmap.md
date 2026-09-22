@@ -1040,9 +1040,9 @@ order:
 1. #459 records uncapped per-code rejection counts, which are content-free.
    The current eight-item cap hides the true size of each rejection.
 2. #460 classifies the two #456 rejected drafts into sanitized structural
-   failure classes. A local script re-runs the validator and emits only codes,
-   positions, and counts; candidate content is never read into this session or
-   committed.
+   failure classes. The drafts were never saved, so the
+   [classification](evaluation/author-correction-reliability.md) uses only the
+   sixteen capped diagnostics and yields four position-based hypotheses.
 3. #461 freezes invented replay cases and negative controls for those classes.
 4. Bounded fix issues, created from the #461 measurement, change the author
    prompt or retry feedback only where a replay shows a gain.
