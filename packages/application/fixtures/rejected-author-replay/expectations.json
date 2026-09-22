@@ -31,13 +31,13 @@
   },
   {
     "executionId": "sanitized-h461-a-joining-words",
-    "status": "rejected",
-    "diagnosticCodes": ["substantive_text_uncovered"]
+    "status": "accepted",
+    "diagnosticCodes": []
   },
   {
     "executionId": "sanitized-h461-a-joining-words-control",
     "status": "rejected",
-    "diagnosticCodes": ["factual_invariant_violation", "substantive_text_uncovered"]
+    "diagnosticCodes": ["factual_invariant_violation"]
   },
   {
     "executionId": "sanitized-h461-a-multi-sentence-claim",
@@ -203,5 +203,25 @@
     "executionId": "sanitized-h469-possessive",
     "status": "accepted",
     "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h470-while",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h470-as-well-as",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h470-who-led-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h470-trailing-clause-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
   }
 ]

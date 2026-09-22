@@ -2574,5 +2574,244 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Platform engineer with 6 years of experience in logistics software while mentoring junior developers.",
+                "claims": [
+                  {
+                    "text": "Platform engineer with 6 years of experience in logistics software",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h470-while-chunk"]
+                  },
+                  {
+                    "text": "mentoring junior developers",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h470-while-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h470-while",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h470-while-source",
+            "path": "fixture://sanitized/sanitized-h470-while",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000055"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h470-while-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h470-while-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000056",
+          "text": "Platform engineer with 6 years of experience in logistics software.\nMentoring junior developers.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Data analyst experienced in SQL reporting as well as dashboard design for finance teams.",
+                "claims": [
+                  {
+                    "text": "Data analyst experienced in SQL reporting",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h470-as-well-as-chunk"]
+                  },
+                  {
+                    "text": "dashboard design for finance teams",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h470-as-well-as-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h470-as-well-as",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h470-as-well-as-source",
+            "path": "fixture://sanitized/sanitized-h470-as-well-as",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000057"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h470-as-well-as-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h470-as-well-as-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000058",
+          "text": "Data analyst experienced in SQL reporting.\nDashboard design for finance teams.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Backend engineer with 5 years of experience in billing systems who led migration projects.",
+                "claims": [
+                  {
+                    "text": "Backend engineer with 5 years of experience in billing systems",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h470-who-led-control-chunk"]
+                  },
+                  {
+                    "text": "migration projects",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h470-who-led-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h470-who-led-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h470-who-led-control-source",
+            "path": "fixture://sanitized/sanitized-h470-who-led-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000059"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h470-who-led-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h470-who-led-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 2,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000005a",
+          "text": "Backend engineer with 5 years of experience in billing systems.\nContributed to migration projects.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Summary",
+            "kind": "summary",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Support engineer with 4 years of experience in customer tooling, including on-call rotations.",
+                "claims": [
+                  {
+                    "text": "Support engineer with 4 years of experience in customer tooling",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h470-trailing-clause-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h470-trailing-clause-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h470-trailing-clause-control-source",
+            "path": "fixture://sanitized/sanitized-h470-trailing-clause-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000005b"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h470-trailing-clause-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h470-trailing-clause-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000005c",
+          "text": "Support engineer with 4 years of experience in customer tooling.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]
