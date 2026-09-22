@@ -1,0 +1,14 @@
+[
+  {
+    "executionId": "sanitized-h471-single-letter",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h471-lowercase-verb-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h471-absent-name-control",
+    "intent": "control"
+  }
+]

@@ -121,8 +121,8 @@
   },
   {
     "executionId": "sanitized-h461-d-per-value-claims",
-    "status": "rejected",
-    "diagnosticCodes": ["unsupported_claim"]
+    "status": "accepted",
+    "diagnosticCodes": []
   },
   {
     "executionId": "sanitized-h461-d-per-value-claims-control",
@@ -223,5 +223,20 @@
     "executionId": "sanitized-h470-trailing-clause-control",
     "status": "rejected",
     "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h471-single-letter",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h471-lowercase-verb-control",
+    "status": "rejected",
+    "diagnosticCodes": ["unsupported_claim"]
+  },
+  {
+    "executionId": "sanitized-h471-absent-name-control",
+    "status": "rejected",
+    "diagnosticCodes": ["unsupported_claim"]
   }
 ]

@@ -2813,5 +2813,173 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "R",
+                "claims": [
+                  {
+                    "text": "R",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h471-single-letter-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h471-single-letter",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h471-single-letter-source",
+            "path": "fixture://sanitized/sanitized-h471-single-letter",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000005d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h471-single-letter-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h471-single-letter-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000005e",
+          "text": "Statistics: R, Python",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Go",
+                "claims": [
+                  {
+                    "text": "Go",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h471-lowercase-verb-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h471-lowercase-verb-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h471-lowercase-verb-control-source",
+            "path": "fixture://sanitized/sanitized-h471-lowercase-verb-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000005f"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h471-lowercase-verb-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h471-lowercase-verb-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000060",
+          "text": "Ready to go live with TypeScript services.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-22T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Go",
+                "claims": [
+                  {
+                    "text": "Go",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h471-absent-name-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h471-absent-name-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h471-absent-name-control-source",
+            "path": "fixture://sanitized/sanitized-h471-absent-name-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000061"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h471-absent-name-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h471-absent-name-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000062",
+          "text": "Languages: TypeScript, Python",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-22T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]

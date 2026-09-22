@@ -4,6 +4,7 @@ import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 import { extractProtectedValues, supportsProtectedValueInChunks } from "./author-grounding.js";
 import { claimCoverageIssues } from "./claim-coverage.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
+import { shortNamesRelated } from "./short-name-relation.js";
 import { unsupportedSingleWordNames } from "./single-word-name-grounding.js";
 
 export const factualInvariantIssueCodes = [
@@ -64,7 +65,11 @@ export function completeCvProposalIssues(
         }
         const evidenceChunks = claim.evidenceChunkIds.map((id) => evidenceById.get(id) ?? "");
         const evidence = normalized(evidenceChunks.join("\n"));
-        const related = meaningfulTokens(claim.text).some((token) => evidence.includes(token));
+        const tokens = meaningfulTokens(claim.text);
+        const related =
+          tokens.length > 0
+            ? tokens.some((token) => evidence.includes(token))
+            : shortNamesRelated(claim.text, evidenceChunks);
         if (!related) {
           issues.push({
             code: "unsupported_claim",
