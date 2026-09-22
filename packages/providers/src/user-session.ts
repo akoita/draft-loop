@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import type { ModelSelection } from "@draft-loop/domain";
 
+import { claudeApiErrorCauseDiagnostics } from "./claude-api-error-cause.js";
 import { captureUnknownClaudeCategories } from "./claude-category-capture.js";
 import {
   assertDataExposureAllowed,
@@ -605,7 +606,10 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
       "anthropic",
       "transient",
       "The user-session provider encountered a transient error.",
-      { retryable: true, diagnostics },
+      {
+        retryable: true,
+        diagnostics: [...diagnostics, ...claudeApiErrorCauseDiagnostics(response.result)],
+      },
     );
   }
   return new ProviderAdapterError(

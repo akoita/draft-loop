@@ -621,6 +621,29 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
     },
   );
 
+  it("appends content-free cause codes to statusless api_error diagnostics", async () => {
+    const resultMarker = "private-api-error-cause-result";
+    const error = await captureClaudeStructuredError({
+      subtype: "success",
+      terminal_reason: "api_error",
+      result: `API Error: 400 {"type":"error","error":{"type":"invalid_request_error","message":"${resultMarker}"}}`,
+    });
+
+    expect(error).toMatchObject({ code: "transient", retryable: true, status: null });
+    expect(error.message).toBe("The user-session provider encountered a transient error.");
+    expect(error.diagnostics).toEqual([
+      { code: "claude_error_subtype_success", path: "subtype" },
+      { code: "claude_terminal_reason_api_error", path: "terminal_reason" },
+      { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+      { code: "claude_api_error_status_400", path: "result" },
+      { code: "claude_api_error_type_invalid_request_error", path: "result" },
+    ]);
+    expect(error.message).not.toContain(resultMarker);
+    expect(JSON.stringify(error.metadata)).not.toContain(resultMarker);
+    expect(JSON.stringify(error.diagnostics)).not.toContain(resultMarker);
+    expect(JSON.stringify(error)).not.toContain(resultMarker);
+  });
+
   it.each([
     [400, "unknown", false, "The user-session provider request failed."],
     [401, "authentication", false, "The user-session provider is not authenticated."],
