@@ -1,6 +1,6 @@
 # Author correction reliability
 
-**Status:** In progress
+**Status:** Exit met on the replay corpus; live author quality not validated
 **Milestone:** [Author correction reliability](https://github.com/akoita/draft-loop/milestone/12)
 
 This stage record contains only sanitized, content-free evidence. Candidate
@@ -72,8 +72,10 @@ later fix targets author guidance rather than the validator.
   where rejections cluster, not why.
 - The underlying text was not available locally and was never read, so no class
   is confirmed as a false rejection.
-- Recovering the true failures would require saving rejected proposals locally
-  and running another authorized observation. Neither is part of this issue.
+- The local driver already supports opt-in capture of rejected proposals
+  (`authorProposalCaptureDirectory`), but the #456 run scripts did not enable
+  it. Recovering the true failures needs another authorized observation with
+  capture enabled; the pilot protocol now requires it.
 
 ## Replay baseline for the hypotheses
 
@@ -196,3 +198,52 @@ are unchanged:
 - **Accepted:** a new supported "R" case.
 - **Rejected with `unsupported_claim`:** two new controls, one where "Go"
   appears only as the lowercase verb and one where it is absent.
+
+## Stage decision
+
+Recorded under #462. The exit rule was fixed in that issue before the fixes:
+at least one #461 supported case moves to accepted, every negative control
+stays rejected, and no validation rule is weakened.
+
+The exit is **met** on the replay corpus.
+
+| Issue | Measured outcome |
+| ----- | ---------------- |
+| #459 | Rejected attempts record uncapped per-code counts beside the capped list |
+| #460 | The #456 drafts were never saved; sixteen capped diagnostics gave four position-based hypotheses |
+| #461 | Twenty invented cases; entry-heading formatting (B) already handled; two supported cases wrongly rejected |
+| #466 | Confirmed that four unsupported single-word name controls were accepted |
+| #469 | Unsupported single-word names now rejected; all six name controls rejected |
+| #470 | Closed-set joining words pass coverage; the joining-words case accepted |
+| #471 | Short names found verbatim pass the related check; the per-value case accepted |
+
+The corpus now holds 48 invented cases: 24 accepted and 24 rejected. The two
+supported cases from #461 that were wrongly rejected are now accepted, and the
+pinned list of such cases is empty. Every control is rejected, which is 21
+controls across #461, #466, #469, #470, and #471.
+
+The factual gate is stronger than at the start of the stage, because #469
+closes the single-word name gap. Two relaxations are bounded by explicit
+controls:
+
+- **#470:** gaps made only of the closed set of joining words, between two
+  covered spans.
+- **#471:** short names that appear verbatim in the evidence, in claims with
+  no longer token.
+
+### What the result does not show
+
+- Every case is invented, and the supported variants were chosen from
+  hypotheses, not from recovered drafts. The replay gain does not establish
+  that a live author draft on a real case will now be accepted.
+- The #456 class B and D rejections were probably genuine author errors,
+  which these validator changes do not address.
+- The unexplained author `api_error` remains an open risk for any live run.
+
+### Next stage
+
+The next stage is a new, separately gated live observation on the unchanged
+case A inputs. It uses the #456 rules, runs the synthetic author preflight,
+and captures rejected proposals locally so any failure can be re-validated
+and classified from real structure. It requires a new user authorization that
+names its issue.

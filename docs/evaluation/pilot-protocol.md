@@ -23,6 +23,10 @@ report contains only aggregate measures and bounded status values.
    declared author model. It sends one fixed synthetic request, and the run
    stops unless the status is `available`. This synthetic call needs the same
    explicit authorization as the observation.
+   Also pass `authorProposalCaptureDirectory`, set to a private directory
+   outside the repository, to the local driver, so rejected author proposals
+   are saved locally for re-validation. Without it, a rejected draft cannot be
+   analysed afterwards.
 4. Use a representative application and record whether a manual baseline is
    available. Do not replace a missing baseline with a synthetic fixture.
 5. Before the first case creates a first draft, declare the private v1 cohort
