@@ -114,9 +114,28 @@ changed from `13b57834…` to `7e9fcca1…` only because cases were appended.
 - **D:** partial citations are completed from retrieved evidence, and
   multi-chunk citations are accepted.
 
-### Open question
+## Single-word name gap
 
-Reading the grounding code suggests that a single capitalised proper noun,
-such as an unsupported tool name, may not be a protected value. Issue #466
-checks this with fixtures before any correction, because an undetected gap
-would make the controls look stronger than they are.
+Issue #466 tested whether an unsupported single-word proper noun is rejected.
+It added eight invented cases: six controls and two supported cases. The gap
+is confirmed.
+
+| Case | Result |
+| ---- | ------ |
+| Tool substituted in a sentence | **Accepted** |
+| Unsupported tool in a skills list | **Accepted** |
+| Organisation substituted in a sentence | **Accepted** |
+| Place substituted in a sentence | **Accepted** |
+| Organisation substituted after "at" | Rejected (factual invariant) |
+| Standalone unsupported tool | Rejected (unsupported claim) |
+| Two supported cases naming the same word as the evidence | Accepted |
+
+A single capitalised word is not a protected value unless it follows "at" or
+"for". The only remaining guard requires one shared word of three or more
+letters between a claim and its evidence. Any other matching word in the
+sentence therefore lets a substituted tool, organisation, or place through.
+
+This is a factuality gap in the validator, not an author-guidance problem. The
+four accepted controls are pinned as known gaps, so a fix must change that
+list deliberately. Every supported case in the corpus must keep its result.
+
