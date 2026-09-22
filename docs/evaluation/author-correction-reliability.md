@@ -138,4 +138,3 @@ sentence therefore lets a substituted tool, organisation, or place through.
 This is a factuality gap in the validator, not an author-guidance problem. The
 four accepted controls are pinned as known gaps, so a fix must change that
 list deliberately. Every supported case in the corpus must keep its result.
-
