@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-22<br>
-**Current stage:** Representative author-draft revalidation
+**Current stage:** Author route readiness
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -181,7 +181,8 @@ applications.
 | Previous | Retrieval and provider quality ([milestone](https://github.com/akoita/draft-loop/milestone/6))                   | [Completed with deterministic and packaged evidence](evaluation/retrieval-provider-quality.md); no release or live-provider outcome | Improve evidence selection and dependable bounded generation                          | Exit criteria met on sanitized replay/retrieval cases and cross-platform packaged recovery evidence; limitations retained |
 | Previous | Broader real-application pilot ([milestone](https://github.com/akoita/draft-loop/milestone/7))                    | [Ended early; exit unmet](evaluation/broader-real-application-pilot.md); no release | Test factuality, quality, and effort across more cases                                | Case A produced no accepted draft; cases B/C were not pursued because the fixed all-cases-pass cohort could no longer pass |
 | Previous | Author-draft acceptance reliability                                                                               | [Provider-free exit met](evaluation/author-draft-acceptance-reliability.md): unchanged replay improved from 2/6 to 3/6 accepted and bounded retry succeeded | Reduce known structural false rejection without weakening negative controls           | Live-model and real-application quality remain unproven |
-| Now      | Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))           | Designed; no provider observation authorized         | Determine whether the corrected boundary can produce one accepted representative draft | #446 predeclares the case, bounds, and decision rules; it needs explicit user authorization before any provider call, then #447 records the decision |
+| Previous | Representative author-draft revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/9))      | [Ended indeterminate](evaluation/representative-author-draft-revalidation.md); no draft reached validation | Determine whether the corrected boundary can produce one accepted representative draft | All three author attempts ended with a provider `api_error`; the sign-in probe did not exercise the model |
+| Now      | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Designed; #449 implements a synthetic model-level preflight | Prove the declared author model can answer before candidate material is sent          | #449 merged, then one separately authorized synthetic preflight reports `available` or diagnoses the blocker |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -953,28 +954,39 @@ bounded retry fixture succeeded. See the canonical
 [stage evidence](evaluation/author-draft-acceptance-reliability.md). The result
 does not establish live-model or real-application quality.
 
-### Now — Representative author-draft revalidation
+### Ended — Representative author-draft revalidation
 
 Determine whether the corrected boundary produces one accepted author draft on
 a consented representative case, verified by the candidate's first review.
-The stage reuses broader-pilot case A inputs unchanged, so the result reflects
-the boundary change rather than an easier case.
-
-[Milestone 9](https://github.com/akoita/draft-loop/milestone/9) runs two
-issues in order:
-
-- #446 records one bounded observation under pass, fail, and indeterminate
-  rules fixed before execution. It ends at the candidate's first review, with
-  no approval, export, or second run.
-- #447 records the stage decision and names the next stage from the result.
-
-Creating these issues authorizes no authentication probe or provider call.
-The observation requires a later user instruction that names #446.
 
 **Exit criterion:** The #446 result is recorded against its predeclared rules,
-and the roadmap names the next stage. A pass admits a separately gated
-multi-case cohort; a fail returns to provider-free replay work seeded by the
-new failure classes.
+and the roadmap names the next stage.
+
+The exit is met with an **indeterminate** result. Under the #446
+authorization, both sign-in probes passed, but all three author attempts on
+unchanged case A inputs ended within about eight seconds with a provider
+`api_error`. No draft reached the corrected validator, and no critic call,
+review, approval, or export occurred. The result neither confirms nor refutes
+the milestone 8 corrections. See the
+[sanitized record](evaluation/representative-author-draft-revalidation.md).
+
+### Now — Author route readiness
+
+Prove that the declared author model can answer through the authenticated user
+session before any candidate material is sent. The sign-in probe only checks
+login state, and case A's first attempt under #430 failed with the same
+`api_error`, so the route itself is the open question.
+
+[Milestone 10](https://github.com/akoita/draft-loop/milestone/10) runs in
+order:
+
+- #449 adds a synthetic model-level author preflight with provider-free tests.
+- One synthetic preflight on the declared author model, with no candidate
+  material, requires a separate user authorization.
+
+**Exit criterion:** The preflight reports `available` for the declared author
+model, or the blocker is diagnosed and a bounded fix or model re-declaration
+is proposed. Only then may a new gated observation issue be created.
 
 ### Later — Production-ready beta
 
@@ -1045,6 +1057,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-22 | Ended representative author-draft revalidation as indeterminate under #447 and admitted author route readiness. | The #446 observation produced no draft: every author attempt ended with a provider `api_error` that the sign-in probe cannot detect. Milestone 10 (#449) requires a synthetic model-level preflight before any further consented observation. |
 | 2026-09-22 | Planned milestone 9 for representative author-draft revalidation as #446 and #447. | One consented observation reuses case A inputs with predeclared pass, fail, and indeterminate rules and ends at first review. No provider call is authorized until a later instruction names #446. |
 | 2026-09-19 | Ended the broader real-application pilot early under #433. | Case A was indeterminate with no accepted draft, and the fixed all-cases-pass contract made the declared cohort exit impossible; cases B/C were not pursued. The exit criterion is unmet, no validation or release exists, and the next decision returns to provider-free author-draft acceptance reliability. |
 | 2026-09-19 | Recorded broader-pilot case A under #430 as indeterminate. | Both authentication probes passed, but the three-attempt author cap ended with no accepted draft: one retryable structured API error, then two local factual/coverage rejections. No critic, approval, or export occurred, so the fixed all-cases-pass cohort can no longer pass. |

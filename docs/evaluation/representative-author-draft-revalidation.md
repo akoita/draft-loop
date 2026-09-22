@@ -1,6 +1,6 @@
 # Representative author-draft revalidation
 
-**Status:** Indeterminate; no author draft reached validation
+**Status:** Ended indeterminate; no author draft reached validation
 **Milestone:** [Representative author-draft revalidation](https://github.com/akoita/draft-loop/milestone/9)
 **Observation issue:** #446
 **Revision:** `ff8fa1892dc472d9bfe666c44976d260a2a5da60`
@@ -61,4 +61,17 @@ model-level preflight that fails closed before a future observation begins.
 - No evidence about draft acceptance, factuality, coverage, quality, or
   candidate effort was produced.
 - This record does not authorize another provider call, a release, or
-  application submission. The stage decision belongs to #447.
+  application submission.
+
+## Stage decision
+
+Recorded under #447. The stage exit is met with an indeterminate result: the
+observation is recorded against its predeclared rules, but it produced no
+evidence about draft acceptance. The rules were not changed after the result.
+
+The indeterminate rule applies, so the next stage is
+[author route readiness](https://github.com/akoita/draft-loop/milestone/10),
+not a cohort or further replay work. It requires #449's synthetic model-level
+preflight, followed by one separately authorized synthetic run on the declared
+author model. A new consented observation may be proposed only after that
+preflight reports `available` or the blocker is resolved.
