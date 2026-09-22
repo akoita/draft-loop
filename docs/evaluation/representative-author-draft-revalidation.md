@@ -75,3 +75,15 @@ not a cohort or further replay work. It requires #449's synthetic model-level
 preflight, followed by one separately authorized synthetic run on the declared
 author model. A new consented observation may be proposed only after that
 preflight reports `available` or the blocker is resolved.
+
+## Follow-up author preflight
+
+Under a separate user authorization naming #449, the synthetic model-level
+preflight ran once on `bd3bc5a` against `claude-sonnet-4-5`. It returned
+`available` in 5,222 ms, with no error code or diagnostics. The request carried
+no candidate material and used the application author output budget, so the
+second authorized model check was not needed.
+
+The declared model and author settings therefore work. The #446 failures
+belong to the real author request, and #453 makes their cause visible before
+another observation.
