@@ -144,11 +144,19 @@ export interface ProviderErrorMetadata {
   readonly retryAfterMs?: number;
   readonly failureStage?: ProviderFailureStage;
   readonly diagnostics?: readonly ProviderValidationDiagnostic[];
+  /** Exact, content-free issue counts per diagnostic code across the whole rejection. */
+  readonly diagnosticCounts?: readonly ProviderDiagnosticCount[];
 }
 
 export interface ProviderValidationDiagnostic {
   readonly code: string;
   readonly path: string;
+}
+
+/** Number of issues with one diagnostic code; the code is a value, never a key. */
+export interface ProviderDiagnosticCount {
+  readonly code: string;
+  readonly count: number;
 }
 
 export class ProviderAdapterError extends Error {
@@ -160,6 +168,7 @@ export class ProviderAdapterError extends Error {
   readonly retryAfterMs: number | null;
   readonly failureStage: ProviderFailureStage | null;
   readonly diagnostics: readonly ProviderValidationDiagnostic[];
+  readonly diagnosticCounts: readonly ProviderDiagnosticCount[];
   readonly metadata: ProviderErrorMetadata;
 
   constructor(
@@ -173,6 +182,7 @@ export class ProviderAdapterError extends Error {
       readonly retryAfterMs?: number;
       readonly failureStage?: ProviderFailureStage;
       readonly diagnostics?: readonly ProviderValidationDiagnostic[];
+      readonly diagnosticCounts?: readonly ProviderDiagnosticCount[];
     } = {},
   ) {
     super(message);
@@ -185,12 +195,16 @@ export class ProviderAdapterError extends Error {
     this.retryAfterMs = sanitizeRetryAfterMs(options.retryAfterMs) ?? null;
     this.failureStage = options.failureStage ?? null;
     this.diagnostics = options.diagnostics ?? [];
+    this.diagnosticCounts = options.diagnosticCounts ?? Object.freeze([]);
     this.metadata = {
       ...(options.status === undefined ? {} : { status: options.status }),
       ...(options.requestId === undefined ? {} : { requestId: options.requestId }),
       ...(this.retryAfterMs === null ? {} : { retryAfterMs: this.retryAfterMs }),
       ...(this.failureStage === null ? {} : { failureStage: this.failureStage }),
       ...(options.diagnostics === undefined ? {} : { diagnostics: options.diagnostics }),
+      ...(options.diagnosticCounts === undefined
+        ? {}
+        : { diagnosticCounts: options.diagnosticCounts }),
     };
   }
 }

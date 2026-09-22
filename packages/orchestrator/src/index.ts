@@ -202,11 +202,22 @@ export interface RunError {
   readonly failureStage?: RunFailureStage;
   readonly failureReason?: RunFailureStage;
   readonly diagnostics?: readonly RunErrorDiagnostic[];
+  /**
+   * Exact, content-free issue counts per diagnostic code across the whole
+   * rejection. Unlike `diagnostics`, this is not capped at eight issues.
+   */
+  readonly diagnosticCounts?: readonly RunErrorDiagnosticCount[];
 }
 
 export interface RunErrorDiagnostic {
   readonly code: string;
   readonly path: string;
+}
+
+/** Number of issues with one diagnostic code; the code is a value, never a key. */
+export interface RunErrorDiagnosticCount {
+  readonly code: string;
+  readonly count: number;
 }
 
 /** Content-free feedback from a prior retryable author or revision failure. */
@@ -516,6 +527,74 @@ function retryNotBefore(value: unknown, now: string): string | undefined {
   return new Date(nowMs + delay).toISOString();
 }
 
+const diagnosticCodePattern = /^[A-Za-z0-9_-]{1,64}$/u;
+const maxDiagnosticCountCodes = 32;
+const maxDiagnosticCount = 100_000;
+
+function compareDiagnosticCounts(
+  left: RunErrorDiagnosticCount,
+  right: RunErrorDiagnosticCount,
+): number {
+  if (left.count !== right.count) return right.count - left.count;
+  return left.code < right.code ? -1 : left.code > right.code ? 1 : 0;
+}
+
+/** Keep at most 32 entries, highest counts first, ties broken by code order. */
+function boundedDiagnosticCounts(
+  entries: readonly RunErrorDiagnosticCount[],
+): readonly RunErrorDiagnosticCount[] | undefined {
+  if (entries.length === 0) return undefined;
+  return [...entries].sort(compareDiagnosticCounts).slice(0, maxDiagnosticCountCodes);
+}
+
+/** Count safe diagnostic codes, dropping unsafe ones instead of renaming them. */
+function countDiagnosticCodes(
+  codes: Iterable<string>,
+): readonly RunErrorDiagnosticCount[] | undefined {
+  const counts = new Map<string, number>();
+  for (const code of codes) {
+    if (!diagnosticCodePattern.test(code)) continue;
+    counts.set(code, Math.min(maxDiagnosticCount, (counts.get(code) ?? 0) + 1));
+  }
+  return boundedDiagnosticCounts([...counts.entries()].map(([code, count]) => ({ code, count })));
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value) as unknown;
+  return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * Validate untrusted diagnostic counts entry by entry. Invalid entries are
+ * dropped individually; a repeated code keeps its first valid entry.
+ */
+function safeDiagnosticCounts(value: unknown): readonly RunErrorDiagnosticCount[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const seen = new Set<string>();
+  const entries: RunErrorDiagnosticCount[] = [];
+  for (const entry of value as readonly unknown[]) {
+    if (!isPlainObject(entry)) continue;
+    const keys = Object.keys(entry);
+    if (keys.length !== 2 || !keys.includes("code") || !keys.includes("count")) continue;
+    const { code, count } = entry;
+    if (
+      typeof code !== "string" ||
+      !diagnosticCodePattern.test(code) ||
+      typeof count !== "number" ||
+      !Number.isSafeInteger(count) ||
+      count < 1 ||
+      count > maxDiagnosticCount ||
+      seen.has(code)
+    ) {
+      continue;
+    }
+    seen.add(code);
+    entries.push({ code, count });
+  }
+  return boundedDiagnosticCounts(entries);
+}
+
 function providerFailure(
   value: unknown,
   context: ContextSnapshot,
@@ -533,6 +612,8 @@ function providerFailure(
           readonly failureStage?: unknown;
           readonly failureReason?: unknown;
           readonly diagnostics?: unknown;
+          readonly diagnosticCounts?: unknown;
+          readonly metadata?: { readonly diagnosticCounts?: unknown } | null;
         })
       : {};
   const selection =
@@ -575,6 +656,9 @@ function providerFailure(
         return [{ code: value.code, path: value.path }];
       })
     : [];
+  const diagnosticCounts = safeDiagnosticCounts(
+    candidate.diagnosticCounts ?? candidate.metadata?.diagnosticCounts,
+  );
   return {
     code,
     message: retryable
@@ -590,6 +674,7 @@ function providerFailure(
     providerRequestId: safeProviderRequestId(candidate.requestId),
     ...(failureStage === undefined ? {} : { failureStage, failureReason: failureStage }),
     diagnostics,
+    ...(diagnosticCounts === undefined ? {} : { diagnosticCounts }),
   };
 }
 
@@ -807,14 +892,17 @@ class InvalidAdjudicationRuntimeError extends Error {
 
 class InvalidAdjudicatedRevisionResponseError extends Error {
   readonly diagnostics: readonly RunErrorDiagnostic[];
+  readonly diagnosticCounts: readonly RunErrorDiagnosticCount[] | undefined;
   constructor(
     diagnostics: readonly RunErrorDiagnostic[] = [
       { code: "invalid_lineage", path: "revisedArtifact" },
     ],
+    diagnosticCounts?: readonly RunErrorDiagnosticCount[],
   ) {
     super("The adjudicated revision response is invalid.");
     this.name = "InvalidAdjudicatedRevisionResponseError";
     this.diagnostics = diagnostics;
+    this.diagnosticCounts = diagnosticCounts;
   }
 }
 
@@ -842,6 +930,9 @@ function deriveAdjudicatedRevisionTrace(
       diagnostics.length > 0
         ? diagnostics
         : [{ code: "invalid_artifact_schema", path: "revisedArtifact" }],
+      countDiagnosticCodes(
+        parsedRevisedArtifact.error.issues.map((issue) => issue.code.slice(0, 64)),
+      ),
     );
   }
   try {
@@ -1456,6 +1547,7 @@ export function createOrchestrationEngine(
               retryable: false,
               failureStage: "artifact-schema-validation",
               diagnostics: error.diagnostics,
+              diagnosticCounts: error.diagnosticCounts,
             }
           : executionFailure(error, signal),
         context,

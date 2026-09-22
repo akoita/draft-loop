@@ -425,6 +425,28 @@ describe("provider-neutral model adapters", () => {
     expect(clamped.retryAfterMs).toBe(60_000);
   });
 
+  it("exposes diagnostic counts in metadata only when they are provided", () => {
+    const withoutCounts = new ProviderAdapterError("anthropic", "invalid-response", "Invalid.", {
+      diagnostics: [{ code: "custom", path: "sections.0" }],
+    });
+    expect(withoutCounts.diagnosticCounts).toEqual([]);
+    expect(Object.isFrozen(withoutCounts.diagnosticCounts)).toBe(true);
+    expect(withoutCounts.metadata).toEqual({
+      diagnostics: [{ code: "custom", path: "sections.0" }],
+    });
+    expect(withoutCounts.metadata).not.toHaveProperty("diagnosticCounts");
+
+    const counts = [
+      { code: "custom", count: 9 },
+      { code: "unsupported_claim", count: 2 },
+    ];
+    const withCounts = new ProviderAdapterError("anthropic", "invalid-response", "Invalid.", {
+      diagnosticCounts: counts,
+    });
+    expect(withCounts.diagnosticCounts).toEqual(counts);
+    expect(withCounts.metadata).toEqual({ diagnosticCounts: counts });
+  });
+
   it("normalizes OpenAI quota exhaustion as a non-retryable provider error", () => {
     const error = normalizeProviderError("openai", {
       status: 429,
