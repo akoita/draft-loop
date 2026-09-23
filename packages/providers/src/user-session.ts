@@ -174,8 +174,17 @@ export interface UserSessionAdapterOptions {
   readonly environment?: Readonly<Record<string, string | undefined>>;
 }
 
+/** The effort levels accepted by the Claude CLI `--effort` flag. */
+export const claudeEffortLevels = ["low", "medium", "high", "xhigh", "max"] as const;
+export type ClaudeEffortLevel = (typeof claudeEffortLevels)[number];
+
 export interface AnthropicClaudeUserSessionAdapterOptions extends UserSessionAdapterOptions {
   readonly localClaudeCategoryCaptureParent?: string;
+  /**
+   * Optional Claude CLI effort level, passed as `--effort <level>`. When
+   * absent, the CLI arguments and environment are unchanged.
+   */
+  readonly effort?: ClaudeEffortLevel;
 }
 
 export interface UserSessionLoginStatus {
@@ -259,6 +268,17 @@ function resolveOutputTokenLimit(
     );
   }
   return limit;
+}
+
+function resolveClaudeEffort(value: unknown): ClaudeEffortLevel | undefined {
+  if (value === undefined) return undefined;
+  if (!(claudeEffortLevels as readonly unknown[]).includes(value)) {
+    throw new ProviderAdapterError("anthropic", "invalid-request", "The effort level is invalid.", {
+      retryable: false,
+      diagnostics: [{ code: "invalid_effort_level", path: "effort" }],
+    });
+  }
+  return value as ClaudeEffortLevel;
 }
 
 function resolveClaudeThinkingTokenLimit(maxOutputTokens: number): number {
@@ -760,11 +780,13 @@ export class AnthropicClaudeUserSessionAdapter<
     Pick<UserSessionAdapterOptions, "command" | "maxOutputBytes" | "runner" | "timeoutMs">
   > &
     Pick<UserSessionAdapterOptions, "configuredModel" | "environment"> &
-    Pick<AnthropicClaudeUserSessionAdapterOptions, "localClaudeCategoryCaptureParent">;
+    Pick<AnthropicClaudeUserSessionAdapterOptions, "effort" | "localClaudeCategoryCaptureParent">;
 
   constructor(options: AnthropicClaudeUserSessionAdapterOptions) {
+    const effort = resolveClaudeEffort(options.effort);
     this.options = {
       ...options,
+      ...(effort === undefined ? {} : { effort }),
       runner: options.runner ?? runUserSessionProcess,
       command: options.command ?? "claude",
       timeoutMs: resolveUserSessionTimeout(this.provider, options.timeoutMs),
@@ -801,6 +823,7 @@ export class AnthropicClaudeUserSessionAdapter<
           "dontAsk",
           "--model",
           request.model.modelId,
+          ...(this.options.effort === undefined ? [] : ["--effort", this.options.effort]),
           "--system-prompt",
           request.systemPrompt,
           "--output-format",
