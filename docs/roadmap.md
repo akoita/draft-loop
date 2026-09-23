@@ -65,15 +65,20 @@ Models are organised in three tiers:
 Both providers offer every tier, and the user can choose the finest models
 even when they cost more.
 
-A result produced with economy models never counts as validation of the
-reference product, and each quality claim applies only to the models that
-produced it.
+Validation has two levels, and each claim applies only to the models that
+produced it:
 
-Evaluating the harness across these models will take time, so it proceeds
-**step by step**: first make the basic scenario work end to end with one
-Anthropic author and one OpenAI critic, then extend the evaluation model by
-model. On the critic side, the cheaper GPT-6 Luna is tested first, then
-GPT-6 Sol.
+- **Use case validation.** The economy pair shows that a use case works end
+  to end: draft, critique, human review, revision, and export. Attempts are
+  cheap, so workflow defects surface before costlier models are used.
+- **Quality validation.** Only the standard frontier pair can support claims
+  about the quality of the CV, the result a candidate pays for.
+
+The evaluation proceeds **step by step**:
+
+1. Make the basic scenario work end to end on the economy pair.
+2. Validate quality on the standard frontier pair (Opus and GPT-6 Sol).
+3. Add the premium tier last.
 
 Anthropic and OpenAI stay the first and default providers. Other providers,
 including local models, are integrated only after the main CV use cases work
@@ -235,7 +240,7 @@ applications.
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
-| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                            | [#516 and #510](evaluation/author-route-diagnosis.md#frontier-route-and-cli-versions): `claude-opus-5-5`, `gpt-6-luna` and `gpt-6-sol` work through the user sessions after a CLI update | Select and validate one frontier Anthropic author and OpenAI critic pair as the first working reference | The user authorizes a gated case A observation with the first pair |
+| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                            | [#516, #510 and #518](evaluation/author-route-diagnosis.md#sonnet-5-recheck-on-the-updated-cli): Opus, GPT-6 Luna and GPT-6 Sol work after a CLI update; `claude-sonnet-5` does not | Select and validate one frontier Anthropic author and OpenAI critic pair as the first working reference | The user authorizes a gated case A observation with the economy pair |
 | Next     | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17))                        | Planned                                              | Replace hard-coded model defaults with versioned model profiles and reference and economy tiers | Profile registry, recorded profiles, and user-facing selection (#84) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
@@ -1241,12 +1246,17 @@ schema-valid proposals 2 of 2. `gpt-6-luna` and `gpt-6-sol` returned valid
 critiques on synthetic requests. See the
 [route record](evaluation/author-route-diagnosis.md#frontier-route-and-cli-versions).
 
-**Remaining order,** step by step with one pair at a time:
+The #518 recheck ran `claude-sonnet-5` on the updated CLI. It still fails the
+author replica, so its earlier failures were real.
 
-1. A gated observation on unchanged case A with `claude-opus-5-5` as author
-   and `gpt-6-luna` as critic, against the fixed result and effect rules.
-2. The same with `gpt-6-sol` as critic.
-3. On a pass, the pair becomes the default for new workspaces.
+**Remaining order,** one pair at a time:
+
+1. **Use case, economy pair.** A gated observation on unchanged case A with
+   `claude-sonnet-4-5` as author and `gpt-6-luna` as critic. Its goal is a
+   complete run to an exported CV.
+2. **Quality, standard frontier pair.** The same case with `claude-opus-5-5`
+   and `gpt-6-sol`, against the fixed result and effect rules. On a pass, this
+   pair becomes the default for new workspaces.
 
 Premium models (Fable, GPT-6 Astra) and the API-key route (#515) come last.
 
@@ -1348,6 +1358,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Ordered validation economy pair first: use case validation on `claude-sonnet-4-5` with `gpt-6-luna`, then quality validation on Opus with GPT-6 Sol. #518 confirmed that `claude-sonnet-5` still fails the author replica on the updated CLI. | Workflow defects surface on cheap attempts before frontier models are used. Economy results validate that a use case works, never CV quality. |
 | 2026-09-23 | Recorded #516 and #510: frontier failures on the user-session routes came from outdated `claude` (2.1.265) and `codex` (0.153.4) CLIs in the Node global packages. | After the update, `claude-opus-5-5` succeeded 2 of 2 on the author replica, and `gpt-6-luna` and `gpt-6-sol` returned valid critiques. The first basic scenario can use Opus with Luna, then Sol. Premium models and the API-key route (#515) are deferred. |
 | 2026-09-23 | Recorded the #507 calibration: frontier author candidates were not reachable through the Claude CLI session. | The Fable preflight was rate-limited and the Opus preflight failed. `claude-sonnet-5` failed structured output even at medium effort with no thinking. The route to frontier authors returns to the user. |
 | 2026-09-23 | Refined the model strategy into premium (Fable, GPT-6 Astra), standard frontier (latest Opus, GPT-6 Sol), and economy tiers, evaluated step by step. | The standard frontier tier is the default and meets most needs, premium is a paid option for maximum confidence, and the first basic scenario uses one pair, testing the GPT-6 Luna critic before GPT-6 Sol. |

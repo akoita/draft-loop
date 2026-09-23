@@ -239,3 +239,27 @@ Both critiques passed the production critique validation rules.
 - The preflight still reports a CLI version refusal only as `unknown`.
   Surfacing the CLI version and the refusal text is a separate diagnostics
   issue.
+
+## Sonnet 5 recheck on the updated CLI
+
+**Issue:** #518 · **Revision:** `3fab5cd` · **CLI:** Claude Code 2.1.280
+
+The #503 replica was run unchanged at the default effort, to test whether the
+earlier `claude-sonnet-5` failures were artefacts of CLI 2.1.265. No candidate
+material was used.
+
+| Request | Status | Duration | Result |
+| ------- | ------ | -------- | ------ |
+| Preflight | available | 2 s | `{"ready": true}` |
+| Replica 1 | error | 151 s | `structured_output_retry_exhausted`, `stop_reason: max_tokens`; all 16,384 output tokens were thinking |
+| Replica 2 | error | 75 s | `structured_output_retry_exhausted`, no stop reason, no usage reported |
+
+### Recheck result
+
+- **The failure is real, not a CLI artefact.** `claude-sonnet-5` still spends
+  its output budget on thinking, or exhausts structured-output retries, on the
+  production author request. It is not usable as the author today.
+- **The economy pair falls back** to `claude-sonnet-4-5` with `gpt-6-luna`,
+  under the #518 rule. `claude-sonnet-4-5` returned valid proposals 3 of 3 on
+  this replica in #503, on CLI 2.1.265. The synthetic author preflight of the
+  case A observation rechecks it on the current CLI.
