@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-22<br>
-**Current stage:** Author model revalidation
+**Current stage:** Reference model pair
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -41,6 +41,36 @@ independent OpenAI critic challenges it, the author adjudicates findings, and
 the candidate approves a professional export. Roles remain configurable, but
 the default pair is cross-company and provider/model identities are recorded.
 
+### Model strategy
+
+Candidates want the strongest possible CV for an application, so production
+quality targets **frontier models for both roles**:
+
+- **Author:** the latest Anthropic frontier models, such as current Opus and
+  Fable versions.
+- **Critic:** the latest OpenAI frontier models, such as GPT-6 Sol and Astra.
+
+Exact model IDs are confirmed when the reference pair is selected. Model cost
+is secondary for the default product, because candidates will pay for the best
+result.
+
+Models are organised in two tiers:
+
+| Tier | Purpose | Examples |
+| ---- | ------- | -------- |
+| **Reference** | Production default and the only basis for quality validation claims | Frontier Anthropic author, frontier OpenAI critic |
+| **Economy** | Cost-conscious users, plus fast and cheap development, replay, and route diagnostics | Smaller Anthropic and OpenAI models |
+
+A result produced with economy models never counts as validation of the
+reference product.
+
+Anthropic and OpenAI stay the first and default providers. Other providers,
+including local models, are integrated only after the main CV use cases work
+with the reference pair.
+
+**The immediate priority is unchanged:** a first working version on one
+reference Anthropic author and OpenAI critic pair.
+
 The reusable corpus is a Candidate Knowledge Base (CKB). A candidate normally
 maintains one default CKB, with additional isolated CKBs available when
 separation is intentional. Selection for an application must be explicit.
@@ -53,6 +83,11 @@ separation is intentional. Selection for an application must be explicit.
 - Local by default: provider transmission is explicit and scoped.
 - Independent review: provider and model identities are visible, with
   cross-company diversity as the default.
+- Frontier quality by default: the reference tier uses the strongest available
+  models, and cheaper tiers are an explicit user or development choice.
+- Validation names its models: every quality claim records the exact model
+  profile, provider, model ID, prompt version, and runtime controls, and
+  applies only to that profile.
 - Durable candidate memory: reusable material is separate from an opportunity
   and selected explicitly for each application.
 - Measured expansion: retrieval, providers, and workflows must improve a
@@ -188,7 +223,8 @@ applications.
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
-| Now      | Author model revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/16))                       | [#503 schema replica](evaluation/author-route-diagnosis.md#schema-replica): `claude-sonnet-4-5` 3/3 ok; `claude-sonnet-5` 3/3 spent the budget on thinking | Test whether `claude-sonnet-5` produces an accepted draft with the v3 prompt           | `api_error` unreproduced in 12 synthetic requests; `claude-sonnet-5` needs an honoured thinking control first |
+| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                            | Economy-model diagnostics done; frontier pair not yet selected | Select and validate one frontier Anthropic author and OpenAI critic pair as the first working reference | Frontier thinking-control calibration (#507), critic availability, then a gated reference observation |
+| Next     | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17))                        | Planned                                              | Replace hard-coded model defaults with versioned model profiles and reference and economy tiers | Profile registry, recorded profiles, and user-facing selection (#84) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1158,24 +1194,72 @@ them verbatim. See the
 [stage record](evaluation/structured-block-author-guidance.md). The user chose
 to test a current-generation author model next.
 
-### Now — Author model revalidation
+### Reframed — Author model revalidation
 
-Test whether a current same-tier author model, `claude-sonnet-5`, produces an
-accepted, human-verified draft on unchanged case A with the current v3 prompt.
-[Milestone 16](https://github.com/akoita/draft-loop/milestone/16) has one gated
-execution issue, #499. The author model is the only change from #496.
+The stage tested smaller author models and diagnosed the route. It is
+reframed as the reference model pair stage below, following the frontier
+model strategy. Its findings are in the
+[model record](evaluation/author-model-revalidation.md) and the
+[route diagnosis](evaluation/author-route-diagnosis.md).
 
-Creating #499 authorizes no provider call. The observation requires a later
-user instruction that names it.
+### Now — Reference model pair
 
-**Exit criterion:** The #499 result and model effect are recorded against
-their predeclared rules, and the roadmap names the next stage:
+[Milestone 16](https://github.com/akoita/draft-loop/milestone/16) started as
+author model revalidation on smaller models. It now selects and validates the
+first **reference pair**: one frontier Anthropic author and one frontier
+OpenAI critic, reached through authenticated user sessions.
 
-- **Pass:** a gated cohort with the new author.
-- **Fail with the model effective or partial:** a bounded follow-up on the new
-  model.
-- **Fail with the model not effective:** deterministic structured blocks
-  generated from evidence fields.
+**What the economy-model work already established:**
+
+- #499: `claude-sonnet-5` produced no draft within the budget.
+- #501 and #503: 12 synthetic requests did not reproduce the status-less
+  `api_error`.
+- #503: the production schema and prompt work on `claude-sonnet-4-5`.
+- #503: Claude 5 models can ignore the adapter's thinking limit and spend the
+  output budget on thinking.
+
+**Engineering done:** #505 recognises the resulting failure, and #506 adds the
+CLI `--effort` control. Both apply to every Claude 5 model, including the
+frontier ones.
+
+**Remaining order:**
+
+1. #507 calibrates a thinking control for the frontier author candidates with
+   synthetic replicas. The economy `claude-sonnet-5` stays as a secondary
+   variant.
+2. #510 confirms that the frontier critic candidates are available through
+   the OpenAI user session.
+3. The user selects the reference pair from the calibration data.
+4. A gated observation on unchanged case A measures the reference pair against
+   the fixed result and effect rules. On a pass, the pair becomes the default
+   for new workspaces.
+
+None of these steps authorizes a provider call without a user instruction that
+names its issue.
+
+**Exit criterion:** One reference pair is selected, its identities and
+runtime controls are recorded, and a gated observation records a result
+against predeclared rules. A pass admits a gated cohort with that pair.
+
+### Next — Model profiles and tiers
+
+Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and
+`gpt-5.6-luna`) and the per-adapter thinking assumptions with **versioned
+model profiles**. A profile holds:
+
+- provider and exact model ID;
+- tier (reference or economy);
+- runtime controls: effort, output budget, and thinking behaviour;
+- known limits.
+
+Runs record the profile next to the prompt version, so a validation claim
+names exactly what it covers. #511 introduces the profiles. Tier presets and user-facing model selection
+(#84) follow, with visible cost estimates and diversity warnings. Adding
+providers beyond Anthropic and OpenAI stays in controlled expansion.
+
+**Exit criterion:** New runs choose models only through recorded profiles.
+The reference and economy presets exist, existing runs resume unchanged, and
+the validated reference pair is the default.
 
 ### Later — Production-ready beta
 
@@ -1190,9 +1274,11 @@ limitations.
 
 ### Later — Controlled expansion
 
-Cover letters, application answers, multilingual templates, additional or local
-providers, portfolio imports, encrypted sync, and coach review remain gated by
-the CV workflow. Cloud accounts, shared workspaces, external tools, and
+Cover letters, application answers, multilingual templates, portfolio imports,
+encrypted sync, and coach review remain gated by the CV workflow. Additional
+providers, including local models, are integrated only after the main CV use
+cases work with the Anthropic and OpenAI reference pair, and each gets its
+own model profiles. Cloud accounts, shared workspaces, external tools, and
 application submission each require a separate architecture and threat-model
 decision.
 
@@ -1246,6 +1332,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Adopted the frontier model strategy: a reference tier of frontier Anthropic and OpenAI models for production and validation, an economy tier for cost-conscious use and development, and other providers only after the reference pair works. | Milestone 16 becomes the reference model pair stage, #507 calibrates frontier author candidates, and a new milestone 17 introduces versioned model profiles, tiers, and user selection (#84). The first-version priority on one Anthropic and OpenAI pair is unchanged. |
 | 2026-09-23 | Recorded the #503 schema replica: production schema and prompt work on `claude-sonnet-4-5`, but `claude-sonnet-5` exhausts its budget on thinking. | The `api_error` is not caused by the schema or the prompt and stays unexplained. `claude-sonnet-5` used 15,200 of 16,384 output tokens thinking, so the adapter's thinking limit is not honoured for it. |
 | 2026-09-23 | Recorded the #501 synthetic route diagnosis: 0 of 6 requests failed. | Real-sized inputs, large outputs, and runs over five minutes succeeded on both models, so size and duration alone do not cause the `api_error`. The production author schema is the leading hypothesis. |
 | 2026-09-23 | Recorded #499 as indeterminate: `claude-sonnet-5` produced no draft within the budget. | Attempt 1 ended in a status-less `api_error` after about eleven minutes and attempt 2 timed out on the remaining budget. The route decision returns to the user. |

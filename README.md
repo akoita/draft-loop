@@ -153,6 +153,12 @@ without a CKB selection continue to use the workspace evidence path.
   workspace shows the provider, model, transmission scope, and retention choice.
 - Independent review is a product constraint: the default author and critic use
   different provider companies, and their identities are recorded.
+- Model strategy: production quality targets frontier models, with the latest
+  Anthropic models as author and the latest OpenAI models as critic. Smaller
+  models are an economy option for cost-conscious use and development, and
+  never count as validation of the reference product. Other providers follow
+  once the CV workflow works with the reference pair. See the
+  [roadmap](docs/roadmap.md#model-strategy).
 - DraftLoop prepares local artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.
