@@ -268,5 +268,55 @@
     "executionId": "sanitized-h480-employer-control",
     "status": "rejected",
     "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h481-experience-heading",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h481-contact-line",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h481-skills-label",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h481-absent-location-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h481-changed-year-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h481-unsupported-skill-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h481-absent-label-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h481-thousands-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h481-range-end-year-control",
+    "status": "rejected",
+    "diagnosticCodes": ["substantive_text_uncovered"]
+  },
+  {
+    "executionId": "sanitized-h481-range-format",
+    "status": "accepted",
+    "diagnosticCodes": []
   }
 ]

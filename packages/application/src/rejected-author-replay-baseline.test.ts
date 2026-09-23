@@ -37,6 +37,10 @@ const h480IntentText = readFileSync(
   new URL("../fixtures/rejected-author-replay/h480-intent.json", import.meta.url),
   "utf8",
 );
+const h481IntentText = readFileSync(
+  new URL("../fixtures/rejected-author-replay/h481-intent.json", import.meta.url),
+  "utf8",
+);
 
 interface ReplayCapture {
   readonly validationInputs: { readonly executionId: string };
@@ -67,6 +71,7 @@ const h469Intents = JSON.parse(h469IntentText) as readonly SingleWordNameIntent[
 const h470Intents = JSON.parse(h470IntentText) as readonly SingleWordNameIntent[];
 const h471Intents = JSON.parse(h471IntentText) as readonly SingleWordNameIntent[];
 const h480Intents = JSON.parse(h480IntentText) as readonly SingleWordNameIntent[];
+const h481Intents = JSON.parse(h481IntentText) as readonly SingleWordNameIntent[];
 
 function replayById(executionId: string) {
   const capture = captures.find(
@@ -98,17 +103,17 @@ describe("sanitized rejected-author replay baseline", () => {
     const result = summarizeRejectedAuthorReplays(captures);
 
     expect(result).toEqual({
-      total: 54,
-      accepted: 26,
-      rejected: 28,
+      total: 64,
+      accepted: 30,
+      rejected: 34,
       failureStages: [
         { value: "artifact-schema-validation", count: 1 },
-        { value: "factual-invariant-rejection", count: 27 },
+        { value: "factual-invariant-rejection", count: 33 },
       ],
       diagnosticCodes: [
         { value: "custom", count: 1 },
         { value: "factual_invariant_violation", count: 21 },
-        { value: "substantive_text_uncovered", count: 3 },
+        { value: "substantive_text_uncovered", count: 9 },
         { value: "unsupported_claim", count: 4 },
       ],
     });
@@ -154,6 +159,14 @@ describe("sanitized rejected-author replay baseline", () => {
       "Pulsar",
       "billing platform",
       "employer of record",
+      "sanitized-h481",
+      "Ada Example",
+      "ada@example.com",
+      "Lisbon",
+      "Porto",
+      "Tooling",
+      "12,000",
+      "2019 – 2023",
     ]) {
       expect(serialized).not.toContain(privateFixtureValue);
     }
@@ -370,6 +383,42 @@ describe("sanitized rejected-author replay baseline", () => {
     }
   });
 
+  it("classifies every #481 structured-field case exactly once as supported or control", () => {
+    const h481Ids = captures
+      .map((capture) => capture.validationInputs.executionId)
+      .filter((executionId) => executionId.startsWith("sanitized-h481-"));
+
+    expect(h481Intents.map((intent) => intent.executionId)).toEqual(h481Ids);
+    for (const intent of h481Intents) {
+      expect(intent.executionId.endsWith("-control"), intent.executionId).toBe(
+        intent.intent === "control",
+      );
+    }
+  });
+
+  it("accepts every #481 heading, contact line, labelled list, and reformatted range found in evidence", () => {
+    const supported = h481Intents.filter((intent) => intent.intent === "supported");
+
+    expect(supported).toHaveLength(4);
+    for (const intent of supported) {
+      expect(replayById(intent.executionId).status, intent.executionId).toBe("accepted");
+    }
+  });
+
+  it("rejects every #481 absent, changed, split-number, or split-range field as uncovered text", () => {
+    const controls = h481Intents.filter((intent) => intent.intent === "control");
+
+    expect(controls).toHaveLength(6);
+    for (const control of controls) {
+      const result = replayById(control.executionId);
+      expect(result.status, control.executionId).toBe("rejected");
+      expect(
+        result.status === "rejected" ? result.diagnostics.map((diagnostic) => diagnostic.code) : [],
+        control.executionId,
+      ).toContain("substantive_text_uncovered");
+    }
+  });
+
   it("contains only invented local fixture identities", () => {
     expect(fixtureText).not.toContain("anthropic");
     expect(fixtureText).not.toContain("openai");
@@ -382,5 +431,6 @@ describe("sanitized rejected-author replay baseline", () => {
     expect(h470IntentText).not.toContain("fixture://");
     expect(h471IntentText).not.toContain("fixture://");
     expect(h480IntentText).not.toContain("fixture://");
+    expect(h481IntentText).not.toContain("fixture://");
   });
 });
