@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { AuthorRequest } from "@draft-loop/orchestrator";
 import {
   authorAdjudicationPlanSchema,
@@ -6,8 +8,14 @@ import {
 } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
-import { authorOutputBudget, createAuthorAdjudicationPrompt } from "./author-adjudication.js";
+import {
+  authorOutputBudget,
+  createAuthorAdjudicationPrompt,
+  promptTemplateVersion,
+} from "./author-adjudication.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
+
+const authorVersion = promptTemplateVersion("author");
 
 function pendingAdjudication(): NonNullable<AuthorRequest["pendingAdjudication"]> {
   const report = independentReadinessReportSchema.parse({
@@ -102,7 +110,7 @@ function groundingGuide(): readonly AuthorGroundingGuideEntry[] {
 
 describe("author adjudication provider handoff", () => {
   it("keeps the initial author request free of an adjudication carrier", () => {
-    const prompt = createAuthorAdjudicationPrompt(undefined);
+    const prompt = createAuthorAdjudicationPrompt(authorVersion, undefined);
 
     expect(prompt.providerInput).toEqual({ outputBudget: authorOutputBudget, groundingGuide: [] });
     expect(prompt.systemPrompt).not.toContain("This is an adjudicated revision.");
@@ -113,7 +121,7 @@ describe("author adjudication provider handoff", () => {
 
   it("includes the exact validated carrier for an adjudicated revision", () => {
     const carrier = pendingAdjudication();
-    const prompt = createAuthorAdjudicationPrompt(carrier);
+    const prompt = createAuthorAdjudicationPrompt(authorVersion, carrier);
 
     expect(prompt.providerInput).toEqual({
       outputBudget: authorOutputBudget,
@@ -126,8 +134,8 @@ describe("author adjudication provider handoff", () => {
   it("includes the same typed grounding guide for initial and adjudicated requests", () => {
     const guide = groundingGuide();
     const carrier = pendingAdjudication();
-    const initial = createAuthorAdjudicationPrompt(undefined, undefined, guide);
-    const revision = createAuthorAdjudicationPrompt(carrier, undefined, guide);
+    const initial = createAuthorAdjudicationPrompt(authorVersion, undefined, undefined, guide);
+    const revision = createAuthorAdjudicationPrompt(authorVersion, carrier, undefined, guide);
 
     expect(initial.providerInput).toEqual({
       outputBudget: authorOutputBudget,
@@ -152,7 +160,7 @@ describe("author adjudication provider handoff", () => {
   });
 
   it("instructs the author how to apply decisions without weakening evidence safeguards", () => {
-    const prompt = createAuthorAdjudicationPrompt(pendingAdjudication());
+    const prompt = createAuthorAdjudicationPrompt(authorVersion, pendingAdjudication());
 
     expectEvidenceGroundingContract(prompt.systemPrompt);
     expect(prompt.systemPrompt).toContain(
@@ -170,7 +178,7 @@ describe("author adjudication provider handoff", () => {
   it("adds bounded retry correction instructions and input only when feedback is present", () => {
     const feedback = retryFeedback();
     const guide = groundingGuide();
-    const prompt = createAuthorAdjudicationPrompt(undefined, feedback, guide);
+    const prompt = createAuthorAdjudicationPrompt(authorVersion, undefined, feedback, guide);
 
     expect(prompt.providerInput).toEqual({
       outputBudget: authorOutputBudget,
@@ -190,5 +198,114 @@ describe("author adjudication provider handoff", () => {
       "an invalid-evidence-reference correction requires an approved retrievedEvidence ID",
     );
     expect(prompt.systemPrompt).toContain("Never reconstruct or request rejected content.");
+  });
+});
+
+function sha256(text: string): string {
+  return createHash("sha256").update(text).digest("hex");
+}
+
+const structuredFieldInstruction =
+  "For heading lines (role, organisation, location, dates), the header contact line, and skills or tool lists, copy each field exactly as it appears in one retrieved evidence chunk.";
+const claimCoverageInstruction =
+  "Cover every factual span of block text with substantive claims using the same contiguous wording.";
+const adjudicationInstruction = "This is an adjudicated revision.";
+const retryInstruction = "When retryFeedback is present";
+
+describe("author prompt template versions", () => {
+  it("records v2 for new author runs and keeps the critic on v1", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v2");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v1");
+  });
+
+  it("keeps the v1 prompt byte-identical to the prompt v1 runs were started with", () => {
+    // Digests of the system prompts produced before cli-author-v2 existed.
+    const feedback = retryFeedback();
+    const carrier = pendingAdjudication();
+    const prompts = {
+      initial: createAuthorAdjudicationPrompt("cli-author-v1", undefined),
+      initialRetry: createAuthorAdjudicationPrompt("cli-author-v1", undefined, feedback),
+      revision: createAuthorAdjudicationPrompt("cli-author-v1", carrier),
+      revisionRetry: createAuthorAdjudicationPrompt("cli-author-v1", carrier, feedback),
+    };
+
+    expect(
+      Object.fromEntries(
+        Object.entries(prompts).map(([name, { systemPrompt }]) => [
+          name,
+          [systemPrompt.length, sha256(systemPrompt)],
+        ]),
+      ),
+    ).toEqual({
+      initial: [2931, "53c47e13465af487f02d10e581f91c9ee1b715c3cd833cbbe56010e82910335f"],
+      initialRetry: [3478, "7a6f90f3479a880b57a7dad2fdf0f643fccfc081dae6b6688060a9db6eedeeb0"],
+      revision: [3379, "ea3ba56b0fa84489df8823b4a42f47abeaecca219db7b3a873d7e71729d42f99"],
+      revisionRetry: [3926, "d02bfeebbc29e768b8874dfd8c3b1c1e91c6503183fde7e676d6d0a63a17c08e"],
+    });
+    for (const { systemPrompt } of Object.values(prompts)) {
+      expect(systemPrompt).not.toContain(structuredFieldInstruction);
+    }
+  });
+
+  it("adds structured-field guidance to v2 after claim coverage and before revision and retry text", () => {
+    const feedback = retryFeedback();
+    const initial = createAuthorAdjudicationPrompt(
+      "cli-author-v2",
+      undefined,
+      feedback,
+    ).systemPrompt;
+    const revision = createAuthorAdjudicationPrompt(
+      "cli-author-v2",
+      pendingAdjudication(),
+      feedback,
+    ).systemPrompt;
+
+    for (const systemPrompt of [initial, revision]) {
+      const structured = systemPrompt.indexOf(structuredFieldInstruction);
+      expect(structured).toBeGreaterThan(systemPrompt.indexOf(claimCoverageInstruction));
+      expect(structured).toBeLessThan(systemPrompt.indexOf(retryInstruction));
+      expect(systemPrompt).toContain(
+        "Do not rephrase, abbreviate, translate, reorder words, or reformat dates.",
+      );
+      expect(systemPrompt).toContain(
+        "Write one substantive claim per field whose text is exactly that field, citing the chunk that contains it.",
+      );
+      expect(systemPrompt).toContain(
+        "Omit a field that cannot be copied verbatim from evidence rather than inventing or paraphrasing it.",
+      );
+      expect(systemPrompt).toContain(
+        "Separators between fields such as |, · or commas need no claim.",
+      );
+    }
+    expect(initial).not.toContain(adjudicationInstruction);
+    expect(revision.indexOf(structuredFieldInstruction)).toBeLessThan(
+      revision.indexOf(adjudicationInstruction),
+    );
+  });
+
+  it("differs from v1 only by the structured-field guidance", () => {
+    const carrier = pendingAdjudication();
+    for (const pending of [undefined, carrier]) {
+      const v1 = createAuthorAdjudicationPrompt("cli-author-v1", pending).systemPrompt;
+      const v2 = createAuthorAdjudicationPrompt("cli-author-v2", pending).systemPrompt;
+      const start = v2.indexOf(` ${structuredFieldInstruction}`);
+      const end = v2.indexOf("Separators between fields such as |, · or commas need no claim.");
+      const withoutGuidance =
+        v2.slice(0, start) +
+        v2.slice(end + "Separators between fields such as |, · or commas need no claim.".length);
+      expect(withoutGuidance).toBe(v1);
+    }
+  });
+
+  it("fails closed for an unknown author prompt template version", () => {
+    expect(() => createAuthorAdjudicationPrompt("cli-author-v9", undefined)).toThrow(
+      'Unsupported author prompt template version "cli-author-v9"',
+    );
+    expect(() => createAuthorAdjudicationPrompt("cli-critic-v1", undefined)).toThrow(
+      "Unsupported author prompt template version",
+    );
+    expect(() => createAuthorAdjudicationPrompt("constructor", undefined)).toThrow(
+      "Unsupported author prompt template version",
+    );
   });
 });

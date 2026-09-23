@@ -14,7 +14,6 @@ import {
   defaultAntiFormulaicTerms,
   type EvidenceRetrievalInspection,
   type IndependentReviewRecord,
-  type ModelConfigurationInput,
   type ModelSelection,
   maximumIndependenceOverrideRationaleLength,
   maximumModelLineageLength,
@@ -138,6 +137,7 @@ import { modelFacingContext } from "./provider-context.js";
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
+import { modelConfiguration, modelSelection } from "./run-model-selection.js";
 
 export type {
   AnthropicClient,
@@ -1604,37 +1604,6 @@ async function prepareInputs(
 }
 
 /**
- * One side of the workspace's pairing, as the domain expects to receive it.
- *
- * Built here rather than inline so the selection a run records and the
- * selection the independence gate judges are the same object: a second copy
- * would let a workspace pass a check on a pairing it does not actually use.
- */
-function modelSelection(config: WorkspaceConfig, role: "author" | "critic"): ModelSelection {
-  const company = role === "author" ? config.authorCompany : config.criticCompany;
-  const modelId = role === "author" ? config.authorModel : config.criticModel;
-  const lineage = role === "author" ? config.authorLineage : config.criticLineage;
-  return {
-    company,
-    modelId,
-    role,
-    promptTemplateVersion: `cli-${role}-v1`,
-    ...(lineage === undefined ? {} : { lineage }),
-  };
-}
-
-function modelConfiguration(config: WorkspaceConfig): ModelConfigurationInput {
-  return {
-    author: modelSelection(config, "author"),
-    critic: modelSelection(config, "critic"),
-    requireProviderDiversity: true,
-    ...(config.independenceOverrideRationale === undefined
-      ? {}
-      : { independenceOverrideRationale: config.independenceOverrideRationale }),
-  };
-}
-
-/**
  * Refuse a pairing the domain would refuse, before it is written down.
  *
  * The rule is not restated here: `assertIndependentReview` is the same check
@@ -2002,7 +1971,7 @@ function providerAgents(
   async function createAdapter(company: string, modelId: string, role: "author" | "critic") {
     return createProviderAdapter(
       config,
-      { company, modelId, role, promptTemplateVersion: `cli-${role}-v1` },
+      { ...context.modelConfiguration[role], company, modelId, role },
       allowProviderData,
       resolveCredential,
       providerClientFactories,
@@ -2033,6 +2002,7 @@ function providerAgents(
         throw new CliUserError("Drafting requires retrieved candidate evidence.");
       }
       const authorPrompt = createAuthorAdjudicationPrompt(
+        context.modelConfiguration.author.promptTemplateVersion,
         pendingAdjudication,
         retryFeedback,
         createAuthorGroundingGuide(retrievedEvidence),
