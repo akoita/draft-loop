@@ -33,6 +33,10 @@ const h471IntentText = readFileSync(
   new URL("../fixtures/rejected-author-replay/h471-intent.json", import.meta.url),
   "utf8",
 );
+const h480IntentText = readFileSync(
+  new URL("../fixtures/rejected-author-replay/h480-intent.json", import.meta.url),
+  "utf8",
+);
 
 interface ReplayCapture {
   readonly validationInputs: { readonly executionId: string };
@@ -62,6 +66,7 @@ const h466Intents = JSON.parse(h466IntentText) as readonly SingleWordNameIntent[
 const h469Intents = JSON.parse(h469IntentText) as readonly SingleWordNameIntent[];
 const h470Intents = JSON.parse(h470IntentText) as readonly SingleWordNameIntent[];
 const h471Intents = JSON.parse(h471IntentText) as readonly SingleWordNameIntent[];
+const h480Intents = JSON.parse(h480IntentText) as readonly SingleWordNameIntent[];
 
 function replayById(executionId: string) {
   const capture = captures.find(
@@ -93,16 +98,16 @@ describe("sanitized rejected-author replay baseline", () => {
     const result = summarizeRejectedAuthorReplays(captures);
 
     expect(result).toEqual({
-      total: 48,
-      accepted: 24,
-      rejected: 24,
+      total: 54,
+      accepted: 26,
+      rejected: 28,
       failureStages: [
         { value: "artifact-schema-validation", count: 1 },
-        { value: "factual-invariant-rejection", count: 23 },
+        { value: "factual-invariant-rejection", count: 27 },
       ],
       diagnosticCodes: [
         { value: "custom", count: 1 },
-        { value: "factual_invariant_violation", count: 17 },
+        { value: "factual_invariant_violation", count: 21 },
         { value: "substantive_text_uncovered", count: 3 },
         { value: "unsupported_claim", count: 4 },
       ],
@@ -143,6 +148,12 @@ describe("sanitized rejected-author replay baseline", () => {
       "sanitized-h471",
       "Statistics",
       "go live",
+      "sanitized-h480",
+      "Platform migrations",
+      "Northwind Freight",
+      "Pulsar",
+      "billing platform",
+      "employer of record",
     ]) {
       expect(serialized).not.toContain(privateFixtureValue);
     }
@@ -323,6 +334,42 @@ describe("sanitized rejected-author replay baseline", () => {
     }
   });
 
+  it("classifies every #480 opening-verb case exactly once as supported or control", () => {
+    const h480Ids = captures
+      .map((capture) => capture.validationInputs.executionId)
+      .filter((executionId) => executionId.startsWith("sanitized-h480-"));
+
+    expect(h480Intents.map((intent) => intent.executionId)).toEqual(h480Ids);
+    for (const intent of h480Intents) {
+      expect(intent.executionId.endsWith("-control"), intent.executionId).toBe(
+        intent.intent === "control",
+      );
+    }
+  });
+
+  it("accepts every #480 opening verb before a name the cited evidence supports", () => {
+    const supported = h480Intents.filter((intent) => intent.intent === "supported");
+
+    expect(supported).toHaveLength(2);
+    for (const intent of supported) {
+      expect(replayById(intent.executionId).status, intent.executionId).toBe("accepted");
+    }
+  });
+
+  it("rejects every #480 absent-name, title, and employer control as a factual violation", () => {
+    const controls = h480Intents.filter((intent) => intent.intent === "control");
+
+    expect(controls).toHaveLength(4);
+    for (const control of controls) {
+      const result = replayById(control.executionId);
+      expect(result.status, control.executionId).toBe("rejected");
+      expect(
+        result.status === "rejected" ? result.diagnostics.map((diagnostic) => diagnostic.code) : [],
+        control.executionId,
+      ).toContain("factual_invariant_violation");
+    }
+  });
+
   it("contains only invented local fixture identities", () => {
     expect(fixtureText).not.toContain("anthropic");
     expect(fixtureText).not.toContain("openai");
@@ -334,5 +381,6 @@ describe("sanitized rejected-author replay baseline", () => {
     expect(h469IntentText).not.toContain("fixture://");
     expect(h470IntentText).not.toContain("fixture://");
     expect(h471IntentText).not.toContain("fixture://");
+    expect(h480IntentText).not.toContain("fixture://");
   });
 });

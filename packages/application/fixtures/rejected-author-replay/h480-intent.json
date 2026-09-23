@@ -1,0 +1,26 @@
+[
+  {
+    "executionId": "sanitized-h480-single-name",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h480-multi-word-name",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h480-absent-name-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h480-senior-title-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h480-lead-title-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h480-employer-control",
+    "intent": "control"
+  }
+]

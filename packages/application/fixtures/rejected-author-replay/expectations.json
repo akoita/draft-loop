@@ -238,5 +238,35 @@
     "executionId": "sanitized-h471-absent-name-control",
     "status": "rejected",
     "diagnosticCodes": ["unsupported_claim"]
+  },
+  {
+    "executionId": "sanitized-h480-single-name",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h480-multi-word-name",
+    "status": "accepted",
+    "diagnosticCodes": []
+  },
+  {
+    "executionId": "sanitized-h480-absent-name-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h480-senior-title-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h480-lead-title-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
+  },
+  {
+    "executionId": "sanitized-h480-employer-control",
+    "status": "rejected",
+    "diagnosticCodes": ["factual_invariant_violation"]
   }
 ]

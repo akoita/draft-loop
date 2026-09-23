@@ -5,6 +5,7 @@ import {
   sourceExperienceValues,
   supportsExperienceClaim,
 } from "./experience-grounding.js";
+import { narrowOpeningActionVerbs, withoutOpeningActionVerb } from "./opening-action-verbs.js";
 import { supportsProtectedValueParaphrase } from "./protected-value-equivalence.js";
 
 const protectedNumberPattern = /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![\p{L}\p{N}])/giu;
@@ -15,25 +16,15 @@ const singleTechnologyNamePattern =
   /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
 const softwareObjectPattern =
   /^[ \t]+(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/u;
-const openingActionVerbs = new Set([
-  "Built",
-  "Implemented",
-  "Developed",
-  "Automated",
-  "Deployed",
-  "Migrated",
-  "Optimized",
-  "Refactored",
-  "Integrated",
-  "Tested",
-]);
+
+const multiWordNamePattern = /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu;
 
 const protectedValuePatterns = [
   /https?:\/\/[^\s)]+/giu,
   /[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/gu,
   protectedNumberPattern,
   /\b[\p{Lu}]{2,}(?:[+-][\p{Lu}\p{N}]+)*\b/gu,
-  /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu,
+  multiWordNamePattern,
   /\b(?:at|for)\s+(\p{Lu}[\p{L}'’-]+)\b/gu,
   mixedCaseNamePattern,
 ] as const;
@@ -95,7 +86,7 @@ function withoutOpeningAction(text: string, matched: string, start: number): str
     parts.length !== 2 ||
     verb === undefined ||
     name === undefined ||
-    !openingActionVerbs.has(verb) ||
+    !narrowOpeningActionVerbs.has(verb) ||
     !singleTechnologyNamePattern.test(name) ||
     !softwareObjectPattern.test(text.slice(start + matched.length))
   )
@@ -110,7 +101,11 @@ export function extractProtectedValues(value: string): readonly string[] {
   const matches: ProtectedValueMatch[] = protectedValuePatterns.flatMap((pattern, patternIndex) =>
     [...value.matchAll(pattern)].map((match, matchIndex) => {
       const raw = match[1] ?? match[0];
-      const extracted = withoutOpeningAction(value, raw, match.index ?? 0);
+      const narrow = withoutOpeningAction(value, raw, match.index ?? 0);
+      const extracted =
+        pattern === multiWordNamePattern && narrow === raw
+          ? withoutOpeningActionVerb(value, raw, match.index ?? 0)
+          : narrow;
       const captureOffset = match[0].indexOf(extracted);
       return {
         value: extracted,
