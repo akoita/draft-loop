@@ -103,6 +103,18 @@ Omitting `[output.md]` writes `pilot-report.md` beside the case file, which the
 command has already proven sits outside any repository. An explicit path is
 honoured exactly as given, including one inside the repository.
 
+To measure rejected author proposals captured during a session, run:
+
+```text
+pnpm --filter @draft-loop/cli start capture-report <private-capture-directory>
+```
+
+The command revalidates each `rejected-author-*/replay.json` capture locally
+and prints JSON to stdout, in capture-time order. The output holds only
+content-free counts: accepted and rejected totals, plus issue codes by capture
+and by section kind. It refuses a directory inside any git repository and
+writes no file.
+
 The harness also computes critical-requirement coverage and deterministic
 unsupported-claim counts for the first draft, revised draft, and manual
 baseline. These are signals for the review, not truth proofs.

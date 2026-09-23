@@ -235,7 +235,9 @@ renderer control.
 
 These files contain sensitive candidate material and source paths. The caller
 owns their retention and deletion; keep the directory outside shared repositories.
-Replay locally by passing the saved `validationInputs` to `buildAuthorArtifact`.
+Replay locally by passing the saved `validationInputs` to `buildAuthorArtifact`,
+or summarize a capture directory with the content-free `capture-report` command
+described in the [pilot protocol](../evaluation/pilot-protocol.md).
 Only a capture success/failure code joins normal error diagnostics; captured
 content stays out of run history and retry feedback. Capture errors preserve the
 original rejection and retry policy. Transport errors and provider token-budget

@@ -25,7 +25,10 @@ const diagnosticSchema = z.strictObject({
   code: z.string(),
   path: z.string(),
 });
-const evidenceSourceSchema = z.strictObject({
+// The capture writer stores the full run-context snapshot and manifest entries,
+// but validation reads only these fields. Unknown keys are stripped so real
+// captures stay replayable without the extra data reaching validation.
+const evidenceSourceSchema = z.object({
   id: z.string(),
   path: z.string(),
   checksum: z.string(),
@@ -44,7 +47,7 @@ const evidenceChunkSchema = z.strictObject({
 const validationInputsSchema = z.strictObject({
   proposal: z.record(z.string(), z.json()),
   executionId: z.string(),
-  context: z.strictObject({
+  context: z.object({
     language: z.string(),
     evidenceManifest: z.array(evidenceSourceSchema),
   }),
@@ -54,7 +57,8 @@ const validationInputsSchema = z.strictObject({
   createdAt: z.string().optional(),
 });
 
-const rejectedAuthorReplayCaptureSchema = z.strictObject({
+/** Shape of one private `replay.json` capture; unknown keys are rejected except in `context`. */
+export const rejectedAuthorReplayCaptureSchema = z.strictObject({
   schemaVersion: z.literal(1),
   capturedAt: z.string(),
   provider: providerSchema,

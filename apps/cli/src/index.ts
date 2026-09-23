@@ -4,6 +4,7 @@ import { defaultRequiredSections } from "@draft-loop/application";
 import { Command } from "commander";
 import packageJson from "../package.json";
 
+import { printRejectedAuthorCaptureReport } from "./capture-report.js";
 import { independentReviewLines } from "./independent-review.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
 import {
@@ -1471,6 +1472,16 @@ export function createCli(dependencies: CliDependencies = {}): Command {
         casePath: caseFile,
         ...(output === undefined ? {} : { outputPath: output }),
       });
+    });
+
+  command
+    .command("capture-report")
+    .description(
+      "Print content-free counts for private rejected-author captures held outside the repository",
+    )
+    .argument("<directory>", "private directory containing rejected-author-* captures")
+    .action(async (directory: string) => {
+      await printRejectedAuthorCaptureReport(directory);
     });
 
   command
