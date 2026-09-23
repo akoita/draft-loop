@@ -2981,5 +2981,341 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Led Platform migrations for billing services.",
+                "claims": [
+                  {
+                    "text": "Led Platform migrations for billing services.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h480-single-name-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h480-single-name",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h480-single-name-source",
+            "path": "fixture://sanitized/sanitized-h480-single-name",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000063"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h480-single-name-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h480-single-name-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000064",
+          "text": "- Led the Platform migrations for billing services.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Launched Northwind Freight dashboards for dispatch teams.",
+                "claims": [
+                  {
+                    "text": "Launched Northwind Freight dashboards for dispatch teams.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h480-multi-word-name-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h480-multi-word-name",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h480-multi-word-name-source",
+            "path": "fixture://sanitized/sanitized-h480-multi-word-name",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000065"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h480-multi-word-name-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h480-multi-word-name-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000066",
+          "text": "- Launched the Northwind Freight dashboards for dispatch teams.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Led Kafka migrations for billing services.",
+                "claims": [
+                  {
+                    "text": "Led Kafka migrations for billing services.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h480-absent-name-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h480-absent-name-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h480-absent-name-control-source",
+            "path": "fixture://sanitized/sanitized-h480-absent-name-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000067"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h480-absent-name-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h480-absent-name-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000068",
+          "text": "- Led the Pulsar migrations for billing services.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Senior Engineer on the billing platform.",
+                "claims": [
+                  {
+                    "text": "Senior Engineer on the billing platform.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h480-senior-title-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h480-senior-title-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h480-senior-title-control-source",
+            "path": "fixture://sanitized/sanitized-h480-senior-title-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000069"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h480-senior-title-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h480-senior-title-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000006a",
+          "text": "- Engineer on the billing platform.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Lead Engineer on the billing platform.",
+                "claims": [
+                  {
+                    "text": "Lead Engineer on the billing platform.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h480-lead-title-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h480-lead-title-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h480-lead-title-control-source",
+            "path": "fixture://sanitized/sanitized-h480-lead-title-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000006b"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h480-lead-title-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h480-lead-title-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000006c",
+          "text": "- Engineer on the billing platform.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T12:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Led Kafka is the employer of record.",
+                "claims": [
+                  {
+                    "text": "Led Kafka is the employer of record.",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h480-employer-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h480-employer-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h480-employer-control-source",
+            "path": "fixture://sanitized/sanitized-h480-employer-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000006d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h480-employer-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h480-employer-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000006e",
+          "text": "- Led the Kafka migrations for billing services.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T12:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]
