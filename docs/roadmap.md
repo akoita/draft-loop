@@ -187,7 +187,7 @@ applications.
 | Previous | Author correction reliability ([milestone](https://github.com/akoita/draft-loop/milestone/12))                   | [Exit met on replay](evaluation/author-correction-reliability.md#stage-decision): both wrongly rejected supported cases accepted; all 21 controls rejected | Make real author drafts pass factual, evidence, and coverage validation without weakening those gates | Invented cases only; live author quality is unproven |
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
-| Now      | Structured-block author guidance                                                                                  | Not yet planned into a milestone                     | Get the author to copy and claim structured fields verbatim from evidence             | A prompt change measured by a new gated live observation against the #476 captures |
+| Now      | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | Designed; no provider observation authorized         | Get the author to copy and claim structured fields verbatim from evidence             | #488 prompt change, then #489 gated observation compared with #476; #489 needs explicit user authorization |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1124,8 +1124,25 @@ by field. Replay cannot measure author behaviour, so the change is measured by
 a new, separately gated live observation on the unchanged case A inputs, with
 the preflight and local capture, compared with #476 through `capture-report`.
 
-This stage has no milestone or issue yet, and creating one authorizes no
-provider call.
+[Milestone 15](https://github.com/akoita/draft-loop/milestone/15) runs in
+order:
+
+1. #488 adds the structured-field instruction to the author prompt and bumps
+   the author prompt version to `cli-author-v2`. It is provider-free and
+   leaves validator behaviour unchanged.
+2. #489 records one gated observation. Its result rules match #476. A
+   guidance-effect rule, fixed in advance, compares the mean issues per
+   rejected attempt with #476.
+
+Creating #489 authorizes no provider call. The observation requires a later
+user instruction that names it.
+
+**Exit criterion:** The #489 result and guidance effect are recorded against
+their predeclared rules, and the roadmap names the next stage:
+
+- **Pass:** a gated cohort.
+- **Fail with guidance effective or partial:** one further guidance iteration.
+- **Fail with guidance not effective:** the author route goes to the user.
 
 ### Later — Production-ready beta
 
@@ -1196,6 +1213,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Planned milestone 15 for structured-block author guidance as #488 and #489. | The prompt change is provider-free and versioned. Its effect is measured by one gated live observation against the #476 captures, with result and effect rules fixed in advance. |
 | 2026-09-23 | Ended structural claim coverage under #482 with the exit not met and named structured-block author guidance. | Validator fixes cut the #476 capture issues from 37 to 28 without weakening any rule. The remaining fields are absent from evidence, so the next lever is the author prompt, measured live. |
 | 2026-09-23 | Planned milestone 14 for structural claim coverage as #479–#482. | Fixes are measured on invented replay cases and on the private #476 captures through a content-free summary, against an exit rule fixed before implementation. |
 | 2026-09-23 | Recorded the #476 live observation as a fail and named structural claim coverage. | Captured proposals show that structural blocks lack author claims and that opening verbs cause false factual rejections. The next stage is provider-free and measured on replay and the private captures. |
