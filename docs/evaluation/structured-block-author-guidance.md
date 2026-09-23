@@ -1,6 +1,6 @@
 # Structured-block author guidance
 
-**Status:** Two observations indeterminate; no draft produced under the `cli-author-v2` prompt
+**Status:** Guidance not effective; the `cli-author-v3` observation failed with more issues than v1
 **Milestone:** [Structured-block author guidance](https://github.com/akoita/draft-loop/milestone/15)
 **Observation issue:** #489
 **Revision:** `8ff31c2` (includes the `cli-author-v2` structured-field guidance from #488)
@@ -109,3 +109,57 @@ Options for the user decision, none of which is authorized here:
   claims, for example one claim per heading line rather than per field, and
   repeat.
 - **Stop.** Stop the guidance line here.
+
+## Larger-budget observation
+
+**Issue:** #496 · **Revision:** `25e3f82` · **Author prompt:** `cli-author-v3`
+(the structured-field guidance with a 16,384-token budget)
+
+The candidate authorized #496 in their own words. Both sign-in probes passed,
+and the synthetic author preflight, run with the new budget, returned
+`available`. The prepared run recorded `cli-author-v3`, `cli-critic-v1`, and
+the declared models.
+
+| Attempt | Result | Active provider time | Uncapped diagnostic counts |
+| ------- | ------ | -------------------- | -------------------------- |
+| 1 | Retryable local rejection | 150,865 ms | 19 substantive-coverage, 1 missing-evidence |
+| 2 | Retryable local rejection | 128,505 ms | 6 substantive-coverage, 2 factual-invariant |
+| 3 | Final local rejection | 158,028 ms | 14 substantive-coverage, 3 factual-invariant, 1 missing-evidence |
+
+No attempt hit the output limit, and no provider error occurred. No critic
+call, first review, approval, or export occurred.
+
+### Larger-budget result
+
+The observation **fails** under the rules fixed in #496: the validator
+rejected every attempt that produced a draft.
+
+### Guidance effect
+
+Both sets of captures were measured with `capture-report` at the same
+validator revision, `25e3f82`:
+
+| Captures | Author prompt | Issues per draft | Mean |
+| -------- | ------------- | ---------------- | ---- |
+| #476 | `cli-author-v1` | 8, 12, 8 | 9.3 |
+| #496 | `cli-author-v3` | 20, 8, 18 | 15.3 |
+
+The mean rose, so the guidance is **not effective** under the predeclared
+rule. The v3 drafts were larger: 40–43 blocks and 64–85 claims, against
+31–34 blocks and 39–58 claims under v1. Experience coverage failures rose from
+13 to 23 and projects from 3 to 7. The guidance produced more structured
+fields, but did not get the author to copy them verbatim.
+
+### Larger-budget stage decision
+
+The rule for a fail with guidance not effective applies: the author route
+question returns to the user. Neither prompt changes nor the validator changes
+of milestones 12 and 14 produced an accepted draft on case A with
+`claude-sonnet-4-5`. Options for the user, none of which is authorized here:
+
+- **Different author model.** Re-declare the author, for example a current
+  Claude model, in a new gated observation with v1 and v3 comparisons.
+- **Stricter generation.** Change how the author produces structured blocks
+  rather than instructing it more, for example by generating heading, contact,
+  and skills blocks from evidence fields deterministically.
+- **Pause.** Pause author-acceptance work and revisit the roadmap.
