@@ -6,7 +6,11 @@ import {
   ProviderAdapterError,
   type ProviderErrorCode,
 } from "./index.js";
-import { AnthropicClaudeUserSessionAdapter, type UserSessionProbeOptions } from "./user-session.js";
+import {
+  AnthropicClaudeUserSessionAdapter,
+  type ClaudeEffortLevel,
+  type UserSessionProbeOptions,
+} from "./user-session.js";
 
 /**
  * The bounded outcome of one synthetic author request.
@@ -39,6 +43,8 @@ export interface AuthorModelPreflightOptions extends UserSessionProbeOptions {
    * budget; pass the budget of the prompt version being checked to match it.
    */
   readonly maxOutputTokens?: number;
+  /** Optional Claude CLI effort level; omitted from the request when absent. */
+  readonly effort?: ClaudeEffortLevel;
 }
 
 const defaultAuthorModelPreflightTimeoutMs = 60_000;
@@ -127,6 +133,7 @@ export async function preflightAnthropicClaudeAuthorModel(
       ...(options.command === undefined ? {} : { command: options.command }),
       ...(options.maxOutputBytes === undefined ? {} : { maxOutputBytes: options.maxOutputBytes }),
       ...(options.environment === undefined ? {} : { environment: options.environment }),
+      ...(options.effort === undefined ? {} : { effort: options.effort }),
     });
     const response = await adapter.execute(
       preflightRequest(

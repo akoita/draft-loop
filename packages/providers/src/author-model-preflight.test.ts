@@ -112,6 +112,33 @@ describe("preflightAnthropicClaudeAuthorModel", () => {
     expect(calls[0]?.options.env.MAX_THINKING_TOKENS).toBe("2048");
   });
 
+  it("omits the effort flag when no effort is declared", async () => {
+    const { calls } = await preflight(claudeSuccess({ ready: true }));
+
+    expect(calls[0]?.args).not.toContain("--effort");
+  });
+
+  it("passes a declared effort through to the Claude runtime", async () => {
+    const { runner, calls } = fakeRunner(claudeSuccess({ ready: true }));
+    const result = await preflightAnthropicClaudeAuthorModel({
+      model: declaredModel,
+      runner,
+      environment: {},
+      effort: "medium",
+    });
+
+    expect(result.status).toBe("available");
+    const args = calls[0]?.args ?? [];
+    const modelIndex = args.indexOf("--model");
+    expect(args.slice(modelIndex, modelIndex + 4)).toEqual([
+      "--model",
+      "claude-declared-author",
+      "--effort",
+      "medium",
+    ]);
+    expect(args.filter((arg) => arg === "--effort")).toHaveLength(1);
+  });
+
   it("reports the observed statusless api_error shape as an api error", async () => {
     const { result, calls } = await preflight(
       claudeError({

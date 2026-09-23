@@ -7,6 +7,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AnthropicClaudeUserSessionAdapter,
+  type ClaudeEffortLevel,
+  claudeEffortLevels,
   defaultUserSessionTimeoutMs,
   type ModelRequest,
   maximumUserSessionTimeoutMs,
@@ -1078,6 +1080,148 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
       await expect(adapter.execute(request(anthropicModel))).resolves.toMatchObject({
         output: { answer: "yes" },
       });
+    },
+  );
+});
+
+describe("AnthropicClaudeUserSessionAdapter effort", () => {
+  const baselineEnvironment = { HOME: "/login-store", KEEP: "yes" } as const;
+  // Recorded from the adapter before the effort option existed; the absent
+  // option must keep these arguments and this environment byte-identical.
+  const baselineArgs = [
+    "-p",
+    "--safe-mode",
+    "--tools",
+    "",
+    "--disallowedTools",
+    "mcp__*",
+    "--strict-mcp-config",
+    "--mcp-config",
+    '{"mcpServers":{}}',
+    "--disable-slash-commands",
+    "--prompt-suggestions",
+    "false",
+    "--no-chrome",
+    "--no-session-persistence",
+    "--permission-mode",
+    "dontAsk",
+    "--model",
+    "claude-exact",
+    "--system-prompt",
+    "Return JSON only.",
+    "--output-format",
+    "json",
+    "--json-schema",
+    JSON.stringify(outputSchema),
+  ] as const;
+  const baselineEnvironmentByBudget = {
+    20: {
+      HOME: "/login-store",
+      KEEP: "yes",
+      CLAUDE_CODE_DISABLE_TERMINAL_TITLE: "1",
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS: "20",
+      MAX_THINKING_TOKENS: "0",
+      CLAUDE_CODE_DISABLE_THINKING: "1",
+      CLAUDE_CODE_MAX_RETRIES: "0",
+      MAX_STRUCTURED_OUTPUT_RETRIES: "0",
+    },
+    16384: {
+      HOME: "/login-store",
+      KEEP: "yes",
+      CLAUDE_CODE_DISABLE_TERMINAL_TITLE: "1",
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS: "16384",
+      MAX_THINKING_TOKENS: "8192",
+      CLAUDE_CODE_MAX_RETRIES: "0",
+      MAX_STRUCTURED_OUTPUT_RETRIES: "0",
+    },
+  } as const;
+
+  async function recordInvocation(
+    maxOutputTokens: 20 | 16_384,
+    effort?: unknown,
+  ): Promise<{ readonly args: readonly string[]; readonly env: Record<string, unknown> }> {
+    const calls: { readonly args: readonly string[]; readonly env: Record<string, unknown> }[] = [];
+    const adapter = new AnthropicClaudeUserSessionAdapter({
+      configuredModel: anthropicModel,
+      environment: baselineEnvironment,
+      ...(effort === undefined ? {} : { effort: effort as ClaudeEffortLevel }),
+      runner: async (_command, args, options) => {
+        calls.push({ args: [...args], env: { ...options.env } });
+        return {
+          exitCode: 0,
+          stdout: JSON.stringify({
+            type: "result",
+            subtype: "success",
+            is_error: false,
+            session_id: "claude-session",
+            structured_output: { answer: "yes" },
+            usage: { input_tokens: 1, output_tokens: 1 },
+            permission_denials: [],
+          }),
+          stderr: "",
+        };
+      },
+    });
+    await adapter.execute(request(anthropicModel, { maxOutputTokens }));
+    expect(calls).toHaveLength(1);
+    const [call] = calls;
+    if (call === undefined) throw new Error("Expected one runner call.");
+    return call;
+  }
+
+  it.each([20, 16_384] as const)(
+    "keeps arguments and environment unchanged without an effort (budget %i)",
+    async (maxOutputTokens) => {
+      const call = await recordInvocation(maxOutputTokens);
+
+      expect(call.args).toEqual(baselineArgs);
+      expect(call.env).toStrictEqual(baselineEnvironmentByBudget[maxOutputTokens]);
+    },
+  );
+
+  it.each(claudeEffortLevels)(
+    "adds only --effort %s immediately after the model",
+    async (effort) => {
+      for (const maxOutputTokens of [20, 16_384] as const) {
+        const call = await recordInvocation(maxOutputTokens, effort);
+        const modelIndex = baselineArgs.indexOf("--model");
+
+        expect(call.args).toEqual([
+          ...baselineArgs.slice(0, modelIndex + 2),
+          "--effort",
+          effort,
+          ...baselineArgs.slice(modelIndex + 2),
+        ]);
+        expect(call.env).toStrictEqual(baselineEnvironmentByBudget[maxOutputTokens]);
+      }
+    },
+  );
+
+  it.each(["", "LOW", "minimal", "ultra", 3, null])(
+    "rejects the invalid effort level %j before any runner call",
+    (effort) => {
+      const runner = vi.fn<UserSessionProcessRunner>();
+      let thrown: unknown;
+      try {
+        new AnthropicClaudeUserSessionAdapter({
+          configuredModel: anthropicModel,
+          runner,
+          effort: effort as unknown as ClaudeEffortLevel,
+        });
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBeInstanceOf(ProviderAdapterError);
+      const error = thrown as ProviderAdapterError;
+      expect(error.provider).toBe("anthropic");
+      expect(error.code).toBe("invalid-request");
+      expect(error.retryable).toBe(false);
+      expect(error.message).toBe("The effort level is invalid.");
+      expect(error.diagnostics).toEqual([{ code: "invalid_effort_level", path: "effort" }]);
+      expect(runner).not.toHaveBeenCalled();
     },
   );
 });
