@@ -60,7 +60,6 @@ import {
   renderArtifact,
 } from "@draft-loop/rendering";
 import {
-  authorArtifactProposalJsonSchemaForEvidence,
   canonicalCandidateProfileExtractionProposalJsonSchema,
   contextSnapshotSchema,
   type DraftArtifact,
@@ -77,8 +76,6 @@ import {
   type WorkspaceRecord,
   type WritingPolicyVersionRecord,
 } from "@draft-loop/storage";
-import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
-import { createAuthorGroundingGuide } from "./author-grounding.js";
 import {
   candidateKnowledgeEvidenceChecksum,
   candidateKnowledgeEvidenceSourceId,
@@ -133,8 +130,8 @@ import type {
 } from "./opportunity-extraction.js";
 import { createOpportunityDraft } from "./opportunity-intake.js";
 import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
+import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
-import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
 import { modelConfiguration, modelSelection } from "./run-model-selection.js";
@@ -1982,72 +1979,16 @@ function providerAgents(
     );
   }
   const promptContext = modelFacingContext(context);
-  const author = {
-    execute: async ({
-      executionId,
-      runId,
-      round,
-      currentArtifact,
-      findings,
-      pendingAdjudication,
-      retryFeedback,
-      retrievedEvidence = [],
-      signal,
-    }) => {
-      const achievementPlan = createRequirementAchievementPlan(
-        context.requirements,
-        retrievedEvidence,
-      );
-      if (achievementPlan.status === "no-evidence") {
-        throw new CliUserError("Drafting requires retrieved candidate evidence.");
-      }
-      const authorPrompt = createAuthorAdjudicationPrompt(
-        context.modelConfiguration.author.promptTemplateVersion,
-        pendingAdjudication,
-        retryFeedback,
-        createAuthorGroundingGuide(retrievedEvidence),
-      );
-      const request: ModelRequest<JsonObject> = {
-        contextSnapshotId: context.id,
-        model: context.modelConfiguration.author,
-        systemPrompt: authorPrompt.systemPrompt,
-        input: asJsonObject({
-          executionId,
-          runId,
-          round,
-          context: promptContext,
-          retrievedEvidence,
-          achievementPlan,
-          currentArtifact,
-          findings,
-          ...authorPrompt.providerInput,
-        }),
-        outputSchema: authorArtifactProposalJsonSchemaForEvidence(
-          retrievedEvidence.map(({ id }) => id),
-        ) as JsonObject,
-        outputName: "author_artifact_proposal",
-        maxOutputTokens: authorPrompt.providerInput.outputBudget.maxOutputTokens,
-        dataPolicy: dataPolicy(config.authorCompany),
-        ...(signal === undefined ? {} : { signal }),
-      };
-      const adapter = await createAdapter(config.authorCompany, config.authorModel, "author");
-      const response = await adapter.execute(request);
-      return responseExecution(
-        response,
-        await buildAuthorArtifactWithCapture(
-          response,
-          {
-            executionId,
-            context,
-            currentArtifact,
-            retrievedEvidence,
-            requiredSections: context.outputConstraints.requiredSections,
-          },
-          authorProposalCaptureDirectory,
-        ),
-      );
-    },
-  } satisfies AuthorAgent;
+  const author = createProviderAuthorAgent({
+    context,
+    promptContext,
+    dataPolicy,
+    createAdapter,
+    authorCompany: config.authorCompany,
+    authorModel: config.authorModel,
+    authorProposalCaptureDirectory,
+    userError: (message) => new CliUserError(message),
+  });
   const critic = {
     execute: async ({
       executionId,

@@ -1268,6 +1268,16 @@ author replica, so its earlier failures were real.
 
 Premium models (Fable, GPT-6 Astra) and the API-key route (#515) come last.
 
+**Direction: automate the user's proven loop,** in three steps:
+
+1. A specific validation report sent back to the author, which revises its
+   rejected proposal (#524).
+2. A richer critic report, requirement by requirement, that names missing
+   accomplishments and gaps not to manufacture. The author reconciles each
+   point as accepted, changed, not changed on purpose, or still open.
+3. The candidate's source of truth and house writing rules as default
+   workspace inputs.
+
 None of these steps authorizes a provider call without a user instruction that
 names its issue.
 
@@ -1366,6 +1376,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Sent the author a specific validation report after a rejection (#524). The next attempt in the same process revises its rejected proposal; the report stays in memory and out of run history. | First step of automating the user's proven loop: validation report, then a richer critic report with author reconciliation, then source of truth and house rules as default inputs. |
 | 2026-09-23 | Replaced verbatim coverage with grounded coverage (#522). Text outside claims is rejected only when a word, protected value, date range, or name is unsupported by the evidence. | Honest wording no longer fails, and invented wording, dates, and names still do. Offline, the #520 drafts remain rejected on employment dates absent from the source. |
 | 2026-09-23 | Recorded #520: the economy pair (`claude-sonnet-4-5` + `gpt-6-luna`) failed on case A. All three drafts were rejected on substantive coverage; the last had no factual violations. | The provider route works. The blocker is the verbatim coverage rule against natural CV prose, so model changes alone are unlikely to clear it. The coverage decision returns to the user. |
 | 2026-09-23 | Ordered validation economy pair first: use case validation on `claude-sonnet-4-5` with `gpt-6-luna`, then quality validation on Opus with GPT-6 Sol. #518 confirmed that `claude-sonnet-5` still fails the author replica on the updated CLI. | Workflow defects surface on cheap attempts before frontier models are used. Economy results validate that a use case works, never CV quality. |

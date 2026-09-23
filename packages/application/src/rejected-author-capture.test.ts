@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import type { JsonObject, ModelResponse } from "@draft-loop/providers";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { type BuildAuthorArtifactOptions, buildAuthorArtifact } from "./author-output.js";
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
@@ -136,4 +136,51 @@ it("does not treat an empty capture directory as the current directory", async (
   ).rejects.toMatchObject({
     diagnostics: expect.arrayContaining([{ code: "local_author_capture_failed", path: "" }]),
   });
+});
+
+it("passes the original validation inputs and error to the rejection hook", async () => {
+  const rejected = response("Built 999 TypeScript tools.");
+  const observed: { inputs: unknown; error: unknown }[] = [];
+  const error = await buildAuthorArtifactWithCapture(rejected, inputs, undefined, (value, cause) =>
+    observed.push({ inputs: value, error: cause }),
+  ).catch((value: unknown) => value);
+
+  expect(observed).toHaveLength(1);
+  expect(observed[0]?.inputs).toEqual({ ...inputs, proposal: rejected.output });
+  expect(observed[0]?.error).toMatchObject({
+    issues: expect.arrayContaining([
+      expect.objectContaining({
+        params: expect.objectContaining({ invariantCode: expect.any(String) }),
+      }),
+    ]),
+  });
+  expect(error).toMatchObject({
+    code: "invalid-response",
+    failureStage: "factual-invariant-rejection",
+  });
+});
+
+it("keeps the rejection and capture unchanged when the rejection hook throws", async () => {
+  const root = await directory();
+  const rejected = response("Built 999 TypeScript tools.");
+  const expected = await buildAuthorArtifactWithCapture(rejected, inputs, root).catch(
+    (value: unknown) => value,
+  );
+  const error = await buildAuthorArtifactWithCapture(rejected, inputs, root, () => {
+    throw new Error("observer failed");
+  }).catch((value: unknown) => value);
+
+  expect(error).toEqual(expected);
+  expect(error).toMatchObject({
+    diagnostics: expect.arrayContaining([{ code: "local_author_capture_saved", path: "" }]),
+  });
+  expect(await readdir(root)).toHaveLength(2);
+});
+
+it("does not call the rejection hook for accepted output", async () => {
+  const hook = vi.fn();
+  await expect(
+    buildAuthorArtifactWithCapture(response("Built TypeScript tools."), inputs, undefined, hook),
+  ).resolves.toHaveProperty("version", 1);
+  expect(hook).not.toHaveBeenCalled();
 });

@@ -1,6 +1,7 @@
 import type { AuthorRequest } from "@draft-loop/orchestrator";
 
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
+import type { AuthorRevision } from "./author-revision-memory.js";
 
 /** The per-generation output-token cap a prompt version states and sends. */
 export type AuthorOutputBudget = Readonly<{ readonly maxOutputTokens: number }>;
@@ -17,6 +18,15 @@ const adjudicatedRevisionInstructions =
 
 const authorRetryInstructions =
   " When retryFeedback is present, output_token_budget_exceeded means return a materially more concise proposal. Apply each retryFeedback.corrections instruction only at its exact path. A factual-claim-text correction requires supported wording or omission; an invalid-evidence-reference correction requires an approved retrievedEvidence ID that supports the claim or omission; an uncovered-substantive-text correction requires contiguous substantive claim coverage or removal of unsupported block text. Never reconstruct or request rejected content.";
+
+/**
+ * Unversioned: appended only when an in-process revision of a rejected
+ * proposal is sent. It states its own exception to the retry rule against
+ * reconstructing rejected content, so prompts without a revision, including
+ * the pinned v1 and v2 retry prompts, stay byte-identical.
+ */
+export const authorRevisionInstructions =
+  " When revision is present, it holds your rejected proposal and a validation report, and it is the one exception to the rule against reconstructing rejected content. Revise revision.rejectedProposal rather than starting over: at each reported path, fix every listed problem using only retrieved evidence, or remove the unsupported text. Copy dates, titles, employers, and names exactly as the cited evidence states them. Keep all other supported content unchanged. Never add facts absent from retrieved evidence.";
 
 const authorGroundingGuideInstructions =
   " The groundingGuide is the exact allowlist for protected factual values: use a protected value only when it appears exactly in the protectedValues for a cited evidenceChunkId. Each protected value used in a substantive claim requires citation of its corresponding evidence chunk(s). Do not use protected values absent from the guide; omit them rather than paraphrase or invent them.";
@@ -80,6 +90,7 @@ export interface AuthorAdjudicationPrompt {
     readonly groundingGuide: readonly AuthorGroundingGuideEntry[];
     readonly pendingAdjudication?: PendingAdjudication;
     readonly retryFeedback?: NonNullable<AuthorRequest["retryFeedback"]>;
+    readonly revision?: AuthorRevision;
   }>;
 }
 
@@ -88,34 +99,32 @@ export interface AuthorAdjudicationPrompt {
  *
  * `authorPromptTemplateVersion` is the run's recorded author version, so a run
  * started on `cli-author-v1` keeps its byte-identical v1 prompt and output
- * budget when resumed.
+ * budget when resumed. `revision`, when present, carries an in-process
+ * rejected proposal and its validation report for the author to revise.
  */
 export function createAuthorAdjudicationPrompt(
   authorPromptTemplateVersion: string,
   pendingAdjudication: AuthorRequest["pendingAdjudication"],
   retryFeedback: AuthorRequest["retryFeedback"] = undefined,
   groundingGuide: readonly AuthorGroundingGuideEntry[] = [],
+  revision: AuthorRevision | undefined = undefined,
 ): AuthorAdjudicationPrompt {
   const { guidance, outputBudget } = versionTemplate(authorPromptTemplateVersion);
   const shared = `${authorSystemPrompt}${authorOutputBudgetInstructions(outputBudget)}${authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
+  const retry = `${retryFeedback === undefined ? "" : authorRetryInstructions}${revision === undefined ? "" : authorRevisionInstructions}`;
+  const retryInput = {
+    ...(retryFeedback === undefined ? {} : { retryFeedback }),
+    ...(revision === undefined ? {} : { revision }),
+  };
   if (pendingAdjudication === undefined) {
     return {
-      systemPrompt: `${shared}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
-      providerInput: {
-        outputBudget,
-        groundingGuide,
-        ...(retryFeedback === undefined ? {} : { retryFeedback }),
-      },
+      systemPrompt: `${shared}${retry}`,
+      providerInput: { outputBudget, groundingGuide, ...retryInput },
     };
   }
 
   return {
-    systemPrompt: `${shared}${adjudicatedRevisionInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
-    providerInput: {
-      outputBudget,
-      groundingGuide,
-      pendingAdjudication,
-      ...(retryFeedback === undefined ? {} : { retryFeedback }),
-    },
+    systemPrompt: `${shared}${adjudicatedRevisionInstructions}${retry}`,
+    providerInput: { outputBudget, groundingGuide, pendingAdjudication, ...retryInput },
   };
 }
