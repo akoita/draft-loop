@@ -3317,5 +3317,600 @@
     },
     "failureStage": "factual-invariant-rejection",
     "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Staff Engineer | Northwind Freight | 2019 – 2023",
+                "claims": [
+                  {
+                    "text": "Staff Engineer",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h481-experience-heading-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-experience-heading",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-experience-heading-source",
+            "path": "fixture://sanitized/sanitized-h481-experience-heading",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000006f"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-experience-heading-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-experience-heading-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000070",
+          "text": "Staff Engineer, Northwind Freight (2019 – 2023): built dispatch tooling.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Contact",
+            "kind": "header",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Ada Example | Lisbon | ada@example.com",
+                "claims": []
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-contact-line",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-contact-line-source",
+            "path": "fixture://sanitized/sanitized-h481-contact-line",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000071"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-contact-line-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-contact-line-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000072",
+          "text": "Ada Example",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h481-contact-line-chunk-1",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-contact-line-source",
+          "ordinal": 1,
+          "lineStart": 2,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000073",
+          "text": "Location: Lisbon. Email: ada@example.com",
+          "rank": 1
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Languages: TypeScript, Python",
+                "claims": [
+                  {
+                    "text": "TypeScript",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h481-skills-label-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-skills-label",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-skills-label-source",
+            "path": "fixture://sanitized/sanitized-h481-skills-label",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000074"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-skills-label-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-skills-label-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000075",
+          "text": "Languages: Python, TypeScript, Go",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Staff Engineer | Northwind Freight | Porto | 2019 – 2023",
+                "claims": [
+                  {
+                    "text": "Staff Engineer",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h481-absent-location-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-absent-location-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-absent-location-control-source",
+            "path": "fixture://sanitized/sanitized-h481-absent-location-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000076"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-absent-location-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-absent-location-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000077",
+          "text": "Staff Engineer, Northwind Freight (2019 – 2023): built dispatch tooling.",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h481-absent-location-control-chunk-1",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-absent-location-control-source",
+          "ordinal": 1,
+          "lineStart": 2,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000078",
+          "text": "Relocated to Lisbon in 2024.",
+          "rank": 1
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Staff Engineer | Northwind Freight | 2019 – 2024",
+                "claims": [
+                  {
+                    "text": "Staff Engineer",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h481-changed-year-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-changed-year-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-changed-year-control-source",
+            "path": "fixture://sanitized/sanitized-h481-changed-year-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000079"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-changed-year-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-changed-year-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000007a",
+          "text": "Staff Engineer, Northwind Freight (2019 – 2023): built dispatch tooling.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Languages: TypeScript, Rust",
+                "claims": [
+                  {
+                    "text": "TypeScript",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h481-unsupported-skill-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-unsupported-skill-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-unsupported-skill-control-source",
+            "path": "fixture://sanitized/sanitized-h481-unsupported-skill-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000007b"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-unsupported-skill-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-unsupported-skill-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000007c",
+          "text": "Languages: Python, TypeScript, Go",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Skills",
+            "kind": "skills",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Tooling: TypeScript, Python",
+                "claims": [
+                  {
+                    "text": "TypeScript",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h481-absent-label-control-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-absent-label-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-absent-label-control-source",
+            "path": "fixture://sanitized/sanitized-h481-absent-label-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000007d"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-absent-label-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-absent-label-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "000000000000000000000000000000000000000000000000000000000000007e",
+          "text": "Languages: Python, TypeScript, Go",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "bullet",
+                "text": "Saved 12,000 hours annually",
+                "claims": []
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-thousands-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-thousands-control-source",
+            "path": "fixture://sanitized/sanitized-h481-thousands-control",
+            "checksum": "000000000000000000000000000000000000000000000000000000000000007f"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-thousands-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-thousands-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000080",
+          "text": "Saved 12,500 hours annually for dispatch teams.",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h481-thousands-control-chunk-1",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-thousands-control-source",
+          "ordinal": 1,
+          "lineStart": 2,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000081",
+          "text": "Automated 3,000 hours annually of reporting.",
+          "rank": 1
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Staff Engineer | Northwind Freight | 2019 – 2023",
+                "claims": [
+                  {
+                    "text": "Staff Engineer",
+                    "substantive": true,
+                    "evidenceChunkIds": [
+                      "sanitized-h481-range-end-year-control-chunk",
+                      "sanitized-h481-range-end-year-control-chunk-1"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-range-end-year-control",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-range-end-year-control-source",
+            "path": "fixture://sanitized/sanitized-h481-range-end-year-control",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000082"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-range-end-year-control-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-range-end-year-control-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000083",
+          "text": "Staff Engineer, Northwind Freight (2019 – 2024).",
+          "rank": 0
+        },
+        {
+          "id": "sanitized-h481-range-end-year-control-chunk-1",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-range-end-year-control-source",
+          "ordinal": 1,
+          "lineStart": 2,
+          "lineEnd": 2,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000084",
+          "text": "Promoted to Staff Engineer in 2023.",
+          "rank": 1
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
+  },
+  {
+    "schemaVersion": 1,
+    "capturedAt": "2026-09-23T13:00:00.000Z",
+    "provider": "local",
+    "modelId": "sanitized-fixture",
+    "validationInputs": {
+      "proposal": {
+        "sections": [
+          {
+            "title": "Experience",
+            "kind": "experience",
+            "blocks": [
+              {
+                "type": "paragraph",
+                "text": "Staff Engineer | Northwind Freight | 2019 – 2023",
+                "claims": [
+                  {
+                    "text": "Staff Engineer",
+                    "substantive": true,
+                    "evidenceChunkIds": ["sanitized-h481-range-format-chunk"]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "executionId": "sanitized-h481-range-format",
+      "context": {
+        "language": "en",
+        "evidenceManifest": [
+          {
+            "id": "sanitized-h481-range-format-source",
+            "path": "fixture://sanitized/sanitized-h481-range-format",
+            "checksum": "0000000000000000000000000000000000000000000000000000000000000085"
+          }
+        ]
+      },
+      "retrievedEvidence": [
+        {
+          "id": "sanitized-h481-range-format-chunk",
+          "workspaceId": "sanitized-workspace",
+          "sourceId": "sanitized-h481-range-format-source",
+          "ordinal": 0,
+          "lineStart": 1,
+          "lineEnd": 1,
+          "checksum": "0000000000000000000000000000000000000000000000000000000000000086",
+          "text": "Staff Engineer, Northwind Freight (2019-2023): built dispatch tooling.",
+          "rank": 0
+        }
+      ],
+      "createdAt": "2026-09-23T13:00:00.000Z"
+    },
+    "failureStage": "factual-invariant-rejection",
+    "diagnostics": []
   }
 ]

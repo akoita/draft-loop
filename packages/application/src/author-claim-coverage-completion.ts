@@ -2,6 +2,7 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { claimCoverageIssues } from "./claim-coverage.js";
+import { completeStructuredFieldClaims } from "./structured-field-completion.js";
 
 function normalized(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US").replace(/\s+/gu, " ").trim();
@@ -10,6 +11,7 @@ function normalized(value: string): string {
 /**
  * Add full-span claim metadata only when an uncovered block is reproduced in
  * retrieved evidence already cited by a substantive claim in that block.
+ * Otherwise, add claims for separated fields reproduced verbatim in evidence.
  */
 export function completeAuthorClaimCoverage(
   proposal: AuthorArtifactProposal,
@@ -43,7 +45,11 @@ export function completeAuthorClaimCoverage(
             normalized(evidenceById.get(chunk.id)?.text ?? "").includes(blockText),
         )
         .map((chunk) => chunk.id);
-      if (supportingChunkIds.length === 0) return block;
+      if (supportingChunkIds.length === 0) {
+        const withFields = completeStructuredFieldClaims(block, retrievedEvidence);
+        if (withFields !== block) sectionChanged = true;
+        return withFields;
+      }
 
       sectionChanged = true;
       return {

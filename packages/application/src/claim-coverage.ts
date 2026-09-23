@@ -2,7 +2,8 @@ import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { coverJoiningGaps } from "./joining-words.js";
 
-function tokens(text: string): readonly string[] {
+/** Coverage tokens: letter-or-digit runs plus `%`, `+`, `−`, and a minus before a digit. */
+export function tokens(text: string): readonly string[] {
   return (
     text
       .normalize("NFKC")

@@ -1,0 +1,42 @@
+[
+  {
+    "executionId": "sanitized-h481-experience-heading",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h481-contact-line",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h481-skills-label",
+    "intent": "supported"
+  },
+  {
+    "executionId": "sanitized-h481-absent-location-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h481-changed-year-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h481-unsupported-skill-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h481-absent-label-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h481-thousands-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h481-range-end-year-control",
+    "intent": "control"
+  },
+  {
+    "executionId": "sanitized-h481-range-format",
+    "intent": "supported"
+  }
+]
