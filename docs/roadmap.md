@@ -186,7 +186,7 @@ applications.
 | Previous | Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                  | [Failed](evaluation/representative-author-draft-revalidation.md#retry-observation): both validated drafts were rejected | Obtain the first real validator verdict on a representative author draft              | Structured retry feedback did not produce an accepted draft; one of three attempts ended with an unexplained `api_error` |
 | Previous | Author correction reliability ([milestone](https://github.com/akoita/draft-loop/milestone/12))                   | [Exit met on replay](evaluation/author-correction-reliability.md#stage-decision): both wrongly rejected supported cases accepted; all 21 controls rejected | Make real author drafts pass factual, evidence, and coverage validation without weakening those gates | Invented cases only; live author quality is unproven |
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
-| Now      | Structural claim coverage                                                                                         | Not yet planned into a milestone                     | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Opening-verb fix and structural claim completion, measured on replay and the private captures |
+| Now      | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | Designed; provider-free                              | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | #479 capture summary, #480 opening verbs, #481 structured-field completion, then #482 decision |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1094,7 +1094,20 @@ contact, and skills fields found verbatim in cited or retrieved evidence. Each
 change is measured on invented replay cases and, with content-free scripts, on
 the three private #476 captures.
 
-This stage has no milestone or issue yet, and it makes no provider call.
+[Milestone 14](https://github.com/akoita/draft-loop/milestone/14) runs in
+order:
+
+1. #479 adds a repo-owned, tested summary that re-validates captured proposals
+   and prints only counts, so every fix is measured the same way.
+2. #480 stops joining opening action verbs to supported names, while keeping
+   inflated titles such as "Senior Engineer" rejected.
+3. #481 adds claims for separator-delimited fields found verbatim in evidence.
+   Fields absent from the evidence still fail.
+4. #482 records the stage decision.
+
+**Exit criterion:** On the three #476 captures, uncovered blocks plus factual
+failures fall by at least half from 37. Every replay control stays rejected,
+and no factual, unsupported-claim, or required-section rule is weakened.
 
 ### Later — Production-ready beta
 
@@ -1165,6 +1178,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Planned milestone 14 for structural claim coverage as #479–#482. | Fixes are measured on invented replay cases and on the private #476 captures through a content-free summary, against an exit rule fixed before implementation. |
 | 2026-09-23 | Recorded the #476 live observation as a fail and named structural claim coverage. | Captured proposals show that structural blocks lack author claims and that opening verbs cause false factual rejections. The next stage is provider-free and measured on replay and the private captures. |
 | 2026-09-22 | Planned milestone 13 for live author revalidation as #476. | The observation reuses the #446/#456 rules and adds local capture of rejected proposals, so a fail can be analysed from real structure. No provider call is authorized until a later instruction names #476. |
 | 2026-09-22 | Completed author correction reliability under #462 and named live author revalidation. | The replay corpus accepts both wrongly rejected supported cases and rejects all 21 controls, with the factual gate strengthened by #469. The next live observation must save rejected proposals locally. |
