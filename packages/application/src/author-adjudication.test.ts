@@ -8,7 +8,11 @@ import {
 } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
-import { createAuthorAdjudicationPrompt, promptTemplateVersion } from "./author-adjudication.js";
+import {
+  authorRevisionInstructions,
+  createAuthorAdjudicationPrompt,
+  promptTemplateVersion,
+} from "./author-adjudication.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 
 const authorVersion = promptTemplateVersion("author");
@@ -195,6 +199,35 @@ describe("author adjudication provider handoff", () => {
       "an invalid-evidence-reference correction requires an approved retrievedEvidence ID",
     );
     expect(prompt.systemPrompt).toContain("Never reconstruct or request rejected content.");
+    expect(prompt.systemPrompt).not.toContain(authorRevisionInstructions);
+    expect(prompt.providerInput).not.toHaveProperty("revision");
+  });
+
+  it("adds revision instructions and input only when a revision is passed", () => {
+    const feedback = retryFeedback();
+    const revision = {
+      rejectedProposal: { sections: [] },
+      report: [
+        {
+          path: "sections.0.blocks.0.claims.0.text",
+          code: "factual_invariant_violation",
+          text: "Rejected claim",
+          problems: ['protected value "2023" is not stated in cited evidence'],
+        },
+      ],
+    };
+    for (const pending of [undefined, pendingAdjudication()]) {
+      const without = createAuthorAdjudicationPrompt(authorVersion, pending, feedback);
+      const prompt = createAuthorAdjudicationPrompt(authorVersion, pending, feedback, [], revision);
+
+      expect(prompt.systemPrompt).toBe(`${without.systemPrompt}${authorRevisionInstructions}`);
+      expect(prompt.providerInput).toEqual({ ...without.providerInput, revision });
+      expect(prompt.providerInput.revision).toBe(revision);
+      expect(prompt.systemPrompt).toContain(
+        "Revise revision.rejectedProposal rather than starting over",
+      );
+      expect(without.systemPrompt).not.toContain("When revision is present");
+    }
   });
 });
 

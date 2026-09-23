@@ -10,16 +10,26 @@ import {
   invalidAuthorProposalError,
 } from "./author-output.js";
 
-/** Opt-in local capture; the caller owns retention of sensitive replay inputs. */
+/**
+ * Opt-in local capture; the caller owns retention of sensitive replay inputs.
+ * `onRejection` observes the original validation error before conversion and
+ * capture; anything it throws is ignored so it cannot change the rejection.
+ */
 export async function buildAuthorArtifactWithCapture(
   response: ModelResponse<JsonObject>,
   inputs: Omit<BuildAuthorArtifactOptions, "proposal">,
   captureDirectory?: string,
+  onRejection?: (validationInputs: BuildAuthorArtifactOptions, error: unknown) => void,
 ): Promise<DraftArtifact> {
   const validationInputs = { ...inputs, proposal: response.output };
   try {
     return buildAuthorArtifact(validationInputs);
   } catch (error) {
+    try {
+      onRejection?.(validationInputs, error);
+    } catch {
+      // The hook only observes; a failing observer must not alter the rejection.
+    }
     const rejection = invalidAuthorProposalError(response, error);
     if (captureDirectory === undefined) throw rejection;
     let captureCode = "local_author_capture_saved";

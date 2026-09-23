@@ -244,6 +244,22 @@ original rejection and retry policy. Transport errors and provider token-budget
 rejections occur before this boundary and are not captured. No provider call,
 retry reset, candidate approval, or export is triggered by capture or replay.
 
+### Author revision report
+
+After a validation rejection, the next author attempt for the same run and
+round in the same process revises its rejected proposal instead of starting
+over. It receives a `revision` input holding:
+
+- the rejected proposal;
+- a bounded report of at most 16 items, each with the issue path and code, the
+  offending text, and specific problems, such as unsupported values, words,
+  and names, or a date range next to the ranges the cited evidence states.
+
+The report quotes candidate content, so it goes only to the author provider
+and is held only in bounded process memory. Run history, diagnostics, retry
+feedback, and captures stay content-free. After a restart, the memory is empty
+and retries use content-free retry feedback alone.
+
 ### Local unknown Claude category capture
 
 The local application driver accepts an optional
