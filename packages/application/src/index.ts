@@ -569,6 +569,7 @@ export * from "./opportunity-brief.js";
 export * from "./opportunity-extraction.js";
 export * from "./opportunity-intake.js";
 export * from "./opportunity-persistence.js";
+export * from "./rejected-author-capture-summary.js";
 export * from "./rejected-author-replay.js";
 export * from "./rejected-author-replay-summary.js";
 export * from "./requirement-achievement-plan.js";
