@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-22<br>
-**Current stage:** Structured-block author guidance
+**Current stage:** Author model revalidation
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -187,7 +187,8 @@ applications.
 | Previous | Author correction reliability ([milestone](https://github.com/akoita/draft-loop/milestone/12))                   | [Exit met on replay](evaluation/author-correction-reliability.md#stage-decision): both wrongly rejected supported cases accepted; all 21 controls rejected | Make real author drafts pass factual, evidence, and coverage validation without weakening those gates | Invented cases only; live author quality is unproven |
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
-| Now      | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): #496 v3 drafts averaged 15.3 issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The author route decision (different model, deterministic structured blocks, or pause) returns to the user |
+| Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
+| Now      | Author model revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/16))                       | Designed; no provider observation authorized         | Test whether `claude-sonnet-5` produces an accepted draft with the v3 prompt           | #499 compares with #496 and #476; it needs explicit user authorization naming it |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1116,7 +1117,7 @@ every remaining uncovered block contains a field the evidence does not
 contain, so further validator relaxation would accept unsupported text. See
 the [stage record](evaluation/structural-claim-coverage.md).
 
-### Now — Structured-block author guidance
+### Ended — Structured-block author guidance
 
 Change the author prompt so that heading roles, organisations, dates, contact
 details, and skills items are copied verbatim from evidence and claimed field
@@ -1149,6 +1150,32 @@ both ended indeterminate, #495 adds `cli-author-v3`: the same guidance with a
 16,384-token output budget. v1 and v2 runs keep their original prompt and
 8,192 budget. Gated #496 measures v3 under the same rules and requires its own
 user authorization.
+
+The stage ended with the guidance **not effective**. With a 16,384-token
+budget, the v3 author produced larger drafts that averaged 15.3 capture issues
+against 9.3 under v1. The author wrote more structured fields but did not copy
+them verbatim. See the
+[stage record](evaluation/structured-block-author-guidance.md). The user chose
+to test a current-generation author model next.
+
+### Now — Author model revalidation
+
+Test whether a current same-tier author model, `claude-sonnet-5`, produces an
+accepted, human-verified draft on unchanged case A with the current v3 prompt.
+[Milestone 16](https://github.com/akoita/draft-loop/milestone/16) has one gated
+execution issue, #499. The author model is the only change from #496.
+
+Creating #499 authorizes no provider call. The observation requires a later
+user instruction that names it.
+
+**Exit criterion:** The #499 result and model effect are recorded against
+their predeclared rules, and the roadmap names the next stage:
+
+- **Pass:** a gated cohort with the new author.
+- **Fail with the model effective or partial:** a bounded follow-up on the new
+  model.
+- **Fail with the model not effective:** deterministic structured blocks
+  generated from evidence fields.
 
 ### Later — Production-ready beta
 
@@ -1219,6 +1246,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Ended structured-block author guidance as not effective and planned milestone 16 with gated #499 on `claude-sonnet-5`. | The author model becomes the single variable against #496. Provider diversity is preserved, and no code change is needed. |
 | 2026-09-23 | Recorded #496 as a fail with the structured-field guidance not effective. | With a 16,384-token budget the v3 author produced larger drafts that averaged 15.3 capture issues against 9.3 under v1. The author route decision returns to the user. |
 | 2026-09-23 | Recorded the #493 retry as indeterminate after the v2 author hit its output-token limit. | The preflight passed, but the single author attempt ended at `max_tokens` with structured-output retries exhausted, which never happened under v1. The v2 guidance probably lengthens proposals past the 8,192-token budget; the decision returns to the user. |
 | 2026-09-23 | Recorded #489 as indeterminate after the author preflight returned a status-less `api-error`. | No candidate material was sent. With no cause code, the rule returns the author route decision to the user: retry, model change, or diagnosis. |
