@@ -6,10 +6,13 @@ Use [Architecture overview](overview.md) for the system map. See [Candidate evid
 
 ## Author–critic loop
 
-Every live author request carries the same 8,192-token output cap in its
-model-facing budget and transport configuration. The prompt asks for compact,
-schema-only JSON while preserving supported facts, required sections, chronology,
-and citations. Initial drafts, ordinary revisions, and adjudicated revisions all
+Every live author request carries its prompt version's output cap in both its
+model-facing budget and its transport configuration. New runs record
+`cli-author-v3`, which has a 16,384-token cap. Runs started on `cli-author-v1`
+or `cli-author-v2` keep their exact prompt and 8,192-token cap when resumed.
+
+The prompt asks for compact, schema-only JSON while preserving supported facts,
+required sections, chronology, and citations. Initial drafts, ordinary revisions, and adjudicated revisions all
 retain this guidance, including retries whose latest failure concerns factuality.
 The critic has its own independent output contract.
 

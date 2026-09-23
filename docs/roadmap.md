@@ -1144,6 +1144,12 @@ their predeclared rules, and the roadmap names the next stage:
 - **Fail with guidance effective or partial:** one further guidance iteration.
 - **Fail with guidance not effective:** the author route goes to the user.
 
+After #489 (preflight `api-error`) and #493 (the v2 author hit `max_tokens`)
+both ended indeterminate, #495 adds `cli-author-v3`: the same guidance with a
+16,384-token output budget. v1 and v2 runs keep their original prompt and
+8,192 budget. Gated #496 measures v3 under the same rules and requires its own
+user authorization.
+
 ### Later — Production-ready beta
 
 Complete signed installers, safe migrations and updates, backup/restore, crash

@@ -272,7 +272,7 @@ describe("full real-mode native host draft workflow", () => {
           const input = anthropicInput(parameters);
           const chunkId = evidenceChunkId(input);
           expect(parameters.model).toBe("claude-sonnet-4-5");
-          expect(parameters.max_tokens).toBe(8192);
+          expect(parameters.max_tokens).toBe(16384);
           expect(parameters.output_config).toEqual(
             expect.objectContaining({
               format: expect.objectContaining({
@@ -545,8 +545,8 @@ describe("full real-mode native host draft workflow", () => {
         { step: "critic", round: 2, provider: "openai", modelId: "gpt-5.6-luna" },
       ]);
       expect(authorRequests).toMatchObject([
-        { model: "claude-sonnet-4-5", maxTokens: 8192, round: 1 },
-        { model: "claude-sonnet-4-5", maxTokens: 8192, round: 2 },
+        { model: "claude-sonnet-4-5", maxTokens: 16384, round: 1 },
+        { model: "claude-sonnet-4-5", maxTokens: 16384, round: 2 },
       ]);
       expect(authorRequests[0]?.evidenceChunkId).toBe(authorRequests[1]?.evidenceChunkId);
       expect(criticRequests).toEqual([

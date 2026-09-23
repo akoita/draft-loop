@@ -34,15 +34,21 @@ export interface AuthorModelPreflightResult {
 export interface AuthorModelPreflightOptions extends UserSessionProbeOptions {
   /** The exact declared Anthropic author model to check. */
   readonly model: ModelSelection;
-  /** The author's output-token budget; defaults to the application author budget. */
+  /**
+   * The author's output-token budget. Defaults to the newest author prompt
+   * budget; pass the budget of the prompt version being checked to match it.
+   */
   readonly maxOutputTokens?: number;
 }
 
 const defaultAuthorModelPreflightTimeoutMs = 60_000;
-// Matches the application's author output budget so the preflight runs the
-// same runtime configuration, including extended thinking, as a real author
-// call. It is a ceiling; the synthetic reply uses only a few tokens.
-const defaultAuthorModelPreflightMaxOutputTokens = 8_192;
+// Tracks the output budget of the newest author prompt version
+// (`cli-author-v3` in the application) so the preflight runs the same runtime
+// configuration, including extended thinking, as a real author call. Update it
+// when a new author prompt version changes the budget; providers cannot import
+// the application value. It is a ceiling; the synthetic reply uses only a few
+// tokens.
+const defaultAuthorModelPreflightMaxOutputTokens = 16_384;
 
 const preflightSystemPrompt =
   'This is a synthetic availability check. Return exactly the JSON object {"ready": true} and nothing else.';

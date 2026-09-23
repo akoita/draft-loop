@@ -8,14 +8,11 @@ import {
 } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
 
-import {
-  authorOutputBudget,
-  createAuthorAdjudicationPrompt,
-  promptTemplateVersion,
-} from "./author-adjudication.js";
+import { createAuthorAdjudicationPrompt, promptTemplateVersion } from "./author-adjudication.js";
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 
 const authorVersion = promptTemplateVersion("author");
+const authorOutputBudget = { maxOutputTokens: 16_384 };
 
 function pendingAdjudication(): NonNullable<AuthorRequest["pendingAdjudication"]> {
   const report = independentReadinessReportSchema.parse({
@@ -213,8 +210,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v2 for new author runs and keeps the critic on v1", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v2");
+  it("records v3 for new author runs and keeps the critic on v1", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v3");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v1");
   });
 
@@ -242,46 +239,101 @@ describe("author prompt template versions", () => {
       revision: [3379, "ea3ba56b0fa84489df8823b4a42f47abeaecca219db7b3a873d7e71729d42f99"],
       revisionRetry: [3926, "d02bfeebbc29e768b8874dfd8c3b1c1e91c6503183fde7e676d6d0a63a17c08e"],
     });
-    for (const { systemPrompt } of Object.values(prompts)) {
+    for (const { systemPrompt, providerInput } of Object.values(prompts)) {
       expect(systemPrompt).not.toContain(structuredFieldInstruction);
+      expect(providerInput.outputBudget).toEqual({ maxOutputTokens: 8_192 });
     }
   });
 
-  it("adds structured-field guidance to v2 after claim coverage and before revision and retry text", () => {
+  it("keeps the v2 prompt and budget byte-identical to the ones v2 runs were started with", () => {
+    // Digests of the system prompts produced before cli-author-v3 existed.
     const feedback = retryFeedback();
-    const initial = createAuthorAdjudicationPrompt(
-      "cli-author-v2",
-      undefined,
-      feedback,
-    ).systemPrompt;
-    const revision = createAuthorAdjudicationPrompt(
-      "cli-author-v2",
-      pendingAdjudication(),
-      feedback,
-    ).systemPrompt;
+    const carrier = pendingAdjudication();
+    const prompts = {
+      initial: createAuthorAdjudicationPrompt("cli-author-v2", undefined),
+      initialRetry: createAuthorAdjudicationPrompt("cli-author-v2", undefined, feedback),
+      revision: createAuthorAdjudicationPrompt("cli-author-v2", carrier),
+      revisionRetry: createAuthorAdjudicationPrompt("cli-author-v2", carrier, feedback),
+    };
 
-    for (const systemPrompt of [initial, revision]) {
-      const structured = systemPrompt.indexOf(structuredFieldInstruction);
-      expect(structured).toBeGreaterThan(systemPrompt.indexOf(claimCoverageInstruction));
-      expect(structured).toBeLessThan(systemPrompt.indexOf(retryInstruction));
-      expect(systemPrompt).toContain(
-        "Do not rephrase, abbreviate, translate, reorder words, or reformat dates.",
+    expect(
+      Object.fromEntries(
+        Object.entries(prompts).map(([name, { systemPrompt }]) => [
+          name,
+          [systemPrompt.length, sha256(systemPrompt)],
+        ]),
+      ),
+    ).toEqual({
+      initial: [3455, "d08c82b8c0940f4f6a1eab544c5adf2bb66eb07bc6e74a3c67e6cc1c9ae58cbb"],
+      initialRetry: [4002, "1063ae8b7243341d7efa33a3a605471aafa76e13d24749ac73f753da9762c621"],
+      revision: [3903, "dd118fc1b7401318576b0aec30c50d425de3472e8c7f5de29a46c43e4d8951b7"],
+      revisionRetry: [4450, "c1daa9700d187791800afce6a8cb619d43dc66e4520e15822290caa30f774c0b"],
+    });
+    for (const { systemPrompt, providerInput } of Object.values(prompts)) {
+      expect(systemPrompt).toContain("maximum generated output for this request is 8192 tokens");
+      expect(providerInput.outputBudget).toEqual({ maxOutputTokens: 8_192 });
+    }
+  });
+
+  it("states and sends the 16,384-token budget for v3 and differs from v2 only there", () => {
+    const feedback = retryFeedback();
+    const carrier = pendingAdjudication();
+    for (const [pending, retry] of [
+      [undefined, undefined],
+      [undefined, feedback],
+      [carrier, undefined],
+      [carrier, feedback],
+    ] as const) {
+      const v2 = createAuthorAdjudicationPrompt("cli-author-v2", pending, retry);
+      const v3 = createAuthorAdjudicationPrompt("cli-author-v3", pending, retry);
+      expect(v3.providerInput.outputBudget).toEqual({ maxOutputTokens: 16_384 });
+      expect(v3.systemPrompt).toContain(
+        "maximum generated output for this request is 16384 tokens",
       );
-      expect(systemPrompt).toContain(
-        "Write one substantive claim per field whose text is exactly that field, citing the chunk that contains it.",
-      );
-      expect(systemPrompt).toContain(
-        "Omit a field that cannot be copied verbatim from evidence rather than inventing or paraphrasing it.",
-      );
-      expect(systemPrompt).toContain(
-        "Separators between fields such as |, · or commas need no claim.",
+      expect(v3.systemPrompt).not.toContain("8192");
+      expect(v3.systemPrompt).toBe(
+        v2.systemPrompt.replace(
+          "maximum generated output for this request is 8192 tokens",
+          "maximum generated output for this request is 16384 tokens",
+        ),
       );
     }
-    expect(initial).not.toContain(adjudicationInstruction);
-    expect(revision.indexOf(structuredFieldInstruction)).toBeLessThan(
-      revision.indexOf(adjudicationInstruction),
-    );
   });
+
+  it.each(["cli-author-v2", "cli-author-v3"])(
+    "adds structured-field guidance to %s after claim coverage and before revision and retry text",
+    (version) => {
+      const feedback = retryFeedback();
+      const initial = createAuthorAdjudicationPrompt(version, undefined, feedback).systemPrompt;
+      const revision = createAuthorAdjudicationPrompt(
+        version,
+        pendingAdjudication(),
+        feedback,
+      ).systemPrompt;
+
+      for (const systemPrompt of [initial, revision]) {
+        const structured = systemPrompt.indexOf(structuredFieldInstruction);
+        expect(structured).toBeGreaterThan(systemPrompt.indexOf(claimCoverageInstruction));
+        expect(structured).toBeLessThan(systemPrompt.indexOf(retryInstruction));
+        expect(systemPrompt).toContain(
+          "Do not rephrase, abbreviate, translate, reorder words, or reformat dates.",
+        );
+        expect(systemPrompt).toContain(
+          "Write one substantive claim per field whose text is exactly that field, citing the chunk that contains it.",
+        );
+        expect(systemPrompt).toContain(
+          "Omit a field that cannot be copied verbatim from evidence rather than inventing or paraphrasing it.",
+        );
+        expect(systemPrompt).toContain(
+          "Separators between fields such as |, · or commas need no claim.",
+        );
+      }
+      expect(initial).not.toContain(adjudicationInstruction);
+      expect(revision.indexOf(structuredFieldInstruction)).toBeLessThan(
+        revision.indexOf(adjudicationInstruction),
+      );
+    },
+  );
 
   it("differs from v1 only by the structured-field guidance", () => {
     const carrier = pendingAdjudication();

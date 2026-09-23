@@ -85,8 +85,9 @@ describe("preflightAnthropicClaudeAuthorModel", () => {
     expect(call?.args[modelIndex + 1]).toBe("claude-declared-author");
     expect(JSON.parse(call?.options.stdin ?? "null")).toEqual({ check: "author-model-preflight" });
     expect(call?.options.timeoutMs).toBe(60_000);
-    expect(call?.options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("8192");
-    expect(call?.options.env.MAX_THINKING_TOKENS).toBe("4096");
+    // The default tracks the newest author prompt budget (cli-author-v3).
+    expect(call?.options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("16384");
+    expect(call?.options.env.MAX_THINKING_TOKENS).toBe("8192");
     expect(call?.options.env.CLAUDE_CODE_DISABLE_THINKING).toBeUndefined();
     const schemaIndex = call?.args.indexOf("--json-schema") ?? -1;
     expect(JSON.parse(call?.args[schemaIndex + 1] ?? "null")).toEqual({
