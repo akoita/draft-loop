@@ -136,3 +136,41 @@ user. The run exposed two bounded, provider-free fixes:
   `claude-sonnet-5` honours through the Claude CLI, or disable thinking for
   the structured author call. Then verify it with the same synthetic replica
   before any candidate observation.
+
+## Thinking control calibration
+
+**Issue:** #507 · **Revision:** `c291600`
+
+The #503 replica was run unchanged, with the CLI `--effort` control from
+[#506](https://github.com/akoita/draft-loop/issues/506). The frontier author candidates were `claude-fable-5-1` (premium) and
+`claude-opus-5-5` (standard frontier); `claude-sonnet-5` was an economy
+variant. Each model was preflighted first, through the synthetic author
+preflight on the authenticated Claude user session. No candidate material was
+used.
+
+| Model | Preflight | Calibration requests |
+| ----- | --------- | -------------------- |
+| `claude-fable-5-1` | `api-error`, classified `rate-limit` | Four skipped (high and medium × 2); no substitution |
+| `claude-opus-5-5` | `api-error`, classified `unknown` | Four skipped (high and medium × 2) |
+| `claude-sonnet-5` | `available` | `--effort medium`: 2 of 2 failed with `error_max_structured_output_retries` and `structured_output_retry_exhausted`, with no stop reason and 0 reported thinking tokens (21 s and 125 s) |
+
+Total active time was 145,830 milliseconds. The preflight keeps no raw error
+text by design, so the exact causes of the two frontier preflight failures are
+not visible.
+
+### Calibration result
+
+Under the #507 rule, **no frontier candidate is usable**, so the next step
+returns to the user.
+
+- **The Claude user-session route is not a working path to the frontier
+  author models today.** Fable was rate-limited and Opus returned an
+  unclassified error on a minimal synthetic request.
+- **`claude-sonnet-5` does not fail only on thinking.** At `--effort medium`
+  it used no thinking tokens and still could not produce a schema-valid
+  proposal. Effort control alone does not make it usable as author.
+
+A direct Anthropic API-key route would reach frontier models through the
+Messages API, where the thinking budget is an explicit request parameter.
+It would need a separate architecture, credential, and cost decision under
+the frontier model strategy.
