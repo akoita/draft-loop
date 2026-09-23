@@ -2,7 +2,7 @@
 
 **Status:** Living document<br>
 **Last reviewed:** 2026-09-22<br>
-**Current stage:** Live author revalidation
+**Current stage:** Structural claim coverage
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -185,7 +185,8 @@ applications.
 | Previous | Author route readiness ([milestone](https://github.com/akoita/draft-loop/milestone/10))                             | Exit met: synthetic preflight `available`; status-less `api_error` results carry bounded cause codes | Prove the declared author route can answer and make its request-level failures diagnosable | No real author request has succeeded since the fixes; the #446 cause remains unobserved |
 | Previous | Author-draft revalidation retry ([milestone](https://github.com/akoita/draft-loop/milestone/11))                  | [Failed](evaluation/representative-author-draft-revalidation.md#retry-observation): both validated drafts were rejected | Obtain the first real validator verdict on a representative author draft              | Structured retry feedback did not produce an accepted draft; one of three attempts ended with an unexplained `api_error` |
 | Previous | Author correction reliability ([milestone](https://github.com/akoita/draft-loop/milestone/12))                   | [Exit met on replay](evaluation/author-correction-reliability.md#stage-decision): both wrongly rejected supported cases accepted; all 21 controls rejected | Make real author drafts pass factual, evidence, and coverage validation without weakening those gates | Invented cases only; live author quality is unproven |
-| Now      | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | Designed; no provider observation authorized         | Test the corrected validator on one real author draft                                 | #476 predeclares the unchanged case, bounds, rules, preflight, and local capture; it needs explicit user authorization naming it |
+| Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
+| Now      | Structural claim coverage                                                                                         | Not yet planned into a milestone                     | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Opening-verb fix and structural claim completion, measured on replay and the private captures |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1049,7 +1050,7 @@ The corpus holds 48 cases, and all 21 controls are rejected. Every case is
 invented, so live author quality remains unproven. See the
 [stage decision](evaluation/author-correction-reliability.md#stage-decision).
 
-### Now — Live author revalidation
+### Ended — Live author revalidation
 
 Test the corrected validator on one real author draft. A new, separately
 gated observation reuses the unchanged case A inputs and the #456 rules. It
@@ -1072,6 +1073,28 @@ and the roadmap names the next stage:
 - **Fail:** a provider-free milestone seeded from the captured proposals.
 - **Indeterminate with a cause code:** one bounded fix.
 - **Indeterminate without a cause code:** the route question goes to the user.
+
+The exit is met with a **fail**. The synthetic preflight passed and no provider
+error occurred, but the validator rejected all three drafts. Captured
+proposals, analysed without reading their text, show two causes:
+
+- Every attempt had ten blocks with uncovered text, mostly entry headings, the
+  header contact line, and skills lists whose fields the author did not claim.
+- Three of seven factual failures joined an opening action verb to a
+  supported name, which is a validator false rejection.
+
+See the [record](evaluation/live-author-revalidation.md).
+
+### Now — Structural claim coverage
+
+Make real drafts pass coverage and factual checks for structured blocks,
+provider-free. Stop joining opening action verbs to supported names in
+protected values, then measure deterministic claim completion for heading,
+contact, and skills fields found verbatim in cited or retrieved evidence. Each
+change is measured on invented replay cases and, with content-free scripts, on
+the three private #476 captures.
+
+This stage has no milestone or issue yet, and it makes no provider call.
 
 ### Later — Production-ready beta
 
@@ -1142,6 +1165,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Recorded the #476 live observation as a fail and named structural claim coverage. | Captured proposals show that structural blocks lack author claims and that opening verbs cause false factual rejections. The next stage is provider-free and measured on replay and the private captures. |
 | 2026-09-22 | Planned milestone 13 for live author revalidation as #476. | The observation reuses the #446/#456 rules and adds local capture of rejected proposals, so a fail can be analysed from real structure. No provider call is authorized until a later instruction names #476. |
 | 2026-09-22 | Completed author correction reliability under #462 and named live author revalidation. | The replay corpus accepts both wrongly rejected supported cases and rejects all 21 controls, with the factual gate strengthened by #469. The next live observation must save rejected proposals locally. |
 | 2026-09-22 | Planned milestone 12 for author correction reliability as #459–#462. | The stage starts with uncapped counts and a local, content-free classification of the #456 drafts before any replay fixture or author change. No provider call belongs to it. |
