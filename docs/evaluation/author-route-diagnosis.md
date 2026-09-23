@@ -174,3 +174,68 @@ A direct Anthropic API-key route would reach frontier models through the
 Messages API, where the thinking budget is an explicit request parameter.
 It would need a separate architecture, credential, and cost decision under
 the frontier model strategy.
+
+## Frontier route and CLI versions
+
+**Issues:** #516 (author) and #510 (critic) · **Revision:** `12e9e6d`
+
+Both checks used the authenticated user sessions and synthetic content only.
+No candidate material was used, and no API key was billed.
+
+### Cause: outdated CLIs on the Node path
+
+Every frontier failure so far came from outdated CLIs in the Node 24.5.0
+global packages. DraftLoop puts that directory first on `PATH`, so the
+adapters used these copies instead of the current ones.
+
+| CLI | Version found | Raw failure |
+| --- | ------------- | ----------- |
+| `claude` | 2.1.265 | HTTP 400: "Claude Code 2.1.265 does not support this model; version 2.1.280 or newer is required". The preflight reported only `api-error` / `unknown`. |
+| `codex` (npm) | 0.153.4, shadowing the standalone 0.155.1 | "Model metadata for `gpt-6-luna` not found", then HTTP 400: "The 'gpt-6-luna' model is not supported when using Codex with a ChatGPT account". The same error occurred for `gpt-6-sol`. |
+
+The same ChatGPT account used both GPT-6 models without error from the Codex
+desktop app. Four minimal `codex exec` requests isolated the cause: the
+adapter's flags were not responsible, and only the binary differed.
+
+**Fix:** the user's global packages were updated to `@anthropic-ai/claude-code`
+2.1.280 and `@openai/codex` 0.155.1.
+
+### Results after the update
+
+**Author, `claude-opus-5-5`.** This was the #503 replica: the production
+`cli-author-v3` prompt, the proposal schema, and invented evidence. It ran at
+the default effort, with no retries.
+
+| Request | Status | Duration | Result |
+| ------- | ------ | -------- | ------ |
+| Preflight | available | 2 s | `{"ready": true}` |
+| Replica 1 | ok | 61 s | 6 sections, 9,413 output tokens, 1,405 thinking |
+| Replica 2 | ok | 43 s | 6 sections, 6,518 output tokens, 1,269 thinking |
+
+**Critic, production `cli-critic-v1` request.** The invented draft contained
+one planted unsupported claim.
+
+| Model | Status | Duration | Findings |
+| ----- | ------ | -------- | -------- |
+| `gpt-6-luna` | ok | 6 s | 1 error: the planted claim |
+| `gpt-6-sol` | ok | 11 s | 3 errors and 1 warning: the planted claim, plus an unsupported name, an unsupported duration, and a CI/CD coverage gap |
+
+Both critiques passed the production critique validation rules.
+
+### Result
+
+- **`claude-opus-5-5` is a usable author on the user-session route.** It
+  succeeded 2 of 2, used thinking moderately, and ran well inside the budget.
+- **`gpt-6-luna` and `gpt-6-sol` are usable critics.** Their exact IDs come
+  from the Codex CLI model list.
+- **The #507 conclusion is superseded for Opus.** The route was not the cause;
+  the CLI version was. The Fable rate-limit result was not rechecked, because
+  the premium tier is deferred.
+
+### Route limitations
+
+- The results are synthetic: two author requests and one critic request per
+  model. They do not measure quality on real material.
+- The preflight still reports a CLI version refusal only as `unknown`.
+  Surfacing the CLI version and the refusal text is a separate diagnostics
+  issue.

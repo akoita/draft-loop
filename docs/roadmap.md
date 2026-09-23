@@ -235,7 +235,7 @@ applications.
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
-| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                            | [#507 calibration](evaluation/author-route-diagnosis.md#thinking-control-calibration): frontier authors unreachable through the Claude CLI session | Select and validate one frontier Anthropic author and OpenAI critic pair as the first working reference | The route to frontier authors (for example a direct API-key adapter) returns to the user |
+| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                            | [#516 and #510](evaluation/author-route-diagnosis.md#frontier-route-and-cli-versions): `claude-opus-5-5`, `gpt-6-luna` and `gpt-6-sol` work through the user sessions after a CLI update | Select and validate one frontier Anthropic author and OpenAI critic pair as the first working reference | The user authorizes a gated case A observation with the first pair |
 | Next     | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17))                        | Planned                                              | Replace hard-coded model defaults with versioned model profiles and reference and economy tiers | Profile registry, recorded profiles, and user-facing selection (#84) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
@@ -1234,17 +1234,21 @@ OpenAI critic, reached through authenticated user sessions.
 CLI `--effort` control. Both apply to every Claude 5 model, including the
 frontier ones.
 
-**Remaining order:**
+**Route established:** #507 found no reachable frontier author. #516 and #510
+then traced every frontier failure to outdated `claude` and `codex` CLIs in
+the Node global packages. After the update, `claude-opus-5-5` returned
+schema-valid proposals 2 of 2. `gpt-6-luna` and `gpt-6-sol` returned valid
+critiques on synthetic requests. See the
+[route record](evaluation/author-route-diagnosis.md#frontier-route-and-cli-versions).
 
-1. #507 calibrates a thinking control for the frontier author candidates with
-   synthetic replicas. The economy `claude-sonnet-5` stays as a secondary
-   variant.
-2. #510 confirms that the frontier critic candidates are available through
-   the OpenAI user session.
-3. The user selects the reference pair from the calibration data.
-4. A gated observation on unchanged case A measures the reference pair against
-   the fixed result and effect rules. On a pass, the pair becomes the default
-   for new workspaces.
+**Remaining order,** step by step with one pair at a time:
+
+1. A gated observation on unchanged case A with `claude-opus-5-5` as author
+   and `gpt-6-luna` as critic, against the fixed result and effect rules.
+2. The same with `gpt-6-sol` as critic.
+3. On a pass, the pair becomes the default for new workspaces.
+
+Premium models (Fable, GPT-6 Astra) and the API-key route (#515) come last.
 
 None of these steps authorizes a provider call without a user instruction that
 names its issue.
@@ -1344,6 +1348,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Recorded #516 and #510: frontier failures on the user-session routes came from outdated `claude` (2.1.265) and `codex` (0.153.4) CLIs in the Node global packages. | After the update, `claude-opus-5-5` succeeded 2 of 2 on the author replica, and `gpt-6-luna` and `gpt-6-sol` returned valid critiques. The first basic scenario can use Opus with Luna, then Sol. Premium models and the API-key route (#515) are deferred. |
 | 2026-09-23 | Recorded the #507 calibration: frontier author candidates were not reachable through the Claude CLI session. | The Fable preflight was rate-limited and the Opus preflight failed. `claude-sonnet-5` failed structured output even at medium effort with no thinking. The route to frontier authors returns to the user. |
 | 2026-09-23 | Refined the model strategy into premium (Fable, GPT-6 Astra), standard frontier (latest Opus, GPT-6 Sol), and economy tiers, evaluated step by step. | The standard frontier tier is the default and meets most needs, premium is a paid option for maximum confidence, and the first basic scenario uses one pair, testing the GPT-6 Luna critic before GPT-6 Sol. |
 | 2026-09-23 | Adopted the frontier model strategy: a reference tier of frontier Anthropic and OpenAI models for production and validation, an economy tier for cost-conscious use and development, and other providers only after the reference pair works. | Milestone 16 becomes the reference model pair stage, #507 calibrates frontier author candidates, and a new milestone 17 introduces versioned model profiles, tiers, and user selection (#84). The first-version priority on one Anthropic and OpenAI pair is unchanged. |
