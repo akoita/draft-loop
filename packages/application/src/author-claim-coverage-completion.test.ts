@@ -79,12 +79,12 @@ describe("author claim coverage completion", () => {
       "uncited exact evidence",
       [
         chunk("cited", "Built reliable TypeScript tools."),
-        chunk("uncited", "Built reliable TypeScript tools across regulated industries."),
+        chunk("uncited", "Built reliable TypeScript tools across 12 regulated industries."),
       ],
     ],
   ])("leaves coverage rejected for %s", (_case, evidence) => {
     const input = proposal(
-      "Built reliable TypeScript tools across regulated industries.",
+      "Built reliable TypeScript tools across 12 regulated industries.",
       "Built reliable TypeScript tools.",
     );
 

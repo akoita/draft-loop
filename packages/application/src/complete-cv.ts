@@ -6,6 +6,7 @@ import { claimCoverageIssues } from "./claim-coverage.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
 import { shortNamesRelated } from "./short-name-relation.js";
 import { unsupportedSingleWordNames } from "./single-word-name-grounding.js";
+import { uncoveredTextIntroducesUnsupportedFact } from "./uncovered-text-grounding.js";
 
 export const factualInvariantIssueCodes = [
   "missing_evidence",
@@ -41,6 +42,8 @@ function meaningfulTokens(value: string): readonly string[] {
  * Fail closed when a live CV proposal cites no evidence, unrelated evidence,
  * or evidence that changes exact factual invariants such as dates, metrics,
  * credentials, links, employers, multi-word titles, and single-word names.
+ * Block text outside substantive claims fails only when it introduces a word,
+ * value, or name the evidence does not support.
  */
 export function completeCvProposalIssues(
   proposal: AuthorArtifactProposal,
@@ -91,9 +94,25 @@ export function completeCvProposalIssues(
       }
     }
   }
+  const uncoveredFactIssues = claimCoverageIssues(proposal)
+    .filter((issue) => {
+      const [, sectionIndex, , blockIndex] = issue.path;
+      const section =
+        typeof sectionIndex === "number" ? proposal.sections[sectionIndex] : undefined;
+      const block = typeof blockIndex === "number" ? section?.blocks[blockIndex] : undefined;
+      return (
+        section === undefined ||
+        block === undefined ||
+        uncoveredTextIntroducesUnsupportedFact(section, block, retrievedEvidence)
+      );
+    })
+    .map((issue) => ({
+      ...issue,
+      message: "text outside substantive claims introduces a fact absent from evidence",
+    }));
   return [
     ...issues,
-    ...claimCoverageIssues(proposal),
+    ...uncoveredFactIssues,
     ...requiredSectionProposalIssues(proposal, requiredSections, retrievedEvidence),
   ];
 }

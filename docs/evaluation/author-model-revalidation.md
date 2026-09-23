@@ -123,3 +123,34 @@ returns to the user.
 - One run of three attempts.
 - The diagnostic counts are uncapped, but the per-path lists are capped at
   eight.
+
+### Offline recheck under the grounded coverage rule
+
+Under #522, uncovered block text is rejected only when it introduces an
+unsupported word, protected value, date range, or name. The three #520 captures
+were revalidated locally, with no provider calls. Only content-free counts were
+printed.
+
+| Draft | Coverage issues before | Coverage issues after | Other issues | Result |
+| ----- | ---------------------- | --------------------- | ------------ | ------ |
+| 1 | 14 | 7 | 2 | rejected |
+| 2 | 8 | 4 | 6 | rejected |
+| 3 | 6 | 6 | 0 | rejected |
+
+- **Accepted now:** 13 uncovered blocks, whose wording came only from evidence
+  and function words.
+- **Still rejected: date ranges.** 18 blocks remain. Most are role headers
+  whose date range is not stated in the evidence, which writes "January 2019
+  to March 2022" style ranges. Comparing each draft range with the 40 ranges
+  in the source:
+  - some drafts merge real start and end dates across positions;
+  - every draft also has two or three ranges with a start or end date that
+    appears nowhere in the source file. Those are errors, and the validator is
+    right to reject them.
+- **Still rejected: words.** 28 uncovered content words appear in no retrieved
+  chunk. Ten are elsewhere in the source file, four appear only in the job
+  description (draft 2's summary), and fourteen appear in neither.
+
+The grounded rule removes rejections of honest wording. It does not accept
+these drafts, because `claude-sonnet-4-5` stated employment dates that the
+evidence does not support.

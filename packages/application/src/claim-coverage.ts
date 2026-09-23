@@ -21,6 +21,41 @@ function presentation(text: string, title: string, kind: string): boolean {
   );
 }
 
+type ProposalSection = AuthorArtifactProposal["sections"][number];
+type ProposalBlock = ProposalSection["blocks"][number];
+
+/**
+ * Return the block tokens left outside substantive claim spans, presentation
+ * lines, and joining-word gaps. A standalone "and" never counts as uncovered.
+ */
+export function uncoveredBlockTokens(
+  section: Pick<ProposalSection, "title" | "kind">,
+  block: ProposalBlock,
+): readonly string[] {
+  const claims = block.claims
+    .filter((claim) => claim.substantive)
+    .map((claim) => tokens(claim.text));
+  const words = tokens(block.text);
+  const covered = words.map(() => false);
+  let lineStart = 0;
+  for (const line of block.text.split(/[\n:;]/u)) {
+    const length = tokens(line).length;
+    if (presentation(line, section.title, section.kind))
+      covered.fill(true, lineStart, lineStart + length);
+    lineStart += length;
+  }
+  for (const claim of claims) {
+    if (claim.length === 0) continue;
+    for (let start = 0; start <= words.length - claim.length; start += 1) {
+      if (claim.every((word, offset) => words[start + offset] === word)) {
+        for (let offset = 0; offset < claim.length; offset += 1) covered[start + offset] = true;
+      }
+    }
+  }
+  const joined = coverJoiningGaps(words, covered);
+  return words.filter((word, index) => !joined[index] && word !== "and");
+}
+
 /** Require contiguous claim spans, not bag-of-words overlap, for factual prose. */
 export function claimCoverageIssues(proposal: AuthorArtifactProposal): readonly {
   readonly path: PropertyKey[];
@@ -34,29 +69,7 @@ export function claimCoverageIssues(proposal: AuthorArtifactProposal): readonly 
   }[] = [];
   for (const [sectionIndex, section] of proposal.sections.entries()) {
     for (const [blockIndex, block] of section.blocks.entries()) {
-      const claims = block.claims
-        .filter((claim) => claim.substantive)
-        .map((claim) => tokens(claim.text));
-      const words = tokens(block.text);
-      const covered = words.map(() => false);
-      let lineStart = 0;
-      for (const line of block.text.split(/[\n:;]/u)) {
-        const length = tokens(line).length;
-        if (presentation(line, section.title, section.kind))
-          covered.fill(true, lineStart, lineStart + length);
-        lineStart += length;
-      }
-      for (const claim of claims) {
-        if (claim.length === 0) continue;
-        for (let start = 0; start <= words.length - claim.length; start += 1) {
-          if (claim.every((word, offset) => words[start + offset] === word)) {
-            for (let offset = 0; offset < claim.length; offset += 1) covered[start + offset] = true;
-          }
-        }
-      }
-      const joined = coverJoiningGaps(words, covered);
-      const uncovered = words.some((word, index) => !joined[index] && word !== "and");
-      if (uncovered)
+      if (uncoveredBlockTokens(section, block).length > 0)
         issues.push({
           path: ["sections", sectionIndex, "blocks", blockIndex, "text"],
           code: "substantive_text_uncovered",
