@@ -163,14 +163,22 @@ establish absence. Author validation rejects empty sections and unavailable
 placeholders when supplied evidence establishes content; missing individual
 details may remain explicit.
 
-Author-output validation requires factual block text to be covered by contiguous
-substantive claim spans. A supported fragment cannot stand in for a broader
-assertion. Uncovered text fails with the content-free
-`substantive_text_uncovered` diagnostic for bounded author retry; headings,
-labels, and explicit missing-data notices do not require factual citations.
-This is structural coverage, not independent factual verification. Protected
-multi-word values remain within one cited chunk, and numbers, punctuation,
-factual wording, and explicit experience contradictions remain protected.
+Author-output validation checks every substantive claim against its cited
+evidence. Protected multi-word values stay within one cited chunk, and numbers,
+names, and explicit experience contradictions stay protected.
+
+Block text outside substantive claims fails with the content-free
+`substantive_text_uncovered` diagnostic, for bounded author retry, when any of
+these holds:
+
+- An uncovered content word appears in no retrieved chunk. A short closed list
+  of function words, such as articles, prepositions, and connectives, is exempt.
+- A protected value in the block is not supported by the chunks its claims cite.
+- A date range is not stated with the same start and end in one cited chunk.
+- A capitalised single-word name appears in no retrieved chunk.
+
+Headings, labels, and explicit missing-data notices stay exempt. Wording built
+only from function words and evidence words is left to critic and human review.
 
 SQLite migration 26 preserves the artifact-history boundary: each immutable
 artifact ID may begin its own version-1 lineage, later rows link by parent
