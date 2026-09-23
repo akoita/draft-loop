@@ -1,6 +1,6 @@
 # Structured-block author guidance
 
-**Status:** Observation indeterminate; the author preflight failed before any candidate material was sent
+**Status:** Two observations indeterminate; no draft produced under the `cli-author-v2` prompt
 **Milestone:** [Structured-block author guidance](https://github.com/akoita/draft-loop/milestone/15)
 **Observation issue:** #489
 **Revision:** `8ff31c2` (includes the `cli-author-v2` structured-field guidance from #488)
@@ -66,3 +66,46 @@ Options for the user decision, none of which is authorized here:
 
 - A single failed preflight. The cause of the status-less `api_error` remains
   unknown, because the CLI result carried no allowlisted error type.
+
+## Retry observation
+
+**Issue:** #493 · **Revision:** `04ee377`
+
+The candidate authorized #493 in their own words, with the #489 setup
+unchanged. Both sign-in probes passed, and the synthetic author preflight
+returned `available`. The prepared run recorded author prompt `cli-author-v2`,
+critic prompt `cli-critic-v1`, and the declared models.
+
+| Attempt | Result | Active provider time | Sanitized diagnostics |
+| ------- | ------ | -------------------- | --------------------- |
+| 1 | Non-retryable provider error (`unknown`) | 348,544 ms | `claude_error_subtype_error_max_structured_output_retries`, `claude_terminal_reason_unrecognized`, `claude_stop_reason_max_tokens` |
+
+Because the error was not retryable, the run ended after one attempt. No
+draft, capture, critic call, or first review exists.
+
+### Retry result
+
+The observation is **indeterminate** under the rules fixed in #493: a provider
+error left no validator verdict. No `claude_api_error_*` cause code was
+present, so under those rules the route decision returns to the user.
+
+### Finding
+
+The diagnostics differ from the earlier status-less `api_error`. The author
+reached its output-token limit (`max_tokens`) and then exhausted structured
+output retries. Under the `cli-author-v1` prompt, none of the three #476
+attempts hit this limit on the same inputs.
+
+The `cli-author-v2` guidance asks for one claim per structured field, which
+lengthens the proposal. The probable cause is that the guidance pushes the
+output past the existing 8,192-token author budget. That is an inference from
+one attempt, not a measured result.
+
+Options for the user decision, none of which is authorized here:
+
+- **Raise the budget.** Raise the author output budget, which the provider
+  allows up to 32,768 tokens, and repeat the observation.
+- **Make claims compact.** Make the structured-field guidance favour compact
+  claims, for example one claim per heading line rather than per field, and
+  repeat.
+- **Stop.** Stop the guidance line here.
