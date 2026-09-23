@@ -21,6 +21,36 @@ const authorGroundingGuideInstructions =
 const claimCoverageInstructions =
   " Cover every factual span of block text with substantive claims using the same contiguous wording. A narrower claim cannot stand in for a broader sentence. Only section labels and explicit missing-data notices may remain outside claims. For substantive_text_uncovered retry feedback, cover the entire supported assertion or remove unsupported prose from the block; do not merely edit the claim list to hide it.";
 
+const structuredFieldInstructions =
+  " For heading lines (role, organisation, location, dates), the header contact line, and skills or tool lists, copy each field exactly as it appears in one retrieved evidence chunk. Do not rephrase, abbreviate, translate, reorder words, or reformat dates. Write one substantive claim per field whose text is exactly that field, citing the chunk that contains it. Omit a field that cannot be copied verbatim from evidence rather than inventing or paraphrasing it. Separators between fields such as |, · or commas need no claim.";
+
+const authorPromptTemplateVersions = Object.freeze({
+  "cli-author-v1": "",
+  "cli-author-v2": structuredFieldInstructions,
+} as const satisfies Readonly<Record<string, string>>);
+
+/**
+ * The prompt template version a NEW run records for each role.
+ *
+ * A run keeps the version it started with: resumed runs pass their stored
+ * author version to `createAuthorAdjudicationPrompt`, never this value.
+ */
+export function promptTemplateVersion(role: "author" | "critic"): string {
+  return role === "author" ? "cli-author-v2" : "cli-critic-v1";
+}
+
+/** The instructions a known author template version adds; unknown versions fail closed. */
+function versionInstructions(authorPromptTemplateVersion: string): string {
+  if (!Object.hasOwn(authorPromptTemplateVersions, authorPromptTemplateVersion)) {
+    throw new Error(
+      `Unsupported author prompt template version "${authorPromptTemplateVersion}"; expected one of ${Object.keys(authorPromptTemplateVersions).join(", ")}.`,
+    );
+  }
+  return authorPromptTemplateVersions[
+    authorPromptTemplateVersion as keyof typeof authorPromptTemplateVersions
+  ];
+}
+
 type PendingAdjudication = NonNullable<AuthorRequest["pendingAdjudication"]>;
 
 export interface AuthorAdjudicationPrompt {
@@ -33,15 +63,22 @@ export interface AuthorAdjudicationPrompt {
   }>;
 }
 
-/** Build the live author prompt and the optional validated adjudication carrier. */
+/**
+ * Build the live author prompt and the optional validated adjudication carrier.
+ *
+ * `authorPromptTemplateVersion` is the run's recorded author version, so a run
+ * started on `cli-author-v1` keeps its byte-identical v1 prompt when resumed.
+ */
 export function createAuthorAdjudicationPrompt(
+  authorPromptTemplateVersion: string,
   pendingAdjudication: AuthorRequest["pendingAdjudication"],
   retryFeedback: AuthorRequest["retryFeedback"] = undefined,
   groundingGuide: readonly AuthorGroundingGuideEntry[] = [],
 ): AuthorAdjudicationPrompt {
+  const versioned = versionInstructions(authorPromptTemplateVersion);
   if (pendingAdjudication === undefined) {
     return {
-      systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${claimCoverageInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
+      systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${claimCoverageInstructions}${versioned}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
       providerInput: {
         outputBudget: authorOutputBudget,
         groundingGuide,
@@ -51,7 +88,7 @@ export function createAuthorAdjudicationPrompt(
   }
 
   return {
-    systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${claimCoverageInstructions}${adjudicatedRevisionInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
+    systemPrompt: `${authorSystemPrompt}${authorOutputBudgetInstructions}${authorGroundingGuideInstructions}${claimCoverageInstructions}${versioned}${adjudicatedRevisionInstructions}${retryFeedback === undefined ? "" : authorRetryInstructions}`,
     providerInput: {
       outputBudget: authorOutputBudget,
       groundingGuide,
