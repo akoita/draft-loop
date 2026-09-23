@@ -1,6 +1,6 @@
 # Author route diagnosis
 
-**Status:** Failure not reproduced; 0 of 6 synthetic requests failed
+**Status:** `api_error` not reproduced in 12 synthetic requests; `claude-sonnet-5` exhausts its output budget on thinking
 **Milestone:** [Author model revalidation](https://github.com/akoita/draft-loop/milestone/16)
 **Issue:** #501
 **Revision:** `14fc75f`
@@ -79,3 +79,60 @@ author proposal schema and invented evidence:
 
 - One request per cell. A zero failure rate over six requests does not rule
   out an intermittent failure at the rate seen in real runs.
+
+## Schema replica
+
+**Issue:** #503 · **Revision:** `dc49d90`
+
+Each request replicated a real author request with invented data:
+
+- the production `cli-author-v3` system prompt, from
+  `createAuthorAdjudicationPrompt`;
+- the production proposal schema, `authorArtifactProposalJsonSchemaForEvidence`
+  with an evidence-ID enum, at 1,413 characters;
+- the production payload shape, about 32,000 characters of input;
+- the 16,384-token budget and the production adapter.
+
+The runs were three per model, with no retries. No candidate material was
+used.
+
+| Model | Run | Status | Duration | Result |
+| ----- | --- | ------ | -------- | ------ |
+| `claude-sonnet-4-5` | 1 | ok | 44 s | 5 sections, 3,267 output tokens |
+| `claude-sonnet-4-5` | 2 | ok | 42 s | 6 sections, 3,020 output tokens |
+| `claude-sonnet-4-5` | 3 | ok | 52 s | 6 sections, 3,357 output tokens |
+| `claude-sonnet-5` | 1 | error | 96 s | `error_max_structured_output_retries`, terminal reason `structured_output_retry_exhausted` |
+| `claude-sonnet-5` | 2 | error | 64 s | same |
+| `claude-sonnet-5` | 3 | error | 261 s | same, `stop_reason: max_tokens`; 16,384 output tokens, of which 15,200 were thinking |
+
+Total active time was 559,623 milliseconds. The raw CLI `result` and stderr
+were empty for all three failures. No `api_error_status` was reported.
+
+### Replica diagnosis
+
+- **The status-less `api_error` did not reproduce.** It stayed absent across 12
+  synthetic requests (#501 and #503). `claude-sonnet-4-5` handles the
+  production schema, prompt, and payload shape reliably, so neither the schema
+  nor the prompt causes the error. It remains unexplained, and is either
+  content-dependent or transient.
+- **`claude-sonnet-5` spends the output budget on thinking.** The adapter sets
+  `MAX_THINKING_TOKENS` to half of `maxOutputTokens`, which is 8,192 for v3.
+  `claude-sonnet-5` nevertheless used 15,200 thinking tokens of 16,384,
+  leaving no room for the structured proposal. This explains its slowness in
+  #499 and the 47,334 output tokens reported in #501. The thinking limit the
+  adapter sets is evidently not honoured for this model.
+- **The adapter misclassifies this failure.** `structured_output_retry_exhausted`
+  is not in its terminal-reason allowlist, so it is recorded as
+  `claude_terminal_reason_unrecognized` with error code `unknown`.
+
+### Replica next step
+
+Under the #503 rule, failures of another kind return the next step to the
+user. The run exposed two bounded, provider-free fixes:
+
+- **Diagnostics.** Recognize the `structured_output_retry_exhausted` terminal
+  reason.
+- **Thinking control.** Find and apply a thinking control that
+  `claude-sonnet-5` honours through the Claude CLI, or disable thinking for
+  the structured author call. Then verify it with the same synthetic replica
+  before any candidate observation.
