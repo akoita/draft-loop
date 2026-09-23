@@ -123,6 +123,11 @@ const claudeErrorDiagnosticCases = [
   },
   { field: "terminal_reason", value: "image_error", code: "claude_terminal_reason_image_error" },
   { field: "terminal_reason", value: "model_error", code: "claude_terminal_reason_model_error" },
+  {
+    field: "terminal_reason",
+    value: "structured_output_retry_exhausted",
+    code: "claude_terminal_reason_structured_output_retry_exhausted",
+  },
   { field: "stop_reason", value: "end_turn", code: "claude_stop_reason_end_turn" },
   { field: "stop_reason", value: "max_tokens", code: "claude_stop_reason_max_tokens" },
   { field: "stop_reason", value: "stop_sequence", code: "claude_stop_reason_stop_sequence" },
@@ -643,6 +648,94 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
     expect(JSON.stringify(error.diagnostics)).not.toContain(resultMarker);
     expect(JSON.stringify(error)).not.toContain(resultMarker);
   });
+
+  it.each([
+    [
+      "max_tokens",
+      { output_tokens: 16_384, output_tokens_details: { thinking_tokens: 15_200 } },
+      {
+        code: "invalid-response",
+        retryable: false,
+        failureStage: "output-token-budget-exceeded",
+        message: "The user-session runtime exceeded the requested output-token budget.",
+        diagnostics: [
+          {
+            code: "claude_error_subtype_error_max_structured_output_retries",
+            path: "subtype",
+          },
+          {
+            code: "claude_terminal_reason_structured_output_retry_exhausted",
+            path: "terminal_reason",
+          },
+          { code: "claude_stop_reason_max_tokens", path: "stop_reason" },
+          { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+        ],
+      },
+    ],
+    [
+      null,
+      { input_tokens: 0, output_tokens: 0 },
+      {
+        code: "unknown",
+        retryable: false,
+        failureStage: null,
+        message: "The user-session provider request failed.",
+        diagnostics: [
+          {
+            code: "claude_error_subtype_error_max_structured_output_retries",
+            path: "subtype",
+          },
+          {
+            code: "claude_terminal_reason_structured_output_retry_exhausted",
+            path: "terminal_reason",
+          },
+          { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+        ],
+      },
+    ],
+  ] as const)(
+    "classifies exhausted structured-output retries with stop reason %s",
+    async (stopReason, usage, expected) => {
+      const captureParent = await mkdtemp(join(tmpdir(), "draft-loop-claude-retry-exhausted-"));
+      const resultMarker = "private-retry-exhausted-result";
+      const errorsMarker = "private-retry-exhausted-errors";
+      const sessionMarker = "private-retry-exhausted-session";
+      const stderrMarker = "private-retry-exhausted-stderr";
+      try {
+        const error = await captureClaudeStructuredError(
+          {
+            subtype: "error_max_structured_output_retries",
+            terminal_reason: "structured_output_retry_exhausted",
+            stop_reason: stopReason,
+            num_turns: 2,
+            result: resultMarker,
+            errors: [errorsMarker],
+            session_id: sessionMarker,
+            usage,
+          },
+          { captureParent, exitCode: 1, stderr: stderrMarker },
+        );
+
+        expect(error).toMatchObject({
+          code: expected.code,
+          retryable: expected.retryable,
+          failureStage: expected.failureStage,
+          status: null,
+        });
+        expect(error.message).toBe(expected.message);
+        expect(error.diagnostics).toEqual(expected.diagnostics);
+        expect(await readdir(captureParent)).toEqual([]);
+        for (const marker of [resultMarker, errorsMarker, sessionMarker, stderrMarker]) {
+          expect(error.message).not.toContain(marker);
+          expect(JSON.stringify(error.metadata)).not.toContain(marker);
+          expect(JSON.stringify(error.diagnostics)).not.toContain(marker);
+          expect(JSON.stringify(error)).not.toContain(marker);
+        }
+      } finally {
+        await rm(captureParent, { recursive: true, force: true });
+      }
+    },
+  );
 
   it.each([
     [400, "unknown", false, "The user-session provider request failed."],
