@@ -508,6 +508,7 @@ const claudeTerminalReasonDiagnosticCodes = new Map([
   ["prompt_too_long", "claude_terminal_reason_prompt_too_long"],
   ["image_error", "claude_terminal_reason_image_error"],
   ["model_error", "claude_terminal_reason_model_error"],
+  ["structured_output_retry_exhausted", "claude_terminal_reason_structured_output_retry_exhausted"],
 ]);
 
 const claudeCategoryCaptureKnownSubtypes = new Set(claudeErrorSubtypeDiagnosticCodes.keys());
@@ -609,6 +610,27 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
       {
         retryable: true,
         diagnostics: [...diagnostics, ...claudeApiErrorCauseDiagnostics(response.result)],
+      },
+    );
+  }
+  if (
+    response.subtype === "error_max_structured_output_retries" &&
+    response.stop_reason === "max_tokens"
+  ) {
+    // Same classification as assertOutputWithinLimit so the orchestrator can
+    // offer a concise-output retry through the existing retry feedback.
+    return new ProviderAdapterError(
+      "anthropic",
+      "invalid-response",
+      "The user-session runtime exceeded the requested output-token budget.",
+      {
+        ...statusMetadata,
+        retryable: false,
+        failureStage: "output-token-budget-exceeded",
+        diagnostics: [
+          ...diagnostics,
+          { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+        ],
       },
     );
   }
