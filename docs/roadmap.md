@@ -54,15 +54,26 @@ Exact model IDs are confirmed when the reference pair is selected. Model cost
 is secondary for the default product, because candidates will pay for the best
 result.
 
-Models are organised in two tiers:
+Models are organised in three tiers:
 
 | Tier | Purpose | Examples |
 | ---- | ------- | -------- |
-| **Reference** | Production default and the only basis for quality validation claims | Frontier Anthropic author, frontier OpenAI critic |
-| **Economy** | Cost-conscious users, plus fast and cheap development, replay, and route diagnostics | Smaller Anthropic and OpenAI models |
+| **Premium** | An optional, paid choice for candidates who want maximum confidence in the result | Fable (Anthropic), GPT-6 Astra (OpenAI) |
+| **Standard frontier** | The production default, expected to meet most candidates' needs; the reference tier for validation | Latest Opus (Anthropic), GPT-6 Sol (OpenAI) |
+| **Economy** | Cost-conscious users, plus fast and cheap development, replay, and route diagnostics | Smaller models such as Sonnet (Anthropic) and GPT-6 Luna (OpenAI) |
+
+Both providers offer every tier, and the user can choose the finest models
+even when they cost more.
 
 A result produced with economy models never counts as validation of the
-reference product.
+reference product, and each quality claim applies only to the models that
+produced it.
+
+Evaluating the harness across these models will take time, so it proceeds
+**step by step**: first make the basic scenario work end to end with one
+Anthropic author and one OpenAI critic, then extend the evaluation model by
+model. On the critic side, the cheaper GPT-6 Luna is tested first, then
+GPT-6 Sol.
 
 Anthropic and OpenAI stay the first and default providers. Other providers,
 including local models, are integrated only after the main CV use cases work
@@ -83,8 +94,9 @@ separation is intentional. Selection for an application must be explicit.
 - Local by default: provider transmission is explicit and scoped.
 - Independent review: provider and model identities are visible, with
   cross-company diversity as the default.
-- Frontier quality by default: the reference tier uses the strongest available
-  models, and cheaper tiers are an explicit user or development choice.
+- Frontier quality by default: the standard frontier tier is the default, the
+  premium tier is an explicit paid option, and the economy tier is an explicit
+  user or development choice.
 - Validation names its models: every quality claim records the exact model
   profile, provider, model ID, prompt version, and runtime controls, and
   applies only to that profile.
@@ -1332,6 +1344,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | Refined the model strategy into premium (Fable, GPT-6 Astra), standard frontier (latest Opus, GPT-6 Sol), and economy tiers, evaluated step by step. | The standard frontier tier is the default and meets most needs, premium is a paid option for maximum confidence, and the first basic scenario uses one pair, testing the GPT-6 Luna critic before GPT-6 Sol. |
 | 2026-09-23 | Adopted the frontier model strategy: a reference tier of frontier Anthropic and OpenAI models for production and validation, an economy tier for cost-conscious use and development, and other providers only after the reference pair works. | Milestone 16 becomes the reference model pair stage, #507 calibrates frontier author candidates, and a new milestone 17 introduces versioned model profiles, tiers, and user selection (#84). The first-version priority on one Anthropic and OpenAI pair is unchanged. |
 | 2026-09-23 | Recorded the #503 schema replica: production schema and prompt work on `claude-sonnet-4-5`, but `claude-sonnet-5` exhausts its budget on thinking. | The `api_error` is not caused by the schema or the prompt and stays unexplained. `claude-sonnet-5` used 15,200 of 16,384 output tokens thinking, so the adapter's thinking limit is not honoured for it. |
 | 2026-09-23 | Recorded the #501 synthetic route diagnosis: 0 of 6 requests failed. | Real-sized inputs, large outputs, and runs over five minutes succeeded on both models, so size and duration alone do not cause the `api_error`. The production author schema is the leading hypothesis. |
