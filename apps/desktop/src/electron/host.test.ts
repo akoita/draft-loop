@@ -5,6 +5,9 @@ import { join } from "node:path";
 import {
   type ApplicationService,
   CliUserError,
+  canonicalCandidateProfileDerivationApprovalErrorMessage,
+  canonicalCandidateProfileDerivationErrorMessage,
+  canonicalCandidateProfileSelectionStaleErrorMessage,
   createCandidateKnowledgeStoreService,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
@@ -815,6 +818,93 @@ describe("native host", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it.each([
+    canonicalCandidateProfileDerivationApprovalErrorMessage,
+    canonicalCandidateProfileDerivationErrorMessage,
+    canonicalCandidateProfileSelectionStaleErrorMessage,
+  ])("shows the user-fixable profile derivation reason %s", async (message) => {
+    const root = "/local/profile-derivation-error-workspace";
+    const fixture = service(root);
+    fixture.service.deriveCanonicalCandidateProfile.mockRejectedValueOnce(
+      new CliUserError(message),
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const derived = await host.invoke({
+      type: "profile.derive",
+      input: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        providerTransmissionApproved: true,
+      },
+    });
+
+    expect(derived).toEqual({
+      ok: false,
+      error: { code: "operation-failed", capability: "profile.derive", message },
+    });
+  });
+
+  it.each([
+    ["an unlisted application user error", new CliUserError("Knowledge missing at /private/kb.")],
+    ["a plain error", new Error(canonicalCandidateProfileDerivationErrorMessage)],
+  ])("keeps %s from profile derivation generic", async (_label, error) => {
+    const root = "/local/profile-derivation-error-workspace";
+    const fixture = service(root);
+    fixture.service.deriveCanonicalCandidateProfile.mockRejectedValueOnce(error);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const derived = await host.invoke({
+      type: "profile.derive",
+      input: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        providerTransmissionApproved: true,
+      },
+    });
+
+    expect(derived).toEqual({
+      ok: false,
+      error: {
+        code: "operation-failed",
+        capability: "profile.derive",
+        message: "The desktop operation could not be completed.",
+      },
+    });
+    expect(JSON.stringify(derived)).not.toContain("/private/kb");
+  });
+
+  it("keeps profile derivation messages generic outside profile derivation", async () => {
+    const root = "/local/profile-derivation-error-workspace";
+    const fixture = service(root);
+    fixture.service.start.mockRejectedValueOnce(
+      new CliUserError(canonicalCandidateProfileDerivationErrorMessage),
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const started = await host.invoke({
+      type: "run.start",
+      input: { workspaceId: "workspace-native" },
+    });
+
+    expect(started).toMatchObject({
+      ok: false,
+      error: { message: "The desktop operation could not be completed." },
+    });
   });
 
   it("projects retrieval selection counts and fallback readiness", async () => {
