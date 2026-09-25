@@ -7,7 +7,6 @@ import {
   type NewArtifactInput,
 } from "@draft-loop/artifacts";
 import {
-  assertIndependentReview,
   type ContextSnapshot,
   createContextSnapshot,
   createWorkspace,
@@ -25,7 +24,6 @@ import {
   normalizeWritingPolicySpellingLocale,
   type RetrievalPort,
   type ScoredEvidenceChunk,
-  SemanticValidationError,
   type WritingPolicyPreferences,
   type WritingPolicyRule,
   writingPolicyPageTargets,
@@ -134,7 +132,11 @@ import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
-import { modelConfiguration, modelSelection } from "./run-model-selection.js";
+import { modelConfiguration } from "./run-model-selection.js";
+import {
+  assertModelCompaniesMatch,
+  assertWorkspaceModelPairing,
+} from "./workspace-model-pairing.js";
 
 export type {
   AnthropicClient,
@@ -1067,7 +1069,7 @@ export async function initWorkspace(
     ...(options.localEndpoint?.trim() ? { localEndpoint: options.localEndpoint.trim() } : {}),
     fixtureMode: options.fixtureMode === true,
   };
-  parseConfig(config);
+  assertModelCompaniesMatch(parseConfig(config));
   await saveWorkspaceConfig(root, config);
   io.write(`Initialized workspace ${config.id} at ${root}`);
   io.write(
@@ -1405,7 +1407,7 @@ export async function reconfigureWorkspaceModels(
       : { independenceOverrideRationale: models.independenceOverrideRationale }),
     ...(models.localEndpoint === undefined ? {} : { localEndpoint: models.localEndpoint }),
   });
-  assertConfiguredIndependence(next);
+  assertWorkspaceModelPairing(next);
   await saveWorkspaceConfig(root, next);
   io.write(
     `Provider pairing: author ${next.authorCompany}/${next.authorModel}; critic ${next.criticCompany}/${next.criticModel}`,
@@ -1598,33 +1600,6 @@ async function prepareInputs(
     ...(candidateKnowledgeSelection === undefined ? {} : { candidateKnowledgeSelection }),
   });
   return { context, sources: ingestion.sources };
-}
-
-/**
- * Refuse a pairing the domain would refuse, before it is written down.
- *
- * The rule is not restated here: `assertIndependentReview` is the same check
- * `createContextSnapshot` makes when a run is built, so a configuration this
- * accepts is one a run can actually be started from. Asking early only moves
- * the refusal to the moment the choice is made; asking here as well as there
- * is not a second rule, it is the same one called sooner.
- */
-function assertConfiguredIndependence(config: WorkspaceConfig): void {
-  try {
-    assertIndependentReview(modelSelection(config, "author"), modelSelection(config, "critic"), {
-      required: true,
-      ...(config.independenceOverrideRationale === undefined
-        ? {}
-        : { overrideRationale: config.independenceOverrideRationale }),
-    });
-  } catch (error) {
-    if (error instanceof SemanticValidationError) {
-      // The domain's own wording, so the two cannot drift; it names no
-      // configured value, only what the pairing must satisfy.
-      throw new CliUserError(error.issues.map((issue) => issue.message).join(" "));
-    }
-    throw error;
-  }
 }
 
 async function saveInputs(

@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 
 export const hotspotLineLimits = Object.freeze({
   "packages/application/src/knowledge-base.ts": 6_168,
-  "packages/application/src/local.ts": 3_599,
+  "packages/application/src/local.ts": 3_574,
   "packages/domain/src/index.ts": 5_693,
   "packages/schemas/src/index.ts": 4_936,
   "packages/storage/src/index.ts": 14_892,
