@@ -76,7 +76,19 @@ export interface CanonicalCandidateProfileDerivationDependencies {
 interface MaterializationResult {
   readonly materials: readonly CanonicalCandidateProfileExtractionMaterial[];
   readonly failedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
+  readonly oversizedReferences: readonly CanonicalCandidateProfileProvenanceReference[];
 }
+
+type NormalizedSourceResult =
+  | { readonly status: "normalized"; readonly source: NonNullable<IngestionResult["source"]> }
+  | { readonly status: "failed" }
+  | { readonly status: "oversized" };
+
+const sourceNormalizationFailureMessage =
+  "Selected candidate knowledge could not be normalized; candidate review is required.";
+const sourceTooLargeMessage = `A selected source is longer than the ${maximumCanonicalCandidateProfileExtractionSourceCharacters.toLocaleString(
+  "en-US",
+)}-character limit for profile derivation. Split it into smaller files and derive again.`;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -159,7 +171,7 @@ function normalizedSource(
   result: IngestionResult,
   expectedChecksum: string,
   expectedSizeBytes: number,
-): IngestionResult["source"] {
+): NormalizedSourceResult {
   const source = result.source;
   if (
     source === null ||
@@ -167,12 +179,14 @@ function normalizedSource(
     source.issues.length > 0 ||
     source.checksum !== expectedChecksum ||
     source.sizeBytes !== expectedSizeBytes ||
-    source.text.trim().length === 0 ||
-    source.text.length > maximumCanonicalCandidateProfileExtractionSourceCharacters
+    source.text.trim().length === 0
   ) {
-    return null;
+    return { status: "failed" };
   }
-  return source;
+  if (source.text.length > maximumCanonicalCandidateProfileExtractionSourceCharacters) {
+    return { status: "oversized" };
+  }
+  return { status: "normalized", source };
 }
 
 async function closeQuietly(handle: CandidateKnowledgeStoreHandle | undefined): Promise<void> {
@@ -192,6 +206,7 @@ async function materializeSelection(
 ): Promise<MaterializationResult> {
   const materials: CanonicalCandidateProfileExtractionMaterial[] = [];
   const failedReferences: CanonicalCandidateProfileProvenanceReference[] = [];
+  const oversizedReferences: CanonicalCandidateProfileProvenanceReference[] = [];
   const logicalSelections = new Set<string>();
 
   for (const selection of selections) {
@@ -241,15 +256,20 @@ async function materializeSelection(
           content.bytes,
           { maxSourceBytes: content.metadata.sizeBytes || 1 },
         );
-        const source = normalizedSource(
+        const normalized = normalizedSource(
           ingested,
           content.metadata.checksum,
           content.metadata.sizeBytes,
         );
-        if (source === null) {
+        if (normalized.status === "failed") {
           failedReferences.push(reference);
           continue;
         }
+        if (normalized.status === "oversized") {
+          oversizedReferences.push(reference);
+          continue;
+        }
+        const { source } = normalized;
         materials.push({
           id,
           mediaType: source.mediaType,
@@ -265,10 +285,12 @@ async function materializeSelection(
   if (logicalSelections.size !== snapshot.entries.length) {
     throw new Error(canonicalCandidateProfileSelectionStaleErrorMessage);
   }
-  return { materials, failedReferences };
+  return { materials, failedReferences, oversizedReferences };
 }
 
 function materializationIssue(
+  namespace: "source-normalization-failure" | "source-too-large",
+  message: string,
   references: readonly CanonicalCandidateProfileProvenanceReference[],
 ): CanonicalCandidateProfileIssue {
   const uniqueReferences = [
@@ -278,14 +300,11 @@ function materializationIssue(
     .map(([, reference]) => reference)
     .slice(0, maximumCanonicalCandidateProfileIssueSourceReferenceCount);
   return {
-    id: `profile-issue-${digest([
-      "source-normalization-failure",
-      ...uniqueReferences.map(referenceKey),
-    ]).slice(0, 32)}`,
+    id: `profile-issue-${digest([namespace, ...uniqueReferences.map(referenceKey)]).slice(0, 32)}`,
     code: "omission",
     severity: "error",
     status: "open",
-    message: "Selected candidate knowledge could not be normalized; candidate review is required.",
+    message,
     factIds: [],
     sourceRefs: uniqueReferences,
   };
@@ -368,9 +387,24 @@ export function createCanonicalCandidateProfileDerivationService(
             });
       const issues = [
         ...extracted.issues,
+        ...(materialization.oversizedReferences.length === 0
+          ? []
+          : [
+              materializationIssue(
+                "source-too-large",
+                sourceTooLargeMessage,
+                materialization.oversizedReferences,
+              ),
+            ]),
         ...(materialization.failedReferences.length === 0
           ? []
-          : [materializationIssue(materialization.failedReferences)]),
+          : [
+              materializationIssue(
+                "source-normalization-failure",
+                sourceNormalizationFailureMessage,
+                materialization.failedReferences,
+              ),
+            ]),
       ];
       if (issues.length > maximumCanonicalCandidateProfileIssueCount) {
         throw new Error(canonicalCandidateProfileDerivationErrorMessage);

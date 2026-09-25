@@ -390,7 +390,11 @@ describe("canonical candidate profile derivation", () => {
 
     expect(saved.profile.facts).toEqual([]);
     expect(saved.profile.issues).toHaveLength(1);
-    expect(saved.profile.issues[0]).toMatchObject({ code: "omission", severity: "error" });
+    expect(saved.profile.issues[0]).toMatchObject({
+      code: "omission",
+      severity: "error",
+      message: genericNormalizationMessage,
+    });
     expect(saved.profile.issues[0]?.sourceRefs[0]).toMatchObject({
       sourceId: "source-1",
       versionId: "version-1",
@@ -399,7 +403,170 @@ describe("canonical candidate profile derivation", () => {
     expect(JSON.stringify(saved)).not.toContain("/private/store");
     expect(extract).not.toHaveBeenCalled();
   });
+
+  it("records a size-specific issue when a selected source exceeds the derivation limit", async () => {
+    const { saved, extract } = await deriveFromSources([
+      { sourceId: "source-large", content: oversizedMarkdown() },
+    ]);
+
+    expect(saved.profile.facts).toEqual([]);
+    expect(saved.profile.issues).toHaveLength(1);
+    expect(saved.profile.issues[0]).toMatchObject({
+      code: "omission",
+      severity: "error",
+      status: "open",
+      message: tooLargeMessage,
+      factIds: [],
+    });
+    expect(saved.profile.issues[0]?.id).toMatch(/^profile-issue-[0-9a-f]{32}$/u);
+    expect(saved.profile.issues[0]?.sourceRefs).toEqual([
+      expect.objectContaining({ sourceId: "source-large", versionId: "version-source-large" }),
+    ]);
+    expect(saved.profile.issues.map((issue) => issue.message)).not.toContain(
+      genericNormalizationMessage,
+    );
+    expect(JSON.stringify(saved)).not.toContain("/private/store");
+    expect(extract).not.toHaveBeenCalled();
+  });
+
+  it("keeps the generic issue for a selected source that normalizes to empty text", async () => {
+    const { saved, extract } = await deriveFromSources([
+      { sourceId: "source-empty", content: emptyMarkdown() },
+    ]);
+
+    expect(saved.profile.issues).toHaveLength(1);
+    expect(saved.profile.issues[0]).toMatchObject({
+      code: "omission",
+      severity: "error",
+      message: genericNormalizationMessage,
+    });
+    expect(saved.profile.issues[0]?.sourceRefs).toEqual([
+      expect.objectContaining({ sourceId: "source-empty" }),
+    ]);
+    expect(extract).not.toHaveBeenCalled();
+  });
+
+  it("records both issues with distinct ids when oversized and unnormalizable sources are selected", async () => {
+    const { saved } = await deriveFromSources([
+      { sourceId: "source-large", content: oversizedMarkdown() },
+      { sourceId: "source-empty", content: emptyMarkdown() },
+    ]);
+
+    expect(saved.profile.issues).toHaveLength(2);
+    const tooLarge = saved.profile.issues.find((issue) => issue.message === tooLargeMessage);
+    const generic = saved.profile.issues.find(
+      (issue) => issue.message === genericNormalizationMessage,
+    );
+    expect(tooLarge?.sourceRefs).toEqual([expect.objectContaining({ sourceId: "source-large" })]);
+    expect(generic?.sourceRefs).toEqual([expect.objectContaining({ sourceId: "source-empty" })]);
+    expect(tooLarge?.id).not.toEqual(generic?.id);
+
+    const { saved: repeated } = await deriveFromSources([
+      { sourceId: "source-large", content: oversizedMarkdown() },
+      { sourceId: "source-empty", content: emptyMarkdown() },
+    ]);
+    expect(repeated.profile.issues.map((issue) => issue.id)).toEqual(
+      saved.profile.issues.map((issue) => issue.id),
+    );
+  });
 });
+
+const genericNormalizationMessage =
+  "Selected candidate knowledge could not be normalized; candidate review is required.";
+const tooLargeMessage =
+  "A selected source is longer than the 131,072-character limit for profile derivation. Split it into smaller files and derive again.";
+
+function oversizedMarkdown(): string {
+  return `# Career history\n\n${"Representative experience. ".repeat(5_000)}`;
+}
+
+function emptyMarkdown(): string {
+  return "   \n\n  ";
+}
+
+async function deriveFromSources(
+  sources: readonly { readonly sourceId: string; readonly content: string }[],
+) {
+  const selected = createCandidateKnowledgeSelectionSnapshot({
+    capturedAt: createdAt,
+    entries: [
+      {
+        storeId: "store-1",
+        knowledgeBaseId: "knowledge-1",
+        sources: sources.map(({ sourceId }) => {
+          const versionId = `version-${sourceId}`;
+          return {
+            sourceId,
+            versionId,
+            lifecycleRevision: {
+              knowledgeBaseState: "active" as const,
+              knowledgeBaseArchivedAt: null,
+              versionId,
+              version: 1,
+              createdAt,
+              managed: true,
+              originBoundAt: createdAt,
+              observation: null,
+              retirement: null,
+              provenanceFetchedAt: null,
+              directory: null,
+            },
+          };
+        }),
+      },
+    ],
+  });
+  const createKnowledgeSelectionSnapshot = vi.fn(async () => selected);
+  const handle = {
+    descriptor: { schemaVersion: 1, id: "store-1", createdAt },
+    readManagedCandidateKnowledgeSourceVersion: vi.fn(
+      async (_knowledgeBaseId: string, sourceId: string, versionId: string) => {
+        const source = sources.find((candidate) => candidate.sourceId === sourceId);
+        if (source === undefined) return undefined;
+        const bytes = new TextEncoder().encode(source.content);
+        return {
+          metadata: {
+            knowledgeBaseId: "knowledge-1",
+            kind: "file",
+            id: versionId,
+            sourceId,
+            version: 1,
+            parentVersionId: null,
+            mediaType: "text/markdown",
+            checksum: createHash("sha256").update(bytes).digest("hex"),
+            sizeBytes: bytes.byteLength,
+            createdAt,
+          },
+          bytes,
+        };
+      },
+    ),
+    close: vi.fn(async () => undefined),
+  } as unknown as CandidateKnowledgeStoreHandle;
+  const extract = vi.fn();
+  const saveCanonicalCandidateProfile = vi.fn(async (workspaceId, profile) => ({
+    workspaceId,
+    profile,
+    checksum,
+  }));
+  const service = createCanonicalCandidateProfileDerivationService({
+    persistence: {
+      getLatestCanonicalCandidateProfile: vi.fn(async () => undefined),
+      saveCanonicalCandidateProfile,
+    },
+    extractor: { extract },
+    knowledgeService: { createKnowledgeSelectionSnapshot },
+    openKnowledgeStore: async () => handle,
+    now: () => createdAt,
+  });
+  const saved = await service.deriveCanonicalCandidateProfile({
+    workspaceId: "workspace-1",
+    profileId: "profile-1",
+    selections: [{ storeRoot: "/private/store", knowledgeBaseId: "knowledge-1" }],
+    allowProviderData: true,
+  });
+  return { saved, extract };
+}
 
 function createHashForText(value: string): string {
   return createHash("sha256").update(value, "utf8").digest("hex");
