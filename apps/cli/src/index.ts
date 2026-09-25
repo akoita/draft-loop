@@ -5,6 +5,7 @@ import { Command } from "commander";
 import packageJson from "../package.json";
 
 import { printRejectedAuthorCaptureReport } from "./capture-report.js";
+import { isEntryPoint } from "./entry-point.js";
 import { independentReviewLines } from "./independent-review.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
 import {
@@ -2721,6 +2722,6 @@ export async function runCli(argv: readonly string[] = process.argv): Promise<vo
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isEntryPoint(import.meta.url, process.argv[1])) {
   await runCli();
 }
