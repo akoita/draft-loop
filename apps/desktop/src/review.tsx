@@ -25,6 +25,7 @@ import {
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
+import { providerAuthenticationSummary } from "./provider-authentication-summary.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { ThemeToggle } from "./theme.js";
 
@@ -1347,6 +1348,15 @@ export function ReviewWorkspace({
   const [openaiStatus, setOpenaiStatus] = useState<CredentialStatus>(() =>
     emptyCredentialStatus("openai"),
   );
+  const [anthropicAuthModeStatus, setAnthropicAuthModeStatus] = useState<ProviderAuthModeStatus>(
+    () => ({
+      provider: "anthropic",
+      activeMode: "api-key",
+      preferredMode: "api-key",
+      restartRequired: false,
+      environmentOverride: false,
+    }),
+  );
   const [openaiAuthModeStatus, setOpenaiAuthModeStatus] = useState<ProviderAuthModeStatus>(() => ({
     provider: "openai",
     activeMode: "api-key",
@@ -1599,6 +1609,9 @@ export function ReviewWorkspace({
 
   const refreshProviderAuthMode = useCallback(() => {
     if (getProviderAuthModeStatus === undefined) return;
+    void getProviderAuthModeStatus("anthropic")
+      .then(setAnthropicAuthModeStatus)
+      .catch(() => undefined);
     void getProviderAuthModeStatus("openai")
       .then(setOpenaiAuthModeStatus)
       .catch(() => undefined);
@@ -2759,13 +2772,13 @@ export function ReviewWorkspace({
                   </div>
                   <strong>Provider authentication</strong>
                   <span>
-                    {state.setup.fixtureMode
-                      ? "Demo mode (no provider authentication required)"
-                      : anthropicStatus.configured && openaiStatus.configured
-                        ? openaiAuthModeStatus.activeMode === "user-session"
-                          ? "Anthropic API key & OpenAI Codex session configured"
-                          : "Anthropic & OpenAI API keys configured"
-                        : "Configure provider authentication for live review"}
+                    {providerAuthenticationSummary({
+                      fixtureMode: state.setup.fixtureMode,
+                      anthropicConfigured: anthropicStatus.configured,
+                      openaiConfigured: openaiStatus.configured,
+                      anthropicMode: anthropicAuthModeStatus.activeMode,
+                      openaiMode: openaiAuthModeStatus.activeMode,
+                    })}
                   </span>
                   <button
                     className="button button-quiet"
