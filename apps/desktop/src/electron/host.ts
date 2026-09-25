@@ -148,6 +148,7 @@ import type {
   WritingPolicyVersionMetadata,
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
+import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
   type ProviderAuthModePreferenceStore,
@@ -4899,10 +4900,14 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       }
     } catch (error) {
       options.onError?.(error, command.type);
-      const hostError =
+      const userMessage =
         error instanceof SourceIngestionUserError
-          ? new NativeHostError("operation-failed", error.message)
-          : error;
+          ? error.message
+          : command.type === "profile.derive"
+            ? userFixableProfileDerivationMessage(error)
+            : undefined;
+      const hostError =
+        userMessage === undefined ? error : new NativeHostError("operation-failed", userMessage);
       return { ok: false, error: safeBridgeError(hostError, command.type) };
     }
   }
