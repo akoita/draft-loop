@@ -176,7 +176,12 @@ describe("desktop canonical candidate profile", () => {
       />,
     );
     expect(html).toContain('aria-labelledby="canonical-profile-title"');
-    expect(html).toContain('aria-label="Opaque profile ID"');
+    expect(html).toContain('aria-label="Profile name"');
+    expect(html).toContain("Profile name");
+    expect(html).toContain('placeholder="e.g. senior-data-engineer-cv"');
+    expect(html).toContain(
+      "Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval",
+    );
     expect(html).toContain("I approve sending selected candidate material");
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');

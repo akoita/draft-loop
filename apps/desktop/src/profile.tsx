@@ -612,7 +612,7 @@ export function ProfileWorkspace({
       </p>
       <div className="profile-controls">
         <label className="profile-id-label">
-          <span>Opaque profile ID</span>
+          <span>Profile name</span>
           <input
             type="text"
             value={profileId}
@@ -620,7 +620,9 @@ export function ProfileWorkspace({
             pattern={profileIdPattern.source}
             autoComplete="off"
             disabled={busy}
-            aria-label="Opaque profile ID"
+            aria-label="Profile name"
+            placeholder="e.g. senior-data-engineer-cv"
+            aria-describedby="profile-id-hint"
             onChange={(event) => {
               const next = event.target.value;
               if (
@@ -652,6 +654,10 @@ export function ProfileWorkspace({
         >
           Load latest
         </button>
+        <p className="field-hint" id="profile-id-hint">
+          Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval
+          applies to this name only.
+        </p>
         <label className="profile-approval-label">
           <input
             type="checkbox"
@@ -700,7 +706,9 @@ export function ProfileWorkspace({
         </label>
       )}
       {record === null ? (
-        <p className="profile-empty">Load a profile ID to inspect its immutable history.</p>
+        <p className="profile-empty">
+          Enter a profile name and choose Load latest to see its history.
+        </p>
       ) : (
         <ProfileDetails
           record={record}
