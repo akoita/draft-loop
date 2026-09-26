@@ -21,6 +21,11 @@ import {
   candidatePriorityEvidenceQueryLimit,
   selectCandidatePriorityEvidence,
 } from "./candidate-priority-evidence.js";
+import {
+  candidateProductionSkillsEvidenceQuery,
+  candidateProductionSkillsEvidenceQueryLimit,
+  selectCandidateProductionSkillsEvidence,
+} from "./candidate-production-skills-evidence.js";
 import type {
   CandidateKnowledgeRetrievalDiagnostic,
   CandidateKnowledgeRetrievalResult,
@@ -28,6 +33,7 @@ import type {
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import {
   hasRequiredSectionEvidence,
+  isSkillsRequiredSection,
   mergeRequiredSectionEvidence,
   type RequiredSectionRetrievalResult,
   type RequiredSectionSupplement,
@@ -266,6 +272,16 @@ export function candidateKnowledgeRuntimeRetrieval(
         priorityRawResult === undefined
           ? []
           : selectCandidatePriorityEvidence(priorityRawResult, limit);
+      const productionSkillsRawResult = config.requiredSections.some(isSkillsRequiredSection)
+        ? await rawQuery(
+            candidateProductionSkillsEvidenceQuery,
+            candidateProductionSkillsEvidenceQueryLimit,
+          )
+        : undefined;
+      const productionSkillsRecord =
+        productionSkillsRawResult === undefined
+          ? undefined
+          : selectCandidateProductionSkillsEvidence(productionSkillsRawResult);
       const sectionQueries = requiredSectionQueries(config.requiredSections, limit);
       const primaryLimit = Math.max(1, limit - sectionQueries.length);
       const primary = await rawQuery(text, primaryLimit);
@@ -274,9 +290,18 @@ export function candidateKnowledgeRuntimeRetrieval(
       for (const sectionQuery of sectionQueries) {
         const result = await rawQuery(sectionQuery.query, requiredSectionRetrievalLimit);
         rawSupplementResults.push(result);
+        const hasProductionSkillsRecord =
+          productionSkillsRecord !== undefined && isSkillsRequiredSection(sectionQuery.section);
+        const sectionHits =
+          hasProductionSkillsRecord && productionSkillsRecord !== undefined
+            ? [
+                productionSkillsRecord,
+                ...result.hits.filter(({ chunkId }) => chunkId !== productionSkillsRecord.chunkId),
+              ]
+            : result.hits;
         const sectionResult: RequiredSectionRetrievalResult = {
-          status: result.status,
-          hits: result.hits.map((hit) => toScoredEvidenceChunk(hit, config.id)),
+          status: hasProductionSkillsRecord ? "matched" : result.status,
+          hits: sectionHits.map((hit) => toScoredEvidenceChunk(hit, config.id)),
         };
         if (
           result.status === "matched" &&
@@ -349,6 +374,7 @@ export function candidateKnowledgeRuntimeRetrieval(
         [
           ...chronologyRawResults,
           ...(priorityRawResult === undefined ? [] : [priorityRawResult]),
+          ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult]),
           primary,
           ...rawSupplementResults,
         ]
@@ -365,6 +391,7 @@ export function candidateKnowledgeRuntimeRetrieval(
           [
             ...chronologyRawResults.map(({ status }) => status),
             ...(priorityRawResult === undefined ? [] : [priorityRawResult.status]),
+            ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult.status]),
             primary.status,
             ...supplements.map(({ result: sectionResult }) => sectionResult.status),
           ],
@@ -380,6 +407,7 @@ export function candidateKnowledgeRuntimeRetrieval(
           [
             ...chronologyRawResults,
             ...(priorityRawResult === undefined ? [] : [priorityRawResult]),
+            ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult]),
             primary,
             ...rawSupplementResults,
           ],

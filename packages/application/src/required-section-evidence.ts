@@ -1,5 +1,6 @@
 import type { CandidateKnowledgeRetrievalStatus, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
+import { isProductionSkillsRecord } from "./candidate-production-skills-evidence.js";
 
 const sectionTokenPattern = /[\p{L}\p{N}]+/gu;
 const unavailableSectionTextPattern =
@@ -258,6 +259,11 @@ function vocabularyFor(section: string): SectionVocabulary | undefined {
   return sectionVocabularies.find((vocabulary) => vocabulary.identities.includes(identity));
 }
 
+/** Identify required-section names covered by the existing Skills vocabulary. */
+export function isSkillsRequiredSection(section: string): boolean {
+  return vocabularyFor(section)?.identities.includes("skills") ?? false;
+}
+
 function sectionQueryTerms(section: string): readonly string[] {
   const vocabulary = vocabularyFor(section);
   return unique([...(tokens(section) ?? []), ...(vocabulary?.queryTerms ?? [])]).slice(0, 32);
@@ -321,6 +327,7 @@ export function requiredSectionQueries(
 
 /** Identify retrieved source content that can support a required section. */
 export function matchesRequiredSectionEvidence(section: string, text: string): boolean {
+  if (isSkillsRequiredSection(section) && isProductionSkillsRecord(text)) return true;
   const sectionTerms = evidenceTermsFor(section);
   const clauses = contentClauses(section, text);
   if (clauses.length === 0) return false;

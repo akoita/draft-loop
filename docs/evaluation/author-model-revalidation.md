@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** #559 failed after three validator-rejected author attempts. Investigation found policy vocabulary displacing required-section source records; #560 protects those records and narrows the priority query. #555 remains qualitatively positive without a verified strict pass; #554 was indeterminate.
+- **Current status:** #562 accepted a frontier draft and completed critique. Candidate review clarified source facts and confirmed sparse recent accomplishments, repeated project entries, and outdated skill emphasis; exhaustive zero-count adjudication remains unverified. #563 addresses selection of the explicit production-skills record.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #559 · 2026-09-26 · revision `a4cba049a1d33774e54c73c4df4b03c06140981d`
+- **Latest observation:** #562 · 2026-09-27 (Europe/Paris) · revision `42e16cb437533dbb5a09ce9b062206b3c98824be`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -512,3 +512,60 @@ fixtures cover the same policy-displacement pattern for CI and other developers;
 restoring the former broad reuse filter makes the actual-record regression fail.
 This proves the targeted selection correction; no additional live workflow has
 run after it, and the frontier quality pass remains unverified.
+
+## Frontier recheck after protecting section records (#562)
+
+**Observed:** 2026-09-27 (Europe/Paris) · **Revision:** `42e16cb437533dbb5a09ce9b062206b3c98824be`
+
+The user requested the next observation after merging PR #561. The same approved
+private case and authenticated `claude-opus-5-5`/`gpt-6-sol` pair retained the
+three-author/one-critic, 1,200,000-ms bound including preflight. Both probes passed;
+the synthetic author preflight succeeded in 4,721 ms.
+
+The first author attempt was rejected for two factual-invariant violations and
+one uncovered block. Local replay reproduced a combined date range absent from
+any single cited chunk, an unsupported literal title prefix, and an uncited
+negative-experience statement. The second attempt was accepted with seven
+sections and 63 claims. One critic call completed with a funding-attribution
+error, eight duplicate-content warnings, sixteen deterministic uncovered-requirement
+warnings, and five additional content warnings.
+
+Provider wall time including preflight was 178,015 ms; accounted workflow time
+including preflight was 222,224 ms. The workflow stopped awaiting approval, with
+readiness false and approval pending. The source-selection check retained actual
+degree, credential, and language records, thirteen dated headings, and one
+production technical-contribution chunk within twenty chunks and 12,706 bytes.
+
+### Candidate review and source corrections
+
+The candidate disputed the funding error, rejected the negative production-experience
+assumption, and clarified that the training included formal awards. The candidate
+confirmed three quality weaknesses: sparse recent-role accomplishments, repeated
+project entries without contributions, and outdated skill emphasis. A separate
+credential-date conflict remains unresolved. No exhaustive category counts were
+supplied, so the strict zero-count pass remains unverified.
+
+Investigation found that the saved writing instructions explicitly asserted an
+experience gap. Corrected private working instructions remove that assumption.
+Candidate-confirmed facts were integrated into a separate private working profile;
+the original evaluation inputs, accepted draft, selected source version, and
+captures remain unchanged. Nothing personal was published or exported.
+
+### Production-skills evidence selection (#563)
+
+A provider-free replay on the corrected working profile still selected an old
+technology-transition paragraph for Skills while omitting the explicit production
+skills inventory. A bounded local query recovered that inventory. Issue #563
+promotes matched substantive `Production experience:` records within the Skills
+supplement, preserving chronology, other actual section records, provenance, and
+the existing item/byte caps. This is one selection correction; recent-role
+accomplishment coverage and project quality require separate verification.
+
+A provider-free proof on the corrected full private profile retained thirteen
+dated headings, actual degree, credential and language records, the explicit
+production-skills inventory including the confirmed language-version migration,
+and recent production-backend evidence. The older transition paragraph was
+absent. Selection remained at twenty chunks, 14,224 bytes, and sixteen
+content-free traces, with no provider calls. Fictional CI fixtures protect the
+same outcome; disabling record promotion makes the focused regression fail.
+Ordinary Skills retrieval remains available when no explicit record exists.
