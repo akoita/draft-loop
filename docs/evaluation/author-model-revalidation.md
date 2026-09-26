@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** #562 accepted a frontier draft and completed critique. Candidate review clarified source facts and confirmed sparse recent accomplishments, repeated project entries, and outdated skill emphasis; exhaustive zero-count adjudication remains unverified. #563 addresses selection of the explicit production-skills record.
+- **Current status:** #563 retained the explicit production-skills inventory and recent backend evidence. The second frontier draft was accepted; the critic reported no errors and five content warnings. Candidate adjudication remains pending, so the strict quality pass is unverified.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #562 · 2026-09-27 (Europe/Paris) · revision `42e16cb437533dbb5a09ce9b062206b3c98824be`
+- **Latest observation:** #563 · 2026-09-27 (Europe/Paris) · revision `f72b428f883721885a9ae452379461afb8251406`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -569,3 +569,38 @@ absent. Selection remained at twenty chunks, 14,224 bytes, and sixteen
 content-free traces, with no provider calls. Fictional CI fixtures protect the
 same outcome; disabling record promotion makes the focused regression fail.
 Ordinary Skills retrieval remains available when no explicit record exists.
+
+### Bounded live follow-up (#563)
+
+The candidate requested continuation after correcting source facts. One fresh
+workflow used the same job description, the full private corpus updated only
+with those confirmations, and corrected writing priorities. This is an input
+variant, not an unchanged-case comparison. The pair remained authenticated
+`claude-opus-5-5` and `gpt-6-sol`, with three author attempts, one critic call,
+and 1,200,000 ms including preflight. Both probes passed; synthetic author
+preflight succeeded in 2,333 ms. The prepared evidence retained twenty chunks,
+thirteen dated headings, all actual required-section records, the production
+skills inventory, and recent backend evidence in 14,216 bytes and sixteen traces.
+
+The first attempt was rejected for two factual-invariant violations and one
+uncovered block. Private replay reproduced introductory modifiers being included
+in protected technology/title phrases despite the underlying values appearing
+in cited evidence; a skills-category label separately failed block coverage.
+This identifies a validator follow-up, without changing grounding during the run.
+The second author draft passed with eight sections and 94 claims. One critic
+call reported no errors, nine duplicate-content warnings, fourteen deterministic
+uncovered-requirement warnings, and five content warnings: missing contributions
+in other recent roles, project labels without substance, thin Java-platform
+accomplishment evidence, implicit production status, and past-role summary framing.
+
+Provider wall time including preflight was 327,975 ms; accounted workflow time
+including preflight was 379,884 ms. The harness blocked the requested post-critic
+revision at the declared first-review boundary. The application consequently
+records a nonretryable revision error; both admitted provider steps completed,
+and the accepted draft and findings were saved for private candidate review.
+No additional workflow, approval, or export occurred. Candidate category counts
+remain pending; critic error counts alone do not establish the fixed quality pass.
+
+The full repository gate passed before this run: 2,042 tests in 136 files plus
+60 release/security tests. Architecture and evaluation documentation describe
+the internal selection change; there is no new command or user-facing option.
