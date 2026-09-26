@@ -1,6 +1,6 @@
 # Author model revalidation
 
-- **Current status:** #526 produced an accepted draft and independent critique; the candidate's first review is pending.
+- **Current status:** #526 failed candidate review: the accepted draft merged two employers' chronology.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
 - **Latest observation:** #526 · 2026-09-24 · revision `1d5c3a8cfd2d521dd79aed4c4fa201da398835b0`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
@@ -190,18 +190,30 @@ at revision (`unknown`, nonretryable, round 2). This records the local stop
 boundary, not a provider transport failure.
 
 The accepted draft and critic findings were rendered privately for candidate
-review. The fixed first-review criteria are zero factual errors, unsupported
-claims, and missing required sections. That review is pending, so this
-observation has no pass/fail decision. Critic warnings are not the candidate's
-decision. The rejected attempts had no factual-invariant or unsupported-claim
-diagnostics; that does not establish human factual correctness. Approval remains
-pending. No product export, submission, or new run occurred.
+review. On 2026-09-26, the candidate found the draft useful while highlighting
+the duplicate-content warnings. A subsequent local source check found that the
+draft assigned an earlier employer's period to a later employer and omitted the
+earlier role. The candidate confirmed the two separate source employment
+periods, establishing one factual chronology error in the accepted draft.
 
-On 2026-09-26, the candidate gave a positive first impression of the draft and
-found its content useful, while highlighting the duplicate-content warnings.
-Confirmation of the three fixed first-review counts is still pending;
-duplication remains a quality concern even if the factuality and completeness
-criteria pass.
+The observation **fails** the fixed first-review rule: any factual error,
+unsupported claim, or missing required section is enough to fail. One confirmed
+factual error suffices; the remaining categories were not exhaustively counted.
+Duplication remains a separate quality concern. Critic warnings and the absence
+of factual-invariant diagnostics on the rejected attempts do not establish human
+factual correctness. Approval remains pending. No product export, submission,
+or new run occurred.
+
+### Economy-pair stage decision
+
+A provider-free replay with invented employers reproduced a validator gap:
+a fully covered claim or block can combine separately supported date endpoints
+into a range that no cited chunk states. The saved artifact's header split its
+endpoints into separate claims. The existing complete-range check applied only
+to text outside claims. Issue #544 applies that same check to substantive claims
+and all block text before further live quality evaluation. It does not prove
+that a supported range belongs to a particular employer or enforce complete
+credential coverage; those limitations remain.
 
 ### Comparison and limitations
 
@@ -210,5 +222,6 @@ the #526 observation reached an accepted draft after two retries with validation
 feedback, followed by one critic call. The offline #522 recheck of #520 used grounded coverage and still
 rejected those drafts. These are observations under different rules and
 workflows; they do not show that revision feedback caused the different result.
-One accepted draft and an independent critique do not establish the fixed
-first-review criteria, and the candidate review remains pending.
+One accepted draft and an independent critique did not establish the fixed
+first-review criteria: the candidate-confirmed chronology error defeats the
+zero-factual-error requirement.

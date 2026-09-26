@@ -166,6 +166,12 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
+Date ranges in substantive claims and whole block text, including ranges split
+across separately covered claims, must appear as a complete range in one cited
+evidence chunk; separate endpoints or ranges do not combine into support. This
+checks range support, but does not establish that a complete range elsewhere in
+cited evidence belongs to the employer named in the claim.
+
 Author grounding treats a narrow English action phrase such as `Built TypeScript
 tools` as an action plus the protected technology name. The exception requires a
 known opening past-tense verb, one acronym or mixed-case name, and a recognized
