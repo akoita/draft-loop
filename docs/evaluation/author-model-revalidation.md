@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** The completed #548 follow-up reached an accepted draft and critic, but source review found a factual chronology error. The original preflight-only attempt remains indeterminate.
+- **Current status:** #551 reached an accepted draft and critic; the candidate gave positive qualitative first-review feedback without exhaustive category counts. Local review found omitted recent roles and employment dates. #548 remains a failed factuality observation.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #548 · 2026-09-26 · revision `fa3f25ea26cffd331e69f6886bdac8836fecb461`
+- **Latest observation:** #551 · 2026-09-26 · revision `40b5e77857df6e2c4ac58000f3d5c6d3e09a2593`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -317,3 +317,54 @@ synthetic checks and the completed workflow provide no evidence of a persistent
 credential failure. The narrow #550 employer-header association fix is checked
 with synthetic examples and a private replay, without another provider call or
 a claim that a corrected live draft has been produced.
+
+## Economy-pair observation after employer-header association
+
+**Issue:** #551 · **Observed:** 2026-09-26 · **Revision:** `40b5e77857df6e2c4ac58000f3d5c6d3e09a2593`
+
+The user instructed `merge and continue` after reviewing the completed #548
+investigation and the #550 fix. The fresh observation used the same approved
+case A inputs and the same authenticated user-session pair: Sonnet 4.5 author
+and GPT-6 Luna critic. Both sign-in probes passed and the synthetic author
+preflight returned `available` in 4,166 ms. The private setup retained detailed
+preflight codes and created the rejection-capture parent before any author call.
+The call and time caps remained three author calls, one critic call, and
+1,200,000 ms total provider time including preflight.
+
+| Author call | Revision input | Validator result |
+| --- | --- | --- |
+| 1 | None | Rejected: 4 factual-invariant violations and 5 uncovered-text issues |
+| 2 | Validation feedback | Rejected: 2 uncovered-text issues |
+| 3 | Validation feedback | Accepted: 8 sections, 68 claims |
+
+The independent critic completed with four duplicate-content and ten
+uncovered-requirement warnings. Provider wall time including preflight was
+386,824 ms; accounted workflow time plus preflight was 403,825 ms. Both stayed
+within the cap. The local guard refused a post-critic author revision before
+any fourth author call; the stored state is `provider-error` on revision, with
+approval pending. No approval, export, or submission occurred.
+
+### Local investigation before publication
+
+The accepted draft omitted both recent employed roles and most employment
+dates. The candidate gave positive qualitative first-review feedback but did
+not report exhaustive counts of factual errors, unsupported claims, or missing
+required sections. The fixed zero-count pass rule therefore remains unverified;
+validator acceptance and critic completion do not establish factual correctness
+or completeness. Omitted roles
+are a quality problem but are not automatically counted as a missing configured
+section when an Experience section exists.
+
+The saved rejected proposals showed that the author received 20 CKB evidence
+chunks with no employer-specific dated Markdown headings. This route bypassed
+the existing chronology reservation for legacy local sources. A provider-free
+replay reproduced the same selection, and bounded local lexical supplements
+recovered 13 dated headings from the same approved CKB. Issue #552 adds those
+matched headings to application-level CKB selection while retaining the
+20-chunk provider cap, required-section supplements, provenance, and traces.
+The corrected private runtime replay retained all 13 discovered dated headings
+in 20 selected chunks, at 9,888 serialized bytes, with 14 content-free traces;
+no provider call was made. The original selection was 34,643 bytes and eight
+traces. These counts describe selection, not CV quality or efficiency.
+This is a correction to evidence selection, not a relaxation of factual checks
+or proof that a subsequent live draft has improved.

@@ -204,7 +204,7 @@ not silently truncate source text. Reviewed-brief requirements and priorities
 remain authoritative, and existing pinned contexts are never re-extracted on
 resume. A corrected interpretation requires a new reviewed context.
 
-### Chronology in local-source retrieval
+### Chronology in evidence retrieval
 
 For local-source contexts without a CKB selection, author and critic retrieval
 reserves space for dated Markdown headings from the exact pinned source IDs
@@ -219,7 +219,21 @@ hundred heading chunks per source. Missing or mismatched sources, scan overflow,
 or headings that cannot fit the requested count or byte limit fail retrieval
 before provider execution. The bounded matcher recognizes Markdown headings
 with a year range or an ongoing end marker; it does not infer dates or repair
-artifact chronology. CKB retrieval retains its separate selected-version path.
+artifact chronology.
+
+For CKB workspaces requiring Experience, the selected-version route also reserves
+matched dated Markdown headings. Fixed local lexical supplements cover English
+month and ongoing-end terms and years 1900–2099 in batches below the query-term
+cap. Each query returns at most one hundred hits; fallback results are ignored.
+Discovered heading IDs are deduplicated and retained before ranked job evidence,
+then merged with the existing required-section supplements. Their existing IDs,
+source-version provenance, and content-free retrieval traces remain intact.
+
+This is bounded lexical discovery, not an exhaustive chronology inventory.
+A saturated matched supplement, discovered headings that cannot fit or are lost
+in the merge, or evidence over the twenty-chunk/128-KiB provider bounds fails
+closed. The queries are local and introduce no provider calls or inferred dates.
+The ordinary CKB lifecycle and freshness checks still apply.
 
 ### Explicit experience statements
 
