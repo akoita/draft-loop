@@ -2,6 +2,7 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { extractProtectedValues, supportsProtectedValueInChunks } from "./author-grounding.js";
+import { supportsInternationalPhoneClaim } from "./author-telephone-grounding.js";
 import { claimCoverageIssues } from "./claim-coverage.js";
 import { hasUnsupportedEmployerHeaderRange } from "./employer-header-range.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
@@ -58,6 +59,9 @@ export function completeCvProposalIssues(
   const evidenceById = new Map(retrievedEvidence.map((chunk) => [chunk.id, chunk.text] as const));
   const issues: CompleteCvProposalIssue[] = [];
   const coverageIssues = claimCoverageIssues(proposal);
+  const presentRequiredSectionTitles = requiredSections.filter((title) =>
+    proposal.sections.some((section) => section.title === title),
+  );
 
   for (const [sectionIndex, section] of proposal.sections.entries()) {
     for (const [blockIndex, block] of section.blocks.entries()) {
@@ -76,10 +80,12 @@ export function completeCvProposalIssues(
         const evidenceChunks = claim.evidenceChunkIds.map((id) => evidenceById.get(id) ?? "");
         const evidence = normalized(evidenceChunks.join("\n"));
         const tokens = meaningfulTokens(claim.text);
+        const phoneSupport = supportsInternationalPhoneClaim(claim.text, evidenceChunks);
         const related =
-          tokens.length > 0
+          phoneSupport ??
+          (tokens.length > 0
             ? tokens.some((token) => evidence.includes(token))
-            : shortNamesRelated(claim.text, evidenceChunks);
+            : shortNamesRelated(claim.text, evidenceChunks));
         if (!related) {
           issues.push({
             code: "unsupported_claim",
@@ -135,7 +141,12 @@ export function completeCvProposalIssues(
       return (
         section === undefined ||
         block === undefined ||
-        uncoveredTextIntroducesUnsupportedFact(section, block, retrievedEvidence)
+        uncoveredTextIntroducesUnsupportedFact(
+          section,
+          block,
+          retrievedEvidence,
+          presentRequiredSectionTitles,
+        )
       );
     })
     .map((issue) => ({

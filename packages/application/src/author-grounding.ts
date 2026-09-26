@@ -16,6 +16,8 @@ const singleTechnologyNamePattern =
   /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
 const softwareObjectPattern =
   /^[ \t]+(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/u;
+const softwareObjectAppositivePattern =
+  /^[ \t]*,[ \t]+(?:a|an)[ \t]+(?:(?:model-driven|engineering)[ \t]+)*(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/iu;
 
 const multiWordNamePattern = /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu;
 
@@ -88,7 +90,8 @@ function withoutOpeningAction(text: string, matched: string, start: number): str
     name === undefined ||
     !narrowOpeningActionVerbs.has(verb) ||
     !singleTechnologyNamePattern.test(name) ||
-    !softwareObjectPattern.test(text.slice(start + matched.length))
+    (!softwareObjectPattern.test(text.slice(start + matched.length)) &&
+      !softwareObjectAppositivePattern.test(text.slice(start + matched.length)))
   )
     return matched;
   return name;
