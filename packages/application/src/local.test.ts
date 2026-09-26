@@ -792,7 +792,7 @@ describe("local application driver", () => {
         const traces = await history.listCandidateKnowledgeRetrievalTraces(
           (await readWorkspace(root)).id,
         );
-        expect(traces).toHaveLength(5);
+        expect(traces).toHaveLength(11);
         expect(traces).toEqual(
           expect.arrayContaining([
             expect.objectContaining({

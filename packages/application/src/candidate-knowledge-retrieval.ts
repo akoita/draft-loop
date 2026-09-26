@@ -9,6 +9,13 @@ import type {
   ScoredEvidenceChunk,
 } from "@draft-loop/domain";
 import type { SqliteStorage } from "@draft-loop/storage";
+import {
+  assertCandidateKnowledgeProviderBounds,
+  candidateKnowledgeChronologyQueries,
+  candidateKnowledgeChronologyQueryLimit,
+  requiresExperienceChronology,
+  selectCandidateKnowledgeChronologyHits,
+} from "./candidate-knowledge-chronology.js";
 import type {
   CandidateKnowledgeRetrievalDiagnostic,
   CandidateKnowledgeRetrievalResult,
@@ -234,8 +241,17 @@ export function candidateKnowledgeRuntimeRetrieval(
     if (existing !== undefined) return existing;
     const pending = (async () => {
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 20) {
-        return rawQuery(text, limit);
+        throw new Error("Candidate knowledge provider retrieval limit must be from 1 through 20.");
       }
+      const chronologyRawResults: CandidateKnowledgeRetrievalResult[] = [];
+      if (requiresExperienceChronology(config.requiredSections)) {
+        for (const chronologyQuery of candidateKnowledgeChronologyQueries) {
+          chronologyRawResults.push(
+            await rawQuery(chronologyQuery, candidateKnowledgeChronologyQueryLimit),
+          );
+        }
+      }
+      const chronologyHits = selectCandidateKnowledgeChronologyHits(chronologyRawResults, limit);
       const sectionQueries = requiredSectionQueries(config.requiredSections, limit);
       const primaryLimit = Math.max(1, limit - sectionQueries.length);
       const primary = await rawQuery(text, primaryLimit);
@@ -265,13 +281,23 @@ export function candidateKnowledgeRuntimeRetrieval(
 
       const primaryHits = primary.hits.map((hit) => toScoredEvidenceChunk(hit, config.id));
       const hits = mergeRequiredSectionEvidence(
-        { status: primary.status, hits: primaryHits },
+        {
+          status: primary.status,
+          hits: [
+            ...chronologyHits.map((hit) => toScoredEvidenceChunk(hit, config.id)),
+            ...primaryHits,
+          ],
+        },
         supplements,
         limit,
       );
       const selectedIds = new Set(hits.map((hit) => hit.id));
+      if (chronologyHits.some((hit) => !selectedIds.has(hit.chunkId))) {
+        throw new Error("Chronology evidence could not fit within the provider retrieval limit.");
+      }
+      assertCandidateKnowledgeProviderBounds(hits, limit);
       const rawHitsById = new Map<string, CandidateKnowledgeLexicalHit>(
-        [primary, ...rawSupplementResults]
+        [...chronologyRawResults, primary, ...rawSupplementResults]
           .flatMap(({ hits: rawHits }) => rawHits)
           .filter((hit) => selectedIds.has(hit.chunkId))
           .map((hit) => [hit.chunkId, hit] as const),
@@ -282,7 +308,11 @@ export function candidateKnowledgeRuntimeRetrieval(
       });
       const result: CandidateKnowledgeRetrievalResult = {
         status: aggregateStatus(
-          [primary.status, ...supplements.map(({ result: sectionResult }) => sectionResult.status)],
+          [
+            ...chronologyRawResults.map(({ status }) => status),
+            primary.status,
+            ...supplements.map(({ result: sectionResult }) => sectionResult.status),
+          ],
           hits.length,
         ),
         indexedChunkCount: primary.indexedChunkCount,
@@ -291,7 +321,10 @@ export function candidateKnowledgeRuntimeRetrieval(
           selectedRawHits.map((hit) => JSON.stringify(hit.metadata.provenance)),
         ).size,
         hits: Object.freeze(selectedRawHits),
-        diagnostics: mergeDiagnostics([primary, ...rawSupplementResults], selectedRawHits),
+        diagnostics: mergeDiagnostics(
+          [...chronologyRawResults, primary, ...rawSupplementResults],
+          selectedRawHits,
+        ),
       };
       return Object.freeze(result);
     })();

@@ -307,8 +307,8 @@ describe("required-section evidence", () => {
     expect(result.hits.map(({ text }) => text)).not.toContain(
       "Built distributed systems with TypeScript.",
     );
-    expect(appendTrace).toHaveBeenCalledTimes(5);
-    expect(new Set(appendTrace.mock.calls.map(([input]) => input.queryChecksum)).size).toBe(5);
+    expect(appendTrace).toHaveBeenCalledTimes(11);
+    expect(new Set(appendTrace.mock.calls.map(([input]) => input.queryChecksum)).size).toBe(11);
 
     // A saturated result cannot prove absence: a supported degree may rank fifth.
     const degree = result.hits.find((hit) => hit.text.includes("MSc"));
