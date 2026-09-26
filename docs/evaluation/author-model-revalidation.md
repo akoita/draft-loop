@@ -1,11 +1,17 @@
 # Author model revalidation
 
-**Status:** Indeterminate; no draft produced with `claude-sonnet-5`
-**Milestone:** [Author model revalidation](https://github.com/akoita/draft-loop/milestone/16)
-**Observation issue:** #499
-**Revision:** `336bb30`
+- **Current status:** #526 produced an accepted draft and independent critique; the candidate's first review is pending.
+- **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
+- **Latest observation:** #526 · 2026-09-24 · revision `1d5c3a8cfd2d521dd79aed4c4fa201da398835b0`
+- **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
+
+## Author model revalidation (#499)
+
+**Status:** Indeterminate; no draft produced with `claude-sonnet-5`
+
+**Revision:** `336bb30`
 
 ## Admission and setup
 
@@ -154,3 +160,55 @@ printed.
 The grounded rule removes rejections of honest wording. It does not accept
 these drafts, because `claude-sonnet-4-5` stated employment dates that the
 evidence does not support.
+
+## Economy pair with author revision feedback
+
+**Issue:** #526 · **Observed:** 2026-09-24 · **Revision:** `1d5c3a8cfd2d521dd79aed4c4fa201da398835b0`
+
+The run recorded authorization as `authorized` on 2026-09-24. Both user-session
+authentication probes passed, and the synthetic author preflight returned
+`available`. The pair was `claude-sonnet-4-5` (`cli-author-v3`) as author and
+`gpt-6-luna` (`cli-critic-v1`) as critic. The bounds were three author calls,
+one critic call, 1,200,000 ms per request, and 1,200,000 ms total active
+provider time.
+
+| Author call | Revision input | Result | Cumulative provider wall time |
+| ----------- | -------------- | ------ | ----------------------------- |
+| 1 | None | Rejected with 8 `substantive_text_uncovered` issues | 162,760 ms |
+| 2 | Validation feedback | Rejected with 1 `substantive_text_uncovered` issue | 308,141 ms |
+| 3 | Validation feedback | Accepted; 8 sections and 95 claims | 481,729 ms |
+
+The critic completed one call. It reported 13 `duplicate-content`, 7
+`uncovered-requirement`, and one each of `production-scope-overstatement`,
+`event-sourcing-gap-omitted`, and `certification-scope`, all as warnings. Total
+cumulative provider wall time after the critic was 500,433 ms; persisted
+accounted active duration was 555,111 ms.
+
+After the critic, the runner's local stop guard refused a post-critic author
+revision before any fourth provider call. The persisted state is `provider-error`
+at revision (`unknown`, nonretryable, round 2). This records the local stop
+boundary, not a provider transport failure.
+
+The accepted draft and critic findings were rendered privately for candidate
+review. The fixed first-review criteria are zero factual errors, unsupported
+claims, and missing required sections. That review is pending, so this
+observation has no pass/fail decision. Critic warnings are not the candidate's
+decision. The rejected attempts had no factual-invariant or unsupported-claim
+diagnostics; that does not establish human factual correctness. Approval remains
+pending. No product export, submission, or new run occurred.
+
+On 2026-09-26, the candidate gave a positive first impression of the draft and
+found its content useful, while highlighting the duplicate-content warnings.
+Confirmation of the three fixed first-review counts is still pending;
+duplication remains a quality concern even if the factuality and completeness
+criteria pass.
+
+### Comparison and limitations
+
+Unlike #520, which rejected all three drafts under the earlier coverage rule,
+the #526 observation reached an accepted draft after two retries with validation
+feedback, followed by one critic call. The offline #522 recheck of #520 used grounded coverage and still
+rejected those drafts. These are observations under different rules and
+workflows; they do not show that revision feedback caused the different result.
+One accepted draft and an independent critique do not establish the fixed
+first-review criteria, and the candidate review remains pending.
