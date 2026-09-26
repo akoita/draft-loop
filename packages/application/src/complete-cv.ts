@@ -3,6 +3,7 @@ import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { extractProtectedValues, supportsProtectedValueInChunks } from "./author-grounding.js";
 import { claimCoverageIssues } from "./claim-coverage.js";
+import { hasUnsupportedEmployerHeaderRange } from "./employer-header-range.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
 import { shortNamesRelated } from "./short-name-relation.js";
 import { unsupportedSingleWordNames } from "./single-word-name-grounding.js";
@@ -103,19 +104,24 @@ export function completeCvProposalIssues(
       const blockPathHasUncoveredText = coverageIssues.some(
         ({ path }) => path[1] === sectionIndex && path[3] === blockIndex,
       );
-      const blockHasUnsupportedRange = hasUnsupportedDateRange(
-        block.text,
-        blockCitedChunks(block, retrievedEvidence),
+      const citedBlockChunks = blockCitedChunks(block, retrievedEvidence);
+      const blockHasUnsupportedRange = hasUnsupportedDateRange(block.text, citedBlockChunks);
+      const blockHasUnsupportedEmployerRange = hasUnsupportedEmployerHeaderRange(
+        section,
+        block,
+        citedBlockChunks,
       );
       if (
         issues.length === blockClaimIssuesStart &&
         !blockPathHasUncoveredText &&
-        blockHasUnsupportedRange
+        (blockHasUnsupportedRange || blockHasUnsupportedEmployerRange)
       ) {
         issues.push({
           code: "factual_invariant_violation",
           path: ["sections", sectionIndex, "blocks", blockIndex, "text"],
-          message: "CV block date range is not present in a cited evidence chunk",
+          message: blockHasUnsupportedEmployerRange
+            ? "CV experience header date range lacks same-employer support in a cited source line"
+            : "CV block date range is not present in a cited evidence chunk",
         });
       }
     }
