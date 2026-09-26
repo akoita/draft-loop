@@ -21,7 +21,8 @@ import {
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 
 const createdAt = "2026-09-26T10:00:00.000Z";
-const candidateInstructions = "Production Java contributions";
+const candidateInstructions =
+  "Preserve experience, education, certifications, and language evidence exactly as sourced. Prioritize Java contributions.";
 
 function lexicalHit(chunkId: string, text: string, bm25Rank = 0): CandidateKnowledgeLexicalHit {
   return createCandidateKnowledgeLexicalHit({
@@ -83,9 +84,19 @@ async function createRuntimeFixture(
       "",
       "Production Java contribution: added integration checks to the release pipeline.",
       "",
+      "Record policy: education, certifications, and language entries below are transcribed from documented source records.",
+      "",
       "## Education",
       "",
       "Bachelor of Computing, Example University, 2017.",
+      "",
+      "## Certifications",
+      "",
+      "Cloud Platform Practitioner Certificate, 2022.",
+      "",
+      "## Languages",
+      "",
+      "English — fluent; French — professional working proficiency.",
     ].join("\n"),
     "utf8",
   );
@@ -115,7 +126,7 @@ async function createRuntimeFixture(
 function createRuntime(
   fixture: Awaited<ReturnType<typeof createRuntimeFixture>>,
   instructions: string,
-  requiredSections = ["Experience", "Education"],
+  requiredSections = ["Experience", "Education", "Certifications", "Languages"],
 ) {
   const runtime = candidateKnowledgeRuntimeRetrieval(
     { appendCandidateKnowledgeRetrievalTrace: fixture.appendTrace },
@@ -145,14 +156,35 @@ describe("candidate-priority evidence", () => {
     );
   });
 
-  it("trims and bounds instruction queries, skipping blank input", () => {
+  it("uses the first explicit Prioritize sentence without splitting Node.js", () => {
+    expect(
+      candidatePriorityEvidenceQuery(
+        "Prioritize Node.js tooling first. Prioritize Java contributions. Keep other facts unchanged.",
+      ),
+    ).toBe("Prioritize Node.js tooling first.");
+    expect(
+      candidatePriorityEvidenceQuery(
+        "Preserve education, certification, and language records\nPrioritize Java contributions\nDo not infer missing facts.",
+      ),
+    ).toBe("Prioritize Java contributions");
+    expect(candidatePriorityEvidenceQuery(candidateInstructions)).toBe(
+      "Prioritize Java contributions.",
+    );
+  });
+
+  it("falls back to trimmed instructions, bounds queries, and skips blank input", () => {
     expect(candidatePriorityEvidenceQuery(" \n\t ")).toBeUndefined();
     expect(candidatePriorityEvidenceQuery(undefined)).toBeUndefined();
     expect(candidatePriorityEvidenceQuery("  prioritize Java contributions  ")).toBe(
       "prioritize Java contributions",
     );
+    expect(candidatePriorityEvidenceQuery("  Preserve education records.  ")).toBe(
+      "Preserve education records.",
+    );
     const bounded = candidatePriorityEvidenceQuery(` ${"x".repeat(2_001)} `);
     expect(bounded).toHaveLength(candidatePriorityEvidenceTextLimit);
+    const boundedDirective = candidatePriorityEvidenceQuery(`Prioritize ${"x".repeat(2_100)}`);
+    expect(boundedDirective).toHaveLength(candidatePriorityEvidenceTextLimit);
     expect(candidatePriorityEvidenceQueryLimit).toBe(20);
     expect(candidatePriorityEvidenceChunkLimit).toBe(3);
   });
@@ -197,6 +229,8 @@ describe("candidate-priority evidence", () => {
         expect.stringContaining("Lumen Works"),
         expect.stringContaining("Production Java contribution: implemented Kafka event ingestion"),
         expect.stringContaining("Bachelor of Computing"),
+        expect.stringContaining("Cloud Platform Practitioner Certificate, 2022"),
+        expect.stringContaining("English — fluent; French — professional working proficiency"),
       ]),
     );
     const contribution = result.hits.find((hit) => hit.text.includes("Kafka event ingestion"));
@@ -215,7 +249,26 @@ describe("candidate-priority evidence", () => {
       result.hits.filter(({ text }) => /^## .*\b(?:19|20)\d{2}.*\bto\b/u.test(text)),
     ).toHaveLength(13);
     expect(result.hits.length).toBeLessThanOrEqual(20);
-    expect(fixture.appendTrace).toHaveBeenCalledTimes(10);
+    expect(fixture.appendTrace).toHaveBeenCalledTimes(12);
+  });
+
+  it("retains actual section records when a fallback priority hit contains section policy terms", async () => {
+    const fixture = await createRuntimeFixture(temporaryRoots);
+    const runtime = createRuntime(
+      fixture,
+      "Preserve education, certifications, and language records exactly as documented.",
+    );
+
+    const result = await runtime.inspect("Platform Engineer");
+
+    expect(result.hits.map(({ text }) => text)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Record policy: education, certifications, and language entries"),
+        expect.stringContaining("Bachelor of Computing, Example University, 2017"),
+        expect.stringContaining("Cloud Platform Practitioner Certificate, 2022"),
+        expect.stringContaining("English — fluent; French — professional working proficiency"),
+      ]),
+    );
   });
 
   it("adds no priority query for blank instructions", async () => {
@@ -223,12 +276,12 @@ describe("candidate-priority evidence", () => {
     const runtime = createRuntime(fixture, " ");
     const result = await runtime.inspect("Platform Engineer");
     expect(result.hits.some(({ text }) => text.includes("Kafka event ingestion"))).toBe(false);
-    expect(fixture.appendTrace).toHaveBeenCalledTimes(9);
+    expect(fixture.appendTrace).toHaveBeenCalledTimes(11);
   });
 
   it("keeps the largest priority prefix that fits beside chronology and education", async () => {
     const fixture = await createRuntimeFixture(temporaryRoots, 0);
-    const runtime = createRuntime(fixture, candidateInstructions);
+    const runtime = createRuntime(fixture, candidateInstructions, ["Experience", "Education"]);
     const result = await runtime.port.queryEvidence("Platform Engineer", { limit: 4 });
 
     expect(result.filter(({ text }) => /^## .*\b(?:19|20)\d{2}/u.test(text))).toHaveLength(2);
@@ -241,11 +294,11 @@ describe("candidate-priority evidence", () => {
 
   it("fits chronology when reserved priority evidence replaces redundant section supplements", async () => {
     const fixture = await createRuntimeFixture(temporaryRoots, 0, true);
-    const withoutPriorities = createRuntime(fixture, "");
+    const withoutPriorities = createRuntime(fixture, "", ["Experience", "Education"]);
     await expect(
       withoutPriorities.port.queryEvidence("Platform Engineer", { limit: 3 }),
     ).rejects.toThrow("Chronology evidence could not fit");
-    const runtime = createRuntime(fixture, "Education Bachelor Java");
+    const runtime = createRuntime(fixture, "Education Bachelor Java", ["Experience", "Education"]);
     const result = await runtime.port.queryEvidence("Platform Engineer", { limit: 3 });
     expect(result.filter(({ text }) => /^## .*\b(?:19|20)\d{2}/u.test(text))).toHaveLength(2);
     expect(result.some(({ text }) => text.includes("Bachelor of Computing"))).toBe(true);
@@ -254,7 +307,7 @@ describe("candidate-priority evidence", () => {
 
   it("fails closed when no priority candidate fits beside chronology and education", async () => {
     const fixture = await createRuntimeFixture(temporaryRoots, 0);
-    const runtime = createRuntime(fixture, candidateInstructions);
+    const runtime = createRuntime(fixture, candidateInstructions, ["Experience", "Education"]);
 
     await expect(runtime.port.queryEvidence("Platform Engineer", { limit: 3 })).rejects.toThrow(
       "Candidate-priority evidence could not fit within the provider retrieval limit.",

@@ -237,17 +237,20 @@ closed. The queries are local and introduce no provider calls or inferred dates.
 The ordinary CKB lifecycle and freshness checks still apply.
 
 When candidate drafting instructions are nonblank, CKB retrieval also queries
-those priorities locally, using at most 2,000 characters and twenty hits.
+the first explicit sentence-level `Prioritize` clause locally, using at most
+2,000 characters and twenty hits. When no such clause exists, it uses the trimmed
+instructions. The full instructions still reach the author unchanged.
 It reserves up to three distinct matched chunks that are not single-line
 Markdown headings, in query order, after chronology and before the general job
 query results. Blank instructions add no query; fallback results are not reserved.
 
 The merge chooses the largest prefix of up to three priority chunks that fits
 alongside chronology and required-section evidence, retaining source/version
-identities and traces. Required sections already satisfied by those guaranteed
-reserved chunks reuse that evidence under the existing section matcher, rather
-than reserving a duplicate supplement. Unselected general-query hits cannot
-justify skipping a reservation. Retrieval fails if matched priority evidence is
+identities and traces. Only Experience may reuse evidence already supplied by
+guaranteed chronology chunks under the existing section matcher. Other required
+sections keep their dedicated supplements: policy text mentioning education,
+credentials, or languages must not displace their source records. Priority and
+unselected general-query hits cannot justify skipping a reservation. Retrieval fails if matched priority evidence is
 available but not even one chunk can fit. This preserves contribution evidence within the existing provider
 limits; lexical matches do not prove job fit or resolve uncertain source claims.
 

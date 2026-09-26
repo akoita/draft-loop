@@ -14,13 +14,36 @@ export interface CandidatePriorityEvidenceQueryResult {
 
 const singleLineMarkdownHeadingPattern = /^\s*#{1,6}\s+[^\r\n]*(?:\r?\n)?\s*$/u;
 
-/** Return trimmed candidate instructions bounded for one local CKB query. */
+/**
+ * Return the first explicit Prioritize sentence for one local CKB query, or the
+ * trimmed instructions when no such sentence is present. Both forms are bounded.
+ */
 export function candidatePriorityEvidenceQuery(
   instructions: string | undefined,
 ): string | undefined {
   if (instructions === undefined) return undefined;
   const trimmed = instructions.trim();
-  return trimmed.length === 0 ? undefined : trimmed.slice(0, candidatePriorityEvidenceTextLimit);
+  if (trimmed.length === 0) return undefined;
+
+  const boundaries = /\r\n|[\r\n]|[.!?](?=\s|$)/gu;
+  let sentenceStart = 0;
+  for (const boundary of trimmed.matchAll(boundaries)) {
+    const index = boundary.index;
+    if (index === undefined) continue;
+    const punctuation = /^[.!?]$/u.test(boundary[0]);
+    const sentenceEnd = index + (punctuation ? 1 : 0);
+    const sentence = trimmed.slice(sentenceStart, sentenceEnd).trim();
+    if (/^Prioritize\b/iu.test(sentence)) {
+      return sentence.slice(0, candidatePriorityEvidenceTextLimit);
+    }
+    sentenceStart = index + boundary[0].length;
+  }
+
+  const finalSentence = trimmed.slice(sentenceStart).trim();
+  if (/^Prioritize\b/iu.test(finalSentence)) {
+    return finalSentence.slice(0, candidatePriorityEvidenceTextLimit);
+  }
+  return trimmed.slice(0, candidatePriorityEvidenceTextLimit);
 }
 
 /** Select a small ordered set of matched body chunks, never heading-only hits. */

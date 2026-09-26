@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** #555 reached an accepted frontier-pair draft and critique; the candidate gave positive qualitative first-review feedback without exhaustive category counts. Chronology is restored, but job-relevant contributions and the requested gap statement are missing. #556 corrects the evidence-selection tradeoff. #554 was indeterminate; #548 remains a failed factuality observation.
+- **Current status:** #559 failed after three validator-rejected author attempts. Investigation found policy vocabulary displacing required-section source records; #560 protects those records and narrows the priority query. #555 remains qualitatively positive without a verified strict pass; #554 was indeterminate.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #555 · 2026-09-26 · revision `57c5fa2ee03b9233faf859cd64eb77fe2937aa5a`
+- **Latest observation:** #559 · 2026-09-26 · revision `a4cba049a1d33774e54c73c4df4b03c06140981d`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -457,5 +457,58 @@ or establish that a subsequent live CV will improve. The corrected provider-free
 runtime replay retained all 13 discovered dated headings in 20 chunks, including
 one chunk with production Java/platform contribution content. Serialized evidence
 was 18,321 bytes, and fifteen content-free traces retained retrieval provenance.
-These are selection counts, not a CV-quality or efficiency result. No second
-live workflow has been run after this correction.
+These were selection counts, not a CV-quality or efficiency result. The #559
+recheck below exposed a required-section coverage defect missed by that replay.
+
+## Frontier recheck after priority reservation (#559)
+
+**Observed:** 2026-09-26 · **Revision:** `a4cba049a1d33774e54c73c4df4b03c06140981d`
+
+The user authorized merging PR #558 and continuing the same private case with
+`claude-opus-5-5` and `gpt-6-sol`. The fixed bound remained three author attempts,
+one critic call, and 1,200,000 ms including preflight. Authentication probes
+passed; the synthetic author preflight succeeded in 2,767 ms.
+
+| Author call | Revision input | Validator result |
+| --- | --- | --- |
+| 1 | None | Rejected: two uncovered blocks and three required-section omissions |
+| 2 | Validation feedback | Rejected: one required-section omission |
+| 3 | Validation feedback | Rejected: two uncovered blocks |
+
+All three attempts received factual-validation verdicts. The bounded observation
+failed without an accepted draft or critic call; this is not an indeterminate
+transport error. Provider wall time including preflight was 354,401 ms; accounted
+workflow time was 385,055 ms. Approval remained pending and readiness false. No
+export, submission, or default change occurred. Private inputs and captured
+outputs remain local.
+
+### Required-section selection correction (#560)
+
+The captured evidence retained thirteen dated headings and technical contribution
+content, but omitted the actual education, credential, and language records.
+Policy text mentioning these categories satisfied the broad reuse matcher and
+displaced their dedicated supplements. The previous replay checked chronology
+and technical contributions without asserting those source records.
+
+Issue #560 limits supplement reuse to Experience covered by guaranteed chronology
+chunks. Other required sections retain dedicated reservations. The priority query
+uses the first explicit `Prioritize` clause when present, reducing policy-text
+competition; the full candidate instructions still reach the author unchanged.
+The correction preserves the existing evidence limits and factual validator.
+
+The final rejected proposal also contained uncited statements describing missing
+event-sourcing and language evidence. The approved source has no explicit
+event-sourcing experience statement, so retrieval cannot establish that requested
+gap as a candidate fact. Restoring language records addresses one selection
+defect; it does not establish that all coverage failures or the live evaluation
+will pass. No source facts were invented or amended.
+
+The corrected provider-free replay asserts the actual degree, credential-list,
+and language-proficiency source records, rather than category vocabulary alone.
+All were retained alongside thirteen dated headings and one production
+Java/platform contribution chunk within twenty chunks and 12,707 serialized bytes.
+Fifteen content-free retrieval traces preserved provenance. Fictional regression
+fixtures cover the same policy-displacement pattern for CI and other developers;
+restoring the former broad reuse filter makes the actual-record regression fail.
+This proves the targeted selection correction; no additional live workflow has
+run after it, and the frontier quality pass remains unverified.
