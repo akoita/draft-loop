@@ -304,7 +304,11 @@ export function candidateKnowledgeRuntimeRetrieval(
           priorityPrefix.length === 0
             ? supplements
             : supplements.filter(
-                ({ section }) => !hasRequiredSectionEvidence(section, reservedChunks),
+                ({ section }) =>
+                  !(
+                    requiresExperienceChronology([section]) &&
+                    hasRequiredSectionEvidence(section, chronologyChunks)
+                  ),
               );
         return mergeRequiredSectionEvidence(
           {
