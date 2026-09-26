@@ -184,6 +184,10 @@ Repository fixtures, reports, and stage evidence must be sanitized. They must
 not contain personal CV content, real names, contact details, real employers,
 or private opportunity URLs or instructions.
 
+The [manual author–critic refinement reference](../packages/evaluations/fixtures/manual-author-critic/README.md)
+illustrates sourced claims, evidence-backed reconciliation, and visible gaps;
+it is fictional reference data, not a provider run or parity result.
+
 ## Candidate knowledge-base model
 
 A CKB is durable candidate memory, not a per-application upload bucket. It may
