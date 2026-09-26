@@ -1,0 +1,365 @@
+{
+  "schemaVersion": 1,
+  "id": "manual-author-critic-refined-cv-reference",
+  "provenance": {
+    "kind": "synthetic",
+    "basis": "Fictional reconstruction of a user-authorized manual author-critic workflow",
+    "containsRealCandidateRecord": false,
+    "realApplicationOutcome": null,
+    "providerRunPerformed": false
+  },
+  "careerFacts": [
+    {
+      "id": "f1",
+      "organisation": "Juniper Civic Systems",
+      "role": "Application Engineer",
+      "period": "Period A",
+      "text": "Maintained an inherited municipal scheduling service and implemented reliability fixes. The candidate did not create the service.",
+      "maturity": "production"
+    },
+    {
+      "id": "f2",
+      "organisation": "Juniper Civic Systems",
+      "role": "Application Engineer",
+      "period": "Period A",
+      "text": "Built an OpenAPI client generator integrated into build checks and wrote setup guides that other engineers used independently.",
+      "maturity": "production"
+    },
+    {
+      "id": "f3",
+      "organisation": "Juniper Civic Systems",
+      "role": "Application Engineer",
+      "period": "Period A",
+      "text": "Compared persistence alternatives and presented a study. The proposed migration was not executed.",
+      "maturity": "study"
+    },
+    {
+      "id": "f4",
+      "organisation": "Meadow Logistics Software",
+      "role": "Backend Engineer",
+      "period": "Period B",
+      "text": "Owned a Python and PostgreSQL parcel-event ingestion feature with retries, idempotency, replay, deduplication, and partial-failure handling. The team released the product.",
+      "maturity": "production"
+    },
+    {
+      "id": "f5",
+      "organisation": "Meadow Logistics Software",
+      "role": "Backend Engineer",
+      "period": "Period B",
+      "text": "Introduced contract tests and quality checks retained by the team. Supported a production incident investigation and remediation, then added a regression test.",
+      "maturity": "production"
+    },
+    {
+      "id": "f6",
+      "organisation": "Meadow Logistics Software",
+      "role": "Backend Engineer",
+      "period": "Period B",
+      "text": "Collaborated remotely with distributed partners through written design notes and operational handovers.",
+      "maturity": "production"
+    },
+    {
+      "id": "f7",
+      "organisation": "Independent projects",
+      "role": "Project builder",
+      "period": "Period C",
+      "text": "Built BorrowDesk, a library-equipment lending prototype using cloud event queues and a merge queue that validated branch batches. It ran only in a demonstration environment, with no production users or independent scale measure.",
+      "maturity": "staging"
+    },
+    {
+      "id": "f8",
+      "organisation": "Independent projects",
+      "role": "Project builder",
+      "period": "Period C",
+      "text": "Uses coding agents daily for design, implementation, tests, and infrastructure, and reviews changes personally and verifies tests before accepting them. Built DraftMate, an experiment alternating independent author and critic roles with evidence-linked decisions and human approval. This does not establish automated parity or enterprise AI governance.",
+      "maturity": "prototype"
+    },
+    {
+      "id": "f9",
+      "organisation": "Meadow Logistics Software",
+      "role": "Backend Engineer",
+      "period": "Period B",
+      "text": "Took technical-lead responsibility in a small team, including scoping, architecture, reviews, and mentoring. No Staff title or organisation-wide authority is established.",
+      "maturity": "production"
+    },
+    {
+      "id": "f10",
+      "organisation": "Education",
+      "role": "Graduate",
+      "period": "Before Period A",
+      "text": "Completed a computing degree, a Distributed Application Design course, and a Cloud Operations workshop.",
+      "maturity": "education"
+    }
+  ],
+  "opportunity": {
+    "organisation": "Cedar Automation",
+    "title": "Staff Platform Engineer",
+    "description": "Improve developer platforms, testing, build and merge workflows, and reliable backend services. The role also calls for cross-organisation technical direction, production cloud operations, and familiarity with the company's proprietary observability suite.",
+    "requirements": [
+      {
+        "id": "r1",
+        "text": "Own production backend services end to end.",
+        "priority": "high"
+      },
+      {
+        "id": "r2",
+        "text": "Design reliable asynchronous event processing.",
+        "priority": "high"
+      },
+      {
+        "id": "r3",
+        "text": "Build developer tools, build checks, and merge workflows.",
+        "priority": "high"
+      },
+      {
+        "id": "r4",
+        "text": "Use coding agents with engineering judgment and tested changes.",
+        "priority": "medium"
+      },
+      {
+        "id": "r5",
+        "text": "Communicate clearly in writing and work autonomously with remote partners.",
+        "priority": "medium"
+      },
+      {
+        "id": "r6",
+        "text": "Collaborate on technical direction across an organisation.",
+        "priority": "high"
+      },
+      {
+        "id": "r7",
+        "text": "Operate cloud-native services in production.",
+        "priority": "medium"
+      },
+      {
+        "id": "r8",
+        "text": "Use the company's proprietary observability suite hands on.",
+        "priority": "low"
+      }
+    ]
+  },
+  "referenceCv": {
+    "kind": "synthetic-editorial-reference",
+    "candidate": "Fictional Candidate",
+    "headline": "Backend Engineer | Developer Platforms | Event Processing",
+    "statements": [
+      {
+        "id": "s1",
+        "section": "summary",
+        "text": "Backend and developer-tools engineer with production experience maintaining an inherited service and owning a team-released event-ingestion feature.",
+        "sourceFactIds": ["f1", "f2", "f4"]
+      },
+      {
+        "id": "s2",
+        "section": "experience",
+        "text": "Maintained an inherited municipal scheduling service and shipped reliability fixes; the service was not candidate-created.",
+        "sourceFactIds": ["f1"],
+        "organisation": "Juniper Civic Systems",
+        "role": "Application Engineer",
+        "period": "Period A"
+      },
+      {
+        "id": "s3",
+        "section": "experience",
+        "text": "Built an OpenAPI client generator integrated into build checks and wrote setup guides used independently by other engineers.",
+        "sourceFactIds": ["f2"],
+        "organisation": "Juniper Civic Systems",
+        "role": "Application Engineer",
+        "period": "Period A"
+      },
+      {
+        "id": "s4",
+        "section": "experience",
+        "text": "Compared persistence alternatives and presented a study; the proposed migration was not executed.",
+        "sourceFactIds": ["f3"],
+        "organisation": "Juniper Civic Systems",
+        "role": "Application Engineer",
+        "period": "Period A"
+      },
+      {
+        "id": "s5",
+        "section": "experience",
+        "text": "Owned a Python and PostgreSQL parcel-event ingestion feature with retries, idempotency, replay, deduplication, and partial-failure handling; the product was released by the team.",
+        "sourceFactIds": ["f4"],
+        "organisation": "Meadow Logistics Software",
+        "role": "Backend Engineer",
+        "period": "Period B"
+      },
+      {
+        "id": "s6",
+        "section": "experience",
+        "text": "Introduced contract tests and quality checks retained by the team; supported a production incident investigation and remediation, then added a regression test.",
+        "sourceFactIds": ["f5"],
+        "organisation": "Meadow Logistics Software",
+        "role": "Backend Engineer",
+        "period": "Period B"
+      },
+      {
+        "id": "s7",
+        "section": "experience",
+        "text": "Wrote design notes and operational handovers while collaborating remotely with distributed partners.",
+        "sourceFactIds": ["f6"],
+        "organisation": "Meadow Logistics Software",
+        "role": "Backend Engineer",
+        "period": "Period B"
+      },
+      {
+        "id": "s8",
+        "section": "experience",
+        "text": "Led technical work in a small team through scoping, architecture, reviews, and mentoring.",
+        "sourceFactIds": ["f9"],
+        "organisation": "Meadow Logistics Software",
+        "role": "Backend Engineer",
+        "period": "Period B"
+      },
+      {
+        "id": "s9",
+        "section": "projects",
+        "text": "Built BorrowDesk, a library-equipment lending prototype with cloud event queues and branch-batch merge validation in a demonstration environment; it had no production users or independent scale measure.",
+        "sourceFactIds": ["f7"],
+        "organisation": "Independent projects",
+        "role": "Project builder",
+        "period": "Period C"
+      },
+      {
+        "id": "s10",
+        "section": "projects",
+        "text": "Uses coding agents daily across design, implementation, tests, and infrastructure, reviewing changes personally; built DraftMate as an experiment in alternating independent author and critic roles with evidence-linked decisions and human approval.",
+        "sourceFactIds": ["f8"],
+        "organisation": "Independent projects",
+        "role": "Project builder",
+        "period": "Period C"
+      },
+      {
+        "id": "s11",
+        "section": "skills",
+        "text": "Demonstrated Python and PostgreSQL ingestion, OpenAPI tooling integrated with build checks, team-retained contract tests, and branch-batch validation in a staging project.",
+        "sourceFactIds": ["f2", "f4", "f5", "f7"]
+      },
+      {
+        "id": "s12",
+        "section": "education",
+        "text": "Computing degree; Distributed Application Design course; Cloud Operations workshop.",
+        "sourceFactIds": ["f10"]
+      }
+    ]
+  },
+  "reviewExpectations": {
+    "requiredFacts": ["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10"],
+    "coverage": [
+      {
+        "requirementId": "r1",
+        "status": "supported",
+        "sourceFactIds": ["f1", "f4", "f5"],
+        "rationale": "The evidence supports ownership of a bounded production feature and related production reliability work; it does not justify generalising end-to-end ownership across the career."
+      },
+      {
+        "requirementId": "r2",
+        "status": "supported",
+        "sourceFactIds": ["f4"],
+        "rationale": "Retries, idempotency, replay, deduplication, and partial-failure handling are stated for the owned production event-ingestion feature."
+      },
+      {
+        "requirementId": "r3",
+        "status": "supported",
+        "sourceFactIds": ["f2", "f5", "f7"],
+        "rationale": "Production OpenAPI build tooling and team-retained checks support this requirement; branch-batch merge validation is adjacent prototype evidence only."
+      },
+      {
+        "requirementId": "r4",
+        "status": "supported",
+        "sourceFactIds": ["f8"],
+        "rationale": "Daily coding-agent use with personal review and tested changes is stated, without a measured productivity claim."
+      },
+      {
+        "requirementId": "r5",
+        "status": "supported",
+        "sourceFactIds": ["f6"],
+        "rationale": "Written design notes, operational handovers, and remote work with distributed partners are explicit."
+      },
+      {
+        "requirementId": "r6",
+        "status": "partial",
+        "sourceFactIds": ["f9"],
+        "rationale": "Technical direction and mentoring are established within a small team; organisation-wide Staff authority is not."
+      },
+      {
+        "requirementId": "r7",
+        "status": "partial",
+        "sourceFactIds": ["f7"],
+        "rationale": "Cloud event queues appear only in a staging demonstration prototype, with no production operation established."
+      },
+      {
+        "requirementId": "r8",
+        "status": "unsupported",
+        "sourceFactIds": [],
+        "rationale": "No evidence of using the proprietary observability suite is supplied; keep this requirement as an explicit gap."
+      }
+    ],
+    "forbiddenClaims": [
+      "Created the inherited municipal scheduling service.",
+      "Executed the proposed persistence migration.",
+      "Released the parcel-ingestion product alone.",
+      "Ran BorrowDesk or its cloud services in production, or measured its independent scale.",
+      "Held a Staff title or organisation-wide technical authority.",
+      "Used or mastered Cedar Automation's proprietary observability suite.",
+      "Proved coding-agent productivity gains, automated author-critic parity, or enterprise AI governance.",
+      "Author and critic agreement proves factual correctness."
+    ],
+    "humanReviewChecks": [
+      "Retain every required fact from f1 through f10, including all three education and training items.",
+      "Keep Period A at Juniper Civic Systems distinct from Period B at Meadow Logistics Software; use only the relative periods supplied.",
+      "Preserve production, study, staging, prototype, and education maturity labels.",
+      "Keep feature ownership distinct from team product release and small-team leadership distinct from organisation-wide authority.",
+      "Show r6 and r7 as partial and r8 as unsupported; do not hide the profile gaps with adjacent keywords.",
+      "Let the candidate approve, reject, or leave a proposed reconciliation open; evidence supports a decision but does not replace candidate control."
+    ],
+    "hypotheticalReconciliationExamples": [
+      {
+        "id": "x1",
+        "requirementId": "r7",
+        "sourceFactIds": ["f7"],
+        "referenceStatementIds": ["s9"],
+        "hypotheticalFinding": "A draft calls BorrowDesk a production cloud lending service.",
+        "decision": "revise",
+        "reconciledClaim": "Built a demonstration-stage lending prototype with cloud event queues; no production users or independent scale measure are established.",
+        "rationale": "Fact f7 and statement s9 support the prototype and staging scope only."
+      },
+      {
+        "id": "x2",
+        "requirementId": "r3",
+        "sourceFactIds": ["f5"],
+        "referenceStatementIds": ["s6"],
+        "hypotheticalFinding": "A draft mentions the production incident remediation and regression test.",
+        "decision": "retain",
+        "reconciledClaim": "Supported a production incident investigation and remediation, then added a regression test.",
+        "rationale": "This accomplishment is explicitly supported by f5 and preserves the candidate's stated contribution."
+      },
+      {
+        "id": "x3",
+        "requirementId": "r8",
+        "sourceFactIds": [],
+        "referenceStatementIds": [],
+        "hypotheticalFinding": "The opportunity asks for hands-on use of a proprietary observability suite, but the supplied facts do not mention one.",
+        "decision": "leave_open",
+        "reconciledClaim": null,
+        "rationale": "Keep r8 visible as an unsupported gap unless the candidate supplies evidence; do not invent a tool or experience."
+      },
+      {
+        "id": "x4",
+        "requirementId": "r6",
+        "sourceFactIds": ["f9"],
+        "referenceStatementIds": ["s8"],
+        "hypotheticalFinding": "A draft upgrades small-team leadership to organisation-wide Staff authority.",
+        "decision": "qualify",
+        "reconciledClaim": "Led technical work in a small team through scoping, architecture, reviews, and mentoring.",
+        "rationale": "Fact f9 supports this bounded leadership scope, not a Staff title or organisation-wide authority."
+      }
+    ]
+  },
+  "limitations": [
+    "All candidate, organisation, opportunity, project, chronology, and achievement details are fictional or recomposed; this is not names-only pseudonymization.",
+    "Only relative periods are used. No contact details, URLs, file paths, exact outcome metrics, or source checksums are included.",
+    "No provider run, actual transcript, actual model identity, historical iteration count, measured effort, or real application outcome is represented.",
+    "This reference is not a runnable EvaluationCase, measured parity result, or training upload; review expectations and reconciliation examples are authored illustrations."
+  ]
+}
