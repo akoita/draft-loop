@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** #526 failed candidate review: the accepted draft merged two employers' chronology.
+- **Current status:** The completed #548 follow-up reached an accepted draft and critic, but source review found a factual chronology error. The original preflight-only attempt remains indeterminate.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #526 · 2026-09-24 · revision `1d5c3a8cfd2d521dd79aed4c4fa201da398835b0`
+- **Latest observation:** #548 · 2026-09-26 · revision `fa3f25ea26cffd331e69f6886bdac8836fecb461`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -225,3 +225,95 @@ workflows; they do not show that revision feedback caused the different result.
 One accepted draft and an independent critique did not establish the fixed
 first-review criteria: the candidate-confirmed chronology error defeats the
 zero-factual-error requirement.
+
+## Economy-pair recheck after complete-range validation
+
+**Issue:** #548 · **Observed:** 2026-09-26 · **Revision:** `fa3f25ea26cffd331e69f6886bdac8836fecb461`
+
+The candidate authorized one fresh observation with the statement `start`, in
+response to the explicit transmission and budget question. The declared pair
+was `claude-sonnet-4-5` author and `gpt-6-luna` critic through authenticated user
+sessions, using unchanged case A inputs and the complete-range guard from
+issue #544 / PR #545. The bounds were three workflow author attempts, one critic
+attempt, 1,200,000 ms per request, and 1,200,000 ms total active provider time,
+including the synthetic author preflight. Approval, export, submission, and a
+second observation were excluded.
+
+| Admission check | Result | Active provider time |
+| --- | --- | --- |
+| Anthropic user-session sign-in probe | Available and authenticated | No candidate material |
+| OpenAI user-session sign-in probe | Available and authenticated | No candidate material |
+| Synthetic Sonnet 4.5 author preflight | `api-error` | 8,084 ms |
+
+The failed preflight stopped admission before any candidate transmission.
+There were zero workflow author calls, zero critic calls, and no draft,
+validator verdict, candidate review, approval, or export. No retry occurred.
+The adapter's sanitized `api-error` classification does not identify an HTTP
+status or establish the underlying cause.
+
+The observation is **indeterminate** under its fixed admission rule. It does
+not test whether the new range guard improves drafting, establish factual
+correctness, or change the failed #526 result. The milestone remains active;
+any further live observation requires separate authorization.
+
+### Follow-up synthetic diagnosis
+
+The user subsequently requested investigation of a possible credential error.
+One separately authorized diagnostic request repeated the same synthetic
+preflight on `claude-sonnet-4-5`, with the same adapter defaults and a
+60,000 ms timeout. It ran at revision
+`f8aaa78`, whose changes from the observation revision were documentation only.
+The diagnostic returned `available`, with `errorCode: null` and no diagnostic
+codes, in 3,455 ms. The Claude CLI was version 2.1.280. No candidate material
+was transmitted and the candidate workflow was not resumed.
+
+The original private runner saved only the preflight status, discarding the
+adapter's returned error and diagnostic codes. Consequently the first error's
+cause cannot be recovered from that record. The successful repetition makes a
+persistent authentication failure less likely, but does not identify the cause
+or exclude a transient session problem. It is a separate diagnostic result,
+not a successful #548 observation or permission for another candidate run.
+
+### Completed follow-up and local investigation
+
+After the candidate requested investigation, fixes, and completion before
+publication, a fresh follow-up workflow ran at revision
+`b737853c7168c11feb4f7b58975331862d7659b7`. This revision changed only documents
+from the original execution revision. The pair, inputs, and call limits stayed
+unchanged. Both sign-in probes passed; the synthetic author preflight succeeded
+in 3,068 ms. The private runner was corrected to retain the returned error code
+and diagnostic codes, and a missing private rejection-capture parent was
+created during the second author request. The first rejected proposal was
+therefore not retained; the second was saved for local diagnosis.
+
+| Author call | Revision input | Validator result |
+| --- | --- | --- |
+| 1 | None | Rejected: 5 factual-invariant violations, 5 uncovered-text issues, 1 missing-evidence issue |
+| 2 | Validation feedback | Rejected: 4 uncovered-text issues |
+| 3 | Validation feedback | Accepted: 8 sections, 83 claims |
+
+The independent critic completed and reported seven duplicate-content warnings
+and nine uncovered-requirement warnings. Provider wall time including preflight
+was 530,844 ms; accounted workflow time plus preflight was 559,210 ms, both
+within the 1,200,000 ms cap. The local guard blocked post-critic revision before
+any fourth author call, leaving the stored run at `provider-error` on revision,
+with approval pending. This is the declared stop boundary, not a transport
+failure. No approval, export, or submission occurred.
+
+Local source review found that an employment header assigned a career-wide
+period to one employer, contradicting the employer-specific period previously
+confirmed by the candidate. Its citations supported the employer identity and
+the overall period separately. A provider-free replay accepted that same faulty
+header before the #550 correction, reproducing the validation gap. The same
+private replay then returned one `factual_invariant_violation` with the
+correction, without any provider call. The saved
+second rejection also contained header text that disagreed with its attached
+date claim; the uncovered-text rejection did not need weakening.
+
+This follow-up **fails** the fixed zero-factual-error rule. It does not have a
+new exhaustive candidate review or establish the other review categories as
+zero. The original transient preflight cause remains unknown; successful
+synthetic checks and the completed workflow provide no evidence of a persistent
+credential failure. The narrow #550 employer-header association fix is checked
+with synthetic examples and a private replay, without another provider call or
+a claim that a corrected live draft has been produced.

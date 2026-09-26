@@ -169,8 +169,15 @@ visible to the existing deterministic completeness check.
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited
 evidence chunk; separate endpoints or ranges do not combine into support. This
-checks range support, but does not establish that a complete range elsewhere in
-cited evidence belongs to the employer named in the claim.
+checks range support across ordinary claims and blocks.
+
+Employer-first, pipe-delimited experience paragraph headers additionally require the
+employer identity and each stated range together on one cited source line.
+Separate employer and career-wide date statements, even within one chunk, do
+not establish that association. This narrow check retains date-format and
+year-only equivalence; it does not infer aliases, validate arbitrary prose
+relationships, or independently verify employment. It is not a general semantic
+employer/date proof, including when one source line describes several employers.
 
 Author grounding treats a narrow English action phrase such as `Built TypeScript
 tools` as an action plus the protected technology name. The exception requires a
