@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** #551 reached an accepted draft and critic; the candidate gave positive qualitative first-review feedback without exhaustive category counts. Local review found omitted recent roles and employment dates. #548 remains a failed factuality observation.
+- **Current status:** #555 reached an accepted frontier-pair draft and critique; the candidate gave positive qualitative first-review feedback without exhaustive category counts. Chronology is restored, but job-relevant contributions and the requested gap statement are missing. #556 corrects the evidence-selection tradeoff. #554 was indeterminate; #548 remains a failed factuality observation.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #551 · 2026-09-26 · revision `40b5e77857df6e2c4ac58000f3d5c6d3e09a2593`
+- **Latest observation:** #555 · 2026-09-26 · revision `57c5fa2ee03b9233faf859cd64eb77fe2937aa5a`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -351,8 +351,7 @@ dates. The candidate gave positive qualitative first-review feedback but did
 not report exhaustive counts of factual errors, unsupported claims, or missing
 required sections. The fixed zero-count pass rule therefore remains unverified;
 validator acceptance and critic completion do not establish factual correctness
-or completeness. Omitted roles
-are a quality problem but are not automatically counted as a missing configured
+or completeness. Omitted roles are a quality problem but are not automatically counted as a missing configured
 section when an Experience section exists.
 
 The saved rejected proposals showed that the author received 20 CKB evidence
@@ -368,3 +367,95 @@ no provider call was made. The original selection was 34,643 bytes and eight
 traces. These counts describe selection, not CV quality or efficiency.
 This is a correction to evidence selection, not a relaxation of factual checks
 or proof that a subsequent live draft has improved.
+
+## Economy-pair verification of chronology selection (#554)
+
+**Observed:** 2026-09-26 · **Revision:** `57c5fa2ee03b9233faf859cd64eb77fe2937aa5a`
+
+The user instructed `continue` after PR #553 merged. This observation reused
+case A and the Sonnet 4.5/GPT-6 Luna user-session pair under the same three-author,
+one-critic, 1,200,000 ms limits. Both authentication probes passed; the synthetic
+author preflight succeeded in 3,027 ms. The captured author input contained
+20 selected chunks, including 13 dated heading chunks. This verifies the
+chronology-selection correction in a live request, not the resulting CV quality.
+
+| Author call | Result |
+| --- | --- |
+| 1 | Rejected: one missing citation and two uncovered-text blocks |
+| 2 | Rejected: two uncovered-text blocks |
+| 3 | Claude exhausted structured-output retries; no proposal reached validation |
+
+The final request reported `claude_error_subtype_error_max_structured_output_retries`
+and `claude_terminal_reason_structured_output_retry_exhausted`, with
+`claude_stop_reason_unavailable`. No authentication-error evidence was reported.
+Provider wall time including preflight was 246,616 ms; accounted workflow time
+plus preflight was 270,214 ms. There was no accepted draft or critic call, and
+no candidate first review, approval, export, or submission.
+
+The result is **indeterminate** under the predeclared rule: the final permitted
+request ended in a provider error without a validator verdict. Both earlier
+rejected proposals remain rejected. Offline replay reproduced their diagnostics.
+A controlled edit to the second proposal's contact and summary blocks, removing
+uncited content and limiting prose to its cited assertions, passed the unchanged
+validator. That diagnostic edit is not a corrected live draft or an evaluation
+pass. Existing provider tests already cover the observed retry-exhaustion
+classification; the investigation established no new validator or credential
+defect.
+
+## Standard frontier pair after chronology selection (#555)
+
+**Observed:** 2026-09-26 · **Revision:** `57c5fa2ee03b9233faf859cd64eb77fe2937aa5a`
+
+The user explicitly approved #555 after reviewing its fixed design: the same
+private case A, `claude-opus-5-5` author and `gpt-6-sol` critic through authenticated
+user sessions, at most three author attempts and one critic call, and 1,200,000 ms
+including preflight. This authorized the standard frontier observation without
+API-key billing, model substitution, or a default change. Both authentication
+probes passed, and the synthetic author preflight succeeded in 2,537 ms.
+
+| Author call | Revision input | Validator result |
+| --- | --- | --- |
+| 1 | None | Rejected: one factual-invariant violation and one uncovered-text block |
+| 2 | Validation feedback | Accepted: 7 sections, 61 claims |
+
+The GPT-6 Sol critique completed with two errors: missing core job-relevant
+evidence and omission of the candidate-requested experience-gap statement.
+There were eight duplicate-content and sixteen deterministic uncovered-requirement
+warnings, plus three content warnings about project contributions, training
+classification, and skills selection. Critic findings do not substitute for
+candidate adjudication under the fixed first-review rule.
+
+Provider wall time including preflight was 140,913 ms; accounted workflow time
+plus preflight was 174,019 ms. The workflow stopped in `awaiting-approval`, with
+approval pending and no further author call. No approval, export, or submission
+occurred. The candidate gave positive qualitative first-review feedback but did
+not report exhaustive counts of factual errors, unsupported claims, or missing
+required sections. The fixed zero-count pass therefore remains unverified. This
+is not a validated quality result or a default-selection decision.
+
+### Evidence-selection investigation
+
+The accepted draft restores the confirmed employment chronology but largely
+lists roles and projects without concrete technical contributions. The captured
+evidence contains 13 dated headings within 20 selected chunks. The remaining
+selection gives little production Java/platform evidence, despite that material
+being available in the approved source and explicitly prioritized by the candidate.
+A provider-free local query using those drafting priorities recovered contribution
+content absent from the author request.
+
+Issue #556 adds one bounded local priority query and reserves a fitting prefix
+of up to three matched non-heading chunks alongside chronology and required-section
+evidence. A private replay exposed redundant required-section reservations;
+child #557 reuses already-reserved chunks that satisfy the existing section matcher,
+instead of consuming an additional slot. The remaining correction was split at
+the parent issue's active-work budget before continuing. The same
+provider caps, pinned source/version provenance, traces, and factual checks remain
+in force.
+
+Lexical selection does not prove relevance, resolve source uncertainty,
+or establish that a subsequent live CV will improve. The corrected provider-free
+runtime replay retained all 13 discovered dated headings in 20 chunks, including
+one chunk with production Java/platform contribution content. Serialized evidence
+was 18,321 bytes, and fifteen content-free traces retained retrieval provenance.
+These are selection counts, not a CV-quality or efficiency result. No second
+live workflow has been run after this correction.
