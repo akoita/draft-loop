@@ -6,7 +6,11 @@ import { claimCoverageIssues } from "./claim-coverage.js";
 import { requiredSectionProposalIssues } from "./required-section-evidence.js";
 import { shortNamesRelated } from "./short-name-relation.js";
 import { unsupportedSingleWordNames } from "./single-word-name-grounding.js";
-import { uncoveredTextIntroducesUnsupportedFact } from "./uncovered-text-grounding.js";
+import {
+  blockCitedChunks,
+  hasUnsupportedDateRange,
+  uncoveredTextIntroducesUnsupportedFact,
+} from "./uncovered-text-grounding.js";
 
 export const factualInvariantIssueCodes = [
   "missing_evidence",
@@ -52,9 +56,11 @@ export function completeCvProposalIssues(
 ): readonly CompleteCvProposalIssue[] {
   const evidenceById = new Map(retrievedEvidence.map((chunk) => [chunk.id, chunk.text] as const));
   const issues: CompleteCvProposalIssue[] = [];
+  const coverageIssues = claimCoverageIssues(proposal);
 
   for (const [sectionIndex, section] of proposal.sections.entries()) {
     for (const [blockIndex, block] of section.blocks.entries()) {
+      const blockClaimIssuesStart = issues.length;
       for (const [claimIndex, claim] of block.claims.entries()) {
         if (!claim.substantive) continue;
         const path = ["sections", sectionIndex, "blocks", blockIndex, "claims", claimIndex];
@@ -83,7 +89,9 @@ export function completeCvProposalIssues(
         const changesFactualInvariant =
           extractProtectedValues(claim.text).some(
             (value) => !supportsProtectedValueInChunks(evidenceChunks, value),
-          ) || unsupportedSingleWordNames(claim.text, evidenceChunks).length > 0;
+          ) ||
+          hasUnsupportedDateRange(claim.text, evidenceChunks) ||
+          unsupportedSingleWordNames(claim.text, evidenceChunks).length > 0;
         if (changesFactualInvariant) {
           issues.push({
             code: "factual_invariant_violation",
@@ -92,9 +100,27 @@ export function completeCvProposalIssues(
           });
         }
       }
+      const blockPathHasUncoveredText = coverageIssues.some(
+        ({ path }) => path[1] === sectionIndex && path[3] === blockIndex,
+      );
+      const blockHasUnsupportedRange = hasUnsupportedDateRange(
+        block.text,
+        blockCitedChunks(block, retrievedEvidence),
+      );
+      if (
+        issues.length === blockClaimIssuesStart &&
+        !blockPathHasUncoveredText &&
+        blockHasUnsupportedRange
+      ) {
+        issues.push({
+          code: "factual_invariant_violation",
+          path: ["sections", sectionIndex, "blocks", blockIndex, "text"],
+          message: "CV block date range is not present in a cited evidence chunk",
+        });
+      }
     }
   }
-  const uncoveredFactIssues = claimCoverageIssues(proposal)
+  const uncoveredFactIssues = coverageIssues
     .filter((issue) => {
       const [, sectionIndex, , blockIndex] = issue.path;
       const section =

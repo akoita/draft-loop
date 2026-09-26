@@ -240,7 +240,7 @@ applications.
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
-| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                            | [#516, #510 and #518](evaluation/author-route-diagnosis.md#sonnet-5-recheck-on-the-updated-cli): Opus, GPT-6 Luna and GPT-6 Sol work after a CLI update; `claude-sonnet-5` does not. #526 reached an accepted economy-pair draft and critic call; candidate review is pending. | Select and validate one frontier Anthropic author and OpenAI critic pair as the first working reference | Complete the pending candidate review for #526 and decide the economy-pair outcome; then proceed to standard-frontier quality validation. Keep API-key route #515 last. |
+| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16))                            | [#516, #510 and #518](evaluation/author-route-diagnosis.md#sonnet-5-recheck-on-the-updated-cli): Opus, GPT-6 Luna and GPT-6 Sol work after a CLI update; `claude-sonnet-5` does not. #526 failed candidate review on chronology; #544 adds provider-free complete-range checks for claims and fully covered blocks. | Select and validate one frontier Anthropic author and OpenAI critic pair as the first working reference | Decide the next separately gated live observation after the #544 correction. Frontier evaluation needs its own explicit authorization; keep API-key route #515 last. |
 | Next     | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17))                        | Planned                                              | Replace hard-coded model defaults with versioned model profiles and reference and economy tiers | Profile registry, recorded profiles, and user-facing selection (#84) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
@@ -1251,23 +1251,20 @@ author replica, so its earlier failures were real.
 
 **Remaining order,** one pair at a time:
 
-1. **Use case, economy pair.** The first observation (#520) on unchanged case
-   A with `claude-sonnet-4-5` and `gpt-6-luna` rejected all drafts under the
-   earlier coverage rule. #522 changed coverage to reject unsupported text,
-   values, dates, and names; its offline recheck still rejected the #520 drafts
-   for unsupported employment dates. #524 is implemented in PR #525 and adds
-   validation feedback between author attempts. Under #526, the author reached
-   an accepted draft and the critic completed one call, but the candidate's
-   first review is pending. The economy outcome remains undecided until that
-   review is recorded. See the [#520 record](evaluation/author-model-revalidation.md#economy-pair-observation)
-   and [#526 record](evaluation/author-model-revalidation.md#economy-pair-with-author-revision-feedback).
-   The comparison is observational: #520 and the #522 offline check used
-   different rules and workflows, so it does not establish what caused the
-   #526 result.
-2. **Quality, standard frontier pair.** After the candidate review and
-   economy-pair decision, use the same case with `claude-opus-5-5` and
-   `gpt-6-sol`, against the fixed result and effect rules. On a pass, this pair
-   becomes the default for new workspaces.
+1. **Use case, economy pair.** #526 reached an accepted draft and independent
+   critique with `claude-sonnet-4-5` and `gpt-6-luna`, but failed candidate review
+   because it merged employment periods from different employers. #544 requires
+   complete ranges in one cited chunk, including fully covered blocks whose
+   endpoints are separate claims. It does not establish employer association
+   for a range already present elsewhere. See the [observation and comparison
+   record](evaluation/author-model-revalidation.md#economy-pair-with-author-revision-feedback).
+   Any further live observation remains separately gated and requires explicit
+   authorization.
+2. **Quality, standard frontier pair.** After a separate stage decision, use
+   the same case with `claude-opus-5-5` and `gpt-6-sol`, against the fixed
+   result and effect rules. The live frontier evaluation requires its own
+   explicit authorization. On a pass, this pair becomes the default for new
+   workspaces.
 
 Premium models (Fable, GPT-6 Astra) remain later; the API-key route (#515) is
 last.
@@ -1380,7 +1377,7 @@ issues retain implementation chronology.
 
 | Date       | Decision                                                                                                                                                                                                                   | Product implication                                                                                                                                                                                                                                                              |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 2026-09-26 | Recorded #526: the economy pair reached an accepted draft and completed one critic call; the candidate's first review is pending. | Milestone 16 remains active. Record the review and decide the economy outcome before standard-frontier quality validation; the API-key route #515 remains last. |
+| 2026-09-26 | Candidate review confirmed a factual chronology error in #526: the accepted draft merged employment periods from different employers, so the fixed factuality rule failed. | Milestone 16 remains active. #544 adds complete-range checks for substantive claims and fully covered blocks before another live observation. Each new live run needs explicit authorization; frontier evaluation remains separately gated. |
 | 2026-09-23 | Sent the author a specific validation report after a rejection (#524). The next attempt in the same process revises its rejected proposal; the report stays in memory and out of run history. | First step of automating the user's proven loop: validation report, then a richer critic report with author reconciliation, then source of truth and house rules as default inputs. |
 | 2026-09-23 | Replaced verbatim coverage with grounded coverage (#522). Text outside claims is rejected only when a word, protected value, date range, or name is unsupported by the evidence. | Honest wording no longer fails, and invented wording, dates, and names still do. Offline, the #520 drafts remain rejected on employment dates absent from the source. |
 | 2026-09-23 | Recorded #520: the economy pair (`claude-sonnet-4-5` + `gpt-6-luna`) failed on case A. All three drafts were rejected on substantive coverage; the last had no factual violations. | The provider route works. The blocker is the verbatim coverage rule against natural CV prose, so model changes alone are unlikely to clear it. The coverage decision returns to the user. |
