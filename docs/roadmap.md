@@ -1337,14 +1337,18 @@ Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and
 model profiles**. A profile holds:
 
 - provider and exact model ID;
-- tier (reference or economy);
+- tier (`premium`, `standard`, or `economy`);
 - runtime controls: effort, output budget, and thinking behaviour;
 - known limits.
 
 Runs record the profile next to the prompt version, so a validation claim
-names exactly what it covers. #511 introduces the profiles. Tier presets and user-facing model selection
-(#84) follow, with visible cost estimates and diversity warnings. Adding
-providers beyond Anthropic and OpenAI stays in controlled expansion.
+names exactly what it covers. [Issue #585](https://github.com/akoita/draft-loop/issues/585)
+prepares the framework-free profile
+contract and strict schema only; it does not select or change defaults while
+acceptance of the reference pair is pending. The registry and tier presets
+from #511, followed by user-facing model selection (#84), remain later steps
+with visible cost estimates and diversity warnings. Adding providers beyond
+Anthropic and OpenAI stays in controlled expansion.
 
 **Exit criterion:** New runs choose models only through recorded profiles.
 The reference and economy presets exist, existing runs resume unchanged, and

@@ -37,6 +37,16 @@ The default pairing is one Anthropic model and one OpenAI model, with roles
 configurable and swappable. Same-company pairings must be visible and warned
 about. Provider identity and model version are part of run history.
 
+The framework-free `ModelProfile` contract is available from the
+`@draft-loop/domain/model-profile` and `@draft-loop/schemas/model-profile`
+subpaths. It describes a versioned provider/model identity, tier, supported roles,
+runtime effort/output/thinking controls, and declared limits. Validation keeps
+the runtime output ceiling within the known output limit and a budgeted
+thinking allowance within that output ceiling; an optional context-window limit
+remains independent. This contract does not populate a registry, describe
+actual provider capabilities, or select defaults. The accepted reference pair
+remains pending.
+
 Before transmission, author and critic share a projection of the local context.
 Source-manifest paths become opaque ordinal labels such as `evidence-source-1`;
 filenames, filesystem locations and source URLs are not used as those labels.
