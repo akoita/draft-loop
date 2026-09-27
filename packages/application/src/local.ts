@@ -129,7 +129,7 @@ import type {
 import { createOpportunityDraft } from "./opportunity-intake.js";
 import { createOpportunityPersistenceService } from "./opportunity-persistence.js";
 import { createProviderAuthorAgent } from "./provider-author-agent.js";
-import { modelFacingContext } from "./provider-context.js";
+import { modelFacingArtifact, modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
 import { modelConfiguration } from "./run-model-selection.js";
@@ -1992,7 +1992,7 @@ function providerAgents(
           context: promptContext,
           retrievedEvidence,
           achievementPlan,
-          artifact,
+          artifact: modelFacingArtifact(artifact, context),
           deterministicFindings,
         }),
         outputSchema: critiqueOutputSchema,

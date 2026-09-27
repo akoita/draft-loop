@@ -882,3 +882,14 @@ production-status caveats, oversized bundles and boundaries before research or
 other dated roles. Selection remains lexical and bounded; it does not require
 every project in a CV or establish revised CV quality. Candidate inputs and replay
 details stay private. No provider call was made.
+
+## Provider manifest projection (#577)
+
+A provider-free check of the original pinned context confirms that both manifest
+entries and 309 artifact evidence references receive opaque logical paths. All
+other manifest fields, artifact content, fact and policy text remain unchanged;
+the original local snapshot and artifact are unmodified. The shared
+projection still removes local knowledge selection and operator lineage.
+Fictional cross-platform path tests and fake-provider transmissions cover the
+normal author and critic boundary. This addresses the manifest-path guard seen
+in #573 without rewriting that observation or making another provider call.
