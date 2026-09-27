@@ -238,12 +238,20 @@ supplements. The original indexed chunks remain unchanged.
 
 The selected CKB source versions are read locally through the managed store and
 normalized with the same verified chunk derivation used by the lexical index.
-For each discovered heading, retrieval assembles a bounded role record from the
-heading and following whole chunks in that source version. It stops at the next
-Markdown heading at the same or higher level, any other dated role heading, or
-before the existing 4,000-character chunk limit. Non-dated nested headings may
-remain within the role; an oversized paragraph is not truncated or skipped to reach later material. A
-heading remains unchanged when no following chunk fits.
+For each discovered heading, retrieval assembles a bounded role record within
+that source version. An explicit contribution region, such as `His work:` or
+`CV-usable facts`, is preferred over introductory platform or team context.
+Complete paragraphs and top-level list items, including nested continuations,
+are selected by deterministic lexical overlap with the job query and rendered in
+source order. Selection may omit blocks to fit the 4,000-character limit; it never
+truncates a block or separates a nested caveat from its list item. A contribution
+region stops before a sibling or ancestor heading, or another dated role.
+
+Without an explicit contribution region, retrieval retains the existing prefix
+behavior: heading and following whole chunks, stopping at the next same-level or
+higher heading, another dated role, or before the record limit. Non-dated nested
+headings may remain in that prefix; an overflowing chunk is not skipped to reach
+later material. A heading remains unchanged when no eligible body fits.
 
 A combined record receives a deterministic identity derived from its original
 constituents and keeps the pinned source/version and full line-range provenance.

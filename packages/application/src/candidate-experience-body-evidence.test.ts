@@ -134,6 +134,31 @@ describe("candidate experience body evidence", () => {
     expect(result[0]?.text).not.toContain("Later supported detail.");
   });
 
+  it("uses only the dated source line and stops at a nested dated role in the same chunk", () => {
+    const headingText = "## Juniper Systems — Engineer — January 2020 to present";
+    const accomplishment =
+      "- Maintained the inherited scheduling service and fixed reliability issues.";
+    const nestedRole = "#### Other Employer — January 2024 to present";
+    const nestedAccomplishment = "- Built an unrelated event pipeline.";
+    const prefix = `${headingText}\nIntro `;
+    const suffix = `\n### Contributions\n${accomplishment}\n${nestedRole}\n${nestedAccomplishment}`;
+    const text = `${prefix}${"x".repeat(3_990 - prefix.length - suffix.length)}${suffix}`;
+    const source = sourceChunk("combined-role-source", 0, text, 1, text.split("\n").length);
+    const original = hit(source);
+    const result = combineCandidateExperienceBodyEvidence(
+      [original],
+      [source],
+      "scheduling reliability inherited",
+    );
+
+    expect(text).toHaveLength(3_990);
+    expect(result[0]?.text).toBe(`${headingText}\n\n${accomplishment}`);
+    expect(result[0]?.text).not.toContain("Intro");
+    expect(result[0]?.text).not.toContain("Other Employer");
+    expect(result[0]?.chunkId).not.toBe(original.chunkId);
+    expect(result[0]?.text.length).toBeLessThanOrEqual(4_000);
+  });
+
   it("hands off bounded role records with body text and required section records from a pinned CKB", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-experience-body-"));
     temporaryRoots.push(parent);
@@ -150,11 +175,20 @@ describe("candidate experience body evidence", () => {
       "",
       "## Juniper Civic Systems — Application Engineer — January 2018 to December 2020",
       "",
-      "Maintained the inherited municipal scheduling service and fixed recurring reliability issues.",
+      ...Array.from(
+        { length: 18 },
+        (_, index) =>
+          `Platform team context ${index + 1}: coordinated shared service ownership and engineering planning across distributed teams. ${"Planning context. ".repeat(12)}`,
+      ),
       "",
-      "### Event processing",
+      "### CV-usable facts",
+      "- Maintained the inherited municipal scheduling service and fixed recurring reliability issues.",
+      "  Caveat: the scheduling service was inherited and was not created by the candidate.",
+      "- Added retry-safe validation and regression tests for event processing.",
+      "- Improved delivery handoffs for event processing reliability.",
       "",
-      "Added retry-safe validation and regression tests to the scheduling workflow.",
+      "### Interview notes",
+      "Discussed event processing tradeoffs during a planning exercise.",
       "",
       "## Lumen Works — Backend Engineer — January 2021 to December 2023",
       "",
@@ -217,7 +251,8 @@ describe("candidate experience body evidence", () => {
     );
     if (runtime === undefined) throw new Error("Expected candidate knowledge runtime retrieval.");
 
-    const result = await runtime.inspect("Platform Engineer event processing");
+    const jobQuery = "event processing scheduling reliability inherited retry tests";
+    const result = await runtime.inspect(jobQuery);
     const roleHits = result.hits.filter(({ text }) =>
       /^## (?:Juniper Civic Systems|Lumen Works|Northstar Systems)/u.test(text),
     );
@@ -231,7 +266,10 @@ describe("candidate experience body evidence", () => {
     );
     const juniper = roleHits.find(({ text }) => text.includes("Juniper Civic Systems"));
     if (juniper === undefined) throw new Error("Expected the Juniper role record.");
-    expect(juniper.text).toContain("### Event processing");
+    expect(juniper.text).not.toContain("### CV-usable facts");
+    expect(juniper.text).toContain("Caveat: the scheduling service was inherited");
+    expect(juniper.text).not.toContain("Platform team context");
+    expect(juniper.text).not.toContain("Interview notes");
     expect(juniper.text).not.toContain("Lumen Works");
     expect(juniper.lineEnd).toBeGreaterThan(juniper.lineStart);
     const lumen = roleHits.find(({ text }) => text.includes("Lumen Works"));
@@ -254,7 +292,7 @@ describe("candidate experience body evidence", () => {
     );
     expect(roleHits.every(({ text }) => text.length <= 4_000)).toBe(true);
 
-    const repeated = await runtime.inspect("event ingestion and replay");
+    const repeated = await runtime.inspect(jobQuery);
     expect(
       repeated.hits
         .filter(({ text }) =>

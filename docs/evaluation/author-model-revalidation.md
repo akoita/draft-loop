@@ -821,3 +821,39 @@ original guidance and limits when resumed. Fictional mocked-runtime checks verif
 prompt/request agreement, classification of explicit output-limit exhaustion,
 recovery, and historical-run preservation. This change authorizes no provider calls and
 does not convert the private manual result into an automated reference pass.
+
+## Candidate review of automated recheck (#573)
+
+The normal bounded CKB handoff selected twenty records, including thirteen dated
+records and twelve with body text. Two author requests at medium used the v4
+ceiling. The first failed coverage for two skills labels; the second passed local
+grounding with seven sections and 110 claims. One critic request at low completed
+within a total of 685,119 ms, reporting two coverage errors and two warnings.
+
+The candidate requested revision of role contributions and contact information.
+Missing independent projects matter when they offer important job-relevant work;
+listing every project is not required. A scope warning prompted a private source
+clarification. No exhaustive zero counts or quality acceptance were supplied.
+The accepted manual revision and historical observations remain unchanged.
+
+Offline investigation showed that body text can contain introductory context
+without accomplishments, and requested project evidence was absent from the
+selection. #574 addresses explicit contribution blocks; contact and relevant
+project selection are ordered follow-ups. No subsequent model calls occurred.
+
+Two local harness guards stopped requests before transmission: an absolute
+manifest path was excluded, and critic stdin parsing was corrected. The recovered
+critic result remains separate from the application snapshot's local error; run
+history was not rewritten. Sources, drafts, requests and detailed findings stay
+private. Nothing was approved, exported or published.
+
+## Contribution-block selection (#574)
+
+A provider-free replay of the same pinned case now includes the oldest role's
+source-backed processing and Java application contributions, both absent from
+that role's previous record. It retains all thirteen dated records within twenty
+selected records and 55,673 serialized bytes. The checked role record is 3,968
+characters, within the existing per-record limit. Fictional regressions protect
+complete list items, nested caveats, exact source ranges and contribution-region
+boundaries. This proves the bounded input improvement, not revised CV quality;
+contact and relevant-project coverage remain separate follow-ups.
