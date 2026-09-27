@@ -23,9 +23,11 @@ const softwareNounPattern =
   "(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?|prox(?:y|ies))";
 const appositiveQualifiersPattern = "(?:(?:model-driven|engineering|in-house|supervision)[ \\t]+)*";
 const precedingGeneratedLanguageConjunctionPattern = new RegExp(
-  `(?:^|[^\\p{L}\\p{N}])(?:generating|producing)[ \\t]+${closedProgrammingLanguagePattern.source}[ \\t]+and[ \\t]+$`,
+  `(?:^|[^\\p{L}\\p{N}])(?:generating|producing|generated)[ \\t]+${closedProgrammingLanguagePattern.source}[ \\t]+and[ \\t]+$`,
   "iu",
 );
+const deliveredMvpApiPattern = /\bdelivered[ \t]+as[ \t]+an[ \t]+$/iu;
+const replacingHaskellDslPattern = /\breplacing[ \t]+an[ \t]+unmaintainable[ \t]+$/iu;
 
 export const softwareObjectAppositivePattern = new RegExp(
   `^[ \\t]*,[ \\t]+(?:a|an|the)[ \\t]+${appositiveQualifiersPattern}${softwareNounPattern}(?![\\p{L}\\p{N}])`,
@@ -85,12 +87,7 @@ export function protectedSoftwareDescriptionParts(
   const words = matched.split(/\s+/u);
   const leadingThen = leadingThenProductPart(text, matched, words, start);
   if (leadingThen.length > 0) return leadingThen;
-  if (words.length !== 2) return [];
-  const [first, second] = words;
-  if (first === undefined || second === undefined) return [];
 
-  const firstStart = start + matched.indexOf(first);
-  const secondStart = start + matched.lastIndexOf(second);
   const following = text.slice(start + matched.length);
   const preceding = text.slice(0, start);
   const precedingWord = preceding
@@ -106,6 +103,38 @@ export function protectedSoftwareDescriptionParts(
           !(word === "and" && precedingGeneratedLanguageConjunctionPattern.test(preceding)),
       ));
 
+  if (words.length !== 2) return [];
+  const [first, second] = words;
+  if (first === undefined || second === undefined) return [];
+
+  if (
+    first === "MVP" &&
+    second === "API" &&
+    deliveredMvpApiPattern.test(preceding) &&
+    /^:[ \t]*/u.test(following) &&
+    !hasEmployerOrTitleOrLinkingContext
+  ) {
+    return [
+      { value: first, start: start + matched.indexOf(first) },
+      { value: second, start: start + matched.lastIndexOf(second) },
+    ];
+  }
+
+  if (
+    first === "Haskell" &&
+    second === "DSL" &&
+    replacingHaskellDslPattern.test(preceding) &&
+    /^;/u.test(following) &&
+    !hasEmployerOrTitleOrLinkingContext
+  ) {
+    return [
+      { value: first, start: start + matched.indexOf(first) },
+      { value: second, start: start + matched.lastIndexOf(second) },
+    ];
+  }
+
+  const firstStart = start + matched.indexOf(first);
+  const secondStart = start + matched.lastIndexOf(second);
   if (
     capitalizedWordPattern.test(first) &&
     second === "API" &&

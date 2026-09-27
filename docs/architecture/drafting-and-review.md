@@ -195,6 +195,13 @@ names also appear in the source grounding guide and require whole-token support;
 `SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
 syntactic rule, not general semantic verification.
 
+Technical descriptions such as an API delivered as an MVP, generated
+language/protocol proxies, and replacement of a language-based DSL receive
+component checks only in explicit software grammar. Each technology or acronym
+must still be supported by the cited evidence. Employer, title and ambiguous
+name contexts retain full-name protection; this does not add fuzzy matching or
+verify arbitrary accomplishments.
+
 ### Local job-document requirement units
 
 When a run does not select a reviewed opportunity brief, the application
