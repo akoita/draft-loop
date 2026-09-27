@@ -10,11 +10,13 @@ import type {
   ModelResponse,
   UserSessionProcessRunner,
 } from "@draft-loop/providers";
+import { type DraftArtifact, draftArtifactSchema } from "@draft-loop/schemas";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { authorRevisionInstructions } from "./author-adjudication.js";
 import { resetAuthorRevisionMemoryForTests } from "./author-revision-memory.js";
 import { createLocalApplicationDriver } from "./local.js";
+import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 import { createProviderAuthorAgent } from "./provider-author-agent.js";
 
 const evidence: readonly ScoredEvidenceChunk[] = [
@@ -64,6 +66,52 @@ function proposal(text: string): JsonObject {
   };
 }
 
+function previousArtifact(): DraftArtifact {
+  return draftArtifactSchema.parse({
+    schemaVersion: 1,
+    id: "artifact-previous",
+    version: 1,
+    parentVersionId: null,
+    createdAt: "2026-09-27T00:00:00.000Z",
+    language: "en",
+    sections: [
+      {
+        id: "section-previous",
+        title: "Experience",
+        kind: "experience",
+        order: 0,
+        blocks: [
+          {
+            id: "block-previous",
+            type: "bullet",
+            text: acceptedText,
+            claimIds: ["claim-previous"],
+          },
+        ],
+      },
+    ],
+    claims: [
+      {
+        id: "claim-previous",
+        text: acceptedText,
+        sectionId: "section-previous",
+        blockId: "block-previous",
+        substantive: true,
+        status: "unverified",
+        evidence: [
+          {
+            sourcePath: "/private/resume.md",
+            sourceChecksum: "a".repeat(64),
+            locator: "line:1",
+            excerpt: "Built TypeScript tools in 2021.",
+          },
+        ],
+      },
+    ],
+    decisions: [],
+  });
+}
+
 const rejectedText = "Built TypeScript tools in 2023.";
 const acceptedText = "Built TypeScript tools in 2021.";
 
@@ -108,7 +156,7 @@ function agent(outputs: JsonObject[]) {
 
 function request(
   runId: string,
-  extra: Partial<Pick<AuthorRequest, "retryFeedback">> = {},
+  extra: Partial<Pick<AuthorRequest, "retryFeedback" | "currentArtifact">> = {},
 ): AuthorRequest {
   return {
     executionId: `${runId}-execution`,
@@ -124,6 +172,31 @@ function request(
 
 describe("provider author agent revision", () => {
   beforeEach(() => resetAuthorRevisionMemoryForTests());
+
+  it("sends a prior artifact with its reference table and resolution instruction", async () => {
+    const { author, requests } = agent([proposal(acceptedText)]);
+    await author.execute(request("run-reference-table", { currentArtifact: previousArtifact() }));
+
+    const requestSent = requests[0];
+    expect(requestSent?.systemPrompt).toContain(evidenceReferenceTableInstructions);
+    const currentArtifact = requestSent?.input.currentArtifact as {
+      readonly evidenceEncoding?: string;
+      readonly evidenceReferences?: Record<string, { readonly sourcePath: string }>;
+      readonly claims?: readonly {
+        readonly evidence?: unknown;
+        readonly evidenceReferenceIds?: readonly string[];
+      }[];
+    } | null;
+    expect(currentArtifact).toMatchObject({ evidenceEncoding: "reference-table-v1" });
+    const claim = currentArtifact?.claims?.[0];
+    expect(claim).not.toHaveProperty("evidence");
+    expect(claim?.evidenceReferenceIds).toEqual(["evidence-reference-1"]);
+    expect(currentArtifact?.evidenceReferences?.["evidence-reference-1"]).toMatchObject({
+      sourcePath: "evidence-source-1",
+      locator: "line:1",
+      excerpt: "Built TypeScript tools in 2021.",
+    });
+  });
 
   it("sends the rejected proposal and a specific report to the next retry", async () => {
     const { author, requests } = agent([proposal(rejectedText), proposal(acceptedText)]);
