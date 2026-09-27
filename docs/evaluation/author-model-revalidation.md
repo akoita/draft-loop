@@ -1,11 +1,27 @@
 # Author model revalidation
 
-- **Current status:** The consented full-profile comparison restored role contribution detail but did not reach an accepted draft or critique. A recorded larger-generation variant exposed three local false rejections; #564 addresses them without another provider call. The strict quality pass remains unverified.
+- **Current status:** The candidate accepts the manually revised full-profile draft with two acknowledged warnings. It has no deterministic or independent critic errors. This establishes acceptance of the revised draft, not an automated first-draft reference pass; full-profile product integration remains pending.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** full-profile comparison / #564 · 2026-09-27 (Europe/Paris) · base revision `f26663ab3f8e7cbce6c319e7bf6c633256991569`
+- **Latest observation:** manual presentation revision · 2026-09-27 (Europe/Paris) · review revision `e37fd067cb75d87d600ef1d8a246dbc5f8806d64`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
+
+## Acceptance rule for future observations
+
+The candidate clarified the product goal after accepting the manual revision:
+zero findings is ideal, but the stopping condition is a draft whose remaining
+findings are acceptable to the user in number, severity, and substance. Each
+finding remains visible with the user's decision and rationale. Accepted
+limitations do not require another revision or another provider call merely to
+reduce the finding count. Acknowledged findings are not silently relabelled as
+resolved, and accepting quality does not authorize export or publication.
+
+Future evaluation admissions must use this user-acceptance rule rather than
+require exhaustive zero counts. Deterministic integrity and grounding checks
+remain in force. Historical observations retain their original admissions and
+results; this clarification does not retrospectively turn a failed observation
+into a pass. Manual acceptance also does not establish an automated outcome.
 
 ## Author model revalidation (#499)
 
@@ -695,3 +711,88 @@ The historical capture is unchanged. Deterministic validation still reports
 evaluation. A targeted shortening input is prepared locally; the two-author
 admission does not permit a third request. Nothing was approved, exported or
 published.
+
+## Targeted shortening and description grounding (#565)
+
+**Observed:** 2026-09-27 (Europe/Paris) · **Author revision:** `26f1ee2bcfe1beebc4a0c46be07a6c4aea83e07d`
+
+The candidate explicitly admitted one targeted author request at medium effort,
+then one critic request at low, within twenty minutes including authentication
+preflight and with no automatic retry. The prepared input retained the same
+corrected profile and job and supplied section budgets targeting 850 words under
+the existing 950-word maximum. Both authentication probes passed. The full local
+gate passed before transmission: 2,060 tests in 137 files and 60 release/security
+checks.
+
+The author returned an 856-word structured proposal in 210,811 ms. Local grounding
+rejected three source-backed software-description spans: a language/platform
+compound, a project/stage label, and an opening action with a language-qualified
+software appositive. Private investigation reproduced each false rejection.
+Issue #565 addresses those grammar cases while retaining cited support for every
+component and preserving identity, employer, title and date checks. No second
+author call is admitted. The unchanged capture remains private; strict quality
+is unverified until local replay, independent critique and candidate review finish.
+
+### Unchanged shortening replay
+
+After the bounded #565 grammar fixes, the unchanged private capture constructs
+nine sections and 116 normalized claims. The visible text remains 856 words;
+deterministic validation reports no errors. The capture hash is unchanged and
+local replay makes no provider calls. Each newly separated component remains
+subject to cited-source checks. Fictional regressions cover missing components,
+near-match language words, and employer, title and linking contexts.
+
+The author output was produced at the earlier revision; the local grounding
+revision is a separately recorded evaluation variant. This is not an
+unchanged-production-template reference pass.
+
+### Independent review and candidate verdict
+
+The remaining admitted critic request completed at low effort in 12,377 ms,
+within the original twenty-minute window. Total elapsed time was 999,988 ms
+(16 minutes 40 seconds), with exactly one author request and one critic request.
+The critic reported no errors and three warnings concerning skill scope,
+accomplishment scope, and underused role-relevant evidence. These warnings remain
+visible for candidate review; a zero-error critic report does not establish the
+fixed first-review pass.
+
+The candidate has been asked for counts of factual errors, unsupported claims,
+and missing required sections. The candidate confirmed all three findings. This observation therefore fails
+the quality review; exhaustive category counts were not supplied. A separate
+private revision narrows both scope claims and adds source-backed role detail.
+It preserves the reviewed draft and has not undergone independent review.
+Neither draft has been approved, exported, or published, and the completed admission permits
+no further provider requests. The final local repository gate passed 2,068 tests
+in 138 files and 60 release/security checks. Only fictional regression fixtures
+and this content-free outcome record belong in the repository.
+
+## Candidate-accepted manual revision
+
+The candidate requested that independent projects appear within their experience
+entry, rather than in a separate projects section. The private revision also
+narrows two scope claims and restores supported role detail. The reviewed author
+output is preserved separately; this is a manual revision with an additional
+candidate-supplied presentation source, not a new automated author observation.
+
+The candidate authorized zero author requests and one GPT-6 Sol critic request
+at low effort, with a twenty-minute limit and no retries. Local preparation
+reconciled the visible draft with its claim references without changing its
+text. The revised required-section policy reflects the requested grouping.
+Validation passed: 914 visible words, eight sections, 123 claims, and no errors.
+The critic completed in 15,862 ms; total admission time was 165,164 ms. It reported
+no errors and two warnings about evidence detail and wording clarity.
+
+The candidate confirmed both warnings and explicitly accepted the CV unchanged.
+Their quality threshold permits acknowledged, acceptable warnings: a CV need not
+be perfect, and some detail belongs in interviews or cannot be disclosed. This
+revision is therefore **accepted with warnings**, without inventing numerical
+category counts or treating the findings as resolved. Factual errors, unsupported
+claims and missing required sections remain blocking concerns; warning severity
+alone does not determine acceptance. The previous observation and its failures
+remain unchanged.
+
+This result establishes candidate acceptance of a manually revised draft. It
+does not establish the milestone's automated first-draft reference outcome,
+complete product integration, or authorize export or publication. Candidate
+material and the detailed adjudication remain private. No further provider
+requests were made.

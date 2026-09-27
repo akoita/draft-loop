@@ -292,6 +292,19 @@ text and claims. Unknown targets, additional assertions, dates and unsupported
 names receive the normal checks. This recognizes a document reference, not an
 exception for unsourced achievements.
 
+### Software-description phrases
+
+A bounded language modifier followed by a platform name in a software-object
+phrase produces two protected names. A claim-start project label ending in
+`MVP:` similarly preserves both its project name and stage token for source
+checks. Neither rule exempts a component from support in cited evidence.
+Company subjects, role titles and linking statements keep whole-name protection.
+
+Software appositives can include one recognised programming-language modifier
+before their bounded qualifiers. This separates an opening action from its tool
+name while retaining source checks for the language and tool. These syntax rules
+do not establish semantic relationships or replace independent critique.
+
 ### Local rejected-author replay
 
 The local driver accepts an optional `authorProposalCaptureDirectory` for
