@@ -13,6 +13,7 @@ import {
   takeAuthorRevision,
 } from "./author-revision-memory.js";
 import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revision-report.js";
+import { modelFacingArtifact } from "./provider-context.js";
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
@@ -86,7 +87,8 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             context: deps.promptContext,
             retrievedEvidence,
             achievementPlan,
-            currentArtifact,
+            currentArtifact:
+              currentArtifact === null ? null : modelFacingArtifact(currentArtifact, context),
             findings,
             ...authorPrompt.providerInput,
           }),

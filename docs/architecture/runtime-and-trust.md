@@ -37,6 +37,18 @@ The default pairing is one Anthropic model and one OpenAI model, with roles
 configurable and swappable. Same-company pairings must be visible and warned
 about. Provider identity and model version are part of run history.
 
+Before transmission, author and critic share a projection of the local context.
+Source-manifest paths become opaque ordinal labels such as `evidence-source-1`;
+filenames, filesystem locations and source URLs are not used as those labels.
+Source IDs, checksums, other manifest metadata and candidate fact text remain
+unchanged. Artifact evidence references also receive logical source-path labels
+before critique or author revision; matching manifest references reuse its labels,
+while other references use opaque labels in first-occurrence order. Excerpts,
+locators and checksums stay intact. Stored artifacts retain their original
+provenance. Local knowledge selection and operator lineage are omitted. The
+projection creates new manifest entries and does not rewrite the stored snapshot
+or its provenance. The existing user-controlled transmission policy still applies.
+
 ## Workflow state machine
 
 Each transition emits an auditable event and retains relevant inputs, outputs,

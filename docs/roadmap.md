@@ -1300,8 +1300,8 @@ author replica, so its earlier failures were real.
    contribution blocks; #575 reserves supplied contact evidence, and #576 selects
    relevant independent-project blocks within the existing role-record limit,
    completed through bounded execution #580. The automated reference outcome and workspace-default
-   decision remain pending. #577 removes absolute manifest paths from normal
-   provider context before another live evaluation.
+   decision remain pending. #577 uses opaque manifest paths in normal provider
+   context. A fresh admission is required before another live evaluation.
 
 Premium models (Fable, GPT-6 Astra) remain later; the API-key route (#515) is
 last.

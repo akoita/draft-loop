@@ -708,6 +708,14 @@ describe("local application driver", () => {
       );
       expect(criticInputs).toHaveLength(1);
       expect(criticInputs[0]).not.toHaveProperty("retryFeedback");
+      for (const input of [...authorInputs, ...criticInputs]) {
+        const providerContext = input.context as JsonRecord | undefined;
+        const evidenceManifest = providerContext?.evidenceManifest as
+          | readonly JsonRecord[]
+          | undefined;
+        expect(evidenceManifest?.map(({ path }) => path)).toEqual(["evidence-source-1"]);
+        expect(JSON.stringify(input)).not.toContain(root);
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -940,7 +948,7 @@ describe("local application driver", () => {
                 },
               ],
             },
-            evidenceManifest: [{ path: join(root, "evidence", "resume.md") }],
+            evidenceManifest: [{ path: "evidence-source-1" }],
           },
         });
         visiblePreferences.push(parsed.context.writingPolicy?.preferences);
