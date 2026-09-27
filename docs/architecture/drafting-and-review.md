@@ -247,14 +247,20 @@ source order. Selection may omit blocks to fit the 4,000-character limit; it nev
 truncates a block or separates a nested caveat from its list item. A contribution
 region stops before a sibling or ancestor heading, or another dated role.
 
-Explicitly independent roles also support project-labelled source groups. Their
-substantive descriptions and complete contribution blocks are ranked against
-nontrivial job terms; project names alone do not establish relevance. Selection
-keeps the project descriptor, applicable production limitations and nested
-caveats together. Selected projects follow their order in candidate instructions,
-with source order as the fallback. They share the existing role-record limit and
-consume no extra retrieval slots. The selector records local omission reasons;
-lexical overlap is an input-selection heuristic, not proof of job fit.
+Explicitly independent roles also support project-labelled source groups.
+Exact source titles or declared aliases mentioned in candidate instructions
+reserve evidence in instruction order before unrequested job-overlap groups.
+Requested groups retain a complete contribution block where available, along
+with their descriptor, applicable production limitations and nested caveats.
+Unrequested groups require substantive job-term overlap; project names alone
+do not establish relevance.
+
+Groups share the existing 4,000-character role-record limit and consume no
+extra retrieval slots. Selection never invents an alias or truncates a block
+or limitation to fit. Local omission reasons remain visible. Supplying a
+requested project's evidence lets the author assess job fit; it does not
+require inclusion in the CV. Lexical overlap and candidate priority are
+input-selection signals, not proof of relevance or candidate achievement.
 
 Without an explicit contribution region or recognized independent project groups,
 retrieval retains the existing prefix behavior: heading and following whole chunks, stopping at the next same-level or
