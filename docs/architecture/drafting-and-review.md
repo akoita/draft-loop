@@ -195,10 +195,11 @@ names also appear in the source grounding guide and require whole-token support;
 `SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
 syntactic rule, not general semantic verification.
 
-Technical descriptions such as an API delivered as an MVP, generated
-language/protocol proxies, and replacement of a language-based DSL receive
-component checks only in explicit software grammar. Each technology or acronym
-must still be supported by the cited evidence. Employer, title and ambiguous
+Technical descriptions such as an API delivered as an MVP, an MVP API in a
+product definition, a coordinated Solidity/Foundry EVM protocol description,
+generated language/protocol proxies, and replacement of a language-based DSL
+receive component checks only in explicit software grammar. Each technology or
+acronym must still be supported by the cited evidence. Employer, title and ambiguous
 name contexts retain full-name protection; this does not add fuzzy matching or
 verify arbitrary accomplishments.
 
