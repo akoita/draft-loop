@@ -836,6 +836,9 @@ describe("desktop candidate profile run selection", () => {
       null,
     );
     expect(candidateProfileStartDisabledReason(false, null)).toBe(null);
+    expect(candidateProfileStartDisabledReason(false, null, true)).toContain(
+      "Wait for candidate knowledge selection",
+    );
   });
 });
 

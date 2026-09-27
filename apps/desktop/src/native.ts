@@ -9,6 +9,10 @@ import {
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
   createCapabilityPort,
+  type KnowledgeSelectionEntry,
+  type KnowledgeSelectionResult,
+  type KnowledgeStoreCreateInput,
+  type KnowledgeStoreResult,
   type ModelCandidate,
   type ModelCompany,
   type ModelDiscoveryProvider,
@@ -108,10 +112,22 @@ export interface DesktopProfileCapabilities {
   ) => Promise<CanonicalCandidateProfileRecordResult>;
 }
 
+export interface DesktopKnowledgeCapabilities {
+  readonly createCandidateKnowledgeStore?: (
+    input: Omit<KnowledgeStoreCreateInput, "selection">,
+  ) => Promise<KnowledgeStoreResult>;
+  readonly openCandidateKnowledgeStore?: () => Promise<KnowledgeStoreResult>;
+  readonly selectCandidateKnowledgeBase?: (
+    workspaceId: string,
+    entry: KnowledgeSelectionEntry,
+  ) => Promise<KnowledgeSelectionResult>;
+}
+
 export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
   WorkspaceSetupCapabilities &
   DesktopOpportunityCapabilities &
-  DesktopProfileCapabilities & {
+  DesktopProfileCapabilities &
+  DesktopKnowledgeCapabilities & {
     readonly getProviderAuthModeStatus?: (
       provider: "anthropic" | "openai",
     ) => Promise<ProviderAuthModeStatus>;
@@ -327,6 +343,44 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "models.preview-independence",
                 input: { author, critic },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.create")
+      ? {
+          createCandidateKnowledgeStore: async (
+            input: Omit<KnowledgeStoreCreateInput, "selection">,
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.create",
+                input: { selection: "native-dialog", ...input },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.open")
+      ? {
+          openCandidateKnowledgeStore: async () =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.open",
+                input: { selection: "native-dialog" },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.select")
+      ? {
+          selectCandidateKnowledgeBase: async (
+            workspaceId: string,
+            entry: KnowledgeSelectionEntry,
+          ) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.select",
+                input: { workspaceId, entries: [entry] },
               }),
             ),
         }
