@@ -70,6 +70,12 @@ encoding after path projection. Table IDs are separate from retrieved-evidence
 chunk IDs used in author proposals. Stored artifacts keep their original
 references, and model instructions explain how to resolve the table.
 
+Author validation requires substantive claim coverage for factual block text.
+In Skills blocks, the exact leading label `Cloud and DevOps:` is presentation
+when followed by content and a substantive claim. Every listed technology
+still needs claim coverage and supporting evidence; arbitrary labels and
+proficiency assertions receive no exemption.
+
 ## Workflow state machine
 
 Each transition emits an auditable event and retains relevant inputs, outputs,

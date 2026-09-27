@@ -8,12 +8,13 @@ function proposal(
   text: string,
   claims: readonly string[],
   substantive = true,
+  kind: AuthorArtifactProposal["sections"][number]["kind"] = "summary",
 ): AuthorArtifactProposal {
   return {
     sections: [
       {
         title: "Summary",
-        kind: "summary",
+        kind,
         blocks: [
           {
             type: "paragraph",
@@ -46,6 +47,42 @@ describe("substantive block claim coverage", () => {
 
   it("does not trust a non-substantive flag on factual prose", () => {
     expect(claimCoverageIssues(proposal("Built tools.", ["Built tools."], false))).toHaveLength(1);
+  });
+
+  it("ignores only the exact leading Cloud and DevOps Skills label", () => {
+    expect(
+      claimCoverageIssues(
+        proposal(
+          "cLoUd and DevOps: Kubernetes Terraform",
+          ["Kubernetes Terraform"],
+          true,
+          "skills",
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+  it.each([
+    ["Cloud and DevOps: Kubernetes Terraform Docker", ["Kubernetes Terraform"], "skills"],
+    ["Cloud and DevOps Kubernetes", ["Kubernetes"], "skills"],
+    ["Cloud and DevOps: Kubernetes Terraform", ["Kubernetes Terraform"], "summary"],
+    ["Cloud and DevOps: Kubernetes Terraform", ["Kubernetes Terraform"], "experience"],
+    ["Platform focus. Cloud and DevOps: Kubernetes", ["Kubernetes"], "skills"],
+    ["Cloud and DevOps: Kubernetes — expert", ["Kubernetes"], "skills"],
+  ])("keeps all non-label text covered: %s", (text, claims, kind) => {
+    expect(
+      claimCoverageIssues(
+        proposal(text, claims, true, kind as AuthorArtifactProposal["sections"][number]["kind"]),
+      ),
+    ).toHaveLength(1);
+  });
+
+  it("requires a substantive claim before ignoring a Skills category label", () => {
+    expect(
+      claimCoverageIssues(
+        proposal("Cloud and DevOps: Kubernetes", ["Kubernetes"], false, "skills"),
+      ),
+    ).toHaveLength(1);
   });
 
   it.each([

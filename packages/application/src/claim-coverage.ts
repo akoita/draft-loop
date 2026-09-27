@@ -1,6 +1,7 @@
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { coverJoiningGaps } from "./joining-words.js";
+import { skillCategoryPresentationPrefixTokenCount } from "./skill-category-labels.js";
 
 /** Coverage tokens: letter-or-digit runs plus `%`, `+`, `−`, and a minus before a digit. */
 export function tokens(text: string): readonly string[] {
@@ -43,6 +44,17 @@ export function uncoveredBlockTokens(
     if (presentation(line, section.title, section.kind))
       covered.fill(true, lineStart, lineStart + length);
     lineStart += length;
+  }
+  const categoryPrefixTokenCount = skillCategoryPresentationPrefixTokenCount(
+    section.kind,
+    block.text,
+  );
+  if (
+    categoryPrefixTokenCount !== undefined &&
+    words.length > categoryPrefixTokenCount &&
+    claims.some((claim) => claim.length > 0)
+  ) {
+    covered.fill(true, 0, categoryPrefixTokenCount);
   }
   for (const claim of claims) {
     if (claim.length === 0) continue;
