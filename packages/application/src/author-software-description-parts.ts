@@ -28,6 +28,12 @@ const precedingGeneratedLanguageConjunctionPattern = new RegExp(
 );
 const deliveredMvpApiPattern = /\bdelivered[ \t]+as[ \t]+an[ \t]+$/iu;
 const replacingHaskellDslPattern = /\breplacing[ \t]+an[ \t]+unmaintainable[ \t]+$/iu;
+const lowercaseSoftwareDescriptorWordPattern = /\p{Ll}[\p{Ll}\p{N}]*(?:-[\p{Ll}][\p{Ll}\p{N}]*)*/u;
+const productDefinitionMvpApiPattern =
+  /,[ \t]+(?:a|an|the)[ \t]+(?<descriptor>\p{Ll}[\p{Ll}\p{N}]*(?:-[\p{Ll}][\p{Ll}\p{N}]*)*(?:[ \t]+\p{Ll}[\p{Ll}\p{N}]*(?:-[\p{Ll}][\p{Ll}\p{N}]*)*)*)[ \t]+$/u;
+const solidityProtocolCoordinationPattern = /:[ \t]*Solidity[ \t]+and[ \t]*$/u;
+const solidityProtocolObjectPattern = /^[ \t]+protocol(?![\p{L}\p{N}])/u;
+const solidityProtocolEmployerPattern = /^[ \t]+protocol[ \t]+(?:company|firm|employer)\b/iu;
 
 export const softwareObjectAppositivePattern = new RegExp(
   `^[ \\t]*,[ \\t]+(?:a|an|the)[ \\t]+${appositiveQualifiersPattern}${softwareNounPattern}(?![\\p{L}\\p{N}])`,
@@ -53,6 +59,59 @@ export interface ProtectedSoftwareDescriptionPart {
 
 function isTitleOrLinkingWord(word: string): boolean {
   return excludedTitleWords.has(word) || linkingWords.has(word.toLocaleLowerCase("en-US"));
+}
+
+function hasUnsafeStatementContext(prefix: string): boolean {
+  const clauseStart = Math.max(
+    prefix.lastIndexOf("."),
+    prefix.lastIndexOf(";"),
+    prefix.lastIndexOf("?"),
+    prefix.lastIndexOf("!"),
+    prefix.lastIndexOf("\n"),
+  );
+  const clause = prefix.slice(clauseStart + 1);
+  const words = clause.match(/[\p{L}\p{N}'’-]+/gu);
+  return (
+    /\b(?:at|for|joined)\b|\bemployed[ \t]+by\b/iu.test(clause) ||
+    (words?.some(isTitleOrLinkingWord) ?? false)
+  );
+}
+
+function hasProductDefinitionAppositive(preceding: string): boolean {
+  const appositive = productDefinitionMvpApiPattern.exec(preceding);
+  const descriptor = appositive?.groups?.descriptor;
+  if (appositive === null || descriptor === undefined) return false;
+
+  const beforeComma = preceding.slice(0, appositive.index).trimEnd();
+  const productName = beforeComma.split(/[ \t]+/u).at(-1);
+  if (productName === undefined || !singleTechnologyNamePattern.test(productName)) return false;
+
+  const productNameStart = beforeComma.lastIndexOf(productName);
+  const productPrefix = beforeComma.slice(0, productNameStart);
+  if (precedingEmployerPattern.test(productPrefix) || hasUnsafeStatementContext(productPrefix)) {
+    return false;
+  }
+
+  return descriptor.split(/[ \t]+/u).every((word) => {
+    const capitalizedWord = word.charAt(0).toLocaleUpperCase("en-US") + word.slice(1);
+    return (
+      lowercaseSoftwareDescriptorWordPattern.test(word) && !isTitleOrLinkingWord(capitalizedWord)
+    );
+  });
+}
+
+function hasSolidityProtocolDefinition(preceding: string, following: string): boolean {
+  if (
+    !solidityProtocolCoordinationPattern.test(preceding) ||
+    !solidityProtocolObjectPattern.test(following) ||
+    solidityProtocolEmployerPattern.test(following)
+  ) {
+    return false;
+  }
+
+  const solidityStart = preceding.lastIndexOf("Solidity");
+  const productPrefix = preceding.slice(0, solidityStart);
+  return !precedingEmployerPattern.test(productPrefix) && !hasUnsafeStatementContext(productPrefix);
 }
 
 function leadingThenProductPart(
@@ -110,11 +169,23 @@ export function protectedSoftwareDescriptionParts(
   if (
     first === "MVP" &&
     second === "API" &&
-    deliveredMvpApiPattern.test(preceding) &&
+    (deliveredMvpApiPattern.test(preceding) || hasProductDefinitionAppositive(preceding)) &&
     /^:[ \t]*/u.test(following) &&
     !hasEmployerOrTitleOrLinkingContext
   ) {
     return [
+      { value: first, start: start + matched.indexOf(first) },
+      { value: second, start: start + matched.lastIndexOf(second) },
+    ];
+  }
+
+  if (
+    first === "Foundry" &&
+    second === "EVM" &&
+    hasSolidityProtocolDefinition(preceding, following)
+  ) {
+    return [
+      { value: "Solidity", start: text.lastIndexOf("Solidity", start) },
       { value: first, start: start + matched.indexOf(first) },
       { value: second, start: start + matched.lastIndexOf(second) },
     ];

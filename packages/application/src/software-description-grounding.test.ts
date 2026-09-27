@@ -132,6 +132,104 @@ describe("software description protected parts", () => {
     ).toContain("factual_invariant_violation");
   });
 
+  it("splits MVP API in a named product appositive with a lowercase descriptor", () => {
+    const text = "ARCHIVEKIT, a document-certification MVP API: multi-node registration workflows.";
+    const evidence = [
+      chunk("product", "ARCHIVEKIT", 0),
+      chunk("mvp", "MVP", 1),
+      chunk("api", "API", 2),
+      chunk("descriptor", "document-certification", 3),
+      chunk("definition", "multi-node registration workflows", 4),
+    ];
+
+    expect(extractProtectedValues(text)).toContain("MVP");
+    expect(extractProtectedValues(text)).toContain("API");
+    expect(extractProtectedValues(text)).not.toContain("MVP API");
+    expect(issues(text, evidence)).toEqual([]);
+    for (const id of ["product", "mvp", "api"]) {
+      expect(
+        issues(
+          text,
+          evidence.filter((chunkValue) => chunkValue.id !== id),
+        ),
+      ).toContain("factual_invariant_violation");
+    }
+
+    const tabbedText =
+      "ARCHIVEKIT,\ta document-certification\tMVP API:\tmulti-node registration workflows.";
+    expect(issues(tabbedText, evidence)).toEqual([]);
+
+    for (const ambiguousText of [
+      "Worked for ARCHIVEKIT, a document-certification MVP API: multi-node workflows.",
+      "Senior ARCHIVEKIT, a document-certification MVP API: multi-node workflows.",
+      "ARCHIVEKIT, a Senior document-certification MVP API: multi-node workflows.",
+      "ARCHIVEKIT is a document-certification MVP API: multi-node workflows.",
+      "ARCHIVEKIT, a document-certification MVP APX: multi-node workflows.",
+    ]) {
+      expect(issues(ambiguousText, evidence), ambiguousText).toContain(
+        "factual_invariant_violation",
+      );
+    }
+    expect(
+      issues("ARCHIVEKIT, a document-certification MVP API: multi-node workflows span 3 nodes.", [
+        ...evidence,
+        chunk("nodes", "2 nodes", 5),
+      ]),
+    ).toContain("factual_invariant_violation");
+  });
+
+  it("splits a Foundry EVM protocol only after Solidity coordination", () => {
+    const text = "Civic Ledger Core: Solidity and Foundry EVM protocol for programmable escrow.";
+    const evidence = [
+      chunk("system", "Civic Ledger Core", 0),
+      chunk("language", "Solidity", 1),
+      chunk("tool", "Foundry", 2),
+      chunk("environment", "EVM", 3),
+      chunk("protocol", "protocol for programmable escrow", 4),
+    ];
+
+    expect(extractProtectedValues(text)).toEqual(
+      expect.arrayContaining(["Civic Ledger Core", "Solidity", "Foundry", "EVM"]),
+    );
+    expect(extractProtectedValues(text)).not.toContain("Foundry EVM");
+    expect(issues(text, evidence)).toEqual([]);
+    expect(
+      issues(
+        "Civic Ledger Core:\tSolidity\tand\tFoundry EVM\tprotocol for programmable escrow.",
+        evidence,
+      ),
+    ).toEqual([]);
+    for (const id of ["language", "tool", "environment"]) {
+      expect(
+        issues(
+          text,
+          evidence.filter((chunkValue) => chunkValue.id !== id),
+        ),
+      ).toContain("factual_invariant_violation");
+    }
+
+    for (const ambiguousText of [
+      "Worked for Civic Ledger Core: Solidity and Foundry EVM protocol for escrow.",
+      "Senior Civic Ledger Core: Solidity and Foundry EVM protocol for escrow.",
+      "Civic Ledger Core is the employer: Solidity and Foundry EVM protocol for escrow.",
+      "Civic Ledger Core: Solidity or Foundry EVM protocol for escrow.",
+      "Civic Ledger Core: Solidity and Foundry EVM product for escrow.",
+      "Civic Ledger Core: Solidity and Foundry EVN protocol for escrow.",
+      "Worked for Solidity and Foundry EVM protocol for escrow.",
+      "Civic Ledger Core: Solidity and Foundry EVM protocol company.",
+    ]) {
+      expect(issues(ambiguousText, evidence), ambiguousText).toContain(
+        "factual_invariant_violation",
+      );
+    }
+    expect(
+      issues("Civic Ledger Core: Solidity and Foundry EVM protocol used by 4 networks.", [
+        ...evidence,
+        chunk("network-count", "used by 3 networks", 5),
+      ]),
+    ).toContain("factual_invariant_violation");
+  });
+
   it("grounds a closed language and a separate product name before a software phrase", () => {
     const text = "Python NimbusLedger event ingestion";
     const evidence = [chunk("language", "Python", 0), chunk("product", "NimbusLedger", 1)];
