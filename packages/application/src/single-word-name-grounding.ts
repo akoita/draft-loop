@@ -1,4 +1,5 @@
 import { extractProtectedValues } from "./author-grounding.js";
+import { isProtectedHaskellBasedDslModifier } from "./author-software-description-parts.js";
 
 // A word is a maximal run of letters that may contain an apostrophe or hyphen.
 const wordPattern = /\p{L}+(?:['’-]\p{L}+)*/gu;
@@ -92,6 +93,7 @@ export function singleWordNames(claimText: string): readonly string[] {
       !capitalisedPattern.test(word) ||
       seen.has(identity) ||
       exemptWords.has(identity) ||
+      isProtectedHaskellBasedDslModifier(claimText, word, match.index ?? 0) ||
       protectedWords.has(word) ||
       sentenceStartPattern.test(claimText.slice(0, match.index))
     )
