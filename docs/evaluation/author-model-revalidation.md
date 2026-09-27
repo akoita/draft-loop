@@ -867,3 +867,18 @@ twenty records and 52,892 serialized bytes. Fictional regressions cover contact
 labels, mixed identity and disclosure clauses, misleading mentions and a full
 twenty-record merge. This confirms input coverage; it does not establish a revised
 CV outcome or authorize another provider call. Candidate material stays private.
+
+## Independent-project selection (#576)
+
+A provider-free replay of the same pinned case selects three independent-project
+groups, including a later relevant project absent from the previous prefix. The
+independent record uses 3,823 characters; the complete handoff retains twenty
+records, all thirteen dated roles, supplied contact fields and the oldest role's
+contributions within 53,247 serialized bytes. Local decisions distinguish projects
+omitted for budget from those without substantive job-term overlap.
+
+Fictional regressions protect project order, complete descriptions, nested and
+production-status caveats, oversized bundles and boundaries before research or
+other dated roles. Selection remains lexical and bounded; it does not require
+every project in a CV or establish revised CV quality. Candidate inputs and replay
+details stay private. No provider call was made.

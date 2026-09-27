@@ -13,12 +13,14 @@ import {
   type CandidateKnowledgeStoreHandle,
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
-
+import { selectCandidateIndependentProjectEvidence } from "./candidate-independent-project-evidence.js";
 import {
   deriveCandidateKnowledgeLexicalChunks,
   lexicalDigest,
 } from "./candidate-knowledge-source-chunks.js";
 import {
+  createCandidateRoleContributionBlock,
+  flattenCandidateRoleContributionSourceLines,
   isDatedCandidateRoleHeading,
   selectCandidateRoleContributionBlocks,
 } from "./candidate-role-contribution-blocks.js";
@@ -130,6 +132,7 @@ export function combineCandidateExperienceBodyEvidence(
   chronologyHits: readonly CandidateKnowledgeLexicalHit[],
   sourceChunks: readonly CandidateKnowledgeLexicalChunkInput[],
   jobQuery = "",
+  candidateInstructions = "",
 ): readonly CandidateKnowledgeLexicalHit[] {
   const chunksById = new Map(sourceChunks.map((chunk) => [chunk.chunkId, chunk] as const));
   const chunksBySource = new Map<string, CandidateKnowledgeLexicalChunkInput[]>();
@@ -172,6 +175,63 @@ export function combineCandidateExperienceBodyEvidence(
         break;
       roleScopeChunks.push(chunk);
       followingChunks.push(chunk);
+    }
+    const independentSelection = selectCandidateIndependentProjectEvidence(
+      heading,
+      roleScopeChunks,
+      jobQuery,
+      candidateInstructions,
+      maximumCandidateKnowledgeRetrievalChunkTextLength,
+    );
+    if (independentSelection.foundRegion) {
+      const headingLine = flattenCandidateRoleContributionSourceLines([exact])?.[0];
+      if (headingLine === undefined) {
+        throw new Error("Chronology heading line could not be verified.");
+      }
+      const headingBlock = createCandidateRoleContributionBlock([headingLine], heading.lineStart);
+      const blocks = independentSelection.blocks;
+      if (blocks.length === 0 && headingBlock.text === heading.text) return heading;
+      const text = [headingBlock.text, ...blocks.map(({ text: blockText }) => blockText)].join(
+        "\n\n",
+      );
+      if (text.length > maximumCandidateKnowledgeRetrievalChunkTextLength) {
+        throw new Error("Independent project role record exceeded its bounded evidence size.");
+      }
+      const provenance = heading.metadata.provenance;
+      return createCandidateKnowledgeLexicalHit({
+        chunkId: lexicalDigest([
+          "candidate-knowledge-independent-project-record-v1",
+          provenance.storeId,
+          provenance.knowledgeBaseId,
+          provenance.sourceId,
+          provenance.versionId,
+          heading.chunkId,
+          headingBlock.lineStart,
+          headingBlock.lineEnd,
+          headingBlock.text,
+          ...headingBlock.sourceRanges.flatMap((range) => [
+            range.chunkId,
+            range.startOffset,
+            range.endOffset,
+          ]),
+          ...blocks.flatMap((block) => [
+            block.lineStart,
+            block.lineEnd,
+            block.text,
+            ...block.sourceRanges.flatMap((range) => [
+              range.chunkId,
+              range.startOffset,
+              range.endOffset,
+            ]),
+          ]),
+        ]),
+        ordinal: heading.ordinal,
+        lineStart: headingBlock.lineStart,
+        lineEnd: Math.max(headingBlock.lineEnd, ...blocks.map(({ lineEnd }) => lineEnd)),
+        text,
+        metadata: heading.metadata,
+        bm25Rank: heading.bm25Rank,
+      });
     }
     const contributionSelection = selectCandidateRoleContributionBlocks(
       heading,

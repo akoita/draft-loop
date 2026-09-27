@@ -159,6 +159,79 @@ describe("candidate experience body evidence", () => {
     expect(result[0]?.text.length).toBeLessThanOrEqual(4_000);
   });
 
+  it("composes only relevant independent projects and keeps stable source-backed records", () => {
+    const text = [
+      "## Independent Work — January 2022 to present",
+      "Introductory profile text that should not enter the preferred project record.",
+      "**SignalDeck**, a Java event platform for distributed processing.",
+      "- Built a concurrent event core with replay support.",
+      "  Caveat: demonstration only; no production users.",
+      "**Canvas**, a creative-writing anthology.",
+      "- Edited fictional stories and poems.",
+      "**LedgerKit**, a distributed platform for event processing.",
+      "- Built an event-ingestion service using Java.",
+      "**Global limitations:** All independent projects remained prototypes, not in production.",
+    ].join("\n");
+    const chunk = sourceChunk("independent-role", 0, text, 1, text.split("\n").length);
+    const original = hit(chunk);
+    const query = "Java concurrent event processing distributed platform";
+    const instructions = "Prioritize LedgerKit / SignalDeck.";
+    const result = combineCandidateExperienceBodyEvidence(
+      [original],
+      [chunk],
+      query,
+      instructions,
+    )[0];
+    const repeated = combineCandidateExperienceBodyEvidence(
+      [original],
+      [chunk],
+      query,
+      instructions,
+    )[0];
+
+    if (result === undefined) throw new Error("Expected an independent project role record.");
+    expect(result.text.startsWith("## Independent Work — January 2022 to present")).toBe(true);
+    expect(result.text.indexOf("**LedgerKit**")).toBeLessThan(
+      result.text.indexOf("**SignalDeck**"),
+    );
+    expect(result.text).toContain("- Built an event-ingestion service using Java.");
+    expect(result.text).toContain("Caveat: demonstration only; no production users.");
+    expect(result.text).toContain(
+      "All independent projects remained prototypes, not in production.",
+    );
+    expect(result.text).not.toContain("Introductory profile text");
+    expect(result.text).not.toContain("**Canvas**");
+    expect(result.chunkId).not.toBe(original.chunkId);
+    expect(repeated?.chunkId).toBe(result.chunkId);
+    expect(result.lineStart).toBe(1);
+    expect(result.lineEnd).toBe(10);
+    expect(result.metadata.provenance).toEqual(provenance);
+    expect(result.text.length).toBeLessThanOrEqual(4_000);
+  });
+
+  it("emits only the independent heading when no project has job overlap", () => {
+    const headingText = "## Independent Projects — January 2022 to present";
+    const text = [
+      headingText,
+      "Profile prose unrelated to a project accomplishment.",
+      "**Canvas**, a creative-writing anthology.",
+      "- Edited fictional stories and poems.",
+    ].join("\n");
+    const chunk = sourceChunk("independent-no-overlap", 0, text, 1, text.split("\n").length);
+    const original = hit(chunk);
+    const result = combineCandidateExperienceBodyEvidence(
+      [original],
+      [chunk],
+      "Java concurrent cloud platform",
+    )[0];
+
+    expect(result?.text).toBe(headingText);
+    expect(result?.chunkId).not.toBe(original.chunkId);
+    expect(result?.lineStart).toBe(1);
+    expect(result?.lineEnd).toBe(1);
+    expect(result?.metadata.provenance).toEqual(provenance);
+  });
+
   it("hands off bounded role records with body text and required section records from a pinned CKB", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-experience-body-"));
     temporaryRoots.push(parent);

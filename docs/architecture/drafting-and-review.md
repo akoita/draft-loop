@@ -247,8 +247,17 @@ source order. Selection may omit blocks to fit the 4,000-character limit; it nev
 truncates a block or separates a nested caveat from its list item. A contribution
 region stops before a sibling or ancestor heading, or another dated role.
 
-Without an explicit contribution region, retrieval retains the existing prefix
-behavior: heading and following whole chunks, stopping at the next same-level or
+Explicitly independent roles also support project-labelled source groups. Their
+substantive descriptions and complete contribution blocks are ranked against
+nontrivial job terms; project names alone do not establish relevance. Selection
+keeps the project descriptor, applicable production limitations and nested
+caveats together. Selected projects follow their order in candidate instructions,
+with source order as the fallback. They share the existing role-record limit and
+consume no extra retrieval slots. The selector records local omission reasons;
+lexical overlap is an input-selection heuristic, not proof of job fit.
+
+Without an explicit contribution region or recognized independent project groups,
+retrieval retains the existing prefix behavior: heading and following whole chunks, stopping at the next same-level or
 higher heading, another dated role, or before the record limit. Non-dated nested
 headings may remain in that prefix; an overflowing chunk is not skipped to reach
 later material. A heading remains unchanged when no eligible body fits.
