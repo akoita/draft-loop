@@ -275,7 +275,9 @@ describe("candidate-priority evidence", () => {
     const fixture = await createRuntimeFixture(temporaryRoots);
     const runtime = createRuntime(fixture, " ");
     const result = await runtime.inspect("Platform Engineer");
-    expect(result.hits.some(({ text }) => text.includes("Kafka event ingestion"))).toBe(false);
+    const kafkaEvidence = result.hits.filter(({ text }) => text.includes("Kafka event ingestion"));
+    expect(kafkaEvidence).toHaveLength(1);
+    expect(kafkaEvidence[0]?.text.startsWith("## ")).toBe(true);
     expect(fixture.appendTrace).toHaveBeenCalledTimes(11);
   });
 
@@ -285,9 +287,14 @@ describe("candidate-priority evidence", () => {
     const result = await runtime.port.queryEvidence("Platform Engineer", { limit: 4 });
 
     expect(result.filter(({ text }) => /^## .*\b(?:19|20)\d{2}/u.test(text))).toHaveLength(2);
-    expect(result.filter(({ text }) => text.includes("Production Java contribution"))).toHaveLength(
-      1,
+    const contributionHits = result.filter(({ text }) =>
+      text.includes("Production Java contribution"),
     );
+    expect(contributionHits).toHaveLength(2);
+    expect(contributionHits.filter(({ text }) => text.startsWith("## "))).toHaveLength(1);
+    expect(
+      contributionHits.filter(({ text }) => text.startsWith("Production Java contribution:")),
+    ).toHaveLength(1);
     expect(result.some(({ text }) => text.includes("Bachelor of Computing"))).toBe(true);
     expect(result).toHaveLength(4);
   });

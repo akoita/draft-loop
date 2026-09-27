@@ -10,6 +10,10 @@ import type {
 } from "@draft-loop/domain";
 import type { SqliteStorage } from "@draft-loop/storage";
 import {
+  combineCandidateExperienceBodyEvidence,
+  createPinnedCandidateKnowledgeSourceChunkLoader,
+} from "./candidate-experience-body-evidence.js";
+import {
   assertCandidateKnowledgeProviderBounds,
   candidateKnowledgeChronologyQueries,
   candidateKnowledgeChronologyQueryLimit,
@@ -198,6 +202,10 @@ export function candidateKnowledgeRuntimeRetrieval(
   if (binding === undefined || selection === undefined) return undefined;
 
   const service = createCandidateKnowledgeStoreService();
+  const loadPinnedSourceChunks = createPinnedCandidateKnowledgeSourceChunkLoader(
+    binding.entries,
+    selection,
+  );
   const rawCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const combinedCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const rawQuery = (text: string, limit: number): Promise<CandidateKnowledgeRetrievalResult> => {
@@ -263,6 +271,21 @@ export function candidateKnowledgeRuntimeRetrieval(
         }
       }
       const chronologyHits = selectCandidateKnowledgeChronologyHits(chronologyRawResults, limit);
+      const sourceChunks =
+        chronologyHits.length === 0 ? [] : await loadPinnedSourceChunks(chronologyHits);
+      const providerChronologyHits =
+        chronologyHits.length === 0
+          ? chronologyHits
+          : combineCandidateExperienceBodyEvidence(chronologyHits, sourceChunks);
+      const composedHeadingsByOriginalId = new Map<string, CandidateKnowledgeLexicalHit>();
+      chronologyHits.forEach((heading, index) => {
+        const composed = providerChronologyHits[index];
+        if (composed !== undefined && composed.chunkId !== heading.chunkId) {
+          composedHeadingsByOriginalId.set(heading.chunkId, composed);
+        }
+      });
+      const replaceComposedHeading = (hit: CandidateKnowledgeLexicalHit) =>
+        composedHeadingsByOriginalId.get(hit.chunkId) ?? hit;
       const priorityQuery = candidatePriorityEvidenceQuery(context.candidateInstructions);
       const priorityRawResult =
         priorityQuery === undefined
@@ -271,7 +294,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       const priorityHits =
         priorityRawResult === undefined
           ? []
-          : selectCandidatePriorityEvidence(priorityRawResult, limit);
+          : selectCandidatePriorityEvidence(priorityRawResult, limit).map(replaceComposedHeading);
       const productionSkillsRawResult = config.requiredSections.some(isSkillsRequiredSection)
         ? await rawQuery(
             candidateProductionSkillsEvidenceQuery,
@@ -301,13 +324,17 @@ export function candidateKnowledgeRuntimeRetrieval(
             : result.hits;
         const sectionResult: RequiredSectionRetrievalResult = {
           status: hasProductionSkillsRecord ? "matched" : result.status,
-          hits: sectionHits.map((hit) => toScoredEvidenceChunk(hit, config.id)),
+          hits: sectionHits
+            .map(replaceComposedHeading)
+            .map((hit) => toScoredEvidenceChunk(hit, config.id)),
         };
         if (
           result.status === "matched" &&
           result.hits.length >= requiredSectionRetrievalLimit &&
           !hasRequiredSectionEvidence(sectionQuery.section, [
-            ...primary.hits.map((hit) => toScoredEvidenceChunk(hit, config.id)),
+            ...primary.hits
+              .map(replaceComposedHeading)
+              .map((hit) => toScoredEvidenceChunk(hit, config.id)),
             ...sectionResult.hits,
           ])
         ) {
@@ -318,8 +345,12 @@ export function candidateKnowledgeRuntimeRetrieval(
         supplements.push({ section: sectionQuery.section, result: sectionResult });
       }
 
-      const primaryHits = primary.hits.map((hit) => toScoredEvidenceChunk(hit, config.id));
-      const chronologyChunks = chronologyHits.map((hit) => toScoredEvidenceChunk(hit, config.id));
+      const primaryHits = primary.hits
+        .map(replaceComposedHeading)
+        .map((hit) => toScoredEvidenceChunk(hit, config.id));
+      const chronologyChunks = providerChronologyHits.map((hit) =>
+        toScoredEvidenceChunk(hit, config.id),
+      );
       const mergeWithPriority = (priorityPrefix: readonly CandidateKnowledgeLexicalHit[]) => {
         const reservedChunks = [
           ...chronologyChunks,
@@ -352,7 +383,7 @@ export function candidateKnowledgeRuntimeRetrieval(
         const candidateHits = mergeWithPriority(prefix);
         const candidateIds = new Set(candidateHits.map((hit) => hit.id));
         if (
-          chronologyHits.every((hit) => candidateIds.has(hit.chunkId)) &&
+          providerChronologyHits.every((hit) => candidateIds.has(hit.chunkId)) &&
           prefix.every((hit) => candidateIds.has(hit.chunkId))
         ) {
           hits = candidateHits;
@@ -361,7 +392,7 @@ export function candidateKnowledgeRuntimeRetrieval(
           break;
         }
       }
-      if (chronologyHits.some((hit) => !selectedIds.has(hit.chunkId))) {
+      if (providerChronologyHits.some((hit) => !selectedIds.has(hit.chunkId))) {
         throw new Error("Chronology evidence could not fit within the provider retrieval limit.");
       }
       if (priorityHits.length > 0 && selectedPriorityHits.length === 0) {
@@ -373,6 +404,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       const rawHitsById = new Map<string, CandidateKnowledgeLexicalHit>(
         [
           ...chronologyRawResults,
+          { hits: providerChronologyHits },
           ...(priorityRawResult === undefined ? [] : [priorityRawResult]),
           ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult]),
           primary,

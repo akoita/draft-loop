@@ -4,7 +4,6 @@ import { basename, isAbsolute, relative, resolve } from "node:path";
 
 import {
   type CandidateKnowledgeBase,
-  type CandidateKnowledgeLexicalChunkInput,
   type CandidateKnowledgeLexicalHit,
   type CandidateKnowledgeLexicalRetrievalResult,
   type CandidateKnowledgeRetrievalPurpose,
@@ -22,8 +21,6 @@ import {
   createCandidateKnowledgeSourceVersion,
   createCandidateKnowledgeStore,
   maximumCandidateKnowledgeRetrievalChunkCount,
-  maximumCandidateKnowledgeRetrievalChunkTextLength,
-  maximumCandidateKnowledgeRetrievalIndexedChunkCount,
   maximumCandidateKnowledgeRetrievalQueryLength,
 } from "@draft-loop/domain";
 import {
@@ -76,6 +73,7 @@ import {
   restoreCandidateKnowledgePortableBackup,
 } from "@draft-loop/storage/knowledge-store";
 import { StorageWriterLeaseError } from "@draft-loop/storage/writer-lease";
+import { deriveCandidateKnowledgeLexicalChunks } from "./candidate-knowledge-source-chunks.js";
 import { monotonicTimestamp } from "./monotonic-timestamp.js";
 
 export type {
@@ -3920,103 +3918,6 @@ function lexicalScopeForEntry(
   return { sources };
 }
 
-function lexicalDigest(parts: readonly (string | number)[]): string {
-  return createHash("sha256").update(JSON.stringify(parts), "utf8").digest("hex");
-}
-
-async function deriveCandidateKnowledgeLexicalChunks(
-  handle: CandidateKnowledgeStoreHandle,
-  entry: KnowledgeSelectionSnapshot["entries"][number],
-  ingest: typeof ingestBytes,
-): Promise<readonly CandidateKnowledgeLexicalChunkInput[]> {
-  const chunks: CandidateKnowledgeLexicalChunkInput[] = [];
-  for (const selectedSource of entry.sources) {
-    const reference = {
-      storeId: entry.storeId,
-      knowledgeBaseId: entry.knowledgeBaseId,
-      sourceId: selectedSource.sourceId,
-      versionId: selectedSource.versionId,
-    };
-    const content = await handle.readManagedCandidateKnowledgeSourceVersion(
-      entry.knowledgeBaseId,
-      selectedSource.sourceId,
-      selectedSource.versionId,
-    );
-    if (
-      content === undefined ||
-      content.metadata.knowledgeBaseId !== entry.knowledgeBaseId ||
-      content.metadata.sourceId !== selectedSource.sourceId ||
-      content.metadata.id !== selectedSource.versionId ||
-      content.metadata.id !== selectedSource.lifecycleRevision.versionId ||
-      content.metadata.version !== selectedSource.lifecycleRevision.version ||
-      content.metadata.createdAt !== selectedSource.lifecycleRevision.createdAt ||
-      selectedSource.lifecycleRevision.managed !== true ||
-      content.bytes.byteLength !== content.metadata.sizeBytes ||
-      createHash("sha256").update(content.bytes).digest("hex") !== content.metadata.checksum
-    ) {
-      throw lexicalIndexFailure();
-    }
-
-    const normalized = await ingest(
-      {
-        // This is a logical identifier consumed only by the byte normalizer;
-        // no local path or source URL enters the lexical projection.
-        path: `candidate-knowledge-${lexicalDigest([
-          reference.storeId,
-          reference.knowledgeBaseId,
-          reference.sourceId,
-          reference.versionId,
-        ])}`,
-        mediaType: content.metadata.mediaType,
-      },
-      content.bytes,
-      {
-        maxChunkCharacters: maximumCandidateKnowledgeRetrievalChunkTextLength,
-        maxSourceBytes: Math.max(1, content.metadata.sizeBytes),
-      },
-    );
-    if (
-      normalized.source === null ||
-      normalized.issues.length > 0 ||
-      normalized.source.issues.length > 0 ||
-      normalized.source.checksum !== content.metadata.checksum ||
-      normalized.source.sizeBytes !== content.metadata.sizeBytes ||
-      normalized.source.chunks.length === 0
-    ) {
-      throw lexicalIndexFailure();
-    }
-    for (const [ordinal, chunk] of normalized.source.chunks.entries()) {
-      if (
-        chunk.text.trim() === "" ||
-        chunk.text.length > maximumCandidateKnowledgeRetrievalChunkTextLength
-      ) {
-        throw lexicalIndexFailure();
-      }
-      chunks.push({
-        chunkId: lexicalDigest([
-          "candidate-knowledge-lexical-v1",
-          reference.storeId,
-          reference.knowledgeBaseId,
-          reference.sourceId,
-          reference.versionId,
-          ordinal,
-          chunk.text,
-        ]),
-        ordinal,
-        lineStart: chunk.locator.lineStart,
-        lineEnd: chunk.locator.lineEnd,
-        text: chunk.text,
-        metadata: { provenance: reference },
-      });
-      if (chunks.length > maximumCandidateKnowledgeRetrievalIndexedChunkCount) {
-        throw lexicalIndexFailure();
-      }
-    }
-  }
-  if (chunks.length === 0) throw lexicalIndexFailure();
-  return chunks;
-}
-
 function lexicalHitKey(hit: CandidateKnowledgeLexicalHit): string {
   return `${lexicalReferenceKey(hit.metadata.provenance)}\u0000${hit.chunkId}`;
 }
@@ -4116,6 +4017,7 @@ export function createCandidateKnowledgeStoreService(
               handle,
               entry,
               resolved.ingestBytes,
+              lexicalIndexFailure,
             );
             const index = await handle.rebuildCandidateKnowledgeLexicalIndex({
               scope,

@@ -225,10 +225,27 @@ For CKB workspaces requiring Experience, the selected-version route also reserve
 matched dated Markdown headings. Fixed local lexical supplements cover English
 month and ongoing-end terms and years 1900–2099 in batches below the query-term
 cap. Each query returns at most one hundred hits; fallback results are ignored.
-Discovered heading IDs are deduplicated and retained before ranked job evidence,
+Discovered headings are deduplicated and retained before ranked job evidence,
 then merged with candidate-priority evidence and the existing required-section
-supplements. Their existing IDs,
-source-version provenance, and content-free retrieval traces remain intact.
+supplements. The original indexed chunks remain unchanged.
+
+The selected CKB source versions are read locally through the managed store and
+normalized with the same verified chunk derivation used by the lexical index.
+For each discovered heading, retrieval assembles a bounded role record from the
+heading and following whole chunks in that source version. It stops at the next
+Markdown heading at the same or higher level, any other dated role heading, or
+before the existing 4,000-character chunk limit. Non-dated nested headings may
+remain within the role; an oversized paragraph is not truncated or skipped to reach later material. A
+heading remains unchanged when no following chunk fits.
+
+A combined record receives a deterministic identity derived from its original
+constituents and keeps the pinned source/version and full line-range provenance.
+Provider evidence, inspection and diagnostics use the same records. This retains
+available role contributions without increasing the twenty-item/128-KiB handoff
+limits or claiming that all profile content was transmitted. Source identity,
+lifecycle, checksums and exact heading matches are verified before assembly;
+other versions and local origin paths are not substitutes. No role-record read
+is added when Experience or discovered dated headings are absent.
 
 This is bounded lexical discovery, not an exhaustive chronology inventory.
 A saturated matched supplement, discovered headings that cannot fit or are lost
