@@ -10,6 +10,7 @@ import { expect, it, vi } from "vitest";
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createLocalApplicationDriver } from "./local.js";
+import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 
 // Lets a test record a run exactly as an older build did, then resume it with
 // the current build.
@@ -174,12 +175,15 @@ it.each([
       expect(output.join("\n")).not.toContain("provider.failed");
       expect(output.join("\n")).not.toContain("provider-error");
       expect(systemPrompts).toHaveLength(2);
-      // The system prompt depends only on the version and which carriers are present.
+      // The versioned template and its budget remain pinned; the wire codec adds
+      // the same decoding instructions independently of the stored prompt version.
       const pending = {} as Parameters<typeof createAuthorAdjudicationPrompt>[1];
       expect(systemPrompts[0]).toBe(
-        createAuthorAdjudicationPrompt(recorded, undefined).systemPrompt,
+        `${createAuthorAdjudicationPrompt(recorded, undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
-      expect(systemPrompts[1]).toBe(createAuthorAdjudicationPrompt(recorded, pending).systemPrompt);
+      expect(systemPrompts[1]).toBe(
+        `${createAuthorAdjudicationPrompt(recorded, pending).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+      );
       expect(systemPrompts[1]).toContain("This is an adjudicated revision.");
       for (const systemPrompt of systemPrompts) {
         expect(systemPrompt.includes(structuredFieldInstruction)).toBe(structuredGuidance);
@@ -199,7 +203,7 @@ it.each([
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v1");
       expect(systemPrompts).toHaveLength(3);
       expect(systemPrompts[2]).toBe(
-        createAuthorAdjudicationPrompt("cli-author-v4", undefined).systemPrompt,
+        `${createAuthorAdjudicationPrompt("cli-author-v4", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[2]).toContain(structuredFieldInstruction);
       expect(systemPrompts[2]).toContain(
