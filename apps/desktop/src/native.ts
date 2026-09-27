@@ -9,6 +9,9 @@ import {
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
   createCapabilityPort,
+  type KnowledgeDirectoryImportResult,
+  type KnowledgeFileImportResult,
+  type KnowledgeReadinessResult,
   type KnowledgeSelectionEntry,
   type KnowledgeSelectionResult,
   type KnowledgeStoreCreateInput,
@@ -121,6 +124,18 @@ export interface DesktopKnowledgeCapabilities {
     workspaceId: string,
     entry: KnowledgeSelectionEntry,
   ) => Promise<KnowledgeSelectionResult>;
+  readonly importCandidateKnowledgeFile?: (
+    storeId: string,
+    knowledgeBaseId: string,
+  ) => Promise<KnowledgeFileImportResult>;
+  readonly importCandidateKnowledgeDirectory?: (
+    storeId: string,
+    knowledgeBaseId: string,
+  ) => Promise<KnowledgeDirectoryImportResult>;
+  readonly getCandidateKnowledgeReadiness?: (
+    storeId: string,
+    knowledgeBaseId: string,
+  ) => Promise<KnowledgeReadinessResult>;
 }
 
 export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
@@ -381,6 +396,39 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.select",
                 input: { workspaceId, entries: [entry] },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.import-file")
+      ? {
+          importCandidateKnowledgeFile: async (storeId: string, knowledgeBaseId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.import-file",
+                input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.import-directory")
+      ? {
+          importCandidateKnowledgeDirectory: async (storeId: string, knowledgeBaseId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.import-directory",
+                input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.readiness")
+      ? {
+          getCandidateKnowledgeReadiness: async (storeId: string, knowledgeBaseId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.readiness",
+                input: { storeId, knowledgeBaseId },
               }),
             ),
         }

@@ -150,7 +150,9 @@ In a collecting or stopped desktop workspace, **Candidate knowledge** can
 create or open a local store. Choose **Use this knowledge base** to replace
 the workspace selection with one active base. This clears the selected
 canonical profile so you can review a profile against the new selection.
-Importing source files through this panel is tracked separately in #590.
+Use **Add file** or **Add directory** beside an active base to import local
+material through a native picker. The result reports complete or partial intake
+and source readiness; importing does not select that base for the workspace.
 
 ## Trust boundary
 

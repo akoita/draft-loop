@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "./bridge.js";
+import {
+  hasDesktopKnowledgeIntakeCapabilities,
+  knowledgeIntakeSummary,
+  knowledgeReadinessSummary,
+  runKnowledgeIntake,
+} from "./knowledge-intake.js";
 import type { DesktopKnowledgeCapabilities } from "./native.js";
 
 export interface KnowledgeWorkspaceProps {
@@ -106,7 +112,7 @@ export function KnowledgeWorkspace({
       await operation(generation);
     } catch {
       if (operationGeneration.current === generation) {
-        setMessage("The knowledge-store operation could not be completed.");
+        setMessage("The candidate knowledge operation could not be completed.");
       }
     } finally {
       pendingLatch.current = false;
@@ -158,6 +164,47 @@ export function KnowledgeWorkspace({
     });
   };
 
+  const importIntoKnowledgeBase = (
+    storeId: string,
+    knowledgeBaseId: string,
+    kind: "file" | "directory",
+  ) => {
+    if (!hasDesktopKnowledgeIntakeCapabilities(capabilities)) return;
+    void perform(async (generation) => {
+      const outcome = await runKnowledgeIntake({
+        workspaceId,
+        target: { storeId, knowledgeBaseId },
+        isCurrent: () => operationGeneration.current === generation,
+        importSource: () =>
+          kind === "file"
+            ? capabilities.importCandidateKnowledgeFile(storeId, knowledgeBaseId)
+            : capabilities.importCandidateKnowledgeDirectory(storeId, knowledgeBaseId),
+        readReadiness: () => capabilities.getCandidateKnowledgeReadiness(storeId, knowledgeBaseId),
+        refreshWorkspace: onSelectionSaved,
+      });
+      if (outcome.status === "stale" || operationGeneration.current !== generation) return;
+      if (outcome.status === "readiness-unavailable") {
+        setMessage(
+          `${knowledgeIntakeSummary(outcome.result)} Readiness could not be checked; some sources may not be ready.`,
+        );
+        return;
+      }
+      if (outcome.status === "refresh-unavailable") {
+        setMessage(
+          `${knowledgeIntakeSummary(outcome.result)} ${
+            outcome.readiness === null ? "Readiness could not be checked. " : ""
+          }Workspace review could not be refreshed. Reopen the workspace before continuing.${
+            outcome.readiness === null ? "" : ` ${knowledgeReadinessSummary(outcome.readiness)}`
+          }`,
+        );
+        return;
+      }
+      setMessage(
+        `${knowledgeIntakeSummary(outcome.result)} ${knowledgeReadinessSummary(outcome.readiness)}`,
+      );
+    });
+  };
+
   if (!supported) {
     return (
       <section className="panel" aria-labelledby="candidate-knowledge-heading">
@@ -169,6 +216,7 @@ export function KnowledgeWorkspace({
 
   const knowledgeBases = store === null ? [] : activeKnowledgeBases(store);
   const controlsDisabled = disabled || pending;
+  const intakeSupported = hasDesktopKnowledgeIntakeCapabilities(capabilities);
 
   return (
     <section className="panel" aria-labelledby="candidate-knowledge-heading">
@@ -208,6 +256,28 @@ export function KnowledgeWorkspace({
               >
                 Use this knowledge base
               </button>
+              {intakeSupported ? (
+                <div>
+                  <button
+                    type="button"
+                    disabled={controlsDisabled}
+                    onClick={() => importIntoKnowledgeBase(store.storeId, knowledgeBase.id, "file")}
+                  >
+                    Add file
+                  </button>
+                  <button
+                    type="button"
+                    disabled={controlsDisabled}
+                    onClick={() =>
+                      importIntoKnowledgeBase(store.storeId, knowledgeBase.id, "directory")
+                    }
+                  >
+                    Add directory
+                  </button>
+                </div>
+              ) : (
+                <p>File and directory intake is unavailable in this desktop host.</p>
+              )}
             </li>
           ))}
           {knowledgeBases.length === 0 ? <li>No active knowledge bases are available.</li> : null}

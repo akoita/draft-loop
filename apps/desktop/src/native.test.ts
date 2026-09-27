@@ -265,4 +265,94 @@ describe("desktop native profile capabilities", () => {
     expect(port.openCandidateKnowledgeStore).toBeDefined();
     expect(port.selectCandidateKnowledgeBase).toBeUndefined();
   });
+
+  it("uses native dialogs for local intake and returns readiness without paths", async () => {
+    const fileResult = {
+      storeId: "store-1",
+      knowledgeBaseId: "knowledge-1",
+      sourceId: "source-1",
+      kind: "file" as const,
+      versionId: "version-1",
+      version: 1,
+      created: true,
+    };
+    const directoryResult = {
+      storeId: "store-1",
+      knowledgeBaseId: "knowledge-1",
+      status: "partial" as const,
+      scannedEntryCount: 5,
+      discoveredFileCount: 3,
+      skippedEntryCount: 2,
+      sourceCount: 3,
+      sources: [],
+      sourcesTruncated: true,
+    };
+    const readinessResult = {
+      storeId: "store-1",
+      knowledgeBaseId: "knowledge-1",
+      state: "active" as const,
+      sourceCount: 3,
+      readyCount: 2,
+      blockedCount: 1,
+      blockerReasons: ["source-retired"],
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
+      if (command.type === "knowledge.import-file") return { ok: true, value: fileResult };
+      if (command.type === "knowledge.import-directory") {
+        return { ok: true, value: directoryResult };
+      }
+      return { ok: true, value: readinessResult };
+    });
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: [
+          "knowledge.import-file",
+          "knowledge.import-directory",
+          "knowledge.readiness",
+        ],
+        invoke,
+      }),
+    );
+
+    await expect(port.importCandidateKnowledgeFile?.("store-1", "knowledge-1")).resolves.toEqual(
+      fileResult,
+    );
+    await expect(
+      port.importCandidateKnowledgeDirectory?.("store-1", "knowledge-1"),
+    ).resolves.toEqual(directoryResult);
+    await expect(port.getCandidateKnowledgeReadiness?.("store-1", "knowledge-1")).resolves.toEqual(
+      readinessResult,
+    );
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual([
+      {
+        type: "knowledge.import-file",
+        input: { storeId: "store-1", knowledgeBaseId: "knowledge-1", selection: "native-dialog" },
+      },
+      {
+        type: "knowledge.import-directory",
+        input: { storeId: "store-1", knowledgeBaseId: "knowledge-1", selection: "native-dialog" },
+      },
+      {
+        type: "knowledge.readiness",
+        input: { storeId: "store-1", knowledgeBaseId: "knowledge-1" },
+      },
+    ]);
+    expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/(?:[A-Z]:\\|\/home\/|file:\/\/)/u);
+  });
+
+  it("returns native file-picker cancellation as an error rather than an import result", async () => {
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["knowledge.import-file"],
+        invoke: async () => ({
+          ok: false,
+          error: { code: "operation-failed", message: "The local picker was canceled." },
+        }),
+      }),
+    );
+
+    await expect(
+      port.importCandidateKnowledgeFile?.("store-1", "knowledge-1"),
+    ).rejects.toMatchObject({ code: "operation-failed" });
+  });
 });
