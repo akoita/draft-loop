@@ -2407,7 +2407,23 @@ describe("native host", () => {
         ok: true,
         value: { state: "awaiting-approval", round: 2 },
       });
-      const approved = await host.invoke({
+      const resumedHost = createNativeHost({ dialogs });
+      await expect(
+        resumedHost.invoke({
+          type: "review.load",
+          input: { workspaceId, runId: reviewValue.runId },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      await expect(
+        resumedHost.invoke({
+          type: "workspace.open",
+          input: { selection: "native-dialog" },
+        }),
+      ).resolves.toMatchObject({
+        ok: true,
+        value: { workspace: { id: workspaceId } },
+      });
+      const approved = await resumedHost.invoke({
         type: "review.dispatch",
         input: {
           workspaceId,
@@ -2419,7 +2435,7 @@ describe("native host", () => {
         ok: true,
         value: { approval: "approved", state: "approved" },
       });
-      const exported = await host.invoke({
+      const exported = await resumedHost.invoke({
         type: "review.dispatch",
         input: {
           workspaceId,

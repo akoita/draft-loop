@@ -159,6 +159,11 @@ workspace’s configured candidate-source directory into the chosen base. This
 requires an explicit action before a run or after it stops. Previously imported
 directories are rejected.
 
+If the desktop host restarts while a review is open, a workspace operation can
+lose its connection. DraftLoop clears that stale review and offers **Open
+workspace**. Select the same local directory to recover its saved history before
+approving or exporting.
+
 ## Trust boundary
 
 - Source material, run history, and exports are local by default.
