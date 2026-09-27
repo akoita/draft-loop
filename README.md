@@ -146,6 +146,12 @@ checks. The integrated path synchronizes and queries exact selected source
 versions through each CKB's local lexical index, while legacy workspaces
 without a CKB selection continue to use the workspace evidence path.
 
+In a collecting or stopped desktop workspace, **Candidate knowledge** can
+create or open a local store. Choose **Use this knowledge base** to replace
+the workspace selection with one active base. This clears the selected
+canonical profile so you can review a profile against the new selection.
+Importing source files through this panel is tracked separately in #590.
+
 ## Trust boundary
 
 - Source material, run history, and exports are local by default.

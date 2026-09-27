@@ -191,4 +191,78 @@ describe("desktop native profile capabilities", () => {
     expect(port.editCanonicalCandidateProfile).toBeUndefined();
     expect(port.reviewCanonicalCandidateProfile).toBeUndefined();
   });
+
+  it("binds candidate knowledge operations to native dialogs and one explicit workspace selection", async () => {
+    const storeResult = {
+      storeId: "store-1",
+      knowledgeBases: [
+        {
+          id: "knowledge-1",
+          displayName: "Candidate facts",
+          description: "Reusable candidate knowledge",
+          state: "active" as const,
+          isDefault: true,
+        },
+      ],
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
+      if (command.type === "knowledge.select") {
+        return {
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            entries: [{ storeId: "store-1", knowledgeBaseId: "knowledge-1" }],
+          },
+        };
+      }
+      return { ok: true, value: storeResult };
+    });
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["knowledge.create", "knowledge.open", "knowledge.select"],
+        invoke,
+      }),
+    );
+
+    await expect(
+      port.createCandidateKnowledgeStore?.({ name: "candidate-facts" }),
+    ).resolves.toEqual(storeResult);
+    await expect(port.openCandidateKnowledgeStore?.()).resolves.toEqual(storeResult);
+    await expect(
+      port.selectCandidateKnowledgeBase?.("workspace-1", {
+        storeId: "store-1",
+        knowledgeBaseId: "knowledge-1",
+      }),
+    ).resolves.toEqual({
+      workspaceId: "workspace-1",
+      entries: [{ storeId: "store-1", knowledgeBaseId: "knowledge-1" }],
+    });
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual([
+      {
+        type: "knowledge.create",
+        input: { selection: "native-dialog", name: "candidate-facts" },
+      },
+      { type: "knowledge.open", input: { selection: "native-dialog" } },
+      {
+        type: "knowledge.select",
+        input: {
+          workspaceId: "workspace-1",
+          entries: [{ storeId: "store-1", knowledgeBaseId: "knowledge-1" }],
+        },
+      },
+    ]);
+  });
+
+  it("gates each candidate knowledge method on its own host capability", () => {
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["knowledge.create", "knowledge.open"],
+        invoke: async () => ({ ok: true, value: { storeId: "store-1", knowledgeBases: [] } }),
+      }),
+    );
+
+    expect(port.createCandidateKnowledgeStore).toBeDefined();
+    expect(port.openCandidateKnowledgeStore).toBeDefined();
+    expect(port.selectCandidateKnowledgeBase).toBeUndefined();
+  });
 });

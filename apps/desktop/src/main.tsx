@@ -6,6 +6,7 @@ import {
   type ModelsPreviewIndependenceResult,
   modelCompanies,
 } from "./bridge.js";
+import { KnowledgeWorkspace } from "./knowledge.js";
 import type {
   CandidateProfileSelection,
   DesktopReviewState,
@@ -126,11 +127,15 @@ function messageOf(reason: unknown, fallback: string): string {
 
 export const candidateProfileStartBlockerMessage =
   "Select an exact reviewed candidate profile before starting a review.";
+export const candidateKnowledgePendingBlockerMessage =
+  "Wait for candidate knowledge selection to finish before starting a review.";
 
 export function candidateProfileStartDisabledReason(
   profileCapabilitiesPresent: boolean,
   selectedProfile: CandidateProfileSelection | null,
+  knowledgePending = false,
 ): string | null {
+  if (knowledgePending) return candidateKnowledgePendingBlockerMessage;
   return profileCapabilitiesPresent && selectedProfile === null
     ? candidateProfileStartBlockerMessage
     : null;
@@ -750,6 +755,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [busy, setBusy] = useState(false);
   const [pendingReviewAction, setPendingReviewAction] = useState<PendingReviewAction | null>(null);
   const [pendingBulkFindingCount, setPendingBulkFindingCount] = useState<number | null>(null);
+  const [knowledgePending, setKnowledgePending] = useState(false);
+  const knowledgePendingRef = useRef(false);
+  const activeWorkspaceIdRef = useRef<string | null>(null);
+  const [profileResetEpoch, setProfileResetEpoch] = useState(0);
   const [candidateProfileSelection, setCandidateProfileSelection] = useState<{
     readonly workspaceId: string;
     readonly profile: CandidateProfileSelection;
@@ -774,6 +783,16 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [preview, setPreview] = useState<IndependencePreviewState>({ status: "idle" });
   const requestedCompanies = useRef(new Set<ModelCompany>());
   const activeExecutionStatus = state?.execution.status;
+  const activeWorkspaceId = state?.workspaceId ?? null;
+  const previousWorkspaceIdRef = useRef<string | null>(null);
+  activeWorkspaceIdRef.current = activeWorkspaceId;
+  useEffect(() => {
+    if (previousWorkspaceIdRef.current !== activeWorkspaceId) {
+      knowledgePendingRef.current = false;
+      setKnowledgePending(false);
+    }
+    previousWorkspaceIdRef.current = activeWorkspaceId;
+  }, [activeWorkspaceId]);
   const profileCapabilities = hasCanonicalCandidateProfileCapabilities(activePort)
     ? activePort
     : null;
@@ -786,6 +805,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       state !== null &&
       (state.state === "collecting" || state.state === "stopped"),
     selectedCandidateProfile,
+    knowledgePending,
   );
   const onCandidateProfileSelectionChange = useCallback(
     (selection: CandidateProfileSelection | null) => {
@@ -857,6 +877,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
 
   const onAction = (action: ReviewAction) => {
     if (state === null) return;
+    if (action.type === "start" && knowledgePendingRef.current) {
+      setImportError(candidateKnowledgePendingBlockerMessage);
+      return;
+    }
     if (action.type === "start" && profileStartDisabledReason !== null) {
       setImportError(profileStartDisabledReason);
       return;
@@ -872,6 +896,27 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         );
       }
     });
+  };
+
+  const onKnowledgePendingChange = (workspaceId: string, pending: boolean) => {
+    if (activeWorkspaceIdRef.current !== workspaceId) return;
+    knowledgePendingRef.current = pending;
+    setKnowledgePending(pending);
+  };
+
+  const onKnowledgeSelectionSaved = async (workspaceId: string): Promise<boolean> => {
+    if (activeWorkspaceIdRef.current !== workspaceId) return false;
+    const loaded = await activePort.load();
+    if (activeWorkspaceIdRef.current !== workspaceId) return false;
+    if (loaded.workspaceId !== workspaceId) {
+      throw new Error("The active workspace changed while refreshing knowledge selection.");
+    }
+    setCandidateProfileSelection((current) =>
+      current?.workspaceId === workspaceId ? null : current,
+    );
+    setProfileResetEpoch((current) => current + 1);
+    setState(loaded);
+    return true;
   };
 
   const onBulkFindingDecision = (
@@ -1117,15 +1162,39 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       pendingReviewAction={pendingReviewAction}
       startDisabledReason={profileStartDisabledReason}
       profilePanel={
-        (state.state === "collecting" || state.state === "stopped") &&
-        profileCapabilities !== null ? (
-          <ProfileWorkspace
-            key={state.workspaceId}
-            workspaceId={state.workspaceId}
-            capabilities={profileCapabilities}
-            selectedProfile={selectedCandidateProfile}
-            onSelectionChange={onCandidateProfileSelectionChange}
-          />
+        state.state === "collecting" || state.state === "stopped" ? (
+          <>
+            <KnowledgeWorkspace
+              key={state.workspaceId}
+              workspaceId={state.workspaceId}
+              capabilities={activePort}
+              disabled={
+                busy || pendingReviewAction !== null || state.execution.status === "running"
+              }
+              onPendingChange={onKnowledgePendingChange}
+              onSelectionSaved={onKnowledgeSelectionSaved}
+            />
+            {profileCapabilities === null ? null : (
+              <fieldset
+                disabled={
+                  knowledgePending ||
+                  busy ||
+                  pendingReviewAction !== null ||
+                  state.execution.status === "running"
+                }
+                className="profile-knowledge-lock"
+                style={{ border: 0, margin: 0, minWidth: 0, padding: 0 }}
+              >
+                <ProfileWorkspace
+                  key={`${state.workspaceId}:${profileResetEpoch}`}
+                  workspaceId={state.workspaceId}
+                  capabilities={profileCapabilities}
+                  selectedProfile={selectedCandidateProfile}
+                  onSelectionChange={onCandidateProfileSelectionChange}
+                />
+              </fieldset>
+            )}
+          </>
         ) : undefined
       }
       {...(activePort.selectFiles === undefined

@@ -142,6 +142,13 @@ the host to resolve every local file through a native picker. Both adapters use
 the same immutable application operations; provider extraction is enabled only
 by an explicit per-create approval.
 
+The desktop knowledge panel exposes native store creation and opening, then
+explicit selection of one active base for a collecting or stopped workspace.
+Opening a store does not bind it. Selection replaces the workspace binding,
+refreshes the workspace, and clears the selected canonical-profile version;
+existing run contexts stay immutable. Pending setup blocks Start, and hosts
+without the required capabilities show an unavailable explanation.
+
 Store setup, selection, inspection, intake, refresh, rebind, retirement, and
 directory maintenance all follow this split. Read-only inspection calls are
 fresh reads rather than a cross-command snapshot. Mutation results expose only
