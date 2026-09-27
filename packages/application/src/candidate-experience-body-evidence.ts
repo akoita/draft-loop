@@ -33,6 +33,11 @@ export interface CandidateKnowledgeStoreBinding {
   readonly knowledgeBaseId: string;
 }
 
+export interface CandidateExperienceBodyEvidenceComposition {
+  readonly chronologyHits: readonly CandidateKnowledgeLexicalHit[];
+  readonly requestedProjectOverflowHits: readonly CandidateKnowledgeLexicalHit[];
+}
+
 function provenanceKey(value: {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -127,15 +132,16 @@ export function createPinnedCandidateKnowledgeSourceChunkLoader(
   };
 }
 
-/** Replace selected dated headings with deterministic bounded source role records. */
-export function combineCandidateExperienceBodyEvidence(
+/** Compose bounded role records and complete requested projects that overflow those records. */
+export function composeCandidateExperienceBodyEvidence(
   chronologyHits: readonly CandidateKnowledgeLexicalHit[],
   sourceChunks: readonly CandidateKnowledgeLexicalChunkInput[],
   jobQuery = "",
   candidateInstructions = "",
-): readonly CandidateKnowledgeLexicalHit[] {
+): CandidateExperienceBodyEvidenceComposition {
   const chunksById = new Map(sourceChunks.map((chunk) => [chunk.chunkId, chunk] as const));
   const chunksBySource = new Map<string, CandidateKnowledgeLexicalChunkInput[]>();
+  const requestedProjectOverflowHits: CandidateKnowledgeLexicalHit[] = [];
   for (const chunk of sourceChunks) {
     const key = provenanceKey(chunk.metadata.provenance);
     const group = chunksBySource.get(key);
@@ -145,7 +151,7 @@ export function combineCandidateExperienceBodyEvidence(
   for (const group of chunksBySource.values())
     group.sort((left, right) => left.ordinal - right.ordinal);
 
-  return chronologyHits.map((heading) => {
+  const composedChronologyHits = chronologyHits.map((heading) => {
     const exact = chunksById.get(heading.chunkId);
     if (
       exact === undefined ||
@@ -190,6 +196,39 @@ export function combineCandidateExperienceBodyEvidence(
       }
       const headingBlock = createCandidateRoleContributionBlock([headingLine], heading.lineStart);
       const blocks = independentSelection.blocks;
+      for (const { title, block } of independentSelection.overflowBundles) {
+        const provenance = heading.metadata.provenance;
+        requestedProjectOverflowHits.push(
+          createCandidateKnowledgeLexicalHit({
+            chunkId: lexicalDigest([
+              "candidate-knowledge-independent-project-overflow-v1",
+              provenance.storeId,
+              provenance.knowledgeBaseId,
+              provenance.sourceId,
+              provenance.versionId,
+              heading.chunkId,
+              heading.text,
+              heading.lineStart,
+              heading.lineEnd,
+              title,
+              block.lineStart,
+              block.lineEnd,
+              block.text,
+              ...block.sourceRanges.flatMap((range) => [
+                range.chunkId,
+                range.startOffset,
+                range.endOffset,
+              ]),
+            ]),
+            ordinal: heading.ordinal,
+            lineStart: block.lineStart,
+            lineEnd: block.lineEnd,
+            text: block.text,
+            metadata: heading.metadata,
+            bm25Rank: heading.bm25Rank,
+          }),
+        );
+      }
       if (blocks.length === 0 && headingBlock.text === heading.text) return heading;
       const text = [headingBlock.text, ...blocks.map(({ text: blockText }) => blockText)].join(
         "\n\n",
@@ -303,4 +342,47 @@ export function combineCandidateExperienceBodyEvidence(
       bm25Rank: heading.bm25Rank,
     });
   });
+
+  const packedOverflowHits: CandidateKnowledgeLexicalHit[] = [];
+  for (const hit of requestedProjectOverflowHits) {
+    const previous = packedOverflowHits.at(-1);
+    const text = previous === undefined ? hit.text : `${previous.text}\n\n${hit.text}`;
+    if (
+      previous !== undefined &&
+      previous.ordinal === hit.ordinal &&
+      provenanceKey(previous.metadata.provenance) === provenanceKey(hit.metadata.provenance) &&
+      text.length <= maximumCandidateKnowledgeRetrievalChunkTextLength
+    ) {
+      packedOverflowHits[packedOverflowHits.length - 1] = createCandidateKnowledgeLexicalHit({
+        ...previous,
+        chunkId: lexicalDigest([
+          "candidate-knowledge-independent-project-overflow-pack-v1",
+          previous.chunkId,
+          hit.chunkId,
+        ]),
+        lineStart: Math.min(previous.lineStart, hit.lineStart),
+        lineEnd: Math.max(previous.lineEnd, hit.lineEnd),
+        text,
+      });
+    } else packedOverflowHits.push(hit);
+  }
+  return Object.freeze({
+    chronologyHits: Object.freeze(composedChronologyHits),
+    requestedProjectOverflowHits: Object.freeze(packedOverflowHits),
+  });
+}
+
+/** Replace selected dated headings with deterministic bounded source role records. */
+export function combineCandidateExperienceBodyEvidence(
+  chronologyHits: readonly CandidateKnowledgeLexicalHit[],
+  sourceChunks: readonly CandidateKnowledgeLexicalChunkInput[],
+  jobQuery = "",
+  candidateInstructions = "",
+): readonly CandidateKnowledgeLexicalHit[] {
+  return composeCandidateExperienceBodyEvidence(
+    chronologyHits,
+    sourceChunks,
+    jobQuery,
+    candidateInstructions,
+  ).chronologyHits;
 }

@@ -20,6 +20,10 @@ export type CandidateIndependentProjectSelectionDecision =
 export interface CandidateIndependentProjectSelection {
   readonly foundRegion: boolean;
   readonly blocks: readonly CandidateRoleContributionBlock[];
+  readonly overflowBundles: readonly {
+    readonly title: string;
+    readonly block: CandidateRoleContributionBlock;
+  }[];
   readonly decision: CandidateIndependentProjectSelectionDecision;
   readonly projectDecisions: readonly {
     readonly title: string;
@@ -312,6 +316,30 @@ function renderProjectGroup(
   );
 }
 
+function requestedOverflowBundles(
+  groups: readonly ProjectGroup[],
+  selectedGroups: ReadonlySet<ProjectGroup>,
+  globalBlocks: readonly CandidateRoleContributionBlock[],
+  maximumRecordCharacters: number,
+): CandidateIndependentProjectSelection["overflowBundles"] {
+  return [...groups]
+    .filter((group) => Number.isFinite(group.requestedOrder) && !selectedGroups.has(group))
+    .sort((left, right) => left.requestedOrder - right.requestedOrder)
+    .map((group) => {
+      const project = renderProjectGroup(group.descriptor, group.minimumBody);
+      const blocks = [
+        project,
+        ...group.constraints,
+        ...[...globalBlocks].sort((left, right) => left.sourceOrder - right.sourceOrder),
+      ];
+      const block = combineBlocks(blocks, project.sourceOrder);
+      if (block.text.length > maximumRecordCharacters) {
+        throw new Error("Requested independent project evidence exceeded its bounded record size.");
+      }
+      return { title: group.title, block };
+    });
+}
+
 /** Select bounded, job-relevant complete projects from an explicit independent-work heading. */
 export function selectCandidateIndependentProjectEvidence(
   roleHeading: CandidateKnowledgeLexicalHit,
@@ -322,12 +350,24 @@ export function selectCandidateIndependentProjectEvidence(
 ): CandidateIndependentProjectSelection {
   const lines = flattenCandidateRoleContributionSourceLines(roleScopeChunks);
   if (lines === undefined) {
-    return { foundRegion: false, blocks: [], decision: "no-project-groups", projectDecisions: [] };
+    return {
+      foundRegion: false,
+      blocks: [],
+      overflowBundles: [],
+      decision: "no-project-groups",
+      projectDecisions: [],
+    };
   }
   const roleLineIndex = lines.findIndex((line) => line.lineNumber === roleHeading.lineStart);
   const roleLine = lines[roleLineIndex];
   if (roleLineIndex < 0 || roleLine === undefined || !independentRoleHeading(roleLine.text)) {
-    return { foundRegion: false, blocks: [], decision: "no-project-groups", projectDecisions: [] };
+    return {
+      foundRegion: false,
+      blocks: [],
+      overflowBundles: [],
+      decision: "no-project-groups",
+      projectDecisions: [],
+    };
   }
   const roleLevel = headingLevel(roleLine.text) ?? 0;
   let scopeEnd = lines.length;
@@ -350,7 +390,13 @@ export function selectCandidateIndependentProjectEvidence(
     return label === undefined ? [] : [{ line, index, ...label }];
   });
   if (labels.length === 0) {
-    return { foundRegion: false, blocks: [], decision: "no-project-groups", projectDecisions: [] };
+    return {
+      foundRegion: false,
+      blocks: [],
+      overflowBundles: [],
+      decision: "no-project-groups",
+      projectDecisions: [],
+    };
   }
 
   const globalBlocks: CandidateRoleContributionBlock[] = [];
@@ -472,6 +518,7 @@ export function selectCandidateIndependentProjectEvidence(
     return {
       foundRegion: true,
       blocks: [],
+      overflowBundles: [],
       decision: "no-job-overlap",
       projectDecisions: labels.map(({ title }) => ({ title, decision: "no-job-overlap" as const })),
     };
@@ -505,9 +552,16 @@ export function selectCandidateIndependentProjectEvidence(
     usedCharacters += nextCost;
   }
   if (selectedGroups.length === 0) {
+    const overflowBundles = requestedOverflowBundles(
+      groups,
+      selectedGroupSet,
+      globalBlocks,
+      maximumRecordCharacters,
+    );
     return {
       foundRegion: true,
       blocks: [],
+      overflowBundles,
       decision: "budget",
       projectDecisions: projectDecisions.map((entry, index) =>
         groups.some(({ labelIndex }) => labelIndex === index)
@@ -555,5 +609,17 @@ export function selectCandidateIndependentProjectEvidence(
       projectDecisions[group.labelIndex] = { title: group.title, decision: "budget" };
     }
   }
-  return { foundRegion: true, blocks: output, decision: "selected", projectDecisions };
+  const overflowBundles = requestedOverflowBundles(
+    groups,
+    selectedGroupSet,
+    globalBlocks,
+    maximumRecordCharacters,
+  );
+  return {
+    foundRegion: true,
+    blocks: output,
+    overflowBundles,
+    decision: "selected",
+    projectDecisions,
+  };
 }

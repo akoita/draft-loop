@@ -262,6 +262,17 @@ requested project's evidence lets the author assess job fit; it does not
 require inclusion in the CV. Lexical overlap and candidate priority are
 input-selection signals, not proof of relevance or candidate achievement.
 
+Requested projects that cannot fit the role record may contribute separate,
+source-backed overflow records. Each retains its complete descriptor,
+contribution and applicable limitations within the same per-record limit.
+Whole overflow bundles from the same role and pinned source may share a record
+when their complete text fits. Overflow records use the existing priority slots ahead of generic matches;
+they do not duplicate projects already selected in the role record. Their
+identities and locators preserve the pinned source version and source ranges.
+If these records cannot fit alongside contact, chronology and required-section
+evidence within the existing record and byte limits, retrieval fails visibly
+before provider transmission.
+
 Without an explicit contribution region or recognized independent project groups,
 retrieval retains the existing prefix behavior: heading and following whole chunks, stopping at the next same-level or
 higher heading, another dated role, or before the record limit. Non-dated nested

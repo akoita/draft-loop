@@ -15,7 +15,7 @@ import {
   selectCandidateContactEvidence,
 } from "./candidate-contact-evidence.js";
 import {
-  combineCandidateExperienceBodyEvidence,
+  composeCandidateExperienceBodyEvidence,
   createPinnedCandidateKnowledgeSourceChunkLoader,
 } from "./candidate-experience-body-evidence.js";
 import {
@@ -26,6 +26,7 @@ import {
   selectCandidateKnowledgeChronologyHits,
 } from "./candidate-knowledge-chronology.js";
 import {
+  candidatePriorityEvidenceChunkLimit,
   candidatePriorityEvidenceQuery,
   candidatePriorityEvidenceQueryLimit,
   selectCandidatePriorityEvidence,
@@ -283,15 +284,22 @@ export function candidateKnowledgeRuntimeRetrieval(
       const chronologyHits = selectCandidateKnowledgeChronologyHits(chronologyRawResults, limit);
       const sourceChunks =
         chronologyHits.length === 0 ? [] : await loadPinnedSourceChunks(chronologyHits);
-      const providerChronologyHits =
+      const composition =
         chronologyHits.length === 0
-          ? chronologyHits
-          : combineCandidateExperienceBodyEvidence(
+          ? { chronologyHits, requestedProjectOverflowHits: [] }
+          : composeCandidateExperienceBodyEvidence(
               chronologyHits,
               sourceChunks,
               text,
               context.candidateInstructions ?? "",
             );
+      const providerChronologyHits = composition.chronologyHits;
+      const requestedProjectOverflowHits = composition.requestedProjectOverflowHits;
+      if (requestedProjectOverflowHits.length > candidatePriorityEvidenceChunkLimit) {
+        throw new Error(
+          "Requested independent project evidence exceeds the bounded priority evidence slots.",
+        );
+      }
       const composedHeadingsByOriginalId = new Map<string, CandidateKnowledgeLexicalHit>();
       chronologyHits.forEach((heading, index) => {
         const composed = providerChronologyHits[index];
@@ -306,10 +314,25 @@ export function candidateKnowledgeRuntimeRetrieval(
         priorityQuery === undefined
           ? undefined
           : await rawQuery(priorityQuery, candidatePriorityEvidenceQueryLimit);
-      const priorityHits =
+      const matchedPriorityHits =
         priorityRawResult === undefined
           ? []
           : selectCandidatePriorityEvidence(priorityRawResult, limit).map(replaceComposedHeading);
+      const priorityHits = [
+        ...requestedProjectOverflowHits,
+        ...matchedPriorityHits.filter(
+          (hit) =>
+            !requestedProjectOverflowHits.some(
+              (overflow) =>
+                overflow.chunkId === hit.chunkId ||
+                (JSON.stringify(overflow.metadata.provenance) ===
+                  JSON.stringify(hit.metadata.provenance) &&
+                  overflow.lineStart === hit.lineStart &&
+                  overflow.lineEnd === hit.lineEnd &&
+                  overflow.text === hit.text),
+            ),
+        ),
+      ].slice(0, candidatePriorityEvidenceChunkLimit);
       const productionSkillsRawResult = config.requiredSections.some(isSkillsRequiredSection)
         ? await rawQuery(
             candidateProductionSkillsEvidenceQuery,
@@ -426,12 +449,22 @@ export function candidateKnowledgeRuntimeRetrieval(
           "Candidate-priority evidence could not fit within the provider retrieval limit.",
         );
       }
+      if (
+        requestedProjectOverflowHits.some(
+          ({ chunkId }) => !selectedPriorityHits.some((hit) => hit.chunkId === chunkId),
+        )
+      ) {
+        throw new Error(
+          "Requested independent project evidence could not fit within the provider retrieval limit.",
+        );
+      }
       assertCandidateKnowledgeProviderBounds(hits, limit);
       const rawHitsById = new Map<string, CandidateKnowledgeLexicalHit>(
         [
           contactRawResult,
           ...chronologyRawResults,
           { hits: providerChronologyHits },
+          { hits: requestedProjectOverflowHits },
           ...(priorityRawResult === undefined ? [] : [priorityRawResult]),
           ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult]),
           primary,
