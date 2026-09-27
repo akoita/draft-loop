@@ -133,6 +133,69 @@ describe("candidate independent project evidence", () => {
     expect(result.projectDecisions).toEqual([{ title: "EventLab", decision: "budget" }]);
   });
 
+  it("admits explicitly requested projects before stronger job matches and keeps their evidence", () => {
+    const chunk = source(
+      [
+        "## Independent Work — January 2021 to present",
+        "**EventEngine**, a Java event-processing platform.",
+        "**Honesty constraints:** Prototype only; no production users. This is a bounded fictional fixture. ".repeat(
+          3,
+        ),
+        "**Canvas / Canvas Index**, a civic library catalogue.",
+        "Curated a searchable lending index for community equipment.",
+        "**Honesty constraints:** Demonstration only; no production users.",
+      ].join("\n"),
+    );
+
+    const result = selectCandidateIndependentProjectEvidence(
+      headingHit(chunk),
+      [chunk],
+      "Java event processing",
+      "Prioritize Canvas Index.",
+      500,
+    );
+
+    expect(result.projectDecisions).toEqual([
+      { title: "EventEngine", decision: "budget" },
+      { title: "Canvas / Canvas Index", decision: "selected" },
+    ]);
+    const text = result.blocks.map(({ text: blockText }) => blockText).join("\n\n");
+    expect(text).toContain("**Canvas / Canvas Index**");
+    expect(text).toContain("Curated a searchable lending index for community equipment.");
+    expect(text).toContain("Demonstration only; no production users.");
+    expect(text).not.toContain("EventEngine");
+    expect(text.length).toBeLessThanOrEqual(500);
+  });
+
+  it("matches source-declared slash aliases as whole phrases, not title substrings", () => {
+    const chunk = source(
+      [
+        "## Independent Work — January 2021 to present",
+        "**SignalDeck Pro**, a Java event-processing platform.",
+        "Built a Java event processor with retry-safe replay.",
+        "**LedgerKit / Ledger Path**, a civic lending catalogue.",
+        "Curated a searchable lending index for community equipment.",
+      ].join("\n"),
+    );
+
+    const result = selectCandidateIndependentProjectEvidence(
+      headingHit(chunk),
+      [chunk],
+      "Java event processing",
+      "Prioritize SignalDeck, then Ledger Path.",
+      4_000,
+    );
+
+    const text = result.blocks.map(({ text: blockText }) => blockText).join("\n\n");
+    expect(text.indexOf("**LedgerKit / Ledger Path**")).toBeLessThan(
+      text.indexOf("**SignalDeck Pro**"),
+    );
+    expect(result.projectDecisions).toEqual([
+      { title: "SignalDeck Pro", decision: "selected" },
+      { title: "LedgerKit / Ledger Path", decision: "selected" },
+    ]);
+  });
+
   it("stops before a nested dated role and rejects mixed source versions", () => {
     const chunk = source(
       [

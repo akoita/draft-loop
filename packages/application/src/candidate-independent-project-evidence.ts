@@ -257,13 +257,19 @@ function overlapScore(queryTerms: ReadonlySet<string>, text: string, title: stri
 }
 
 function instructionOrder(title: string, instructions: string): number {
-  const normalizedInstructions = normalizePhrase(instructions);
+  const instructionTerms = normalizePhrase(instructions).split(" ").filter(Boolean);
   const aliases = title
     .split(/\s*\/\s*/u)
     .map(normalizePhrase)
-    .filter(Boolean);
+    .map((alias) => alias.split(" ").filter(Boolean))
+    .filter((alias) => alias.length > 0);
   const positions = aliases
-    .map((alias) => normalizedInstructions.indexOf(alias))
+    .map((alias) => {
+      for (let index = 0; index <= instructionTerms.length - alias.length; index += 1) {
+        if (alias.every((term, offset) => instructionTerms[index + offset] === term)) return index;
+      }
+      return -1;
+    })
     .filter((position) => position >= 0);
   return positions.length === 0 ? Number.POSITIVE_INFINITY : Math.min(...positions);
 }
@@ -418,6 +424,8 @@ export function selectCandidateIndependentProjectEvidence(
     );
     if (descriptionTerms.size + bodyTerms.size === 0) continue;
 
+    const requestedOrder = instructionOrder(label.title, candidateInstructions);
+    const isRequested = Number.isFinite(requestedOrder);
     const descriptorScore = overlapScore(queryTerms, description, label.title);
     const bodyUnits = bodyBlocks
       .map((block) => ({ block, score: overlapScore(queryTerms, block.text, label.title) }))
@@ -427,9 +435,20 @@ export function selectCandidateIndependentProjectEvidence(
           right.score - left.score || left.block.sourceOrder - right.block.sourceOrder,
       );
     const bestBody = bodyUnits[0];
-    if (descriptorScore === 0 && bestBody === undefined) continue;
+    if (descriptorScore === 0 && bestBody === undefined && !isRequested) continue;
     const bestScore = Math.max(descriptorScore, bestBody?.score ?? 0);
-    const mandatoryBody = descriptorScore > 0 ? [] : bestBody === undefined ? [] : [bestBody.block];
+    const firstBody = bodyBlocks[0];
+    const mandatoryBody = isRequested
+      ? bestBody === undefined
+        ? firstBody === undefined
+          ? []
+          : [firstBody]
+        : [bestBody.block]
+      : descriptorScore > 0
+        ? []
+        : bestBody === undefined
+          ? []
+          : [bestBody.block];
     const minimum = renderProjectGroup(descriptor, mandatoryBody);
     const selectedBody = new Set(mandatoryBody);
     const extras = bodyUnits
@@ -445,7 +464,7 @@ export function selectCandidateIndependentProjectEvidence(
       minimumBody: mandatoryBody,
       extras,
       constraints,
-      requestedOrder: instructionOrder(label.title, candidateInstructions),
+      requestedOrder,
     });
   }
 
@@ -458,10 +477,15 @@ export function selectCandidateIndependentProjectEvidence(
     };
   }
 
-  const rankedGroups = [...groups].sort(
-    (left, right) =>
-      right.score - left.score || left.descriptor.sourceOrder - right.descriptor.sourceOrder,
-  );
+  const rankedGroups = [...groups].sort((left, right) => {
+    const leftRequested = Number.isFinite(left.requestedOrder);
+    const rightRequested = Number.isFinite(right.requestedOrder);
+    if (leftRequested !== rightRequested) return leftRequested ? -1 : 1;
+    if (leftRequested && rightRequested && left.requestedOrder !== right.requestedOrder) {
+      return left.requestedOrder - right.requestedOrder;
+    }
+    return right.score - left.score || left.descriptor.sourceOrder - right.descriptor.sourceOrder;
+  });
   const limitationCost = globalBlocks.reduce((sum, block) => sum + 2 + block.text.length, 0);
   const selectedGroups: { group: ProjectGroup; body: CandidateRoleContributionBlock[] }[] = [];
   const selectedGroupSet = new Set<ProjectGroup>();
