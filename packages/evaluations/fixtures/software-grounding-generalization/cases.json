@@ -1,0 +1,213 @@
+{
+  "schemaVersion": 1,
+  "id": "software-grounding-generalization",
+  "provenance": {
+    "kind": "synthetic",
+    "basis": "Fictional paired source-claim cases for auditing software-engineering grounding generalization",
+    "containsRealCandidateRecord": false,
+    "providerRunPerformed": false,
+    "realApplicationOutcome": null
+  },
+  "scenarios": [
+    {
+      "id": "unfamiliar-adapter-paraphrase",
+      "tags": ["unfamiliar-technology", "paraphrase"],
+      "sourceChunks": [
+        {
+          "id": "u1",
+          "text": "At Emberglass Systems, added the invented Qorvex Relay adapter in Rust. It replays queued callbacks while preserving their original order."
+        }
+      ],
+      "claims": [
+        {
+          "id": "supported-sequence-paraphrase",
+          "text": "Built a Rust Qorvex Relay adapter that replays queued callbacks in sequence.",
+          "evidenceChunkIds": ["u1"],
+          "expectedSourceSupport": "supported",
+          "rationale": "Source chunk u1 identifies the adapter, language, queued callbacks, and original ordering; 'in sequence' paraphrases that ordering.",
+          "expectedBoundary": "semantic"
+        },
+        {
+          "id": "unsupported-language",
+          "text": "Built a Go Qorvex Relay adapter that replays queued callbacks in sequence.",
+          "evidenceChunkIds": ["u1"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "Source chunk u1 specifies Rust and supplies no Go implementation.",
+          "expectedBoundary": "deterministic"
+        }
+      ]
+    },
+    {
+      "id": "consultant-client-attribution",
+      "tags": ["consulting", "client-attribution"],
+      "sourceChunks": [
+        {
+          "id": "c1",
+          "text": "Employed by Juniper Field Consulting; delivered a telemetry importer for its client, Bellwether Transit."
+        }
+      ],
+      "claims": [
+        {
+          "id": "supported-consultant-attribution",
+          "text": "Employed by Juniper Field Consulting; delivered a telemetry importer for client Bellwether Transit.",
+          "evidenceChunkIds": ["c1"],
+          "expectedSourceSupport": "supported",
+          "rationale": "Source chunk c1 distinguishes the consulting employer from the transit client and supports the delivery statement.",
+          "expectedBoundary": "deterministic"
+        },
+        {
+          "id": "client-misreported-as-employer",
+          "text": "Employed by Bellwether Transit; delivered a telemetry importer for its client.",
+          "evidenceChunkIds": ["c1"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "Source chunk c1 names Bellwether Transit as a client and Juniper Field Consulting as the employer.",
+          "expectedBoundary": "semantic"
+        }
+      ]
+    },
+    {
+      "id": "study-vs-implementation",
+      "tags": ["study", "implementation-status"],
+      "sourceChunks": [
+        {
+          "id": "s1",
+          "text": "Compared two cache designs, wrote a migration proposal, and documented expected benefits. The migration was not executed."
+        }
+      ],
+      "claims": [
+        {
+          "id": "supported-migration-study",
+          "text": "Compared cache designs and presented a migration study; the migration was not implemented.",
+          "evidenceChunkIds": ["s1"],
+          "expectedSourceSupport": "supported",
+          "rationale": "Source chunk s1 records the comparison, proposal, and explicit non-execution; the claim keeps the work at study stage.",
+          "expectedBoundary": "semantic"
+        },
+        {
+          "id": "unsupported-migration-delivery",
+          "text": "Implemented the proposed cache migration.",
+          "evidenceChunkIds": ["s1"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "Source chunk s1 says the migration was proposed but not executed.",
+          "expectedBoundary": "semantic"
+        }
+      ]
+    },
+    {
+      "id": "shared-contribution-vs-ownership",
+      "tags": ["shared-contribution", "leadership", "ownership"],
+      "sourceChunks": [
+        {
+          "id": "t1",
+          "text": "Worked with a teammate on the retry worker. I wrote retry tests; the project lead owned the retry service and led the rollout."
+        }
+      ],
+      "claims": [
+        {
+          "id": "supported-shared-contribution",
+          "text": "Wrote retry tests for a shared worker with a teammate.",
+          "evidenceChunkIds": ["t1"],
+          "expectedSourceSupport": "supported",
+          "rationale": "Source chunk t1 explicitly attributes the retry tests to the candidate and describes the worker as shared.",
+          "expectedBoundary": "deterministic"
+        },
+        {
+          "id": "lead-work-attributed-to-candidate",
+          "text": "Owned the retry service and led the rollout.",
+          "evidenceChunkIds": ["t1"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "Source chunk t1 assigns service ownership and rollout leadership to the project lead, not the candidate.",
+          "expectedBoundary": "semantic"
+        }
+      ]
+    },
+    {
+      "id": "staging-research-vs-production",
+      "tags": ["staging", "research", "production-scope"],
+      "sourceChunks": [
+        {
+          "id": "r1",
+          "text": "Built a staging-only parcel replay simulator for a research demonstration; it was not deployed to production."
+        }
+      ],
+      "claims": [
+        {
+          "id": "supported-staging-description",
+          "text": "Built a staging parcel replay simulator for a research demonstration.",
+          "evidenceChunkIds": ["r1"],
+          "expectedSourceSupport": "supported",
+          "rationale": "Source chunk r1 establishes the simulator, staging maturity, and research demonstration scope.",
+          "expectedBoundary": "deterministic"
+        },
+        {
+          "id": "unsupported-production-deployment",
+          "text": "Deployed the parcel replay simulator to production.",
+          "evidenceChunkIds": ["r1"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "Source chunk r1 explicitly says the simulator was not deployed to production.",
+          "expectedBoundary": "semantic"
+        }
+      ]
+    },
+    {
+      "id": "career-gap-preservation",
+      "tags": ["career-gap", "date-ranges"],
+      "sourceChunks": [
+        {
+          "id": "g1",
+          "text": "At Copper Kite Labs, Engineer, Jan 2020 to Dec 2021."
+        },
+        {
+          "id": "g2",
+          "text": "At Copper Kite Labs, Engineer, Jan 2023 to Dec 2024."
+        }
+      ],
+      "claims": [
+        {
+          "id": "supported-separate-periods",
+          "text": "Worked at Copper Kite Labs from Jan 2020 to Dec 2021, then returned from Jan 2023 to Dec 2024.",
+          "evidenceChunkIds": ["g1", "g2"],
+          "expectedSourceSupport": "supported",
+          "rationale": "Chunks g1 and g2 independently establish the two periods while preserving the intervening gap.",
+          "expectedBoundary": "deterministic"
+        },
+        {
+          "id": "unsupported-continuous-period",
+          "text": "Worked continuously at Copper Kite Labs from Jan 2020 to Dec 2024 without interruption.",
+          "evidenceChunkIds": ["g1", "g2"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "Chunks g1 and g2 leave 2022 uncovered and do not establish one continuous date range.",
+          "expectedBoundary": "deterministic"
+        }
+      ]
+    },
+    {
+      "id": "course-vs-certification",
+      "tags": ["bootcamp", "course", "certification-scope"],
+      "sourceChunks": [
+        {
+          "id": "e1",
+          "text": "Completed a Cloud Systems bootcamp course at Ashen Ridge Institute and received a certificate of attendance, not a professional certification."
+        }
+      ],
+      "claims": [
+        {
+          "id": "supported-course-and-attendance-certificate",
+          "text": "Completed the Ashen Ridge Institute Cloud Systems course; received a certificate of attendance.",
+          "evidenceChunkIds": ["e1"],
+          "expectedSourceSupport": "supported",
+          "rationale": "Source chunk e1 supports the completed course and limits the document to attendance rather than professional qualification.",
+          "expectedBoundary": "semantic"
+        },
+        {
+          "id": "unsupported-professional-certification",
+          "text": "Earned a professional Cloud Systems certification from Ashen Ridge Institute.",
+          "evidenceChunkIds": ["e1"],
+          "expectedSourceSupport": "contradicted",
+          "rationale": "Source chunk e1 explicitly states that the attendance certificate is not a professional certification.",
+          "expectedBoundary": "semantic"
+        }
+      ]
+    }
+  ]
+}
