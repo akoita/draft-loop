@@ -196,6 +196,73 @@ describe("candidate independent project evidence", () => {
     ]);
   });
 
+  it("returns complete requested overflow bundles without duplicating role-record projects", () => {
+    const chunk = source(
+      [
+        "## Independent Work — January 2021 to present",
+        "All independent projects are prototypes, not in production.",
+        "**AsterKit**, a civic archive index.",
+        "Curated a searchable archive for community equipment.",
+        "**Honesty constraints:** Prototype only; no production users.",
+        "**BerylHub**, a community lending catalogue.",
+        "Built a complete fictional borrowing index for library tools.",
+        "**Honesty constraints:** Demonstration only; no production users.",
+      ].join("\n"),
+    );
+
+    const result = selectCandidateIndependentProjectEvidence(
+      headingHit(chunk),
+      [chunk],
+      "Java event processing",
+      "Prioritize AsterKit, then BerylHub.",
+      260,
+    );
+    const roleText = result.blocks.map(({ text: blockText }) => blockText).join("\n\n");
+
+    expect(roleText).toContain("**AsterKit**");
+    expect(roleText).not.toContain("**BerylHub**");
+    expect(result.overflowBundles).toHaveLength(1);
+    const overflow = result.overflowBundles[0];
+    if (overflow === undefined) throw new Error("Expected one requested overflow project.");
+    expect(overflow.title).toBe("BerylHub");
+    expect(overflow.block.text).toContain("**BerylHub**");
+    expect(overflow.block.text).toContain(
+      "Built a complete fictional borrowing index for library tools.",
+    );
+    expect(overflow.block.text).toContain("Demonstration only; no production users.");
+    expect(overflow.block.text).toContain(
+      "All independent projects are prototypes, not in production.",
+    );
+    expect(overflow.block.text.length).toBeLessThanOrEqual(260);
+    const contributionStart = chunk.text.indexOf("Built a complete fictional borrowing index");
+    expect(
+      overflow.block.sourceRanges.some(
+        ({ startOffset, endOffset }) =>
+          startOffset <= contributionStart && endOffset >= contributionStart,
+      ),
+    ).toBe(true);
+  });
+
+  it("fails closed when an indivisible requested overflow bundle exceeds its record limit", () => {
+    const chunk = source(
+      [
+        "## Independent Work — January 2021 to present",
+        "**AtlasIndex**, a civic catalogue.",
+        `Curated a complete archive. ${"Unabridged fictional source detail. ".repeat(8)}`,
+      ].join("\n"),
+    );
+
+    expect(() =>
+      selectCandidateIndependentProjectEvidence(
+        headingHit(chunk),
+        [chunk],
+        "unrelated requirements",
+        "Prioritize AtlasIndex.",
+        120,
+      ),
+    ).toThrow("Requested independent project evidence exceeded its bounded record size.");
+  });
+
   it("stops before a nested dated role and rejects mixed source versions", () => {
     const chunk = source(
       [

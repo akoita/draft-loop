@@ -12,7 +12,10 @@ import {
 } from "@draft-loop/domain";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import * as experienceBodyEvidence from "./candidate-experience-body-evidence.js";
-import { combineCandidateExperienceBodyEvidence } from "./candidate-experience-body-evidence.js";
+import {
+  combineCandidateExperienceBodyEvidence,
+  composeCandidateExperienceBodyEvidence,
+} from "./candidate-experience-body-evidence.js";
 import { candidateKnowledgeChronologyProviderByteLimit } from "./candidate-knowledge-chronology.js";
 import { candidateKnowledgeRuntimeRetrieval } from "./candidate-knowledge-retrieval.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
@@ -230,6 +233,82 @@ describe("candidate experience body evidence", () => {
     expect(result?.lineStart).toBe(1);
     expect(result?.lineEnd).toBe(1);
     expect(result?.metadata.provenance).toEqual(provenance);
+  });
+
+  it("composes requested project overflow as stable source-backed hits", () => {
+    const heading = sourceChunk(
+      "overflow-role-heading",
+      0,
+      "## Independent Work — January 2022 to present",
+      1,
+    );
+    const global = sourceChunk(
+      "overflow-global-limitations",
+      1,
+      "All independent projects are prototypes, not in production.",
+      3,
+    );
+    const names = ["AsterKit", "BerylHub", "River Archive", "Pixel Registry"];
+    let nextLine = 5;
+    const projectChunks = names.map((name, index) => {
+      const text = [
+        `**${name}**, a fictional civic catalogue.`,
+        "",
+        `- Catalogued a complete collection of fictional equipment records. ${"Bounded fixture detail. ".repeat(65)}`,
+        "",
+        "**Honesty constraints:** Prototype only; no production users.",
+      ].join("\n");
+      const lineEnd = nextLine + text.split("\n").length - 1;
+      const chunk = sourceChunk(`overflow-project-${index}`, index + 2, text, nextLine, lineEnd);
+      nextLine = lineEnd + 2;
+      return chunk;
+    });
+    const chunks = [heading, global, ...projectChunks];
+    const original = hit(heading);
+    const instructions =
+      "Prioritize River Archive, then Pixel Registry, then AsterKit, then BerylHub.";
+    const result = composeCandidateExperienceBodyEvidence(
+      [original],
+      chunks,
+      "Java distributed event processing",
+      instructions,
+    );
+    const repeated = composeCandidateExperienceBodyEvidence(
+      [original],
+      chunks,
+      "Java distributed event processing",
+      instructions,
+    );
+    const role = result.chronologyHits[0];
+    if (role === undefined) throw new Error("Expected the composed role record.");
+
+    expect(result.chronologyHits).toHaveLength(1);
+    expect(role.text.length).toBeLessThanOrEqual(4_000);
+    expect(role.text).toContain("**River Archive**");
+    expect(role.text).toContain("**Pixel Registry**");
+    expect(role.text.indexOf("**River Archive**")).toBeLessThan(
+      role.text.indexOf("**Pixel Registry**"),
+    );
+    expect(role.text).not.toContain("**AsterKit**");
+    expect(role.text).not.toContain("**BerylHub**");
+    expect(result.requestedProjectOverflowHits).toHaveLength(1);
+    expect(result.requestedProjectOverflowHits[0]?.text).toContain("**AsterKit**");
+    expect(result.requestedProjectOverflowHits[0]?.text).toContain("**BerylHub**");
+    for (const overflow of result.requestedProjectOverflowHits) {
+      expect(overflow.text).toContain(
+        "Catalogued a complete collection of fictional equipment records.",
+      );
+      expect(overflow.text).toContain("Honesty constraints");
+      expect(overflow.text).toContain(
+        "All independent projects are prototypes, not in production.",
+      );
+      expect(overflow.text.length).toBeLessThanOrEqual(4_000);
+      expect(overflow.metadata.provenance).toEqual(provenance);
+      expect(overflow.lineEnd).toBeGreaterThan(overflow.lineStart);
+    }
+    expect(repeated.requestedProjectOverflowHits.map(({ chunkId }) => chunkId)).toEqual(
+      result.requestedProjectOverflowHits.map(({ chunkId }) => chunkId),
+    );
   });
 
   it("hands off bounded role records with body text and required section records from a pinned CKB", async () => {
