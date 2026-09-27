@@ -16,6 +16,7 @@ import {
   type KnowledgeSelectionResult,
   type KnowledgeStoreCreateInput,
   type KnowledgeStoreResult,
+  type KnowledgeWorkspaceSourcesImportInput,
   type ModelCandidate,
   type ModelCompany,
   type ModelDiscoveryProvider,
@@ -136,6 +137,9 @@ export interface DesktopKnowledgeCapabilities {
     storeId: string,
     knowledgeBaseId: string,
   ) => Promise<KnowledgeReadinessResult>;
+  readonly importWorkspaceCandidateSources?: (
+    input: KnowledgeWorkspaceSourcesImportInput,
+  ) => Promise<KnowledgeDirectoryImportResult>;
 }
 
 export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
@@ -429,6 +433,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "knowledge.readiness",
                 input: { storeId, knowledgeBaseId },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("knowledge.import-workspace-sources")
+      ? {
+          importWorkspaceCandidateSources: async (input: KnowledgeWorkspaceSourcesImportInput) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.import-workspace-sources",
+                input,
               }),
             ),
         }

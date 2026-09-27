@@ -83,8 +83,6 @@ import {
   type KnowledgeBaseDeletionPlanResult,
   type KnowledgeBaseDeletionResult,
   type KnowledgeDirectoryAddMembersResult,
-  type KnowledgeDirectoryImportResult,
-  type KnowledgeDirectoryImportSourceResult,
   type KnowledgeDirectoryMemberMoveResult,
   type KnowledgeDirectoryMovedCandidatesResult,
   type KnowledgeDirectoryReconciliationApplyResult,
@@ -148,6 +146,7 @@ import type {
   WritingPolicyVersionMetadata,
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
+import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
@@ -3593,99 +3592,50 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             knowledgeBaseId: command.input.knowledgeBaseId,
             directoryPath: resolve(directoryPath),
           });
-          if (
-            !Number.isSafeInteger(imported.scannedEntryCount) ||
-            imported.scannedEntryCount < 0 ||
-            !Number.isSafeInteger(imported.discoveredFileCount) ||
-            imported.discoveredFileCount < 0 ||
-            imported.discoveredFileCount > imported.scannedEntryCount ||
-            !Number.isSafeInteger(imported.skippedEntryCount) ||
-            imported.skippedEntryCount < 0 ||
-            imported.skippedEntryCount > imported.scannedEntryCount ||
-            imported.discoveredFileCount + imported.skippedEntryCount >
-              imported.scannedEntryCount ||
-            imported.sources.length > imported.discoveredFileCount ||
-            (imported.status === "complete" &&
-              imported.sources.length !== imported.discoveredFileCount) ||
-            (imported.status === "complete" &&
-              (typeof imported.directoryId !== "string" || imported.directoryId.trim() === "")) ||
-            (imported.status === "partial" && Object.hasOwn(imported, "directoryId")) ||
-            (imported.status !== "complete" && imported.status !== "partial")
-          ) {
-            return fail(
-              "operation-failed",
-              "Candidate knowledge directory intake returned inconsistent state.",
-            );
-          }
-          const sources: KnowledgeDirectoryImportSourceResult[] = [];
-          const seenSourceIds = new Set<string>();
-          for (const importedSource of imported.sources) {
-            const sourceId = importedSource.source.id;
-            const versionIds = new Set<string>();
-            const versionNumbers = new Set<number>();
-            if (
-              !Array.isArray(importedSource.versions) ||
-              importedSource.versions.length === 0 ||
-              importedSource.versions.some((candidateVersion) => {
-                const valid =
-                  typeof candidateVersion.id === "string" &&
-                  candidateVersion.id.trim() !== "" &&
-                  !versionIds.has(candidateVersion.id) &&
-                  candidateVersion.sourceId === sourceId &&
-                  Number.isSafeInteger(candidateVersion.version) &&
-                  candidateVersion.version >= 1 &&
-                  !versionNumbers.has(candidateVersion.version);
-                versionIds.add(candidateVersion.id);
-                versionNumbers.add(candidateVersion.version);
-                return !valid;
-              })
-            ) {
-              return fail(
-                "operation-failed",
-                "Candidate knowledge directory intake returned inconsistent state.",
-              );
-            }
-            const versions = [...importedSource.versions].sort(
-              (left, right) => right.version - left.version || left.id.localeCompare(right.id),
-            );
-            const version = versions[0];
-            if (
-              importedSource.source.knowledgeBaseId !== command.input.knowledgeBaseId ||
-              importedSource.source.kind !== "file" ||
-              typeof sourceId !== "string" ||
-              sourceId.trim() === "" ||
-              seenSourceIds.has(sourceId) ||
-              version === undefined ||
-              typeof importedSource.created !== "boolean"
-            ) {
-              return fail(
-                "operation-failed",
-                "Candidate knowledge directory intake returned inconsistent state.",
-              );
-            }
-            seenSourceIds.add(sourceId);
-            sources.push({
-              sourceId,
-              versionId: version.id,
-              version: version.version,
-              created: importedSource.created,
-            });
-          }
-          sources.sort((left, right) => left.sourceId.localeCompare(right.sourceId));
-          const projectedSources = sources.slice(0, maximumKnowledgeInspectionEntries);
-          const result: KnowledgeDirectoryImportResult = {
+          return projectKnowledgeDirectoryImportResult({
             storeId: command.input.storeId,
             knowledgeBaseId: command.input.knowledgeBaseId,
-            status: imported.status,
-            ...(imported.status === "complete" ? { directoryId: imported.directoryId } : {}),
-            scannedEntryCount: imported.scannedEntryCount,
-            discoveredFileCount: imported.discoveredFileCount,
-            skippedEntryCount: imported.skippedEntryCount,
-            sourceCount: sources.length,
-            sources: projectedSources,
-            sourcesTruncated: sources.length > projectedSources.length,
-          };
-          return { ok: true, value: result };
+            imported,
+            maximumInspectionEntries: maximumKnowledgeInspectionEntries,
+          });
+        }
+        case "knowledge.import-workspace-sources": {
+          const openedWorkspace = workspaceFor(command.input.workspaceId);
+          const workspace = await refreshWorkspaceDescriptor(openedWorkspace);
+          const snapshot = await service.status({ root: workspace.root });
+          if (
+            (snapshot !== undefined &&
+              snapshot.state !== "collecting" &&
+              snapshot.state !== "stopped") ||
+            (snapshot !== undefined && backgroundRuns.has(backgroundKey(workspace, snapshot.runId)))
+          ) {
+            return fail(
+              "permission-denied",
+              "Workspace candidate sources can only be imported before a run or after it stops.",
+            );
+          }
+          const storeRoot = await verifiedKnowledgeBaseRoot(
+            command.input.storeId,
+            command.input.knowledgeBaseId,
+          );
+          const readiness = await knowledgeService.getKnowledgeBaseLifecycleReadiness({
+            storeRoot,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+          });
+          if (readiness.state !== "active") {
+            return fail("permission-denied", "The requested candidate knowledge base is archived.");
+          }
+          const imported = await knowledgeService.importKnowledgeSourceDirectory({
+            storeRoot,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            directoryPath: resolve(workspace.root, workspace.descriptor.sourceDirectory),
+          });
+          return projectKnowledgeDirectoryImportResult({
+            storeId: command.input.storeId,
+            knowledgeBaseId: command.input.knowledgeBaseId,
+            imported,
+            maximumInspectionEntries: maximumKnowledgeInspectionEntries,
+          });
         }
         case "knowledge.directory-rebind-preview": {
           const chooseKnowledgeSourceDirectory = options.dialogs.chooseKnowledgeSourceDirectory;

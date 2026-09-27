@@ -19,6 +19,12 @@ export type KnowledgeIntakeCapabilities = Required<
     | "getCandidateKnowledgeReadiness"
   >
 >;
+export type WorkspaceSourcesIntakeCapabilities = Required<
+  Pick<
+    DesktopKnowledgeCapabilities,
+    "importWorkspaceCandidateSources" | "getCandidateKnowledgeReadiness"
+  >
+>;
 
 export type KnowledgeIntakeOutcome =
   | { readonly status: "stale" }
@@ -40,6 +46,15 @@ export function hasDesktopKnowledgeIntakeCapabilities(
   return (
     capabilities.importCandidateKnowledgeFile !== undefined &&
     capabilities.importCandidateKnowledgeDirectory !== undefined &&
+    capabilities.getCandidateKnowledgeReadiness !== undefined
+  );
+}
+
+export function hasWorkspaceSourcesIntakeCapabilities(
+  capabilities: DesktopKnowledgeCapabilities,
+): capabilities is DesktopKnowledgeCapabilities & WorkspaceSourcesIntakeCapabilities {
+  return (
+    capabilities.importWorkspaceCandidateSources !== undefined &&
     capabilities.getCandidateKnowledgeReadiness !== undefined
   );
 }

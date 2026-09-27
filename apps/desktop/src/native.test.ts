@@ -355,4 +355,71 @@ describe("desktop native profile capabilities", () => {
       port.importCandidateKnowledgeFile?.("store-1", "knowledge-1"),
     ).rejects.toMatchObject({ code: "operation-failed" });
   });
+
+  it("binds workspace-source intake to an explicitly approved workspace and base", async () => {
+    const directoryResult = {
+      storeId: "store-1",
+      knowledgeBaseId: "knowledge-1",
+      status: "partial" as const,
+      scannedEntryCount: 2,
+      discoveredFileCount: 1,
+      skippedEntryCount: 1,
+      sourceCount: 1,
+      sources: [],
+      sourcesTruncated: true,
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: directoryResult,
+    }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["knowledge.import-workspace-sources"],
+        invoke,
+      }),
+    );
+
+    await expect(
+      port.importWorkspaceCandidateSources?.({
+        workspaceId: "workspace-1",
+        storeId: "store-1",
+        knowledgeBaseId: "knowledge-1",
+        approved: true,
+      }),
+    ).resolves.toEqual(directoryResult);
+    expect(invoke).toHaveBeenCalledWith({
+      type: "knowledge.import-workspace-sources",
+      input: {
+        workspaceId: "workspace-1",
+        storeId: "store-1",
+        knowledgeBaseId: "knowledge-1",
+        approved: true,
+      },
+    });
+    expect(JSON.stringify(invoke.mock.calls)).not.toMatch(/(?:[A-Z]:\\|\/home\/|file:\/\/)/u);
+  });
+
+  it("does not upgrade an unapproved workspace-source intake request", async () => {
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: {},
+    }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["knowledge.import-workspace-sources"],
+        invoke,
+      }),
+    );
+    const unapproved = {
+      workspaceId: "workspace-1",
+      storeId: "store-1",
+      knowledgeBaseId: "knowledge-1",
+      approved: false,
+    } as unknown as Parameters<NonNullable<typeof port.importWorkspaceCandidateSources>>[0];
+
+    await expect(port.importWorkspaceCandidateSources?.(unapproved)).rejects.toMatchObject({
+      code: "invalid-input",
+    });
+    expect(invoke).not.toHaveBeenCalled();
+  });
 });

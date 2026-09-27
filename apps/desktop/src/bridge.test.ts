@@ -2568,6 +2568,65 @@ describe("desktop capability bridge", () => {
     ).resolves.toMatchObject({ ok: true, value: { status: "partial", sourceCount: 1 } });
   });
 
+  it("requires explicit approval and strict workspace identity for workspace source intake", async () => {
+    const input = {
+      workspaceId: "workspace-1",
+      storeId: "store-1",
+      knowledgeBaseId: "kb-1",
+      approved: true,
+    } as const;
+    expect(validateBridgeCommand({ type: "knowledge.import-workspace-sources", input })).toEqual({
+      type: "knowledge.import-workspace-sources",
+      input,
+    });
+    for (const invalid of [
+      { ...input, approved: false },
+      {
+        workspaceId: input.workspaceId,
+        storeId: input.storeId,
+        knowledgeBaseId: input.knowledgeBaseId,
+      },
+      { ...input, sourceDirectory: "/private/candidate-sources" },
+      { ...input, extra: "unexpected" },
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.import-workspace-sources", input: invalid }),
+      ).toThrow("invalid");
+    }
+
+    const value = {
+      storeId: input.storeId,
+      knowledgeBaseId: input.knowledgeBaseId,
+      status: "complete",
+      directoryId: "directory-1",
+      scannedEntryCount: 1,
+      discoveredFileCount: 1,
+      skippedEntryCount: 0,
+      sourceCount: 1,
+      sources: [{ sourceId: "source-1", versionId: "version-1", version: 1, created: true }],
+      sourcesTruncated: false,
+    } as const;
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value }), ["knowledge.import-workspace-sources"]),
+    );
+    await expect(
+      port.execute({ type: "knowledge.import-workspace-sources", input }),
+    ).resolves.toEqual({ ok: true, value });
+
+    const leakingPort = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: { ...value, sourceDirectory: "/private/candidate-sources" },
+        }),
+        ["knowledge.import-workspace-sources"],
+      ),
+    );
+    await expect(
+      leakingPort.execute({ type: "knowledge.import-workspace-sources", input }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+  });
+
   it("validates guarded path-free directory-root rebind controls", async () => {
     const previewInput = {
       storeId: "store-1",
