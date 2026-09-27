@@ -87,6 +87,51 @@ describe("software description protected parts", () => {
     }
   });
 
+  it("splits a delivered MVP API label only in the explicit result context", () => {
+    const text = "The product was delivered as an MVP API: authentication workflows.";
+    const evidence = [
+      chunk("context", "The product was delivered as an", 0),
+      chunk("mvp", "MVP", 1),
+      chunk("api", "API", 2),
+      chunk("authentication", "authentication workflows", 3),
+    ];
+
+    expect(extractProtectedValues(text)).toContain("MVP");
+    expect(extractProtectedValues(text)).toContain("API");
+    expect(extractProtectedValues(text)).not.toContain("MVP API");
+    expect(issues(text, evidence)).toEqual([]);
+    expect(
+      issues(
+        text,
+        evidence.filter(({ id }) => id !== "mvp"),
+      ),
+    ).toContain("factual_invariant_violation");
+    expect(
+      issues(
+        text,
+        evidence.filter(({ id }) => id !== "api"),
+      ),
+    ).toContain("factual_invariant_violation");
+
+    for (const ambiguousText of [
+      "Senior MVP API: authentication workflows.",
+      "Worked for MVP API: authentication workflows.",
+      "The product shipped as an MVP API: authentication workflows.",
+      "The product was delivered as an MVP API with authentication workflows.",
+      "The product was delivered as an MVP APIv2: authentication workflows.",
+    ]) {
+      expect(issues(ambiguousText, evidence), ambiguousText).toContain(
+        "factual_invariant_violation",
+      );
+    }
+    expect(
+      issues(
+        "The product was delivered as an MVP API: authentication workflows span 3 endpoints.",
+        [...evidence, chunk("endpoints", "2 endpoints", 4)],
+      ),
+    ).toContain("factual_invariant_violation");
+  });
+
   it("grounds a closed language and a separate product name before a software phrase", () => {
     const text = "Python NimbusLedger event ingestion";
     const evidence = [chunk("language", "Python", 0), chunk("product", "NimbusLedger", 1)];
@@ -150,6 +195,42 @@ describe("software description protected parts", () => {
     }
   });
 
+  it("splits generated Java and Python proxy wording only in its bounded context", () => {
+    const text = "The tool generated Java and Python ICE proxies and adapters.";
+    const evidence = [
+      chunk("prefix", "The tool generated Java and", 0),
+      chunk("python", "Python", 1),
+      chunk("ice", "ICE", 2),
+      chunk("proxy-work", "proxies and adapters", 3),
+    ];
+
+    expect(extractProtectedValues(text)).toEqual(expect.arrayContaining(["Python", "ICE"]));
+    expect(extractProtectedValues(text)).not.toContain("Python ICE");
+    expect(issues(text, evidence)).toEqual([]);
+    for (const id of ["python", "ice", "prefix"]) {
+      expect(
+        issues(
+          text,
+          evidence.filter((chunkValue) => chunkValue.id !== id),
+        ),
+      ).toContain("factual_invariant_violation");
+    }
+
+    for (const ambiguousText of [
+      "The tool generated Java and Python ICE modules.",
+      "Worked for Java and Python ICE proxies and adapters.",
+      "Senior Python ICE proxies and adapters.",
+    ]) {
+      expect(issues(ambiguousText, evidence)).toContain("factual_invariant_violation");
+    }
+    expect(
+      issues("The tool generated Java and Python ICE proxies across 3 deployments.", [
+        ...evidence,
+        chunk("deployments", "2 deployments", 4),
+      ]),
+    ).toContain("factual_invariant_violation");
+  });
+
   it("keeps proxy descriptions closed to missing or unrecognized identity parts", () => {
     const text = "Python FLUXRPC proxies";
     const work = chunk("work", "proxies", 0);
@@ -180,6 +261,51 @@ describe("software description protected parts", () => {
       issues("Senior Python FLUXRPC proxies", [
         chunk("language", "Python", 1),
         chunk("technology", "FLUXRPC", 2),
+      ]),
+    ).toContain("factual_invariant_violation");
+  });
+
+  it("splits Haskell DSL only in the explicit replacement phrase", () => {
+    const text = "Replacing an unmaintainable Haskell DSL; retained the parser grammar.";
+    const evidence = [
+      chunk("replacement-context", "Replacing an unmaintainable", 0),
+      chunk("language", "Haskell", 1),
+      chunk("dsl", "DSL", 2),
+      chunk("retained-work", "retained the parser grammar", 3),
+    ];
+
+    expect(extractProtectedValues(text)).toContain("Haskell");
+    expect(extractProtectedValues(text)).toContain("DSL");
+    expect(extractProtectedValues(text)).not.toContain("Haskell DSL");
+    expect(issues(text, evidence)).toEqual([]);
+    expect(
+      issues(
+        text,
+        evidence.filter(({ id }) => id !== "language"),
+      ),
+    ).toContain("factual_invariant_violation");
+    expect(
+      issues(
+        text,
+        evidence.filter(({ id }) => id !== "dsl"),
+      ),
+    ).toContain("factual_invariant_violation");
+
+    for (const ambiguousText of [
+      "Worked for Haskell DSL; generated parser code.",
+      "Senior Haskell DSL; generated parser code.",
+      "Replacing an unmaintainable Haskell DSL without a semicolon.",
+      "Replacing an unmaintainable Haskell DSL company;",
+      "Replacing an unmaintainable Haskel DSL;",
+    ]) {
+      expect(issues(ambiguousText, evidence), ambiguousText).toContain(
+        "factual_invariant_violation",
+      );
+    }
+    expect(
+      issues("Replacing an unmaintainable Haskell DSL; migrated 4 modules.", [
+        ...evidence.slice(0, 3),
+        chunk("modules", "migrated 3 modules", 3),
       ]),
     ).toContain("factual_invariant_violation");
   });
