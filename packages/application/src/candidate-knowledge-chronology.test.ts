@@ -295,7 +295,7 @@ describe("candidate knowledge chronology supplement", () => {
       ]),
     );
     expect(result.hits.some(({ text }) => text.includes("delivery workflow"))).toBe(true);
-    expect(appendTrace).toHaveBeenCalledTimes(9);
+    expect(appendTrace).toHaveBeenCalledTimes(10);
     await expect(runtime.port.queryEvidence("Platform Engineer", { limit: 3 })).rejects.toThrow(
       "Chronology evidence could not fit within the provider retrieval limit.",
     );

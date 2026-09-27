@@ -297,7 +297,7 @@ describe("candidate production skills evidence", () => {
     const queryChecksum = createHash("sha256")
       .update(candidateProductionSkillsEvidenceQuery, "utf8")
       .digest("hex");
-    expect(fixture.appendTrace).toHaveBeenCalledTimes(9);
+    expect(fixture.appendTrace).toHaveBeenCalledTimes(10);
     expect(
       fixture.appendTrace.mock.calls.some(([trace]) => trace.queryChecksum === queryChecksum),
     ).toBe(false);
