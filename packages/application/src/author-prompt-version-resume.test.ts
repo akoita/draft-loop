@@ -9,26 +9,30 @@ import { openSqliteStorage } from "@draft-loop/storage";
 import { expect, it, vi } from "vitest";
 
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
+import { createCriticAdjudicationPrompt } from "./critic-adjudication.js";
 import { createLocalApplicationDriver } from "./local.js";
 import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 
 // Lets a test record a run exactly as an older build did, then resume it with
 // the current build.
-const recordedAuthorVersion = vi.hoisted(() => ({ value: undefined as string | undefined }));
+const recordedPromptVersions = vi.hoisted(() => ({
+  author: undefined as string | undefined,
+  critic: undefined as string | undefined,
+}));
 
 vi.mock("./author-adjudication.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./author-adjudication.js")>();
   return {
     ...actual,
     promptTemplateVersion: (role: "author" | "critic") =>
-      role === "author" && recordedAuthorVersion.value !== undefined
-        ? recordedAuthorVersion.value
-        : actual.promptTemplateVersion(role),
+      recordedPromptVersions[role] ?? actual.promptTemplateVersion(role),
   };
 });
 
 const structuredFieldInstruction = "For heading lines (role, organisation, location, dates)";
 const claimText = "Built local-first TypeScript tools with deterministic testing.";
+const criticSystemInstructionsPrefix = "System instructions:\n";
+const criticInputSeparator = "\n\nInput JSON:\n";
 
 async function contextModels(root: string, contextSnapshotId: string) {
   const storage = openSqliteStorage(join(root, ".draft-loop", "history.sqlite"));
@@ -53,6 +57,7 @@ it.each([
     const output: string[] = [];
     const io = { write: (line: string) => void output.push(line) };
     const systemPrompts: string[] = [];
+    const criticSystemPrompts: string[] = [];
     const budgets: { env: string | undefined; input: unknown }[] = [];
     const author: UserSessionProcessRunner = vi.fn(async (_command, args, options) => {
       systemPrompts.push(args[args.indexOf("--system-prompt") + 1] ?? "");
@@ -92,7 +97,13 @@ it.each([
         }),
       };
     });
-    const critic = vi.fn<UserSessionProcessRunner>(async (_command, args) => {
+    const critic = vi.fn<UserSessionProcessRunner>(async (_command, args, options) => {
+      const separatorIndex = options.stdin.indexOf(criticInputSeparator);
+      criticSystemPrompts.push(
+        separatorIndex < 0
+          ? options.stdin
+          : options.stdin.slice(0, separatorIndex + criticInputSeparator.length),
+      );
       const outputPath = args[args.indexOf("--output-last-message") + 1];
       if (!outputPath) throw new Error("Missing output path");
       await writeFile(outputPath, JSON.stringify({ findings: [] }));
@@ -124,14 +135,19 @@ it.each([
         io,
       );
 
-      recordedAuthorVersion.value = recorded;
+      recordedPromptVersions.author = recorded;
+      recordedPromptVersions.critic = "cli-critic-v1";
       const initial = await driver.start({ root, allowProviderData: true }, io);
-      recordedAuthorVersion.value = undefined;
+      recordedPromptVersions.author = undefined;
+      recordedPromptVersions.critic = undefined;
       expect(initial.state, JSON.stringify(initial.lastError)).toBe("awaiting-approval");
       if (!initial.artifact) throw new Error("Missing first artifact");
       const legacy = await contextModels(root, initial.contextSnapshotId);
       expect(legacy.modelConfiguration.author.promptTemplateVersion).toBe(recorded);
       expect(legacy.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v1");
+      expect(criticSystemPrompts[0]).toBe(
+        `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v1")}${criticInputSeparator}`,
+      );
 
       const report = buildApplicationReadinessStoppingDecision({
         artifact: initial.artifact,
@@ -186,6 +202,9 @@ it.each([
         `${createAuthorAdjudicationPrompt(recorded, pending).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[1]).toContain("This is an adjudicated revision.");
+      expect(criticSystemPrompts[1]).toBe(
+        `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v1")}${criticInputSeparator}`,
+      );
       for (const systemPrompt of systemPrompts) {
         expect(systemPrompt.includes(structuredFieldInstruction)).toBe(structuredGuidance);
         expect(systemPrompt).toContain(
@@ -201,7 +220,7 @@ it.each([
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
       expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v5");
-      expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v1");
+      expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v2");
       expect(systemPrompts).toHaveLength(3);
       expect(systemPrompts[2]).toBe(
         `${createAuthorAdjudicationPrompt("cli-author-v5", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
@@ -214,6 +233,9 @@ it.each([
         "maximum generated output for this request is 32768 tokens",
       );
       expect(budgets[2]).toEqual({ env: "32768", input: { maxOutputTokens: 32_768 } });
+      expect(criticSystemPrompts[2]).toBe(
+        `${criticSystemInstructionsPrefix}${createCriticAdjudicationPrompt("cli-critic-v2")}${criticInputSeparator}`,
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

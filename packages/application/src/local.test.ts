@@ -659,8 +659,44 @@ describe("local application driver", () => {
           : localCompletion(authorProposal(evidenceChunkId(serialized)), "valid-author");
       }
       criticSystemPrompts.push(body.messages[0]?.content ?? "");
-      criticInputs.push(JSON.parse(serialized) as JsonRecord);
-      return localCompletion({ findings: [] }, "critic");
+      const input = JSON.parse(serialized) as JsonRecord;
+      criticInputs.push(input);
+      const artifact = input.artifact as JsonRecord | undefined;
+      const claims = artifact?.claims as readonly JsonRecord[] | undefined;
+      const claimId = claims?.[0]?.id;
+      const referenceIds = claims?.[0]?.evidenceReferenceIds as readonly string[] | undefined;
+      const referenceId = referenceIds?.[0];
+      if (typeof claimId !== "string" || referenceId === undefined) {
+        throw new Error("Missing projected claim evidence references");
+      }
+      return localCompletion(
+        {
+          findings: [
+            {
+              id: "source-support-gap",
+              code: "missing-cited-support",
+              category: "evidence",
+              severity: "error",
+              message: `Claim ${claimId} is missing support from cited source ${referenceId}.`,
+            },
+            {
+              id: "source-conflict-review",
+              code: "source-contradiction",
+              category: "factuality",
+              severity: "error",
+              message: `Claim ${claimId} conflicts with cited source ${referenceId}.`,
+            },
+            {
+              id: "source-ambiguity-review",
+              code: "unresolved-source-ambiguity",
+              category: "evidence",
+              severity: "warning",
+              message: `Cited source ${referenceId} leaves claim ${claimId} unresolved.`,
+            },
+          ],
+        },
+        "critic",
+      );
     });
     const driver = createLocalApplicationDriver({
       providerClientFactories: {
@@ -716,6 +752,12 @@ describe("local application driver", () => {
       for (const systemPrompt of [...authorSystemPrompts, ...criticSystemPrompts]) {
         expect(systemPrompt).toContain(evidenceReferenceTableInstructions);
       }
+      expect(criticSystemPrompts[0]).toContain(
+        "Review every substantive artifact claim against the source excerpts",
+      );
+      expect(criticSystemPrompts[0]).toContain(
+        "Do not rely on a hardcoded technology vocabulary, external verification, or web research.",
+      );
       const criticArtifact = criticInputs[0]?.artifact as JsonRecord | undefined;
       expect(criticArtifact).toMatchObject({ evidenceEncoding: "reference-table-v1" });
       expect(criticArtifact).toHaveProperty("evidenceReferences");
@@ -730,6 +772,32 @@ describe("local application driver", () => {
           sourcePath: "evidence-source-1",
           excerpt: expect.any(String),
         });
+      }
+      expect(recovered.findings).toMatchObject([
+        {
+          id: "source-support-gap",
+          code: "missing-cited-support",
+          category: "evidence",
+          severity: "error",
+          message: expect.stringContaining(`Claim ${criticClaims?.[0]?.id}`),
+        },
+        {
+          id: "source-conflict-review",
+          code: "source-contradiction",
+          category: "factuality",
+          severity: "error",
+          message: expect.stringContaining(`Claim ${criticClaims?.[0]?.id}`),
+        },
+        {
+          id: "source-ambiguity-review",
+          code: "unresolved-source-ambiguity",
+          category: "evidence",
+          severity: "warning",
+          message: expect.stringContaining(`Cited source ${referenceIds?.[0]}`),
+        },
+      ]);
+      for (const finding of recovered.findings) {
+        expect(finding.message).toContain(referenceIds?.[0]);
       }
       for (const input of [...authorInputs, ...criticInputs]) {
         const providerContext = input.context as JsonRecord | undefined;
