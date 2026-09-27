@@ -189,11 +189,17 @@ employer/date proof, including when one source line describes several employers.
 Author grounding treats a narrow English action phrase such as `Built TypeScript
 tools` as an action plus the protected technology name. The exception requires a
 known opening past-tense verb, one acronym or mixed-case name, and a recognized
-software-object noun. Headings, ambiguous title words, employer statements, and
-multi-word names keep their existing full-span checks. Standalone mixed-case
-names also appear in the source grounding guide and require whole-token support;
-`SuperTypeScript` cannot support a claim of `TypeScript`. This is a conservative
-syntactic rule, not general semantic verification.
+software-object noun. For other capitalized multiword values, uncertain word
+order or grouping can pass lexical grounding only when every whole-word
+component appears in the same cited evidence chunk and two of the components
+appear there as adjacent words; components never combine across chunks or match
+as substrings. This is not proof that the combined term
+has the claimed meaning, so the independent critic still evaluates it. Numeric,
+date, URL, and email checks remain exact, and structured employer/date headers
+still require same-line employer association. Headings, contact fields, and
+skills or tool lists retain their exact-copy author instructions. Standalone
+mixed-case names require whole-token support; `SuperTypeScript` cannot support
+a claim of `TypeScript`.
 
 Technical descriptions such as an API delivered as an MVP, an MVP API in a
 product definition, a coordinated Solidity/Foundry EVM protocol description,
@@ -208,8 +214,10 @@ Engineering tool` and `replacing an unmaintainable Haskell-based DSL tool;` as
 separate product, language, or descriptor values. A sentence-opening
 `At <Employer>, <listed lowercase action> ...` with a single capitalized
 employer token protects that name only when the exact structure is present.
-Each resulting identity still needs its own evidence; these forms do not
-generalize title-case splitting or employer inference.
+Each resulting identity still needs its own evidence. Generic same-chunk
+composition may pass a reordered title-case phrase lexically, but does not
+establish its identity, employer relationship, or the candidate's role; those
+distinctions remain for independent critique.
 
 ### Local job-document requirement units
 
@@ -385,7 +393,8 @@ A bounded language modifier followed by a platform name in a software-object
 phrase produces two protected names. A claim-start project label ending in
 `MVP:` similarly preserves both its project name and stage token for source
 checks. Neither rule exempts a component from support in cited evidence.
-Company subjects, role titles and linking statements keep whole-name protection.
+Company subjects, role titles and linking statements still require source-backed
+components; a newly composed full name remains semantically uncertain.
 
 The software-object vocabulary includes singular `proxy` and plural `proxies`.
 In the narrow generation phrase `generating Java and Python FLUXRPC proxies`,

@@ -19,6 +19,10 @@ const mixedCaseNamePattern = /\b\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*\b/gu;
 const singleTitleCaseNamePattern = /^\p{Lu}[\p{L}\p{N}]*\p{Ll}[\p{L}\p{N}]*$/u;
 const singleTechnologyNamePattern =
   /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
+const compositionalNameWordPattern = /^\p{Lu}[\p{L}'’-]*$/u;
+const wholeEvidenceWordPattern = /[\p{L}]+(?:['’-][\p{L}]+)*/gu;
+const standaloneStrongWordPattern =
+  /(?<![\p{L}\p{N}\\])\*\*([\p{L}]+(?:['’-][\p{L}]+)*)\*\*(?![\p{L}\p{N}])/gu;
 const softwareObjectPattern =
   /^[ \t]+(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/u;
 
@@ -50,6 +54,44 @@ function normalizedIdentity(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US");
 }
 
+/**
+ * Permit uncertain descriptive-name composition only when each capitalized
+ * word occurs as a whole word in this one evidence chunk and one source
+ * adjacent pair is preserved. This is lexical support, not a check of meaning.
+ */
+function supportsCompositionalMultiwordValue(evidence: string, protectedValue: string): boolean {
+  const words = protectedValue.normalize("NFKC").trim().split(/\s+/u);
+  if (words.length < 2 || words.some((word) => !compositionalNameWordPattern.test(word))) {
+    return false;
+  }
+
+  const remaining = new Map<string, number>();
+  const normalizedWords = words.map(normalizedIdentity);
+  for (const word of words) {
+    const normalizedWord = normalizedIdentity(word);
+    remaining.set(normalizedWord, (remaining.get(normalizedWord) ?? 0) + 1);
+  }
+  let hasSourceAdjacentPair = false;
+  for (const line of evidence.split(/\r\n|\n|\r/u)) {
+    if (line.includes("`")) continue;
+    const wholeWordText = line.replace(standaloneStrongWordPattern, "$1").replace(/\*\*/gu, "x");
+    const sourceWords = normalizedIdentity(wholeWordText).match(wholeEvidenceWordPattern) ?? [];
+    for (const [index, sourceWord] of sourceWords.entries()) {
+      if (
+        normalizedWords.includes(sourceWord) &&
+        normalizedWords.includes(sourceWords[index + 1] ?? "")
+      ) {
+        hasSourceAdjacentPair = true;
+      }
+      const count = remaining.get(sourceWord);
+      if (count === undefined) continue;
+      if (count === 1) remaining.delete(sourceWord);
+      else remaining.set(sourceWord, count - 1);
+    }
+  }
+  return remaining.size === 0 && hasSourceAdjacentPair;
+}
+
 /** Match numbers with their units and mixed-case names as whole tokens. */
 export function supportsProtectedValue(evidence: string, protectedValue: string): boolean {
   const experienceSupport = supportsExperienceClaim(evidence, protectedValue);
@@ -67,7 +109,10 @@ export function supportsProtectedValue(evidence: string, protectedValue: string)
   }
   if (/\s/u.test(value)) {
     if (source.replace(/\s+/gu, " ").includes(value.replace(/\s+/gu, " "))) return true;
-    return supportsInlineStrongMultiwordName(evidence, protectedValue);
+    return (
+      supportsInlineStrongMultiwordName(evidence, protectedValue) ||
+      supportsCompositionalMultiwordValue(evidence, protectedValue)
+    );
   }
   return source.includes(value);
 }

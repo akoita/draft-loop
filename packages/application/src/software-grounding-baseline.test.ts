@@ -150,39 +150,6 @@ function replay(scenario: FixtureScenario, claim: FixtureClaim): BaselineObserva
   };
 }
 
-function summarize(observations: readonly BaselineObservation[]) {
-  const expectations = new Map(
-    fixture.scenarios.flatMap((scenario) =>
-      scenario.claims.map((claim) => [`${scenario.id}/${claim.id}`, claim] as const),
-    ),
-  );
-  const claimFor = (observation: BaselineObservation) => {
-    const claim = expectations.get(`${observation.scenarioId}/${observation.claimId}`);
-    if (claim === undefined) throw new Error("baseline contains an unknown claim");
-    return claim;
-  };
-  return {
-    claimCount: observations.length,
-    supportedFalseRejections: observations.filter(
-      (observation) =>
-        claimFor(observation).expectedSourceSupport === "supported" &&
-        observation.status === "rejected",
-    ).length,
-    semanticClaimsAdmittedNeedingCritique: observations.filter(
-      (observation) =>
-        claimFor(observation).expectedSourceSupport === "contradicted" &&
-        claimFor(observation).expectedBoundary === "semantic" &&
-        observation.status === "accepted",
-    ).length,
-    deterministicContradictionsAccepted: observations.filter(
-      (observation) =>
-        claimFor(observation).expectedSourceSupport === "contradicted" &&
-        claimFor(observation).expectedBoundary === "deterministic" &&
-        observation.status === "accepted",
-    ).length,
-  };
-}
-
 function validateFixture(): void {
   expect(fixture.schemaVersion).toBe(1);
   expect(fixture.provenance).toMatchObject({
@@ -231,16 +198,54 @@ describe("fictional software-grounding generalization baseline", () => {
     validateFixture();
   });
 
-  it("reproduces the committed current validator observations at the normal local boundary", () => {
-    const observations = fixture.scenarios.flatMap((scenario) =>
-      scenario.claims.map((claim) => replay(scenario, claim)),
-    );
-
-    console.log(JSON.stringify(summarize(observations)));
+  it("keeps the original validator observations as immutable historical evidence", () => {
     expect(baseline.schemaVersion).toBe(1);
     expect(baseline.fixtureId).toBe(fixture.id);
     expect(baseline.boundary).toBe("replayRejectedAuthorCapture");
-    expect(observations).toEqual(baseline.observations);
-    expect(summarize(observations)).toEqual(baseline.aggregate);
+    expect(baseline.aggregate).toMatchObject({
+      claimCount: 14,
+      supportedFalseRejections: 2,
+      semanticClaimsAdmittedNeedingCritique: 5,
+      deterministicContradictionsAccepted: 0,
+    });
+    expect(baseline.observations).toContainEqual({
+      scenarioId: "unfamiliar-adapter-paraphrase",
+      claimId: "supported-sequence-paraphrase",
+      status: "rejected",
+      diagnosticCodes: ["factual_invariant_violation"],
+    });
+    expect(baseline.observations).toContainEqual({
+      scenarioId: "course-vs-certification",
+      claimId: "supported-course-and-attendance-certificate",
+      status: "rejected",
+      diagnosticCodes: ["factual_invariant_violation"],
+    });
+  });
+
+  it("accepts the two supported terminology compositions through the normal local boundary", () => {
+    const supportedClaims = fixture.scenarios
+      .filter((scenario) =>
+        ["unfamiliar-adapter-paraphrase", "course-vs-certification"].includes(scenario.id),
+      )
+      .flatMap((scenario) =>
+        scenario.claims
+          .filter((claim) => claim.expectedSourceSupport === "supported")
+          .map((claim) => replay(scenario, claim)),
+      );
+
+    expect(supportedClaims).toEqual([
+      {
+        scenarioId: "unfamiliar-adapter-paraphrase",
+        claimId: "supported-sequence-paraphrase",
+        status: "accepted",
+        diagnosticCodes: [],
+      },
+      {
+        scenarioId: "course-vs-certification",
+        claimId: "supported-course-and-attendance-certificate",
+        status: "accepted",
+        diagnosticCodes: [],
+      },
+    ]);
   });
 });
