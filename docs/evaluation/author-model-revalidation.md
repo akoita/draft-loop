@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** #559 failed after three validator-rejected author attempts. Investigation found policy vocabulary displacing required-section source records; #560 protects those records and narrows the priority query. #555 remains qualitatively positive without a verified strict pass; #554 was indeterminate.
+- **Current status:** #563 retained the explicit production-skills inventory and recent backend evidence. The second frontier draft was accepted; the critic reported no errors and five content warnings. Candidate adjudication remains pending, so the strict quality pass is unverified.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #559 · 2026-09-26 · revision `a4cba049a1d33774e54c73c4df4b03c06140981d`
+- **Latest observation:** #563 · 2026-09-27 (Europe/Paris) · revision `f72b428f883721885a9ae452379461afb8251406`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -512,3 +512,95 @@ fixtures cover the same policy-displacement pattern for CI and other developers;
 restoring the former broad reuse filter makes the actual-record regression fail.
 This proves the targeted selection correction; no additional live workflow has
 run after it, and the frontier quality pass remains unverified.
+
+## Frontier recheck after protecting section records (#562)
+
+**Observed:** 2026-09-27 (Europe/Paris) · **Revision:** `42e16cb437533dbb5a09ce9b062206b3c98824be`
+
+The user requested the next observation after merging PR #561. The same approved
+private case and authenticated `claude-opus-5-5`/`gpt-6-sol` pair retained the
+three-author/one-critic, 1,200,000-ms bound including preflight. Both probes passed;
+the synthetic author preflight succeeded in 4,721 ms.
+
+The first author attempt was rejected for two factual-invariant violations and
+one uncovered block. Local replay reproduced a combined date range absent from
+any single cited chunk, an unsupported literal title prefix, and an uncited
+negative-experience statement. The second attempt was accepted with seven
+sections and 63 claims. One critic call completed with a funding-attribution
+error, eight duplicate-content warnings, sixteen deterministic uncovered-requirement
+warnings, and five additional content warnings.
+
+Provider wall time including preflight was 178,015 ms; accounted workflow time
+including preflight was 222,224 ms. The workflow stopped awaiting approval, with
+readiness false and approval pending. The source-selection check retained actual
+degree, credential, and language records, thirteen dated headings, and one
+production technical-contribution chunk within twenty chunks and 12,706 bytes.
+
+### Candidate review and source corrections
+
+The candidate disputed the funding error, rejected the negative production-experience
+assumption, and clarified that the training included formal awards. The candidate
+confirmed three quality weaknesses: sparse recent-role accomplishments, repeated
+project entries without contributions, and outdated skill emphasis. A separate
+credential-date conflict remains unresolved. No exhaustive category counts were
+supplied, so the strict zero-count pass remains unverified.
+
+Investigation found that the saved writing instructions explicitly asserted an
+experience gap. Corrected private working instructions remove that assumption.
+Candidate-confirmed facts were integrated into a separate private working profile;
+the original evaluation inputs, accepted draft, selected source version, and
+captures remain unchanged. Nothing personal was published or exported.
+
+### Production-skills evidence selection (#563)
+
+A provider-free replay on the corrected working profile still selected an old
+technology-transition paragraph for Skills while omitting the explicit production
+skills inventory. A bounded local query recovered that inventory. Issue #563
+promotes matched substantive `Production experience:` records within the Skills
+supplement, preserving chronology, other actual section records, provenance, and
+the existing item/byte caps. This is one selection correction; recent-role
+accomplishment coverage and project quality require separate verification.
+
+A provider-free proof on the corrected full private profile retained thirteen
+dated headings, actual degree, credential and language records, the explicit
+production-skills inventory including the confirmed language-version migration,
+and recent production-backend evidence. The older transition paragraph was
+absent. Selection remained at twenty chunks, 14,224 bytes, and sixteen
+content-free traces, with no provider calls. Fictional CI fixtures protect the
+same outcome; disabling record promotion makes the focused regression fail.
+Ordinary Skills retrieval remains available when no explicit record exists.
+
+### Bounded live follow-up (#563)
+
+The candidate requested continuation after correcting source facts. One fresh
+workflow used the same job description, the full private corpus updated only
+with those confirmations, and corrected writing priorities. This is an input
+variant, not an unchanged-case comparison. The pair remained authenticated
+`claude-opus-5-5` and `gpt-6-sol`, with three author attempts, one critic call,
+and 1,200,000 ms including preflight. Both probes passed; synthetic author
+preflight succeeded in 2,333 ms. The prepared evidence retained twenty chunks,
+thirteen dated headings, all actual required-section records, the production
+skills inventory, and recent backend evidence in 14,216 bytes and sixteen traces.
+
+The first attempt was rejected for two factual-invariant violations and one
+uncovered block. Private replay reproduced introductory modifiers being included
+in protected technology/title phrases despite the underlying values appearing
+in cited evidence; a skills-category label separately failed block coverage.
+This identifies a validator follow-up, without changing grounding during the run.
+The second author draft passed with eight sections and 94 claims. One critic
+call reported no errors, nine duplicate-content warnings, fourteen deterministic
+uncovered-requirement warnings, and five content warnings: missing contributions
+in other recent roles, project labels without substance, thin Java-platform
+accomplishment evidence, implicit production status, and past-role summary framing.
+
+Provider wall time including preflight was 327,975 ms; accounted workflow time
+including preflight was 379,884 ms. The harness blocked the requested post-critic
+revision at the declared first-review boundary. The application consequently
+records a nonretryable revision error; both admitted provider steps completed,
+and the accepted draft and findings were saved for private candidate review.
+No additional workflow, approval, or export occurred. Candidate category counts
+remain pending; critic error counts alone do not establish the fixed quality pass.
+
+The full repository gate passed before this run: 2,042 tests in 136 files plus
+60 release/security tests. Architecture and evaluation documentation describe
+the internal selection change; there is no new command or user-facing option.

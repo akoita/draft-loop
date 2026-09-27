@@ -254,6 +254,14 @@ unselected general-query hits cannot justify skipping a reservation. Retrieval f
 available but not even one chunk can fit. This preserves contribution evidence within the existing provider
 limits; lexical matches do not prove job fit or resolve uncertain source claims.
 
+When a Skills section is configured, CKB retrieval also runs one cached local
+`production experience` query with a twenty-hit limit. A substantive explicit
+`Production experience:` record takes precedence within the Skills supplement.
+Plain and Markdown labels are supported; unavailable, negative, heading-only,
+and fallback results are not promoted. Without a matched record, the existing
+supplement behavior remains. The record keeps its source/version identity and
+content-free trace; this adds no provider call or evidence-budget allowance.
+
 ### Explicit experience statements
 
 Author grounding recognizes whole statements such as `No GraphQL experience`
