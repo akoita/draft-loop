@@ -302,6 +302,10 @@ workspace candidate material (#591). These three slices complete #533.
 Selection and intake reset the chosen canonical profile without changing
 existing run history.
 
+Desktop restart recovery (#172) now clears a stale review when the host has
+lost its workspace context and offers explicit reopening through the native
+picker. Saved approval and export workflows remain available after reopening.
+
 Sprint 2 is complete with writer coordination, interrupted-write recovery,
 retention, backup export, and collision-safe restore. Its five feature PRs
 added 10,365 lines across 71 file-changes, so #166 was removed instead of

@@ -23,6 +23,11 @@ import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./pr
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import { ThemeToggle } from "./theme.js";
+import {
+  isWorkspaceContextCurrent,
+  isWorkspaceContextLost,
+  WorkspaceRecovery,
+} from "./workspace-recovery.js";
 import "./styles.css";
 
 const runRefreshIntervalMs = 750;
@@ -751,6 +756,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
   const [state, setState] = useState<DesktopReviewState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
+  const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [pendingReviewAction, setPendingReviewAction] = useState<PendingReviewAction | null>(null);
@@ -758,6 +765,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [knowledgePending, setKnowledgePending] = useState(false);
   const knowledgePendingRef = useRef(false);
   const activeWorkspaceIdRef = useRef<string | null>(null);
+  const contextGenerationRef = useRef(0);
   const [profileResetEpoch, setProfileResetEpoch] = useState(0);
   const [candidateProfileSelection, setCandidateProfileSelection] = useState<{
     readonly workspaceId: string;
@@ -784,8 +792,52 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const requestedCompanies = useRef(new Set<ModelCompany>());
   const activeExecutionStatus = state?.execution.status;
   const activeWorkspaceId = state?.workspaceId ?? null;
+  const workspaceGeneration = contextGenerationRef.current;
   const previousWorkspaceIdRef = useRef<string | null>(null);
   activeWorkspaceIdRef.current = activeWorkspaceId;
+  const isCurrentWorkspaceContext = useCallback(
+    (workspaceId: string, generation: number) =>
+      isWorkspaceContextCurrent(
+        workspaceId,
+        generation,
+        activeWorkspaceIdRef.current,
+        contextGenerationRef.current,
+      ),
+    [],
+  );
+  const enterWorkspaceRecovery = useCallback(
+    (workspaceId: string, generation: number, reason: unknown): boolean => {
+      if (
+        !isWorkspaceContextLost(
+          reason,
+          workspaceId,
+          generation,
+          activeWorkspaceIdRef.current,
+          contextGenerationRef.current,
+        )
+      ) {
+        return false;
+      }
+      contextGenerationRef.current += 1;
+      activeWorkspaceIdRef.current = null;
+      setState(null);
+      setError(null);
+      setImportError(null);
+      setPendingReviewAction(null);
+      setPendingBulkFindingCount(null);
+      knowledgePendingRef.current = false;
+      setKnowledgePending(false);
+      setBusy(false);
+      setCandidateProfileSelection((current) =>
+        current?.workspaceId === workspaceId ? null : current,
+      );
+      setProfileResetEpoch((current) => current + 1);
+      setWorkspaceRecoveryError(null);
+      setWorkspaceRecoveryRequired(true);
+      return true;
+    },
+    [],
+  );
   useEffect(() => {
     if (previousWorkspaceIdRef.current !== activeWorkspaceId) {
       knowledgePendingRef.current = false;
@@ -828,25 +880,41 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
 
   useEffect(() => {
     let active = true;
+    const requestedWorkspaceId = activeWorkspaceIdRef.current;
+    const requestedGeneration = contextGenerationRef.current;
+    const requestIsCurrent = () =>
+      contextGenerationRef.current === requestedGeneration &&
+      activeWorkspaceIdRef.current === requestedWorkspaceId;
     void activePort
       .load()
       .then((loaded) => {
-        if (active) setState(loaded);
+        if (!active || !requestIsCurrent()) return;
+        if (requestedWorkspaceId !== null && loaded.workspaceId !== requestedWorkspaceId) {
+          return;
+        }
+        activeWorkspaceIdRef.current = loaded.workspaceId;
+        setState(loaded);
       })
       .catch((reason: unknown) => {
-        if (active) {
-          setError(
+        if (!active || !requestIsCurrent()) return;
+        if (requestedWorkspaceId !== null) {
+          if (enterWorkspaceRecovery(requestedWorkspaceId, requestedGeneration, reason)) return;
+          setImportError(
             reason instanceof Error ? reason.message : "The review workspace could not load.",
           );
+          return;
         }
+        setError(reason instanceof Error ? reason.message : "The review workspace could not load.");
       });
     return () => {
       active = false;
     };
-  }, [activePort]);
+  }, [activePort, enterWorkspaceRecovery]);
 
   useEffect(() => {
-    if (activeExecutionStatus !== "running") return;
+    if (activeExecutionStatus !== "running" || activeWorkspaceId === null) return;
+    const workspaceId = activeWorkspaceId;
+    const generation = contextGenerationRef.current;
     let active = true;
     let loading = false;
     const refresh = async () => {
@@ -854,16 +922,20 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       loading = true;
       try {
         const loaded = await activePort.load();
-        if (active) {
+        if (
+          active &&
+          isCurrentWorkspaceContext(workspaceId, generation) &&
+          loaded.workspaceId === workspaceId
+        ) {
           setState(loaded);
           setImportError(null);
         }
       } catch (reason: unknown) {
-        if (active) {
-          setImportError(
-            reason instanceof Error ? reason.message : "Review progress could not be refreshed.",
-          );
-        }
+        if (!active || !isCurrentWorkspaceContext(workspaceId, generation)) return;
+        if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+        setImportError(
+          reason instanceof Error ? reason.message : "Review progress could not be refreshed.",
+        );
       } finally {
         loading = false;
       }
@@ -873,10 +945,19 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       active = false;
       window.clearInterval(interval);
     };
-  }, [activePort, activeExecutionStatus]);
+  }, [
+    activePort,
+    activeExecutionStatus,
+    activeWorkspaceId,
+    enterWorkspaceRecovery,
+    isCurrentWorkspaceContext,
+  ]);
 
   const onAction = (action: ReviewAction) => {
     if (state === null) return;
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
     if (action.type === "start" && knowledgePendingRef.current) {
       setImportError(candidateKnowledgePendingBlockerMessage);
       return;
@@ -889,8 +970,16 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     setImportError(null);
     reviewActionDispatcher.dispatch(dispatchedAction, async () => {
       try {
-        setState(await activePort.dispatch(state, dispatchedAction));
+        const next = await activePort.dispatch(state, dispatchedAction);
+        if (
+          isCurrentWorkspaceContext(workspaceId, generation) &&
+          next.workspaceId === workspaceId
+        ) {
+          setState(next);
+        }
       } catch (reason: unknown) {
+        if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+        if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
         setImportError(
           reason instanceof Error ? reason.message : "The review action could not be completed.",
         );
@@ -898,20 +987,30 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     });
   };
 
-  const onKnowledgePendingChange = (workspaceId: string, pending: boolean) => {
-    if (activeWorkspaceIdRef.current !== workspaceId) return;
+  const onKnowledgePendingChange = (workspaceId: string, generation: number, pending: boolean) => {
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
     knowledgePendingRef.current = pending;
     setKnowledgePending(pending);
   };
 
-  const onKnowledgeSelectionSaved = async (workspaceId: string): Promise<boolean> => {
-    if (activeWorkspaceIdRef.current !== workspaceId) return false;
+  const onKnowledgeSelectionSaved = async (
+    workspaceId: string,
+    generation: number,
+  ): Promise<boolean> => {
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return false;
     setCandidateProfileSelection((current) =>
       current?.workspaceId === workspaceId ? null : current,
     );
     setProfileResetEpoch((current) => current + 1);
-    const loaded = await activePort.load();
-    if (activeWorkspaceIdRef.current !== workspaceId) return false;
+    let loaded: DesktopReviewState;
+    try {
+      loaded = await activePort.load();
+    } catch (reason: unknown) {
+      if (!isCurrentWorkspaceContext(workspaceId, generation)) return false;
+      enterWorkspaceRecovery(workspaceId, generation, reason);
+      throw reason;
+    }
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return false;
     if (loaded.workspaceId !== workspaceId) {
       throw new Error("The active workspace changed while refreshing knowledge selection.");
     }
@@ -925,6 +1024,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   ) => {
     const firstFindingId = findingIds[0];
     if (state === null || firstFindingId === undefined) return;
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
     setImportError(null);
     setPendingBulkFindingCount(findingIds.length);
     const pendingAction: ReviewAction = {
@@ -934,15 +1036,35 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     };
     const started = reviewActionDispatcher.dispatch(pendingAction, async () => {
       try {
-        await dispatchFindingDecisions(state, findingIds, decision, activePort.dispatch, setState);
+        await dispatchFindingDecisions(
+          state,
+          findingIds,
+          decision,
+          async (currentState, action) => {
+            if (!isCurrentWorkspaceContext(workspaceId, generation)) {
+              throw new Error("Workspace context changed before all finding decisions were saved.");
+            }
+            return activePort.dispatch(currentState, action);
+          },
+          (next) => {
+            if (
+              isCurrentWorkspaceContext(workspaceId, generation) &&
+              next.workspaceId === workspaceId
+            ) {
+              setState(next);
+            }
+          },
+        );
       } catch (reason: unknown) {
+        if (enterWorkspaceRecovery(workspaceId, generation, reason)) return;
+        if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
         setImportError(
           reason instanceof Error
             ? reason.message
             : "The finding decisions could not be completed.",
         );
       } finally {
-        setPendingBulkFindingCount(null);
+        if (isCurrentWorkspaceContext(workspaceId, generation)) setPendingBulkFindingCount(null);
       }
     });
     if (!started) setPendingBulkFindingCount(null);
@@ -964,7 +1086,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     setError(null);
     setImportError(null);
     try {
-      setState(await action());
+      const loaded = await action();
+      contextGenerationRef.current += 1;
+      activeWorkspaceIdRef.current = loaded.workspaceId;
+      setWorkspaceRecoveryRequired(false);
+      setWorkspaceRecoveryError(null);
+      setState(loaded);
     } catch (reason: unknown) {
       setError(describeFailure(reason));
     } finally {
@@ -972,7 +1099,28 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     }
   };
 
-  const setupVisible = error !== null;
+  const openWorkspaceFromRecovery = async () => {
+    const openWorkspace = nativeActions.open;
+    if (openWorkspace === undefined || busy) return;
+    setBusy(true);
+    setWorkspaceRecoveryError(null);
+    try {
+      const loaded = await openWorkspace();
+      contextGenerationRef.current += 1;
+      activeWorkspaceIdRef.current = loaded.workspaceId;
+      setWorkspaceRecoveryRequired(false);
+      setWorkspaceRecoveryError(null);
+      setError(null);
+      setImportError(null);
+      setState(loaded);
+    } catch {
+      setWorkspaceRecoveryError("The workspace was not opened. Choose a workspace and try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setupVisible = error !== null && !workspaceRecoveryRequired;
   const listModels = activePort.listModels;
   const previewIndependence = activePort.previewIndependence;
   const localEndpointNamed = draft.localEndpoint.trim() !== "";
@@ -1081,6 +1229,18 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     };
   }, [setupVisible, previewIndependence, authorCompany, authorModel, criticCompany, criticModel]);
 
+  if (workspaceRecoveryRequired) {
+    return (
+      <WorkspaceRecovery
+        busy={busy}
+        errorMessage={workspaceRecoveryError}
+        {...(nativeActions.open === undefined
+          ? {}
+          : { onOpen: () => void openWorkspaceFromRecovery() })}
+      />
+    );
+  }
+
   if (error !== null) {
     const openWorkspace = nativeActions.open;
     const createWorkspace = nativeActions.create;
@@ -1171,8 +1331,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               disabled={
                 busy || pendingReviewAction !== null || state.execution.status === "running"
               }
-              onPendingChange={onKnowledgePendingChange}
-              onSelectionSaved={onKnowledgeSelectionSaved}
+              onPendingChange={(workspaceId, pending) =>
+                onKnowledgePendingChange(workspaceId, workspaceGeneration, pending)
+              }
+              onSelectionSaved={(workspaceId) =>
+                onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
+              }
             />
             {profileCapabilities === null ? null : (
               <fieldset
@@ -1203,11 +1367,22 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             onSelectFiles: (
               target: "evidence" | "job-description" | "writing-policy" | "writing-policy-override",
             ) => {
+              const workspaceId = state.workspaceId;
+              if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
               setImportError(null);
               void activePort
                 .selectFiles?.(target)
-                .then(setState)
+                .then((loaded) => {
+                  if (
+                    isCurrentWorkspaceContext(workspaceId, workspaceGeneration) &&
+                    loaded.workspaceId === workspaceId
+                  ) {
+                    setState(loaded);
+                  }
+                })
                 .catch((reason: unknown) => {
+                  if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
+                  if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
                   setImportError(
                     reason instanceof Error ? reason.message : "The files could not be imported.",
                   );
@@ -1218,11 +1393,22 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         ? {}
         : {
             onAddUrl: (target: "evidence" | "job-description", url: string) => {
+              const workspaceId = state.workspaceId;
+              if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
               setImportError(null);
               void activePort
                 .addUrl?.(target, url)
-                .then(setState)
+                .then((loaded) => {
+                  if (
+                    isCurrentWorkspaceContext(workspaceId, workspaceGeneration) &&
+                    loaded.workspaceId === workspaceId
+                  ) {
+                    setState(loaded);
+                  }
+                })
                 .catch((reason: unknown) => {
+                  if (enterWorkspaceRecovery(workspaceId, workspaceGeneration, reason)) return;
+                  if (!isCurrentWorkspaceContext(workspaceId, workspaceGeneration)) return;
                   setImportError(
                     reason instanceof Error ? reason.message : "The URL could not be imported.",
                   );

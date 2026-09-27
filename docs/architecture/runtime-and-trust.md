@@ -173,6 +173,13 @@ candidate-source directory and uses the same bounded directory importer and
 result projection as picker intake. Active runs and archived target bases
 block this action. Neither the renderer nor the result supplies a path.
 
+A trusted workspace-scoped `not-found` failure clears stale desktop review and
+profile state and presents an explicit **Open workspace** recovery screen. The
+renderer ignores completions from a previously open workspace. Recovery does
+not remember or reopen filesystem paths automatically, discover models, or
+approve an artifact; the native picker opens the saved workspace again. Other
+operation failures leave the current review available.
+
 Store setup, selection, inspection, intake, refresh, rebind, retirement, and
 directory maintenance all follow this split. Read-only inspection calls are
 fresh reads rather than a cross-command snapshot. Mutation results expose only
