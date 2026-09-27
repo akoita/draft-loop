@@ -41,6 +41,52 @@ function issues(text: string, evidence: readonly ScoredEvidenceChunk[]) {
 }
 
 describe("software description protected parts", () => {
+  it("drops only a leading Then before an evidenced chaincode product name", () => {
+    const text = "Then Nimbus Fabric chaincodes";
+    const evidence = [chunk("product", "Nimbus Fabric", 0), chunk("work", "chaincodes", 1)];
+
+    expect(extractProtectedValues(text)).toContain("Nimbus Fabric");
+    expect(extractProtectedValues(text)).not.toContain("Then Nimbus Fabric");
+    expect(issues(text, evidence)).toEqual([]);
+
+    for (const contextualText of [
+      "Worked for Then Nimbus Fabric chaincodes",
+      "Senior Then Nimbus Fabric chaincodes",
+      "And Then Nimbus Fabric chaincodes",
+      "Earlier work, Then Nimbus Fabric chaincodes",
+    ]) {
+      expect(issues(contextualText, evidence)).toContain("factual_invariant_violation");
+    }
+    expect(issues("Then Nimbus Fabric services", evidence)).toContain(
+      "factual_invariant_violation",
+    );
+  });
+
+  it("splits a product API only before authentication in an unambiguous context", () => {
+    const text = "Keycloak API authentication";
+    const productEvidence = chunk("product", "Keycloak", 0);
+    const apiEvidence = chunk("api", "API authentication", 1);
+    const evidence = [productEvidence, apiEvidence];
+
+    expect(extractProtectedValues(text)).toEqual(expect.arrayContaining(["Keycloak", "API"]));
+    expect(extractProtectedValues(text)).not.toContain("Keycloak API");
+    expect(issues(text, evidence)).toEqual([]);
+    expect(issues(text, [apiEvidence])).toContain("factual_invariant_violation");
+    expect(issues(text, [chunk("near-product", "KeycloakPro", 0), apiEvidence])).toContain(
+      "factual_invariant_violation",
+    );
+
+    for (const contextualText of [
+      "Worked for Keycloak API authentication",
+      "Senior Keycloak API authentication",
+      "And Keycloak API authentication",
+      "Keycloak API authentication company",
+      "Keycloak API Authentication",
+    ]) {
+      expect(issues(contextualText, evidence)).toContain("factual_invariant_violation");
+    }
+  });
+
   it("grounds a closed language and a separate product name before a software phrase", () => {
     const text = "Python NimbusLedger event ingestion";
     const evidence = [chunk("language", "Python", 0), chunk("product", "NimbusLedger", 1)];

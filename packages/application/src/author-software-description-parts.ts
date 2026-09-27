@@ -36,10 +36,44 @@ const softwareObjectLanguageAppositivePattern = new RegExp(
   `^[ \\t]*,[ \\t]+(?:a|an|the)[ \\t]+(${closedProgrammingLanguagePattern.source})[ \\t]+${appositiveQualifiersPattern}${softwareNounPattern}(?![\\p{L}\\p{N}])`,
   "u",
 );
+const leadingThenChaincodePattern = /^[ \t]+chaincodes?(?![\p{L}\p{N}])/iu;
+const apiAuthenticationPattern = /^[ \t]+authentication(?![\p{L}\p{N}])/u;
+const apiAuthenticationEmployerPattern = /^[ \t]+authentication[ \t]+(?:company|firm|employer)\b/iu;
+const technicalNamePattern =
+  /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*|\p{Lu}{2,}\p{Ll}[\p{L}\p{N}]*)$/u;
+const usedTechnicalPairPattern =
+  /^[ \t]+and[ \t]+(?<name>\p{Lu}[\p{L}\p{N}]*)[ \t]+to[ \t]+\p{Ll}[\p{L}'’-]*/u;
 
 export interface ProtectedSoftwareDescriptionPart {
   readonly value: string;
   readonly start: number;
+}
+
+function isTitleOrLinkingWord(word: string): boolean {
+  return excludedTitleWords.has(word) || linkingWords.has(word.toLocaleLowerCase("en-US"));
+}
+
+function leadingThenProductPart(
+  text: string,
+  matched: string,
+  words: readonly string[],
+  start: number,
+): readonly ProtectedSoftwareDescriptionPart[] {
+  if (
+    words[0] !== "Then" ||
+    words.length < 2 ||
+    text.slice(0, start).trim() !== "" ||
+    !leadingThenChaincodePattern.test(text.slice(start + matched.length))
+  ) {
+    return [];
+  }
+
+  const nameWords = words.slice(1);
+  if (nameWords.some((word) => !capitalizedWordPattern.test(word) || isTitleOrLinkingWord(word))) {
+    return [];
+  }
+  const name = nameWords.join(" ");
+  return [{ value: name, start: start + matched.indexOf(name) }];
 }
 
 /** Return only the bounded language, product-name, or MVP components in a software phrase. */
@@ -49,6 +83,8 @@ export function protectedSoftwareDescriptionParts(
   start: number,
 ): readonly ProtectedSoftwareDescriptionPart[] {
   const words = matched.split(/\s+/u);
+  const leadingThen = leadingThenProductPart(text, matched, words, start);
+  if (leadingThen.length > 0) return leadingThen;
   if (words.length !== 2) return [];
   const [first, second] = words;
   if (first === undefined || second === undefined) return [];
@@ -69,6 +105,41 @@ export function protectedSoftwareDescriptionParts(
           word === precedingWord &&
           !(word === "and" && precedingGeneratedLanguageConjunctionPattern.test(preceding)),
       ));
+
+  if (
+    capitalizedWordPattern.test(first) &&
+    second === "API" &&
+    apiAuthenticationPattern.test(following) &&
+    !apiAuthenticationEmployerPattern.test(following) &&
+    !exactProgrammingLanguagePattern.test(first) &&
+    !isTitleOrLinkingWord(first) &&
+    !hasEmployerOrTitleOrLinkingContext
+  ) {
+    return [
+      { value: first, start: firstStart },
+      { value: second, start: secondStart },
+    ];
+  }
+
+  const usedPair = usedTechnicalPairPattern.exec(following);
+  const secondUsedName = usedPair?.groups?.name;
+  if (
+    text.slice(0, start).trim() === "" &&
+    first === "Used" &&
+    technicalNamePattern.test(second) &&
+    !isTitleOrLinkingWord(second) &&
+    secondUsedName !== undefined &&
+    technicalNamePattern.test(secondUsedName) &&
+    !isTitleOrLinkingWord(secondUsedName)
+  ) {
+    return [
+      { value: second, start: secondStart },
+      {
+        value: secondUsedName,
+        start: start + matched.length + (usedPair?.[0].indexOf(secondUsedName) ?? 0),
+      },
+    ];
+  }
 
   if (
     exactProgrammingLanguagePattern.test(first) &&
