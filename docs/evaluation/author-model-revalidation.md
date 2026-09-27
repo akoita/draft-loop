@@ -695,3 +695,38 @@ The historical capture is unchanged. Deterministic validation still reports
 evaluation. A targeted shortening input is prepared locally; the two-author
 admission does not permit a third request. Nothing was approved, exported or
 published.
+
+## Targeted shortening and description grounding (#565)
+
+**Observed:** 2026-09-27 (Europe/Paris) · **Author revision:** `26f1ee2bcfe1beebc4a0c46be07a6c4aea83e07d`
+
+The candidate explicitly admitted one targeted author request at medium effort,
+then one critic request at low, within twenty minutes including authentication
+preflight and with no automatic retry. The prepared input retained the same
+corrected profile and job and supplied section budgets targeting 850 words under
+the existing 950-word maximum. Both authentication probes passed. The full local
+gate passed before transmission: 2,060 tests in 137 files and 60 release/security
+checks.
+
+The author returned an 856-word structured proposal in 210,811 ms. Local grounding
+rejected three source-backed software-description spans: a language/platform
+compound, a project/stage label, and an opening action with a language-qualified
+software appositive. Private investigation reproduced each false rejection.
+Issue #565 addresses those grammar cases while retaining cited support for every
+component and preserving identity, employer, title and date checks. No second
+author call is admitted. The unchanged capture remains private; strict quality
+is unverified until local replay, independent critique and candidate review finish.
+
+### Unchanged shortening replay
+
+After the bounded #565 grammar fixes, the unchanged private capture constructs
+nine sections and 116 normalized claims. The visible text remains 856 words;
+deterministic validation reports no errors. The capture hash is unchanged and
+local replay makes no provider calls. Each newly separated component remains
+subject to cited-source checks. Fictional regressions cover missing components,
+near-match language words, and employer, title and linking contexts.
+
+The original single critic allowance remains available only within the admitted
+twenty-minute wall-clock window. The author output was produced at the earlier
+revision; the local grounding revision is a separately recorded evaluation
+variant. This is not an unchanged-production-template reference pass.

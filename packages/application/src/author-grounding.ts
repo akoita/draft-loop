@@ -1,5 +1,8 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
-
+import {
+  protectedSoftwareDescriptionParts,
+  softwareObjectAppositivePattern,
+} from "./author-software-description-parts.js";
 import {
   experienceClaimValues,
   sourceExperienceValues,
@@ -16,8 +19,6 @@ const singleTechnologyNamePattern =
   /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
 const softwareObjectPattern =
   /^[ \t]+(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/u;
-const softwareObjectAppositivePattern =
-  /^[ \t]*,[ \t]+(?:a|an|the)[ \t]+(?:(?:model-driven|engineering|in-house|supervision)[ \t]+)*(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/iu;
 
 const multiWordNamePattern = /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu;
 
@@ -102,20 +103,35 @@ export function extractProtectedValues(value: string): readonly string[] {
   const experienceValues = experienceClaimValues(value);
   if (experienceValues !== undefined) return Object.freeze([...experienceValues]);
   const matches: ProtectedValueMatch[] = protectedValuePatterns.flatMap((pattern, patternIndex) =>
-    [...value.matchAll(pattern)].map((match, matchIndex) => {
+    [...value.matchAll(pattern)].flatMap((match, matchIndex) => {
       const raw = match[1] ?? match[0];
-      const narrow = withoutOpeningAction(value, raw, match.index ?? 0);
+      const start = match.index ?? 0;
+      const softwareParts =
+        pattern === multiWordNamePattern
+          ? protectedSoftwareDescriptionParts(value, raw, start)
+          : [];
+      if (softwareParts.length > 0) {
+        return softwareParts.map((part, partIndex) => ({
+          value: part.value,
+          start: part.start,
+          patternIndex,
+          matchIndex: matchIndex * 2 + partIndex,
+        }));
+      }
+      const narrow = withoutOpeningAction(value, raw, start);
       const extracted =
         pattern === multiWordNamePattern && narrow === raw
-          ? withoutOpeningActionVerb(value, raw, match.index ?? 0)
+          ? withoutOpeningActionVerb(value, raw, start)
           : narrow;
       const captureOffset = match[0].indexOf(extracted);
-      return {
-        value: extracted,
-        start: (match.index ?? 0) + Math.max(captureOffset, 0),
-        patternIndex,
-        matchIndex,
-      };
+      return [
+        {
+          value: extracted,
+          start: start + Math.max(captureOffset, 0),
+          patternIndex,
+          matchIndex,
+        },
+      ];
     }),
   );
   matches.sort(
