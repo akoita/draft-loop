@@ -403,21 +403,39 @@ export function mergeRequiredSectionEvidence(
   for (const hit of primary.hits) {
     if (!primaryById.has(hit.id)) primaryById.set(hit.id, hit);
   }
-  const requiredHits: ScoredEvidenceChunk[] = [];
-  const requiredIds = new Set(primaryById.keys());
+  const primaryHits = [...primaryById.values()];
+  const matchedCandidates: ScoredEvidenceChunk[] = [];
+  const candidateIds = new Set<string>();
   for (const supplement of supplements) {
     if (supplement.result.status !== "matched") continue;
     const hit = supplement.result.hits.find((candidate) =>
       matchesRequiredSectionEvidence(supplement.section, candidate.text),
     );
-    if (hit === undefined || requiredIds.has(hit.id)) continue;
-    requiredIds.add(hit.id);
-    requiredHits.push(hit);
+    if (hit === undefined || candidateIds.has(hit.id)) continue;
+    candidateIds.add(hit.id);
+    matchedCandidates.push(hit);
+  }
+
+  const capacity = Math.floor(limit);
+  let primaryPrefixSize = Math.min(primaryHits.length, capacity);
+  const reservedIds = new Set<string>();
+  let reservationChanged = true;
+  while (reservationChanged) {
+    reservationChanged = false;
+    const primaryPrefixIds = new Set(primaryHits.slice(0, primaryPrefixSize).map((hit) => hit.id));
+    for (const candidate of matchedCandidates) {
+      if (primaryPrefixIds.has(candidate.id) || reservedIds.has(candidate.id)) continue;
+      reservedIds.add(candidate.id);
+      reservationChanged = true;
+    }
+    if (reservationChanged) {
+      primaryPrefixSize = Math.min(primaryHits.length, Math.max(0, capacity - reservedIds.size));
+    }
   }
 
   const selected: ScoredEvidenceChunk[] = [
-    ...[...primaryById.values()].slice(0, Math.max(0, limit - requiredHits.length)),
-    ...requiredHits,
+    ...primaryHits.slice(0, primaryPrefixSize),
+    ...matchedCandidates.filter((candidate) => reservedIds.has(candidate.id)),
   ];
   const selectedIds = new Set(selected.map((hit) => hit.id));
   for (const supplement of supplements) {
