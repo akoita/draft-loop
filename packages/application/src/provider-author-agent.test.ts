@@ -400,7 +400,10 @@ describe("local driver author revision", () => {
     });
     expect(JSON.stringify(inputs[1]?.retryFeedback)).not.toContain("999");
     expect(systemPrompts[0]).not.toContain(authorRevisionInstructions);
-    expect(systemPrompts[1]).toContain(authorRevisionInstructions);
+    expect(systemPrompts[1]).toContain(
+      "Revise revision.rejectedProposal rather than starting over",
+    );
+    expect(systemPrompts[1]).toContain("descriptive capitalized multiword terms may vary");
     for (const snapshot of [failed, recovered]) {
       expect(JSON.stringify(snapshot)).not.toContain("Built 999");
       expect(JSON.stringify(snapshot)).not.toContain("is not stated in cited evidence");

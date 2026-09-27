@@ -69,16 +69,14 @@ function pendingAdjudication(): NonNullable<AuthorRequest["pendingAdjudication"]
 
 function expectEvidenceGroundingContract(systemPrompt: string): void {
   expect(systemPrompt).toContain(
-    "For every substantive claim, the cited evidence chunks collectively must contain each exact protected factual value used in the claim",
+    "For every substantive claim, cited evidence must support its factual values.",
   );
   expect(systemPrompt).toContain(
-    "dates, metrics, employers, multi-word titles, credentials, URLs, emails, and acronyms",
+    "Copy dates, metrics, employers, titles, credentials, URLs, emails, and acronyms exactly from cited evidence",
   );
   expect(systemPrompt).toContain("Cite every retrievedEvidence ID that supports the claim.");
   expect(systemPrompt).toContain("Split compound claims when support is distributed or unclear.");
-  expect(systemPrompt).toContain(
-    "Omit unsupported protected values rather than paraphrase or invent them.",
-  );
+  expect(systemPrompt).toContain("Omit unsupported factual values rather than invent them");
   expect(systemPrompt).toContain(
     "Do not mark factual CV content non-substantive to evade grounding.",
   );
@@ -150,13 +148,13 @@ describe("author adjudication provider handoff", () => {
     });
     expect(revision.providerInput.groundingGuide).toBe(guide);
     expect(initial.systemPrompt).toContain(
-      "The groundingGuide is the exact allowlist for protected factual values",
+      "The groundingGuide lists source-stated protected values",
     );
     expect(initial.systemPrompt).toContain(
-      "Each protected value used in a substantive claim requires citation of its corresponding evidence chunk(s).",
+      "Copy factual fields exactly and cite the chunk that supports each one.",
     );
     expect(revision.systemPrompt).toContain(
-      "The groundingGuide is the exact allowlist for protected factual values",
+      "The groundingGuide lists source-stated protected values",
     );
   });
 
@@ -216,15 +214,19 @@ describe("author adjudication provider handoff", () => {
         },
       ],
     };
+    const v5RevisionInstructions = `${authorRevisionInstructions.replace("Copy dates, titles, employers, and names exactly as the cited evidence states them.", "Copy dates, titles, employers, and structured names exactly as the cited evidence states them; descriptive capitalized multiword terms may vary only when every whole-word component occurs in one cited chunk and at least two components appear together there.")} For descriptive capitalized multiword terms only, word order or grouping may vary when every whole-word component appears in the same cited chunk and at least two components appear together there; this lexical support does not establish meaning, which remains for independent critique. Preserve exact dates and structured heading, contact, skills and tool-list fields, and keep each factual claim cited to supporting retrieved evidence.`;
     for (const pending of [undefined, pendingAdjudication()]) {
       const without = createAuthorAdjudicationPrompt(authorVersion, pending, feedback);
       const prompt = createAuthorAdjudicationPrompt(authorVersion, pending, feedback, [], revision);
 
-      expect(prompt.systemPrompt).toBe(`${without.systemPrompt}${authorRevisionInstructions}`);
+      expect(prompt.systemPrompt).toBe(`${without.systemPrompt}${v5RevisionInstructions}`);
       expect(prompt.providerInput).toEqual({ ...without.providerInput, revision });
       expect(prompt.providerInput.revision).toBe(revision);
       expect(prompt.systemPrompt).toContain(
         "Revise revision.rejectedProposal rather than starting over",
+      );
+      expect(prompt.systemPrompt).toContain(
+        "For descriptive capitalized multiword terms only, word order or grouping may vary",
       );
       expect(without.systemPrompt).not.toContain("When revision is present");
     }
@@ -243,8 +245,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v4 for new author runs and keeps the critic on v1", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v4");
+  it("records v5 for new author runs and keeps the critic on v1", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v5");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v1");
   });
 
@@ -358,7 +360,29 @@ describe("author prompt template versions", () => {
     }
   });
 
-  it.each(["cli-author-v2", "cli-author-v3", "cli-author-v4"])(
+  it("adds the bounded compositional-term guidance in v5 without changing v4", () => {
+    const pending = pendingAdjudication();
+    const v4 = createAuthorAdjudicationPrompt("cli-author-v4", pending);
+    const v5 = createAuthorAdjudicationPrompt("cli-author-v5", pending);
+
+    expect(v5.providerInput.outputBudget).toEqual({ maxOutputTokens: 32_768 });
+    expect(v5.systemPrompt).toContain(
+      "For a descriptive capitalized multiword term, word order or grouping may vary only when every whole-word component appears in one cited retrievedEvidence chunk",
+    );
+    expect(v5.systemPrompt).toContain("leave semantic meaning to the independent critic");
+    expect(v5.systemPrompt).not.toContain("groundingGuide is the exact allowlist");
+    expect(v5.systemPrompt).not.toContain("Copy dates, titles, employers, and names exactly");
+    expect(v5.systemPrompt).not.toContain(
+      "Omit unsupported protected values rather than paraphrase",
+    );
+    expect(v5.systemPrompt).toContain(
+      "This does not relax exact-copy requirements for headings, contact fields, skills or tool lists",
+    );
+    expect(v5.systemPrompt).toContain("Do not rephrase, abbreviate, translate, reorder words");
+    expect(v4.systemPrompt).not.toContain("word order or grouping may vary");
+  });
+
+  it.each(["cli-author-v2", "cli-author-v3", "cli-author-v4", "cli-author-v5"])(
     "adds structured-field guidance to %s after claim coverage and before revision and retry text",
     (version) => {
       const feedback = retryFeedback();

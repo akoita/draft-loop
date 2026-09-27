@@ -45,8 +45,9 @@ it.each([
   { recorded: "cli-author-v1", structuredGuidance: false, budget: 8_192 },
   { recorded: "cli-author-v2", structuredGuidance: true, budget: 8_192 },
   { recorded: "cli-author-v3", structuredGuidance: true, budget: 16_384 },
+  { recorded: "cli-author-v4", structuredGuidance: true, budget: 32_768 },
 ])(
-  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v4",
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v5",
   async ({ recorded, structuredGuidance, budget }) => {
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
     const output: string[] = [];
@@ -199,13 +200,16 @@ it.each([
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v4");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v5");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v1");
       expect(systemPrompts).toHaveLength(3);
       expect(systemPrompts[2]).toBe(
-        `${createAuthorAdjudicationPrompt("cli-author-v4", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
+        `${createAuthorAdjudicationPrompt("cli-author-v5", undefined).systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
       );
       expect(systemPrompts[2]).toContain(structuredFieldInstruction);
+      expect(systemPrompts[2]).toContain(
+        "word order or grouping may vary only when every whole-word component",
+      );
       expect(systemPrompts[2]).toContain(
         "maximum generated output for this request is 32768 tokens",
       );

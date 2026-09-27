@@ -31,11 +31,35 @@ export const authorRevisionInstructions =
 const authorGroundingGuideInstructions =
   " The groundingGuide is the exact allowlist for protected factual values: use a protected value only when it appears exactly in the protectedValues for a cited evidenceChunkId. Each protected value used in a substantive claim requires citation of its corresponding evidence chunk(s). Do not use protected values absent from the guide; omit them rather than paraphrase or invent them.";
 
+// Recorded v1-v4 prompts retain their original wording. New runs distinguish
+// exact factual fields from descriptive terms whose components share one source.
+const authorSystemPromptV5 = authorSystemPrompt
+  .replace(
+    "For every substantive claim, the cited evidence chunks collectively must contain each exact protected factual value used in the claim: dates, metrics, employers, multi-word titles, credentials, URLs, emails, and acronyms.",
+    "For every substantive claim, cited evidence must support its factual values. Copy dates, metrics, employers, titles, credentials, URLs, emails, and acronyms exactly from cited evidence; descriptive capitalized multiword terms may vary in word order or grouping only when every whole-word component occurs in one cited chunk and at least two components appear together there.",
+  )
+  .replace(
+    "Omit unsupported protected values rather than paraphrase or invent them.",
+    "Omit unsupported factual values rather than invent them; leave uncertain descriptive meaning to independent critique.",
+  );
+const authorGroundingGuideInstructionsV5 =
+  " The groundingGuide lists source-stated protected values. Copy factual fields exactly and cite the chunk that supports each one. A descriptive capitalized multiword term may use a different order or grouping when every whole-word component occurs in one cited retrievedEvidence chunk and at least two components appear together there, even if the full phrase is absent from the guide. This is lexical support only; never infer a new employer, title, credential, achievement, or technology from the words alone.";
+const authorRevisionInstructionsV5 = authorRevisionInstructions.replace(
+  "Copy dates, titles, employers, and names exactly as the cited evidence states them.",
+  "Copy dates, titles, employers, and structured names exactly as the cited evidence states them; descriptive capitalized multiword terms may vary only when every whole-word component occurs in one cited chunk and at least two components appear together there.",
+);
+
 const claimCoverageInstructions =
   " Cover every factual span of block text with substantive claims using the same contiguous wording. A narrower claim cannot stand in for a broader sentence. Only section labels and explicit missing-data notices may remain outside claims. For substantive_text_uncovered retry feedback, cover the entire supported assertion or remove unsupported prose from the block; do not merely edit the claim list to hide it.";
 
 const structuredFieldInstructions =
   " For heading lines (role, organisation, location, dates), the header contact line, and skills or tool lists, copy each field exactly as it appears in one retrieved evidence chunk. Do not rephrase, abbreviate, translate, reorder words, or reformat dates. Write one substantive claim per field whose text is exactly that field, citing the chunk that contains it. Omit a field that cannot be copied verbatim from evidence rather than inventing or paraphrasing it. Separators between fields such as |, · or commas need no claim.";
+
+const compositionalTerminologyInstructions =
+  " For a descriptive capitalized multiword term, word order or grouping may vary only when every whole-word component appears in one cited retrievedEvidence chunk and at least two components appear together there; the full expression need not appear as one groundingGuide value. This is uncertain lexical support, not proof of meaning: do not invent names or facts, and leave semantic meaning to the independent critic. This does not relax exact-copy requirements for headings, contact fields, skills or tool lists, nor citation and same-employer date-association requirements for factual fields.";
+
+const compositionalTerminologyRevisionInstructions =
+  " For descriptive capitalized multiword terms only, word order or grouping may vary when every whole-word component appears in the same cited chunk and at least two components appear together there; this lexical support does not establish meaning, which remains for independent critique. Preserve exact dates and structured heading, contact, skills and tool-list fields, and keep each factual claim cited to supporting retrieved evidence.";
 
 interface AuthorPromptTemplate {
   /** Version-specific guidance placed after the shared claim-coverage instructions. */
@@ -58,6 +82,10 @@ const authorPromptTemplateVersions = Object.freeze({
   // One claim per structured field lengthens proposals past the v2 cap.
   "cli-author-v3": authorPromptTemplate(structuredFieldInstructions, 16_384),
   "cli-author-v4": authorPromptTemplate(structuredFieldInstructions, 32_768),
+  "cli-author-v5": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}`,
+    32_768,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -67,7 +95,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v4" : "cli-critic-v1";
+  return role === "author" ? "cli-author-v5" : "cli-critic-v1";
 }
 
 /** The template of a known author version; unknown versions fail closed. */
@@ -111,8 +139,15 @@ export function createAuthorAdjudicationPrompt(
   revision: AuthorRevision | undefined = undefined,
 ): AuthorAdjudicationPrompt {
   const { guidance, outputBudget } = versionTemplate(authorPromptTemplateVersion);
-  const shared = `${authorSystemPrompt}${authorOutputBudgetInstructions(outputBudget)}${authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
-  const retry = `${retryFeedback === undefined ? "" : authorRetryInstructions}${revision === undefined ? "" : authorRevisionInstructions}`;
+  const isV5 = authorPromptTemplateVersion === "cli-author-v5";
+  const shared = `${isV5 ? authorSystemPromptV5 : authorSystemPrompt}${authorOutputBudgetInstructions(outputBudget)}${isV5 ? authorGroundingGuideInstructionsV5 : authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
+  const revisionInstructions =
+    revision === undefined
+      ? ""
+      : isV5
+        ? `${authorRevisionInstructionsV5}${compositionalTerminologyRevisionInstructions}`
+        : authorRevisionInstructions;
+  const retry = `${retryFeedback === undefined ? "" : authorRetryInstructions}${revisionInstructions}`;
   const retryInput = {
     ...(retryFeedback === undefined ? {} : { retryFeedback }),
     ...(revision === undefined ? {} : { revision }),
