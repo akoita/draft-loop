@@ -244,8 +244,9 @@ applications.
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
-| Now      | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Current evidence](evaluation/author-model-revalidation.md): a manual revision is candidate-accepted with two acknowledged warnings; the automated reference outcome remains pending. | Validate one frontier Anthropic author and OpenAI critic pair as the first working reference | #563–#565 correct evidence selection and grounding. #569 retains contribution bodies with dated roles within existing evidence limits. #571 versions a larger structured-author ceiling. #573 needs revision after candidate review; ordered fixes cover role contributions (#574), contact evidence (#575), and job-relevant projects (#576). Keep API-key route #515 last. |
-| Next     | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17))                        | Planned                                              | Replace hard-coded model defaults with versioned model profiles and reference and economy tiers | Profile registry, recorded profiles, and user-facing selection (#84) |
+| Now | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
+| Next | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Planned, starts after milestone 16 closes | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | #618 rollup; #619–#622 in dependency order. Domain rules may help, but reliability cannot depend on anticipating every term. |
+| Later | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Planned after generalization | Replace hard-coded defaults with versioned model profiles and reference/economy tiers | Profile registry, recorded profiles and user-facing selection (#84) |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1291,8 +1292,8 @@ author replica, so its earlier failures were real.
    but ended without an accepted draft after coverage rejections and structured-output
    retry exhaustion. Offline replay reproduced the rejections; the final provider
    error had no validator verdict, so the observation is indeterminate.
-2. **Quality, standard frontier pair.** Use the same case with
-   `claude-opus-5-5` and `gpt-6-sol`, under a separate explicit admission. Earlier
+2. **Quality, standard frontier pair.** The same case used
+   `claude-opus-5-5` and `gpt-6-sol` under a separate explicit admission. Earlier
    fixed-rule observations retain their original results: #555 lacks exhaustive
    first-review counts, while candidate review of #562 and #573 confirmed
    omissions needing revision. The full-profile manual revision is
@@ -1309,9 +1310,11 @@ author replica, so its earlier failures were real.
    could not start because repeated artifact evidence exceeded the session's
    input limit. #586 fixes the first draft's narrow proxy-description grounding
    false positive; #587 owns lossless evidence deduplication before another
-   independent review. Captures remain private. The automated reference outcome
-   and workspace-default decision remain pending, and further live requests
-   require a fresh admission.
+   independent review. Captures remain private. The subsequent #601 normal
+   workflow completed and the candidate accepted it with disclosed warnings;
+   [the evidence record](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601)
+   retains its failed automatic readiness score. Workspace defaults remain
+   unchanged, and further live requests require a fresh admission.
 
 Premium models (Fable, GPT-6 Astra) remain later; the API-key route (#515) is
 last.
@@ -1320,8 +1323,8 @@ last.
 remaining findings in number, severity, and substance. Zero is ideal, not a
 required finding count. Preserve acknowledged limitations and the user's
 rationale. Future evaluation admissions must reflect this rule; historical
-fixed-rule observations retain their results. The accepted manual revision does
-not establish the automated reference outcome or authorize export.
+fixed-rule observations retain their results. The later accepted #601 normal
+observation establishes only this bounded case and does not authorize export.
 
 **Direction: automate the user's proven loop,** in three steps:
 
@@ -1338,9 +1341,28 @@ names its issue.
 
 **Exit criterion:** One reference pair is selected, its identities and
 runtime controls are recorded, and a gated observation records a result
-against predeclared rules. A pass admits a gated cohort with that pair.
+against predeclared rules. Candidate acceptance permits a separately gated
+cohort proposal; it authorizes no cohort calls or model-default change.
 
-### Next — Model profiles and tiers
+### Next — Software-engineering generalization
+
+[Milestone 18](https://github.com/akoita/draft-loop/milestone/18) starts after
+the reference-pair milestone closes. Its fixed scope is the
+[#618](https://github.com/akoita/draft-loop/issues/618) rollup and ordered
+children #619–#622: fictional grounding cases and baseline; separation of
+uncertain terminology from hard factual rejection; source-grounded review
+through the existing critic; and a separately admitted reserved-profile
+cohort. One bounded execution issue is admitted at a time.
+
+Domain keywords can support familiar conventions, but reliability must not
+depend on hardcoding every technology, concept or career path in advance. The
+cohort must show that unfamiliar software engineers can use the normal
+author–critic workflow without profile-specific code changes. Candidate
+clarifications and acceptance of disclosed warnings remain normal product
+actions. #515, the optional API-key route experiment, is deferred and requires
+separate billing authorization.
+
+### Later — Model profiles and tiers
 
 Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and
 `gpt-5.6-luna`) and the per-adapter thinking assumptions with **versioned
@@ -1355,7 +1377,7 @@ Runs record the profile next to the prompt version, so a validation claim
 names exactly what it covers. [Issue #585](https://github.com/akoita/draft-loop/issues/585)
 prepares the framework-free profile
 contract and strict schema only; it does not select or change defaults while
-acceptance of the reference pair is pending. The registry and tier presets
+the separate workspace-default decision remains pending. The registry and tier presets
 from #511, followed by user-facing model selection (#84), remain later steps
 with visible cost estimates and diversity warnings. Adding providers beyond
 Anthropic and OpenAI stays in controlled expansion.

@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** The candidate accepts the manually revised full-profile draft with two acknowledged warnings. It has no deterministic or independent critic errors. This establishes acceptance of the revised draft, not an automated first-draft reference pass; full-profile product integration remains pending.
+- **Current status:** The candidate accepts the bounded normal author–critic reference observation with disclosed limitations. The application's automatic readiness score remains false; the result does not validate unfamiliar candidates or change model defaults.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** manual presentation revision · 2026-09-27 (Europe/Paris) · review revision `e37fd067cb75d87d600ef1d8a246dbc5f8806d64`
+- **Latest observation:** #601 normal author–critic workflow · 2026-09-28 (Europe/Paris) · merged input revision `3616960214ac1775e4ea36596e8936bf83f214a2`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -893,3 +893,37 @@ projection still removes local knowledge selection and operator lineage.
 Fictional cross-platform path tests and fake-provider transmissions cover the
 normal author and critic boundary. This addresses the manifest-path guard seen
 in #573 without rewriting that observation or making another provider call.
+
+## Bounded normal reference observation (#601)
+
+A fresh ordinary workflow on the pinned, locally corrected source completed on
+`3616960214ac1775e4ea36596e8936bf83f214a2`. One Anthropic
+`claude-opus-5-5` author call at medium produced a draft; one independent OpenAI
+`gpt-6-sol` critic call at low reviewed it. There were no retries or API-key
+calls. The run used author prompt `cli-author-v4`, critic prompt
+`cli-critic-v1`, a 20-minute limit, one round and the existing 950-word maximum.
+The workflow returned an artifact for candidate review in about 223 seconds.
+
+The artifact has seven sections, 111 evidence-linked claims and 840 body-text
+words. Local validation found no errors, seven duplicate-claim warnings and
+fourteen requirements unmatched by deterministic tokens. The independent critic
+found no errors and one scope warning. The candidate supplied a first-person
+clarification that resolved that warning and accepted the evaluation with the
+remaining local warnings disclosed. The original critic finding and pinned
+run remain unchanged. Candidate materials, draft and detailed findings stay
+private; this record publishes only counts, models, controls and decisions.
+
+Automatic readiness remains **false**: token matching covered four of eighteen
+requirements, below the existing relevance threshold. Other rubric thresholds
+passed, and the one-round workflow returned its best available draft. Candidate
+acceptance is recorded as a separate decision; the automatic score is not
+relabeled as a pass. The observation demonstrates the authorized reference
+pair on this one case. It does not establish reliability for unfamiliar
+engineers, approve or export the CV, select workspace defaults or authorize a
+release. Earlier failed and mixed-path observations keep their original results.
+
+Software-engineering generalization is the next planned milestone, with
+[#618](https://github.com/akoita/draft-loop/issues/618) and ordered children
+issues #619–#622. Domain rules may help, but product reliability cannot depend on
+anticipating every keyword or career scenario. The separately billed API route
+experiment #515 remains open and deferred outside this milestone.
