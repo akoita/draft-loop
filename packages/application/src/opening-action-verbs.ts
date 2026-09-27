@@ -10,6 +10,7 @@ export const narrowOpeningActionVerbs: ReadonlySet<string> = new Set([
   "Refactored",
   "Integrated",
   "Tested",
+  "Evolved",
 ]);
 
 /**

@@ -129,6 +129,15 @@ describe("full-context grounding boundaries", () => {
     expect(extractProtectedValues(text)).toContain("FLUXDSL");
     expect(extractProtectedValues(text)).not.toContain("Built FLUXDSL");
     expect(codes(proposal("Experience", "experience", text, text, ["tool"]), evidence)).toEqual([]);
+
+    const evolved = "Evolved WATCHSYS, the in-house supervision tool built with Java.";
+    expect(extractProtectedValues(evolved)).toContain("WATCHSYS");
+    expect(extractProtectedValues(evolved)).not.toContain("Evolved WATCHSYS");
+    expect(
+      codes(proposal("Experience", "experience", evolved, evolved, ["evolved-tool"]), [
+        chunk("evolved-tool", evolved),
+      ]),
+    ).toEqual([]);
   });
 
   it("keeps unsupported acronyms, employers, titles, and linking predicates protected", () => {
@@ -146,6 +155,20 @@ describe("full-context grounding boundaries", () => {
       extractProtectedValues("Built Staff Engineer, a model-driven engineering tool"),
     ).toContain("Built Staff Engineer");
     expect(extractProtectedValues("Built FLUXDSL is an employer")).toContain("Built FLUXDSL");
+
+    const evolved = "Evolved WATCHSYS, the in-house supervision tool built with Java.";
+    expect(
+      codes(proposal("Experience", "experience", evolved, evolved, ["tool-without-name"]), [
+        chunk("tool-without-name", "Evolved the in-house supervision tool built with Java."),
+      ]),
+    ).toContain("factual_invariant_violation");
+    expect(
+      extractProtectedValues("Evolved Northwind Freight, the in-house supervision tool"),
+    ).toContain("Evolved Northwind Freight");
+    expect(
+      extractProtectedValues("Evolved Staff Engineer, the in-house supervision tool"),
+    ).toContain("Evolved Staff Engineer");
+    expect(extractProtectedValues("Evolved WATCHSYS is an employer")).toContain("Evolved WATCHSYS");
   });
 
   it("builds an artifact with a cited phone, software appositive, and configured navigation note", () => {

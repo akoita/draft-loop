@@ -662,3 +662,36 @@ the original capture hash is unchanged. This replay makes no provider calls and 
 the artifact. Fictional regression cases cover the accepted shapes and unsupported
 phone, acronym and section-reference variants. A local validator acceptance is
 not a critic review or a reference-quality pass; that evaluation remains pending.
+
+## Corrected-profile recheck at capped effort (#564)
+
+**Observed:** 2026-09-27 (Europe/Paris) · **Base revision:** `fdff153992957ef0585923b477a4af7f269a42fe`
+
+A separately admitted critic-only follow-up completed in 12,270 ms with
+GPT-6 Sol at the application's configured low effort. It reported one factual
+error and three warnings; deterministic validation also reported the word limit.
+Local investigation confirmed a stale source attribution contradicted by later
+candidate corrections. A private next-run copy corrected that stale bullet;
+historical sources, proposals and captures remained unchanged.
+
+The candidate then capped DraftLoop reasoning at medium and authorized the
+prepared revision. The new input retained complete normalized profile text,
+corrected attribution and explicit instructions to omit unsettled timing,
+preserve role contributions and meet 950 words. Both authentication probes
+passed. The author used explicit medium effort with the recorded 32,768-token
+ceiling variant; the critic remained low. The admission allowed two author
+attempts and one critic call within twenty minutes including preflight.
+
+Both author attempts returned structured content but were rejected for the same
+opening action and definite software-appositive span, despite direct support in
+its cited source. The attempts took 251,751 and 241,092 ms; accounted elapsed
+time was 493,348 ms. No critic call followed. The bounded local grammar fix adds
+one action verb and closed software qualifiers; fictional fixtures preserve
+absent-name, employer, title and linking-predicate rejection.
+
+Unchanged private replay now constructs nine sections and 150 normalized claims.
+The historical capture is unchanged. Deterministic validation still reports
+`max-words-exceeded`, so this is not a quality pass or a completed author–critic
+evaluation. A targeted shortening input is prepared locally; the two-author
+admission does not permit a third request. Nothing was approved, exported or
+published.

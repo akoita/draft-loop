@@ -17,7 +17,7 @@ const singleTechnologyNamePattern =
 const softwareObjectPattern =
   /^[ \t]+(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/u;
 const softwareObjectAppositivePattern =
-  /^[ \t]*,[ \t]+(?:a|an)[ \t]+(?:(?:model-driven|engineering)[ \t]+)*(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/iu;
+  /^[ \t]*,[ \t]+(?:a|an|the)[ \t]+(?:(?:model-driven|engineering|in-house|supervision)[ \t]+)*(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)(?![\p{L}\p{N}])/iu;
 
 const multiWordNamePattern = /\b\p{Lu}[\p{L}'’-]+(?:\s+\p{Lu}[\p{L}'’-]+)+\b/gu;
 
