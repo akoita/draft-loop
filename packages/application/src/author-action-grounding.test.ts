@@ -37,6 +37,24 @@ function proposal(text: string, cited = true) {
   });
 }
 
+function proposalWithEvidence(text: string, evidenceChunkIds: readonly string[]) {
+  return authorArtifactProposalSchema.parse({
+    sections: [
+      {
+        title: "Experience",
+        kind: "experience",
+        blocks: [
+          {
+            type: "bullet",
+            text,
+            claims: [{ text, substantive: true, evidenceChunkIds }],
+          },
+        ],
+      },
+    ],
+  });
+}
+
 describe("opening action-verb grounding", () => {
   it.each([
     ["Built", "TypeScript"],
@@ -59,6 +77,48 @@ describe("opening action-verb grounding", () => {
       "AWS",
       "2024",
     ]);
+  });
+
+  it("splits Used only for a leading supported pair of technical names and an action", () => {
+    const text = "Used JUnit and AssertJ to validate scenarios";
+    const junitEvidence = { ...source("JUnit"), id: "junit" };
+    const assertjEvidence = { ...source("AssertJ"), id: "assertj" };
+    const evidence = [junitEvidence, assertjEvidence];
+    const input = proposalWithEvidence(
+      text,
+      evidence.map(({ id }) => id),
+    );
+
+    expect(extractProtectedValues(text)).toEqual(expect.arrayContaining(["JUnit", "AssertJ"]));
+    expect(extractProtectedValues(text)).not.toContain("Used JUnit");
+    expect(completeCvProposalIssues(input, evidence)).toEqual([]);
+    expect(
+      completeCvProposalIssues(input, [{ ...source("JUnitPro"), id: "junit" }, assertjEvidence]),
+    ).toContainEqual(expect.objectContaining({ code: "factual_invariant_violation" }));
+    expect(completeCvProposalIssues(input, [junitEvidence])).toContainEqual(
+      expect.objectContaining({ code: "factual_invariant_violation" }),
+    );
+
+    expect(extractProtectedValues("Used Acme and AssertJ to validate scenarios")).toContain(
+      "Used Acme",
+    );
+    expect(extractProtectedValues("Used Senior and AssertJ to validate scenarios")).toContain(
+      "Used Senior",
+    );
+    expect(extractProtectedValues("Used JUnit or AssertJ to validate scenarios")).toContain(
+      "Used JUnit",
+    );
+  });
+
+  it("requires single TitleCase and mixed names to be whole evidence tokens", () => {
+    for (const name of ["Keycloak", "JUnit", "AssertJ"]) {
+      expect(
+        completeCvProposalIssues(proposal(`Used ${name} tools`), [source(`${name}Pro tools`)]),
+      ).toContainEqual(expect.objectContaining({ code: "factual_invariant_violation" }));
+      expect(
+        completeCvProposalIssues(proposal(`Used ${name} tools`), [source(`${name} tools`)]),
+      ).toEqual([]);
+    }
   });
 
   it.each([

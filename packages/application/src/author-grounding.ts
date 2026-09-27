@@ -16,6 +16,7 @@ const protectedNumberPattern = /(?<![\p{L}\p{N}])\d+(?:[.,]\d+)*(?:%|[kmb])?(?![
 
 // Mixed-case names must also appear in source guides when they stand alone.
 const mixedCaseNamePattern = /\b\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*\b/gu;
+const singleTitleCaseNamePattern = /^\p{Lu}[\p{L}\p{N}]*\p{Ll}[\p{L}\p{N}]*$/u;
 const singleTechnologyNamePattern =
   /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
 const softwareObjectPattern =
@@ -61,7 +62,7 @@ export function supportsProtectedValue(evidence: string, protectedValue: string)
       supportsProtectedValueParaphrase(source, value)
     );
   }
-  if (/^\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*$/u.test(protectedValue)) {
+  if (singleTitleCaseNamePattern.test(protectedValue)) {
     return (source.match(/[\p{L}\p{N}]+/gu) ?? []).some((token) => token === value);
   }
   if (/\s/u.test(value)) {

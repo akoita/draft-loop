@@ -80,6 +80,11 @@ Markdown strong emphasis around individual words. Matching preserves word
 identity and order; it does not join separate lines or ignore arbitrary
 punctuation, escaped markers, or code literals.
 
+Closed software-phrase contexts distinguish an opening transition, API
+authentication, and an opening use of two technical tools from compound names.
+The resulting product and tool names still require whole-word source support;
+employer, title, linking-word, numeric and date checks remain in force.
+
 ## Workflow state machine
 
 Each transition emits an auditable event and retains relevant inputs, outputs,
