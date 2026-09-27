@@ -1,0 +1,103 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "software-grounding-generalization",
+  "boundary": "replayRejectedAuthorCapture",
+  "generatedAt": "2026-09-28",
+  "observations": [
+    {
+      "scenarioId": "unfamiliar-adapter-paraphrase",
+      "claimId": "supported-sequence-paraphrase",
+      "status": "rejected",
+      "diagnosticCodes": ["factual_invariant_violation"]
+    },
+    {
+      "scenarioId": "unfamiliar-adapter-paraphrase",
+      "claimId": "unsupported-language",
+      "status": "rejected",
+      "diagnosticCodes": ["factual_invariant_violation"]
+    },
+    {
+      "scenarioId": "consultant-client-attribution",
+      "claimId": "supported-consultant-attribution",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "consultant-client-attribution",
+      "claimId": "client-misreported-as-employer",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "study-vs-implementation",
+      "claimId": "supported-migration-study",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "study-vs-implementation",
+      "claimId": "unsupported-migration-delivery",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "shared-contribution-vs-ownership",
+      "claimId": "supported-shared-contribution",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "shared-contribution-vs-ownership",
+      "claimId": "lead-work-attributed-to-candidate",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "staging-research-vs-production",
+      "claimId": "supported-staging-description",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "staging-research-vs-production",
+      "claimId": "unsupported-production-deployment",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "career-gap-preservation",
+      "claimId": "supported-separate-periods",
+      "status": "accepted",
+      "diagnosticCodes": []
+    },
+    {
+      "scenarioId": "career-gap-preservation",
+      "claimId": "unsupported-continuous-period",
+      "status": "rejected",
+      "diagnosticCodes": ["factual_invariant_violation"]
+    },
+    {
+      "scenarioId": "course-vs-certification",
+      "claimId": "supported-course-and-attendance-certificate",
+      "status": "rejected",
+      "diagnosticCodes": ["factual_invariant_violation"]
+    },
+    {
+      "scenarioId": "course-vs-certification",
+      "claimId": "unsupported-professional-certification",
+      "status": "accepted",
+      "diagnosticCodes": []
+    }
+  ],
+  "aggregate": {
+    "claimCount": 14,
+    "supportedFalseRejections": 2,
+    "semanticClaimsAdmittedNeedingCritique": 5,
+    "deterministicContradictionsAccepted": 0
+  },
+  "limitations": [
+    "This is the current deterministic local-validator baseline for fictional examples, not a product pass or generalization claim.",
+    "Semantic expectations are authored source judgments; accepted contradictory cases still need independent review.",
+    "No model or provider was called."
+  ]
+}
