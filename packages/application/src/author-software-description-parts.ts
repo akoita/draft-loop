@@ -1,3 +1,4 @@
+import { protectedEmployerOpening } from "./author-employer-opening.js";
 import {
   excludedTitleWords,
   linkingWords,
@@ -28,12 +29,67 @@ const precedingGeneratedLanguageConjunctionPattern = new RegExp(
 );
 const deliveredMvpApiPattern = /\bdelivered[ \t]+as[ \t]+an[ \t]+$/iu;
 const replacingHaskellDslPattern = /\breplacing[ \t]+an[ \t]+unmaintainable[ \t]+$/iu;
+const replacingHaskellBasedDslObjectPattern = /^[ \t]+tool[ \t]*;/iu;
+const modelDrivenEngineeringToolPattern =
+  /^[ \t]*,[ \t]+a[ \t]+Java[ \t]+(?<qualifier>Model-Driven[ \t]+Engineering)[ \t]+tool(?![\p{L}\p{N}])/iu;
+const modelDrivenEngineeringNamePattern =
+  /^Java[ \t]+(?<qualifier>Model-Driven[ \t]+Engineering)$/u;
+const modelDrivenEngineeringProductPrefixPattern =
+  /^Built[ \t]+\p{Lu}[\p{L}\p{N}]*,[ \t]+a[ \t]+$/u;
 const lowercaseSoftwareDescriptorWordPattern = /\p{Ll}[\p{Ll}\p{N}]*(?:-[\p{Ll}][\p{Ll}\p{N}]*)*/u;
 const productDefinitionMvpApiPattern =
   /,[ \t]+(?:a|an|the)[ \t]+(?<descriptor>\p{Ll}[\p{Ll}\p{N}]*(?:-[\p{Ll}][\p{Ll}\p{N}]*)*(?:[ \t]+\p{Ll}[\p{Ll}\p{N}]*(?:-[\p{Ll}][\p{Ll}\p{N}]*)*)*)[ \t]+$/u;
 const solidityProtocolCoordinationPattern = /:[ \t]*Solidity[ \t]+and[ \t]*$/u;
 const solidityProtocolObjectPattern = /^[ \t]+protocol(?![\p{L}\p{N}])/u;
 const solidityProtocolEmployerPattern = /^[ \t]+protocol[ \t]+(?:company|firm|employer)\b/iu;
+
+function hasUnsafeHaskellDslReplacementContext(preceding: string): boolean {
+  const comma = preceding.lastIndexOf(",");
+  const earlierContext = preceding.slice(0, comma).trim();
+  const replacementClause = preceding.slice(comma + 1);
+  return (
+    hasUnsafeStatementContext(replacementClause) ||
+    /^(?:at|for|employed[ \t]+by|joined|worked[ \t]+(?:at|for))[ \t]+\p{Lu}[\p{L}\p{N}]*$/iu.test(
+      earlierContext,
+    ) ||
+    [...excludedTitleWords].some((word) => new RegExp(`^${word}\\b`, "u").test(earlierContext))
+  );
+}
+
+function replacingHaskellBasedDslParts(
+  text: string,
+  matched: string,
+  start: number,
+): readonly ProtectedSoftwareDescriptionPart[] {
+  const preceding = text.slice(0, start);
+  const following = text.slice(start + matched.length);
+  if (
+    matched !== "Haskell-based DSL" ||
+    text.slice(start, start + matched.length) !== matched ||
+    !replacingHaskellDslPattern.test(preceding) ||
+    !replacingHaskellBasedDslObjectPattern.test(following) ||
+    hasUnsafeHaskellDslReplacementContext(preceding)
+  ) {
+    return [];
+  }
+
+  return [
+    { value: "Haskell", start: start + matched.indexOf("Haskell") },
+    { value: "DSL", start: start + matched.lastIndexOf("DSL") },
+  ];
+}
+
+/** Whether a hyphenated word is only the modifier in the exact checked DSL phrase. */
+export function isProtectedHaskellBasedDslModifier(
+  text: string,
+  word: string,
+  start: number,
+): boolean {
+  return (
+    word === "Haskell-based" &&
+    replacingHaskellBasedDslParts(text, "Haskell-based DSL", start).length === 2
+  );
+}
 
 export const softwareObjectAppositivePattern = new RegExp(
   `^[ \\t]*,[ \\t]+(?:a|an|the)[ \\t]+${appositiveQualifiersPattern}${softwareNounPattern}(?![\\p{L}\\p{N}])`,
@@ -143,12 +199,36 @@ export function protectedSoftwareDescriptionParts(
   matched: string,
   start: number,
 ): readonly ProtectedSoftwareDescriptionPart[] {
+  const employerOpening = protectedEmployerOpening(text, matched, start);
+  if (employerOpening !== undefined) return [employerOpening];
+
   const words = matched.split(/\s+/u);
   const leadingThen = leadingThenProductPart(text, matched, words, start);
   if (leadingThen.length > 0) return leadingThen;
 
   const following = text.slice(start + matched.length);
   const preceding = text.slice(0, start);
+
+  const modelDrivenEngineeringName = modelDrivenEngineeringNamePattern.exec(matched);
+  const modelDrivenEngineeringQualifier = modelDrivenEngineeringName?.groups?.qualifier;
+  if (
+    modelDrivenEngineeringQualifier !== undefined &&
+    modelDrivenEngineeringProductPrefixPattern.test(preceding) &&
+    /^[ \t]+tool(?![\p{L}\p{N}])/u.test(following)
+  ) {
+    return [
+      {
+        value: modelDrivenEngineeringQualifier,
+        start: start + matched.indexOf(modelDrivenEngineeringQualifier),
+      },
+    ];
+  }
+
+  const haskellDslParts = replacingHaskellBasedDslParts(text, matched, start);
+  if (haskellDslParts.length > 0) return haskellDslParts;
+
+  const exactModelDrivenTool = modelDrivenEngineeringToolPattern.exec(following);
+  const modelDrivenEngineering = exactModelDrivenTool?.groups?.qualifier;
   const precedingWord = preceding
     .trimEnd()
     .split(/[ \t]+/u)
@@ -274,12 +354,22 @@ export function protectedSoftwareDescriptionParts(
   )
     return [];
   const languageMatch = softwareObjectLanguageAppositivePattern.exec(following);
-  if (languageMatch?.[1] === undefined) return [];
+  const language =
+    languageMatch?.[1] ?? (modelDrivenEngineering === undefined ? undefined : "Java");
+  if (language === undefined) return [];
   const articleEnd = /^[ \t]*,[ \t]+(?:a|an|the)[ \t]+/iu.exec(following)?.[0].length;
   if (articleEnd === undefined) return [];
   const languageStart = start + matched.length + articleEnd;
-  return [
+  const protectedParts: ProtectedSoftwareDescriptionPart[] = [
     { value: name, start: start + matched.indexOf(name) },
-    { value: languageMatch[1], start: languageStart },
+    { value: language, start: languageStart },
   ];
+  if (modelDrivenEngineering !== undefined) {
+    protectedParts.push({
+      value: modelDrivenEngineering,
+      start:
+        start + matched.length + (exactModelDrivenTool?.[0].indexOf(modelDrivenEngineering) ?? 0),
+    });
+  }
+  return protectedParts;
 }

@@ -203,6 +203,14 @@ acronym must still be supported by the cited evidence. Employer, title and ambig
 name contexts retain full-name protection; this does not add fuzzy matching or
 verify arbitrary accomplishments.
 
+The same closed grammar recognizes `Built <name>, a Java Model-Driven
+Engineering tool` and `replacing an unmaintainable Haskell-based DSL tool;` as
+separate product, language, or descriptor values. A sentence-opening
+`At <Employer>, <listed lowercase action> ...` with a single capitalized
+employer token protects that name only when the exact structure is present.
+Each resulting identity still needs its own evidence; these forms do not
+generalize title-case splitting or employer inference.
+
 ### Local job-document requirement units
 
 When a run does not select a reviewed opportunity brief, the application
