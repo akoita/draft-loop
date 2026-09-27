@@ -51,13 +51,24 @@ Before transmission, author and critic share a projection of the local context.
 Source-manifest paths become opaque ordinal labels such as `evidence-source-1`;
 filenames, filesystem locations and source URLs are not used as those labels.
 Source IDs, checksums, other manifest metadata and candidate fact text remain
-unchanged. Artifact evidence references also receive logical source-path labels
+unchanged.
+
+Artifact evidence references also receive logical source-path labels
 before critique or author revision; matching manifest references reuse its labels,
 while other references use opaque labels in first-occurrence order. Excerpts,
 locators and checksums stay intact. Stored artifacts retain their original
 provenance. Local knowledge selection and operator lineage are omitted. The
 projection creates new manifest entries and does not rewrite the stored snapshot
 or its provenance. The existing user-controlled transmission policy still applies.
+
+Provider-facing artifacts use `evidenceEncoding: reference-table-v1`. Each
+claim's ordered `evidenceReferenceIds` resolves to a complete entry in that
+artifact's `evidenceReferences` table. Identical references appear once; distinct
+checksums, locators and excerpts remain distinct, and every full excerpt is
+retained. Both the critic's artifact and the author's prior draft use this
+encoding after path projection. Table IDs are separate from retrieved-evidence
+chunk IDs used in author proposals. Stored artifacts keep their original
+references, and model instructions explain how to resolve the table.
 
 ## Workflow state machine
 

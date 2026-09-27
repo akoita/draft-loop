@@ -31,6 +31,7 @@ import {
   opportunityBriefNotFoundErrorMessage,
   opportunityBriefVersionStaleErrorMessage,
 } from "./opportunity-persistence.js";
+import { evidenceReferenceTableInstructions } from "./provider-artifact-input.js";
 
 interface JsonRecord {
   readonly [key: string]: unknown;
@@ -640,6 +641,8 @@ describe("local application driver", () => {
     const root = await providerWorkspace("draft-loop-author-retry-feedback-");
     const authorInputs: JsonRecord[] = [];
     const criticInputs: JsonRecord[] = [];
+    const authorSystemPrompts: string[] = [];
+    const criticSystemPrompts: string[] = [];
     let authorAttempts = 0;
     const localFetch = vi.fn(async (_url: string, init: RequestInit) => {
       const body = JSON.parse(String(init.body)) as {
@@ -648,12 +651,14 @@ describe("local application driver", () => {
       };
       const serialized = body.messages[1]?.content ?? "";
       if (body.model === "retry-author") {
+        authorSystemPrompts.push(body.messages[0]?.content ?? "");
         authorInputs.push(JSON.parse(serialized) as JsonRecord);
         authorAttempts += 1;
         return authorAttempts === 1
           ? localCompletion({}, "invalid-author-request-id")
           : localCompletion(authorProposal(evidenceChunkId(serialized)), "valid-author");
       }
+      criticSystemPrompts.push(body.messages[0]?.content ?? "");
       criticInputs.push(JSON.parse(serialized) as JsonRecord);
       return localCompletion({ findings: [] }, "critic");
     });
@@ -708,6 +713,24 @@ describe("local application driver", () => {
       );
       expect(criticInputs).toHaveLength(1);
       expect(criticInputs[0]).not.toHaveProperty("retryFeedback");
+      for (const systemPrompt of [...authorSystemPrompts, ...criticSystemPrompts]) {
+        expect(systemPrompt).toContain(evidenceReferenceTableInstructions);
+      }
+      const criticArtifact = criticInputs[0]?.artifact as JsonRecord | undefined;
+      expect(criticArtifact).toMatchObject({ evidenceEncoding: "reference-table-v1" });
+      expect(criticArtifact).toHaveProperty("evidenceReferences");
+      const criticClaims = criticArtifact?.claims as readonly JsonRecord[] | undefined;
+      expect(criticClaims?.[0]).toHaveProperty("evidenceReferenceIds");
+      expect(criticClaims?.[0]).not.toHaveProperty("evidence");
+      const referenceIds = criticClaims?.[0]?.evidenceReferenceIds as readonly string[] | undefined;
+      const referenceTable = criticArtifact?.evidenceReferences as JsonRecord | undefined;
+      expect(referenceIds?.length).toBeGreaterThan(0);
+      for (const referenceId of referenceIds ?? []) {
+        expect(referenceTable?.[referenceId]).toMatchObject({
+          sourcePath: "evidence-source-1",
+          excerpt: expect.any(String),
+        });
+      }
       for (const input of [...authorInputs, ...criticInputs]) {
         const providerContext = input.context as JsonRecord | undefined;
         const evidenceManifest = providerContext?.evidenceManifest as

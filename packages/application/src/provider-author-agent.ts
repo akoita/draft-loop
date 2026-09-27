@@ -13,7 +13,10 @@ import {
   takeAuthorRevision,
 } from "./author-revision-memory.js";
 import { authorRevisionProposal, buildAuthorRevisionReport } from "./author-revision-report.js";
-import { modelFacingArtifact } from "./provider-context.js";
+import {
+  evidenceReferenceTableInstructions,
+  modelFacingArtifactWithEvidenceTable,
+} from "./provider-artifact-input.js";
 import { buildAuthorArtifactWithCapture } from "./rejected-author-capture.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution } from "./response-execution.js";
@@ -78,7 +81,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,
         model: context.modelConfiguration.author,
-        systemPrompt: authorPrompt.systemPrompt,
+        systemPrompt: `${authorPrompt.systemPrompt}\n\n${evidenceReferenceTableInstructions}`,
         input: JSON.parse(
           JSON.stringify({
             executionId,
@@ -88,7 +91,9 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
             retrievedEvidence,
             achievementPlan,
             currentArtifact:
-              currentArtifact === null ? null : modelFacingArtifact(currentArtifact, context),
+              currentArtifact === null
+                ? null
+                : modelFacingArtifactWithEvidenceTable(currentArtifact, context),
             findings,
             ...authorPrompt.providerInput,
           }),
