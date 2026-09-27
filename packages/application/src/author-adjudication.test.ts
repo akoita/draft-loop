@@ -16,7 +16,7 @@ import {
 import type { AuthorGroundingGuideEntry } from "./author-grounding.js";
 
 const authorVersion = promptTemplateVersion("author");
-const authorOutputBudget = { maxOutputTokens: 16_384 };
+const authorOutputBudget = { maxOutputTokens: 32_768 };
 
 function pendingAdjudication(): NonNullable<AuthorRequest["pendingAdjudication"]> {
   const report = independentReadinessReportSchema.parse({
@@ -243,8 +243,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v3 for new author runs and keeps the critic on v1", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v3");
+  it("records v4 for new author runs and keeps the critic on v1", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v4");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v1");
   });
 
@@ -333,7 +333,32 @@ describe("author prompt template versions", () => {
     }
   });
 
-  it.each(["cli-author-v2", "cli-author-v3"])(
+  it("states and sends the 32,768-token budget for v4 and differs from v3 only there", () => {
+    const feedback = retryFeedback();
+    const carrier = pendingAdjudication();
+    for (const [pending, retry] of [
+      [undefined, undefined],
+      [undefined, feedback],
+      [carrier, undefined],
+      [carrier, feedback],
+    ] as const) {
+      const v3 = createAuthorAdjudicationPrompt("cli-author-v3", pending, retry);
+      const v4 = createAuthorAdjudicationPrompt("cli-author-v4", pending, retry);
+      expect(v4.providerInput.outputBudget).toEqual({ maxOutputTokens: 32_768 });
+      expect(v4.systemPrompt).toContain(
+        "maximum generated output for this request is 32768 tokens",
+      );
+      expect(v4.systemPrompt).not.toContain("16384");
+      expect(v4.systemPrompt).toBe(
+        v3.systemPrompt.replace(
+          "maximum generated output for this request is 16384 tokens",
+          "maximum generated output for this request is 32768 tokens",
+        ),
+      );
+    }
+  });
+
+  it.each(["cli-author-v2", "cli-author-v3", "cli-author-v4"])(
     "adds structured-field guidance to %s after claim coverage and before revision and retry text",
     (version) => {
       const feedback = retryFeedback();

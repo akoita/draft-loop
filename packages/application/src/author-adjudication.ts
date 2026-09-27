@@ -57,6 +57,7 @@ const authorPromptTemplateVersions = Object.freeze({
   "cli-author-v2": authorPromptTemplate(structuredFieldInstructions, 8_192),
   // One claim per structured field lengthens proposals past the v2 cap.
   "cli-author-v3": authorPromptTemplate(structuredFieldInstructions, 16_384),
+  "cli-author-v4": authorPromptTemplate(structuredFieldInstructions, 32_768),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -66,7 +67,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v3" : "cli-critic-v1";
+  return role === "author" ? "cli-author-v4" : "cli-critic-v1";
 }
 
 /** The template of a known author version; unknown versions fail closed. */

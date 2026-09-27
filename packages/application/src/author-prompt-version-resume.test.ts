@@ -11,8 +11,8 @@ import { expect, it, vi } from "vitest";
 import { createAuthorAdjudicationPrompt } from "./author-adjudication.js";
 import { createLocalApplicationDriver } from "./local.js";
 
-// Lets a test record a run exactly as an older build did (one that predates
-// cli-author-v2 or cli-author-v3), then resume it with the current build.
+// Lets a test record a run exactly as an older build did, then resume it with
+// the current build.
 const recordedAuthorVersion = vi.hoisted(() => ({ value: undefined as string | undefined }));
 
 vi.mock("./author-adjudication.js", async (importOriginal) => {
@@ -41,11 +41,12 @@ async function contextModels(root: string, contextSnapshotId: string) {
 }
 
 it.each([
-  { recorded: "cli-author-v1", structuredGuidance: false },
-  { recorded: "cli-author-v2", structuredGuidance: true },
+  { recorded: "cli-author-v1", structuredGuidance: false, budget: 8_192 },
+  { recorded: "cli-author-v2", structuredGuidance: true, budget: 8_192 },
+  { recorded: "cli-author-v3", structuredGuidance: true, budget: 16_384 },
 ])(
-  "resumes a $recorded run with its prompt and 8,192-token budget while new runs record cli-author-v3",
-  async ({ recorded, structuredGuidance }) => {
+  "resumes a $recorded run with its prompt and $budget-token budget while new runs record cli-author-v4",
+  async ({ recorded, structuredGuidance, budget }) => {
     const root = await mkdtemp(join(tmpdir(), "author-prompt-version-"));
     const output: string[] = [];
     const io = { write: (line: string) => void output.push(line) };
@@ -182,27 +183,29 @@ it.each([
       expect(systemPrompts[1]).toContain("This is an adjudicated revision.");
       for (const systemPrompt of systemPrompts) {
         expect(systemPrompt.includes(structuredFieldInstruction)).toBe(structuredGuidance);
-        expect(systemPrompt).toContain("maximum generated output for this request is 8192 tokens");
+        expect(systemPrompt).toContain(
+          `maximum generated output for this request is ${budget} tokens`,
+        );
       }
       expect(budgets).toEqual([
-        { env: "8192", input: { maxOutputTokens: 8_192 } },
-        { env: "8192", input: { maxOutputTokens: 8_192 } },
+        { env: String(budget), input: { maxOutputTokens: budget } },
+        { env: String(budget), input: { maxOutputTokens: budget } },
       ]);
 
       const fresh = await driver.start({ root, allowProviderData: true }, io);
       expect(fresh.state, JSON.stringify(fresh.lastError)).toBe("awaiting-approval");
       const current = await contextModels(root, fresh.contextSnapshotId);
-      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v3");
+      expect(current.modelConfiguration.author.promptTemplateVersion).toBe("cli-author-v4");
       expect(current.modelConfiguration.critic.promptTemplateVersion).toBe("cli-critic-v1");
       expect(systemPrompts).toHaveLength(3);
       expect(systemPrompts[2]).toBe(
-        createAuthorAdjudicationPrompt("cli-author-v3", undefined).systemPrompt,
+        createAuthorAdjudicationPrompt("cli-author-v4", undefined).systemPrompt,
       );
       expect(systemPrompts[2]).toContain(structuredFieldInstruction);
       expect(systemPrompts[2]).toContain(
-        "maximum generated output for this request is 16384 tokens",
+        "maximum generated output for this request is 32768 tokens",
       );
-      expect(budgets[2]).toEqual({ env: "16384", input: { maxOutputTokens: 16_384 } });
+      expect(budgets[2]).toEqual({ env: "32768", input: { maxOutputTokens: 32_768 } });
     } finally {
       await rm(root, { recursive: true, force: true });
     }

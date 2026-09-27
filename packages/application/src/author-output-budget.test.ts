@@ -2,19 +2,127 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import type { ContextSnapshot } from "@draft-loop/domain";
+import type { ContextSnapshot, ModelSelection } from "@draft-loop/domain";
 import {
   buildApplicationReadinessStoppingDecision,
   runFailureStages,
 } from "@draft-loop/orchestrator";
-import { providerFailureStages, type UserSessionProcessRunner } from "@draft-loop/providers";
+import {
+  AnthropicClaudeUserSessionAdapter,
+  type JsonObject,
+  providerFailureStages,
+  type UserSessionProcessRunner,
+} from "@draft-loop/providers";
+import { authorArtifactProposalJsonSchemaForEvidence } from "@draft-loop/schemas";
 import { openSqliteStorage } from "@draft-loop/storage";
 import { expect, it, vi } from "vitest";
-
+import { createAuthorAdjudicationPrompt, promptTemplateVersion } from "./author-adjudication.js";
 import { createLocalApplicationDriver } from "./local.js";
 
 it("keeps provider and orchestrator failure stages identical", () => {
   expect(providerFailureStages).toEqual(runFailureStages);
+});
+
+it("classifies Claude's structured-output cap exhaustion and accepts the next separate request", async () => {
+  const maxOutputTokens = 32_768;
+  const claimText = "Built local-first TypeScript tools.";
+  const evidenceId = "resume-evidence";
+  const authorPrompt = createAuthorAdjudicationPrompt(promptTemplateVersion("author"), undefined);
+  const model: ModelSelection = {
+    company: "anthropic",
+    modelId: "claude-exact",
+    role: "author",
+    promptTemplateVersion: promptTemplateVersion("author"),
+  };
+  const request = {
+    contextSnapshotId: "context-v4-budget",
+    model,
+    systemPrompt: authorPrompt.systemPrompt,
+    input: JSON.parse(
+      JSON.stringify({
+        retrievedEvidence: [{ id: evidenceId, text: claimText }],
+        ...authorPrompt.providerInput,
+      }),
+    ) as JsonObject,
+    outputSchema: authorArtifactProposalJsonSchemaForEvidence([
+      evidenceId,
+    ]) as unknown as JsonObject,
+    outputName: "author_artifact_proposal",
+    maxOutputTokens: authorPrompt.providerInput.outputBudget.maxOutputTokens,
+    dataPolicy: {
+      allowTransmission: true,
+      allowedCompanies: ["anthropic", "openai"],
+      sensitiveData: false,
+      sensitiveDataAcknowledged: false,
+    },
+  };
+  expect(request.maxOutputTokens).toBe(maxOutputTokens);
+  const proposal = {
+    sections: [
+      {
+        title: "Summary",
+        kind: "summary",
+        blocks: [
+          {
+            type: "paragraph",
+            text: claimText,
+            claims: [{ text: claimText, substantive: true, evidenceChunkIds: [evidenceId] }],
+          },
+        ],
+      },
+    ],
+  };
+  let callCount = 0;
+  const runner: UserSessionProcessRunner = vi.fn(async (_command, _args, options) => {
+    callCount += 1;
+    expect(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe(String(maxOutputTokens));
+    expect(JSON.parse(options.stdin)).toMatchObject({ outputBudget: { maxOutputTokens } });
+    if (callCount === 1) {
+      return {
+        exitCode: 1,
+        stderr: "",
+        stdout: JSON.stringify({
+          type: "result",
+          subtype: "error_max_structured_output_retries",
+          is_error: true,
+          session_id: "claude-cap-exhausted",
+          terminal_reason: "structured_output_retry_exhausted",
+          stop_reason: "max_tokens",
+          usage: { input_tokens: 100, output_tokens: maxOutputTokens },
+          structured_output: proposal,
+        }),
+      };
+    }
+    return {
+      exitCode: 0,
+      stderr: "",
+      stdout: JSON.stringify({
+        type: "result",
+        subtype: "success",
+        is_error: false,
+        session_id: "claude-next-request",
+        usage: { input_tokens: 100, output_tokens: maxOutputTokens },
+        structured_output: proposal,
+      }),
+    };
+  });
+  const adapter = new AnthropicClaudeUserSessionAdapter({
+    configuredModel: model,
+    runner,
+  });
+
+  await expect(adapter.execute(request)).rejects.toMatchObject({
+    code: "invalid-response",
+    retryable: false,
+    failureStage: "output-token-budget-exceeded",
+    diagnostics: expect.arrayContaining([
+      { code: "output_token_budget_exceeded", path: "usage.outputTokens" },
+    ]),
+  });
+  const nextRequest = await adapter.execute(request);
+  expect(nextRequest.usage.outputTokens).toBe(maxOutputTokens);
+  expect(nextRequest.output).toEqual(proposal);
+  expect(runner).toHaveBeenCalledTimes(2);
 });
 
 it("retains the exact per-generation cap and adjudication through a factuality retry", async () => {
@@ -25,8 +133,8 @@ it("retains the exact per-generation cap and adjudication through a factuality r
     const input = JSON.parse(options.stdin) as Record<string, unknown>;
     inputs.push(input);
     const cap = Number(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS);
-    // New runs record cli-author-v3, whose budget is 16,384 tokens.
-    expect(cap).toBe(16384);
+    // New runs record cli-author-v4, whose budget is 32,768 tokens.
+    expect(cap).toBe(32768);
     expect(input.outputBudget).toEqual({ maxOutputTokens: cap });
     const system = args[args.indexOf("--system-prompt") + 1] ?? "";
     expect(system).toContain(`maximum generated output for this request is ${cap} tokens`);
