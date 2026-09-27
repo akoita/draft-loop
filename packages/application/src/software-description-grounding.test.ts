@@ -70,6 +70,74 @@ describe("software description protected parts", () => {
     ).toContain("factual_invariant_violation");
   });
 
+  it("grounds proxy descriptions without merging their language and technology names", () => {
+    const text =
+      "The transport tool supports generating Java and Python FLUXRPC proxies and adapters through a Maven plugin.";
+    const evidence = [
+      chunk("language-python", "Python", 0),
+      chunk("technology", "FLUXRPC", 1),
+      chunk("language-java", "Java", 2),
+      chunk("proxy-work", "proxies and adapters through a Maven plugin", 3),
+    ];
+
+    expect(extractProtectedValues(text)).toEqual(expect.arrayContaining(["Python", "FLUXRPC"]));
+    expect(extractProtectedValues(text)).not.toContain("Python FLUXRPC");
+    expect(issues(text, evidence)).toEqual([]);
+    expect(
+      issues("The helper supports producing Java and Python FLUXRPC proxies.", [
+        chunk("java", "Java", 0),
+        chunk("python", "Python", 1),
+        chunk("technology", "FLUXRPC", 2),
+        chunk("proxy", "proxies", 3),
+      ]),
+    ).toEqual([]);
+
+    for (const object of ["proxy", "proxies"]) {
+      const midSentence = `Delivered a transport feature using Python FLUXRPC ${object}.`;
+      expect(
+        issues(midSentence, [
+          chunk("python", "Python", 0),
+          chunk("fluxrpc", "FLUXRPC", 1),
+          chunk("work", `transport feature using ${object}`, 2),
+        ]),
+      ).toEqual([]);
+    }
+  });
+
+  it("keeps proxy descriptions closed to missing or unrecognized identity parts", () => {
+    const text = "Python FLUXRPC proxies";
+    const work = chunk("work", "proxies", 0);
+    expect(issues(text, [chunk("technology", "FLUXRPC", 1), work])).toContain(
+      "factual_invariant_violation",
+    );
+    expect(issues(text, [chunk("language", "Python", 1), work])).toContain(
+      "factual_invariant_violation",
+    );
+    expect(issues("Klingon FLUXRPC proxies", [chunk("technology", "FLUXRPC", 1), work])).toContain(
+      "factual_invariant_violation",
+    );
+    expect(
+      issues("Worked at Python FLUXRPC proxy company", [
+        chunk("language", "Python", 1),
+        chunk("technology", "FLUXRPC", 2),
+      ]),
+    ).toContain("factual_invariant_violation");
+    expect(
+      issues("Worked for Java and Python FLUXRPC proxies", [
+        chunk("java", "Java", 0),
+        chunk("python", "Python", 1),
+        chunk("technology", "FLUXRPC", 2),
+        chunk("proxy", "proxies", 3),
+      ]),
+    ).toContain("factual_invariant_violation");
+    expect(
+      issues("Senior Python FLUXRPC proxies", [
+        chunk("language", "Python", 1),
+        chunk("technology", "FLUXRPC", 2),
+      ]),
+    ).toContain("factual_invariant_violation");
+  });
+
   it("keeps a language-looking employer phrase intact", () => {
     const text = "Worked at Python NimbusLedger software company";
     expect(

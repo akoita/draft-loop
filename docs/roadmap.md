@@ -1276,32 +1276,27 @@ author replica, so its earlier failures were real.
    but ended without an accepted draft after coverage rejections and structured-output
    retry exhaustion. Offline replay reproduced the rejections; the final provider
    error had no validator verdict, so the observation is indeterminate.
-2. **Quality, standard frontier pair.** After a separate stage decision, use
-   the same case with `claude-opus-5-5` and `gpt-6-sol`, against the fixed
-   result and effect rules. The live frontier evaluation requires its own
-   explicit authorization. The user approved #555, which accepted a draft on
-   the second author attempt and completed critique. Candidate feedback was
-   positive without exhaustive category counts; the strict first-review pass
-   remains unverified. The draft restores chronology but lacks concrete job-relevant
-   contributions and the requested gap statement. #556 reserves bounded evidence
-   for candidate drafting priorities alongside chronology; #557 introduced section
-   reuse. The #559 recheck failed after three validator rejections and exposed
-   policy vocabulary displacing actual required-section records. #560 limits reuse
-   to chronology-covered Experience and narrows priority retrieval. #562 reached
-   an accepted draft and critique; candidate review confirmed sparse recent-role
-   accomplishments, repeated project entries, and outdated skill emphasis.
-   Corrected private facts remove the unsupported experience-gap assumption.
-   #563 fixes selection of the production-skills inventory; #564 and #565 fix
-   supported text rejected by grounding. A full-profile manual revision is
-   candidate-accepted with acknowledged warnings. #569 carries available role
-   contributions into the normal handoff within existing evidence limits.
-   #571 gives new runs a versioned structured-output ceiling while preserving
-   earlier runs. #573 needs revision after candidate review: #574 prioritizes
-   contribution blocks; #575 reserves supplied contact evidence, and #576 selects
-   relevant independent-project blocks within the existing role-record limit,
-   completed through bounded execution #580. The automated reference outcome and workspace-default
-   decision remain pending. #577 uses opaque manifest paths in normal provider
-   context. A fresh admission is required before another live evaluation.
+2. **Quality, standard frontier pair.** Use the same case with
+   `claude-opus-5-5` and `gpt-6-sol`, under a separate explicit admission. Earlier
+   fixed-rule observations retain their original results: #555 lacks exhaustive
+   first-review counts, while candidate review of #562 and #573 confirmed
+   omissions needing revision. The full-profile manual revision is
+   candidate-accepted with acknowledged warnings; it does not establish the
+   normal automated reference result.
+
+   The normal handoff now preserves production skills (#563), bounded role
+   contributions (#569 and #574), supplied contacts (#575), and relevant
+   independent projects (#576/#580). Supported-text grounding fixes (#564/#565)
+   and the versioned output ceiling (#571) preserve earlier runs. Provider
+   metadata uses opaque source labels (#577).
+
+   The fresh #584 observation locally accepted its second draft, but the critic
+   could not start because repeated artifact evidence exceeded the session's
+   input limit. #586 fixes the first draft's narrow proxy-description grounding
+   false positive; #587 owns lossless evidence deduplication before another
+   independent review. Captures remain private. The automated reference outcome
+   and workspace-default decision remain pending, and further live requests
+   require a fresh admission.
 
 Premium models (Fable, GPT-6 Astra) remain later; the API-key route (#515) is
 last.

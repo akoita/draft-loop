@@ -350,6 +350,12 @@ phrase produces two protected names. A claim-start project label ending in
 checks. Neither rule exempts a component from support in cited evidence.
 Company subjects, role titles and linking statements keep whole-name protection.
 
+The software-object vocabulary includes singular `proxy` and plural `proxies`.
+In the narrow generation phrase `generating Java and Python FLUXRPC proxies`,
+the closed language modifiers and technology name remain separately protected.
+The same coordination rule applies to `producing`; employer and title phrases
+retain whole-name checks, and each separated component still needs evidence.
+
 Software appositives can include one recognised programming-language modifier
 before their bounded qualifiers. This separates an opening action from its tool
 name while retaining source checks for the language and tool. These syntax rules
