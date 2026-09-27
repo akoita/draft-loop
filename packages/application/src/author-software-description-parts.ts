@@ -15,13 +15,17 @@ const singleTechnologyNamePattern =
   /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
 const capitalizedWordPattern = /^\p{Lu}[\p{L}\p{N}]*$/u;
 const languageObjectPhrasePattern =
-  /^[ \t]+(?:(?:event[ \t]+)?ingestion|event[ \t]+processing|tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|infrastructure|components?|clients?)(?![\p{L}\p{N}])/u;
+  /^[ \t]+(?:(?:event[ \t]+)?ingestion|event[ \t]+processing|tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|infrastructure|components?|clients?|prox(?:y|ies))(?![\p{L}\p{N}])/u;
 const softwareObjectFollowedByEmployerPattern =
-  /^[ \t]+(?:(?:event[ \t]+)?ingestion|event[ \t]+processing|tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|infrastructure|components?|clients?)[ \t]+(?:company|firm|employer)\b/u;
+  /^[ \t]+(?:(?:event[ \t]+)?ingestion|event[ \t]+processing|tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|infrastructure|components?|clients?|prox(?:y|ies))[ \t]+(?:company|firm|employer)\b/u;
 const precedingEmployerPattern = /\b(?:at|for|employed[ \t]+by|joined)[ \t]+$/iu;
 const softwareNounPattern =
-  "(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?)";
+  "(?:tools?|tooling|applications?|apps?|services?|systems?|software|integrations?|adapters?|pipelines?|libraries|library|tests?|infrastructure|components?|clients?|prox(?:y|ies))";
 const appositiveQualifiersPattern = "(?:(?:model-driven|engineering|in-house|supervision)[ \\t]+)*";
+const precedingGeneratedLanguageConjunctionPattern = new RegExp(
+  `(?:^|[^\\p{L}\\p{N}])(?:generating|producing)[ \\t]+${closedProgrammingLanguagePattern.source}[ \\t]+and[ \\t]+$`,
+  "iu",
+);
 
 export const softwareObjectAppositivePattern = new RegExp(
   `^[ \\t]*,[ \\t]+(?:a|an|the)[ \\t]+${appositiveQualifiersPattern}${softwareNounPattern}(?![\\p{L}\\p{N}])`,
@@ -60,7 +64,11 @@ export function protectedSoftwareDescriptionParts(
   const hasEmployerOrTitleOrLinkingContext =
     precedingEmployerPattern.test(preceding) ||
     (precedingWord !== undefined &&
-      [...excludedTitleWords, ...linkingWords].some((word) => word === precedingWord));
+      [...excludedTitleWords, ...linkingWords].some(
+        (word) =>
+          word === precedingWord &&
+          !(word === "and" && precedingGeneratedLanguageConjunctionPattern.test(preceding)),
+      ));
 
   if (
     exactProgrammingLanguagePattern.test(first) &&
