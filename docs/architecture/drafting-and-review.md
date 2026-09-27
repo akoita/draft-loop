@@ -297,9 +297,13 @@ identities and traces. Only Experience may reuse evidence already supplied by
 guaranteed chronology chunks under the existing section matcher. Other required
 sections keep their dedicated supplements: policy text mentioning education,
 credentials, or languages must not displace their source records. Priority and
-unselected general-query hits cannot justify skipping a reservation. Retrieval fails if matched priority evidence is
-available but not even one chunk can fit. This preserves contribution evidence within the existing provider
-limits; lexical matches do not prove job fit or resolve uncertain source claims.
+unselected general-query hits cannot justify skipping a reservation. A required
+record found by the general query remains reserved even when it falls beyond
+the selected primary prefix; duplicate IDs consume one slot.
+
+Retrieval fails if matched priority evidence is available but not even one chunk
+can fit. This preserves contribution evidence within the existing provider limits;
+lexical matches do not prove job fit or resolve uncertain source claims.
 
 When a Skills section is configured, CKB retrieval also runs one cached local
 `production experience` query with a twenty-hit limit. A substantive explicit

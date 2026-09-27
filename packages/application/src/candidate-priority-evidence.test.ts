@@ -312,12 +312,12 @@ describe("candidate-priority evidence", () => {
     expect(result).toHaveLength(3);
   });
 
-  it("fails closed when no priority candidate fits beside chronology and education", async () => {
+  it("fails closed when experience and education reservations exceed chronology capacity", async () => {
     const fixture = await createRuntimeFixture(temporaryRoots, 0);
     const runtime = createRuntime(fixture, candidateInstructions, ["Experience", "Education"]);
 
     await expect(runtime.port.queryEvidence("Platform Engineer", { limit: 3 })).rejects.toThrow(
-      "Candidate-priority evidence could not fit within the provider retrieval limit.",
+      "Chronology evidence could not fit within the provider retrieval limit.",
     );
   });
 });

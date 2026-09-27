@@ -106,6 +106,96 @@ describe("required-section evidence", () => {
     expect(selected).not.toContainEqual(expect.objectContaining({ id: "fallback" }));
   });
 
+  it("reserves a required hit that appears only after the selected primary prefix", () => {
+    const lateEducation = evidence("education", "Education\nMSc Computer Science.", 2);
+    const selected = mergeRequiredSectionEvidence(
+      {
+        status: "matched",
+        hits: [
+          evidence("role", "Platform Engineer at Example Systems.", 0),
+          evidence("filler", "Built a TypeScript service.", 1),
+          lateEducation,
+        ],
+      },
+      [
+        {
+          section: "Education",
+          result: {
+            status: "matched",
+            hits: [lateEducation, evidence("alternate-education", "BSc Computer Science.", 3)],
+          },
+        },
+      ],
+      2,
+    );
+
+    expect(selected.map(({ id }) => id)).toEqual(["role", "education"]);
+  });
+
+  it("deduplicates a shared reservation across supplements and respects impossible capacity", () => {
+    const sharedRecord = evidence(
+      "shared-record",
+      "Education: MSc Computer Science; Certifications: AWS Certified Developer.",
+      2,
+    );
+    const primary = {
+      status: "matched" as const,
+      hits: [evidence("role", "Platform Engineer.", 0), evidence("filler", "TypeScript.", 1)],
+    };
+    const supplements = ["Education", "Certifications"].map((section) => ({
+      section,
+      result: { status: "matched" as const, hits: [sharedRecord] },
+    }));
+
+    expect(mergeRequiredSectionEvidence(primary, supplements, 2).map(({ id }) => id)).toEqual([
+      "role",
+      "shared-record",
+    ]);
+
+    const impossible = mergeRequiredSectionEvidence(
+      primary,
+      [
+        {
+          section: "Education",
+          result: { status: "matched", hits: [evidence("degree", "MSc Computer Science.", 3)] },
+        },
+        {
+          section: "Certifications",
+          result: {
+            status: "matched",
+            hits: [evidence("certification", "AWS Certified Developer.", 4)],
+          },
+        },
+      ],
+      1,
+    );
+
+    expect(impossible.map(({ id }) => id)).toEqual(["degree"]);
+    expect(impossible).toHaveLength(1);
+  });
+
+  it("keeps ordinary primary and supplemental ordering when capacity is available", () => {
+    const selected = mergeRequiredSectionEvidence(
+      {
+        status: "matched",
+        hits: [
+          evidence("role", "Platform Engineer.", 0),
+          evidence("role", "Duplicate primary record.", 0),
+          evidence("role-2", "TypeScript.", 1),
+        ],
+      },
+      [
+        {
+          section: "Education",
+          result: { status: "matched", hits: [evidence("education", "MSc Computer Science.", 2)] },
+        },
+      ],
+      4,
+    );
+
+    expect(selected.map(({ id }) => id)).toEqual(["role", "role-2", "education"]);
+  });
+
   it("keeps required-section queries deterministic, unique, and within the result budget", () => {
     const queries = requiredSectionQueries(
       ["Education", "education", "Certifications", "Languages", "Projects"],
