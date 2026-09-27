@@ -154,6 +154,11 @@ Use **Add file** or **Add directory** beside an active base to import local
 material through a native picker. The result reports complete or partial intake
 and source readiness; importing does not select that base for the workspace.
 
+**Import workspace candidate sources** imports all supported files from this
+workspace’s configured candidate-source directory into the chosen base. This
+requires an explicit action before a run or after it stops. Previously imported
+directories are rejected.
+
 ## Trust boundary
 
 - Source material, run history, and exports are local by default.

@@ -232,10 +232,13 @@ and keeps paths local.
   and the binding timestamp. Logical retirement is idempotent, preserves
   evidence, and requires confirmation. Retired sources cannot be reactivated.
 
-- **Directory intake.** CLI users choose a local path, while the desktop uses a
-  dedicated native directory picker. Complete and partial results contain only
-  scan counts and opaque source or version identities; roots, filenames, labels,
-  hashes, and content remain local.
+- **Directory intake.** CLI users choose a local path; the desktop offers a
+  native directory picker or **Import workspace candidate sources**. The latter
+  requires explicit approval and an open collecting or stopped workspace. Its
+  host resolves the configured candidate-source directory; importing does not
+  select a base or start a provider workflow. Complete and partial results
+  contain only scan counts and opaque source or version identities; roots,
+  filenames, labels, hashes, and content remain local.
 
 - **Directory rebinding.** Preview and confirmed apply are separate operations.
   Apply rescans the selected root and updates member origins atomically only

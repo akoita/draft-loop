@@ -4170,6 +4170,159 @@ describe("candidate knowledge native controls", () => {
     }
   });
 
+  it("imports only the explicitly named open workspace's configured candidate-source directory", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-workspace-knowledge-import-"));
+    const knowledgeService = createCandidateKnowledgeStoreService();
+    const importKnowledgeSourceDirectory = vi.fn(
+      (input: Parameters<typeof knowledgeService.importKnowledgeSourceDirectory>[0]) =>
+        knowledgeService.importKnowledgeSourceDirectory(input),
+    );
+    const chooseKnowledgeSourceDirectory = vi.fn(async () => undefined);
+    const host = createNativeHost({
+      knowledgeService: { ...knowledgeService, importKnowledgeSourceDirectory } as never,
+      dialogs: {
+        chooseDirectory: async () => parent,
+        chooseFiles: async () => [],
+        chooseKnowledgeSourceDirectory,
+      },
+    });
+    try {
+      const olderWorkspace = await host.invoke({
+        type: "workspace.create",
+        input: { name: "older-workspace", mode: "real" },
+      });
+      const olderWorkspaceId = (
+        olderWorkspace as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+      const store = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-store" },
+      });
+      const storeId = (store as { readonly value: { readonly storeId: string } }).value.storeId;
+      const knowledgeBaseId = (
+        store as { readonly value: { readonly knowledgeBases: readonly { id: string }[] } }
+      ).value.knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected an active candidate base.");
+      const currentWorkspace = await host.invoke({
+        type: "workspace.create",
+        input: { name: "current-workspace", mode: "real" },
+      });
+      const currentWorkspaceId = (
+        currentWorkspace as { readonly value: { readonly workspace: { readonly id: string } } }
+      ).value.workspace.id;
+      const currentRoot = join(parent, "current-workspace");
+      await writeFile(
+        join(currentRoot, "evidence", "candidate.md"),
+        "Fictional candidate facts.\n",
+      );
+      await writeFile(join(currentRoot, "job.md"), "Fictional job requirements only.\n");
+
+      await expect(
+        host.invoke({
+          type: "knowledge.import-workspace-sources",
+          input: {
+            workspaceId: olderWorkspaceId,
+            storeId,
+            knowledgeBaseId,
+            approved: true,
+          },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      expect(importKnowledgeSourceDirectory).not.toHaveBeenCalled();
+
+      const imported = await host.invoke({
+        type: "knowledge.import-workspace-sources",
+        input: {
+          workspaceId: currentWorkspaceId,
+          storeId,
+          knowledgeBaseId,
+          approved: true,
+        },
+      });
+      expect(imported).toMatchObject({
+        ok: true,
+        value: {
+          storeId,
+          knowledgeBaseId,
+          status: "complete",
+          sourceCount: 1,
+          sources: [{ created: true }],
+        },
+      });
+      expect(importKnowledgeSourceDirectory).toHaveBeenCalledWith({
+        storeRoot: join(parent, "candidate-store"),
+        knowledgeBaseId,
+        directoryPath: join(currentRoot, "evidence"),
+      });
+      expect(chooseKnowledgeSourceDirectory).not.toHaveBeenCalled();
+      expect(JSON.stringify(imported)).not.toContain(parent);
+      expect(JSON.stringify(imported)).not.toContain("candidate.md");
+      expect(JSON.stringify(imported)).not.toContain("Fictional candidate facts");
+      expect(JSON.stringify(imported)).not.toContain("Fictional job requirements only");
+
+      const repeated = await host.invoke({
+        type: "knowledge.import-workspace-sources",
+        input: {
+          workspaceId: currentWorkspaceId,
+          storeId,
+          knowledgeBaseId,
+          approved: true,
+        },
+      });
+      expect(repeated).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(importKnowledgeSourceDirectory).toHaveBeenCalledTimes(2);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses workspace candidate-source mutation while a run is active", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-active-run-knowledge-import-"));
+    const root = join(parent, "workspace");
+    await mkdir(join(root, "evidence"), { recursive: true });
+    const fixture = service(root, { state: "drafting" });
+    const knowledgeService = createCandidateKnowledgeStoreService();
+    const importKnowledgeSourceDirectory = vi.fn(
+      (input: Parameters<typeof knowledgeService.importKnowledgeSourceDirectory>[0]) =>
+        knowledgeService.importKnowledgeSourceDirectory(input),
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      knowledgeService: { ...knowledgeService, importKnowledgeSourceDirectory } as never,
+      dialogs: {
+        chooseDirectory: async (mode) => (mode === "open" ? root : parent),
+        chooseFiles: async () => [],
+      },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const store = await host.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-store" },
+      });
+      const storeId = (store as { readonly value: { readonly storeId: string } }).value.storeId;
+      const knowledgeBaseId = (
+        store as { readonly value: { readonly knowledgeBases: readonly { id: string }[] } }
+      ).value.knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected an active candidate base.");
+
+      await expect(
+        host.invoke({
+          type: "knowledge.import-workspace-sources",
+          input: {
+            workspaceId: "workspace-native",
+            storeId,
+            knowledgeBaseId,
+            approved: true,
+          },
+        }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "permission-denied" } });
+      expect(importKnowledgeSourceDirectory).not.toHaveBeenCalled();
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("previews and explicitly applies a path-free directory refresh", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-directory-refresh-host-"));
     const directoryPath = join(parent, "private-career-directory");

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "./bridge.js";
 import {
   hasDesktopKnowledgeIntakeCapabilities,
+  hasWorkspaceSourcesIntakeCapabilities,
   knowledgeIntakeSummary,
   knowledgeReadinessSummary,
   runKnowledgeIntake,
@@ -167,19 +168,43 @@ export function KnowledgeWorkspace({
   const importIntoKnowledgeBase = (
     storeId: string,
     knowledgeBaseId: string,
-    kind: "file" | "directory",
+    kind: "file" | "directory" | "workspace",
   ) => {
-    if (!hasDesktopKnowledgeIntakeCapabilities(capabilities)) return;
+    const importFile = capabilities.importCandidateKnowledgeFile;
+    const importDirectory = capabilities.importCandidateKnowledgeDirectory;
+    const importWorkspaceSources = capabilities.importWorkspaceCandidateSources;
+    const readReadiness = capabilities.getCandidateKnowledgeReadiness;
+    if (
+      readReadiness === undefined ||
+      (kind === "file" && importFile === undefined) ||
+      (kind === "directory" && importDirectory === undefined) ||
+      (kind === "workspace" && importWorkspaceSources === undefined)
+    ) {
+      return;
+    }
     void perform(async (generation) => {
       const outcome = await runKnowledgeIntake({
         workspaceId,
         target: { storeId, knowledgeBaseId },
         isCurrent: () => operationGeneration.current === generation,
-        importSource: () =>
-          kind === "file"
-            ? capabilities.importCandidateKnowledgeFile(storeId, knowledgeBaseId)
-            : capabilities.importCandidateKnowledgeDirectory(storeId, knowledgeBaseId),
-        readReadiness: () => capabilities.getCandidateKnowledgeReadiness(storeId, knowledgeBaseId),
+        importSource: () => {
+          if (kind === "file" && importFile !== undefined) {
+            return importFile(storeId, knowledgeBaseId);
+          }
+          if (kind === "directory" && importDirectory !== undefined) {
+            return importDirectory(storeId, knowledgeBaseId);
+          }
+          if (kind === "workspace" && importWorkspaceSources !== undefined) {
+            return importWorkspaceSources({
+              workspaceId,
+              storeId,
+              knowledgeBaseId,
+              approved: true,
+            });
+          }
+          throw new Error("Candidate knowledge intake is unavailable");
+        },
+        readReadiness: () => readReadiness(storeId, knowledgeBaseId),
         refreshWorkspace: onSelectionSaved,
       });
       if (outcome.status === "stale" || operationGeneration.current !== generation) return;
@@ -217,6 +242,7 @@ export function KnowledgeWorkspace({
   const knowledgeBases = store === null ? [] : activeKnowledgeBases(store);
   const controlsDisabled = disabled || pending;
   const intakeSupported = hasDesktopKnowledgeIntakeCapabilities(capabilities);
+  const workspaceSourcesSupported = hasWorkspaceSourcesIntakeCapabilities(capabilities);
 
   return (
     <section className="panel" aria-labelledby="candidate-knowledge-heading">
@@ -277,6 +303,24 @@ export function KnowledgeWorkspace({
                 </div>
               ) : (
                 <p>File and directory intake is unavailable in this desktop host.</p>
+              )}
+              <p>
+                This imports all supported files from this workspace’s configured candidate-source
+                directory. It does not select the base automatically. Directory limits can produce a
+                partial result, and previously imported directories are rejected.
+              </p>
+              {workspaceSourcesSupported ? (
+                <button
+                  type="button"
+                  disabled={controlsDisabled}
+                  onClick={() =>
+                    importIntoKnowledgeBase(store.storeId, knowledgeBase.id, "workspace")
+                  }
+                >
+                  Import workspace candidate sources
+                </button>
+              ) : (
+                <p>Workspace candidate-source import is unavailable in this desktop host.</p>
               )}
             </li>
           ))}

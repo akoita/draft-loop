@@ -167,6 +167,12 @@ as reused or processed. Successful intake invalidates the chosen profile even
 if subsequent inspection fails; it does not select a knowledge base or start
 provider execution.
 
+The separate workspace-source intake capability requires an explicit approval
+flag and the current open workspace ID. The host resolves its configured
+candidate-source directory and uses the same bounded directory importer and
+result projection as picker intake. Active runs and archived target bases
+block this action. Neither the renderer nor the result supplies a path.
+
 Store setup, selection, inspection, intake, refresh, rebind, retirement, and
 directory maintenance all follow this split. Read-only inspection calls are
 fresh reads rather than a cross-command snapshot. Mutation results expose only

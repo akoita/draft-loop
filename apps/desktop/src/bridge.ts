@@ -73,6 +73,7 @@ export const bridgeCapabilities = [
   "knowledge.backup-restore",
   "knowledge.import-file",
   "knowledge.import-directory",
+  "knowledge.import-workspace-sources",
   "knowledge.directory-refresh-preview",
   "knowledge.directory-refresh-apply",
   "knowledge.directory-add-members",
@@ -350,6 +351,20 @@ const knowledgeDirectoryImportKeys = inputKeys<KnowledgeDirectoryImportInput>()(
   "storeId",
   "knowledgeBaseId",
   "selection",
+]);
+
+export interface KnowledgeWorkspaceSourcesImportInput {
+  readonly workspaceId: string;
+  readonly storeId: string;
+  readonly knowledgeBaseId: string;
+  readonly approved: true;
+}
+
+const knowledgeWorkspaceSourcesImportKeys = inputKeys<KnowledgeWorkspaceSourcesImportInput>()([
+  "workspaceId",
+  "storeId",
+  "knowledgeBaseId",
+  "approved",
 ]);
 
 export interface KnowledgeDirectoryRootRebindPreviewInput extends KnowledgeReadinessInput {
@@ -2577,6 +2592,7 @@ export interface BridgeCommandInputMap {
   "knowledge.backup-restore": KnowledgeBackupRestoreInput;
   "knowledge.import-file": KnowledgeFileImportInput;
   "knowledge.import-directory": KnowledgeDirectoryImportInput;
+  "knowledge.import-workspace-sources": KnowledgeWorkspaceSourcesImportInput;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewInput;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyInput;
   "knowledge.directory-add-members": KnowledgeDirectoryAddMembersInput;
@@ -2646,6 +2662,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.backup-restore": KnowledgePortableBackupRestoreResult;
   "knowledge.import-file": KnowledgeFileImportResult;
   "knowledge.import-directory": KnowledgeDirectoryImportResult;
+  "knowledge.import-workspace-sources": KnowledgeDirectoryImportResult;
   "knowledge.directory-refresh-preview": KnowledgeDirectoryRefreshPreviewResult;
   "knowledge.directory-refresh-apply": KnowledgeDirectoryRefreshApplyResult;
   "knowledge.directory-add-members": KnowledgeDirectoryAddMembersResult;
@@ -3235,6 +3252,21 @@ function validateKnowledgeDirectoryImportInput(value: unknown): KnowledgeDirecto
     storeId: identifier(input.storeId),
     knowledgeBaseId: identifier(input.knowledgeBaseId),
     selection: "native-dialog",
+  };
+}
+
+function validateKnowledgeWorkspaceSourcesImportInput(
+  value: unknown,
+): KnowledgeWorkspaceSourcesImportInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeWorkspaceSourcesImportKeys) || input.approved !== true) {
+    return invalidInput();
+  }
+  return {
+    workspaceId: identifier(input.workspaceId),
+    storeId: identifier(input.storeId),
+    knowledgeBaseId: identifier(input.knowledgeBaseId),
+    approved: true,
   };
 }
 
@@ -4509,6 +4541,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "knowledge.import-directory",
         input: validateKnowledgeDirectoryImportInput(command.input),
+      };
+    case "knowledge.import-workspace-sources":
+      return {
+        type: "knowledge.import-workspace-sources",
+        input: validateKnowledgeWorkspaceSourcesImportInput(command.input),
       };
     case "knowledge.directory-refresh-preview":
       return {
@@ -6692,6 +6729,7 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
     case "knowledge.append-file-version":
       return normalizeKnowledgeFileWriteResult(value);
     case "knowledge.import-directory":
+    case "knowledge.import-workspace-sources":
       return normalizeKnowledgeDirectoryImportResult(value);
     case "knowledge.directory-refresh-preview":
       return normalizeKnowledgeDirectoryRefreshPreviewResult(value);
