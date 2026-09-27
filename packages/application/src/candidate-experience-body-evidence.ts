@@ -18,11 +18,13 @@ import {
   deriveCandidateKnowledgeLexicalChunks,
   lexicalDigest,
 } from "./candidate-knowledge-source-chunks.js";
+import {
+  isDatedCandidateRoleHeading,
+  selectCandidateRoleContributionBlocks,
+} from "./candidate-role-contribution-blocks.js";
 
 const sourceReadFailureMessage = "Pinned candidate knowledge evidence could not be verified.";
 const markdownHeadingPattern = /^\s*(#{1,6})\s+/u;
-const datedMarkdownHeadingPattern =
-  /^\s*#{1,6}\s+[^\n]*(?:19|20)\d{2}[^\n]*(?:\bto\b|[–—-])[^\n]*(?:(?:19|20)\d{2}|present|current|now)\b/iu;
 
 export interface CandidateKnowledgeStoreBinding {
   readonly storeRoot: string;
@@ -127,6 +129,7 @@ export function createPinnedCandidateKnowledgeSourceChunkLoader(
 export function combineCandidateExperienceBodyEvidence(
   chronologyHits: readonly CandidateKnowledgeLexicalHit[],
   sourceChunks: readonly CandidateKnowledgeLexicalChunkInput[],
+  jobQuery = "",
 ): readonly CandidateKnowledgeLexicalHit[] {
   const chunksById = new Map(sourceChunks.map((chunk) => [chunk.chunkId, chunk] as const));
   const chunksBySource = new Map<string, CandidateKnowledgeLexicalChunkInput[]>();
@@ -158,16 +161,62 @@ export function combineCandidateExperienceBodyEvidence(
     const headingIndex = group.findIndex(({ chunkId }) => chunkId === heading.chunkId);
     if (headingIndex < 0) throw new Error("Chronology heading source order could not be verified.");
 
-    const constituentIds: string[] = [heading.chunkId];
-    const bodyTexts = [heading.text];
-    let lineEnd = heading.lineEnd;
+    const roleScopeChunks = [exact];
+    const followingChunks: CandidateKnowledgeLexicalChunkInput[] = [];
     for (const chunk of group.slice(headingIndex + 1)) {
       const nextHeadingLevel = markdownHeadingPattern.exec(chunk.text)?.[1]?.length;
       if (
-        datedMarkdownHeadingPattern.test(chunk.text) ||
+        isDatedCandidateRoleHeading(chunk.text) ||
         (nextHeadingLevel !== undefined && nextHeadingLevel <= headingLevel)
       )
         break;
+      roleScopeChunks.push(chunk);
+      followingChunks.push(chunk);
+    }
+    const contributionSelection = selectCandidateRoleContributionBlocks(
+      heading,
+      roleScopeChunks,
+      jobQuery,
+      maximumCandidateKnowledgeRetrievalChunkTextLength,
+    );
+    if (contributionSelection.foundRegion) {
+      const blocks = contributionSelection.blocks;
+      const headingLine = exact.text.split("\n", 1)[0];
+      if (headingLine === undefined) return heading;
+      const text = [headingLine, ...blocks.map(({ text: blockText }) => blockText)].join("\n\n");
+      const provenance = heading.metadata.provenance;
+      return createCandidateKnowledgeLexicalHit({
+        chunkId: lexicalDigest([
+          "candidate-knowledge-experience-role-contributions-v1",
+          provenance.storeId,
+          provenance.knowledgeBaseId,
+          provenance.sourceId,
+          provenance.versionId,
+          heading.chunkId,
+          ...blocks.flatMap((block) => [
+            block.lineStart,
+            block.lineEnd,
+            block.text,
+            ...block.sourceRanges.flatMap((range) => [
+              range.chunkId,
+              range.startOffset,
+              range.endOffset,
+            ]),
+          ]),
+        ]),
+        ordinal: heading.ordinal,
+        lineStart: heading.lineStart,
+        lineEnd: Math.max(heading.lineEnd, ...blocks.map(({ lineEnd }) => lineEnd)),
+        text,
+        metadata: heading.metadata,
+        bm25Rank: heading.bm25Rank,
+      });
+    }
+
+    const constituentIds: string[] = [heading.chunkId];
+    const bodyTexts = [heading.text];
+    let lineEnd = heading.lineEnd;
+    for (const chunk of followingChunks) {
       const candidateText = `${bodyTexts.join("\n\n")}\n\n${chunk.text}`;
       if (candidateText.length > maximumCandidateKnowledgeRetrievalChunkTextLength) break;
       bodyTexts.push(chunk.text);
