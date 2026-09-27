@@ -75,6 +75,10 @@ In Skills blocks, the exact leading label `Cloud and DevOps:` is presentation
 when followed by content and a substantive claim. Every listed technology
 still needs claim coverage and supporting evidence; arbitrary labels and
 proficiency assertions receive no exemption.
+Protected multiword names may also match same-line evidence with balanced
+Markdown strong emphasis around individual words. Matching preserves word
+identity and order; it does not join separate lines or ignore arbitrary
+punctuation, escaped markers, or code literals.
 
 ## Workflow state machine
 

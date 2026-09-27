@@ -1,7 +1,11 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 
-import { createAuthorGroundingGuide, extractProtectedValues } from "./author-grounding.js";
+import {
+  createAuthorGroundingGuide,
+  extractProtectedValues,
+  supportsProtectedValue,
+} from "./author-grounding.js";
 
 const checksum = "a".repeat(64);
 
@@ -70,5 +74,14 @@ describe("author grounding guide", () => {
         chunk("plain", "plain evidence with no protected values", 1),
       ]),
     ).toEqual([]);
+  });
+
+  it("matches a protected multiword name wrapped word by word in source evidence", () => {
+    expect(
+      supportsProtectedValue("Technical summary: **FLUX** RPC was deployed.", "FLUX RPC"),
+    ).toBe(true);
+    expect(
+      supportsProtectedValue("Technical summary: C**FLUX** RPC was deployed.", "FLUX RPC"),
+    ).toBe(false);
   });
 });

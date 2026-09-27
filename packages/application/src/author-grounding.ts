@@ -8,6 +8,7 @@ import {
   sourceExperienceValues,
   supportsExperienceClaim,
 } from "./experience-grounding.js";
+import { supportsInlineStrongMultiwordName } from "./inline-strong-name-grounding.js";
 import { narrowOpeningActionVerbs, withoutOpeningActionVerb } from "./opening-action-verbs.js";
 import { supportsProtectedValueParaphrase } from "./protected-value-equivalence.js";
 
@@ -64,7 +65,8 @@ export function supportsProtectedValue(evidence: string, protectedValue: string)
     return (source.match(/[\p{L}\p{N}]+/gu) ?? []).some((token) => token === value);
   }
   if (/\s/u.test(value)) {
-    return source.replace(/\s+/gu, " ").includes(value.replace(/\s+/gu, " "));
+    if (source.replace(/\s+/gu, " ").includes(value.replace(/\s+/gu, " "))) return true;
+    return supportsInlineStrongMultiwordName(evidence, protectedValue);
   }
   return source.includes(value);
 }
