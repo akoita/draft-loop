@@ -6,6 +6,10 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./model-profile": {
+      "types": "./src/model-profile.ts",
+      "import": "./src/model-profile.ts"
     }
   },
   "files": [
