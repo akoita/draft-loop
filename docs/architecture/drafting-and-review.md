@@ -276,6 +276,22 @@ negative statements, qualified clauses, and partial technology-name matches do
 not satisfy this bounded rule. Ambiguous names and longer prose retain the
 existing grounding behavior; this is not general semantic factual verification.
 
+### Contact fields and internal references
+
+A standalone international phone claim needs its complete literal in one cited
+chunk. Separate digit groups, partial numbers and a number assembled across
+chunks do not establish support. Existing protected-value checks still apply.
+Opening action verbs can precede a technical name and a bounded software
+appositive without becoming part of the name; the technical name itself must
+remain source-backed. Titles, employer names and linking statements keep their
+existing protection.
+
+A terminal `; see <section>.` suffix is navigation only when the exact target is
+both configured and present in the proposal. Grounding still checks all preceding
+text and claims. Unknown targets, additional assertions, dates and unsupported
+names receive the normal checks. This recognizes a document reference, not an
+exception for unsourced achievements.
+
 ### Local rejected-author replay
 
 The local driver accepts an optional `authorProposalCaptureDirectory` for

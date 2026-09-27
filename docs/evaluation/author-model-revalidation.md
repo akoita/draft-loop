@@ -1,8 +1,8 @@
 # Author model revalidation
 
-- **Current status:** #563 retained the explicit production-skills inventory and recent backend evidence. The second frontier draft was accepted; the critic reported no errors and five content warnings. Candidate adjudication remains pending, so the strict quality pass is unverified.
+- **Current status:** The consented full-profile comparison restored role contribution detail but did not reach an accepted draft or critique. A recorded larger-generation variant exposed three local false rejections; #564 addresses them without another provider call. The strict quality pass remains unverified.
 - **Milestone:** [Reference model pair](https://github.com/akoita/draft-loop/milestone/16)
-- **Latest observation:** #563 · 2026-09-27 (Europe/Paris) · revision `f72b428f883721885a9ae452379461afb8251406`
+- **Latest observation:** full-profile comparison / #564 · 2026-09-27 (Europe/Paris) · base revision `f26663ab3f8e7cbce6c319e7bf6c633256991569`
 - **Historical observation:** #499 was indeterminate; `claude-sonnet-5` produced no draft.
 
 This record contains only sanitized, content-free evidence.
@@ -604,3 +604,94 @@ remain pending; critic error counts alone do not establish the fixed quality pas
 The full repository gate passed before this run: 2,042 tests in 136 files plus
 60 release/security tests. Architecture and evaluation documentation describe
 the internal selection change; there is no new command or user-facing option.
+
+## Full-profile comparison and local grounding follow-up (#564)
+
+**Observed:** 2026-09-27 (Europe/Paris) · **Base revision:** `f26663ab3f8e7cbce6c319e7bf6c633256991569`
+
+The candidate reported that their manual two-model workflow no longer omitted
+role contributions. Local comparison found 189 normalized profile chunks,
+121,405 bytes of normalized text, and only 7,136 text bytes in the twenty-chunk
+handoff. Six of seven main experience entries received no body content. A
+lossless adjacent packing experiment preserved the normalized text in forty-two
+citation packets, within four thousand characters each; provider-facing evidence
+serialized to 136,126 bytes. The application, rather than provider adapters,
+imposes the twenty-item/128-KiB handoff limits.
+
+The existing consent excluded a complete corpus in one provider request. The
+candidate explicitly authorized one prepared full-profile comparison using the
+same job, corrected profile, signed-in model pair, three-author/one-critic cap,
+and twenty-minute limit including preflight. Credentials, filesystem paths and
+baseline attachments were excluded. Nothing was published or exported. Both
+sign-in probes passed and synthetic author preflight took 2,344 ms.
+
+The first request ended with an invalid-response error before a proposal reached
+validation; its original control log omitted detailed diagnostics. A second
+permitted request with response-metadata capture confirmed generation exhaustion
+at the 16,384-token ceiling and no structured proposal. This was an output-budget
+failure, not evidence of an authentication problem or an inaccurate CV.
+
+The final permitted request used a recorded private 32,768-token generation
+variant with matching prompt and request budget. It returned structured content
+using 27,573 generated tokens. This differs from the fixed production author
+prompt budget and is not an unchanged-template reference observation. The
+proposal contained nine sections and 148 claims. Contribution detail returned
+to the previously sparse roles; current independent work appeared mainly in
+Selected Projects with an overview in Experience.
+
+The local validator rejected three spans: an exact cited international phone
+field, an opening action incorrectly joined to a technical name, and a terminal
+navigation reference to an existing section. Private replay reproduced them.
+Issue #564 addresses these narrow support/coverage cases using fictional positive
+and adversarial fixtures. The provider output remains unchanged for local replay.
+This does not implement full-profile product transmission or alter model defaults.
+
+Three author calls and no critic call occurred. The provider request durations
+were 158,235, 160,254 and 270,956 ms; accounted processing including preflight was
+591,961 ms. The comparison and investigation completed within the authorized
+wall-clock bound. No accepted draft or candidate adjudication established the
+fixed quality pass. The result is indeterminate, with a captured validator
+rejection and reproducible local defects. No further provider call is admitted
+by this comparison.
+
+### Local replay verification
+
+The unchanged private capture passes `buildAuthorArtifact` after the narrow
+fixes for #564. It produces nine sections and 150 normalized claims from the 148-claim proposal;
+the original capture hash is unchanged. This replay makes no provider calls and does not approve or export
+the artifact. Fictional regression cases cover the accepted shapes and unsupported
+phone, acronym and section-reference variants. A local validator acceptance is
+not a critic review or a reference-quality pass; that evaluation remains pending.
+
+## Corrected-profile recheck at capped effort (#564)
+
+**Observed:** 2026-09-27 (Europe/Paris) · **Base revision:** `fdff153992957ef0585923b477a4af7f269a42fe`
+
+A separately admitted critic-only follow-up completed in 12,270 ms with
+GPT-6 Sol at the application's configured low effort. It reported one factual
+error and three warnings; deterministic validation also reported the word limit.
+Local investigation confirmed a stale source attribution contradicted by later
+candidate corrections. A private next-run copy corrected that stale bullet;
+historical sources, proposals and captures remained unchanged.
+
+The candidate then capped DraftLoop reasoning at medium and authorized the
+prepared revision. The new input retained complete normalized profile text,
+corrected attribution and explicit instructions to omit unsettled timing,
+preserve role contributions and meet 950 words. Both authentication probes
+passed. The author used explicit medium effort with the recorded 32,768-token
+ceiling variant; the critic remained low. The admission allowed two author
+attempts and one critic call within twenty minutes including preflight.
+
+Both author attempts returned structured content but were rejected for the same
+opening action and definite software-appositive span, despite direct support in
+its cited source. The attempts took 251,751 and 241,092 ms; accounted elapsed
+time was 493,348 ms. No critic call followed. The bounded local grammar fix adds
+one action verb and closed software qualifiers; fictional fixtures preserve
+absent-name, employer, title and linking-predicate rejection.
+
+Unchanged private replay now constructs nine sections and 150 normalized claims.
+The historical capture is unchanged. Deterministic validation still reports
+`max-words-exceeded`, so this is not a quality pass or a completed author–critic
+evaluation. A targeted shortening input is prepared locally; the two-author
+admission does not permit a third request. Nothing was approved, exported or
+published.

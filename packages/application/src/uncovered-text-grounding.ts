@@ -2,6 +2,7 @@ import type { ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
 
 import { extractProtectedValues, supportsProtectedValueInChunks } from "./author-grounding.js";
+import { withoutConfiguredNavigationSuffix } from "./author-navigation-grounding.js";
 import { tokens, uncoveredBlockTokens } from "./claim-coverage.js";
 import { unsupportedSingleWordNames } from "./single-word-name-grounding.js";
 
@@ -195,16 +196,21 @@ export function uncoveredTextIntroducesUnsupportedFact(
   section: Pick<ProposalSection, "title" | "kind">,
   block: ProposalBlock,
   retrievedEvidence: readonly ScoredEvidenceChunk[],
+  presentRequiredSectionTitles: readonly string[] = [],
 ): boolean {
-  if (ungroundedUncoveredWords(section, block, retrievedEvidence).length > 0) return true;
-  const citedChunks = blockCitedChunks(block, retrievedEvidence);
+  const checkedBlock = {
+    ...block,
+    text: withoutConfiguredNavigationSuffix(block.text, presentRequiredSectionTitles),
+  };
+  if (ungroundedUncoveredWords(section, checkedBlock, retrievedEvidence).length > 0) return true;
+  const citedChunks = blockCitedChunks(checkedBlock, retrievedEvidence);
   return (
-    extractProtectedValues(block.text).some(
+    extractProtectedValues(checkedBlock.text).some(
       (value) => !supportsProtectedValueInChunks(citedChunks, value),
     ) ||
-    hasUnsupportedDateRange(block.text, citedChunks) ||
+    hasUnsupportedDateRange(checkedBlock.text, citedChunks) ||
     unsupportedSingleWordNames(
-      block.text,
+      checkedBlock.text,
       retrievedEvidence.map((chunk) => chunk.text),
     ).length > 0
   );
