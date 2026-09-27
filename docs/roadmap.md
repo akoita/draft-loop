@@ -296,10 +296,10 @@ up by #112 are implemented. Sprint 1 is complete, #160 is closed, and the CKB
 foundation is a [Released checkpoint](releases/stage-evidence-v0.7.0-alpha.1.md).
 
 The desktop renderer now exposes native store creation, opening, and explicit
-single-base selection (#589). This closes the first slice of #533; file and
-directory intake (#590) and explicit import of workspace candidate material
-(#591) remain separate outcomes. Selection resets the chosen canonical profile
-without changing existing run history.
+single-base selection (#589), plus file and directory intake with complete or
+partial counts and source readiness (#590). Explicit import of workspace
+candidate material (#591) remains the final slice of #533. Selection and intake
+reset the chosen canonical profile without changing existing run history.
 
 Sprint 2 is complete with writer coordination, interrupted-write recovery,
 retention, backup export, and collision-safe restore. Its five feature PRs

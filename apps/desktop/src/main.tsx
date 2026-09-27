@@ -906,15 +906,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
 
   const onKnowledgeSelectionSaved = async (workspaceId: string): Promise<boolean> => {
     if (activeWorkspaceIdRef.current !== workspaceId) return false;
+    setCandidateProfileSelection((current) =>
+      current?.workspaceId === workspaceId ? null : current,
+    );
+    setProfileResetEpoch((current) => current + 1);
     const loaded = await activePort.load();
     if (activeWorkspaceIdRef.current !== workspaceId) return false;
     if (loaded.workspaceId !== workspaceId) {
       throw new Error("The active workspace changed while refreshing knowledge selection.");
     }
-    setCandidateProfileSelection((current) =>
-      current?.workspaceId === workspaceId ? null : current,
-    );
-    setProfileResetEpoch((current) => current + 1);
     setState(loaded);
     return true;
   };

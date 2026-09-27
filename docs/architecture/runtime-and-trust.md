@@ -160,6 +160,13 @@ refreshes the workspace, and clears the selected canonical-profile version;
 existing run contexts stay immutable. Pending setup blocks Start, and hosts
 without the required capabilities show an unavailable explanation.
 
+File and directory intake in that panel uses the existing host-owned pickers
+and shared CKB service. Complete and partial results report counts and fresh
+readiness without filenames or source content. Repeated sources are described
+as reused or processed. Successful intake invalidates the chosen profile even
+if subsequent inspection fails; it does not select a knowledge base or start
+provider execution.
+
 Store setup, selection, inspection, intake, refresh, rebind, retirement, and
 directory maintenance all follow this split. Read-only inspection calls are
 fresh reads rather than a cross-command snapshot. Mutation results expose only
