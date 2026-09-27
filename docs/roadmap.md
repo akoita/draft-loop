@@ -1297,8 +1297,9 @@ author replica, so its earlier failures were real.
    contributions into the normal handoff within existing evidence limits.
    #571 gives new runs a versioned structured-output ceiling while preserving
    earlier runs. #573 needs revision after candidate review: #574 prioritizes
-   contribution blocks; #575 reserves supplied contact evidence. Job-relevant
-   projects (#576) remain next. The automated reference outcome and workspace-default
+   contribution blocks; #575 reserves supplied contact evidence, and #576 selects
+   relevant independent-project blocks within the existing role-record limit,
+   completed through bounded execution #580. The automated reference outcome and workspace-default
    decision remain pending. #577 removes absolute manifest paths from normal
    provider context before another live evaluation.
 

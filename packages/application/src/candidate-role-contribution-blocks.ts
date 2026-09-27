@@ -17,17 +17,17 @@ const contributionHeadingLabels = new Set([
 const listItemIndentPattern = /^( *)(?:[-*+]|\d+[.)])\s+\S/u;
 const indentedContinuationPattern = /^\s{2,}\S/u;
 
-interface SourceSegment {
+export interface CandidateRoleContributionSourceSegment {
   readonly chunkId: string;
   readonly ordinal: number;
   readonly startOffset: number;
   readonly endOffset: number;
 }
 
-interface SourceLine {
+export interface CandidateRoleContributionSourceLine {
   readonly lineNumber: number;
   text: string;
-  readonly segments: SourceSegment[];
+  readonly segments: CandidateRoleContributionSourceSegment[];
 }
 
 export interface CandidateRoleContributionSourceRange {
@@ -60,10 +60,10 @@ function provenanceKey(chunk: CandidateKnowledgeLexicalChunkInput): string {
   return JSON.stringify([storeId, knowledgeBaseId, sourceId, versionId]);
 }
 
-function flattenSourceLines(
+export function flattenCandidateRoleContributionSourceLines(
   chunks: readonly CandidateKnowledgeLexicalChunkInput[],
-): SourceLine[] | undefined {
-  const lines: SourceLine[] = [];
+): CandidateRoleContributionSourceLine[] | undefined {
+  const lines: CandidateRoleContributionSourceLine[] = [];
   const expectedProvenance = chunks[0] === undefined ? undefined : provenanceKey(chunks[0]);
   for (const chunk of [...chunks].sort((left, right) => left.ordinal - right.ordinal)) {
     if (
@@ -78,7 +78,7 @@ function flattenSourceLines(
     let offset = 0;
     for (const [index, part] of parts.entries()) {
       const lineNumber = chunk.lineStart + index;
-      const segment: SourceSegment = {
+      const segment: CandidateRoleContributionSourceSegment = {
         chunkId: chunk.chunkId,
         ordinal: chunk.ordinal,
         startOffset: offset,
@@ -124,7 +124,10 @@ function isContributionAnchor(line: string): boolean {
   return title !== undefined && (title === "his work" || contributionHeadingLabels.has(title));
 }
 
-function findAnchors(lines: readonly SourceLine[], start: number): ContributionAnchor[] {
+function findAnchors(
+  lines: readonly CandidateRoleContributionSourceLine[],
+  start: number,
+): ContributionAnchor[] {
   const anchors: ContributionAnchor[] = [];
   for (let index = start; index < lines.length; index += 1) {
     const line = lines[index];
@@ -136,8 +139,8 @@ function findAnchors(lines: readonly SourceLine[], start: number): ContributionA
   return anchors;
 }
 
-function blockFromLines(
-  lines: readonly SourceLine[],
+export function createCandidateRoleContributionBlock(
+  lines: readonly CandidateRoleContributionSourceLine[],
   sourceOrder: number,
 ): CandidateRoleContributionBlock {
   const contentLines = [...lines];
@@ -190,8 +193,8 @@ function listItemIndent(line: string): number | undefined {
   return match === null ? undefined : (match[1]?.length ?? 0);
 }
 
-function parseContributionBlocks(
-  lines: readonly SourceLine[],
+export function parseCandidateRoleContributionBlocks(
+  lines: readonly CandidateRoleContributionSourceLine[],
   firstSourceOrder: number,
 ): CandidateRoleContributionBlock[] {
   const blocks: CandidateRoleContributionBlock[] = [];
@@ -199,7 +202,7 @@ function parseContributionBlocks(
   while (index < lines.length) {
     const first = lines[index];
     if (first === undefined) break;
-    const item: SourceLine[] = [first];
+    const item: CandidateRoleContributionSourceLine[] = [first];
     let cursor = index + 1;
     const firstListIndent = listItemIndent(first.text);
     if (firstListIndent !== undefined) {
@@ -230,7 +233,7 @@ function parseContributionBlocks(
         cursor += 1;
       }
     }
-    blocks.push(blockFromLines(item, firstSourceOrder + blocks.length));
+    blocks.push(createCandidateRoleContributionBlock(item, firstSourceOrder + blocks.length));
     index = cursor;
   }
   return blocks;
@@ -252,7 +255,7 @@ export function selectCandidateRoleContributionBlocks(
   jobQuery: string,
   maximumRecordCharacters: number,
 ): CandidateRoleContributionSelection {
-  const lines = flattenSourceLines(roleScopeChunks);
+  const lines = flattenCandidateRoleContributionSourceLines(roleScopeChunks);
   if (lines === undefined) return { foundRegion: false, blocks: [] };
   const roleLineIndex = lines.findIndex(
     (line) => line.lineNumber === roleHeading.lineStart && headingLevel(line.text) !== undefined,
@@ -278,9 +281,10 @@ export function selectCandidateRoleContributionBlocks(
       }
     }
     const regionLines = lines.slice(anchor.index + 1, end);
-    const regionBlocks = parseContributionBlocks(regionLines, anchorPosition * 10_000).filter(
-      (block) => block.text.trim() !== "",
-    );
+    const regionBlocks = parseCandidateRoleContributionBlocks(
+      regionLines,
+      anchorPosition * 10_000,
+    ).filter((block) => block.text.trim() !== "");
     if (regionBlocks.length > 0) {
       selectedRegion = regionBlocks;
       break;

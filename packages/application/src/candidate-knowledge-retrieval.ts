@@ -286,7 +286,12 @@ export function candidateKnowledgeRuntimeRetrieval(
       const providerChronologyHits =
         chronologyHits.length === 0
           ? chronologyHits
-          : combineCandidateExperienceBodyEvidence(chronologyHits, sourceChunks, text);
+          : combineCandidateExperienceBodyEvidence(
+              chronologyHits,
+              sourceChunks,
+              text,
+              context.candidateInstructions ?? "",
+            );
       const composedHeadingsByOriginalId = new Map<string, CandidateKnowledgeLexicalHit>();
       chronologyHits.forEach((heading, index) => {
         const composed = providerChronologyHits[index];
