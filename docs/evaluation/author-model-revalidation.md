@@ -649,8 +649,8 @@ failure, not evidence of an authentication problem or an inaccurate CV.
 
 The final permitted request used a recorded private 32,768-token generation
 variant with matching prompt and request budget. It returned structured content
-using 27,573 generated tokens. This differs from the fixed production author
-prompt budget and is not an unchanged-template reference observation. The
+using 27,573 generated tokens. This differed from the production author
+prompt budget at the time and remains a separate variant observation. The
 proposal contained nine sections and 148 claims. Contribution detail returned
 to the previously sparse roles; current independent work appeared mainly in
 Selected Projects with an overview in Experience.
@@ -812,3 +812,12 @@ present. Fictional regression tests protect pinned-version identity, role
 boundaries, whole-chunk limits and consistent inspection identities. No provider
 requests were made, and the detailed replay remains private. This establishes
 selection coverage, not generated-CV quality or the automated reference outcome.
+
+## Versioned structured-output ceiling (#571)
+
+The production author template now records v4 for new runs, with the 32,768-token
+ceiling used by the private generation variant. Earlier templates retain their
+original guidance and limits when resumed. Fictional mocked-runtime checks verify
+prompt/request agreement, classification of explicit output-limit exhaustion,
+recovery, and historical-run preservation. This change authorizes no provider calls and
+does not convert the private manual result into an automated reference pass.
