@@ -796,3 +796,19 @@ does not establish the milestone's automated first-draft reference outcome,
 complete product integration, or authorize export or publication. Candidate
 material and the detailed adjudication remain private. No further provider
 requests were made.
+
+## Bounded role-body handoff (#569)
+
+A provider-free comparison replayed the historical pinned selection through the
+normal CKB handoff. Previously, none of its thirteen selected dated records
+contained contribution bodies. With bounded role assembly, twelve do, including
+all seven primary experience records. The remaining appendix record cannot fit
+its next whole paragraph within the existing 4,000-character limit; the primary
+record for that role already contains contributions.
+
+The handoff still selects twenty records, using 34,100 serialized bytes within
+the 128-KiB limit. Degree, credential, language and production-skill records remain
+present. Fictional regression tests protect pinned-version identity, role
+boundaries, whole-chunk limits and consistent inspection identities. No provider
+requests were made, and the detailed replay remains private. This establishes
+selection coverage, not generated-CV quality or the automated reference outcome.
