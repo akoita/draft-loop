@@ -306,6 +306,10 @@ Desktop restart recovery (#172) now clears a stale review when the host has
 lost its workspace context and offers explicit reopening through the native
 picker. Saved approval and export workflows remain available after reopening.
 
+Packaged desktop builds now keep bounded local diagnostics for host errors
+(#534), with capability and recognized error codes and no messages, stacks,
+paths, filenames, or provider content.
+
 Sprint 2 is complete with writer coordination, interrupted-write recovery,
 retention, backup export, and collision-safe restore. Its five feature PRs
 added 10,365 lines across 71 file-changes, so #166 was removed instead of

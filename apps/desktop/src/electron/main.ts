@@ -14,6 +14,7 @@ import {
   type CredentialAcceptancePhase,
   runCredentialAcceptance,
 } from "./credential-acceptance.js";
+import { createHostErrorLogger } from "./diagnostics.js";
 import { chooseMarkdownExportPath } from "./dialogs.js";
 import { createNativeHost, createSafeStorageCredentialStore } from "./host.js";
 import { type LiveProviderE2EOptions, runLiveProviderE2E } from "./live-e2e.js";
@@ -111,6 +112,9 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(async () => {
+  const hostErrorLogger = app.isPackaged
+    ? createHostErrorLogger(app.getPath("userData"))
+    : undefined;
   const providerAuthModePreference = createProviderAuthModePreferenceStore(
     join(app.getPath("userData"), providerAuthModePreferenceFilename),
   );
@@ -262,6 +266,7 @@ app.whenReady().then(async () => {
     );
   };
   const acceptanceUrlHostnameResolver = async (): Promise<readonly string[]> => ["93.184.216.34"];
+  const consoleHostErrors = smokeEnabled || (!app.isPackaged && !liveE2eEnabled);
   const host = createNativeHost({
     providerAuthModeConfiguration,
     providerAuthModeEnvironmentOverrides: environmentOverrides,
@@ -315,13 +320,16 @@ app.whenReady().then(async () => {
           urlHostnameResolver: acceptanceUrlHostnameResolver,
         }
       : {}),
-    ...(smokeEnabled || (!app.isPackaged && !liveE2eEnabled)
+    ...(app.isPackaged || consoleHostErrors
       ? {
           onError: (error: unknown, capability: string) => {
-            console.error(
-              `desktop host error (${capability}):`,
-              error instanceof Error ? (error.stack ?? error.message) : error,
-            );
+            if (app.isPackaged) hostErrorLogger?.record(error, capability);
+            if (consoleHostErrors) {
+              console.error(
+                `desktop host error (${capability}):`,
+                error instanceof Error ? (error.stack ?? error.message) : error,
+              );
+            }
           },
         }
       : {}),
