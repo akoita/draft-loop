@@ -9,6 +9,20 @@ Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
 candidate material out of the repository.
 
+## Desktop diagnostics
+
+Packaged builds keep host-error diagnostics in `diagnostics/host-errors.jsonl`
+under Electron’s local `userData` directory. This is the same application data
+location used for credential and authentication preferences. Electron places it
+under the application’s folder in `%APPDATA%` on Windows, `$XDG_CONFIG_HOME`
+(or `~/.config`) on Linux, and `~/Library/Application Support` on macOS.
+
+Each line contains only an ISO timestamp, capability, recognized error class,
+and recognized bridge or provider code. Messages, stacks, filesystem paths,
+filenames, source content, and provider responses are excluded. The current log
+and one rotated backup are each bounded to 64 KiB. Logging failures do not
+interrupt a review operation. Logs stay local and are not uploaded automatically.
+
 ## Opportunity briefs
 
 The `opportunity` command group creates and reloads one durable brief, lists
