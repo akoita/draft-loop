@@ -10,6 +10,11 @@ import type {
 } from "@draft-loop/domain";
 import type { SqliteStorage } from "@draft-loop/storage";
 import {
+  candidateContactEvidenceQuery,
+  candidateContactEvidenceQueryLimit,
+  selectCandidateContactEvidence,
+} from "./candidate-contact-evidence.js";
+import {
   combineCandidateExperienceBodyEvidence,
   createPinnedCandidateKnowledgeSourceChunkLoader,
 } from "./candidate-experience-body-evidence.js";
@@ -262,6 +267,11 @@ export function candidateKnowledgeRuntimeRetrieval(
       if (!Number.isSafeInteger(limit) || limit < 1 || limit > 20) {
         throw new Error("Candidate knowledge provider retrieval limit must be from 1 through 20.");
       }
+      const contactRawResult = await rawQuery(
+        candidateContactEvidenceQuery,
+        candidateContactEvidenceQueryLimit,
+      );
+      const candidateContactHit = selectCandidateContactEvidence(contactRawResult);
       const chronologyRawResults: CandidateKnowledgeRetrievalResult[] = [];
       if (requiresExperienceChronology(config.requiredSections)) {
         for (const chronologyQuery of candidateKnowledgeChronologyQueries) {
@@ -348,11 +358,16 @@ export function candidateKnowledgeRuntimeRetrieval(
       const primaryHits = primary.hits
         .map(replaceComposedHeading)
         .map((hit) => toScoredEvidenceChunk(hit, config.id));
+      const contactChunks =
+        candidateContactHit === undefined
+          ? []
+          : [toScoredEvidenceChunk(candidateContactHit, config.id)];
       const chronologyChunks = providerChronologyHits.map((hit) =>
         toScoredEvidenceChunk(hit, config.id),
       );
       const mergeWithPriority = (priorityPrefix: readonly CandidateKnowledgeLexicalHit[]) => {
         const reservedChunks = [
+          ...contactChunks,
           ...chronologyChunks,
           ...priorityPrefix.map((hit) => toScoredEvidenceChunk(hit, config.id)),
         ];
@@ -384,7 +399,8 @@ export function candidateKnowledgeRuntimeRetrieval(
         const candidateIds = new Set(candidateHits.map((hit) => hit.id));
         if (
           providerChronologyHits.every((hit) => candidateIds.has(hit.chunkId)) &&
-          prefix.every((hit) => candidateIds.has(hit.chunkId))
+          prefix.every((hit) => candidateIds.has(hit.chunkId)) &&
+          (candidateContactHit === undefined || candidateIds.has(candidateContactHit.chunkId))
         ) {
           hits = candidateHits;
           selectedIds = candidateIds;
@@ -395,6 +411,11 @@ export function candidateKnowledgeRuntimeRetrieval(
       if (providerChronologyHits.some((hit) => !selectedIds.has(hit.chunkId))) {
         throw new Error("Chronology evidence could not fit within the provider retrieval limit.");
       }
+      if (candidateContactHit !== undefined && !selectedIds.has(candidateContactHit.chunkId)) {
+        throw new Error(
+          "Candidate contact evidence could not fit within the provider retrieval limit.",
+        );
+      }
       if (priorityHits.length > 0 && selectedPriorityHits.length === 0) {
         throw new Error(
           "Candidate-priority evidence could not fit within the provider retrieval limit.",
@@ -403,6 +424,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       assertCandidateKnowledgeProviderBounds(hits, limit);
       const rawHitsById = new Map<string, CandidateKnowledgeLexicalHit>(
         [
+          contactRawResult,
           ...chronologyRawResults,
           { hits: providerChronologyHits },
           ...(priorityRawResult === undefined ? [] : [priorityRawResult]),
@@ -421,6 +443,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       const result: CandidateKnowledgeRetrievalResult = {
         status: aggregateStatus(
           [
+            contactRawResult.status,
             ...chronologyRawResults.map(({ status }) => status),
             ...(priorityRawResult === undefined ? [] : [priorityRawResult.status]),
             ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult.status]),
@@ -437,6 +460,7 @@ export function candidateKnowledgeRuntimeRetrieval(
         hits: Object.freeze(selectedRawHits),
         diagnostics: mergeDiagnostics(
           [
+            contactRawResult,
             ...chronologyRawResults,
             ...(priorityRawResult === undefined ? [] : [priorityRawResult]),
             ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult]),

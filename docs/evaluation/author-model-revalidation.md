@@ -856,4 +856,14 @@ selected records and 55,673 serialized bytes. The checked role record is 3,968
 characters, within the existing per-record limit. Fictional regressions protect
 complete list items, nested caveats, exact source ranges and contribution-region
 boundaries. This proves the bounded input improvement, not revised CV quality;
-contact and relevant-project coverage remain separate follow-ups.
+Relevant-project coverage remains a separate follow-up.
+
+## Contact evidence selection (#575)
+
+A provider-free replay of the same pinned case now retains the supplied email,
+phone and profile link without changing their source text or provenance. It
+keeps all thirteen dated roles and the oldest role's contribution evidence within
+twenty records and 52,892 serialized bytes. Fictional regressions cover contact
+labels, mixed identity and disclosure clauses, misleading mentions and a full
+twenty-record merge. This confirms input coverage; it does not establish a revised
+CV outcome or authorize another provider call. Candidate material stays private.

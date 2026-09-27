@@ -249,7 +249,7 @@ describe("candidate-priority evidence", () => {
       result.hits.filter(({ text }) => /^## .*\b(?:19|20)\d{2}.*\bto\b/u.test(text)),
     ).toHaveLength(13);
     expect(result.hits.length).toBeLessThanOrEqual(20);
-    expect(fixture.appendTrace).toHaveBeenCalledTimes(12);
+    expect(fixture.appendTrace).toHaveBeenCalledTimes(13);
   });
 
   it("retains actual section records when a fallback priority hit contains section policy terms", async () => {
@@ -278,7 +278,7 @@ describe("candidate-priority evidence", () => {
     const kafkaEvidence = result.hits.filter(({ text }) => text.includes("Kafka event ingestion"));
     expect(kafkaEvidence).toHaveLength(1);
     expect(kafkaEvidence[0]?.text.startsWith("## ")).toBe(true);
-    expect(fixture.appendTrace).toHaveBeenCalledTimes(11);
+    expect(fixture.appendTrace).toHaveBeenCalledTimes(12);
   });
 
   it("keeps the largest priority prefix that fits beside chronology and education", async () => {

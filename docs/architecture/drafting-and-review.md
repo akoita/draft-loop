@@ -294,6 +294,15 @@ and fallback results are not promoted. Without a matched record, the existing
 supplement behavior remains. The record keeps its source/version identity and
 content-free trace; this adds no provider call or evidence-budget allowance.
 
+CKB retrieval also reserves one matched candidate contact record for the CV
+header, even when Header is not a configured required section. A bounded local
+query looks for contact fields; selection requires an actual field in explicit
+candidate contact context. Policy mentions and unavailable values do not qualify.
+The selected source chunk retains its exact text, identity and provenance. Contact,
+chronology and required-section reservations share the existing evidence limits;
+retrieval fails when protected evidence cannot fit. This performs no contact
+lookup and makes no provider call.
+
 ### Explicit experience statements
 
 Author grounding recognizes whole statements such as `No GraphQL experience`
