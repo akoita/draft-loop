@@ -15,10 +15,10 @@ describe("critic prompt versions", () => {
     expect(createCriticAdjudicationPrompt("cli-critic-v1")).toBe(legacyPrompt);
   });
 
-  it("sets v2 for new runs and instructs evidence-linked semantic review", () => {
-    const prompt = createCriticAdjudicationPrompt("cli-critic-v2");
+  it("sets v3 for new runs and checks explicit dated employment gaps", () => {
+    const prompt = createCriticAdjudicationPrompt("cli-critic-v3");
 
-    expect(promptTemplateVersion("critic")).toBe("cli-critic-v2");
+    expect(promptTemplateVersion("critic")).toBe("cli-critic-v3");
     expect(prompt).toContain(
       "against the source excerpts linked by that claim's evidenceReferenceIds in artifact.evidenceReferences",
     );
@@ -44,14 +44,44 @@ describe("critic prompt versions", () => {
     expect(prompt).toContain(
       "include the affected claim ID and cited evidence reference ID(s) in the message",
     );
+    expect(prompt).toContain(
+      "Separately review retrievedEvidence against the complete CV artifact for explicitly stated dated employment gaps.",
+    );
+    expect(prompt).toContain(
+      "expressly marks an employment gap or says no employment in a stated field is listed during a concrete date interval",
+    );
+    expect(prompt).toContain(
+      "emit a coverage warning and identify the source by its retrievedEvidence ID in the finding message",
+    );
+    expect(prompt).toContain(
+      "no listed software employment does not mean the candidate was unemployed",
+    );
+    expect(prompt).toContain(
+      "Do not infer a gap from spacing, missing dates, or ordering between listed roles",
+    );
+    expect(prompt).toContain(
+      "Do not speculate about the reason for a gap or add a cause that the source does not state",
+    );
+    expect(prompt).toContain(
+      "This source-to-CV completeness check is the only use of uncited retrievedEvidence",
+    );
     expect(prompt).toContain("Do not repeat deterministicFindings");
     expect(prompt).toContain(evidenceReferenceTableInstructions);
     expect(prompt).not.toContain("TypeScript");
   });
 
+  it("keeps v2 claim review separate from the new source-to-CV check", () => {
+    const prompt = createCriticAdjudicationPrompt("cli-critic-v2");
+
+    expect(prompt).toContain(
+      "against the source excerpts linked by that claim's evidenceReferenceIds in artifact.evidenceReferences",
+    );
+    expect(prompt).not.toContain("explicitly stated dated employment gaps");
+  });
+
   it("rejects unsupported recorded critic templates", () => {
-    expect(() => createCriticAdjudicationPrompt("cli-critic-v3")).toThrow(
-      'Unsupported critic prompt template version "cli-critic-v3".',
+    expect(() => createCriticAdjudicationPrompt("cli-critic-v4")).toThrow(
+      'Unsupported critic prompt template version "cli-critic-v4".',
     );
   });
 });
