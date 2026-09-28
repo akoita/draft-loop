@@ -95,7 +95,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v5" : "cli-critic-v1";
+  return role === "author" ? "cli-author-v5" : "cli-critic-v2";
 }
 
 /** The template of a known author version; unknown versions fail closed. */
