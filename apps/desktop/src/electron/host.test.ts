@@ -21,6 +21,7 @@ import {
   type BridgeErrorCode,
   type BridgeResult,
   bridgeCapabilities,
+  type ReviewStateResult,
   safeBridgeError,
 } from "../bridge.js";
 import type { DesktopReviewState } from "../model.js";
@@ -32,6 +33,7 @@ import {
   resolveCredential,
   type SafeStorageAdapter,
 } from "./host.js";
+import { hasLiveE2EArtifactSection } from "./live-e2e.js";
 import { createMemoryProviderAuthModePreferenceStore } from "./provider-auth-mode.js";
 
 function descriptor(root: string): WorkspaceDescriptor {
@@ -504,6 +506,59 @@ function service(
 }
 
 describe("native host", () => {
+  it("preserves semantic section identity for live-E2E required-section checks", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-semantic-section-"));
+    const baseArtifact = artifact();
+    const summarySection = baseArtifact.sections[0];
+    if (summarySection === undefined) throw new Error("Expected artifact summary section.");
+    const fixture = service(root, {
+      artifact: {
+        ...baseArtifact,
+        sections: [
+          { ...summarySection, title: "Professional Summary" },
+          {
+            ...summarySection,
+            id: "experience",
+            title: "Career History",
+            kind: "experience",
+            order: 1,
+            blocks: [],
+          },
+        ],
+      },
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const loaded = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native", runId: "run-native" },
+      });
+
+      expect(loaded).toMatchObject({
+        ok: true,
+        value: {
+          artifact: {
+            sections: [
+              { title: "Professional Summary", kind: "summary" },
+              { title: "Career History", kind: "experience" },
+            ],
+          },
+        },
+      });
+      if (!loaded.ok) throw new Error("Expected review state to load.");
+      const state = loaded.value as ReviewStateResult;
+      expect(hasLiveE2EArtifactSection(state.artifact.sections, "Summary")).toBe(true);
+      expect(hasLiveE2EArtifactSection(state.artifact.sections, "Experience")).toBe(true);
+      expect(hasLiveE2EArtifactSection([{ title: "Professional Summary" }], "Summary")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("returns actionable content-free guidance when a bad PDF blocks a run", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-invalid-pdf-"));
     const root = join(parent, "invalid-pdf-workspace");

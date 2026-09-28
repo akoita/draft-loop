@@ -1,6 +1,7 @@
 import { chmod, mkdir, stat, writeFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import type { ProviderAuthModeConfiguration } from "@draft-loop/application";
+import { type ArtifactSection, hasRequiredArtifactSection } from "@draft-loop/artifacts";
 
 import type {
   BridgeCommand,
@@ -75,6 +76,23 @@ export class LiveProviderE2EError extends Error {
     super(message);
     this.name = "LiveProviderE2EError";
   }
+}
+
+export function hasLiveE2EArtifactSection(
+  sections: readonly {
+    readonly title: string;
+    readonly kind?: ArtifactSection["kind"];
+  }[],
+  requiredSection: string,
+): boolean {
+  const artifactSections: ArtifactSection[] = sections.map(({ title, kind }, order) => ({
+    id: `live-e2e-section-${order}`,
+    title,
+    kind: kind ?? "custom",
+    order,
+    blocks: [],
+  }));
+  return hasRequiredArtifactSection({ sections: artifactSections }, requiredSection);
 }
 
 async function invoke<Value>(
@@ -220,8 +238,8 @@ function createReport(
       workspaceReady: state.setup.ready,
       providerTransmissionAcknowledged: state.providerTransmissionPreflight.acknowledged,
       reviewComplete: state.reviewComplete,
-      hasSummary: state.artifact.sections.some((section) => section.title === "Summary"),
-      hasExperience: state.artifact.sections.some((section) => section.title === "Experience"),
+      hasSummary: hasLiveE2EArtifactSection(state.artifact.sections, "Summary"),
+      hasExperience: hasLiveE2EArtifactSection(state.artifact.sections, "Experience"),
       hasEvidenceLinkedClaims: evidenceLinkedClaims.length > 0,
       approved: state.approval === "approved",
       exported: state.state === "exported",
@@ -387,11 +405,11 @@ export async function runLiveProviderE2E(options: LiveProviderE2EOptions): Promi
   requireCondition(!completed.setup.fixtureMode, "provider run returned fixture mode");
   requireCondition(hasCompletedArtifact(completed), "provider run returned an incomplete artifact");
   requireCondition(
-    completed.artifact.sections.some((section) => section.title === "Summary"),
+    hasLiveE2EArtifactSection(completed.artifact.sections, "Summary"),
     "provider artifact is missing Summary",
   );
   requireCondition(
-    completed.artifact.sections.some((section) => section.title === "Experience"),
+    hasLiveE2EArtifactSection(completed.artifact.sections, "Experience"),
     "provider artifact is missing Experience",
   );
   requireCondition(

@@ -75,6 +75,9 @@ importers:
       '@draft-loop/application':
         specifier: workspace:*
         version: link:../../packages/application
+      '@draft-loop/artifacts':
+        specifier: workspace:*
+        version: link:../../packages/artifacts
       '@draft-loop/domain':
         specifier: workspace:*
         version: link:../../packages/domain

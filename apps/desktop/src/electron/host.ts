@@ -768,6 +768,7 @@ function reviewArtifact(
   const sections: readonly ReviewSection[] = artifact.sections.map((section) => ({
     id: section.id,
     title: section.title,
+    kind: section.kind,
     blocks: section.blocks.map((block) => ({
       id: block.id,
       type: block.type,
