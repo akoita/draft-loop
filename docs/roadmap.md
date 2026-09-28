@@ -1369,7 +1369,7 @@ clarifications and acceptance of disclosed warnings remain normal product
 actions. #515, the optional API-key route experiment, is deferred and requires
 separate billing authorization.
 
-### Now — Generalization evidence follow-up
+### Completed observation — Generalization evidence follow-up
 
 [Milestone 19](https://github.com/akoita/draft-loop/milestone/19) closes the
 specific gaps exposed by #622 in bounded order: [#628](https://github.com/akoita/draft-loop/issues/628)
@@ -1377,11 +1377,17 @@ classifies Claude OAuth refresh contention at the subscription-session
 boundary; [#629](https://github.com/akoita/draft-loop/issues/629) preserves dated
 chronology through source markers; [#632](https://github.com/akoita/draft-loop/issues/632)
 associates required section headings with adjacent source bodies; and
-[#630](https://github.com/akoita/draft-loop/issues/630) prepares a fresh,
-fictional reserved cohort. Each issue owns one boundary and one PR. The new
-cohort requires its own frozen admission and explicit user authorization; this
-milestone authorizes no model calls or API billing. The model-profile milestone
-remains later so the reference workflow can be measured first.
+[#630](https://github.com/akoita/draft-loop/issues/630) prepared a fresh,
+fictional reserved cohort. Its separately authorized run made two author calls
+and one critic call without retries. Case C was rejected by a Markdown-emphasis
+false positive in protected-name grounding; case D reached independent review
+with zero critic findings but omitted its explicitly required employment gap.
+The [cohort record](../packages/evaluations/fixtures/fresh-software-engineering-cohort/README.md)
+gives the exact result and limits. The two-case workflow and coverage exit was
+not met. Fixes and a fresh observation belong to a new bounded milestone; the
+frozen #630 cohort cannot be rerun or silently treated as a pass. The
+model-profile milestone remains later so the reference workflow can be
+measured first.
 
 ### Later — Model profiles and tiers
 
