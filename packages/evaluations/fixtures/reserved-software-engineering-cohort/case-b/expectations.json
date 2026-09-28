@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "caseId": "ivo-developer-platform",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "b-must-01",
+      "sourceIds": ["b-contact", "b-education", "b-languages", "b-training"],
+      "fact": "Preserve the supplied contact information, 2016 information-systems degree, English/Spanish proficiency, and attendance-only training record.",
+      "boundary": "No professional Kubernetes or cloud credential is established."
+    },
+    {
+      "id": "b-must-02",
+      "sourceIds": ["b-employment-1", "b-gap", "b-employment-2"],
+      "fact": "Keep the Frostcairn and Kiteframe employer periods separate, include the 2019 gap, and preserve the two distinct Kiteframe titles and their subperiods.",
+      "boundary": "Do not merge the gap or promote Technical Lead to a Staff or company-wide role."
+    },
+    {
+      "id": "b-must-03",
+      "sourceIds": ["b-echoplex"],
+      "fact": "Describe Ivo's batch-selector and rollback-hook contributions to EchoPlex, the team's production build-check service, with the bounded build-wait measurement.",
+      "boundary": "Cloud queue operations and access-control design belonged to other engineers; the team shipped and supported the service."
+    },
+    {
+      "id": "b-must-04",
+      "sourceIds": ["b-crateturn-study", "b-gap-after", "b-independent"],
+      "fact": "Keep the CrateTurn migration as a study, state that no employment is recorded after March 2024, and describe WispRelay as a separate personal staging prototype.",
+      "boundary": "Neither study nor prototype is a production migration or production service."
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["b-employment-1", "b-echoplex"],
+      "rationale": "Production Python test tooling and a Go merge-batch service integrated with production build checks are stated."
+    },
+    {
+      "requirementId": "r2",
+      "status": "partial",
+      "sourceIds": ["b-echoplex"],
+      "rationale": "Ivo implemented two service components, but other engineers owned cloud-queue operations and access control."
+    },
+    {
+      "requirementId": "r3",
+      "status": "partial",
+      "sourceIds": ["b-employment-2"],
+      "rationale": "Technical leadership and mentoring apply to a five-person team, not several teams or the whole organization."
+    },
+    {
+      "requirementId": "r4",
+      "status": "unsupported",
+      "sourceIds": ["b-crateturn-study"],
+      "rationale": "The required production migration and rollout did not occur; only a comparison, non-production load test, and proposal exist."
+    },
+    {
+      "requirementId": "r5",
+      "status": "unsupported",
+      "sourceIds": ["b-training"],
+      "rationale": "The course issued an attendance certificate only, and the profile explicitly records no professional Kubernetes or cloud certification."
+    },
+    {
+      "requirementId": "r6",
+      "status": "supported",
+      "sourceIds": ["b-echoplex"],
+      "rationale": "A six-week sample of 240 builds and its median-wait values are specified."
+    },
+    {
+      "requirementId": "degree",
+      "status": "supported",
+      "sourceIds": ["b-education"],
+      "rationale": "The profile states a completed information-systems degree."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "b-no-01",
+      "claim": "Ivo alone designed, built, released, or operated EchoPlex or owned its cloud queues and access-control design.",
+      "sourceIds": ["b-echoplex"],
+      "reason": "The five-person team shipped the service; specific queue and access-control ownership belonged to other engineers."
+    },
+    {
+      "id": "b-no-02",
+      "claim": "Ivo led organization-wide architecture, had a Staff title, or directed several teams.",
+      "sourceIds": ["b-employment-2"],
+      "reason": "The technical-lead scope was one five-person team; no broader authority is established."
+    },
+    {
+      "id": "b-no-03",
+      "claim": "The CrateTurn production migration was completed or WispRelay served production users.",
+      "sourceIds": ["b-crateturn-study", "b-independent"],
+      "reason": "CrateTurn remained a proposal after a non-production load test; WispRelay was a local staging prototype."
+    },
+    {
+      "id": "b-no-04",
+      "claim": "Ivo holds a Kubernetes/cloud certification, or the CI wait metric was 34 to 18 minutes across all runs.",
+      "sourceIds": ["b-training", "b-echoplex"],
+      "reason": "The training certificate records attendance; the only metric is 34 to 19 minutes over six weeks and 240 builds."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "b-det-dates",
+      "sourceIds": ["b-employment-1", "b-gap", "b-employment-2", "b-gap-after", "b-independent"],
+      "check": "Keep the 2019 gap, two distinct Kiteframe title ranges, March 2024 employment end, and independent-project dates separate."
+    },
+    {
+      "id": "b-det-metric",
+      "sourceIds": ["b-echoplex"],
+      "check": "Preserve 34 to 19 minutes, median CI wait, the six-week window, and 240-build sample; do not change values or scope."
+    },
+    {
+      "id": "b-det-names",
+      "sourceIds": ["b-employment-1", "b-echoplex", "b-crateturn-study", "b-independent"],
+      "check": "Check exact supported spellings Frostcairn, Kiteframe, EchoPlex, CrateTurn, and WispRelay; changed-name controls are unsupported."
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "b-sem-ownership",
+      "sourceIds": ["b-employment-2", "b-echoplex"],
+      "check": "Separate personal code contributions, team delivery, other engineers' service ownership, and the limited five-person lead role."
+    },
+    {
+      "id": "b-sem-maturity",
+      "sourceIds": ["b-echoplex", "b-crateturn-study", "b-independent"],
+      "check": "Distinguish production service, non-production migration study, and local staging prototype."
+    },
+    {
+      "id": "b-sem-credential",
+      "sourceIds": ["b-training"],
+      "check": "Do not equate workshop attendance or its certificate with a professional certification."
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}
