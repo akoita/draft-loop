@@ -10,8 +10,8 @@ results. Case G records a dated interval with no listed paid work in a named
 software field. Case H has separated role dates without a source claim about
 unemployment.
 
-No provider run is authorized. Any future evaluation requires separate
-admission and authorization.
+The [one-round observation](observation.md) completed under a separate frozen
+admission and explicit user authorization. It does not authorize another run.
 
 Provider-free preparation initially omitted G's training body when education
 and training shared one heading. The fictional profiles now use separate

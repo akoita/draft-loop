@@ -1408,18 +1408,21 @@ The two-case exit was not met. The E/F cohort cannot be retuned or rerun under
 that admission; a new bounded milestone must own the lexical correction and
 any fresh observation.
 
-### Now — Protected identity and reference observation
+### Completed observation — Protected identity and reference observation
 
-[Milestone 21](https://github.com/akoita/draft-loop/milestone/21) has two
-ordered issues: [#642](https://github.com/akoita/draft-loop/issues/642) fixes
-the source-backed possessive-name rejection at the application grounding
-boundary, then [#643](https://github.com/akoita/draft-loop/issues/643)
-prepares and measures a new fictional two-profile cohort. The frozen E/F
-observation cannot be retried or used to tune its own result. The cohort needs
-a new concrete admission and explicit authorization before any provider call;
-the milestone itself authorizes no such call, billing, CV approval, or export.
-Close this finite milestone with the observed outcome even if the two-case
-exit remains unmet.
+[Milestone 21](https://github.com/akoita/draft-loop/milestone/21) contained
+two ordered issues. [#642](https://github.com/akoita/draft-loop/issues/642)
+fixed the source-backed possessive-name rejection at the application grounding
+boundary. [#643](https://github.com/akoita/draft-loop/issues/643) froze and
+measured a new fictional two-profile cohort under a separate admission and
+explicit user authorization. Both profiles produced grounded drafts and
+independent reviews in one round, without a retry. The [sanitized
+observation](../packages/evaluations/fixtures/reference-software-engineering-cohort/observation.md)
+records that G's draft omitted a source-explicit dated work interval, which
+the critic flagged. H did not infer unemployment from separate role dates.
+The milestone closed with its frozen coverage exit unmet; the consumed G/H
+cohort cannot be tuned or rerun under that admission. Further sprint work is
+paused pending prioritization.
 
 ### Later — Model profiles and tiers
 
