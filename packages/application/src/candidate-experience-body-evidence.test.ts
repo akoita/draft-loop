@@ -530,11 +530,6 @@ describe("candidate experience body evidence", () => {
       "Pinned candidate knowledge evidence could not be verified.",
     );
 
-    const bodyLoader = vi.fn(async () => []);
-    vi.spyOn(
-      experienceBodyEvidence,
-      "createPinnedCandidateKnowledgeSourceChunkLoader",
-    ).mockReturnValue(bodyLoader);
     const noExperienceRuntime = candidateKnowledgeRuntimeRetrieval(
       { appendCandidateKnowledgeRetrievalTrace: appendTrace },
       {
@@ -549,7 +544,11 @@ describe("candidate experience body evidence", () => {
     if (noExperienceRuntime === undefined) {
       throw new Error("Expected the non-Experience candidate knowledge runtime.");
     }
-    await noExperienceRuntime.inspect("Bachelor of Computing");
-    expect(bodyLoader).not.toHaveBeenCalled();
+    const noExperienceResult = await noExperienceRuntime.inspect("Bachelor of Computing");
+    expect(noExperienceResult.hits.map(({ text }) => text)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("Bachelor of Computing, Example University"),
+      ]),
+    );
   });
 });

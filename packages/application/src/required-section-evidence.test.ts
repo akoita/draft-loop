@@ -15,6 +15,7 @@ import { candidateKnowledgeRuntimeRetrieval } from "./candidate-knowledge-retrie
 import * as knowledgeBase from "./knowledge-base.js";
 import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import {
+  matchesRequiredSectionEvidence,
   mergeRequiredSectionEvidence,
   requiredSectionProposalIssues,
   requiredSectionQueries,
@@ -226,6 +227,16 @@ describe("required-section evidence", () => {
     );
   });
 
+  it("requires a body beside a section heading and can use the heading to classify that body", () => {
+    const headingOnly = "<!-- evidence-id: training -->\n## Training";
+    const unlabelledBody = "Completed the Stream Processing Workshop in 2024.";
+    const joined = `${headingOnly}\n\n${unlabelledBody}`;
+
+    expect(matchesRequiredSectionEvidence("Certifications", headingOnly)).toBe(false);
+    expect(matchesRequiredSectionEvidence("Certifications", unlabelledBody)).toBe(false);
+    expect(matchesRequiredSectionEvidence("Certifications", joined)).toBe(true);
+  });
+
   it("accepts honest no-source placeholders and accepts supplied section content", () => {
     const roleOnly = evidence("role", "Platform Engineer delivered TypeScript systems.");
     const education = evidence("education", "MSc Computer Science, Example University.");
@@ -428,5 +439,90 @@ describe("required-section evidence", () => {
     await expect(saturated?.port.queryEvidence("Platform Engineer")).rejects.toThrow(
       "Required-section evidence coverage could not be established within the retrieval limit.",
     );
+  });
+
+  it("hands off pinned body text for a split Training heading without crossing sections", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-required-section-body-"));
+    temporaryRoots.push(root);
+    const storeRoot = join(root, "candidate-knowledge");
+    const sourcePath = join(root, "fictional-profile.md");
+    await writeFile(
+      sourcePath,
+      [
+        "# Fictional Candidate",
+        "",
+        "**Candidate contact:** Ada Rivera | ada@rivera.test",
+        "",
+        "## Juniper Civic Systems — Application Engineer — January 2020 to December 2021",
+        "",
+        "### CV-usable facts",
+        "- Maintained the inherited scheduling service and fixed reliability issues.",
+        "",
+        "## Training",
+        "",
+        "Completed the Stream Processing Workshop in 2024.",
+        "",
+        "## Languages",
+        "",
+        "English — fluent.",
+      ].join("\n"),
+      "utf8",
+    );
+    const ids = [
+      "section-body-store",
+      "section-body-ckb",
+      "section-body-source",
+      "section-body-version",
+    ];
+    const service = createCandidateKnowledgeStoreService({
+      generateId: () => ids.shift() ?? "unexpected-id",
+      now: () => "2026-09-28T10:00:00.000Z",
+    });
+    await service.initializeStore({ storeRoot });
+    await service.importKnowledgeSourceFile({
+      storeRoot,
+      knowledgeBaseId: "section-body-ckb",
+      sourcePath,
+    });
+    const selection = await service.createKnowledgeSelectionSnapshot({
+      selections: [{ storeRoot, knowledgeBaseId: "section-body-ckb" }],
+    });
+    const appendTrace = vi.fn(
+      async (
+        input: CandidateKnowledgeRetrievalTraceInput,
+      ): Promise<CandidateKnowledgeRetrievalTrace> =>
+        input as unknown as CandidateKnowledgeRetrievalTrace,
+    );
+    const runtime = candidateKnowledgeRuntimeRetrieval(
+      { appendCandidateKnowledgeRetrievalTrace: appendTrace },
+      {
+        id: "workspace-1",
+        requiredSections: ["Experience", "Certifications", "Languages"],
+        candidateKnowledgeSelection: {
+          entries: [{ storeRoot, knowledgeBaseId: "section-body-ckb" }],
+        },
+      },
+      { candidateKnowledgeSelection: selection } as ContextSnapshot,
+    );
+    if (runtime === undefined) throw new Error("Expected candidate knowledge runtime retrieval.");
+
+    const result = await runtime.inspect("scheduling reliability");
+    const workshop = result.hits.find(({ text }) => text.includes("Stream Processing Workshop"));
+    const role = result.hits.find(({ text }) =>
+      text.includes("Maintained the inherited scheduling"),
+    );
+
+    expect(result.status).toBe("matched");
+    expect(result.hits.map(({ text }) => text)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("ada@rivera.test"),
+        expect.stringContaining("Juniper Civic Systems"),
+      ]),
+    );
+    expect(workshop?.text).toBe("## Training\n\nCompleted the Stream Processing Workshop in 2024.");
+    expect(workshop?.text).not.toContain("English");
+    expect(role?.text).toContain("Maintained the inherited scheduling service");
+    expect(result.hits.some(({ text }) => text === "## Training")).toBe(false);
+    expect(result.selectedChunkCount).toBeLessThanOrEqual(20);
   });
 });
