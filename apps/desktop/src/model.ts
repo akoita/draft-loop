@@ -1,3 +1,4 @@
+import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { CredentialStatus } from "./bridge.js";
 
 /**
@@ -89,6 +90,7 @@ export interface ReviewBlock {
 export interface ReviewSection {
   readonly id: string;
   readonly title: string;
+  readonly kind?: ArtifactSection["kind"];
   readonly blocks: readonly ReviewBlock[];
 }
 

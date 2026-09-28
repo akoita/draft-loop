@@ -11,7 +11,7 @@ import type {
 } from "../bridge.js";
 import { createFixtureReviewState } from "../model.js";
 import type { NativeHost } from "./host.js";
-import { runLiveProviderE2E } from "./live-e2e.js";
+import { hasLiveE2EArtifactSection, runLiveProviderE2E } from "./live-e2e.js";
 
 interface StubPaths {
   readonly root: string;
@@ -21,6 +21,25 @@ interface StubPaths {
   readonly report: string;
   readonly export: string;
 }
+
+describe("live E2E required section matching", () => {
+  it("accepts custom headings with semantic kinds and rejects sections with neither identity", () => {
+    expect(
+      hasLiveE2EArtifactSection(
+        [
+          { title: "Professional Summary", kind: "summary" },
+          { title: "Career History", kind: "experience" },
+        ],
+        "Summary",
+      ),
+    ).toBe(true);
+    expect(
+      hasLiveE2EArtifactSection([{ title: "Career History", kind: "experience" }], "Experience"),
+    ).toBe(true);
+    expect(hasLiveE2EArtifactSection([{ title: "Professional Summary" }], "Summary")).toBe(false);
+    expect(hasLiveE2EArtifactSection([{ title: "" }], "Summary")).toBe(false);
+  });
+});
 
 function liveState(): ReviewStateResult {
   const fixture = createFixtureReviewState();
