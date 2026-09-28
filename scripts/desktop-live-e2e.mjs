@@ -37,15 +37,42 @@ const OPENAI_AUTH_MODE_VARIABLE = "DRAFT_LOOP_OPENAI_AUTH_MODE";
 const DEFAULT_AUTHOR_MODEL = "claude-haiku-4-5";
 const DEFAULT_CRITIC_MODEL = "gpt-5.6-luna";
 const PACKAGED_LAUNCH_ARGUMENTS = Object.freeze(["--headless", "--disable-gpu", "--no-sandbox"]);
-const jobContent = `# Synthetic Platform Engineer role
+const jobContent = `# Platform Engineer — Willowmere Developer Tools
 
-Build local-first TypeScript products with automated tests and evidence-backed documentation.
-Required experience: TypeScript, Node.js, testing, accessibility, and technical writing.
+Willowmere builds local developer tools for TypeScript services and internal dashboards.
+The role maintains Node.js tooling and React-based views, adds automated tests, supports keyboard-accessible interfaces, and documents setup and troubleshooting.
 `;
-const candidateContent = `# Synthetic Candidate Evidence
+const candidateContent = `# Sela Nareth
 
-Built local-first TypeScript tools with automated tests and clear documentation.
-Worked with Node.js, React, accessibility, and evidence-backed technical writing.
+**Contact**: \`sela.nareth@candidate.test\`
+
+## Summary
+
+Platform engineer focused on JavaScript and TypeScript developer tooling. Recent work includes local validation tools, an internal report view, automated tests, keyboard accessibility, and user documentation.
+
+## Experience
+
+### Morrowbeam Build Cooperative — Platform Engineer — April 2021 to present
+
+Worked in a four-engineer platform group. Built a TypeScript command-line tool on Node.js that reads \`package.json\` manifests and reports missing project scripts before release. Product engineers ran it locally; it did not change CI policy or deploy services.
+
+Added Vitest unit tests for manifest validation and command exit statuses. Built a React page that displays the validation report, with associated form labels and a predictable keyboard focus order; checked the page in a keyboard-only walkthrough, not a formal accessibility audit. Wrote Markdown setup and troubleshooting guides for the tool.
+
+### Saltmere Integration Studio — Software Engineer — September 2018 to March 2021
+
+Created a TypeScript utility on Node.js to normalize local JSON fixtures used in integration tests. Added automated tests for malformed fixture data and wrote a short local setup guide. This utility was used by the studio's integration team and was not a customer-facing service.
+
+## Education
+
+BSc in Software Engineering, Keelpoint University, 2018.
+
+## Skills
+
+TypeScript, Node.js, React, Vitest, JSON, command-line tooling, keyboard navigation, HTML forms, and Markdown documentation.
+
+## Languages
+
+English — fluent; Portuguese — conversational.
 `;
 
 class DesktopLiveE2EError extends Error {
