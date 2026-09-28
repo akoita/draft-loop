@@ -6,7 +6,10 @@ import { join } from "node:path";
 
 import type { ModelSelection } from "@draft-loop/domain";
 
-import { claudeApiErrorCauseDiagnostics } from "./claude-api-error-cause.js";
+import {
+  claudeApiErrorCauseDiagnostics,
+  claudeOAuthRefreshContentionDiagnosticCode,
+} from "./claude-api-error-cause.js";
 import { captureUnknownClaudeCategories } from "./claude-category-capture.js";
 import {
   assertDataExposureAllowed,
@@ -623,13 +626,25 @@ function mapClaudeStructuredError(response: ClaudeJsonResult): ProviderAdapterEr
     );
   }
   if (status === undefined && response.terminal_reason === "api_error") {
+    const causeDiagnostics = claudeApiErrorCauseDiagnostics(response.result);
+    if (causeDiagnostics.some(({ code }) => code === claudeOAuthRefreshContentionDiagnosticCode)) {
+      return new ProviderAdapterError(
+        "anthropic",
+        "authentication",
+        "Claude sign-in could not be refreshed. Wait a minute and retry. If the problem persists, close other Claude Code processes, then sign in again.",
+        {
+          retryable: false,
+          diagnostics: [...diagnostics, ...causeDiagnostics],
+        },
+      );
+    }
     return new ProviderAdapterError(
       "anthropic",
       "transient",
       "The user-session provider encountered a transient error.",
       {
         retryable: true,
-        diagnostics: [...diagnostics, ...claudeApiErrorCauseDiagnostics(response.result)],
+        diagnostics: [...diagnostics, ...causeDiagnostics],
       },
     );
   }

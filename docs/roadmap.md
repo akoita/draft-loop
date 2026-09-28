@@ -1369,6 +1369,19 @@ clarifications and acceptance of disclosed warnings remain normal product
 actions. #515, the optional API-key route experiment, is deferred and requires
 separate billing authorization.
 
+### Now — Generalization evidence follow-up
+
+[Milestone 19](https://github.com/akoita/draft-loop/milestone/19) closes the
+specific gaps exposed by #622 in bounded order: [#628](https://github.com/akoita/draft-loop/issues/628)
+classifies Claude OAuth refresh contention at the subscription-session
+boundary; [#629](https://github.com/akoita/draft-loop/issues/629) keeps required
+source-backed section and chronology evidence in context selection; and
+[#630](https://github.com/akoita/draft-loop/issues/630) prepares a fresh,
+fictional reserved cohort. Each issue owns one boundary and one PR. The new
+cohort requires its own frozen admission and explicit user authorization; this
+milestone authorizes no model calls or API billing. The model-profile milestone
+remains later so the reference workflow can be measured first.
+
 ### Later — Model profiles and tiers
 
 Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and

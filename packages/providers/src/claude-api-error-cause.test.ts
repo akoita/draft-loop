@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { claudeApiErrorCauseDiagnostics } from "./claude-api-error-cause.js";
+import {
+  claudeApiErrorCauseDiagnostics,
+  claudeOAuthRefreshContentionDiagnosticCode,
+} from "./claude-api-error-cause.js";
 
 const allowlistedTokens = [
   "invalid_request_error",
@@ -42,6 +45,29 @@ describe("claudeApiErrorCauseDiagnostics", () => {
     expect(claudeApiErrorCauseDiagnostics("API Error: 529 then API Error: 500")).toEqual([
       { code: "claude_api_error_status_529", path: "result" },
     ]);
+  });
+
+  it("classifies Claude OAuth refresh contention without retaining result text", () => {
+    const privateResult =
+      "Failed to refresh OAuth token: another Claude Code process is refreshing it or exited mid-refresh; local detail: private-refresh-marker";
+
+    const diagnostics = claudeApiErrorCauseDiagnostics(privateResult);
+
+    expect(diagnostics).toEqual([
+      { code: claudeOAuthRefreshContentionDiagnosticCode, path: "result" },
+    ]);
+    expect(JSON.stringify(diagnostics)).not.toContain("private-refresh-marker");
+  });
+
+  it.each([
+    "Failed to refresh token: another Claude Code process is refreshing it or exited mid-refresh",
+    "Failed to refresh OAuth token: another process is refreshing it or exited mid-refresh",
+    "Failed to refresh OAuth token: another Claude Code process refreshed it successfully",
+    `${" ".repeat(4_096)}Failed to refresh OAuth token: another Claude Code process is refreshing it or exited mid-refresh`,
+  ])("does not classify an OAuth refresh near miss: %s", (result) => {
+    expect(claudeApiErrorCauseDiagnostics(result)).not.toContainEqual(
+      expect.objectContaining({ code: claudeOAuthRefreshContentionDiagnosticCode }),
+    );
   });
 
   it.each([
@@ -118,7 +144,9 @@ describe("claudeApiErrorCauseDiagnostics", () => {
     expect(output.length).toBeGreaterThan(0);
     expect(JSON.stringify(output)).not.toContain(sentinel);
     for (const { code, path } of output) {
-      expect(code).toMatch(/^claude_api_error_(?:status_[1-5]\d{2}|type_[a-z_]+)$/u);
+      expect(code).toMatch(
+        /^claude_api_error_(?:status_[1-5]\d{2}|type_[a-z_]+|oauth_refresh_contention)$/u,
+      );
       expect(path).toBe("result");
     }
   });
