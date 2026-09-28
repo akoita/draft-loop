@@ -1,0 +1,171 @@
+{
+  "schemaVersion": 1,
+  "caseId": "independent-cohort-case-f",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "f-employment-chronology",
+      "fact": "Preserve the February 2015–June 2017, October 2018–May 2021, and November 2022–present role dates as separate periods; do not label the unaddressed time between roles as unemployment.",
+      "sourceIds": ["f-summary", "f-role-1", "f-role-2", "f-role-3"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "f-role-and-team-attribution",
+      "fact": "Attribute Daro's Kotlin validator, audit endpoint, and review queue contributions separately from the planning, dispatch, product, and operations teams' authority.",
+      "sourceIds": ["f-role-1", "f-role-2", "f-role-3"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "f-study-boundary",
+      "fact": "Describe event delivery as a design study recommending a limited trial; no migration or production rollout occurred.",
+      "sourceIds": ["f-study-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "f-project-maturity",
+      "fact": "Keep Quiet Current Replay a personal local prototype using synthetic inputs without deployment or validated forecast accuracy.",
+      "sourceIds": ["f-project-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "f-background",
+      "fact": "Retain the computing degree, participant-only forum scope, supported skills, language level, and contact details.",
+      "sourceIds": ["f-contact", "f-education", "f-training", "f-skills", "f-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["f-role-3"],
+      "rationale": "The review queue is explicitly described as used in production and handles operator-entered adjustments."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["f-role-2", "f-skills"],
+      "rationale": "Daro implemented a Kotlin validator and audit endpoint, and Kotlin and Java are listed skills."
+    },
+    {
+      "requirementId": "r3",
+      "status": "unsupported",
+      "sourceIds": ["f-role-3"],
+      "rationale": "Site reliability engineers own cluster operations and on-call; Daro has no administrator access and is not on the rotation."
+    },
+    {
+      "requirementId": "r4",
+      "status": "unsupported",
+      "sourceIds": ["f-role-3"],
+      "rationale": "The product director owns portfolio priorities; no cross-team roadmap authority is recorded for Daro."
+    },
+    {
+      "requirementId": "r5",
+      "status": "supported",
+      "sourceIds": ["f-role-2", "f-role-3"],
+      "rationale": "Dispatch specialists defined constraints, and Daro documented queue-triage and manual-correction handoffs."
+    },
+    {
+      "requirementId": "r6",
+      "status": "partial",
+      "sourceIds": ["f-study-1"],
+      "rationale": "Daro compared delivery options and recommended a trial, but no migration or production rollout occurred."
+    },
+    {
+      "requirementId": "r7",
+      "status": "unsupported",
+      "sourceIds": ["f-role-2", "f-project-1"],
+      "rationale": "The record explicitly excludes forecast-model work from the role and gives no validated accuracy result for the prototype."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "f-inferred-unemployment",
+      "claim": "Daro was unemployed or had no other work during the time between the listed role dates.",
+      "sourceIds": ["f-summary", "f-role-1", "f-role-2", "f-role-3"],
+      "reason": "The source gives separate role dates but makes no claim about intervening work or unemployment."
+    },
+    {
+      "id": "f-owned-operations",
+      "claim": "Daro owned production releases, Kubernetes administration, or on-call response.",
+      "sourceIds": ["f-role-3"],
+      "reason": "Those responsibilities belong to site reliability engineers."
+    },
+    {
+      "id": "f-roadmap-authority",
+      "claim": "Daro set the product portfolio or cross-team roadmap.",
+      "sourceIds": ["f-role-3"],
+      "reason": "A product director owns portfolio priorities."
+    },
+    {
+      "id": "f-completed-event-migration",
+      "claim": "Daro delivered an event-stream migration or production cutover.",
+      "sourceIds": ["f-study-1"],
+      "reason": "The evidence is a design note and no migration or production rollout occurred."
+    },
+    {
+      "id": "f-forecast-results",
+      "claim": "Daro built forecasting models or demonstrated improved forecast accuracy.",
+      "sourceIds": ["f-role-2", "f-project-1"],
+      "reason": "The role record excludes forecast-model work and the prototype has no validated accuracy result."
+    },
+    {
+      "id": "f-project-production",
+      "claim": "Quiet Current Replay is deployed or uses live utility data.",
+      "sourceIds": ["f-project-1"],
+      "reason": "It is a local personal prototype using synthetic load intervals."
+    },
+    {
+      "id": "f-operator-license",
+      "claim": "Daro holds an operator license or engineering certification from the forum.",
+      "sourceIds": ["f-training"],
+      "reason": "The source records attendance and a participant certificate only."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "f-exact-role-dates",
+      "check": "Keep each of the three role date ranges distinct and make no employment-status claim for the time between them.",
+      "sourceIds": ["f-role-1", "f-role-2", "f-role-3"]
+    },
+    {
+      "id": "f-contact-and-degree",
+      "check": "Do not alter the .test contact address, degree title, or institution name.",
+      "sourceIds": ["f-contact", "f-education"]
+    },
+    {
+      "id": "f-training-wording",
+      "check": "Preserve the forum's participant-only scope and do not name an operator license.",
+      "sourceIds": ["f-training"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "f-team-authority",
+      "check": "Separate Daro's implementation from dispatch constraints, product direction, and site-reliability ownership.",
+      "sourceIds": ["f-role-2", "f-role-3"]
+    },
+    {
+      "id": "f-study-versus-delivery",
+      "check": "Keep the event-delivery comparison and recommendation distinct from a completed migration.",
+      "sourceIds": ["f-study-1"]
+    },
+    {
+      "id": "f-prototype-versus-operation",
+      "check": "Keep the synthetic-input replay tool separate from live utility operations or validated forecasting.",
+      "sourceIds": ["f-project-1"]
+    },
+    {
+      "id": "f-background-scope",
+      "check": "Represent forum attendance as participation, not professional or operator qualification.",
+      "sourceIds": ["f-training"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}

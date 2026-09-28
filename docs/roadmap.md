@@ -1389,18 +1389,24 @@ frozen #630 cohort cannot be rerun or silently treated as a pass. The
 model-profile milestone remains later so the reference workflow can be
 measured first.
 
-### Now — Generalization coverage follow-up
+### Completed observation — Generalization coverage follow-up
 
-[Milestone 20](https://github.com/akoita/draft-loop/milestone/20) has a fixed,
-ordered exit: [#636](https://github.com/akoita/draft-loop/issues/636) corrects
+[Milestone 20](https://github.com/akoita/draft-loop/milestone/20) had a fixed,
+ordered exit: [#636](https://github.com/akoita/draft-loop/issues/636) corrected
 the protected-name Markdown-emphasis false positive;
-[#637](https://github.com/akoita/draft-loop/issues/637) makes the existing
-source-grounded review surface an omitted explicit employment gap; and
-[#638](https://github.com/akoita/draft-loop/issues/638) freezes and measures a
-new fictional cohort after both fixes. Each issue has one boundary and one PR.
-The milestone itself authorizes no provider call or retry; the cohort requires
-a separate concrete admission and user authorization. Close the milestone with
-the observed result, including an unmet exit if either case fails.
+[#637](https://github.com/akoita/draft-loop/issues/637) added a versioned
+source-to-CV critic instruction for explicit employment gaps; and
+[#638](https://github.com/akoita/draft-loop/issues/638) froze and measured a
+new fictional cohort after both changes. Each issue owned one boundary and one
+PR. The milestone itself authorized no provider call or retry; the cohort used
+a separate concrete admission and user authorization. The [frozen #638
+observation](../packages/evaluations/fixtures/independent-software-engineering-cohort/README.md)
+used two author calls and one critic call. Case E stopped at a new
+protected-possessive false positive before independent review; case F reached
+review without a fabricated employment gap and received zero critic findings.
+The two-case exit was not met. The E/F cohort cannot be retuned or rerun under
+that admission; a new bounded milestone must own the lexical correction and
+any fresh observation.
 
 ### Later — Model profiles and tiers
 

@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "caseId": "independent-cohort-case-e",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "e-employment-chronology",
+      "fact": "Keep the April 2014–July 2016, March 2017–September 2020, and October 2020–present roles distinct, and preserve the explicitly stated August 2016–February 2017 period with no software role.",
+      "sourceIds": ["e-role-1", "e-gap-1", "e-role-2", "e-role-3"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "e-employer-client-attribution",
+      "fact": "Attribute the integration employment to Yarrowline, the client relationship to Tidemark, Meral's adapter work to her four-engineer team, and production imports to client operations.",
+      "sourceIds": ["e-role-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "e-local-benchmark",
+      "fact": "If used, retain the 9,600-record snapshot, 12 local replay runs, and 3.2-to-2.1-second median transform-stage scope.",
+      "sourceIds": ["e-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "e-assessment-boundary",
+      "fact": "Present the lookup-cache work as an assessment and recommendation; no datastore migration was approved or run.",
+      "sourceIds": ["e-study-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "e-project-maturity",
+      "fact": "Keep Parcel Beacon a local personal prototype using generated records, without municipal integration or measured scale.",
+      "sourceIds": ["e-project-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "e-background",
+      "fact": "Retain the Applied Computing degree, attendance-only workshop scope, supported skills, language level, and contact details.",
+      "sourceIds": ["e-contact", "e-education", "e-training", "e-skills", "e-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["e-role-1", "e-role-3"],
+      "rationale": "The record describes parcel imports and a production-used intake review endpoint."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["e-role-2"],
+      "rationale": "Meral's adapter is explicitly identified as a Rust parser, and the role records its invalid-record quarantine."
+    },
+    {
+      "requirementId": "r3",
+      "status": "partial",
+      "sourceIds": ["e-role-2"],
+      "rationale": "Meral implemented the adapter under client-set acceptance rules, while client operations ran production imports."
+    },
+    {
+      "requirementId": "r4",
+      "status": "supported",
+      "sourceIds": ["e-role-2"],
+      "rationale": "A fixed record snapshot and 12 local replay runs have scoped median timings."
+    },
+    {
+      "requirementId": "r5",
+      "status": "supported",
+      "sourceIds": ["e-role-2", "e-role-3"],
+      "rationale": "Client data stewards set rules, and Meral maintains API handoff notes."
+    },
+    {
+      "requirementId": "r6",
+      "status": "unsupported",
+      "sourceIds": ["e-role-3"],
+      "rationale": "Site reliability engineers handle deployment and on-call; no Kubernetes operations are recorded."
+    },
+    {
+      "requirementId": "r7",
+      "status": "partial",
+      "sourceIds": ["e-study-1"],
+      "rationale": "Meral assessed cache options, but no datastore migration was approved or run."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "e-invented-interval-cause",
+      "claim": "Meral was away from software work for a stated personal, study, or health reason.",
+      "sourceIds": ["e-gap-1"],
+      "reason": "The interval is explicit, but the profile gives no cause."
+    },
+    {
+      "id": "e-client-as-employer",
+      "claim": "Meral was employed by the Tidemark Land Office.",
+      "sourceIds": ["e-role-2"],
+      "reason": "Yarrowline employed her; Tidemark was its client."
+    },
+    {
+      "id": "e-owned-cutover",
+      "claim": "Meral independently ran the client's production imports or owned the cutover.",
+      "sourceIds": ["e-role-2"],
+      "reason": "Client operations ran the production imports."
+    },
+    {
+      "id": "e-altered-benchmark",
+      "claim": "The transform benchmark used a different record count, run count, or median timing.",
+      "sourceIds": ["e-role-2"],
+      "reason": "Only the 9,600-record, 12-run local benchmark and its two median values are recorded."
+    },
+    {
+      "id": "e-completed-migration",
+      "claim": "Meral executed the lookup-cache datastore migration.",
+      "sourceIds": ["e-study-1"],
+      "reason": "The work was an assessment; no migration was approved or run."
+    },
+    {
+      "id": "e-project-production",
+      "claim": "Parcel Beacon serves a municipal system or has independently proven scale.",
+      "sourceIds": ["e-project-1"],
+      "reason": "It is a local prototype using generated records without an independent scale measurement."
+    },
+    {
+      "id": "e-professional-certification",
+      "claim": "Meral holds a professional Civic Data Interchange certification.",
+      "sourceIds": ["e-training"],
+      "reason": "The document records workshop attendance."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "e-dates-and-explicit-period",
+      "check": "Keep the three role date ranges separate and retain the dated no-software-role interval.",
+      "sourceIds": ["e-role-1", "e-gap-1", "e-role-2", "e-role-3"]
+    },
+    {
+      "id": "e-benchmark-values",
+      "check": "Any benchmark statement preserves its record count, local run count, stage, and both median values.",
+      "sourceIds": ["e-role-2"]
+    },
+    {
+      "id": "e-contact-and-degree",
+      "check": "Do not alter the .test contact address, degree title, or institution name.",
+      "sourceIds": ["e-contact", "e-education"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "e-client-and-release-ownership",
+      "check": "Distinguish the consulting employer, client, engineering contribution, and client-run production imports.",
+      "sourceIds": ["e-role-2"]
+    },
+    {
+      "id": "e-assessment-versus-migration",
+      "check": "Do not convert the cache recommendation into an executed datastore migration.",
+      "sourceIds": ["e-study-1"]
+    },
+    {
+      "id": "e-local-prototype-boundary",
+      "check": "Keep Parcel Beacon's generated inputs and local-only maturity distinct from production services.",
+      "sourceIds": ["e-project-1"]
+    },
+    {
+      "id": "e-training-scope",
+      "check": "Treat the workshop record as attendance, not a professional credential.",
+      "sourceIds": ["e-training"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}
