@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "caseId": "fresh-cohort-case-d",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "d-employment-chronology",
+      "fact": "Keep the three work periods distinct and preserve the November 2018–January 2020 gap.",
+      "sourceIds": ["d-role-1", "d-gap-1", "d-role-2", "d-role-3"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "d-build-contribution",
+      "fact": "Ivo implemented verification and a manifest checker within a release process whose team owned production rollout.",
+      "sourceIds": ["d-role-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "d-benchmark-scope",
+      "fact": "Preserve the 30-clean-build test scope and 22-to-16-minute median values if the measurement is used.",
+      "sourceIds": ["d-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "d-team-tooling",
+      "fact": "The dashboard was a three-engineer group contribution retained by the robotics group; its manager sets the roadmap.",
+      "sourceIds": ["d-role-3"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "d-project-maturity",
+      "fact": "Hollow Meter is a local prototype, not a production release, and has no independent scale result.",
+      "sourceIds": ["d-project-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "d-education-training-languages",
+      "fact": "Retain the computer-engineering degree, attendance-only workshop, and stated language levels.",
+      "sourceIds": ["d-education", "d-training", "d-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["d-role-1", "d-role-2", "d-role-3"],
+      "rationale": "The record describes production-used test tooling, shared build verification, and a retained internal dashboard."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["d-role-1", "d-role-2", "d-skills"],
+      "rationale": "C++ control modules, fixture generation, and compiled-code checks are explicit."
+    },
+    {
+      "requirementId": "r3",
+      "status": "partial",
+      "sourceIds": ["d-role-2"],
+      "rationale": "Ivo implemented a manifest checker, but the security group kept signing-key custody."
+    },
+    {
+      "requirementId": "r4",
+      "status": "supported",
+      "sourceIds": ["d-role-3"],
+      "rationale": "Maintenance notes and handoffs accompany collaboration on a team-retained tool."
+    },
+    {
+      "requirementId": "r5",
+      "status": "unsupported",
+      "sourceIds": ["d-role-3"],
+      "rationale": "The manager sets the tooling roadmap and organization-wide authority is not established."
+    },
+    {
+      "requirementId": "r6",
+      "status": "unsupported",
+      "sourceIds": ["d-role-3"],
+      "rationale": "No production Kubernetes operations are recorded."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "d-key-custody",
+      "claim": "Ivo owned signing keys or the release security policy.",
+      "sourceIds": ["d-role-2"],
+      "reason": "The security group retained signing-key custody."
+    },
+    {
+      "id": "d-individual-platform-owner",
+      "claim": "Ivo set the organization-wide developer-platform roadmap.",
+      "sourceIds": ["d-role-3"],
+      "reason": "The group manager sets the tooling roadmap."
+    },
+    {
+      "id": "d-prototype-production",
+      "claim": "Hollow Meter was released or operated in production.",
+      "sourceIds": ["d-project-1"],
+      "reason": "The project is a local prototype with no production release."
+    },
+    {
+      "id": "d-altered-benchmark",
+      "claim": "Verification took 12 minutes or the measurement covered a different number of builds.",
+      "sourceIds": ["d-role-2"],
+      "reason": "Only 30 clean trials and the 22-to-16-minute median are recorded."
+    },
+    {
+      "id": "d-continuous-history",
+      "claim": "Ivo worked continuously from 2015 to the present.",
+      "sourceIds": ["d-role-1", "d-gap-1", "d-role-2", "d-role-3"],
+      "reason": "The profile explicitly separates periods with a gap."
+    },
+    {
+      "id": "d-professional-certification",
+      "claim": "Ivo holds a professional build-systems certification.",
+      "sourceIds": ["d-training"],
+      "reason": "The workshop document is a certificate of attendance."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "d-exact-periods",
+      "check": "Keep the recorded role dates separate and do not fill the stated employment gap.",
+      "sourceIds": ["d-role-1", "d-gap-1", "d-role-2", "d-role-3"]
+    },
+    {
+      "id": "d-exact-benchmark",
+      "check": "Any benchmark statement preserves the 30-build scope and 22-to-16-minute values.",
+      "sourceIds": ["d-role-2"]
+    },
+    {
+      "id": "d-contact-degree",
+      "check": "Do not alter the .test email, degree title, or college name.",
+      "sourceIds": ["d-contact", "d-education"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "d-team-attribution",
+      "check": "Separate Ivo's implementation contribution from release-team rollout ownership and security-group key custody.",
+      "sourceIds": ["d-role-2"]
+    },
+    {
+      "id": "d-group-vs-roadmap",
+      "check": "Do not turn a three-engineer dashboard contribution into organization-wide strategy ownership.",
+      "sourceIds": ["d-role-3"]
+    },
+    {
+      "id": "d-local-vs-production",
+      "check": "Keep Hollow Meter's local prototype maturity distinct from production-used work.",
+      "sourceIds": ["d-project-1"]
+    },
+    {
+      "id": "d-attendance-scope",
+      "check": "Treat the workshop certificate as attendance evidence, not a professional credential.",
+      "sourceIds": ["d-training"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}
