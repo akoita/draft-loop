@@ -1408,6 +1408,19 @@ The two-case exit was not met. The E/F cohort cannot be retuned or rerun under
 that admission; a new bounded milestone must own the lexical correction and
 any fresh observation.
 
+### Now — Protected identity and reference observation
+
+[Milestone 21](https://github.com/akoita/draft-loop/milestone/21) has two
+ordered issues: [#642](https://github.com/akoita/draft-loop/issues/642) fixes
+the source-backed possessive-name rejection at the application grounding
+boundary, then [#643](https://github.com/akoita/draft-loop/issues/643)
+prepares and measures a new fictional two-profile cohort. The frozen E/F
+observation cannot be retried or used to tune its own result. The cohort needs
+a new concrete admission and explicit authorization before any provider call;
+the milestone itself authorizes no such call, billing, CV approval, or export.
+Close this finite milestone with the observed outcome even if the two-case
+exit remains unmet.
+
 ### Later — Model profiles and tiers
 
 Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and

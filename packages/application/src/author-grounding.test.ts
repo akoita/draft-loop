@@ -1,11 +1,13 @@
 import type { ScoredEvidenceChunk } from "@draft-loop/domain";
+import { authorArtifactProposalSchema } from "@draft-loop/schemas";
 import { describe, expect, it } from "vitest";
-
 import {
   createAuthorGroundingGuide,
   extractProtectedValues,
   supportsProtectedValue,
+  supportsProtectedValueInChunks,
 } from "./author-grounding.js";
+import { completeCvProposalIssues } from "./complete-cv.js";
 
 const checksum = "a".repeat(64);
 
@@ -21,6 +23,24 @@ function chunk(id: string, text: string, rank = 0): ScoredEvidenceChunk {
     text,
     rank,
   };
+}
+
+function proposal(text: string, evidenceChunkId: string) {
+  return authorArtifactProposalSchema.parse({
+    sections: [
+      {
+        title: "Experience",
+        kind: "experience",
+        blocks: [
+          {
+            type: "bullet",
+            text,
+            claims: [{ text, substantive: true, evidenceChunkIds: [evidenceChunkId] }],
+          },
+        ],
+      },
+    ],
+  });
 }
 
 describe("author grounding guide", () => {
@@ -83,5 +103,47 @@ describe("author grounding guide", () => {
     expect(
       supportsProtectedValue("Technical summary: C**FLUX** RPC was deployed.", "FLUX RPC"),
     ).toBe(false);
+  });
+
+  it.each([
+    ["Yarrowline", "Yarrowline's"],
+    ["Yarrowline", "Yarrowline’s"],
+    ["Yarrowline's client record", "Yarrowline’s"],
+    ["Yarrowline’s client record", "Yarrowline's"],
+  ])("supports the ordinary possessive of an exact single-word name: %s / %s", (evidence, name) => {
+    expect(supportsProtectedValue(evidence, name)).toBe(true);
+    expect(supportsProtectedValueInChunks([evidence], name)).toBe(true);
+  });
+
+  it.each([
+    ["NorthYarrowline", "Yarrowline's"],
+    ["YarrowlineX", "Yarrowline's"],
+    ["Yarrowlune", "Yarrowline's"],
+    ["Yarrowlines", "Yarrowline's"],
+    ["Tidemark", "Yarrowline's"],
+    ["Yarrowline", "Yarrowlines'"],
+    ["Yarrowline", "Yarrowline's Company"],
+  ])(
+    "rejects changed, partial, plural, or unrelated possessive names: %s / %s",
+    (evidence, name) => {
+      expect(supportsProtectedValue(evidence, name)).toBe(false);
+      expect(supportsProtectedValueInChunks([evidence], name)).toBe(false);
+    },
+  );
+
+  it("grounds the full fictional client-attribution claim against cited evidence", () => {
+    const claim = "Worked on an integration for Yarrowline's client, the Tidemark Land Office.";
+    const evidence = chunk(
+      "client-source",
+      "Yarrowline employed Meral on an integration for its client, the Tidemark Land Office.",
+    );
+    const protectedValues = extractProtectedValues(claim);
+
+    expect(protectedValues).toContain("Yarrowline's");
+    expect(protectedValues).toContain("Tidemark Land Office");
+    for (const value of protectedValues) {
+      expect(supportsProtectedValueInChunks([evidence.text], value), value).toBe(true);
+    }
+    expect(completeCvProposalIssues(proposal(claim, evidence.id), [evidence])).toEqual([]);
   });
 });

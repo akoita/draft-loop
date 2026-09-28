@@ -21,6 +21,8 @@ const singleTechnologyNamePattern =
   /^(?:\p{Lu}{2,}(?:[+-][\p{Lu}\p{N}]+)*|\p{Lu}\p{Ll}+\p{Lu}[\p{L}\p{N}]*)$/u;
 const compositionalNameWordPattern = /^\p{Lu}[\p{L}'’-]*$/u;
 const wholeEvidenceWordPattern = /[\p{L}]+(?:['’-][\p{L}]+)*/gu;
+const possessiveProtectedNamePattern = /^([\p{L}\p{N}]+(?:['-][\p{L}\p{N}]+)*)'s$/u;
+const wholeEvidenceNamePattern = /[\p{L}\p{N}]+(?:['-][\p{L}\p{N}]+)*/gu;
 const standaloneStrongWordPattern =
   /(?<![\p{L}\p{N}\\])\*\*([\p{L}]+(?:['’-][\p{L}]+)*)\*\*(?![\p{L}\p{N}])/gu;
 const softwareObjectPattern =
@@ -52,6 +54,22 @@ interface ProtectedValueMatch {
 
 function normalizedIdentity(value: string): string {
   return value.normalize("NFKC").toLocaleLowerCase("en-US");
+}
+
+function normalizedNameIdentity(value: string): string {
+  return normalizedIdentity(value).replace(/’/gu, "'");
+}
+
+function supportsPossessiveProtectedName(
+  evidence: string,
+  protectedValue: string,
+): boolean | undefined {
+  const normalizedValue = normalizedNameIdentity(protectedValue);
+  const baseName = possessiveProtectedNamePattern.exec(normalizedValue)?.[1];
+  if (baseName === undefined) return undefined;
+
+  const evidenceNames = normalizedNameIdentity(evidence).match(wholeEvidenceNamePattern) ?? [];
+  return evidenceNames.some((name) => name === baseName || name === normalizedValue);
 }
 
 /**
@@ -104,6 +122,8 @@ export function supportsProtectedValue(evidence: string, protectedValue: string)
       supportsProtectedValueParaphrase(source, value)
     );
   }
+  const possessiveNameSupport = supportsPossessiveProtectedName(evidence, protectedValue);
+  if (possessiveNameSupport !== undefined) return possessiveNameSupport;
   if (singleTitleCaseNamePattern.test(protectedValue)) {
     return (source.match(/[\p{L}\p{N}]+/gu) ?? []).some((token) => token === value);
   }
