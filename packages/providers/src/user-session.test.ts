@@ -561,7 +561,7 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
         errors: [errorsMarker],
         session_id: sessionMarker,
       },
-      { exitCode: 0, stderr: stderrMarker },
+      { exitCode: 1, stderr: stderrMarker },
     );
 
     expect(error).toMatchObject({
@@ -649,6 +649,85 @@ describe("AnthropicClaudeUserSessionAdapter", () => {
     expect(JSON.stringify(error.metadata)).not.toContain(resultMarker);
     expect(JSON.stringify(error.diagnostics)).not.toContain(resultMarker);
     expect(JSON.stringify(error)).not.toContain(resultMarker);
+  });
+
+  it("classifies the statusless Claude OAuth refresh contention as a nonretryable session error", async () => {
+    const resultMarker = "private-oauth-refresh-result-marker";
+    const sessionMarker = "private-oauth-refresh-session-marker";
+    const stderrMarker = "private-oauth-refresh-stderr-marker";
+    const error = await captureClaudeStructuredError(
+      {
+        subtype: "success",
+        terminal_reason: "api_error",
+        api_error_status: null,
+        result: `Failed to refresh OAuth token: another Claude Code process is refreshing it or exited mid-refresh. ${resultMarker}`,
+        usage: { input_tokens: 0, output_tokens: 0 },
+        session_id: sessionMarker,
+      },
+      { exitCode: 0, stderr: stderrMarker },
+    );
+
+    expect(error).toMatchObject({ code: "authentication", retryable: false, status: null });
+    expect(error.message).toBe(
+      "Claude sign-in could not be refreshed. Wait a minute and retry. If the problem persists, close other Claude Code processes, then sign in again.",
+    );
+    expect(error.diagnostics).toEqual([
+      { code: "claude_error_subtype_success", path: "subtype" },
+      { code: "claude_terminal_reason_api_error", path: "terminal_reason" },
+      { code: "claude_stop_reason_unavailable", path: "stop_reason" },
+      { code: "claude_api_error_oauth_refresh_contention", path: "result" },
+    ]);
+    for (const privateValue of [resultMarker, sessionMarker, stderrMarker]) {
+      expect(error.message).not.toContain(privateValue);
+      expect(JSON.stringify(error.metadata)).not.toContain(privateValue);
+      expect(JSON.stringify(error.diagnostics)).not.toContain(privateValue);
+      expect(JSON.stringify(error)).not.toContain(privateValue);
+    }
+  });
+
+  it.each([
+    "Failed to refresh token: another Claude Code process is refreshing it or exited mid-refresh",
+    "Failed to refresh OAuth token: a different Claude process is refreshing it",
+    "Failed to refresh OAuth token: another Claude Code process refreshed it successfully",
+  ])("keeps statusless api_error near miss transient: %s", async (result) => {
+    const error = await captureClaudeStructuredError({
+      subtype: "success",
+      terminal_reason: "api_error",
+      api_error_status: null,
+      result,
+      usage: { input_tokens: 0, output_tokens: 0 },
+    });
+
+    expect(error).toMatchObject({ code: "transient", retryable: true, status: null });
+    expect(error.message).toBe("The user-session provider encountered a transient error.");
+    expect(error.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: "claude_api_error_oauth_refresh_contention" }),
+    );
+    expect(JSON.stringify(error)).not.toContain(result);
+  });
+
+  it("keeps numeric Claude status ahead of OAuth refresh-contention text", async () => {
+    const result =
+      "Failed to refresh OAuth token: another Claude Code process is refreshing it or exited mid-refresh";
+    const error = await captureClaudeStructuredError({
+      subtype: "success",
+      terminal_reason: "api_error",
+      api_error_status: 503,
+      result,
+      usage: { input_tokens: 0, output_tokens: 0 },
+    });
+
+    expect(error).toMatchObject({
+      code: "transient",
+      retryable: true,
+      status: 503,
+      metadata: { status: 503 },
+    });
+    expect(error.message).toBe("The user-session provider encountered a transient error.");
+    expect(error.diagnostics).not.toContainEqual(
+      expect.objectContaining({ code: "claude_api_error_oauth_refresh_contention" }),
+    );
+    expect(JSON.stringify(error)).not.toContain(result);
   });
 
   it.each([

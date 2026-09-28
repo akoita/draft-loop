@@ -12,8 +12,12 @@ export interface ClaudeApiErrorCauseDiagnostic {
 
 const maximumScannedCharacters = 4_096;
 const maximumCauseDiagnostics = 4;
+export const claudeOAuthRefreshContentionDiagnosticCode =
+  "claude_api_error_oauth_refresh_contention";
 
 const statusPattern = /\bAPI Error:\s*([1-5]\d{2})\b/u;
+const oauthRefreshContentionPattern =
+  /failed to refresh oauth token:\s*another claude code process is refreshing it or exited mid-refresh\b/iu;
 
 const allowlistedErrorTypes = [
   "invalid_request_error",
@@ -37,6 +41,10 @@ export function claudeApiErrorCauseDiagnostics(
   if (typeof result !== "string") return [];
   const text = result.slice(0, maximumScannedCharacters);
   const codes: string[] = [];
+
+  if (oauthRefreshContentionPattern.test(text)) {
+    codes.push(claudeOAuthRefreshContentionDiagnosticCode);
+  }
 
   const status = statusPattern.exec(text)?.[1];
   if (status !== undefined) codes.push(`claude_api_error_status_${status}`);
