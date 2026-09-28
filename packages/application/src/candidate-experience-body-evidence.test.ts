@@ -124,6 +124,48 @@ describe("candidate experience body evidence", () => {
     ).toThrow("Chronology heading did not match its pinned source chunk.");
   });
 
+  it("composes a marker-prefixed dated project heading and stops before the next dated role", () => {
+    const headingText =
+      "<!-- evidence-id: a-independent -->\n## Independent Work — January 2021 to present";
+    const heading = sourceChunk("independent-heading", 0, headingText, 10, 11);
+    const project = sourceChunk(
+      "project-body",
+      1,
+      "**AsterMap**, a Java event catalogue.\n- Built asynchronous event replay support using Java.",
+      12,
+      13,
+    );
+    const nextRole = sourceChunk(
+      "next-role-heading",
+      2,
+      "<!-- evidence-id: b-employment -->\n## Meadow Systems — Engineer — January 2018 to December 2020",
+      14,
+      15,
+    );
+    const nextRoleBody = sourceChunk(
+      "next-role-body",
+      3,
+      "- Built unrelated payroll software.",
+      16,
+    );
+    const original = hit(heading);
+    const result = combineCandidateExperienceBodyEvidence(
+      [original],
+      [heading, project, nextRole, nextRoleBody],
+      "Java asynchronous event replay",
+    )[0];
+
+    expect(result?.text).toContain("## Independent Work — January 2021 to present");
+    expect(result?.text).toContain("**AsterMap**, a Java event catalogue.");
+    expect(result?.text).toContain("Built asynchronous event replay support using Java.");
+    expect(result?.text).not.toContain("evidence-id");
+    expect(result?.text).not.toContain("Meadow Systems");
+    expect(result?.text).not.toContain("unrelated payroll");
+    expect(result?.lineStart).toBe(11);
+    expect(result?.lineEnd).toBe(13);
+    expect(result?.metadata.provenance).toEqual(provenance);
+  });
+
   it("does not truncate or skip an overflowing whole paragraph", () => {
     const heading = sourceChunk("role-a", 0, "## Juniper — Engineer — January 2020 to present", 1);
     const longBody = sourceChunk("body-a", 1, "A".repeat(3_990), 3);

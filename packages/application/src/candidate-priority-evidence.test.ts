@@ -217,6 +217,21 @@ describe("candidate-priority evidence", () => {
     ).toEqual([]);
   });
 
+  it("skips an evidence-id-prefixed heading-only chunk but keeps its substantive body", () => {
+    const heading = lexicalHit("training-heading", "<!-- evidence-id: a-training -->\n## Training");
+    const body = lexicalHit(
+      "training-body",
+      "<!-- evidence-id: b-training-details -->\n## Training\nCloud operations workshop and Linux labs.",
+      1,
+    );
+
+    expect(
+      selectCandidatePriorityEvidence({ status: "matched", hits: [heading, body] }, 20).map(
+        ({ chunkId }) => chunkId,
+      ),
+    ).toEqual(["training-body"]);
+  });
+
   it("preserves a requested contribution alongside chronology and required-section evidence", async () => {
     const fixture = await createRuntimeFixture(temporaryRoots);
     const runtime = createRuntime(fixture, candidateInstructions);

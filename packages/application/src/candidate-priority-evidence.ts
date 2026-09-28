@@ -2,6 +2,7 @@ import type {
   CandidateKnowledgeLexicalHit,
   CandidateKnowledgeRetrievalStatus,
 } from "@draft-loop/domain";
+import { isLeadingMarkdownHeadingOnly } from "./candidate-knowledge-heading.js";
 
 export const candidatePriorityEvidenceQueryLimit = 20;
 export const candidatePriorityEvidenceTextLimit = 2_000;
@@ -11,8 +12,6 @@ export interface CandidatePriorityEvidenceQueryResult {
   readonly status: CandidateKnowledgeRetrievalStatus;
   readonly hits: readonly CandidateKnowledgeLexicalHit[];
 }
-
-const singleLineMarkdownHeadingPattern = /^\s*#{1,6}\s+[^\r\n]*(?:\r?\n)?\s*$/u;
 
 /**
  * Return the first explicit Prioritize sentence for one local CKB query, or the
@@ -58,7 +57,7 @@ export function selectCandidatePriorityEvidence(
   const selected: CandidateKnowledgeLexicalHit[] = [];
   const seenIds = new Set<string>();
   for (const hit of result.hits) {
-    if (singleLineMarkdownHeadingPattern.test(hit.text) || seenIds.has(hit.chunkId)) continue;
+    if (isLeadingMarkdownHeadingOnly(hit.text) || seenIds.has(hit.chunkId)) continue;
     seenIds.add(hit.chunkId);
     selected.push(hit);
     if (selected.length >= maximum) break;

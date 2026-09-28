@@ -3,6 +3,7 @@ import type {
   CandidateKnowledgeRetrievalStatus,
   ScoredEvidenceChunk,
 } from "@draft-loop/domain";
+import { parseLeadingMarkdownHeading } from "./candidate-knowledge-heading.js";
 
 export const candidateKnowledgeChronologyQueryLimit = 100;
 export const candidateKnowledgeChronologyProviderByteLimit = 131_072;
@@ -100,7 +101,12 @@ export function selectCandidateKnowledgeChronologyHits(
     if (result.hits.length >= candidateKnowledgeChronologyQueryLimit) {
       throw new Error("Chronology query saturated its retrieval limit.");
     }
-    candidates.push(...result.hits.filter((hit) => datedMarkdownHeadingPattern.test(hit.text)));
+    candidates.push(
+      ...result.hits.filter((hit) => {
+        const heading = parseLeadingMarkdownHeading(hit.text);
+        return heading !== undefined && datedMarkdownHeadingPattern.test(heading.line);
+      }),
+    );
   }
 
   candidates.sort(compareChronologyHits);

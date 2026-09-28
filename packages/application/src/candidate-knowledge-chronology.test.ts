@@ -142,6 +142,24 @@ describe("candidate knowledge chronology supplement", () => {
     ).toEqual(["dated"]);
   });
 
+  it("recognizes a dated heading after its leading evidence-id comment", () => {
+    const marked = lexicalHit(
+      "marked-dated",
+      "<!-- evidence-id: a-gap -->\n## Career Gap — January 2021 to December 2021",
+    );
+    const malformed = lexicalHit(
+      "not-leading",
+      "Profile note\n<!-- evidence-id: a-gap -->\n## Career Gap — January 2021 to December 2021",
+    );
+
+    expect(
+      selectCandidateKnowledgeChronologyHits(
+        [{ status: "matched", hits: [malformed, marked] }],
+        20,
+      ),
+    ).toEqual([marked]);
+  });
+
   it("deduplicates and orders headings by source provenance, ordinal, and id", () => {
     const later = lexicalHit("later", "## Lumen Systems — Engineer — January 2022 to present", {
       sourceId: "source-b",
