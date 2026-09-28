@@ -29,6 +29,7 @@ const CRITIC_MODEL_VARIABLE = "DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL";
 const AUTH_MODE_VARIABLE = "DRAFT_LOOP_PROVIDER_AUTH_MODE";
 const ANTHROPIC_AUTH_MODE_VARIABLE = "DRAFT_LOOP_ANTHROPIC_AUTH_MODE";
 const OPENAI_AUTH_MODE_VARIABLE = "DRAFT_LOOP_OPENAI_AUTH_MODE";
+const PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE = "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE";
 /**
  * The gate exercises the real provider path, so it should run the cheapest
  * models that still do so rather than the workspace defaults. Anthropic and
@@ -209,7 +210,11 @@ function launchLiveE2E(
     const child = spawn(command, commandArguments, {
       cwd: resolve(process.cwd()),
       env: {
-        ...process.env,
+        ...Object.fromEntries(
+          Object.entries(process.env).filter(
+            ([name]) => name !== PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE,
+          ),
+        ),
         ...displayEnvironment,
         DRAFT_LOOP_LIVE_E2E: "1",
         DRAFT_LOOP_LIVE_E2E_WORKSPACE: paths.workspace,
@@ -284,7 +289,11 @@ function assertSanitizedReport(report, paths) {
 
 export async function runLiveE2E(
   { keep = false, executable, evidence } = {},
-  { stdout = process.stdout } = {},
+  {
+    stdout = process.stdout,
+    launch = launchLiveE2E,
+    preserveWorkspaceOnFailure = process.env[PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE] === "1",
+  } = {},
 ) {
   const packagedExecutable = executable === undefined ? undefined : resolve(executable);
   const evidencePath = evidence === undefined ? undefined : resolve(evidence);
@@ -312,13 +321,14 @@ export async function runLiveE2E(
   };
   const models = resolveGateModels();
   let failure;
+  let retainedAfterFailure = false;
 
   try {
     await writeSyntheticInputs(paths);
     stdout.write(
       `Live-provider gate: Anthropic ${authModes.anthropic}, OpenAI ${authModes.openai}; author ${models.author}, critic ${models.critic}.\n`,
     );
-    await launchLiveE2E(paths, packagedExecutable, models, authModes);
+    await launch(paths, packagedExecutable, models, authModes);
     const report = JSON.parse(await readFile(paths.report, "utf8"));
     assertSanitizedReport(report, paths);
     const reportDetails = await stat(paths.report);
@@ -328,8 +338,9 @@ export async function runLiveE2E(
     stdout.write(`${JSON.stringify(report, null, 2)}\n`);
   } catch (error) {
     failure = error;
+    retainedAfterFailure = preserveWorkspaceOnFailure;
   } finally {
-    if (!keep) {
+    if (!keep && !retainedAfterFailure) {
       try {
         await rm(temporaryRoot, { force: true, recursive: true, maxRetries: 3, retryDelay: 100 });
       } catch {
@@ -341,6 +352,9 @@ export async function runLiveE2E(
     }
   }
 
+  if (retainedAfterFailure) {
+    stdout.write(`Synthetic live E2E workspace retained after failure: ${temporaryRoot}\n`);
+  }
   if (failure !== undefined) throw failure;
 }
 

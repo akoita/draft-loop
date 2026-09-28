@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -10,10 +10,12 @@ import {
   resolveGateAuthMode,
   resolveGateAuthModes,
   resolveGateModels,
+  runLiveE2E,
 } from "./desktop-live-e2e.mjs";
 
 const anthropicVariable = "ANTHROPIC_API_KEY";
 const openaiVariable = "OPENAI_API_KEY";
+const preserveWorkspaceVariable = "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE";
 const anthropicPlaceholder = "synthetic-anthropic-credential";
 const openaiPlaceholder = "synthetic-openai-credential";
 const missingExecutable = join(tmpdir(), "draft-loop-live-e2e-missing-executable");
@@ -22,6 +24,7 @@ const temporaryDirectories = [];
 const savedCredentials = {
   [anthropicVariable]: process.env[anthropicVariable],
   [openaiVariable]: process.env[openaiVariable],
+  [preserveWorkspaceVariable]: process.env[preserveWorkspaceVariable],
 };
 
 afterEach(() => {
@@ -292,5 +295,79 @@ describe("desktop live E2E CLI", () => {
     assert.equal(exitCode, 1);
     assert.equal(io.result.stdout, "");
     assert.match(io.result.stderr, /unknown argument: --nope/u);
+  });
+});
+
+describe("desktop live E2E diagnostic workspace retention", () => {
+  test("retains and reports the workspace when the release preflight run fails", async () => {
+    const io = streams();
+    let temporaryRoot;
+    process.env[preserveWorkspaceVariable] = "1";
+
+    await assert.rejects(
+      runLiveE2E(
+        {},
+        {
+          stdout: io.stdout,
+          launch: async (paths) => {
+            temporaryRoot = paths.root;
+            temporaryDirectories.push(temporaryRoot);
+            throw new Error("synthetic launch failure");
+          },
+        },
+      ),
+      /synthetic launch failure/u,
+    );
+
+    assert.equal(existsSync(temporaryRoot), true);
+    assert.ok(io.result.stdout.includes(temporaryRoot));
+    assert.match(io.result.stdout, /workspace retained after failure/u);
+  });
+
+  test("cleans up a successful run even when failure retention is enabled", async () => {
+    const io = streams();
+    let temporaryRoot;
+
+    await runLiveE2E(
+      {},
+      {
+        stdout: io.stdout,
+        preserveWorkspaceOnFailure: true,
+        launch: async (paths) => {
+          temporaryRoot = paths.root;
+          writeFileSync(
+            paths.report,
+            JSON.stringify({ stage: "desktop-live-e2e", providerMode: "live" }),
+            { mode: 0o600 },
+          );
+        },
+      },
+    );
+
+    assert.equal(existsSync(temporaryRoot), false);
+    assert.equal(io.result.stdout.includes("workspace retained after failure"), false);
+  });
+
+  test("preserves ordinary cleanup behavior on failure", async () => {
+    const io = streams();
+    let temporaryRoot;
+
+    await assert.rejects(
+      runLiveE2E(
+        {},
+        {
+          stdout: io.stdout,
+          preserveWorkspaceOnFailure: false,
+          launch: async (paths) => {
+            temporaryRoot = paths.root;
+            throw new Error("synthetic launch failure");
+          },
+        },
+      ),
+      /synthetic launch failure/u,
+    );
+
+    assert.equal(existsSync(temporaryRoot), false);
+    assert.equal(io.result.stdout.includes("workspace retained after failure"), false);
   });
 });
