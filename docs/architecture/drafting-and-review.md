@@ -174,11 +174,15 @@ model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
 v4/v5 retain 32,768.
 
-New runs record critic template `cli-critic-v2`. It directs the independent
-critic to compare claims with their cited evidence references and assess
-attribution, work maturity, and credential scope without relying on a fixed
-technology vocabulary or external verification. Findings use the existing
-structured contract; resumed v1 runs retain the original prompt byte-for-byte.
+New runs record critic template `cli-critic-v3`. It retains evidence-linked
+claim review for attribution, work maturity, and credential scope, and also
+asks the critic to compare explicit dated employment gaps in retrieved sources
+with the complete CV. An omitted interval is a coverage warning with its
+source ID; the critic must not infer gaps from spacing between roles or turn a
+record of no listed software work into a claim of unemployment. The prompt
+does not use a fixed technology vocabulary or external verification. Findings
+use the existing structured contract; resumed v1/v2 runs retain their recorded
+prompt bytes.
 
 Date ranges in substantive claims and whole block text, including ranges split
 across separately covered claims, must appear as a complete range in one cited
