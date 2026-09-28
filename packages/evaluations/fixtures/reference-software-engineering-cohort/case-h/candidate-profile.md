@@ -50,10 +50,12 @@ Created a local simulator for synthetic shopping-cart changes. It is a
 personal prototype with no real transactions, production integration, or
 independent throughput measurement.
 
-## Education and training
+## Education
 
 <!-- evidence-id: h-education -->
 BSc in Information Systems, Pellume School of Computing, 2013.
+
+## Training
 
 <!-- evidence-id: h-training -->
 Attended the Retail Payment Reconciliation forum in 2020 and received a

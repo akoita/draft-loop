@@ -12,3 +12,9 @@ unemployment.
 
 No provider run is authorized. Any future evaluation requires separate
 admission and authorization.
+
+Provider-free preparation initially omitted G's training body when education
+and training shared one heading. The fictional profiles now use separate
+headings before the cohort is admitted. This is a fixture-format limitation of
+the observation, not evidence that the product retrieves combined headings
+reliably. No model result was used to make this change.

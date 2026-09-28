@@ -64,10 +64,12 @@ Created a local tool that arranges generated caption fragments for visual
 inspection. It is a personal prototype, is not published or used by a station,
 and has no independent user or scale study.
 
-## Education and training
+## Education
 
 <!-- evidence-id: g-education -->
 BSc in Software Engineering, Korrel Shore Institute, 2013.
+
+## Training
 
 <!-- evidence-id: g-training -->
 Attended the Broadcast Package Workshop in 2019 and received a certificate of
