@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "caseId": "fresh-cohort-case-c",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "c-employment-chronology",
+      "fact": "Keep the three employment periods separate and preserve the April 2019–February 2020 gap.",
+      "sourceIds": ["c-role-1", "c-gap-1", "c-role-2", "c-role-3"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "c-consulting-contribution",
+      "fact": "Attribute employment to Larkspur and delivery to the Selwick client engagement; Nera authored the Driftglass adapter within a four-person team.",
+      "sourceIds": ["c-role-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "c-measured-benchmark",
+      "fact": "Preserve the fixed replay benchmark's 8,000-packet scope and 11.2-to-7.4-second P95 values if the metric is used.",
+      "sourceIds": ["c-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "c-study-status",
+      "fact": "Describe the storage work as a recommendation; no migration was executed.",
+      "sourceIds": ["c-study-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "c-independent-project-maturity",
+      "fact": "Thistle Relay is a staging prototype without production users or independent scale results.",
+      "sourceIds": ["c-project-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "c-education-training-languages",
+      "fact": "Retain the geoinformatics degree, workshop attendance scope, and supported language levels.",
+      "sourceIds": ["c-education", "c-training", "c-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["c-role-1", "c-role-2", "c-role-3"],
+      "rationale": "The profile shows production code contributions and a separate operational handoff, while preserving who operated each service."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["c-role-1", "c-role-2"],
+      "rationale": "Parser retries, bounded retries, duplicate suppression, and queued ingestion are explicit."
+    },
+    {
+      "requirementId": "r3",
+      "status": "partial",
+      "sourceIds": ["c-study-2"],
+      "rationale": "A storage migration was analyzed and recommended but never executed."
+    },
+    {
+      "requirementId": "r4",
+      "status": "supported",
+      "sourceIds": ["c-role-2", "c-role-3"],
+      "rationale": "The consulting engagement and release handoff notes support partner coordination and technical writing."
+    },
+    {
+      "requirementId": "r5",
+      "status": "unsupported",
+      "sourceIds": ["c-role-2", "c-role-3"],
+      "rationale": "Service operations and the production API roadmap belong to client or platform teams."
+    },
+    {
+      "requirementId": "r6",
+      "status": "unsupported",
+      "sourceIds": ["c-role-3"],
+      "rationale": "The profile explicitly records no cloud-provider operations responsibility."
+    },
+    {
+      "requirementId": "r7",
+      "status": "unsupported",
+      "sourceIds": ["c-role-3"],
+      "rationale": "The profile explicitly records no Kubernetes operations responsibility."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "c-client-as-employer",
+      "claim": "Nera was employed by Selwick Watershed Authority.",
+      "sourceIds": ["c-role-2"],
+      "reason": "Larkspur Data Works was the employer; Selwick was the client."
+    },
+    {
+      "id": "c-owned-deployment",
+      "claim": "Nera owned or performed the client's production deployment.",
+      "sourceIds": ["c-role-2"],
+      "reason": "The client reliability group approved and performed deployment."
+    },
+    {
+      "id": "c-completed-migration",
+      "claim": "Nera completed the storage migration.",
+      "sourceIds": ["c-study-2"],
+      "reason": "The migration was not executed."
+    },
+    {
+      "id": "c-altered-metric",
+      "claim": "The replay benchmark reached 6.4 seconds or covered a different packet count.",
+      "sourceIds": ["c-role-2"],
+      "reason": "Only the 8,000-packet, 11.2-to-7.4-second P95 comparison is recorded."
+    },
+    {
+      "id": "c-prototype-in-production",
+      "claim": "Thistle Relay served production users or demonstrated independently measured scale.",
+      "sourceIds": ["c-project-1"],
+      "reason": "It is a staging prototype without production users or independent scale results."
+    },
+    {
+      "id": "c-professional-certification",
+      "claim": "Nera holds a professional Distributed Log Operations certification.",
+      "sourceIds": ["c-training"],
+      "reason": "The document is a certificate of workshop attendance."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "c-exact-periods",
+      "check": "Do not merge the dated roles into continuous employment across the recorded gap.",
+      "sourceIds": ["c-role-1", "c-gap-1", "c-role-2", "c-role-3"]
+    },
+    {
+      "id": "c-exact-benchmark",
+      "check": "Any benchmark claim keeps the recorded packet count and both P95 values unchanged.",
+      "sourceIds": ["c-role-2"]
+    },
+    {
+      "id": "c-contact-and-degree",
+      "check": "Do not alter the .test contact address or the named degree and institution.",
+      "sourceIds": ["c-contact", "c-education"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "c-client-attribution",
+      "check": "Distinguish consulting employer, client, candidate contribution, and client-owned deployment.",
+      "sourceIds": ["c-role-2"]
+    },
+    {
+      "id": "c-study-vs-delivery",
+      "check": "Do not turn the storage recommendation into a completed migration.",
+      "sourceIds": ["c-study-2"]
+    },
+    {
+      "id": "c-staging-vs-production",
+      "check": "Keep the independent prototype at staging maturity and retain the absence of production users.",
+      "sourceIds": ["c-project-1"]
+    },
+    {
+      "id": "c-team-vs-platform-owner",
+      "check": "Do not attribute platform roadmap or service-operation ownership to Nera.",
+      "sourceIds": ["c-role-2", "c-role-3"]
+    },
+    {
+      "id": "c-attendance-scope",
+      "check": "Represent the workshop document as attendance evidence, not a professional certification.",
+      "sourceIds": ["c-training"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}
