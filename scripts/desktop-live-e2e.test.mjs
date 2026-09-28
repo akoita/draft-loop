@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -295,6 +295,36 @@ describe("desktop live E2E CLI", () => {
     assert.equal(exitCode, 1);
     assert.equal(io.result.stdout, "");
     assert.match(io.result.stderr, /unknown argument: --nope/u);
+  });
+});
+
+describe("desktop live E2E synthetic job fixture", () => {
+  test("writes distinct job requirements and requests standard CV sections", async () => {
+    const io = streams();
+    let jobContent;
+
+    await assert.rejects(
+      runLiveE2E(
+        {},
+        {
+          stdout: io.stdout,
+          launch: async (paths) => {
+            jobContent = readFileSync(paths.job, "utf8");
+            throw new Error("fixture inspection complete");
+          },
+        },
+      ),
+      /fixture inspection complete/u,
+    );
+
+    const requirements = jobContent.split("\n").filter((line) => line.startsWith("- "));
+    assert.equal(requirements.length, 5);
+    assert.match(jobContent, /TypeScript command-line tooling on Node\.js/u);
+    assert.match(jobContent, /React views/u);
+    assert.match(jobContent, /automated unit tests/u);
+    assert.match(jobContent, /accessible forms/u);
+    assert.match(jobContent, /Markdown setup and troubleshooting guides/u);
+    assert.match(jobContent, /CV with Summary, Experience, Education, and Skills sections/u);
   });
 });
 
