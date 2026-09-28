@@ -14,6 +14,7 @@ import {
   openCandidateKnowledgeStore,
 } from "@draft-loop/storage/knowledge-store";
 import { selectCandidateIndependentProjectEvidence } from "./candidate-independent-project-evidence.js";
+import { parseLeadingMarkdownHeading } from "./candidate-knowledge-heading.js";
 import {
   deriveCandidateKnowledgeLexicalChunks,
   lexicalDigest,
@@ -26,7 +27,6 @@ import {
 } from "./candidate-role-contribution-blocks.js";
 
 const sourceReadFailureMessage = "Pinned candidate knowledge evidence could not be verified.";
-const markdownHeadingPattern = /^\s*(#{1,6})\s+/u;
 
 export interface CandidateKnowledgeStoreBinding {
   readonly storeRoot: string;
@@ -163,9 +163,22 @@ export function composeCandidateExperienceBodyEvidence(
     ) {
       throw new Error("Chronology heading did not match its pinned source chunk.");
     }
-    const headingMatch = markdownHeadingPattern.exec(heading.text);
-    if (headingMatch === null) return heading;
-    const headingLevel = headingMatch[1]?.length ?? 0;
+    const headingMatch = parseLeadingMarkdownHeading(heading.text);
+    if (headingMatch === undefined) return heading;
+    const headingLevel = headingMatch.level;
+    const headingLineStart = exact.lineStart + headingMatch.lineIndex;
+    const headingLine = flattenCandidateRoleContributionSourceLines([exact])?.find(
+      (line) => line.lineNumber === headingLineStart,
+    );
+    if (headingLine === undefined || headingLine.text !== headingMatch.line) {
+      throw new Error("Chronology heading line could not be verified.");
+    }
+    const roleHeading: CandidateKnowledgeLexicalHit = {
+      ...heading,
+      text: headingLine.text,
+      lineStart: headingLine.lineNumber,
+      lineEnd: headingLine.lineNumber,
+    };
     const group = chunksBySource.get(provenanceKey(heading.metadata.provenance)) ?? [];
     const headingIndex = group.findIndex(({ chunkId }) => chunkId === heading.chunkId);
     if (headingIndex < 0) throw new Error("Chronology heading source order could not be verified.");
@@ -173,9 +186,10 @@ export function composeCandidateExperienceBodyEvidence(
     const roleScopeChunks = [exact];
     const followingChunks: CandidateKnowledgeLexicalChunkInput[] = [];
     for (const chunk of group.slice(headingIndex + 1)) {
-      const nextHeadingLevel = markdownHeadingPattern.exec(chunk.text)?.[1]?.length;
+      const nextHeading = parseLeadingMarkdownHeading(chunk.text);
+      const nextHeadingLevel = nextHeading?.level;
       if (
-        isDatedCandidateRoleHeading(chunk.text) ||
+        (nextHeading !== undefined && isDatedCandidateRoleHeading(nextHeading.line)) ||
         (nextHeadingLevel !== undefined && nextHeadingLevel <= headingLevel)
       )
         break;
@@ -183,18 +197,17 @@ export function composeCandidateExperienceBodyEvidence(
       followingChunks.push(chunk);
     }
     const independentSelection = selectCandidateIndependentProjectEvidence(
-      heading,
+      roleHeading,
       roleScopeChunks,
       jobQuery,
       candidateInstructions,
       maximumCandidateKnowledgeRetrievalChunkTextLength,
     );
     if (independentSelection.foundRegion) {
-      const headingLine = flattenCandidateRoleContributionSourceLines([exact])?.[0];
-      if (headingLine === undefined) {
-        throw new Error("Chronology heading line could not be verified.");
-      }
-      const headingBlock = createCandidateRoleContributionBlock([headingLine], heading.lineStart);
+      const headingBlock = createCandidateRoleContributionBlock(
+        [headingLine],
+        headingLine.lineNumber,
+      );
       const blocks = independentSelection.blocks;
       for (const { title, block } of independentSelection.overflowBundles) {
         const provenance = heading.metadata.provenance;
@@ -273,16 +286,16 @@ export function composeCandidateExperienceBodyEvidence(
       });
     }
     const contributionSelection = selectCandidateRoleContributionBlocks(
-      heading,
+      roleHeading,
       roleScopeChunks,
       jobQuery,
       maximumCandidateKnowledgeRetrievalChunkTextLength,
     );
     if (contributionSelection.foundRegion) {
       const blocks = contributionSelection.blocks;
-      const headingLine = exact.text.split("\n", 1)[0];
-      if (headingLine === undefined) return heading;
-      const text = [headingLine, ...blocks.map(({ text: blockText }) => blockText)].join("\n\n");
+      const text = [headingLine.text, ...blocks.map(({ text: blockText }) => blockText)].join(
+        "\n\n",
+      );
       const provenance = heading.metadata.provenance;
       return createCandidateKnowledgeLexicalHit({
         chunkId: lexicalDigest([
@@ -304,8 +317,8 @@ export function composeCandidateExperienceBodyEvidence(
           ]),
         ]),
         ordinal: heading.ordinal,
-        lineStart: heading.lineStart,
-        lineEnd: Math.max(heading.lineEnd, ...blocks.map(({ lineEnd }) => lineEnd)),
+        lineStart: headingLine.lineNumber,
+        lineEnd: Math.max(headingLine.lineNumber, ...blocks.map(({ lineEnd }) => lineEnd)),
         text,
         metadata: heading.metadata,
         bm25Rank: heading.bm25Rank,
@@ -313,8 +326,8 @@ export function composeCandidateExperienceBodyEvidence(
     }
 
     const constituentIds: string[] = [heading.chunkId];
-    const bodyTexts = [heading.text];
-    let lineEnd = heading.lineEnd;
+    const bodyTexts = [headingLine.text];
+    let lineEnd = headingLine.lineNumber;
     for (const chunk of followingChunks) {
       const candidateText = `${bodyTexts.join("\n\n")}\n\n${chunk.text}`;
       if (candidateText.length > maximumCandidateKnowledgeRetrievalChunkTextLength) break;
@@ -322,7 +335,7 @@ export function composeCandidateExperienceBodyEvidence(
       constituentIds.push(chunk.chunkId);
       lineEnd = chunk.lineEnd;
     }
-    if (constituentIds.length === 1) return heading;
+    if (constituentIds.length === 1 && heading.text === headingLine.text) return heading;
 
     const provenance = heading.metadata.provenance;
     return createCandidateKnowledgeLexicalHit({
@@ -335,7 +348,7 @@ export function composeCandidateExperienceBodyEvidence(
         ...constituentIds,
       ]),
       ordinal: heading.ordinal,
-      lineStart: heading.lineStart,
+      lineStart: headingLine.lineNumber,
       lineEnd,
       text: bodyTexts.join("\n\n"),
       metadata: heading.metadata,

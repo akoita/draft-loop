@@ -1374,8 +1374,9 @@ separate billing authorization.
 [Milestone 19](https://github.com/akoita/draft-loop/milestone/19) closes the
 specific gaps exposed by #622 in bounded order: [#628](https://github.com/akoita/draft-loop/issues/628)
 classifies Claude OAuth refresh contention at the subscription-session
-boundary; [#629](https://github.com/akoita/draft-loop/issues/629) keeps required
-source-backed section and chronology evidence in context selection; and
+boundary; [#629](https://github.com/akoita/draft-loop/issues/629) preserves dated
+chronology through source markers; [#632](https://github.com/akoita/draft-loop/issues/632)
+associates required section headings with adjacent source bodies; and
 [#630](https://github.com/akoita/draft-loop/issues/630) prepares a fresh,
 fictional reserved cohort. Each issue owns one boundary and one PR. The new
 cohort requires its own frozen admission and explicit user authorization; this
