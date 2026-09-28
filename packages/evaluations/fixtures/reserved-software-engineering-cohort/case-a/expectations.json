@@ -1,0 +1,142 @@
+{
+  "schemaVersion": 1,
+  "caseId": "nila-event-platform",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "a-must-01",
+      "sourceIds": ["a-contact", "a-education", "a-languages", "a-training"],
+      "fact": "Preserve the supplied contact fields, 2017 software-systems degree, English/French proficiency, and attendance-only workshop record.",
+      "boundary": "Do not turn the workshop into a professional certification."
+    },
+    {
+      "id": "a-must-02",
+      "sourceIds": ["a-employment-1", "a-dispatchloom"],
+      "fact": "Show Bright Silt Consulting as the employer and Marrow County Mobility Office as the client; describe the inherited DispatchLoom adapter and retries as Nila's contribution.",
+      "boundary": "The client owned DispatchLoom and production release decisions."
+    },
+    {
+      "id": "a-must-03",
+      "sourceIds": ["a-micashore-study"],
+      "fact": "Represent MicaShore as a proposed store studied in a local benchmark.",
+      "boundary": "No option was selected and no migration or production implementation occurred."
+    },
+    {
+      "id": "a-must-04",
+      "sourceIds": ["a-gap-1", "a-employment-2", "a-siltweave", "a-gap-2", "a-independent"],
+      "fact": "Preserve the distinct 2020–2021 and 2024–2025 employment gaps, Fable Current Systems dates, team context, and later TernSpindle project period.",
+      "boundary": "TernSpindle is independent staging work, not employment or production service operation."
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "supported",
+      "sourceIds": ["a-dispatchloom", "a-siltweave"],
+      "rationale": "The profile establishes production Kotlin adapter and event-worker contributions, with retry and idempotency checks."
+    },
+    {
+      "requirementId": "r2",
+      "status": "partial",
+      "sourceIds": ["a-dispatchloom", "a-siltweave"],
+      "rationale": "Retry, idempotency, and replay implementation is supported, but end-to-end ownership through production rollout is not established."
+    },
+    {
+      "requirementId": "r3",
+      "status": "supported",
+      "sourceIds": ["a-dispatchloom", "a-siltweave"],
+      "rationale": "A measured reconciliation improvement, dashboard, and regression-test contribution are stated with limits."
+    },
+    {
+      "requirementId": "r4",
+      "status": "unsupported",
+      "sourceIds": ["a-micashore-study"],
+      "rationale": "A migration study exists, but the required production implementation and rollout did not occur."
+    },
+    {
+      "requirementId": "r5",
+      "status": "partial",
+      "sourceIds": ["a-dispatchloom", "a-siltweave"],
+      "rationale": "Work with county engineers and an on-call team is stated, but decision authority across customer-facing and product teams is not."
+    },
+    {
+      "requirementId": "r6",
+      "status": "partial",
+      "sourceIds": ["a-employment-1", "a-dispatchloom", "a-siltweave"],
+      "rationale": "Collaboration within a client team and a six-person engineering team is stated; direction across multiple teams is not."
+    },
+    {
+      "requirementId": "r7",
+      "status": "supported",
+      "sourceIds": ["a-education"],
+      "rationale": "A software-systems engineering degree is explicitly recorded."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "a-no-01",
+      "claim": "Nila was employed by Marrow County Mobility Office or created/owned DispatchLoom.",
+      "sourceIds": ["a-employment-1", "a-dispatchloom"],
+      "reason": "Bright Silt Consulting was the employer; the county owned the inherited service and released changes."
+    },
+    {
+      "id": "a-no-02",
+      "claim": "Nila migrated production data to MicaShore or completed the proposed migration.",
+      "sourceIds": ["a-micashore-study"],
+      "reason": "The work was a comparison and local benchmark; no option or implementation followed."
+    },
+    {
+      "id": "a-no-03",
+      "claim": "The measured reconciliation result was 11 to 6 minutes, a service-level guarantee, or an uptime improvement.",
+      "sourceIds": ["a-dispatchloom"],
+      "reason": "The only stated metric is median feed reconciliation from 11 to 7 minutes over three weeks."
+    },
+    {
+      "id": "a-no-04",
+      "claim": "Nila alone designed, released, or operated SiltWeave; TernSpindle had production users; or the workshop conferred a professional certification.",
+      "sourceIds": ["a-training", "a-employment-2", "a-siltweave", "a-independent"],
+      "reason": "The service was team-owned, TernSpindle was a local prototype, and the workshop certificate records attendance only."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "a-det-dates",
+      "sourceIds": ["a-employment-1", "a-gap-1", "a-employment-2", "a-gap-2", "a-independent"],
+      "check": "Keep the supplied date ranges separate; do not bridge either explicit employment gap or extend the independent project beyond 2025-08."
+    },
+    {
+      "id": "a-det-metric",
+      "sourceIds": ["a-dispatchloom"],
+      "check": "A metric claim must preserve the 11-to-7-minute values and the three-week median reconciliation context."
+    },
+    {
+      "id": "a-det-names",
+      "sourceIds": ["a-dispatchloom", "a-micashore-study", "a-siltweave", "a-independent"],
+      "check": "Check exact supported spellings DispatchLoom, MicaShore, SiltWeave, and TernSpindle; changed-name controls are unsupported."
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "a-sem-client",
+      "sourceIds": ["a-employment-1", "a-dispatchloom"],
+      "check": "Separate consulting employer from client and distinguish maintenance from creating or owning the client platform."
+    },
+    {
+      "id": "a-sem-maturity",
+      "sourceIds": ["a-micashore-study", "a-siltweave", "a-independent"],
+      "check": "Distinguish study, team-operated production work, and a local staging prototype."
+    },
+    {
+      "id": "a-sem-credential",
+      "sourceIds": ["a-training"],
+      "check": "Do not imply that an attendance certificate is an assessed professional credential."
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}

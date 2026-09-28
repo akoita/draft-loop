@@ -1344,20 +1344,27 @@ runtime controls are recorded, and a gated observation records a result
 against predeclared rules. Candidate acceptance permits a separately gated
 cohort proposal; it authorizes no cohort calls or model-default change.
 
-### Next — Software-engineering generalization
+### Completed observation — Software-engineering generalization
 
-[Milestone 18](https://github.com/akoita/draft-loop/milestone/18) starts after
-the reference-pair milestone closes. Its fixed scope is the
+[Milestone 18](https://github.com/akoita/draft-loop/milestone/18) followed
+the reference-pair milestone. Its fixed scope was the
 [#618](https://github.com/akoita/draft-loop/issues/618) rollup and ordered
 children #619–#622: fictional grounding cases and baseline; separation of
 uncertain terminology from hard factual rejection; source-grounded review
 through the existing critic; and a separately admitted reserved-profile
-cohort. One bounded execution issue is admitted at a time.
+cohort. The provider-free changes and fictional regression fixtures were
+delivered in #619–#621. The explicitly authorized frozen #622 cohort did not
+reach author inference: both Claude subscription-session calls failed during
+OAuth token refresh, before any draft or critic review. Its quality result is
+indeterminate and the workflow-completion exit was not met. The
+[fixture record](../packages/evaluations/fixtures/reserved-software-engineering-cohort/README.md)
+states the exact bounds and preflight limitations. A fresh cohort requires a
+new admission and authorization; this milestone does not acquire extra work.
 
 Domain keywords can support familiar conventions, but reliability must not
-depend on hardcoding every technology, concept or career path in advance. The
-cohort must show that unfamiliar software engineers can use the normal
-author–critic workflow without profile-specific code changes. Candidate
+depend on hardcoding every technology, concept or career path in advance. A
+follow-up cohort must show that unfamiliar software engineers can use the
+normal author–critic workflow without profile-specific code changes. Candidate
 clarifications and acceptance of disclosed warnings remain normal product
 actions. #515, the optional API-key route experiment, is deferred and requires
 separate billing authorization.
