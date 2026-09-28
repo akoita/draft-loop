@@ -8,6 +8,8 @@ import {
   runReleaseLocalPreflight,
 } from "./release-local-preflight.mjs";
 
+const preserveWorkspaceVariable = "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE";
+
 describe("local release preflight", () => {
   test("defaults to the verified mixed provider route", () => {
     assert.deepEqual(resolveReleasePreflightEnvironment({}), {
@@ -36,6 +38,7 @@ describe("local release preflight", () => {
         DRAFT_LOOP_OPENAI_AUTH_MODE: "user-session",
         DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-haiku-4-5",
         DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-6-luna",
+        [preserveWorkspaceVariable]: "1",
       }),
       { PATH: "/usr/bin" },
     );
@@ -70,7 +73,9 @@ describe("local release preflight", () => {
     );
     assert.equal(Object.hasOwn(calls[1].options.env, "DRAFT_LOOP_PROVIDER_AUTH_MODE"), false);
     assert.equal(Object.hasOwn(calls[1].options.env, "DRAFT_LOOP_OPENAI_AUTH_MODE"), false);
+    assert.equal(Object.hasOwn(calls[1].options.env, preserveWorkspaceVariable), false);
     assert.equal(calls[2].options.env.DRAFT_LOOP_OPENAI_AUTH_MODE, "user-session");
+    assert.equal(calls[2].options.env[preserveWorkspaceVariable], "1");
 
     let call = 0;
     assert.throws(

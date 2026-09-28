@@ -8,9 +8,11 @@ const DEFAULTS = Object.freeze({
   DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL: "claude-haiku-4-5",
   DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL: "gpt-6-luna",
 });
+const PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE = "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE";
 
 const VALIDATION_ENVIRONMENT_EXCLUSIONS = new Set([
   "DRAFT_LOOP_PROVIDER_AUTH_MODE",
+  PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE,
   ...Object.keys(DEFAULTS),
 ]);
 
@@ -52,7 +54,14 @@ export function runReleaseLocalPreflight({
   const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
   const commands = [
     { args: ["validate"], environment: validationEnvironment },
-    { args: ["test:e2e:live"], environment: { ...environment, ...resolved } },
+    {
+      args: ["test:e2e:live"],
+      environment: {
+        ...environment,
+        ...resolved,
+        [PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE]: "1",
+      },
+    },
   ];
 
   const status = runner("git", ["status", "--porcelain", "--untracked-files=normal"], {
