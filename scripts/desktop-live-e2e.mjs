@@ -40,19 +40,11 @@ const DEFAULT_CRITIC_MODEL = "gpt-5.6-luna";
 const PACKAGED_LAUNCH_ARGUMENTS = Object.freeze(["--headless", "--disable-gpu", "--no-sandbox"]);
 const jobContent = `# Platform Engineer — Willowmere Developer Tools
 
-Willowmere builds internal developer tools for TypeScript services. The platform group works with product engineers on local feedback tools and their documentation.
-
-Requirements:
-
 - Implement TypeScript command-line tooling on Node.js to validate \`package.json\` manifests and explain missing project scripts.
-- Build React views that present validation reports to product engineers.
+- Build a React page that displays the validation report.
 - Add automated unit tests for manifest validation and command exit statuses.
 - Create accessible forms with associated labels and a predictable keyboard focus order.
 - Write concise Markdown setup and troubleshooting guides.
-
-Application:
-
-Submit a CV with Summary, Experience, Education, and Skills sections.
 `;
 const candidateContent = `# Sela Nareth
 
