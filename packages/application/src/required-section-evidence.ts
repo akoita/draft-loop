@@ -1,5 +1,9 @@
 import type { CandidateKnowledgeRetrievalStatus, ScoredEvidenceChunk } from "@draft-loop/domain";
 import type { AuthorArtifactProposal } from "@draft-loop/schemas";
+import {
+  isCandidateEvidenceIdCommentLine,
+  parseLeadingMarkdownHeading,
+} from "./candidate-knowledge-heading.js";
 import { isProductionSkillsRecord } from "./candidate-production-skills-evidence.js";
 
 const sectionTokenPattern = /[\p{L}\p{N}]+/gu;
@@ -284,13 +288,35 @@ function headingIdentity(value: string): string {
   return sectionIdentity(value.replace(/^\s*#{1,6}\s*/u, "").replace(/[:\-–—]\s*$/u, ""));
 }
 
+/** Match only an exact leading heading title or one of the section's existing terms. */
+export function matchesRequiredSectionHeading(section: string, text: string): boolean {
+  const heading = parseLeadingMarkdownHeading(text);
+  if (heading === undefined) return false;
+  const identity = headingIdentity(heading.line);
+  return (
+    identity === sectionIdentity(section) ||
+    evidenceTermsFor(section).some((term) => identity === sectionIdentity(term))
+  );
+}
+
 function hasContentBeyondHeading(section: string, text: string): boolean {
   return contentClauses(section, text).length > 0;
 }
 
+function stripLeadingEvidenceIdComment(text: string): string {
+  const lines = text.split(/\r?\n/u);
+  return isCandidateEvidenceIdCommentLine(lines[0] ?? "") ? lines.slice(1).join("\n") : text;
+}
+
 /** Missing details are local to their clause, not evidence that the whole section is absent. */
 function contentClauses(section: string, text: string): readonly string[] {
-  return text
+  const withoutComment = stripLeadingEvidenceIdComment(text);
+  const heading = parseLeadingMarkdownHeading(withoutComment);
+  const contentText =
+    heading !== undefined && matchesRequiredSectionHeading(section, withoutComment)
+      ? withoutComment.split(/\r?\n/u).slice(1).join("\n")
+      : withoutComment;
+  return contentText
     .split(/[\n;,]|\.\s+/u)
     .map((clause) => clause.trim())
     .filter(
@@ -331,11 +357,14 @@ export function matchesRequiredSectionEvidence(section: string, text: string): b
   const sectionTerms = evidenceTermsFor(section);
   const clauses = contentClauses(section, text);
   if (clauses.length === 0) return false;
+  const hasRequiredHeading = matchesRequiredSectionHeading(section, text);
   const hasHeading = text
     .split(/\r?\n/u)
     .some((line) => headingIdentity(line) === sectionIdentity(section));
   return (
-    hasHeading || clauses.some((clause) => sectionTerms.some((term) => textHasTerm(clause, term)))
+    hasRequiredHeading ||
+    hasHeading ||
+    clauses.some((clause) => sectionTerms.some((term) => textHasTerm(clause, term)))
   );
 }
 

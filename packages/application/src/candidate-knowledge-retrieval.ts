@@ -25,6 +25,7 @@ import {
   requiresExperienceChronology,
   selectCandidateKnowledgeChronologyHits,
 } from "./candidate-knowledge-chronology.js";
+import { isLeadingMarkdownHeadingOnly } from "./candidate-knowledge-heading.js";
 import {
   candidatePriorityEvidenceChunkLimit,
   candidatePriorityEvidenceQuery,
@@ -36,6 +37,7 @@ import {
   candidateProductionSkillsEvidenceQueryLimit,
   selectCandidateProductionSkillsEvidence,
 } from "./candidate-production-skills-evidence.js";
+import { composeCandidateRequiredSectionBodyEvidence } from "./candidate-required-section-body-evidence.js";
 import type {
   CandidateKnowledgeRetrievalDiagnostic,
   CandidateKnowledgeRetrievalResult,
@@ -44,6 +46,7 @@ import { createCandidateKnowledgeStoreService } from "./knowledge-base.js";
 import {
   hasRequiredSectionEvidence,
   isSkillsRequiredSection,
+  matchesRequiredSectionHeading,
   mergeRequiredSectionEvidence,
   type RequiredSectionRetrievalResult,
   type RequiredSectionSupplement,
@@ -348,9 +351,49 @@ export function candidateKnowledgeRuntimeRetrieval(
       const primary = await rawQuery(text, primaryLimit);
       const supplements: RequiredSectionSupplement[] = [];
       const rawSupplementResults: CandidateKnowledgeRetrievalResult[] = [];
+      const requiredSectionBodyHitsByHeadingId = new Map<string, CandidateKnowledgeLexicalHit>();
+      const composedRequiredSectionBodyHits: CandidateKnowledgeLexicalHit[] = [];
+      const replaceRequiredSectionBodyHit = (hit: CandidateKnowledgeLexicalHit) =>
+        requiredSectionBodyHitsByHeadingId.get(hit.chunkId) ?? hit;
       for (const sectionQuery of sectionQueries) {
         const result = await rawQuery(sectionQuery.query, requiredSectionRetrievalLimit);
         rawSupplementResults.push(result);
+        const headingCandidates = new Map<string, CandidateKnowledgeLexicalHit>();
+        if (primary.status === "matched") {
+          for (const hit of primary.hits) {
+            if (
+              isLeadingMarkdownHeadingOnly(hit.text) &&
+              matchesRequiredSectionHeading(sectionQuery.section, hit.text)
+            ) {
+              headingCandidates.set(hit.chunkId, hit);
+            }
+          }
+        }
+        if (result.status === "matched") {
+          for (const hit of result.hits) {
+            if (
+              isLeadingMarkdownHeadingOnly(hit.text) &&
+              matchesRequiredSectionHeading(sectionQuery.section, hit.text)
+            ) {
+              headingCandidates.set(hit.chunkId, hit);
+            }
+          }
+        }
+        if (headingCandidates.size > 0) {
+          const candidates = [...headingCandidates.values()];
+          const sourceChunks = await loadPinnedSourceChunks(candidates);
+          for (const headingHit of candidates) {
+            const composed = composeCandidateRequiredSectionBodyEvidence(
+              sectionQuery.section,
+              headingHit,
+              sourceChunks,
+            );
+            if (composed !== undefined) {
+              requiredSectionBodyHitsByHeadingId.set(headingHit.chunkId, composed);
+              composedRequiredSectionBodyHits.push(composed);
+            }
+          }
+        }
         const hasProductionSkillsRecord =
           productionSkillsRecord !== undefined && isSkillsRequiredSection(sectionQuery.section);
         const sectionHits =
@@ -363,6 +406,7 @@ export function candidateKnowledgeRuntimeRetrieval(
         const sectionResult: RequiredSectionRetrievalResult = {
           status: hasProductionSkillsRecord ? "matched" : result.status,
           hits: sectionHits
+            .map(replaceRequiredSectionBodyHit)
             .map(replaceComposedHeading)
             .map((hit) => toScoredEvidenceChunk(hit, config.id)),
         };
@@ -371,6 +415,7 @@ export function candidateKnowledgeRuntimeRetrieval(
           result.hits.length >= requiredSectionRetrievalLimit &&
           !hasRequiredSectionEvidence(sectionQuery.section, [
             ...primary.hits
+              .map(replaceRequiredSectionBodyHit)
               .map(replaceComposedHeading)
               .map((hit) => toScoredEvidenceChunk(hit, config.id)),
             ...sectionResult.hits,
@@ -384,6 +429,7 @@ export function candidateKnowledgeRuntimeRetrieval(
       }
 
       const primaryHits = primary.hits
+        .map(replaceRequiredSectionBodyHit)
         .map(replaceComposedHeading)
         .map((hit) => toScoredEvidenceChunk(hit, config.id));
       const contactChunks =
@@ -465,6 +511,7 @@ export function candidateKnowledgeRuntimeRetrieval(
           ...chronologyRawResults,
           { hits: providerChronologyHits },
           { hits: requestedProjectOverflowHits },
+          { hits: composedRequiredSectionBodyHits },
           ...(priorityRawResult === undefined ? [] : [priorityRawResult]),
           ...(productionSkillsRawResult === undefined ? [] : [productionSkillsRawResult]),
           primary,
