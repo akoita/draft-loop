@@ -14,10 +14,11 @@ up traceability or control of their source material. Claims remain connected to
 candidate-provided evidence, provider and model identities are visible, and the
 candidate decides what to approve and export.
 
-> **Current maturity:** DraftLoop `v0.8.0-alpha.1` is a released Usable CV MVP
-> alpha. Its bounded capabilities are integrated and deterministically
-> validated, but no representative consented outcome has been recorded. The
-> [roadmap and current status](docs/roadmap.md) record its evidence and
+> **Current maturity:** DraftLoop is an alpha-stage local-first CV tool. Its
+> bounded capabilities are integrated and deterministically validated, but
+> the latest fictional two-profile reference observation did not meet its
+> coverage exit. No representative consented outcome has been recorded. The
+> [roadmap and current status](docs/roadmap.md) record the evidence and
 > remaining gaps. This project is not production-ready.
 
 ## How DraftLoop works
@@ -51,7 +52,7 @@ The loop is an assistant, not an authority. DraftLoop does not independently
 verify a career, contact past employers, replace interviews, or turn a
 candidate's source material into permission to invent facts.
 
-## Try the v0.8 alpha desktop build
+## Try the alpha desktop build
 
 Download the [newest release compatible with your platform](https://github.com/akoita/draft-loop/releases)
 and its `SHA256SUMS` file. Desktop packages are distributed as platform-specific

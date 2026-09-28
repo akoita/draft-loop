@@ -1,8 +1,8 @@
 {
   "project": "draft-loop",
-  "stage": "usable-cv-mvp",
+  "stage": "reference-model-pair",
   "channel": "alpha",
-  "releaseName": "Usable CV MVP alpha",
-  "stageIssue": 74,
+  "releaseName": "Reference workflow checkpoint alpha",
+  "stageIssue": 646,
   "artifactTargets": ["linux-x64", "macos-arm64", "windows-x64"]
 }
