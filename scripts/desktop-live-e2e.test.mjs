@@ -299,7 +299,7 @@ describe("desktop live E2E CLI", () => {
 });
 
 describe("desktop live E2E synthetic job fixture", () => {
-  test("writes distinct job requirements and requests standard CV sections", async () => {
+  test("writes only a heading and distinct role requirements", async () => {
     const io = streams();
     let jobContent;
 
@@ -317,14 +317,19 @@ describe("desktop live E2E synthetic job fixture", () => {
       /fixture inspection complete/u,
     );
 
-    const requirements = jobContent.split("\n").filter((line) => line.startsWith("- "));
+    const lines = jobContent
+      .trim()
+      .split("\n")
+      .filter((line) => line.trim() !== "");
+    const requirements = lines.slice(1);
+    assert.equal(lines[0], "# Platform Engineer — Willowmere Developer Tools");
     assert.equal(requirements.length, 5);
+    assert.ok(requirements.every((line) => line.startsWith("- ")));
     assert.match(jobContent, /TypeScript command-line tooling on Node\.js/u);
-    assert.match(jobContent, /React views/u);
+    assert.match(jobContent, /React page that displays the validation report/u);
     assert.match(jobContent, /automated unit tests/u);
     assert.match(jobContent, /accessible forms/u);
     assert.match(jobContent, /Markdown setup and troubleshooting guides/u);
-    assert.match(jobContent, /CV with Summary, Experience, Education, and Skills sections/u);
   });
 });
 
