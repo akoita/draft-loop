@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "caseId": "reference-cohort-case-g",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "g-employment-chronology",
+      "fact": "Keep the March 2014–August 2017, June 2018–February 2021, and March 2021–present roles separate, and preserve the September 2017–May 2018 interval with no listed paid media-software work.",
+      "sourceIds": ["g-role-1", "g-gap-1", "g-role-2", "g-role-3"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "g-employer-client-attribution",
+      "fact": "Attribute the integration employment to Silver Cut, Milepost as its client, Niva's validator work to a four-engineer team, and deployment preparation to Silver Cut release engineering.",
+      "sourceIds": ["g-role-2"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "g-validator-measurement",
+      "fact": "If used, retain the fixed 10,000-segment manifest, 14 staging replays, and 710-to-495-millisecond median validation scope.",
+      "sourceIds": ["g-role-2"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "g-archive-review-boundary",
+      "fact": "Describe archive packaging as a review and recommendation; no migration was approved or performed.",
+      "sourceIds": ["g-study-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "g-project-maturity",
+      "fact": "Keep Paper Rewind a local personal prototype using generated fragments, without publication or independent user or scale studies.",
+      "sourceIds": ["g-project-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "g-background",
+      "fact": "Retain the Software Engineering degree, attendance-only workshop scope, supported skills, language level, and contact details.",
+      "sourceIds": ["g-contact", "g-education", "g-training", "g-skills", "g-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "partial",
+      "sourceIds": ["g-role-1", "g-role-3"],
+      "rationale": "Niva built an ingest validator and retry path for a service used by stations, but the source assigns release scheduling and CDN operations to other groups and does not describe maintaining playback services."
+    },
+    {
+      "requirementId": "r2",
+      "status": "supported",
+      "sourceIds": ["g-role-2", "g-skills"],
+      "rationale": "The role identifies a Rust segment-structure validator and its test harness."
+    },
+    {
+      "requirementId": "r3",
+      "status": "unsupported",
+      "sourceIds": ["g-role-3"],
+      "rationale": "Site reliability engineers own CDN operations and on-call."
+    },
+    {
+      "requirementId": "r4",
+      "status": "supported",
+      "sourceIds": ["g-role-2"],
+      "rationale": "A bounded staging replay records its sample size, repetition count, and median values."
+    },
+    {
+      "requirementId": "r5",
+      "status": "partial",
+      "sourceIds": ["g-role-2", "g-role-3"],
+      "rationale": "The client set acceptance rules and Niva maintains operator notes, but the evidence does not say she coordinated partner handoffs."
+    },
+    {
+      "requirementId": "r6",
+      "status": "partial",
+      "sourceIds": ["g-study-1"],
+      "rationale": "Niva reviewed archive options and recommended a sample conversion; no migration occurred."
+    },
+    {
+      "requirementId": "r7",
+      "status": "unsupported",
+      "sourceIds": ["g-role-3"],
+      "rationale": "The media-rights group sets policy, and Niva has no key-custody responsibility."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "g-invented-interval-reason",
+      "claim": "Niva left media-software work for a stated personal, medical, or study reason.",
+      "sourceIds": ["g-gap-1"],
+      "reason": "The dated interval has no recorded reason or activity description."
+    },
+    {
+      "id": "g-client-as-employer",
+      "claim": "Niva was employed by the Milepost Listening Network.",
+      "sourceIds": ["g-role-2"],
+      "reason": "Silver Cut employed her; Milepost was its client."
+    },
+    {
+      "id": "g-owned-cdn-operations",
+      "claim": "Niva owned CDN configuration or the production on-call rotation.",
+      "sourceIds": ["g-role-3"],
+      "reason": "Site reliability engineers own those responsibilities."
+    },
+    {
+      "id": "g-altered-benchmark",
+      "claim": "The validator benchmark used a different sample, repetition count, or timing result.",
+      "sourceIds": ["g-role-2"],
+      "reason": "Only the 10,000-segment, 14-replay staging measurement and its two medians are recorded."
+    },
+    {
+      "id": "g-completed-archive-migration",
+      "claim": "Niva migrated archived packages to a new storage system.",
+      "sourceIds": ["g-study-1"],
+      "reason": "The source describes a review and recommendation; no migration occurred."
+    },
+    {
+      "id": "g-project-production",
+      "claim": "Paper Rewind is a published station product or has proven user-scale results.",
+      "sourceIds": ["g-project-1"],
+      "reason": "It is a local personal prototype without an independent user or scale study."
+    },
+    {
+      "id": "g-key-custody",
+      "claim": "Niva sets encryption policy or controls content-protection keys.",
+      "sourceIds": ["g-role-3"],
+      "reason": "The media-rights group sets policy, and Niva has no key-custody responsibility."
+    },
+    {
+      "id": "g-professional-credential",
+      "claim": "Niva holds a professional media-operations credential from the workshop.",
+      "sourceIds": ["g-training"],
+      "reason": "The source records workshop attendance."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "g-exact-periods",
+      "check": "Keep the three role date ranges distinct and retain the explicitly listed media-software interval.",
+      "sourceIds": ["g-role-1", "g-gap-1", "g-role-2", "g-role-3"]
+    },
+    {
+      "id": "g-benchmark-scope",
+      "check": "Any benchmark claim preserves the segment count, staging replay count, and both median values.",
+      "sourceIds": ["g-role-2"]
+    },
+    {
+      "id": "g-contact-and-degree",
+      "check": "Do not alter the .test contact address, degree, or institute name.",
+      "sourceIds": ["g-contact", "g-education"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "g-client-and-team-ownership",
+      "check": "Separate the employer, client acceptance, engineering contribution, and release-preparation responsibilities.",
+      "sourceIds": ["g-role-2"]
+    },
+    {
+      "id": "g-benchmark-boundary",
+      "check": "Keep staging validation timings distinct from audience playback latency or CDN throughput.",
+      "sourceIds": ["g-role-2"]
+    },
+    {
+      "id": "g-review-versus-migration",
+      "check": "Do not turn the archive packaging review into a completed migration.",
+      "sourceIds": ["g-study-1"]
+    },
+    {
+      "id": "g-prototype-and-training-scope",
+      "check": "Keep the local tool at prototype maturity and the workshop at attendance scope.",
+      "sourceIds": ["g-project-1", "g-training"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}

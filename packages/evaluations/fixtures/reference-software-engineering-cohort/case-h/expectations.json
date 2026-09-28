@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "caseId": "reference-cohort-case-h",
+  "profileSource": "candidate-profile.md",
+  "opportunitySource": "job-description.md",
+  "mustCover": [
+    {
+      "id": "h-employment-chronology",
+      "fact": "Keep the February 2014–September 2017, November 2018–June 2021, and October 2022–present roles distinct; the source does not describe unemployment between them.",
+      "sourceIds": ["h-role-1", "h-role-2", "h-role-3"],
+      "boundary": "deterministic"
+    },
+    {
+      "id": "h-team-and-finance-attribution",
+      "fact": "Attribute the return-state and webhook contributions to Olan's teams, refund authorization to finance, and platform operation to the assigned operations groups.",
+      "sourceIds": ["h-role-1", "h-role-2", "h-role-3"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "h-study-boundary",
+      "fact": "Present the outbox work as a design comparison and proposed limited test; no production migration or rollout occurred.",
+      "sourceIds": ["h-study-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "h-project-maturity",
+      "fact": "Keep Order Echo a local prototype using synthetic cart changes, with no real transactions, integration, or measured throughput.",
+      "sourceIds": ["h-project-1"],
+      "boundary": "semantic"
+    },
+    {
+      "id": "h-background",
+      "fact": "Retain the Information Systems degree, participant-only forum scope, supported skills, language level, and contact details.",
+      "sourceIds": ["h-contact", "h-education", "h-training", "h-skills", "h-languages"],
+      "boundary": "deterministic"
+    }
+  ],
+  "requirementExpectations": [
+    {
+      "requirementId": "r1",
+      "status": "partial",
+      "sourceIds": ["h-role-1", "h-role-2", "h-role-3"],
+      "rationale": "Olan implemented checkout, returns, and reconciliation features, but the source does not establish that he maintained production workflows."
+    },
+    {
+      "requirementId": "r2",
+      "status": "partial",
+      "sourceIds": ["h-role-2", "h-skills"],
+      "rationale": "Olan implemented a Java return-state handler and lists relational-data skills, but the source does not describe a tested API over relational data."
+    },
+    {
+      "requirementId": "r3",
+      "status": "unsupported",
+      "sourceIds": ["h-role-2"],
+      "rationale": "Finance authorized payouts; Olan did not approve refunds or move funds."
+    },
+    {
+      "requirementId": "r4",
+      "status": "partial",
+      "sourceIds": ["h-role-2", "h-role-3"],
+      "rationale": "The source records support triaging returns and finance using the reconciliation queue, but does not say Olan coordinated exception handling between them."
+    },
+    {
+      "requirementId": "r5",
+      "status": "partial",
+      "sourceIds": ["h-study-1"],
+      "rationale": "Olan compared batch and outbox designs and proposed a synthetic test; no production migration occurred."
+    },
+    {
+      "requirementId": "r6",
+      "status": "supported",
+      "sourceIds": ["h-role-3"],
+      "rationale": "The role records replay-safe webhook handling."
+    },
+    {
+      "requirementId": "r7",
+      "status": "unsupported",
+      "sourceIds": ["h-role-3"],
+      "rationale": "The product director sets portfolio priorities; no company-wide architecture authority is recorded for Olan."
+    }
+  ],
+  "prohibitedClaims": [
+    {
+      "id": "h-inferred-unemployment",
+      "claim": "Olan was unemployed during the time between the listed employment dates.",
+      "sourceIds": ["h-role-1", "h-role-2", "h-role-3"],
+      "reason": "The roles have separated dates, but the source makes no claim about unemployment or other activity between them."
+    },
+    {
+      "id": "h-refund-authority",
+      "claim": "Olan approved refunds, moved customer funds, or held payment credentials.",
+      "sourceIds": ["h-role-2"],
+      "reason": "Finance reviewed and authorized refund payouts; Olan did not move funds or approve refunds."
+    },
+    {
+      "id": "h-delivered-outbox",
+      "claim": "Olan delivered a production outbox migration.",
+      "sourceIds": ["h-study-1"],
+      "reason": "The source describes a design comparison and synthetic test proposal only."
+    },
+    {
+      "id": "h-project-real-transactions",
+      "claim": "Order Echo processed real customer transactions or was integrated into production.",
+      "sourceIds": ["h-project-1"],
+      "reason": "It is a local prototype using synthetic cart changes."
+    },
+    {
+      "id": "h-company-roadmap",
+      "claim": "Olan set the company-wide commerce roadmap.",
+      "sourceIds": ["h-role-3"],
+      "reason": "The product director sets portfolio priorities."
+    },
+    {
+      "id": "h-professional-credential",
+      "claim": "Olan holds a payment-security or professional accounting certification.",
+      "sourceIds": ["h-training"],
+      "reason": "The source records forum attendance and a participant certificate only."
+    }
+  ],
+  "deterministicChecks": [
+    {
+      "id": "h-role-date-separation",
+      "check": "Keep the three recorded employment periods separate and do not assign an employment status to the intervening time.",
+      "sourceIds": ["h-role-1", "h-role-2", "h-role-3"]
+    },
+    {
+      "id": "h-contact-and-degree",
+      "check": "Do not alter the .test contact address, degree title, or school name.",
+      "sourceIds": ["h-contact", "h-education"]
+    },
+    {
+      "id": "h-training-scope",
+      "check": "Do not convert the participant certificate into a professional payment or accounting credential.",
+      "sourceIds": ["h-training"]
+    }
+  ],
+  "semanticChecks": [
+    {
+      "id": "h-team-and-payout-ownership",
+      "check": "Separate Olan's implementation from finance authorization, support triage, product direction, and service operations.",
+      "sourceIds": ["h-role-2", "h-role-3"]
+    },
+    {
+      "id": "h-study-versus-shipping",
+      "check": "Do not turn the outbox comparison and suggested test into a production migration.",
+      "sourceIds": ["h-study-1"]
+    },
+    {
+      "id": "h-prototype-versus-commerce-service",
+      "check": "Keep the synthetic-cart simulator separate from real orders and production integration.",
+      "sourceIds": ["h-project-1"]
+    },
+    {
+      "id": "h-background-scope",
+      "check": "Describe the forum certificate as participation rather than a professional qualification.",
+      "sourceIds": ["h-training"]
+    }
+  ],
+  "executionBoundary": {
+    "providerRunPerformed": false,
+    "plannedRoundsPerProfile": 1,
+    "maximumProviderCallsForCohort": 4,
+    "requiresSeparateAuthorization": true
+  }
+}
