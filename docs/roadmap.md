@@ -1389,6 +1389,19 @@ frozen #630 cohort cannot be rerun or silently treated as a pass. The
 model-profile milestone remains later so the reference workflow can be
 measured first.
 
+### Now — Generalization coverage follow-up
+
+[Milestone 20](https://github.com/akoita/draft-loop/milestone/20) has a fixed,
+ordered exit: [#636](https://github.com/akoita/draft-loop/issues/636) corrects
+the protected-name Markdown-emphasis false positive;
+[#637](https://github.com/akoita/draft-loop/issues/637) makes the existing
+source-grounded review surface an omitted explicit employment gap; and
+[#638](https://github.com/akoita/draft-loop/issues/638) freezes and measures a
+new fictional cohort after both fixes. Each issue has one boundary and one PR.
+The milestone itself authorizes no provider call or retry; the cohort requires
+a separate concrete admission and user authorization. Close the milestone with
+the observed result, including an unmet exit if either case fails.
+
 ### Later — Model profiles and tiers
 
 Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and
