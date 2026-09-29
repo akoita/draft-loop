@@ -42,6 +42,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Update apt package indexes (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update
+
+      - name: Install Xvfb and xauth (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install --no-install-recommends -y xvfb xauth
+
       - name: Package desktop application
         run: pnpm --filter @draft-loop/desktop package --arch ${{ matrix.arch }}
 
@@ -57,7 +65,13 @@ jobs:
           test -n "$path"
           echo "path=$path" >> "$GITHUB_OUTPUT"
 
-      - name: Run sanitized installed-app acceptance
+      - name: Run sanitized installed-app acceptance (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: xvfb-run --auto-servernum pnpm desktop:acceptance -- "${{ steps.executable.outputs.path }}" "acceptance-evidence/${{ matrix.name }}.json"
+
+      - name: Run sanitized installed-app acceptance (macOS and Windows)
+        if: runner.os != 'Linux'
         shell: bash
         run: pnpm desktop:acceptance -- "${{ steps.executable.outputs.path }}" "acceptance-evidence/${{ matrix.name }}.json"
 

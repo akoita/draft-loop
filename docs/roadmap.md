@@ -1,8 +1,8 @@
 # Product vision and roadmap
 
 **Status:** Living document<br>
-**Last reviewed:** 2026-09-27<br>
-**Current stage:** Reference model pair
+**Last reviewed:** 2026-09-30<br>
+**Current stage:** Model profiles and tiers
 
 This document describes product direction, not fixed delivery dates. **Now** is
 the current commitment, **Next** is planned work that may change after
@@ -244,9 +244,9 @@ applications.
 | Previous | Live author revalidation ([milestone](https://github.com/akoita/draft-loop/milestone/13))                        | [Failed](evaluation/live-author-revalidation.md): three drafts rejected, captures analysed content-free | Test the corrected validator on one real author draft                                 | Ten uncovered structural blocks per attempt; three of seven factual failures were validator false rejections |
 | Previous | Structural claim coverage ([milestone](https://github.com/akoita/draft-loop/milestone/14))                       | [Exit not met](evaluation/structural-claim-coverage.md): capture issues 37 → 28 against a target of 18 | Make real drafts pass coverage and factual checks for headings, contact lines, and skills lists | Remaining uncovered blocks contain fields absent from the evidence; the gap is author behaviour |
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
-| Now | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
-| Next | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Planned, starts after milestone 16 closes | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | #618 rollup; #619–#622 in dependency order. Domain rules may help, but reliability cannot depend on anticipating every term. |
-| Later | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Planned after generalization | Replace hard-coded defaults with versioned model profiles and reference/economy tiers | Profile registry, recorded profiles and user-facing selection (#84) |
+| Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
+| Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
+| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contract delivered; context snapshot preparation in progress | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: #585 complete, then #662–#664; user-facing selection follows. Default promotion remains a separate decision. |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1239,11 +1239,11 @@ model strategy. Its findings are in the
 [model record](evaluation/author-model-revalidation.md) and the
 [route diagnosis](evaluation/author-route-diagnosis.md).
 
-### Now — Reference model pair
+### Completed observation — Reference model pair
 
 [Milestone 16](https://github.com/akoita/draft-loop/milestone/16) started as
-author model revalidation on smaller models. It now selects and validates the
-first **reference pair**: one frontier Anthropic author and one frontier
+author model revalidation on smaller models. It recorded a bounded observation
+of the first **reference pair**: one frontier Anthropic author and one frontier
 OpenAI critic, reached through authenticated user sessions.
 
 **What the economy-model work already established:**
@@ -1386,8 +1386,8 @@ The [cohort record](../packages/evaluations/fixtures/fresh-software-engineering-
 gives the exact result and limits. The two-case workflow and coverage exit was
 not met. Fixes and a fresh observation belong to a new bounded milestone; the
 frozen #630 cohort cannot be rerun or silently treated as a pass. The
-model-profile milestone remains later so the reference workflow can be
-measured first.
+model-profile milestone remained deferred during these observations; its
+current scope is described below.
 
 ### Completed observation — Generalization coverage follow-up
 
@@ -1421,10 +1421,11 @@ observation](../packages/evaluations/fixtures/reference-software-engineering-coh
 records that G's draft omitted a source-explicit dated work interval, which
 the critic flagged. H did not infer unemployment from separate role dates.
 The milestone closed with its frozen coverage exit unmet; the consumed G/H
-cohort cannot be tuned or rerun under that admission. Further sprint work is
-paused pending prioritization.
+cohort cannot be tuned or rerun under that admission. Milestone 17 is now the
+priority. Further generalization observations require fresh bounded work and
+separate authorization.
 
-### Later — Model profiles and tiers
+### Now — Model profiles and tiers
 
 Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and
 `gpt-5.6-luna`) and the per-adapter thinking assumptions with **versioned
@@ -1435,14 +1436,26 @@ model profiles**. A profile holds:
 - runtime controls: effort, output budget, and thinking behaviour;
 - known limits.
 
-Runs record the profile next to the prompt version, so a validation claim
-names exactly what it covers. [Issue #585](https://github.com/akoita/draft-loop/issues/585)
-prepares the framework-free profile
-contract and strict schema only; it does not select or change defaults while
-the separate workspace-default decision remains pending. The registry and tier presets
-from #511, followed by user-facing model selection (#84), remain later steps
-with visible cost estimates and diversity warnings. Adding providers beyond
-Anthropic and OpenAI stays in controlled expansion.
+The intended run history records the full profile next to the prompt version,
+so a validation claim names exactly what it covers. [#585](https://github.com/akoita/draft-loop/issues/585)
+delivered the framework-free profile contract and strict schema. The remaining
+[#511](https://github.com/akoita/draft-loop/issues/511) work is ordered:
+
+1. [#662](https://github.com/akoita/draft-loop/issues/662): optional full profile
+   snapshots in context, preserving legacy selections.
+2. [#663](https://github.com/akoita/draft-loop/issues/663): a provider-free,
+   versioned application registry.
+3. [#664](https://github.com/akoita/draft-loop/issues/664): recorded runtime
+   controls for new runs and legacy-safe resume, split further before coding
+   if adapter integration exceeds one bounded execution issue.
+
+Snapshot preparation does not select profiles for current workspace runs or
+change runtime controls. User-facing selection (#84), including desktop model
+changes (#536) and unavailable-list suggestions (#527), follows the relevant
+shared contracts. Model capability verification and the explicit workspace-default
+decision remain required before promoting presets. Earlier generalization
+failures remain recorded; this milestone does not authorize another live cohort.
+Broad cross-profession and multilingual validation (#583) stays deferred.
 
 **Exit criterion:** New runs choose models only through recorded profiles.
 The reference and economy presets exist, existing runs resume unchanged, and
