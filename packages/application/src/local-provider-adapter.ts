@@ -1,4 +1,3 @@
-import Anthropic from "@anthropic-ai/sdk";
 import type { ModelSelection } from "@draft-loop/domain";
 import {
   AnthropicAdapter,
@@ -14,6 +13,7 @@ import {
   type UserSessionProcessRunner,
 } from "@draft-loop/providers";
 import OpenAI from "openai";
+import { createAnthropicSdkClient } from "./anthropic-sdk-client.js";
 
 /** Concrete local driver shared by CLI and the native desktop host. */
 export type ProviderCredentialResolver = (
@@ -103,9 +103,7 @@ export async function createProviderAdapter(
         { retryable: false },
       );
     }
-    const client =
-      providerClientFactories?.anthropic?.(apiKey) ??
-      (new Anthropic({ apiKey, maxRetries: 0 }) as unknown as AnthropicClient);
+    const client = providerClientFactories?.anthropic?.(apiKey) ?? createAnthropicSdkClient(apiKey);
     return new AnthropicAdapter<JsonObject, JsonObject>(client, { configuredModel: model });
   }
   if (providerAuthModeConfiguration.openai === "user-session") {
