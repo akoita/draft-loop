@@ -44,8 +44,14 @@ runtime effort/output/thinking controls, and declared limits. Validation keeps
 the runtime output ceiling within the known output limit and a budgeted
 thinking allowance within that output ceiling; an optional context-window limit
 remains independent. This contract does not populate a registry, describe
-actual provider capabilities, or select defaults. The accepted reference pair
-remains pending.
+actual provider capabilities, or select defaults. The separate decision to
+promote the observed reference pair to workspace defaults remains pending.
+
+Context model selections can carry a validated, detached copy of a profile
+beside the exact provider/model identity and prompt-template version, and JSON
+round-trips preserve that snapshot. This prepares context snapshots only:
+current workspace runs do not yet select profiles, and runtime/default model
+controls remain unchanged.
 
 Before transmission, author and critic share a projection of the local context.
 Source-manifest paths become opaque ordinal labels such as `evidence-source-1`;

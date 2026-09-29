@@ -78,7 +78,6 @@ import {
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
   maximumIndependenceOverrideRationaleLength,
-  maximumModelLineageLength,
   maximumWritingPolicyCharactersLength,
   maximumWritingPolicyPreferenceListEntries,
   maximumWritingPolicyPreferenceNameLength,
@@ -120,8 +119,11 @@ import {
   writingPolicyVerbosityLevels,
 } from "@draft-loop/domain";
 import { z } from "zod";
+import { modelSelectionSchema } from "./model-selection.js";
 
 export type { RenderingLayoutProfileId } from "@draft-loop/domain";
+export type { ModelSelection } from "./model-selection.js";
+export { modelSelectionSchema } from "./model-selection.js";
 
 const nonEmptyString = z.string().trim().min(1, "must not be empty");
 
@@ -2784,17 +2786,6 @@ export const outputConstraintsSchema = z.object({
 });
 
 export type OutputConstraints = z.infer<typeof outputConstraintsSchema>;
-
-export const modelSelectionSchema = z.object({
-  company: nonEmptyString,
-  modelId: nonEmptyString,
-  role: z.enum(["author", "critic"]),
-  promptTemplateVersion: nonEmptyString,
-  /** Derived from company and model id when absent; see `deriveModelLineage`. */
-  lineage: nonEmptyString.max(maximumModelLineageLength).optional(),
-});
-
-export type ModelSelection = z.infer<typeof modelSelectionSchema>;
 
 /** What independence was claimed for a run, and whether the claim held. */
 export const independentReviewSchema = z.object({

@@ -1,3 +1,14 @@
+import type { ModelSelection, ModelSelectionInput } from "./model-selection.js";
+import {
+  maximumModelLineageLength,
+  normalizeLineageLabel,
+  normalizeModelSelection,
+  validateModelSelection,
+} from "./model-selection.js";
+
+export type { ModelSelection, ModelSelectionInput };
+export { maximumModelLineageLength, normalizeLineageLabel };
+
 export const workflowStates = [
   "collecting",
   "ingesting",
@@ -1195,43 +1206,12 @@ export type AgentRole = "author" | "critic";
 export type ModelCompany = "anthropic" | "openai" | (string & {});
 
 /**
- * The longest accepted model-lineage label.
- *
- * A lineage is a short identifier a person types once and reads later; a bound
- * keeps a persisted snapshot and every surface that renders it predictable.
- */
-export const maximumModelLineageLength = 200;
-
-/**
  * The longest accepted independence-override rationale.
  *
  * Long enough for a paragraph explaining why a shared lineage is acceptable,
  * short enough that the value stays a note rather than a document.
  */
 export const maximumIndependenceOverrideRationaleLength = 500;
-
-export interface ModelSelection {
-  readonly company: ModelCompany;
-  readonly modelId: string;
-  readonly role: AgentRole;
-  readonly promptTemplateVersion: string;
-  /**
-   * The weights this selection descends from, as claimed by the operator.
-   *
-   * Optional: when absent a lineage is derived from company and model id, so a
-   * workspace written before lineages existed keeps its current behaviour. See
-   * `deriveModelLineage`.
-   */
-  readonly lineage?: string;
-}
-
-export interface ModelSelectionInput {
-  readonly company?: string;
-  readonly modelId?: string;
-  readonly role?: AgentRole;
-  readonly promptTemplateVersion?: string;
-  readonly lineage?: string;
-}
 
 /**
  * What independence was claimed for a run, and whether the claim held.
@@ -4274,55 +4254,6 @@ function validateEvidenceManifest(
   });
 }
 
-function validateModelSelection(
-  selection: unknown,
-  role: AgentRole,
-  field: string,
-  issues: SemanticValidationIssue[],
-): selection is ModelSelectionInput {
-  if (!isRecord(selection)) {
-    addIssue(issues, "missing-required-input", field, `${role} model selection is required.`);
-    return false;
-  }
-
-  if (!isNonEmptyString(selection.company)) {
-    addIssue(issues, "invalid-value", `${field}.company`, "a model company is required.");
-  }
-  if (!isNonEmptyString(selection.modelId)) {
-    addIssue(issues, "invalid-value", `${field}.modelId`, "an exact model id is required.");
-  }
-  if (selection.role !== role) {
-    addIssue(issues, "invalid-value", `${field}.role`, `must be the ${role} role.`);
-  }
-  if (!isNonEmptyString(selection.promptTemplateVersion)) {
-    addIssue(
-      issues,
-      "invalid-value",
-      `${field}.promptTemplateVersion`,
-      "a prompt-template version is required.",
-    );
-  }
-  if (selection.lineage !== undefined) {
-    // Deliberately does not echo the value: this message reaches logs and UI.
-    if (!isNonEmptyString(selection.lineage)) {
-      addIssue(
-        issues,
-        "invalid-value",
-        `${field}.lineage`,
-        "must be a non-empty model lineage when provided.",
-      );
-    } else if (selection.lineage.trim().length > maximumModelLineageLength) {
-      addIssue(
-        issues,
-        "invalid-value",
-        `${field}.lineage`,
-        `must be at most ${maximumModelLineageLength} characters.`,
-      );
-    }
-  }
-  return true;
-}
-
 function validateModelConfiguration(
   input: ContextSnapshotInput,
   issues: SemanticValidationIssue[],
@@ -4338,17 +4269,22 @@ function validateModelConfiguration(
     return;
   }
 
+  const reportSelectionIssue = (
+    code: "missing-required-input" | "invalid-value",
+    field: string,
+    message: string,
+  ): void => addIssue(issues, code, field, message);
   const hasAuthor = validateModelSelection(
     configuration.author,
     "author",
     "modelConfiguration.author",
-    issues,
+    reportSelectionIssue,
   );
   const hasCritic = validateModelSelection(
     configuration.critic,
     "critic",
     "modelConfiguration.critic",
-    issues,
+    reportSelectionIssue,
   );
   const requireDiversity = configuration.requireProviderDiversity ?? true;
   if (typeof requireDiversity !== "boolean") {
@@ -5234,18 +5170,6 @@ function normalizeEvidenceSource(source: EvidenceSourceInput): EvidenceSource {
   };
 }
 
-function normalizeModelSelection(selection: ModelSelectionInput): ModelSelection {
-  return {
-    company: selection.company?.trim() as ModelCompany,
-    modelId: selection.modelId?.trim() as string,
-    role: selection.role as AgentRole,
-    promptTemplateVersion: selection.promptTemplateVersion?.trim() as string,
-    ...(isNonEmptyString(selection.lineage)
-      ? { lineage: normalizeLineageLabel(selection.lineage) }
-      : {}),
-  };
-}
-
 function normalizeModelConfiguration(configuration: ModelConfigurationInput): ModelConfiguration {
   const author = normalizeModelSelection(configuration.author as ModelSelectionInput);
   const critic = normalizeModelSelection(configuration.critic as ModelSelectionInput);
@@ -5262,17 +5186,6 @@ function normalizeModelConfiguration(configuration: ModelConfigurationInput): Mo
       ...(rationale === undefined ? {} : { overrideRationale: rationale }),
     }),
   };
-}
-
-/**
- * Fold away differences that are spelling rather than lineage.
- *
- * `Local-A`, `local-a `, and `local  a` are one claim, not three; without this
- * a typo would read as independence, which is the failure mode this whole
- * mechanism exists to avoid.
- */
-export function normalizeLineageLabel(value: string): string {
-  return value.trim().replace(/\s+/gu, " ").toLowerCase();
 }
 
 /** The fields a lineage can be read or derived from, declared or persisted. */
