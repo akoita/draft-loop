@@ -64,9 +64,25 @@ function launch(executable, phase, paths, artifactChecksum) {
     child.stdout.on("data", (chunk) => (output += chunk));
     child.stderr.on("data", (chunk) => (output += chunk));
     child.once("error", rejectLaunch);
-    child.once("close", (code) => {
+    child.once("close", (code, signal) => {
       if (code === 0) resolveLaunch(output);
-      else rejectLaunch(new Error(`Installed-app acceptance ${phase} launch exited with ${code}.`));
+      else {
+        const cause =
+          /Missing X server|could not connect to display|Failed to initialize.*platform/iu.test(
+            output,
+          )
+            ? "display-unavailable"
+            : /cannot open shared object file/iu.test(output)
+              ? "shared-library-unavailable"
+              : /No usable sandbox|SUID sandbox|Failed to move to new namespace/iu.test(output)
+                ? "sandbox-unavailable"
+                : "unclassified";
+        rejectLaunch(
+          new Error(
+            `Installed-app acceptance ${phase} launch exited with ${code} (signal: ${signal ?? "none"}; cause: ${cause}).`,
+          ),
+        );
+      }
     });
   });
 }
