@@ -20,7 +20,12 @@ function launch(executable, phase, userData, evidencePath, secrets) {
   return new Promise((resolveLaunch, rejectLaunch) => {
     const child = spawn(
       executable,
-      ["--headless", "--disable-gpu", "--no-sandbox", `--user-data-dir=${userData}`],
+      [
+        ...(process.platform === "linux" && process.env.DISPLAY ? [] : ["--headless"]),
+        "--disable-gpu",
+        "--no-sandbox",
+        `--user-data-dir=${userData}`,
+      ],
       {
         env: {
           ...process.env,

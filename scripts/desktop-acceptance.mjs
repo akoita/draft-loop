@@ -42,7 +42,12 @@ function launch(executable, phase, paths, artifactChecksum) {
   return new Promise((resolveLaunch, rejectLaunch) => {
     const child = spawn(
       executable,
-      ["--headless", "--disable-gpu", "--no-sandbox", `--user-data-dir=${paths.userData}`],
+      [
+        ...(process.platform === "linux" && process.env.DISPLAY ? [] : ["--headless"]),
+        "--disable-gpu",
+        "--no-sandbox",
+        `--user-data-dir=${paths.userData}`,
+      ],
       {
         env: {
           ...process.env,
