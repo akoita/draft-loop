@@ -10,6 +10,10 @@
     "./knowledge-base": {
       "types": "./src/knowledge-base.ts",
       "import": "./src/knowledge-base.ts"
+    },
+    "./model-profiles": {
+      "types": "./src/model-profiles.ts",
+      "import": "./src/model-profiles.ts"
     }
   },
   "files": [

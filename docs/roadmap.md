@@ -246,7 +246,7 @@ applications.
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
 | Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contract and context snapshots delivered; provider-default effort preparation in progress | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: #585/#662 complete, then #666, #663, and #664; user-facing selection follows. Default promotion remains a separate decision. |
+| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contract, snapshots, provider-default effort, and registry implemented; runtime integration next | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: #585/#662/#666 complete; #663 registry prepared, then #664; user-facing selection follows. Default promotion remains a separate decision. |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1443,17 +1443,17 @@ delivered the framework-free profile contract and strict schema. The remaining
 
 1. [#662](https://github.com/akoita/draft-loop/issues/662) delivered optional
    full profile snapshots in context, preserving legacy selections.
-2. [#666](https://github.com/akoita/draft-loop/issues/666): explicit
+2. [#666](https://github.com/akoita/draft-loop/issues/666) delivered explicit
    provider-default effort, allowing profiles to describe models with no
    effort override without inventing a numeric setting.
-3. [#663](https://github.com/akoita/draft-loop/issues/663): a provider-free,
-   versioned application registry.
+3. [#663](https://github.com/akoita/draft-loop/issues/663) adds a provider-free,
+   versioned application registry with verified legacy economy presets.
 4. [#664](https://github.com/akoita/draft-loop/issues/664): recorded runtime
    controls for new runs and legacy-safe resume, split further before coding
    if adapter integration exceeds one bounded execution issue.
 
-Snapshot preparation does not select profiles for current workspace runs or
-change runtime controls. User-facing selection (#84), including desktop model
+The registry and snapshot contracts do not select profiles for current workspace
+runs or change runtime controls. User-facing selection (#84), including desktop model
 changes (#536) and unavailable-list suggestions (#527), follows the relevant
 shared contracts. Model capability verification and the explicit workspace-default
 decision remain required before promoting presets. Earlier generalization
