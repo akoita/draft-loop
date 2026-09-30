@@ -7,7 +7,6 @@ import {
   defaultModelProfileRegistry,
   type ModelProfileRegistry,
 } from "@draft-loop/application/model-profiles";
-import type { AgentRole } from "@draft-loop/domain";
 
 export interface ModelProfileSelectionOptions {
   readonly modelPreset?: unknown;
@@ -55,9 +54,9 @@ export function parseModelProfileReference(reference: unknown): {
 
 function resolveReference(
   reference: unknown,
-  role: AgentRole,
+  role: keyof ModelProfileReferences,
   registry: ModelProfileRegistry,
-): ModelProfileReferences[AgentRole] {
+): ModelProfileReferences[keyof ModelProfileReferences] {
   const parsed = parseModelProfileReference(reference);
   try {
     const profile = registry.resolve(parsed.id, parsed.version, role);
