@@ -1527,7 +1527,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option(
       "--model-preset <id>",
-      "exact registered author/critic pair preset; standard and premium are unvalidated",
+      "exact registered author/critic pair preset; economy and standard are unvalidated",
     )
     .option("--author-profile <id@version>", "exact registered author profile version")
     .option("--critic-profile <id@version>", "exact registered critic profile version")

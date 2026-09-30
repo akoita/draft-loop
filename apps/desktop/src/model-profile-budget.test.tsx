@@ -13,7 +13,7 @@ import {
 
 const standard: ModelProfileReferences = {
   author: { id: "standard-anthropic-author", version: 1 },
-  critic: { id: "standard-openai-critic", version: 1 },
+  critic: { id: "standard-openai-critic", version: 2 },
 };
 const apiKeyModes: RunProviderAuthModeConfiguration = {
   anthropic: "api-key",
@@ -40,7 +40,7 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("2 author calls and 1 critic call");
     expect(html).toContain("standard-anthropic-author@1");
     expect(html).toContain("$4/1M input · $20/1M output");
-    expect(html).toContain("standard-openai-critic@1");
+    expect(html).toContain("standard-openai-critic@2");
     expect(html).toContain("$2/1M input · $10/1M output");
     expect(html).toContain("up to 200,000 input tokens per call");
     expect(html).toContain("Formula: calls ×");

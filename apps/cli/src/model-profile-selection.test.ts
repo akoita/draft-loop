@@ -85,6 +85,7 @@ describe("model profile selection parsing", () => {
       options: { modelPreset: "unlisted-preset-secret" },
       code: "unavailable",
     },
+    { options: { modelPreset: "premium" }, code: "unavailable" },
   ] as const)("fails closed for invalid selection options: $code", ({ options, code }) => {
     try {
       resolveModelProfileSelection(options, defaultModelProfileRegistry);
@@ -96,23 +97,22 @@ describe("model profile selection parsing", () => {
     }
   });
 
-  it.each(["economy", "standard", "premium"] as const)(
-    "resolves the exact %s preset references",
-    (modelPreset) => {
+  it.each([
+    {
+      modelPreset: "economy",
+      author: { id: "economy-anthropic-author", version: 1 },
+      critic: { id: "economy-openai-critic", version: 1 },
+    },
+    {
+      modelPreset: "standard",
+      author: { id: "standard-anthropic-author", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2 },
+    },
+  ] as const)(
+    "resolves the exact $modelPreset preset references",
+    ({ modelPreset, author, critic }) => {
       const selected = resolveModelProfileSelection({ modelPreset });
-      expect(selected).toEqual({
-        author: {
-          id:
-            modelPreset === "economy"
-              ? "legacy-anthropic-author"
-              : `${modelPreset}-anthropic-author`,
-          version: 1,
-        },
-        critic: {
-          id: modelPreset === "economy" ? "legacy-openai-critic" : `${modelPreset}-openai-critic`,
-          version: 1,
-        },
-      });
+      expect(selected).toEqual({ author, critic });
     },
   );
 });

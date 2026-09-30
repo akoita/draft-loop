@@ -9,11 +9,18 @@ import {
 import { defaultModelProfileRegistry } from "./model-profiles.js";
 
 describe("model profile catalog", () => {
-  it("documents all registered profiles with bounded API price scope and explicit status", () => {
+  it("lists only active curated profiles with bounded API price scope and explicit status", () => {
     const catalog = listModelProfileCatalog();
-    const byId = new Map(catalog.map((entry) => [entry.profile.id, entry]));
+    const byId = new Map(
+      catalog.map((entry) => [`${entry.profile.id}@${entry.profile.version}`, entry]),
+    );
 
-    expect(catalog).toHaveLength(7);
+    expect(catalog.map(({ profile }) => `${profile.id}@${profile.version}`)).toEqual([
+      "economy-anthropic-author@1",
+      "economy-openai-critic@1",
+      "standard-anthropic-author@1",
+      "standard-openai-critic@2",
+    ]);
     for (const entry of catalog) {
       expect(entry).toMatchObject({
         reviewedAt: "2026-09-30",
@@ -31,28 +38,24 @@ describe("model profile catalog", () => {
     expect(
       Object.fromEntries(
         catalog.map(({ profile, apiPricing }) => [
-          profile.id,
+          `${profile.id}@${profile.version}`,
           [apiPricing.inputUsdPerMillion, apiPricing.outputUsdPerMillion],
         ]),
       ),
     ).toEqual({
-      "legacy-anthropic-author": [3, 15],
-      "legacy-openai-critic": [0.2, 1.2],
-      "standard-anthropic-author": [4, 20],
-      "standard-openai-critic": [2, 10],
-      "premium-anthropic-author": [10, 50],
-      "premium-openai-critic": [10, 50],
-      "economy-openai-critic": [0.1, 0.5],
+      "economy-anthropic-author@1": [2, 10],
+      "economy-openai-critic@1": [0.1, 0.5],
+      "standard-anthropic-author@1": [4, 20],
+      "standard-openai-critic@2": [2, 10],
     });
-    expect(byId.get("legacy-anthropic-author")?.sources).toEqual([
-      "https://platform.claude.com/docs/fr/models/sonnet-4-5/overview",
-      "https://platform.claude.com/docs/en/about-claude/pricing",
+    expect(byId.get("economy-anthropic-author@1")?.sources).toEqual([
+      "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
     ]);
-    expect(byId.get("standard-anthropic-author")?.sources).toEqual([
+    expect(byId.get("standard-anthropic-author@1")?.sources).toEqual([
       "https://platform.claude.com/docs/en/models/overview",
     ]);
-    expect(byId.get("premium-openai-critic")?.sources).toEqual([
-      "https://developers.openai.com/api/docs/models/gpt-6-astra",
+    expect(byId.get("standard-openai-critic@2")?.sources).toEqual([
+      "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
     ]);
   });
 
@@ -68,48 +71,39 @@ describe("model profile catalog", () => {
     catalog.pop();
 
     const next = listModelProfileCatalog();
-    expect(next).toHaveLength(7);
+    expect(next).toHaveLength(4);
     expect(next[0]).toMatchObject({
       profile: {
-        id: "legacy-anthropic-author",
+        id: "economy-anthropic-author",
         roles: ["author"],
-        runtime: { thinking: { mode: "budgeted", maxTokens: 16384 } },
+        modelId: "claude-sonnet-5-5",
+        runtime: { thinking: { mode: "provider-default" } },
       },
-      sources: [
-        "https://platform.claude.com/docs/fr/models/sonnet-4-5/overview",
-        "https://platform.claude.com/docs/en/about-claude/pricing",
-      ],
-      apiPricing: { inputUsdPerMillion: 3, outputUsdPerMillion: 15 },
+      sources: ["https://platform.claude.com/docs/en/models/sonnet-5-5/overview"],
+      apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
     });
     expect(
       defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author").roles,
     ).toEqual(["author"]);
   });
 
-  it("lists only exact, role-safe pair presets and keeps frontier tiers opt-in", () => {
+  it("lists only economy and standard exact, role-safe presets", () => {
     const presets = listModelProfilePresets();
 
     expect(presets).toEqual([
       {
         id: "economy",
-        label: "Economy — current defaults",
+        label: "Economy — unvalidated",
         tier: "economy",
-        author: { id: "legacy-anthropic-author", version: 1 },
-        critic: { id: "legacy-openai-critic", version: 1 },
+        author: { id: "economy-anthropic-author", version: 1 },
+        critic: { id: "economy-openai-critic", version: 1 },
       },
       {
         id: "standard",
         label: "Standard — unvalidated",
         tier: "standard",
         author: { id: "standard-anthropic-author", version: 1 },
-        critic: { id: "standard-openai-critic", version: 1 },
-      },
-      {
-        id: "premium",
-        label: "Premium — unvalidated",
-        tier: "premium",
-        author: { id: "premium-anthropic-author", version: 1 },
-        critic: { id: "premium-openai-critic", version: 1 },
+        critic: { id: "standard-openai-critic", version: 2 },
       },
     ]);
     for (const preset of presets) {
@@ -125,11 +119,29 @@ describe("model profile catalog", () => {
     expect(
       defaultModelProfileRegistry.resolve(getModelProfilePreset("economy").critic.id, 1, "critic")
         .modelId,
-    ).toBe("gpt-5.6-luna");
+    ).toBe("gpt-6-luna");
 
-    const mutable = getModelProfilePreset("premium");
+    const mutable = getModelProfilePreset("economy");
     (mutable.author as { id: string }).id = "modified";
-    expect(getModelProfilePreset("premium").author.id).toBe("premium-anthropic-author");
+    expect(getModelProfilePreset("economy").author.id).toBe("economy-anthropic-author");
+  });
+
+  it("keeps retired exact versions resolvable without listing them as current profiles", () => {
+    expect(
+      defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author").modelId,
+    ).toBe("claude-sonnet-4-5");
+    expect(defaultModelProfileRegistry.resolve("standard-openai-critic", 1, "critic").modelId).toBe(
+      "gpt-6-sol",
+    );
+    expect(
+      listModelProfileCatalog().some(({ profile }) => profile.id === "legacy-anthropic-author"),
+    ).toBe(false);
+    expect(
+      listModelProfileCatalog().some(({ profile }) => profile.id === "premium-openai-critic"),
+    ).toBe(false);
+    expect(() => getModelProfilePreset("premium")).toThrowError(
+      new ModelProfileCatalogError("unknown-preset"),
+    );
   });
 
   it("rejects unknown preset ids with fixed, non-echoing errors", () => {

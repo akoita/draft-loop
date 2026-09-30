@@ -61,16 +61,16 @@ describe("desktop model profile picker rendering", () => {
     expect(legacyHtml).not.toContain("Illustrative public API token-cost scenario");
     const html = renderPicker(supportState(true), economy);
     expect(html).toContain("Applied next-run profiles");
-    expect(html).toContain("Economy — current defaults");
+    expect(html).toContain("Economy — unvalidated");
     expect(html).toContain("Standard — unvalidated");
-    expect(html).toContain("Premium — unvalidated");
+    expect(html).not.toContain("Premium — unvalidated");
     expect(html).toContain("Author profile");
     expect(html).toContain("Critic profile");
-    expect(html).toContain("legacy-anthropic-author@1");
-    expect(html).toContain("legacy-openai-critic@1");
-    expect(html).toContain(
-      "effort provider-default; output 32768 tokens; thinking budgeted (16384 tokens)",
-    );
+    expect(html).toContain("economy-anthropic-author@1");
+    expect(html).toContain("economy-openai-critic@1");
+    expect(html).toContain("claude-sonnet-5-5");
+    expect(html).toContain("gpt-6-luna");
+    expect(html).toContain("effort medium; output 32768 tokens; thinking provider-default");
     expect(html).toContain("Quality unvalidated; account availability unchecked");
     expect(html).toContain("CV quality has not been validated");
     expect(html).toContain("Authentication is never switched automatically.");
