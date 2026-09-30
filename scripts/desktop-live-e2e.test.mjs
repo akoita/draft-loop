@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
+import { PassThrough } from "node:stream";
 import { afterEach, describe, test } from "node:test";
+import { setImmediate } from "node:timers";
 import {
+  launchLiveE2E,
   main,
   parseArguments,
   resolveGateAuthMode,
@@ -21,6 +26,16 @@ const openaiPlaceholder = "synthetic-openai-credential";
 const missingExecutable = join(tmpdir(), "draft-loop-live-e2e-missing-executable");
 
 const temporaryDirectories = [];
+const launchPaths = {
+  root: "/tmp/draft-loop-live-e2e-profile",
+  userData: "/tmp/draft-loop-live-e2e-profile/user-data",
+  workspace: "/tmp/draft-loop-live-e2e-profile/workspace",
+  job: "/tmp/draft-loop-live-e2e-profile/job.md",
+  candidate: "/tmp/draft-loop-live-e2e-profile/candidate.md",
+  report: "/tmp/draft-loop-live-e2e-profile/report.json",
+};
+const launchModels = { author: "claude-haiku-4-5", critic: "gpt-6-luna" };
+const launchAuthModes = { anthropic: "api-key", openai: "api-key" };
 const savedCredentials = {
   [anthropicVariable]: process.env[anthropicVariable],
   [openaiVariable]: process.env[openaiVariable],
@@ -295,6 +310,90 @@ describe("desktop live E2E CLI", () => {
     assert.equal(exitCode, 1);
     assert.equal(io.result.stdout, "");
     assert.match(io.result.stderr, /unknown argument: --nope/u);
+  });
+});
+
+describe("desktop live E2E launch isolation", () => {
+  function spawnHarness() {
+    const calls = [];
+    const spawnProcess = (command, args, options) => {
+      calls.push({ command, args, options });
+      const child = new EventEmitter();
+      child.stderr = new PassThrough();
+      setImmediate(() => child.emit("close", 0, null));
+      return child;
+    };
+    return { calls, spawnProcess };
+  }
+
+  test("forwards the temporary profile through pnpm and Electron Forge's argument boundary", async () => {
+    const { calls, spawnProcess } = spawnHarness();
+
+    await launchLiveE2E(launchPaths, undefined, launchModels, launchAuthModes, spawnProcess);
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].command, process.platform === "win32" ? "pnpm.cmd" : "pnpm");
+    assert.deepEqual(calls[0].args, [
+      "--filter",
+      "@draft-loop/desktop",
+      "start",
+      "--",
+      `--user-data-dir=${launchPaths.userData}`,
+    ]);
+    assert.equal(calls[0].options.env.DRAFT_LOOP_LIVE_E2E_WORKSPACE, launchPaths.workspace);
+  });
+
+  test("pnpm start forwards exactly one Forge separator and the temporary app argument", {
+    skip: process.platform === "win32",
+  }, async () => {
+    const { calls, spawnProcess } = spawnHarness();
+    await launchLiveE2E(launchPaths, undefined, launchModels, launchAuthModes, spawnProcess);
+    const launch = calls[0];
+    assert.ok(launch);
+    const directory = createTemporaryDirectory();
+    writeFileSync(
+      join(directory, "package.json"),
+      JSON.stringify({
+        name: "@draft-loop/desktop",
+        private: true,
+        scripts: { start: "node probe.cjs" },
+      }),
+    );
+    writeFileSync(
+      join(directory, "probe.cjs"),
+      'process.stdout.write(JSON.stringify(process.argv.slice(2)) + "\\n");',
+    );
+    const probe = spawnSync(launch.command, launch.args, {
+      cwd: directory,
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+
+    assert.equal(probe.status, 0, probe.stderr);
+    const lastOutputLine = probe.stdout.trim().split(/\r?\n/u).at(-1);
+    assert.ok(lastOutputLine);
+    assert.deepEqual(JSON.parse(lastOutputLine), ["--", `--user-data-dir=${launchPaths.userData}`]);
+  });
+
+  test("keeps the packaged launch flags and temporary profile argument", async () => {
+    const { calls, spawnProcess } = spawnHarness();
+
+    await launchLiveE2E(
+      launchPaths,
+      "/tmp/draft-loop-packaged",
+      launchModels,
+      launchAuthModes,
+      spawnProcess,
+    );
+
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].command, "/tmp/draft-loop-packaged");
+    assert.deepEqual(calls[0].args, [
+      "--headless",
+      "--disable-gpu",
+      "--no-sandbox",
+      `--user-data-dir=${launchPaths.userData}`,
+    ]);
   });
 });
 

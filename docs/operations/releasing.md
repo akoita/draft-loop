@@ -173,10 +173,12 @@ provider gate is local-only: do not add provider credentials or subscription
 sessions to GitHub Actions or another CI/CD environment.
 
 The live gate uses synthetic `example.test`-style job and candidate material.
-In API-key mode it requires both Anthropic and OpenAI credentials to already be
-configured in the Electron application and incurs a bounded provider cost. Run this gate before
-manual Electron validation with consented real data; never use real candidate
-material in the synthetic gate.
+Its development launch uses a temporary Electron user-data directory, so
+API-key mode uses environment credentials instead of keys saved in the normal
+desktop profile. Provider-managed Claude and Codex sessions remain external and
+use their separately logged-in CLI sessions. The gate incurs bounded provider
+cost. Run it before manual Electron validation with consented real data; never
+use real candidate material in the synthetic gate.
 
 This gate is a release step and not a development loop. Day-to-day work on the
 author-critic flow belongs in fixture mode, which spends nothing — see
