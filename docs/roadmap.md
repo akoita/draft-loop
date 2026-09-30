@@ -1468,9 +1468,11 @@ the existing path. Desktop model changes (#536) reuse setup discovery and indepe
 apply to future runs, and refresh transmission acknowledgement. User-facing
 profile selection (#84) and unavailable-list suggestions (#527) follow these
 shared contracts.
-The suggestion work is split into [#678](https://github.com/akoita/draft-loop/issues/678)
-for the UI and [#679](https://github.com/akoita/draft-loop/issues/679) for local
-release validation. Model capability verification and the explicit workspace-default
+[#678](https://github.com/akoita/draft-loop/issues/678) delivered registry-derived
+fallback IDs for setup and model editing, with tier/role labels, unrestricted
+typed IDs, and explicit availability and quality limitations.
+[#679](https://github.com/akoita/draft-loop/issues/679) adds local release
+validation. Model capability verification and the explicit workspace-default
 decision remain required before promoting presets. Earlier generalization
 failures remain recorded; this milestone does not authorize another live cohort.
 Broad cross-profession and multilingual validation (#583) stays deferred.
