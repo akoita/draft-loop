@@ -15,6 +15,31 @@ export interface WorkspaceModelSettingsPreview {
   readonly result?: { readonly lineagesDistinct: boolean };
 }
 
+export function workspaceModelSettingsTransmissionPairChanged(
+  previous: DesktopReviewState["providerTransmissionPreflight"],
+  next: DesktopReviewState["providerTransmissionPreflight"],
+): boolean {
+  return (
+    previous.author.company !== next.author.company ||
+    previous.author.model !== next.author.model ||
+    previous.author.endpoint !== next.author.endpoint ||
+    previous.critic.company !== next.critic.company ||
+    previous.critic.model !== next.critic.model ||
+    previous.critic.endpoint !== next.critic.endpoint
+  );
+}
+
+export function workspaceModelSettingsNeedsFreshAcknowledgement(
+  previous: DesktopReviewState["providerTransmissionPreflight"],
+  next: DesktopReviewState["providerTransmissionPreflight"],
+): boolean {
+  return (
+    workspaceModelSettingsTransmissionPairChanged(previous, next) &&
+    next.required &&
+    next.acknowledged
+  );
+}
+
 function modelCompany(value: string): ModelCompany {
   const normalized = value.trim().toLowerCase();
   if ((modelCompanies as readonly string[]).includes(normalized)) return normalized as ModelCompany;

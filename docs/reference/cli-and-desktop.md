@@ -146,12 +146,21 @@ workspace name, round limit, or existing run records. A changed provider
 transmission identity requires fresh acknowledgement before a later run starts
 or resumes; saving settings never sends candidate material to a provider.
 
-The native host can also report which registered exact profiles the active
-workspace's configured authentication routes support. The projection is local
-metadata and makes no credential or provider calls. The desktop does not yet
-expose a profile picker. Profile references carried by review-start
-must match the configured workspace pair, and the existing transmission
-acknowledgement is still required.
+The native host can report which registered exact profiles the active
+workspace's configured authentication routes support. This is local metadata
+and makes no credential or provider calls. In collecting or stopped workspaces,
+the desktop offers presets and role-specific exact profile choices when both
+model-configuration and route-support capabilities are available. Choices stay
+a draft until **Apply for future runs** saves their provider/model destinations.
+The renderer keeps the exact references for new starts; existing run records
+remain unchanged. Unsupported or unavailable routes block profile-backed starts,
+and provider-transmission acknowledgement is still required. OpenAI Codex
+user-session routes do not support these profiles, and authentication is never
+switched automatically.
+
+**Use workspace models** keeps the saved provider/model destinations and uses
+legacy controls for the next start. The next-run profile choice belongs to the
+current window; manual model saves and workspace changes clear it.
 
 When provider model discovery fails or returns no IDs, the setup and **Change
 models** forms offer exact IDs from the default application profile registry.
