@@ -1083,6 +1083,7 @@ describe("desktop workspace setup", () => {
     preview: IndependencePreviewState,
     discovery: Readonly<Record<ModelCompany, ModelDiscoveryState>> = idleDiscovery,
     modelFilters: Readonly<Record<ModelSide, ModelFilterState>> = noFilters(draft),
+    editMode = false,
   ) =>
     renderToStaticMarkup(
       <WorkspaceSetupForm
@@ -1092,10 +1093,12 @@ describe("desktop workspace setup", () => {
         typingOwnModel={{ author: false, critic: false }}
         modelFilters={modelFilters}
         busy={false}
+        editMode={editMode}
         onDraftChange={() => undefined}
         onModelFilterChange={() => undefined}
         onTypeOwnModel={() => undefined}
         onCreate={() => undefined}
+        {...(editMode ? { onSave: () => undefined, onCancel: () => undefined } : {})}
         onCreateDemo={() => undefined}
         onOpen={() => undefined}
       />,
@@ -1541,6 +1544,38 @@ describe("desktop workspace setup", () => {
       name: "draft-loop-workspace",
       mode: "real",
     });
+  });
+
+  it("keeps edit mode focused on model settings", () => {
+    const html = renderForm(named, { status: "idle" }, idleDiscovery, noFilters(named), true);
+
+    expect(html).toContain("Save models");
+    expect(html).toContain("Cancel");
+    expect(html).not.toContain("Workspace name");
+    expect(html).not.toContain("Maximum review rounds");
+    expect(html).not.toContain("Try demo workspace");
+    expect(html).not.toContain("Open workspace");
+  });
+
+  it("requires a rationale for a shared pair in edit mode, independent of setup-only fields", () => {
+    const invalidSetupFields = { ...named, name: "", maxRounds: 0 };
+    const shared = ready("same-lineage", "same-lineage", false);
+    const blocked = renderForm(
+      invalidSetupFields,
+      shared,
+      idleDiscovery,
+      noFilters(invalidSetupFields),
+      true,
+    );
+    const overridden = {
+      ...invalidSetupFields,
+      independenceOverrideRationale: "Same team owns both deployments.",
+    };
+    const allowed = renderForm(overridden, shared, idleDiscovery, noFilters(overridden), true);
+
+    expect(blocked).toContain("Record why one lineage on both sides is acceptable");
+    expect(blocked).toMatch(/type="submit"[^>]*disabled=""/u);
+    expect(allowed).not.toMatch(/type="submit"[^>]*disabled=""/u);
   });
 
   it("explains and repairs an empty round opened past the configured limit", () => {

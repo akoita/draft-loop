@@ -45,6 +45,8 @@ interface ReviewWorkspaceProps {
   readonly errorMessage?: string | null;
   /** Optional exact-profile gate shared by every new-run trigger. */
   readonly startDisabledReason?: string | null;
+  /** Optional native model-settings action shown in the workspace header. */
+  readonly modelSettingsAction?: ReactNode;
   /** Profile controls rendered in the collecting/setup workspace. */
   readonly profilePanel?: ReactNode;
   readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
@@ -1234,6 +1236,7 @@ export function ReviewWorkspace({
   onAddUrl,
   errorMessage,
   startDisabledReason = null,
+  modelSettingsAction,
   profilePanel,
   getCredentialStatus,
   onSetCredential,
@@ -2554,6 +2557,7 @@ export function ReviewWorkspace({
                 </div>
               </div>
               <div className="spine-loop" />
+              <div className="spine-meta">{modelSettingsAction}</div>
             </header>
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               <p className="eyebrow">Before the first run</p>
@@ -2884,6 +2888,7 @@ export function ReviewWorkspace({
                   </span>
                 )}
               </div>
+              {modelSettingsAction}
             </div>
           </header>
 

@@ -741,11 +741,11 @@ input[type="checkbox"] {
 
 .spine-meta {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: flex-end;
   gap: var(--space-3);
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .spine-versions {

@@ -24,6 +24,12 @@ import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import { ThemeToggle } from "./theme.js";
 import {
+  workspaceModelSettingsBlocker,
+  workspaceModelSettingsDraft,
+  workspaceModelSettingsFailureMessage,
+  workspaceModelSettingsInput,
+} from "./workspace-model-settings.js";
+import {
   isWorkspaceContextCurrent,
   isWorkspaceContextLost,
   WorkspaceRecovery,
@@ -187,8 +193,12 @@ export function modelDiscoveryNote(
   company: ModelCompany,
   discovery: ModelDiscoveryState,
   localEndpointNamed: boolean,
+  editMode = false,
 ): string {
   if (company === "local" && localEndpointNamed) {
+    if (editMode) {
+      return "Model discovery uses the default local server, not this workspace address. Type the model id served at the local address below.";
+    }
     return "Model discovery can only ask the default local server until this workspace exists, and you named a different address. Type the model id your server serves.";
   }
   switch (discovery.status) {
@@ -197,10 +207,10 @@ export function modelDiscoveryNote(
     case "loading":
       return `Asking ${modelCompanyLabels[company]} which models are available…`;
     case "unavailable":
-      return `Models could not be listed. ${discovery.reason} Type the model id instead; this does not stop the workspace being created.`;
+      return `Models could not be listed. ${discovery.reason} Type the model id instead; ${editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."}`;
     case "ready":
       if (discovery.models.length === 0) {
-        return `${modelCompanyLabels[company]} listed no models. Type the model id instead; this does not stop the workspace being created.`;
+        return `${modelCompanyLabels[company]} listed no models. Type the model id instead; ${editMode ? "a model list is optional for saving settings." : "this does not stop the workspace being created."}`;
       }
       return `${discovery.models.length} model${discovery.models.length === 1 ? "" : "s"} listed ${
         discovery.source === "cache" ? "from a recent lookup" : "by the provider"
@@ -436,6 +446,7 @@ interface ModelSideFieldsProps {
   readonly typingOwnModel: boolean;
   readonly filter: string;
   readonly disabled: boolean;
+  readonly editMode?: boolean;
   readonly onCompanyChange: (company: ModelCompany) => void;
   readonly onModelChange: (model: string) => void;
   readonly onFilterChange: (filter: string) => void;
@@ -451,6 +462,7 @@ function ModelSideFields({
   typingOwnModel,
   filter,
   disabled,
+  editMode = false,
   onCompanyChange,
   onModelChange,
   onFilterChange,
@@ -458,7 +470,7 @@ function ModelSideFields({
 }: ModelSideFieldsProps) {
   const label = modelSideLabels[side];
   const mode = modelInputMode(company, discovery, localEndpointNamed, typingOwnModel);
-  const note = modelDiscoveryNote(company, discovery, localEndpointNamed);
+  const note = modelDiscoveryNote(company, discovery, localEndpointNamed, editMode);
   const listed = discovery.status === "ready" ? discovery.models : [];
   const filtered = filterModelOptions(listed, filter, model);
   const filterNoteId = `setup-model-filter-note-${side}`;
@@ -562,10 +574,14 @@ interface WorkspaceSetupFormProps {
   readonly typingOwnModel: Readonly<Record<ModelSide, boolean>>;
   readonly modelFilters: Readonly<Record<ModelSide, ModelFilterState>>;
   readonly busy: boolean;
+  readonly editMode?: boolean;
+  readonly errorMessage?: string | null;
   readonly onDraftChange: (draft: WorkspaceSetupDraft) => void;
   readonly onModelFilterChange: (side: ModelSide, filter: ModelFilterState) => void;
   readonly onTypeOwnModel: (side: ModelSide) => void;
   readonly onCreate?: (() => void) | undefined;
+  readonly onSave?: (() => void) | undefined;
+  readonly onCancel?: (() => void) | undefined;
   readonly onCreateDemo?: (() => void) | undefined;
   readonly onOpen?: (() => void) | undefined;
 }
@@ -584,58 +600,76 @@ export function WorkspaceSetupForm({
   typingOwnModel,
   modelFilters,
   busy,
+  editMode = false,
+  errorMessage = null,
   onDraftChange,
   onModelFilterChange,
   onTypeOwnModel,
   onCreate,
+  onSave,
+  onCancel,
   onCreateDemo,
   onOpen,
 }: WorkspaceSetupFormProps) {
   const localEndpointNamed = draft.localEndpoint.trim() !== "";
   const summary = independencePreviewSummary(preview, draft.independenceOverrideRationale);
   const blocked = sharedLineageBlocksCreation(preview, draft.independenceOverrideRationale);
-  const blocker = workspaceSetupBlocker(draft, preview);
+  const blocker = editMode
+    ? workspaceModelSettingsBlocker(draft, preview)
+    : workspaceSetupBlocker(draft, preview);
   return (
     <form
       className="setup-form"
       aria-label="workspace model selection"
       onSubmit={(event) => {
         event.preventDefault();
-        if (blocker === null && !busy) onCreate?.();
+        if (blocker !== null || busy) return;
+        if (editMode) onSave?.();
+        else onCreate?.();
       }}
     >
-      <label className="setup-field">
-        <span>Workspace name</span>
-        <input
-          type="text"
-          value={draft.name}
-          disabled={busy}
-          aria-label="Workspace name"
-          onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
-        />
-      </label>
-      <label className="setup-field setup-round-limit">
-        <span>Maximum review rounds</span>
-        <input
-          type="number"
-          min={1}
-          max={20}
-          step={1}
-          value={draft.maxRounds}
-          disabled={busy}
-          aria-label="Maximum review rounds"
-          onChange={(event) =>
-            onDraftChange({
-              ...draft,
-              maxRounds: event.target.value === "" ? 0 : Number(event.target.value),
-            })
-          }
-        />
-        <span className="setup-note">
-          The author and critic stop after this many rounds and return the last fully reviewed draft
-          to you. More rounds can improve convergence but use more time and provider budget.
-        </span>
-      </label>
+      {editMode ? null : (
+        <>
+          <label className="setup-field">
+            <span>Workspace name</span>
+            <input
+              type="text"
+              value={draft.name}
+              disabled={busy}
+              aria-label="Workspace name"
+              onChange={(event) => onDraftChange({ ...draft, name: event.target.value })}
+            />
+          </label>
+          <label className="setup-field setup-round-limit">
+            <span>Maximum review rounds</span>
+            <input
+              type="number"
+              min={1}
+              max={20}
+              step={1}
+              value={draft.maxRounds}
+              disabled={busy}
+              aria-label="Maximum review rounds"
+              onChange={(event) =>
+                onDraftChange({
+                  ...draft,
+                  maxRounds: event.target.value === "" ? 0 : Number(event.target.value),
+                })
+              }
+            />
+            <span className="setup-note">
+              The author and critic stop after this many rounds and return the last fully reviewed
+              draft to you. More rounds can improve convergence but use more time and provider
+              budget.
+            </span>
+          </label>
+        </>
+      )}
+      {errorMessage === null ? null : (
+        <p className="setup-blocker" role="alert">
+          {errorMessage}
+        </p>
+      )}
       <div className="setup-sides">
         <ModelSideFields
           side="author"
@@ -646,6 +680,7 @@ export function WorkspaceSetupForm({
           typingOwnModel={typingOwnModel.author}
           filter={modelFilterText(modelFilters.author, draft.authorCompany)}
           disabled={busy}
+          editMode={editMode}
           onCompanyChange={(authorCompany) => {
             onModelFilterChange("author", { company: authorCompany, text: "" });
             onDraftChange({ ...draft, authorCompany, authorModel: "" });
@@ -665,6 +700,7 @@ export function WorkspaceSetupForm({
           typingOwnModel={typingOwnModel.critic}
           filter={modelFilterText(modelFilters.critic, draft.criticCompany)}
           disabled={busy}
+          editMode={editMode}
           onCompanyChange={(criticCompany) => {
             onModelFilterChange("critic", { company: criticCompany, text: "" });
             onDraftChange({ ...draft, criticCompany, criticModel: "" });
@@ -727,26 +763,41 @@ export function WorkspaceSetupForm({
         <button
           className="button button-primary"
           type="submit"
-          disabled={busy || onCreate === undefined || blocker !== null}
+          disabled={
+            busy || blocker !== null || (editMode ? onSave === undefined : onCreate === undefined)
+          }
         >
-          Create workspace
+          {editMode ? "Save models" : "Create workspace"}
         </button>
-        <button
-          className="button button-quiet"
-          type="button"
-          disabled={busy || onCreateDemo === undefined}
-          onClick={() => onCreateDemo?.()}
-        >
-          Try demo workspace
-        </button>
-        <button
-          className="button button-quiet"
-          type="button"
-          disabled={busy || onOpen === undefined}
-          onClick={() => onOpen?.()}
-        >
-          Open workspace
-        </button>
+        {editMode ? (
+          <button
+            className="button button-quiet"
+            type="button"
+            disabled={busy || onCancel === undefined}
+            onClick={() => onCancel?.()}
+          >
+            Cancel
+          </button>
+        ) : (
+          <>
+            <button
+              className="button button-quiet"
+              type="button"
+              disabled={busy || onCreateDemo === undefined}
+              onClick={() => onCreateDemo?.()}
+            >
+              Try demo workspace
+            </button>
+            <button
+              className="button button-quiet"
+              type="button"
+              disabled={busy || onOpen === undefined}
+              onClick={() => onOpen?.()}
+            >
+              Open workspace
+            </button>
+          </>
+        )}
       </div>
     </form>
   );
@@ -775,6 +826,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     createReviewActionDispatcher(setPendingReviewAction),
   );
   const [draft, setDraft] = useState<WorkspaceSetupDraft>(initialWorkspaceSetupDraft);
+  const [editingModels, setEditingModels] = useState(false);
+  const [modelSettingsError, setModelSettingsError] = useState<string | null>(null);
   const [typingOwnModel, setTypingOwnModel] = useState<Readonly<Record<ModelSide, boolean>>>({
     author: false,
     critic: false,
@@ -1120,7 +1173,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     }
   };
 
-  const setupVisible = error !== null && !workspaceRecoveryRequired;
+  const setupVisible = (error !== null && !workspaceRecoveryRequired) || editingModels;
   const listModels = activePort.listModels;
   const previewIndependence = activePort.previewIndependence;
   const localEndpointNamed = draft.localEndpoint.trim() !== "";
@@ -1128,6 +1181,88 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const criticCompany = draft.criticCompany;
   const authorModel = draft.authorModel.trim();
   const criticModel = draft.criticModel.trim();
+
+  const modelSettingsDisabled =
+    busy ||
+    knowledgePending ||
+    pendingReviewAction !== null ||
+    state?.execution.status === "running";
+
+  const openModelSettings = () => {
+    if (state === null || activePort.configureModels === undefined || modelSettingsDisabled) return;
+    try {
+      const settings = workspaceModelSettingsDraft(state);
+      setDraft((current) => ({ ...current, ...settings }));
+      setModelFilters({
+        author: { company: settings.authorCompany, text: "" },
+        critic: { company: settings.criticCompany, text: "" },
+      });
+      setTypingOwnModel({ author: false, critic: false });
+      requestedCompanies.current.clear();
+      setDiscovery({
+        anthropic: { status: "idle" },
+        openai: { status: "idle" },
+        local: { status: "idle" },
+      });
+      setPreview({ status: "idle" });
+      setModelSettingsError(null);
+      setEditingModels(true);
+    } catch {
+      setModelSettingsError("The current model settings are unavailable.");
+    }
+  };
+
+  const saveModelSettings = async () => {
+    if (state === null || activePort.configureModels === undefined || modelSettingsDisabled) return;
+    const blocker = workspaceModelSettingsBlocker(draft, preview);
+    const selection = workspaceModelSettingsInput(draft, preview);
+    if (blocker !== null || selection === null) {
+      setModelSettingsError(
+        blocker ?? "Model settings could not be saved. Check both model ids and try again.",
+      );
+      return;
+    }
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+    setBusy(true);
+    setModelSettingsError(null);
+    try {
+      const loaded = await activePort.configureModels(workspaceId, selection);
+      if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+      if (loaded.workspaceId !== workspaceId) {
+        setModelSettingsError(workspaceModelSettingsFailureMessage());
+        return;
+      }
+      const previousPreflight = state.providerTransmissionPreflight;
+      const refreshedPreflight = loaded.providerTransmissionPreflight;
+      const transmissionPairChanged =
+        previousPreflight.author.company !== refreshedPreflight.author.company ||
+        previousPreflight.author.model !== refreshedPreflight.author.model ||
+        previousPreflight.author.endpoint !== refreshedPreflight.author.endpoint ||
+        previousPreflight.critic.company !== refreshedPreflight.critic.company ||
+        previousPreflight.critic.model !== refreshedPreflight.critic.model ||
+        previousPreflight.critic.endpoint !== refreshedPreflight.critic.endpoint;
+      if (
+        transmissionPairChanged &&
+        refreshedPreflight.required &&
+        refreshedPreflight.acknowledged
+      ) {
+        setModelSettingsError(
+          "The updated models require a new provider-transmission acknowledgement. Reload the workspace and try again.",
+        );
+        return;
+      }
+      setState(loaded);
+      setEditingModels(false);
+    } catch {
+      if (isCurrentWorkspaceContext(workspaceId, generation)) {
+        setModelSettingsError(workspaceModelSettingsFailureMessage());
+      }
+    } finally {
+      if (isCurrentWorkspaceContext(workspaceId, generation)) setBusy(false);
+    }
+  };
 
   /**
    * Ask each selected company for its models, once, and never block on it.
@@ -1241,7 +1376,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     );
   }
 
-  if (error !== null) {
+  if (error !== null && !editingModels) {
     const openWorkspace = nativeActions.open;
     const createWorkspace = nativeActions.create;
     const createDemoWorkspace = nativeActions.createDemo;
@@ -1312,6 +1447,45 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     );
   }
 
+  if (editingModels) {
+    return (
+      <main className="boot-shell">
+        <section className="panel boot-panel">
+          <div className="boot-brand">
+            <BrandMark />
+            <span className="brand-name">DraftLoop</span>
+            <ThemeToggle />
+          </div>
+          <p className="eyebrow">Workspace settings</p>
+          <h1>Change models for new runs</h1>
+          <p>Existing run records stay unchanged. New runs will use the saved model pair.</p>
+          <WorkspaceSetupForm
+            draft={draft}
+            discovery={discovery}
+            preview={preview}
+            typingOwnModel={typingOwnModel}
+            modelFilters={modelFilters}
+            busy={modelSettingsDisabled}
+            editMode
+            errorMessage={modelSettingsError}
+            onDraftChange={setDraft}
+            onModelFilterChange={(side, filter) =>
+              setModelFilters((current) => ({ ...current, [side]: filter }))
+            }
+            onTypeOwnModel={(side) =>
+              setTypingOwnModel((current) => ({ ...current, [side]: true }))
+            }
+            onSave={() => void saveModelSettings()}
+            onCancel={() => {
+              setEditingModels(false);
+              setModelSettingsError(null);
+            }}
+          />
+        </section>
+      </main>
+    );
+  }
+
   return (
     <ReviewWorkspace
       state={state}
@@ -1321,6 +1495,20 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       errorMessage={importError}
       pendingReviewAction={pendingReviewAction}
       startDisabledReason={profileStartDisabledReason}
+      {...(activePort.configureModels === undefined
+        ? {}
+        : {
+            modelSettingsAction: (
+              <button
+                className="button button-quiet"
+                type="button"
+                disabled={modelSettingsDisabled}
+                onClick={openModelSettings}
+              >
+                Change models
+              </button>
+            ),
+          })}
       profilePanel={
         state.state === "collecting" || state.state === "stopped" ? (
           <>
