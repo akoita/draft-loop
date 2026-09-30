@@ -1,10 +1,12 @@
 import { createHash } from "node:crypto";
 import { hasIndependentReview, type ModelSelection } from "@draft-loop/domain";
+import { canonicalCandidateProfileExtractionProposalJsonSchema } from "@draft-loop/schemas";
 import { describe, expect, it, vi } from "vitest";
 
 import {
   AnthropicAdapter,
   type AnthropicClient,
+  type JsonSchema,
   type ModelRequest,
   normalizeProviderError,
   OpenAIAdapter,
@@ -114,6 +116,53 @@ describe("provider-neutral model adapters", () => {
       createHash("sha256").update('{"answer":"yes"}').digest("hex"),
     );
     expect(seenOptions?.signal).toBe(controller.signal);
+  });
+
+  it("normalizes the canonical candidate profile schema in the Anthropic request payload", async () => {
+    type Params = Parameters<AnthropicClient["messages"]["create"]>[0];
+    const response = {
+      id: "msg-1",
+      content: [{ type: "text", text: '{"schemaVersion":1,"facts":[],"issues":[]}' }],
+      model: model.modelId,
+      stop_reason: "end_turn",
+      usage: { input_tokens: 11, output_tokens: 7 },
+    };
+    let seen: Params | undefined;
+    const create = (params: Params) => {
+      seen = params;
+      return Object.assign(Promise.resolve(response), {
+        withResponse: async () => ({ data: response, request_id: "anthropic-request-1" }),
+      }) as ReturnType<AnthropicClient["messages"]["create"]>;
+    };
+    const client: AnthropicClient = { messages: { create } };
+    const adapter = new AnthropicAdapter(client, { configuredModel: model });
+
+    await adapter.execute(
+      request({
+        outputSchema:
+          canonicalCandidateProfileExtractionProposalJsonSchema as unknown as JsonSchema,
+      }),
+    );
+
+    expect(seen).toBeDefined();
+    const outputFormat = (
+      seen as unknown as { readonly output_config: { readonly format: Record<string, unknown> } }
+    ).output_config.format;
+    const normalizedSchema = outputFormat.schema as Record<string, unknown>;
+    const facts = (normalizedSchema.properties as Record<string, unknown>).facts as Record<
+      string,
+      unknown
+    >;
+
+    expect(outputFormat).toMatchObject({ type: "json_schema" });
+    expect(outputFormat).not.toHaveProperty("parse");
+    expect(normalizedSchema).toMatchObject({
+      type: "object",
+      additionalProperties: false,
+      required: ["schemaVersion", "facts", "issues"],
+    });
+    expect(facts).not.toHaveProperty("maxItems");
+    expect(facts.description).toContain("maxItems: 512");
   });
 
   it("sends OpenAI Responses input as user data and uses strict JSON schema text format", async () => {
