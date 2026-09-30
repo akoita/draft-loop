@@ -45,8 +45,8 @@ function expectRegistryError(
 }
 
 describe("model profile registry", () => {
-  it("seeds only the observed legacy author and critic profiles with their declared tiers", () => {
-    expect(defaultModelProfileRegistry.list()).toEqual([
+  it("preserves the legacy author and critic profile snapshots", () => {
+    expect(defaultModelProfileRegistry.list().slice(0, 2)).toEqual([
       expect.objectContaining({
         id: "legacy-anthropic-author",
         version: 1,
@@ -76,6 +76,89 @@ describe("model profile registry", () => {
         knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
       }),
     ]);
+  });
+
+  it("adds standard, premium, and current economy role-specific profiles without changing defaults", () => {
+    const profiles = defaultModelProfileRegistry.list();
+    expect(profiles).toHaveLength(7);
+    expect(profiles.slice(2)).toEqual([
+      {
+        id: "standard-anthropic-author",
+        version: 1,
+        provider: "anthropic",
+        modelId: "claude-opus-5-5",
+        tier: "standard",
+        roles: ["author"],
+        runtime: {
+          effort: "medium",
+          maxOutputTokens: 32768,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+      },
+      {
+        id: "standard-openai-critic",
+        version: 1,
+        provider: "openai",
+        modelId: "gpt-6-sol",
+        tier: "standard",
+        roles: ["critic"],
+        runtime: {
+          effort: "low",
+          maxOutputTokens: 16384,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
+      },
+      {
+        id: "premium-anthropic-author",
+        version: 1,
+        provider: "anthropic",
+        modelId: "claude-fable-5-1",
+        tier: "premium",
+        roles: ["author"],
+        runtime: {
+          effort: "high",
+          maxOutputTokens: 32768,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+      },
+      {
+        id: "premium-openai-critic",
+        version: 1,
+        provider: "openai",
+        modelId: "gpt-6-astra",
+        tier: "premium",
+        roles: ["critic"],
+        runtime: {
+          effort: "medium",
+          maxOutputTokens: 16384,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
+      },
+      {
+        id: "economy-openai-critic",
+        version: 1,
+        provider: "openai",
+        modelId: "gpt-6-luna",
+        tier: "economy",
+        roles: ["critic"],
+        runtime: {
+          effort: "low",
+          maxOutputTokens: 16384,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
+      },
+    ]);
+    expect(defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author")).toEqual(
+      profiles[0],
+    );
+    expect(defaultModelProfileRegistry.resolve("legacy-openai-critic", 1, "critic")).toEqual(
+      profiles[1],
+    );
   });
 
   it("normalizes profile identities and rejects duplicate ID/version pairs", () => {
