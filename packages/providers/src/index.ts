@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/messages/messages.js";
 import type { AgentRole, ModelCompany, ModelSelection } from "@draft-loop/domain";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses.js";
+import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
 
 export * from "./author-model-preflight.js";
@@ -680,7 +681,7 @@ export class AnthropicAdapter<
         ? { thinking: profileControls.thinking }
         : {}),
       output_config: {
-        format: { type: "json_schema", schema: request.outputSchema },
+        format: normalizeAnthropicOutputSchema(request.outputSchema),
         ...(profileControls?.provider === "anthropic" && profileControls.effort !== undefined
           ? { effort: profileControls.effort }
           : {}),

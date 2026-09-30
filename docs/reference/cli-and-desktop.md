@@ -135,6 +135,8 @@ If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
 preparation, response format, and grounding failures have distinct messages.
+For Anthropic structured output, the SDK normalizes the provider-facing JSON
+schema; application-side schema and source-grounding checks remain authoritative.
 
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
