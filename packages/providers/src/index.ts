@@ -891,6 +891,17 @@ export class LocalModelAdapter<
   }
 
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
+    if (this.configuredModel.profile !== undefined || request.model.profile !== undefined) {
+      throw new ProviderAdapterError(
+        this.provider,
+        "invalid-request",
+        "Model profiles are not supported by the local runtime yet.",
+        {
+          retryable: false,
+          diagnostics: [{ code: "profile_runtime_unsupported", path: "model.profile" }],
+        },
+      );
+    }
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
     const maxOutputTokens = resolveMaxOutputTokens(this.provider, request.maxOutputTokens);

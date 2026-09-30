@@ -18,6 +18,7 @@ import {
   type ModelResponse,
   ProviderAdapterError,
 } from "./index.js";
+import { resolveClaudeSessionProfileControls } from "./session-profile-controls.js";
 
 export const defaultUserSessionTimeoutMs = 120_000;
 export const maximumUserSessionTimeoutMs = 1_200_000;
@@ -41,6 +42,12 @@ const anthropicControlledEnvironmentNames = [
   ...claudeAuxiliaryTrafficEnvironmentNames,
   "MAX_THINKING_TOKENS",
   "CLAUDE_CODE_DISABLE_THINKING",
+] as const;
+const anthropicProfileControlEnvironmentNames = [
+  "CLAUDE_CODE_EFFORT_LEVEL",
+  "MAX_THINKING_TOKENS",
+  "CLAUDE_CODE_DISABLE_THINKING",
+  "CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING",
 ] as const;
 const openAISecretEnvironmentNames = [
   "OPENAI_API_KEY",
@@ -252,6 +259,23 @@ function assertExactModel(
       { retryable: false },
     );
   }
+}
+
+function assertNoModelProfile(
+  provider: "openai",
+  configured: ModelSelection,
+  requested: ModelSelection,
+): void {
+  if (configured.profile === undefined && requested.profile === undefined) return;
+  throw new ProviderAdapterError(
+    provider,
+    "invalid-request",
+    "Model profiles are not supported by this user-session runtime yet.",
+    {
+      retryable: false,
+      diagnostics: [{ code: "profile_generation_cap", path: "model.profile" }],
+    },
+  );
 }
 
 function resolveOutputTokenLimit(
@@ -812,8 +836,26 @@ export class AnthropicClaudeUserSessionAdapter<
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertExactModel(this.provider, this.options.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
-    const maxOutputTokens = resolveOutputTokenLimit(this.provider, request.maxOutputTokens);
-    const maxThinkingTokens = resolveClaudeThinkingTokenLimit(maxOutputTokens);
+    const profileControls = resolveClaudeSessionProfileControls(
+      this.options.configuredModel,
+      request.model,
+      request.maxOutputTokens,
+      this.options.effort,
+      () =>
+        new ProviderAdapterError(
+          this.provider,
+          "invalid-request",
+          "The selected model profile is invalid for this provider request.",
+          { retryable: false },
+        ),
+    );
+    const maxOutputTokens = resolveOutputTokenLimit(
+      this.provider,
+      profileControls?.maxOutputTokens ?? request.maxOutputTokens,
+    );
+    const legacyMaxThinkingTokens =
+      profileControls === undefined ? resolveClaudeThinkingTokenLimit(maxOutputTokens) : undefined;
+    const effort = profileControls === undefined ? this.options.effort : profileControls.effort;
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
 
@@ -838,7 +880,7 @@ export class AnthropicClaudeUserSessionAdapter<
           "dontAsk",
           "--model",
           request.model.modelId,
-          ...(this.options.effort === undefined ? [] : ["--effort", this.options.effort]),
+          ...(effort === undefined ? [] : ["--effort", effort]),
           "--system-prompt",
           request.systemPrompt,
           "--output-format",
@@ -848,7 +890,9 @@ export class AnthropicClaudeUserSessionAdapter<
         ];
         const environment = sanitizedEnvironment(
           this.options.environment ?? process.env,
-          anthropicControlledEnvironmentNames,
+          profileControls === undefined
+            ? anthropicControlledEnvironmentNames
+            : [...anthropicControlledEnvironmentNames, ...anthropicProfileControlEnvironmentNames],
         );
         const result = await this.options.runner(this.options.command, args, {
           cwd: directory,
@@ -857,8 +901,19 @@ export class AnthropicClaudeUserSessionAdapter<
             CLAUDE_CODE_DISABLE_TERMINAL_TITLE: "1",
             CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1",
             CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(maxOutputTokens),
-            MAX_THINKING_TOKENS: String(maxThinkingTokens),
-            ...(maxThinkingTokens === 0 ? { CLAUDE_CODE_DISABLE_THINKING: "1" } : {}),
+            ...(profileControls === undefined
+              ? {
+                  MAX_THINKING_TOKENS: String(legacyMaxThinkingTokens),
+                  ...(legacyMaxThinkingTokens === 0 ? { CLAUDE_CODE_DISABLE_THINKING: "1" } : {}),
+                }
+              : profileControls.thinking === undefined
+                ? {}
+                : {
+                    MAX_THINKING_TOKENS:
+                      profileControls.thinking.type === "disabled"
+                        ? "0"
+                        : String(profileControls.thinking.budget_tokens),
+                  }),
             CLAUDE_CODE_MAX_RETRIES: "0",
             MAX_STRUCTURED_OUTPUT_RETRIES: "0",
           },
@@ -1084,6 +1139,7 @@ export class OpenAICodexUserSessionAdapter<
 
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertExactModel(this.provider, this.options.configuredModel, request.model);
+    assertNoModelProfile(this.provider, this.options.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
     const maxOutputTokens = resolveOutputTokenLimit(this.provider, request.maxOutputTokens);
     const startTime = Date.now();
