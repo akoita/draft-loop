@@ -89,7 +89,7 @@ import type {
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
-import { canonicalProfileRequest } from "./canonical-profile-provider-request.js";
+import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { assertExportRenderingQa } from "./export-qa.js";
@@ -3078,7 +3078,7 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
     company: config.authorCompany,
     modelId: config.authorModel,
     role: "author",
-    promptTemplateVersion: "canonical-candidate-profile-extraction-v2",
+    promptTemplateVersion: promptVersion,
   };
   const requestContract = canonicalProfileRequest(model, providerAuthModeConfiguration.anthropic);
   return Object.freeze({
