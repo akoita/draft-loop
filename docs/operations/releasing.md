@@ -109,11 +109,37 @@ Before a release, run the mandatory local preflight:
 pnpm release:preflight
 ```
 
-The command first requires a clean worktree, then runs `pnpm validate` followed
-by the paid synthetic live-provider gate. It fails closed on either failure and
-refuses to run when `CI` or `GITHUB_ACTIONS` is enabled. Its default mixed route
-is Anthropic API-key mode with OpenAI user-session mode; the provider-specific
-environment variables below remain available as explicit local overrides.
+The command first requires a clean worktree, then runs `pnpm validate`, the
+registry-derived model-suggestion availability check, and the existing paid
+synthetic live-provider gate. A required model-suggestion failure stops before
+the end-to-end gate; optional failures remain visible in its result. It fails
+closed on command failure and refuses to run when `CI` or `GITHUB_ACTIONS` is
+enabled. Its default mixed route is Anthropic API-key mode with OpenAI
+user-session mode; the provider-specific environment variables below remain
+available as explicit local overrides.
+
+Inspect the exact bounded request and current registry-derived plan without
+creating provider adapters or resolving credentials:
+
+```text
+pnpm test:model-suggestions:live --plan
+```
+
+The live check sends one content-free structured request per exact
+provider/model/role row, without model-profile controls. It reports whether
+each destination was available under this check; it does not update catalog
+availability, guarantee account access, or validate CV quality. All four
+current economy and standard-preset destinations must pass. Optional entries
+not used by these presets, if ever added to the catalog, are reported
+separately. User-session checks can consume subscription allowance. Each row
+has a 60-second timeout and requests at most 1,024 output tokens. API SDK and
+adapter retries are disabled. Codex cannot enforce that token cap before generation; its adapter checks the
+response afterward, and CLI-internal requests are outside this command’s
+retry control. The command is local-only and must never run in CI/CD.
+
+Before running the live command, obtain approval for the exact plan: model
+IDs, routes, roles, synthetic payload, request controls, and cost/call bounds.
+Plan inspection and deterministic tests do not authorize provider calls.
 
 For an experimental local run through authenticated Claude and Codex user
 sessions, first complete `claude auth login` and `codex login`, then run:
@@ -121,7 +147,7 @@ sessions, first complete `claude auth login` and `codex login`, then run:
 ```text
 DRAFT_LOOP_PROVIDER_AUTH_MODE=user-session \
 DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-4-5 \
-DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-5.3-codex-spark \
+DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-6-luna \
 pnpm test:e2e:live
 ```
 
@@ -138,7 +164,7 @@ explicitly. For example, Anthropic API billing with an OpenAI subscription:
 DRAFT_LOOP_ANTHROPIC_AUTH_MODE=api-key \
 DRAFT_LOOP_OPENAI_AUTH_MODE=user-session \
 DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-haiku-4-5 \
-DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-5.3-codex-spark \
+DRAFT_LOOP_LIVE_E2E_CRITIC_MODEL=gpt-6-luna \
 pnpm test:e2e:live
 ```
 
@@ -159,11 +185,10 @@ iteration is what exhausts the provider budget this release validation depends
 on.
 
 Direct `pnpm test:e2e:live` runs default to `claude-haiku-4-5` as author and
-`gpt-5.6-luna` as critic. `pnpm release:preflight` deliberately overrides the
-critic with `gpt-5.3-codex-spark` for the required local mixed-auth release gate.
-Both pairs are chosen to exercise the provider path at bounded cost, not to
-measure output quality. Override either side for a direct run without editing
-code:
+`gpt-5.6-luna` as critic. `pnpm release:preflight` deliberately uses
+`gpt-6-luna` as critic for its required local mixed-auth release gate. These
+pairs exercise provider paths at bounded cost; they do not measure output
+quality. Override either side for a direct run without editing code:
 
 ```text
 DRAFT_LOOP_LIVE_E2E_AUTHOR_MODEL=claude-sonnet-4-5 pnpm test:e2e:live

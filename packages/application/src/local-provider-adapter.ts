@@ -10,6 +10,7 @@ import {
   type OpenAIClient,
   OpenAICodexUserSessionAdapter,
   ProviderAdapterError,
+  type RetryOptions,
   type UserSessionProcessRunner,
 } from "@draft-loop/providers";
 import OpenAI from "openai";
@@ -53,7 +54,7 @@ function providerId(company: string): "anthropic" | "openai" | "local" {
 }
 
 export async function createProviderAdapter(
-  config: { readonly localEndpoint?: string },
+  config: { readonly localEndpoint?: string; readonly retry?: RetryOptions },
   model: ModelSelection,
   allowProviderData: boolean,
   resolveCredential: ProviderCredentialResolver,
@@ -79,7 +80,10 @@ export async function createProviderAdapter(
     const client: LocalClient =
       providerClientFactories?.local?.(config.localEndpoint) ??
       (config.localEndpoint === undefined ? {} : { endpoint: config.localEndpoint });
-    return new LocalModelAdapter<JsonObject, JsonObject>(client, { configuredModel: model });
+    return new LocalModelAdapter<JsonObject, JsonObject>(client, {
+      configuredModel: model,
+      ...(config.retry === undefined ? {} : { retry: config.retry }),
+    });
   }
   if (provider === "anthropic") {
     if (providerAuthModeConfiguration.anthropic === "user-session") {
@@ -104,7 +108,10 @@ export async function createProviderAdapter(
       );
     }
     const client = providerClientFactories?.anthropic?.(apiKey) ?? createAnthropicSdkClient(apiKey);
-    return new AnthropicAdapter<JsonObject, JsonObject>(client, { configuredModel: model });
+    return new AnthropicAdapter<JsonObject, JsonObject>(client, {
+      configuredModel: model,
+      ...(config.retry === undefined ? {} : { retry: config.retry }),
+    });
   }
   if (providerAuthModeConfiguration.openai === "user-session") {
     return new OpenAICodexUserSessionAdapter<JsonObject, JsonObject>({
@@ -123,5 +130,8 @@ export async function createProviderAdapter(
     );
   }
   const client = providerClientFactories?.openai?.(apiKey) ?? new OpenAI({ apiKey, maxRetries: 0 });
-  return new OpenAIAdapter<JsonObject, JsonObject>(client, { configuredModel: model });
+  return new OpenAIAdapter<JsonObject, JsonObject>(client, {
+    configuredModel: model,
+    ...(config.retry === undefined ? {} : { retry: config.retry }),
+  });
 }
