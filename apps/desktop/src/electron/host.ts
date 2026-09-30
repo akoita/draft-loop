@@ -146,12 +146,17 @@ import type {
   WritingPolicyVersionMetadata,
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
+import { projectModelProfileSupport } from "../model-profile-bridge.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
   type ProviderAuthModePreferenceStore,
 } from "./provider-auth-mode.js";
+import {
+  RunModelProfileSelectionError,
+  resolveWorkspaceModelProfileSelection,
+} from "./run-model-profile-selection.js";
 
 const configDirectory = ".draft-loop";
 const maximumKnowledgeInspectionEntries = 256;
@@ -3095,6 +3100,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         break;
       }
       case "start": {
+        let modelProfiles: ReturnType<typeof resolveWorkspaceModelProfileSelection> | undefined;
+        if (action.modelProfiles !== undefined) {
+          try {
+            modelProfiles = resolveWorkspaceModelProfileSelection(
+              action.modelProfiles,
+              workspace.descriptor,
+              providerAuthModeConfiguration,
+            );
+          } catch (error) {
+            const message =
+              error instanceof RunModelProfileSelectionError
+                ? error.message
+                : "The selected model profiles are unavailable for this workspace.";
+            return fail("operation-failed", message);
+          }
+        }
         await requireProviderTransmissionAcknowledgement(workspace);
         const reviewedOpportunity = overrides.reviewedOpportunity;
         const pendingWritingPolicyOverride = overrides.pendingWritingPolicyOverride;
@@ -3106,6 +3127,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             ...(action.candidateProfile === undefined
               ? {}
               : { candidateProfile: action.candidateProfile }),
+            ...(modelProfiles === undefined ? {} : { modelProfiles }),
             ...(pendingWritingPolicyOverride === undefined
               ? {}
               : { writingPolicyOverrideChecksum: pendingWritingPolicyOverride.checksum }),
@@ -4848,6 +4870,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await listModels(command.input) };
         case "models.preview-independence":
           return { ok: true, value: previewIndependence(command.input) };
+        case "models.profile-support": {
+          const workspace = workspaceFor(command.input.workspaceId);
+          return {
+            ok: true,
+            value: projectModelProfileSupport(
+              workspace.descriptor.id,
+              providerAuthModeConfiguration,
+            ),
+          };
+        }
       }
     } catch (error) {
       options.onError?.(error, command.type);

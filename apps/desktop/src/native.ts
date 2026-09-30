@@ -20,6 +20,7 @@ import {
   type ModelCandidate,
   type ModelCompany,
   type ModelDiscoveryProvider,
+  type ModelProfileSupportResult,
   type ModelsListResult,
   type ModelsPreviewIndependenceResult,
   type NativeBridge,
@@ -84,6 +85,7 @@ export interface WorkspaceSetupCapabilities {
     author: ModelCandidate,
     critic: ModelCandidate,
   ) => Promise<ModelsPreviewIndependenceResult>;
+  readonly getModelProfileSupport?: (workspaceId: string) => Promise<ModelProfileSupportResult>;
 }
 
 export interface DesktopOpportunityCapabilities {
@@ -383,6 +385,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               await capabilityPort.execute({
                 type: "models.preview-independence",
                 input: { author, critic },
+              }),
+            ),
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("models.profile-support")
+      ? {
+          getModelProfileSupport: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "models.profile-support",
+                input: { workspaceId },
               }),
             ),
         }

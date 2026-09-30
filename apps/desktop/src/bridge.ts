@@ -45,6 +45,13 @@ import type {
   WritingPolicyLineage,
   WritingPolicyVersionMetadata,
 } from "./model.js";
+import {
+  type ModelProfileSupportInput,
+  type ModelProfileSupportResult,
+  parseModelProfileReferences,
+  parseModelProfileSupportInput,
+  parseModelProfileSupportResult,
+} from "./model-profile-bridge.js";
 
 // Re-export the safe policy vocabulary from the bridge so consumers that only
 // depend on renderer contracts do not need to import the model module.
@@ -125,9 +132,15 @@ export const bridgeCapabilities = [
   "provider-auth.set",
   "models.list",
   "models.preview-independence",
+  "models.profile-support",
 ] as const;
 
 export type BridgeCapability = (typeof bridgeCapabilities)[number];
+
+export type {
+  ModelProfileSupportInput,
+  ModelProfileSupportResult,
+} from "./model-profile-bridge.js";
 
 export const supportedFileExtensions = [
   ".docx",
@@ -2644,6 +2657,7 @@ export interface BridgeCommandInputMap {
   "provider-auth.set": ProviderAuthModeSetInput;
   "models.list": ModelsListInput;
   "models.preview-independence": ModelsPreviewIndependenceInput;
+  "models.profile-support": ModelProfileSupportInput;
 }
 
 export interface BridgeCommandOutputMap {
@@ -2714,6 +2728,7 @@ export interface BridgeCommandOutputMap {
   "provider-auth.set": ProviderAuthModeResult;
   "models.list": ModelsListResult;
   "models.preview-independence": ModelsPreviewIndependenceResult;
+  "models.profile-support": ModelProfileSupportResult;
 }
 
 export type BridgeCommandName = keyof BridgeCommandInputMap;
@@ -3753,14 +3768,20 @@ function validateReviewAction(value: unknown): ReviewAction {
       if (!hasOnlyKeys(action, ["type"])) return invalidInput();
       return { type: action.type };
     case "start": {
-      if (!hasOnlyKeys(action, ["type", "candidateProfile"])) return invalidInput();
+      if (!hasOnlyKeys(action, ["type", "candidateProfile", "modelProfiles"]))
+        return invalidInput();
       const candidateProfile =
         action.candidateProfile === undefined
           ? undefined
           : validateCandidateProfileSelectionInput(action.candidateProfile);
+      const modelProfiles =
+        action.modelProfiles === undefined
+          ? undefined
+          : parseModelProfileReferences(action.modelProfiles);
       return {
         type: action.type,
         ...(candidateProfile === undefined ? {} : { candidateProfile }),
+        ...(modelProfiles === undefined ? {} : { modelProfiles }),
       };
     }
     default:
@@ -4747,6 +4768,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "models.preview-independence",
         input: validateModelsPreviewIndependenceInput(command.input),
+      };
+    case "models.profile-support":
+      return {
+        type: "models.profile-support",
+        input: parseModelProfileSupportInput(command.input),
       };
   }
 }
@@ -6791,6 +6817,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return normalizeModelsListResult(value);
     case "models.preview-independence":
       return normalizeModelsPreviewIndependenceResult(value);
+    case "models.profile-support":
+      return parseModelProfileSupportResult(value, command.input.workspaceId);
   }
 }
 

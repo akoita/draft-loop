@@ -1,3 +1,4 @@
+import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { CredentialStatus } from "./bridge.js";
 
@@ -298,7 +299,11 @@ export type ReviewAction =
   | { readonly type: "edit-block"; readonly blockId: string; readonly text: string }
   | { readonly type: "pause" }
   | { readonly type: "acknowledge-provider-transmission"; readonly fingerprint: string }
-  | { readonly type: "start"; readonly candidateProfile?: CandidateProfileSelection }
+  | {
+      readonly type: "start";
+      readonly candidateProfile?: CandidateProfileSelection;
+      readonly modelProfiles?: ModelProfileReferences;
+    }
   | { readonly type: "resume" }
   | { readonly type: "recover-to-review" }
   | { readonly type: "recover-round-limit" }
