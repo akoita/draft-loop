@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
-
 import type { NativeBridge } from "./bridge.js";
 import { createFixtureReviewState } from "./model.js";
+import { projectModelProfileSupport } from "./model-profile-bridge.js";
 import { createBridgeReviewPort, createNativeCapabilityPort } from "./native.js";
 
 function canonicalCandidateProfileResult(
@@ -495,5 +495,35 @@ describe("desktop workspace model settings capability", () => {
     );
 
     expect(port.configureModels).toBeUndefined();
+  });
+});
+
+describe("desktop model profile support capability", () => {
+  it("binds route support to the requested workspace without credentials or discovery calls", async () => {
+    const support = projectModelProfileSupport("workspace-1", {
+      anthropic: "api-key",
+      openai: "user-session",
+    });
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({ ok: true, value: support }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["models.profile-support"], invoke }),
+    );
+
+    await expect(port.getModelProfileSupport?.("workspace-1")).resolves.toEqual(support);
+    expect(invoke).toHaveBeenCalledWith({
+      type: "models.profile-support",
+      input: { workspaceId: "workspace-1" },
+    });
+  });
+
+  it("does not expose profile route support when the host lacks its capability", () => {
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load"],
+        invoke: vi.fn<NativeBridge["invoke"]>(),
+      }),
+    );
+
+    expect(port.getModelProfileSupport).toBeUndefined();
   });
 });

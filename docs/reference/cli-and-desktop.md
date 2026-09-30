@@ -146,6 +146,13 @@ workspace name, round limit, or existing run records. A changed provider
 transmission identity requires fresh acknowledgement before a later run starts
 or resumes; saving settings never sends candidate material to a provider.
 
+The native host can also report which registered exact profiles the active
+workspace's configured authentication routes support. The projection is local
+metadata and makes no credential or provider calls. The desktop does not yet
+expose a profile picker. Profile references carried by review-start
+must match the configured workspace pair, and the existing transmission
+acknowledgement is still required.
+
 When provider model discovery fails or returns no IDs, the setup and **Change
 models** forms offer exact IDs from the default application profile registry.
 Labels show only each entry's configured tier and registered author or critic

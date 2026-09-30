@@ -681,6 +681,209 @@ describe("native host", () => {
     expect(beginCommand).not.toHaveProperty("storeRoot");
   });
 
+  it("starts with an exact supported model pair only when it matches the workspace selection", async () => {
+    const root = "/local/model-profile-start";
+    const fixture = service(root);
+    fixture.service.readWorkspace.mockResolvedValue({
+      ...descriptor(root),
+      critic: { company: "openai", model: "gpt-5.6-luna" },
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const started = await host.invoke({
+      type: "review.dispatch",
+      input: {
+        workspaceId: "workspace-native",
+        runId: "pending",
+        action: {
+          type: "start",
+          candidateProfile: { profileId: "profile-native", version: 2 },
+          modelProfiles: {
+            author: { id: "legacy-anthropic-author", version: 1 },
+            critic: { id: "legacy-openai-critic", version: 1 },
+          },
+        },
+      },
+    });
+
+    expect(started).toMatchObject({ ok: true, value: { runId: "run-native" } });
+    expect(fixture.service.begin).toHaveBeenCalledWith(
+      {
+        root,
+        allowProviderData: true,
+        candidateProfile: { profileId: "profile-native", version: 2 },
+        modelProfiles: {
+          author: { id: "legacy-anthropic-author", version: 1 },
+          critic: { id: "legacy-openai-critic", version: 1 },
+        },
+      },
+      expect.anything(),
+    );
+  });
+
+  it("rejects mismatched or unsupported profile routes before review begin", async () => {
+    const root = "/local/model-profile-route-rejection";
+    const matchingWorkspace = {
+      ...descriptor(root),
+      critic: { company: "openai", model: "gpt-5.6-luna" },
+    };
+    const mismatched = service(root);
+    mismatched.service.readWorkspace.mockResolvedValue(matchingWorkspace);
+    const mismatchHost = createNativeHost({
+      applicationService: mismatched.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await mismatchHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const mismatch = await mismatchHost.invoke({
+      type: "review.dispatch",
+      input: {
+        workspaceId: "workspace-native",
+        runId: "pending",
+        action: {
+          type: "start",
+          modelProfiles: {
+            author: { id: "standard-anthropic-author", version: 1 },
+            critic: { id: "legacy-openai-critic", version: 1 },
+          },
+        },
+      },
+    });
+    expect(mismatch).toMatchObject({
+      ok: false,
+      error: {
+        code: "operation-failed",
+        message:
+          "The selected model profiles must match the workspace's configured author and critic.",
+      },
+    });
+    expect(mismatched.service.begin).not.toHaveBeenCalled();
+
+    const unsupported = service(root);
+    unsupported.service.readWorkspace.mockResolvedValue(matchingWorkspace);
+    const unsupportedHost = createNativeHost({
+      applicationService: unsupported.service,
+      providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await unsupportedHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+    const unsupportedStart = await unsupportedHost.invoke({
+      type: "review.dispatch",
+      input: {
+        workspaceId: "workspace-native",
+        runId: "pending",
+        action: {
+          type: "start",
+          modelProfiles: {
+            author: { id: "legacy-anthropic-author", version: 1 },
+            critic: { id: "legacy-openai-critic", version: 1 },
+          },
+        },
+      },
+    });
+    expect(unsupportedStart).toMatchObject({
+      ok: false,
+      error: {
+        code: "operation-failed",
+        message:
+          "The selected model profiles are unsupported by the configured authentication routes.",
+      },
+    });
+    expect(unsupported.service.begin).not.toHaveBeenCalled();
+  });
+
+  it("keeps the current transmission acknowledgement gate for profile-backed review start", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-profile-stale-ack-"));
+    const fixture = service(root);
+    let liveWorkspace = {
+      ...descriptor(root),
+      fixtureMode: false,
+      critic: { company: "openai", model: "gpt-5.6-luna" },
+    };
+    fixture.service.readWorkspace.mockImplementation(async () => liveWorkspace);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      requireProviderPreflight: true,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const before = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: "workspace-native" },
+      });
+      const fingerprint = (before as { readonly value: DesktopReviewState }).value
+        .providerTransmissionPreflight.fingerprint;
+      await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "pending",
+          action: { type: "acknowledge-provider-transmission", fingerprint },
+        },
+      });
+
+      liveWorkspace = { ...liveWorkspace, maxRounds: 3 };
+      const stale = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "pending",
+          action: {
+            type: "start",
+            modelProfiles: {
+              author: { id: "legacy-anthropic-author", version: 1 },
+              critic: { id: "legacy-openai-critic", version: 1 },
+            },
+          },
+        },
+      });
+
+      expect(stale).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(fixture.service.begin).not.toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports route support for the active workspace without model discovery", async () => {
+    const root = "/local/model-profile-support";
+    const fixture = service(root);
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      providerAuthModeConfiguration: { anthropic: "api-key", openai: "user-session" },
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const support = await host.invoke({
+      type: "models.profile-support",
+      input: { workspaceId: "workspace-native" },
+    });
+
+    expect(support).toMatchObject({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        authModes: { anthropic: "api-key", openai: "user-session" },
+        profiles: expect.arrayContaining([
+          { id: "legacy-anthropic-author", version: 1, supported: true },
+          { id: "legacy-openai-critic", version: 1, supported: false },
+        ]),
+      },
+    });
+    expect(fixture.service.begin).not.toHaveBeenCalled();
+    expect(fixture.service.start).not.toHaveBeenCalled();
+    await expect(
+      host.invoke({ type: "models.profile-support", input: { workspaceId: "other-workspace" } }),
+    ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+  });
+
   it("binds an imported opportunity override locally, leaves the global policy untouched, and clears it after dispatch start", async () => {
     const parent = await mkdtemp(join(tmpdir(), "draft-loop-host-policy-override-"));
     const root = join(parent, "workspace");

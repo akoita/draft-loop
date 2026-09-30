@@ -18,6 +18,10 @@
     "./model-profile-catalog": {
       "types": "./src/model-profile-catalog.ts",
       "import": "./src/model-profile-catalog.ts"
+    },
+    "./model-profile-selection": {
+      "types": "./src/model-profile-selection.ts",
+      "import": "./src/model-profile-selection.ts"
     }
   },
   "files": [

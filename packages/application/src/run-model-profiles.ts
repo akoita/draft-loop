@@ -120,7 +120,7 @@ export interface ResolvedRunModelProfiles {
 const maximumProfileOutputTokens = 32_768;
 const verifiedSonnet45ModelIds = new Set(["claude-sonnet-4-5", "claude-sonnet-4-5-20250929"]);
 
-function validateProfileRoute(
+export function validateProfileRoute(
   profile: ModelProfile,
   authModes: RunProviderAuthModeConfiguration,
 ): void {
