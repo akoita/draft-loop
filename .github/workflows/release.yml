@@ -243,12 +243,12 @@ jobs:
             `Validation: https://github.com/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`,
             `Stage issue: https://github.com/${repository}/issues/${process.env.RELEASE_STAGE_ISSUE}`,
             "SBOM: CycloneDX JSON is attached to the release.",
-            "Checkpoint status: bounded local-first CV capabilities are integrated and deterministically validated. The frozen two-case fictional reference observation (#643) produced two grounded drafts and independent reviews, but its coverage exit failed because one draft omitted an explicit dated work interval. The critic flagged that omission. No representative consented outcome or validated reference-workflow result is claimed.",
+            "Model profiles and tiers: versioned author and critic controls are recorded with run snapshots and reused on resume. CLI and desktop support explicit profile selection: Economy pairs Claude Sonnet 5.5 with GPT-6 Luna; Standard pairs Claude Opus 5.5 with GPT-6.1 Sol. The desktop provides public API pricing scenarios, and a local-only availability check reports bounded results. Representative CV quality remains unvalidated; existing workspace defaults and authentication settings are unchanged. Historical observations do not add validation evidence.",
             ...(process.env.ATTEST_PROVENANCE === "true"
               ? ["Provenance: GitHub artifact attestations were requested for packaged artifacts."]
               : ["Provenance: not requested for this run."]),
             "",
-            "Known limitations: the fictional observation also omitted both candidate names from rendered headers; representative consented outcome evidence is not yet recorded. DOCX checks cannot establish office pagination or clipping, broad cross-viewer validation remains outstanding, signing and automatic updates remain incomplete, and the CLI remains source-distributed.",
+            "Known limitations: representative consented CV quality remains unvalidated. DOCX checks cannot establish office pagination or clipping, broad cross-viewer validation remains outstanding, signing and automatic updates remain incomplete, and the CLI remains source-distributed. Codex user-session and local routes do not support profile controls; manual raw model selection remains available.",
           ].join("\n");
           fs.writeFileSync("release-output/release-notes.md", `${notes}\n`, "utf8");
           NODE
