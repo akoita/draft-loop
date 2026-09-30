@@ -17,6 +17,15 @@ and separate quality and availability statuses. Catalog quality is unvalidated
 and account or provider availability has not been checked. Listing is
 content-free and does not call a provider.
 
+The local release preflight checks each registry-derived provider/model
+destination with one synthetic request before its end-to-end gate. Inspect that
+request and plan with `pnpm test:model-suggestions:live --plan`; it does not
+create provider adapters or resolve credentials. The default command performs
+the live check, which can use paid API or subscription routes, and is reserved
+for an explicitly approved local availability check or release preflight. Its result covers
+availability under that bounded check only, not account guarantees, profile
+controls, or CV quality.
+
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy

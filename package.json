@@ -28,6 +28,7 @@
     "desktop:smoke": "node scripts/desktop-smoke.mjs",
     "desktop:credential-acceptance": "node scripts/credential-acceptance.mjs",
     "desktop:acceptance": "node scripts/desktop-acceptance.mjs",
+    "test:model-suggestions:live": "tsx packages/application/src/model-suggestion-preflight-command.ts",
     "test:e2e:live": "node scripts/desktop-live-e2e.mjs",
     "security:licenses": "node scripts/licenses.mjs",
     "security:secrets": "node scripts/secrets.mjs",

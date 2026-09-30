@@ -11,6 +11,8 @@ const DEFAULTS = Object.freeze({
 const PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE = "DRAFT_LOOP_LIVE_E2E_PRESERVE_WORKSPACE_ON_FAILURE";
 
 const VALIDATION_ENVIRONMENT_EXCLUSIONS = new Set([
+  "ANTHROPIC_API_KEY",
+  "OPENAI_API_KEY",
   "DRAFT_LOOP_PROVIDER_AUTH_MODE",
   PRESERVE_WORKSPACE_ON_FAILURE_VARIABLE,
   ...Object.keys(DEFAULTS),
@@ -54,6 +56,10 @@ export function runReleaseLocalPreflight({
   const command = platform === "win32" ? "pnpm.cmd" : "pnpm";
   const commands = [
     { args: ["validate"], environment: validationEnvironment },
+    {
+      args: ["test:model-suggestions:live"],
+      environment: { ...environment, ...resolved },
+    },
     {
       args: ["test:e2e:live"],
       environment: {

@@ -240,7 +240,7 @@ applications.
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
 | Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, supported controls, CLI/desktop selection, and pricing integrated; four-model curation and availability acceptance pending | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned profiles and controls; #684/#686 expose exact run selection. Pricing scenarios (#687) are delivered; local availability preflight (#679) remains. Default promotion is separate (#683). |
+| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, supported controls, CLI/desktop selection, and pricing integrated; four-model catalog and bounded availability preflight integrated | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned profiles and controls; #684/#686 expose exact run selection. Pricing scenarios (#687) are delivered; local availability preflight (#679) is delivered. Default promotion is separate (#683). |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1445,11 +1445,17 @@ and unrestricted typed IDs remain available. Registry-derived fallback IDs
 ([#678](https://github.com/akoita/draft-loop/issues/678)) disclose availability
 and quality limitations. Pricing and explicit token/call scenarios are delivered in
 [#687](https://github.com/akoita/draft-loop/issues/687); local availability
-preflight follows in [#679](https://github.com/akoita/draft-loop/issues/679).
+preflight is delivered in [#679](https://github.com/akoita/draft-loop/issues/679).
+The approved content-free check on 2026-09-30 passed for both Anthropic API
+authors and both OpenAI Codex-session critics; [PR #693](https://github.com/akoita/draft-loop/pull/693)
+records the exact revision, routes, controls, time, and CLI version. These
+checks establish bounded local availability, not profile-control support or
+representative CV quality. Catalog availability remains an account-specific
+runtime check rather than a global guarantee.
 
 On 2026-09-30 the user narrowed curated choices to Sonnet 5.5, Opus 5.5,
 GPT-6 Luna, and GPT-6.1 Sol. This supersedes the seven-model catalog and premium
-preset. New-workspace defaults are awaiting an explicit decision. Frontier options
+preset. Workspace defaults remain unchanged. Frontier options
 remain unvalidated for representative CV quality; tier labels are not quality
 recommendations. Default promotion moves to
 [#683](https://github.com/akoita/draft-loop/issues/683), requiring a separately
