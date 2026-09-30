@@ -1,6 +1,6 @@
+import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-
 import {
   type ModelCompany,
   type ModelsPreviewIndependenceResult,
@@ -13,6 +13,21 @@ import type {
   FindingDecision,
   ReviewAction,
 } from "./model.js";
+import { parseModelProfileSupportResult } from "./model-profile-bridge.js";
+import { ModelProfilePicker } from "./model-profile-picker.js";
+import {
+  type AppliedModelProfileSelection,
+  type ModelProfileSupportState,
+  modelProfileCatalog,
+  modelProfileEntryForReference,
+  modelProfileNotSupportedMessage,
+  modelProfileRouteIsSupported,
+  modelProfileStartDisabledReason,
+  modelProfileSupportUnavailableMessage,
+  profileReferencesMatchPreflight,
+  reviewActionWithModelProfiles,
+  workspaceModelsForProfileReferences,
+} from "./model-profile-picker-state.js";
 import { hasFallbackModelSuggestions, ModelSuggestionDatalist } from "./model-suggestions.js";
 import {
   createDesktopReviewPort,
@@ -29,6 +44,7 @@ import {
   workspaceModelSettingsDraft,
   workspaceModelSettingsFailureMessage,
   workspaceModelSettingsInput,
+  workspaceModelSettingsNeedsFreshAcknowledgement,
 } from "./workspace-model-settings.js";
 import {
   isWorkspaceContextCurrent,
@@ -854,6 +870,14 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     readonly workspaceId: string;
     readonly profile: CandidateProfileSelection;
   } | null>(null);
+  const [appliedModelProfiles, setAppliedModelProfiles] =
+    useState<AppliedModelProfileSelection | null>(null);
+  const [modelProfileSupport, setModelProfileSupport] = useState<ModelProfileSupportState>({
+    status: "idle",
+  });
+  const [modelProfileSupportEpoch, setModelProfileSupportEpoch] = useState(0);
+  const modelProfileSupportEpochRef = useRef(modelProfileSupportEpoch);
+  modelProfileSupportEpochRef.current = modelProfileSupportEpoch;
   const [reviewActionDispatcher] = useState(() =>
     createReviewActionDispatcher(setPendingReviewAction),
   );
@@ -916,6 +940,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setCandidateProfileSelection((current) =>
         current?.workspaceId === workspaceId ? null : current,
       );
+      setAppliedModelProfiles((current) => (current?.workspaceId === workspaceId ? null : current));
       setProfileResetEpoch((current) => current + 1);
       setWorkspaceRecoveryError(null);
       setWorkspaceRecoveryRequired(true);
@@ -930,6 +955,60 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     }
     previousWorkspaceIdRef.current = activeWorkspaceId;
   }, [activeWorkspaceId]);
+  useEffect(() => {
+    if (activeWorkspaceId === null || activePort.configureModels === undefined) {
+      setModelProfileSupport({ status: "idle" });
+      return;
+    }
+    const workspaceId = activeWorkspaceId;
+    const generation = workspaceGeneration;
+    const requestedEpoch = modelProfileSupportEpoch;
+    const getSupport = activePort.getModelProfileSupport;
+    if (getSupport === undefined) {
+      setModelProfileSupport({ status: "idle" });
+      return;
+    }
+    let current = true;
+    setModelProfileSupport({ status: "loading", workspaceId, generation });
+    void getSupport(workspaceId)
+      .then((result) => {
+        if (
+          !current ||
+          requestedEpoch !== modelProfileSupportEpochRef.current ||
+          !isCurrentWorkspaceContext(workspaceId, generation)
+        )
+          return;
+        const validated = parseModelProfileSupportResult(result, workspaceId);
+        setModelProfileSupport({ status: "ready", workspaceId, generation, result: validated });
+      })
+      .catch(() => {
+        if (
+          !current ||
+          requestedEpoch !== modelProfileSupportEpochRef.current ||
+          !isCurrentWorkspaceContext(workspaceId, generation)
+        )
+          return;
+        setModelProfileSupport({ status: "unavailable", workspaceId, generation });
+      });
+    return () => {
+      current = false;
+    };
+  }, [
+    activePort,
+    activeWorkspaceId,
+    isCurrentWorkspaceContext,
+    modelProfileSupportEpoch,
+    workspaceGeneration,
+  ]);
+  useEffect(() => {
+    if (
+      appliedModelProfiles !== null &&
+      (appliedModelProfiles.workspaceId !== activeWorkspaceId ||
+        appliedModelProfiles.generation !== workspaceGeneration)
+    ) {
+      setAppliedModelProfiles(null);
+    }
+  }, [activeWorkspaceId, appliedModelProfiles, workspaceGeneration]);
   const profileCapabilities = hasCanonicalCandidateProfileCapabilities(activePort)
     ? activePort
     : null;
@@ -937,13 +1016,30 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     state !== null && candidateProfileSelection?.workspaceId === state.workspaceId
       ? candidateProfileSelection.profile
       : null;
-  const profileStartDisabledReason = candidateProfileStartDisabledReason(
+  const selectedModelProfiles =
+    state !== null &&
+    appliedModelProfiles?.workspaceId === state.workspaceId &&
+    appliedModelProfiles.generation === workspaceGeneration
+      ? appliedModelProfiles
+      : null;
+  const candidateProfileStartReason = candidateProfileStartDisabledReason(
     profileCapabilities !== null &&
       state !== null &&
       (state.state === "collecting" || state.state === "stopped"),
     selectedCandidateProfile,
     knowledgePending,
   );
+  const modelProfileStartReason =
+    selectedModelProfiles === null || state === null
+      ? null
+      : modelProfileStartDisabledReason(
+          selectedModelProfiles,
+          state.workspaceId,
+          workspaceGeneration,
+          modelProfileSupport,
+          state.providerTransmissionPreflight,
+        );
+  const profileStartDisabledReason = candidateProfileStartReason ?? modelProfileStartReason;
   const onCandidateProfileSelectionChange = useCallback(
     (selection: CandidateProfileSelection | null) => {
       setCandidateProfileSelection(
@@ -1051,7 +1147,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setImportError(profileStartDisabledReason);
       return;
     }
-    const dispatchedAction = reviewActionWithCandidateProfile(action, selectedCandidateProfile);
+    const withCandidateProfile = reviewActionWithCandidateProfile(action, selectedCandidateProfile);
+    const dispatchedAction = reviewActionWithModelProfiles(
+      withCandidateProfile,
+      selectedModelProfiles?.refs ?? null,
+    );
     setImportError(null);
     reviewActionDispatcher.dispatch(dispatchedAction, async () => {
       try {
@@ -1266,19 +1366,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         setModelSettingsError(workspaceModelSettingsFailureMessage());
         return;
       }
-      const previousPreflight = state.providerTransmissionPreflight;
-      const refreshedPreflight = loaded.providerTransmissionPreflight;
-      const transmissionPairChanged =
-        previousPreflight.author.company !== refreshedPreflight.author.company ||
-        previousPreflight.author.model !== refreshedPreflight.author.model ||
-        previousPreflight.author.endpoint !== refreshedPreflight.author.endpoint ||
-        previousPreflight.critic.company !== refreshedPreflight.critic.company ||
-        previousPreflight.critic.model !== refreshedPreflight.critic.model ||
-        previousPreflight.critic.endpoint !== refreshedPreflight.critic.endpoint;
       if (
-        transmissionPairChanged &&
-        refreshedPreflight.required &&
-        refreshedPreflight.acknowledged
+        workspaceModelSettingsNeedsFreshAcknowledgement(
+          state.providerTransmissionPreflight,
+          loaded.providerTransmissionPreflight,
+        )
       ) {
         setModelSettingsError(
           "The updated models require a new provider-transmission acknowledgement. Reload the workspace and try again.",
@@ -1286,11 +1378,78 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         return;
       }
       setState(loaded);
+      setAppliedModelProfiles(null);
       setEditingModels(false);
     } catch {
       if (isCurrentWorkspaceContext(workspaceId, generation)) {
         setModelSettingsError(workspaceModelSettingsFailureMessage());
       }
+    } finally {
+      if (isCurrentWorkspaceContext(workspaceId, generation)) setBusy(false);
+    }
+  };
+
+  const applyModelProfiles = async (references: ModelProfileReferences): Promise<boolean> => {
+    if (
+      state === null ||
+      activePort.configureModels === undefined ||
+      activePort.getModelProfileSupport === undefined ||
+      modelSettingsDisabled
+    ) {
+      return false;
+    }
+    const workspaceId = state.workspaceId;
+    const generation = workspaceGeneration;
+    if (!isCurrentWorkspaceContext(workspaceId, generation)) return false;
+    const support = modelProfileSupport;
+    if (
+      support.status !== "ready" ||
+      support.workspaceId !== workspaceId ||
+      support.generation !== generation
+    ) {
+      throw new Error(modelProfileSupportUnavailableMessage);
+    }
+    const author = modelProfileEntryForReference(references.author, "author");
+    const critic = modelProfileEntryForReference(references.critic, "critic");
+    if (
+      author === undefined ||
+      critic === undefined ||
+      !modelProfileRouteIsSupported(references.author, support.result) ||
+      !modelProfileRouteIsSupported(references.critic, support.result)
+    ) {
+      throw new Error(modelProfileNotSupportedMessage);
+    }
+    const selection = workspaceModelsForProfileReferences(references, modelProfileCatalog);
+    if (selection === null) throw new Error("The selected profile pair is unavailable.");
+    setBusy(true);
+    try {
+      const loaded = await activePort.configureModels(workspaceId, selection);
+      if (!isCurrentWorkspaceContext(workspaceId, generation)) return false;
+      if (
+        loaded.workspaceId !== workspaceId ||
+        !profileReferencesMatchPreflight(references, loaded.providerTransmissionPreflight)
+      ) {
+        throw new Error("The saved workspace pair did not match the selected profiles.");
+      }
+      if (
+        workspaceModelSettingsNeedsFreshAcknowledgement(
+          state.providerTransmissionPreflight,
+          loaded.providerTransmissionPreflight,
+        )
+      ) {
+        throw new Error("The updated models require a new provider-transmission acknowledgement.");
+      }
+      setState(loaded);
+      setAppliedModelProfiles({
+        workspaceId,
+        generation,
+        refs: {
+          author: { ...references.author },
+          critic: { ...references.critic },
+        },
+      });
+      setImportError(null);
+      return true;
     } finally {
       if (isCurrentWorkspaceContext(workspaceId, generation)) setBusy(false);
     }
@@ -1558,6 +1717,21 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
               }
             />
+            {activePort.configureModels === undefined ||
+            activePort.getModelProfileSupport === undefined ? null : (
+              <ModelProfilePicker
+                key={`${state.workspaceId}:${workspaceGeneration}`}
+                workspaceId={state.workspaceId}
+                generation={workspaceGeneration}
+                applied={selectedModelProfiles?.refs ?? null}
+                support={modelProfileSupport}
+                disabled={modelSettingsDisabled}
+                onApply={applyModelProfiles}
+                onUseWorkspaceModels={() => setAppliedModelProfiles(null)}
+                onRetrySupport={() => setModelProfileSupportEpoch((current) => current + 1)}
+                isContextCurrent={isCurrentWorkspaceContext}
+              />
+            )}
             {profileCapabilities === null ? null : (
               <fieldset
                 disabled={
@@ -1665,7 +1839,16 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               if (activePort.setProviderAuthMode === undefined) {
                 throw new Error("Provider authentication mode changes are unavailable.");
               }
-              return activePort.setProviderAuthMode(provider, mode);
+              const workspaceId = state.workspaceId;
+              const generation = workspaceGeneration;
+              setModelProfileSupport({ status: "loading", workspaceId, generation });
+              try {
+                return await activePort.setProviderAuthMode(provider, mode);
+              } finally {
+                if (isCurrentWorkspaceContext(workspaceId, generation)) {
+                  setModelProfileSupportEpoch((current) => current + 1);
+                }
+              }
             },
           })}
     />
