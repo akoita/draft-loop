@@ -137,8 +137,14 @@ export function createAuthorAdjudicationPrompt(
   retryFeedback: AuthorRequest["retryFeedback"] = undefined,
   groundingGuide: readonly AuthorGroundingGuideEntry[] = [],
   revision: AuthorRevision | undefined = undefined,
+  requestedOutputBudget?: number,
 ): AuthorAdjudicationPrompt {
-  const { guidance, outputBudget } = versionTemplate(authorPromptTemplateVersion);
+  const template = versionTemplate(authorPromptTemplateVersion);
+  const guidance = template.guidance;
+  const outputBudget =
+    requestedOutputBudget === undefined
+      ? template.outputBudget
+      : { maxOutputTokens: requestedOutputBudget };
   const isV5 = authorPromptTemplateVersion === "cli-author-v5";
   const shared = `${isV5 ? authorSystemPromptV5 : authorSystemPrompt}${authorOutputBudgetInstructions(outputBudget)}${isV5 ? authorGroundingGuideInstructionsV5 : authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
   const revisionInstructions =

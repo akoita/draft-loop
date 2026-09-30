@@ -96,7 +96,6 @@ import { exactApprovedArtifactFailure } from "./export-readiness.js";
 import type {
   ApplicationDriver,
   ApplicationIo,
-  CandidateProfileSelection,
   ConfigureKnowledgeSelectionCommand,
   ConfigureWritingPolicyCommand,
   GetWritingPolicyCommand,
@@ -123,6 +122,7 @@ import type {
 import { createProviderAdapter } from "./local-provider-adapter.js";
 import { localJobRequirements } from "./local-requirements.js";
 import { saveTypedHistory } from "./local-typed-history.js";
+import type { ModelProfileRegistry } from "./model-profiles.js";
 import type {
   OpportunityExtractionPort,
   OpportunityExtractionRequest,
@@ -134,6 +134,19 @@ import { createProviderAuthorAgent } from "./provider-author-agent.js";
 import { modelFacingContext } from "./provider-context.js";
 import { createRequirementAchievementPlan } from "./requirement-achievement-plan.js";
 import { responseExecution, timestamp } from "./response-execution.js";
+import {
+  type BeginStartRunOptions,
+  bindRunModelProfiles,
+  criticOutputBudget,
+  projectResumeRunOptions,
+  projectStartRunOptions,
+  type ResumeRunOptions,
+  type RunOptions,
+  resolveRequestedRunModelProfiles,
+  runModelIdentity,
+  validateRecordedRunProfileRoute,
+  writeRunPreflight,
+} from "./run-model-profiles.js";
 import { modelConfiguration } from "./run-model-selection.js";
 import {
   assertModelCompaniesMatch,
@@ -1779,6 +1792,14 @@ function fixtureAgents(
   readonly author: AuthorAgent;
   readonly critic: CriticAgent;
 } {
+  const authorIdentity = runModelIdentity(
+    { company: config.authorCompany, modelId: config.authorModel },
+    context.modelConfiguration.author,
+  );
+  const criticIdentity = runModelIdentity(
+    { company: config.criticCompany, modelId: config.criticModel },
+    context.modelConfiguration.critic,
+  );
   const waitForFixtureStep = (signal?: AbortSignal): Promise<void> =>
     new Promise((resolveDelay, reject) => {
       if (signal?.aborted === true) {
@@ -1801,8 +1822,8 @@ function fixtureAgents(
         await waitForFixtureStep(signal);
         return execution(
           fixtureArtifact(context, currentArtifact),
-          config.authorCompany,
-          config.authorModel,
+          authorIdentity.company,
+          authorIdentity.modelId,
         );
       },
     },
@@ -1824,13 +1845,11 @@ function fixtureAgents(
                 },
               ]
             : [];
-        return execution<Critique>({ findings }, config.criticCompany, config.criticModel);
+        return execution<Critique>({ findings }, criticIdentity.company, criticIdentity.modelId);
       },
     },
   };
 }
-const maximumCritiqueOutputTokens = 16_384;
-
 const critiqueOutputSchema: JsonObject = {
   type: "object",
   additionalProperties: false,
@@ -1937,6 +1956,14 @@ function providerAgents(
   authorProposalCaptureDirectory?: string,
   localClaudeCategoryCaptureParent?: string,
 ): { readonly author: AuthorAgent; readonly critic: CriticAgent } {
+  const authorIdentity = runModelIdentity(
+    { company: config.authorCompany, modelId: config.authorModel },
+    context.modelConfiguration.author,
+  );
+  const criticIdentity = runModelIdentity(
+    { company: config.criticCompany, modelId: config.criticModel },
+    context.modelConfiguration.critic,
+  );
   const dataPolicy = (company: string) =>
     providerDataPolicy(company, allowProviderData, providerAuthModeConfiguration);
   async function createAdapter(company: string, modelId: string, role: "author" | "critic") {
@@ -1958,8 +1985,8 @@ function providerAgents(
     promptContext,
     dataPolicy,
     createAdapter,
-    authorCompany: config.authorCompany,
-    authorModel: config.authorModel,
+    authorCompany: authorIdentity.company,
+    authorModel: authorIdentity.modelId,
     authorProposalCaptureDirectory,
     userError: (message) => new CliUserError(message),
   });
@@ -1996,11 +2023,11 @@ function providerAgents(
         }),
         outputSchema: critiqueOutputSchema,
         outputName: "draft_critique",
-        maxOutputTokens: maximumCritiqueOutputTokens,
-        dataPolicy: dataPolicy(config.criticCompany),
+        maxOutputTokens: criticOutputBudget(context.modelConfiguration.critic),
+        dataPolicy: dataPolicy(criticIdentity.company),
         ...(signal === undefined ? {} : { signal }),
       };
-      const adapter = await createAdapter(config.criticCompany, config.criticModel, "critic");
+      const adapter = await createAdapter(criticIdentity.company, criticIdentity.modelId, "critic");
       const response = await adapter.execute(request);
       try {
         return responseExecution(response, parseCritique(response.output));
@@ -2089,18 +2116,6 @@ async function ensureWorkspaceRecord(storage: SqliteStorage, workspaceId: string
     updatedAt: now,
   };
   await storage.saveWorkspace(record);
-}
-
-function preflight(config: WorkspaceConfig, io: CliIo, runBudget: RunBudget): void {
-  io.write(
-    `Provider pairing: author ${config.authorCompany}/${config.authorModel}; critic ${config.criticCompany}/${config.criticModel}`,
-  );
-  io.write(
-    `Budget: maxRounds=${runBudget.maxRounds}${runBudget.maxCostUsd === undefined ? "" : `, maxCostUsd=${runBudget.maxCostUsd}`}${runBudget.maxDurationMs === undefined ? "" : `, maxDurationMs=${runBudget.maxDurationMs}`}`,
-  );
-  io.write(
-    `Provider transmission: ${config.fixtureMode ? "disabled (offline fixture mode)" : "enabled only with --allow-provider-data"}`,
-  );
 }
 
 function outputEvents(events: readonly RunEvent[], io: CliIo): void {
@@ -2196,28 +2211,6 @@ async function contextForRun(storage: SqliteStorage, runId: string): Promise<Con
   return contextSnapshotSchema.parse(contextRecord.payload) as unknown as ContextSnapshot;
 }
 
-interface RunOptions {
-  readonly runId?: string;
-  readonly allowProviderData?: boolean;
-  readonly opportunityBrief?: OpportunityBriefSelection;
-  readonly candidateProfile?: CandidateProfileSelection;
-  readonly writingPolicyOverrideChecksum?: string;
-  readonly resolveCredential?: ProviderCredentialResolver;
-  readonly providerClientFactories?: ProviderClientFactories;
-  readonly providerAuthMode?: ProviderAuthMode;
-  readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
-  readonly userSessionRunners?: ProviderUserSessionRunners;
-  readonly userSessionTimeoutMs?: number;
-  readonly signal?: AbortSignal;
-  readonly authorProposalCaptureDirectory?: string;
-  readonly localClaudeCategoryCaptureParent?: string;
-}
-type OmitRunOptions<K extends keyof RunOptions> = Omit<RunOptions, K>;
-type BeginStartRunOptions = OmitRunOptions<"runId" | "signal" | "writingPolicyOverrideChecksum">;
-type ResumeRunOptions = OmitRunOptions<
-  "opportunityBrief" | "candidateProfile" | "writingPolicyOverrideChecksum"
->;
-
 async function createRun(
   rootInput: string,
   options: RunOptions = {},
@@ -2226,6 +2219,13 @@ async function createRun(
 ): Promise<RunSnapshot> {
   const root = resolve(rootInput);
   let config = await readWorkspace(root);
+  const providerAuthModeConfiguration =
+    options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
+  const resolvedModelProfiles = resolveRequestedRunModelProfiles(
+    options.modelProfiles,
+    options.modelProfileRegistry,
+    providerAuthModeConfiguration,
+  );
   // Keep the historical fail-before-persistence boundary for an ordinary run:
   // source validation happens before opening SQLite. A managed policy is
   // compiled here as part of that same validation, then imported only after
@@ -2295,7 +2295,7 @@ async function createRun(
             version: candidateProfileRecord.profile.version,
             checksum: candidateProfileRecord.checksum,
           };
-    const inputs =
+    const preparedInputs =
       legacyInputs ??
       (await prepareInputs(
         root,
@@ -2304,6 +2304,13 @@ async function createRun(
         effectivePolicy,
         candidateProfileReference,
       ));
+    const inputs =
+      resolvedModelProfiles === undefined
+        ? preparedInputs
+        : {
+            ...preparedInputs,
+            context: bindRunModelProfiles(preparedInputs.context, resolvedModelProfiles),
+          };
     if (candidateProfileRecord !== undefined) {
       const profileSelection = candidateProfileRecord.profile.candidateKnowledgeSelection;
       const contextSelection = inputs.context.candidateKnowledgeSelection;
@@ -2330,7 +2337,7 @@ async function createRun(
     );
     const runId = `run-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const runBudget = budget(config);
-    preflight(config, io, runBudget);
+    writeRunPreflight(config, io.write, runBudget, inputs.context);
     const runEngine = engine(
       storage,
       config,
@@ -2339,7 +2346,7 @@ async function createRun(
       true,
       options.resolveCredential ?? environmentCredentialResolver,
       options.providerClientFactories,
-      options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode),
+      providerAuthModeConfiguration,
       options.userSessionRunners,
       options.userSessionTimeoutMs,
       candidateRetrieval?.port,
@@ -2397,6 +2404,16 @@ export async function resumeRun(
   const storage = await openStorage(root);
   try {
     const context = await contextForRun(storage, runId);
+    try {
+      validateRecordedRunProfileRoute(
+        context,
+        options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode),
+      );
+    } catch {
+      throw new CliUserError(
+        "The recorded model profiles are invalid or unsupported for the configured provider route.",
+      );
+    }
     await assertCandidateKnowledgeSelectionStable(root, context.candidateKnowledgeSelection);
     const candidateRetrieval = candidateKnowledgeRuntimeRetrieval(storage, config, context);
     const runEngine = engine(
@@ -2414,7 +2431,7 @@ export async function resumeRun(
       options.authorProposalCaptureDirectory,
       options.localClaudeCategoryCaptureParent,
     );
-    preflight(config, io, budget(config));
+    writeRunPreflight(config, io.write, budget(config), context);
     const snapshot = await runEngine.resume(runId, {
       context,
       budget: budget(config),
@@ -2971,6 +2988,7 @@ export interface LocalApplicationDriverOptions {
   readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
   readonly resolveCredential?: ProviderCredentialResolver;
   readonly providerClientFactories?: ProviderClientFactories;
+  readonly modelProfileRegistry?: ModelProfileRegistry;
   readonly userSessionRunners?: ProviderUserSessionRunners;
   readonly userSessionTimeoutMs?: number;
   readonly authorProposalCaptureDirectory?: string;
@@ -3127,6 +3145,9 @@ export function createLocalApplicationDriver(
   };
   const runProviderOptions = {
     ...providerOpportunityOptions,
+    ...(options?.modelProfileRegistry === undefined
+      ? {}
+      : { modelProfileRegistry: options.modelProfileRegistry }),
     ...(options?.localClaudeCategoryCaptureParent === undefined
       ? {}
       : { localClaudeCategoryCaptureParent: options.localClaudeCategoryCaptureParent }),
@@ -3153,58 +3174,11 @@ export function createLocalApplicationDriver(
         await configureWorkspaceKnowledgeSelection(command, io),
       ),
     begin: async (command, io) =>
-      beginRun(
-        command.root,
-        {
-          ...(command.allowProviderData === undefined
-            ? {}
-            : { allowProviderData: command.allowProviderData }),
-          ...(command.opportunityBrief === undefined
-            ? {}
-            : { opportunityBrief: command.opportunityBrief }),
-          ...(command.candidateProfile === undefined
-            ? {}
-            : { candidateProfile: command.candidateProfile }),
-          ...(command.writingPolicyOverrideChecksum === undefined
-            ? {}
-            : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),
-          ...runProviderOptions,
-        },
-        io,
-      ),
+      beginRun(command.root, projectStartRunOptions(command, runProviderOptions), io),
     start: async (command, io) =>
-      startRun(
-        command.root,
-        {
-          ...(command.allowProviderData === undefined
-            ? {}
-            : { allowProviderData: command.allowProviderData }),
-          ...(command.opportunityBrief === undefined
-            ? {}
-            : { opportunityBrief: command.opportunityBrief }),
-          ...(command.candidateProfile === undefined
-            ? {}
-            : { candidateProfile: command.candidateProfile }),
-          ...(command.writingPolicyOverrideChecksum === undefined
-            ? {}
-            : { writingPolicyOverrideChecksum: command.writingPolicyOverrideChecksum }),
-          ...runProviderOptions,
-        },
-        io,
-      ),
+      startRun(command.root, projectStartRunOptions(command, runProviderOptions), io),
     resume: async (command, io) =>
-      resumeRun(
-        command.root,
-        {
-          ...(command.runId === undefined ? {} : { runId: command.runId }),
-          ...(command.allowProviderData === undefined
-            ? {}
-            : { allowProviderData: command.allowProviderData }),
-          ...(command.signal === undefined ? {} : { signal: command.signal }),
-          ...runProviderOptions,
-        },
-        io,
-      ),
+      resumeRun(command.root, projectResumeRunOptions(command, runProviderOptions), io),
     requestAdjudicatedRevision: (command, io) =>
       requestLocalAdjudicatedRevision(
         command,

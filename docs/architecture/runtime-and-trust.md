@@ -90,15 +90,20 @@ can be verified and implemented in a separate issue. Profile selection must
 reject an unsupported configured route visibly; it must not switch
 transports, authentication, or providers automatically.
 
-Current workspace runs do not select profiles, so these adapter changes do
-not alter workspace or default behavior. Application integration in #671 and
-promotion of the observed reference pair to workspace defaults remain pending.
-
 Context model selections can carry a validated, detached copy of a profile
 beside the exact provider/model identity and prompt-template version, and JSON
-round-trips preserve that snapshot. This prepares context snapshots only:
-current workspace runs do not yet select profiles, and runtime/default model
-controls remain unchanged.
+round-trips preserve that snapshot. The application `begin` and `start`
+contracts accept exact author and critic profile ID/version references for one
+run. The registry resolves each once, and the full snapshots are bound to the
+context before its input records are persisted. A profile replaces the
+workspace model pair for that run only; it does not reconfigure the workspace.
+
+The author prompt and request use the recorded profile output cap, and the
+critic request uses its recorded cap. Resume validates the saved profile route
+against current authentication settings without consulting the registry, then
+continues with the context's provider, model, and runtime controls. Existing
+workspace settings remain the source for runs without profile references.
+There is no CLI or UI selector or profile-default promotion in this integration.
 
 Before transmission, author and critic share a projection of the local context.
 Source-manifest paths become opaque ordinal labels such as `evidence-source-1`;
