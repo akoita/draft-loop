@@ -135,8 +135,12 @@ If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
 preparation, response format, and grounding failures have distinct messages.
-For Anthropic structured output, the SDK normalizes the provider-facing JSON
-schema; application-side schema and source-grounding checks remain authoritative.
+Anthropic structured output uses the SDK-normalized provider schema, while
+application schema and source-grounding checks remain authoritative. Requests
+require exact contiguous evidence quotes, unique fact and issue references,
+and grounded facts for both sides of any conflict. The 32,768-token extraction
+ceiling applies only to API-key requests for Claude Sonnet 5.5 and Opus 5.5;
+user-session, local, and all other model routes keep the 8,192-token ceiling.
 
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
