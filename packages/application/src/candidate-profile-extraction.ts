@@ -19,6 +19,10 @@ import {
   canonicalCandidateProfileExtractionProposalSchema,
   canonicalCandidateProfileProvenanceReferenceSchema,
 } from "@draft-loop/schemas";
+import {
+  type CandidateProfileExtractionStage,
+  candidateProfileExtractionFailureMessage,
+} from "./candidate-profile-extraction-errors.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
 export const maximumCanonicalCandidateProfileExtractionSources = 64;
@@ -262,6 +266,7 @@ function buildIssue(
   sourceRefs: readonly CanonicalCandidateProfileProvenanceReference[],
   category?: string,
   severity = issueSeverity(code),
+  message?: string,
 ): CanonicalCandidateProfileIssue {
   const normalizedFactIds = [...new Set(factIds)].sort(lexicalCompare);
   const normalizedSourceRefs = uniqueSorted(sourceRefs, referenceKey);
@@ -275,7 +280,7 @@ function buildIssue(
     code,
     severity,
     status: "open",
-    message: issueMessage(code, category),
+    message: message ?? issueMessage(code, category),
     factIds: normalizedFactIds.slice(0, maximumCanonicalCandidateProfileIssueFactReferenceCount),
     sourceRefs: normalizedSourceRefs.slice(
       0,
@@ -429,6 +434,7 @@ function mapProposal(
 
 function extractionFailure(
   sources: readonly CanonicalCandidateProfileExtractionMaterial[],
+  message: string,
 ): CanonicalCandidateProfileExtractionResult {
   const references = uniqueSorted(
     sources.flatMap((source) => {
@@ -445,7 +451,7 @@ function extractionFailure(
   );
   return cloneAndFreeze({
     facts: [],
-    issues: [buildIssue("omission", [], references, undefined, "error")],
+    issues: [buildIssue("omission", [], references, undefined, "error", message)],
   });
 }
 
@@ -457,11 +463,14 @@ export async function processCanonicalCandidateProfileExtraction(
   if (!isRecord(input) || input.allowProviderData !== true) {
     throw new Error(canonicalCandidateProfileExtractionApprovalErrorMessage);
   }
+  let stage: CandidateProfileExtractionStage = "input-preparation";
   try {
     const validated = validateInput(input);
-    const proposal = canonicalCandidateProfileExtractionProposalSchema.parse(
-      await port.extract(validated.request),
-    );
+    stage = "provider";
+    const output = await port.extract(validated.request);
+    stage = "response-schema";
+    const proposal = canonicalCandidateProfileExtractionProposalSchema.parse(output);
+    stage = "grounding";
     return mapProposal(proposal, validated.references, validated.sourceTexts);
   } catch (error) {
     if (input.signal?.aborted === true || (error instanceof Error && error.name === "AbortError")) {
@@ -471,6 +480,7 @@ export async function processCanonicalCandidateProfileExtraction(
       isRecord(input) && Array.isArray(input.sources)
         ? (input.sources as readonly CanonicalCandidateProfileExtractionMaterial[])
         : [],
+      candidateProfileExtractionFailureMessage(error, stage),
     );
   }
 }

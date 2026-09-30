@@ -1,4 +1,5 @@
 import { canonicalCandidateProfileFactCategories } from "@draft-loop/domain";
+import { ProviderAdapterError } from "@draft-loop/providers";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -240,6 +241,9 @@ describe("canonical candidate profile extraction", () => {
     );
     expect(ungrounded.facts).toEqual([]);
     expect(ungrounded.issues).toHaveLength(1);
+    expect(ungrounded.issues[0]?.message).toBe(
+      "Extracted claims could not be grounded in the selected sources. No facts were saved; review the source material and try again.",
+    );
     expect(JSON.stringify(ungrounded)).not.toContain("Invented role");
 
     const thrown = await processCanonicalCandidateProfileExtraction(
@@ -256,6 +260,144 @@ describe("canonical candidate profile extraction", () => {
     );
     expect(thrown.facts).toEqual([]);
     expect(thrown.issues[0]?.severity).toBe("error");
+    expect(thrown.issues[0]?.message).toBe(
+      "Candidate profile source material could not be prepared. Check the selected source references and try again.",
+    );
+  });
+
+  it("gives fixed action guidance for recognized provider failures without exposing diagnostics", async () => {
+    const cases = [
+      [
+        "authentication",
+        undefined,
+        "Provider authentication failed. Sign in or configure an API key, then retry.",
+      ],
+      [
+        "permission",
+        undefined,
+        "The provider denied access to the extraction request. Check account permissions and access to the selected model.",
+      ],
+      [
+        "rate-limit",
+        undefined,
+        "The provider rate limit or quota was reached. Check the account limit and retry later.",
+      ],
+      [
+        "quota-exhausted",
+        undefined,
+        "The provider rate limit or quota was reached. Check the account limit and retry later.",
+      ],
+      [
+        "transient",
+        undefined,
+        "The provider request timed out or failed temporarily. Retry in a moment.",
+      ],
+      [
+        "timeout",
+        undefined,
+        "The provider request timed out or failed temporarily. Retry in a moment.",
+      ],
+      [
+        "cancelled",
+        undefined,
+        "The provider cancelled candidate profile extraction. Retry if you still need this profile.",
+      ],
+      [
+        "invalid-request",
+        undefined,
+        "The provider rejected the extraction request. Check the model configuration and retry.",
+      ],
+      [
+        "invalid-response",
+        undefined,
+        "The provider returned an invalid extraction response. Retry or check the configured model.",
+      ],
+      [
+        "policy",
+        undefined,
+        "The provider did not accept this extraction request under its policy. Check provider settings.",
+      ],
+      [
+        "unknown",
+        undefined,
+        "The provider failed during candidate profile extraction for an unknown reason. Check the configured provider and retry.",
+      ],
+      [
+        "invalid-response",
+        "output-token-budget-exceeded",
+        "The provider response exceeded the profile extraction output limit. Report this error before retrying.",
+      ],
+    ] as const;
+
+    for (const [code, failureStage, message] of cases) {
+      const result = await processCanonicalCandidateProfileExtraction(
+        {
+          extract: async () => {
+            throw new ProviderAdapterError("anthropic", code, "private provider response", {
+              status: 503,
+              requestId: "private-request-id",
+              ...(failureStage === undefined ? {} : { failureStage }),
+              diagnostics: [{ code: "private-diagnostic", path: "private.path" }],
+            });
+          },
+        },
+        { operationId: "profile-operation", sources: [material()], allowProviderData: true },
+      );
+
+      expect(result.facts).toEqual([]);
+      expect(result.issues).toHaveLength(1);
+      expect(result.issues[0]?.message).toBe(message);
+      expect(result.issues[0]?.sourceRefs).toEqual([material().reference]);
+      expect(JSON.stringify(result)).not.toMatch(
+        /private provider response|private-request-id|private-diagnostic|private\.path|503/u,
+      );
+    }
+  });
+
+  it("distinguishes schema failures from unknown provider exceptions without echoing their messages", async () => {
+    const malformedSchema = await processCanonicalCandidateProfileExtraction(
+      { extract: async () => ({ private: "malformed provider payload" }) },
+      { operationId: "profile-operation", sources: [material()], allowProviderData: true },
+    );
+    const unknownProviderFailure = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: async () => {
+          throw new Error("private candidate source and request diagnostics");
+        },
+      },
+      { operationId: "profile-operation", sources: [material()], allowProviderData: true },
+    );
+
+    expect(malformedSchema.facts).toEqual([]);
+    expect(malformedSchema.issues).toHaveLength(1);
+    expect(malformedSchema.issues[0]?.message).toBe(
+      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    );
+    expect(unknownProviderFailure.facts).toEqual([]);
+    expect(unknownProviderFailure.issues).toHaveLength(1);
+    expect(unknownProviderFailure.issues[0]?.message).toBe(
+      "The provider failed during candidate profile extraction for an unknown reason. Check the configured provider and retry.",
+    );
+    expect(JSON.stringify([malformedSchema, unknownProviderFailure])).not.toMatch(
+      /malformed provider payload|private candidate source|request diagnostics/u,
+    );
+  });
+
+  it("fails closed with a specific fixed message when source input is invalid", async () => {
+    const result = await processCanonicalCandidateProfileExtraction(
+      { extract: vi.fn(async () => ({ schemaVersion: 1, facts: [], issues: [] })) },
+      {
+        operationId: "profile-operation",
+        sources: [material({ mediaType: "" })],
+        allowProviderData: true,
+      },
+    );
+
+    expect(result.facts).toEqual([]);
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.message).toBe(
+      "Candidate profile source material could not be prepared. Check the selected source references and try again.",
+    );
   });
 
   it("requires direct approval, rejects path-bearing references, and propagates cancellation", async () => {
