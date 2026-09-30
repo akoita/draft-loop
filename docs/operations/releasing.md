@@ -88,11 +88,12 @@ archives are rejected. Directory symlinks are not followed; ignored entries
 are listed in the report. Files and categories are sorted deterministically so
 reports can be compared between builds.
 
-The Linux packaging job also launches the unpacked Electron binary twice in a
-headless smoke workflow. The first launch creates a synthetic offline run and
-requests a revision; the second launch reopens the workspace, resumes the run,
-approves the revised draft, and verifies the local export. This keeps the
-packaged host, SQLite runtime, and restart boundary in the release gate.
+The Linux packaging job also launches the unpacked Electron binary twice in an
+offline smoke workflow under a virtual X display (Xvfb). The first launch
+creates a synthetic run and requests a revision; the second launch reopens the
+workspace, resumes the run, approves the revised draft, and verifies the local
+export. This keeps the packaged host, SQLite runtime, and restart boundary in
+the release gate.
 This synthetic smoke is implementation and integration evidence. It is not a
 substitute for installed-app acceptance with representative real inputs on each
 supported platform.

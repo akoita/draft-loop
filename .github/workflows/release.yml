@@ -125,6 +125,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Update apt package indexes (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update
+
+      - name: Install Xvfb and xauth (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get install --no-install-recommends -y xvfb xauth
+
       - name: Build packaged desktop application
         run: pnpm --filter @draft-loop/desktop make --arch ${{ matrix.arch }}
 
@@ -139,7 +147,7 @@ jobs:
 
       - name: Run packaged desktop smoke
         if: ${{ matrix.name == 'linux-x64' }}
-        run: pnpm desktop:smoke -- "${{ steps.packaged-linux.outputs.path }}"
+        run: xvfb-run --auto-servernum pnpm desktop:smoke -- "${{ steps.packaged-linux.outputs.path }}"
 
       - name: Upload platform artifacts
         uses: actions/upload-artifact@v7
