@@ -77,6 +77,7 @@ export function createProviderAuthorAgent(deps: ProviderAuthorAgentDependencies)
         retryFeedback,
         createAuthorGroundingGuide(retrievedEvidence),
         revision,
+        context.modelConfiguration.author.profile?.runtime.maxOutputTokens,
       );
       const request: ModelRequest<JsonObject> = {
         contextSnapshotId: context.id,

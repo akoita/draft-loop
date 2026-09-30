@@ -184,12 +184,24 @@ export interface WorkspaceDescriptor {
 export interface StartRunCommand {
   readonly root: string;
   readonly allowProviderData?: boolean;
+  /** Exact author and critic profile versions to bind to this run only. */
+  readonly modelProfiles?: ModelProfileReferences;
   /** Exact immutable reviewed opportunity version to bind to the new run. */
   readonly opportunityBrief?: OpportunityBriefSelection;
   /** Exact immutable reviewed candidate-profile version to bind to the new run. */
   readonly candidateProfile?: CandidateProfileSelection;
   /** Exact immutable policy history version for a reviewed opportunity override. */
   readonly writingPolicyOverrideChecksum?: string;
+}
+
+export interface ModelProfileReference {
+  readonly id: string;
+  readonly version: number;
+}
+
+export interface ModelProfileReferences {
+  readonly author: ModelProfileReference;
+  readonly critic: ModelProfileReference;
 }
 
 export type BeginRunCommand = StartRunCommand;

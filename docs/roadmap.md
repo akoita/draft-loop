@@ -246,7 +246,7 @@ applications.
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
 | Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contract, snapshots, provider-default effort, and registry implemented; runtime integration next | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: #585/#662/#666/#663 complete; #664 children #669, #670, then #671; user-facing selection follows. Default promotion remains a separate decision. |
+| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, registry, supported provider controls, and explicit run integration implemented; selection UI next | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: contracts and #669/#670 complete; #671 run integration prepared; user-facing selection follows. Default promotion remains a separate decision. |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1458,14 +1458,15 @@ delivered the framework-free profile contract and strict schema. The remaining
    [#674](https://github.com/akoita/draft-loop/issues/674) (supported-route
    decision: API and verified Claude-session profile controls; Codex/local
    profiles remain unavailable), then
-   [#671](https://github.com/akoita/draft-loop/issues/671) pins profiles for
-   new runs and preserves recorded-control and legacy resume. Each child stays
+   [#671](https://github.com/akoita/draft-loop/issues/671) adds explicit profile
+   selection to shared begin/start contracts and preserves recorded-control
+   and legacy resume. Each child stays
    within one execution boundary and may be split again before coding.
 
-The registry and snapshot contracts do not select profiles for current workspace
-runs or change runtime controls. User-facing selection (#84), including desktop model
-changes (#536) and unavailable-list suggestions (#527), follows the relevant
-shared contracts. Model capability verification and the explicit workspace-default
+Shared application callers can select exact profile versions for a run. Profiled
+runs persist the full controls and reuse them on resume; unprofiled runs retain
+the existing path. User-facing selection (#84), including desktop model changes
+(#536) and unavailable-list suggestions (#527), follows these shared contracts. Model capability verification and the explicit workspace-default
 decision remain required before promoting presets. Earlier generalization
 failures remain recorded; this milestone does not authorize another live cohort.
 Broad cross-profession and multilingual validation (#583) stays deferred.
