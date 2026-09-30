@@ -47,10 +47,25 @@ remains independent. The `provider-default` effort value means an adapter
 omits its effort override; it makes no numeric effort or capability guarantee.
 [Anthropic's migration guide](https://platform.claude.com/docs/en/models/sonnet-5/migration-guide)
 notes that Sonnet 4.5 had no effort parameter.
-Provider-specific translation of profile controls remains pending in #664. The
-profile registry is not populated, and this does not change live runtime,
-workspace selection, or default model behavior. Promotion of the observed
-reference pair to workspace defaults also remains pending.
+The public `@draft-loop/application/model-profiles` subpath exports
+`createModelProfileRegistry` and the `defaultModelProfileRegistry` singleton.
+It resolves an exact profile ID and required version for a requested author or
+critic role; it does not choose the latest version or fall back. Registry inputs
+and each result from `resolve()` or `list()` are detached copies.
+
+The economy `legacy-anthropic-author` preset is author-only and describes
+Anthropic's `claude-sonnet-4-5` alias
+([model reference](https://platform.claude.com/docs/fr/models/sonnet-4-5/overview)).
+The economy `legacy-openai-critic` preset is critic-only and describes OpenAI's
+`gpt-5.6-luna` alias
+([model reference](https://developers.openai.com/api/docs/models/gpt-5.6-luna));
+limits were verified on 2026-09-30. These aliases and their metadata do not pin
+provider-side model weights or claim account availability or quality.
+
+Provider-specific translation of profile controls remains pending in #664;
+registry profiles do not change live runtime, workspace selection, or default
+model behavior. Promotion of the observed reference pair to workspace defaults
+also remains pending.
 
 Context model selections can carry a validated, detached copy of a profile
 beside the exact provider/model identity and prompt-template version, and JSON
