@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/messages/messages.js";
 import type { AgentRole, ModelCompany, ModelSelection } from "@draft-loop/domain";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses.js";
+import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
 
 export * from "./author-model-preflight.js";
 export * from "./user-session.js";
@@ -649,7 +650,23 @@ export class AnthropicAdapter<
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
-    const maxOutputTokens = resolveMaxOutputTokens(this.provider, request.maxOutputTokens);
+    const profileControls = resolveProfileRuntimeControls(
+      this.provider,
+      this.configuredModel,
+      request.model,
+      request.maxOutputTokens,
+      () =>
+        new ProviderAdapterError(
+          this.provider,
+          "invalid-request",
+          "The selected model profile is invalid for this provider request.",
+          { retryable: false },
+        ),
+    );
+    const maxOutputTokens = resolveMaxOutputTokens(
+      this.provider,
+      profileControls?.maxOutputTokens ?? request.maxOutputTokens,
+    );
 
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
@@ -659,8 +676,14 @@ export class AnthropicAdapter<
       max_tokens: maxOutputTokens,
       system: request.systemPrompt,
       messages: [{ role: "user", content: serializeJson(request.input) }],
+      ...(profileControls?.provider === "anthropic" && profileControls.thinking !== undefined
+        ? { thinking: profileControls.thinking }
+        : {}),
       output_config: {
         format: { type: "json_schema", schema: request.outputSchema },
+        ...(profileControls?.provider === "anthropic" && profileControls.effort !== undefined
+          ? { effort: profileControls.effort }
+          : {}),
       },
     };
 
@@ -751,7 +774,23 @@ export class OpenAIAdapter<
   async execute(request: ModelRequest<Input>): Promise<ModelResponse<Output>> {
     assertConfiguredModel(this.provider, this.configuredModel, request.model);
     assertDataExposureAllowed(this.provider, request.dataPolicy);
-    const maxOutputTokens = resolveMaxOutputTokens(this.provider, request.maxOutputTokens);
+    const profileControls = resolveProfileRuntimeControls(
+      this.provider,
+      this.configuredModel,
+      request.model,
+      request.maxOutputTokens,
+      () =>
+        new ProviderAdapterError(
+          this.provider,
+          "invalid-request",
+          "The selected model profile is invalid for this provider request.",
+          { retryable: false },
+        ),
+    );
+    const maxOutputTokens = resolveMaxOutputTokens(
+      this.provider,
+      profileControls?.maxOutputTokens ?? request.maxOutputTokens,
+    );
 
     const startTime = Date.now();
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
@@ -767,6 +806,9 @@ export class OpenAIAdapter<
         },
       ],
       store: false,
+      ...(profileControls?.provider === "openai" && profileControls.reasoning !== undefined
+        ? { reasoning: profileControls.reasoning }
+        : {}),
       text: {
         format: {
           type: "json_schema",
