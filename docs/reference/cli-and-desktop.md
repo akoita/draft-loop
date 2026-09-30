@@ -131,6 +131,11 @@ new run, only while its exact CKB selection still matches the workspace's
 current lifecycle-ready selection. Historical profile versions and existing
 run/export records remain available for audit after lifecycle changes.
 
+If extraction fails, it saves no facts and returns one omission issue with
+opaque source references. Recognized provider failures provide fixed action
+guidance; unrecognized errors and provider diagnostics are never shown. Input
+preparation, response format, and grounding failures have distinct messages.
+
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
   --profile-id default-profile --allow-provider-data
