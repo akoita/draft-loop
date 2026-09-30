@@ -43,9 +43,14 @@ subpaths. It describes a versioned provider/model identity, tier, supported role
 runtime effort/output/thinking controls, and declared limits. Validation keeps
 the runtime output ceiling within the known output limit and a budgeted
 thinking allowance within that output ceiling; an optional context-window limit
-remains independent. This contract does not populate a registry, describe
-actual provider capabilities, or select defaults. The separate decision to
-promote the observed reference pair to workspace defaults remains pending.
+remains independent. The `provider-default` effort value means an adapter
+omits its effort override; it makes no numeric effort or capability guarantee.
+[Anthropic's migration guide](https://platform.claude.com/docs/en/models/sonnet-5/migration-guide)
+notes that Sonnet 4.5 had no effort parameter.
+Provider-specific translation of profile controls remains pending in #664. The
+profile registry is not populated, and this does not change live runtime,
+workspace selection, or default model behavior. Promotion of the observed
+reference pair to workspace defaults also remains pending.
 
 Context model selections can carry a validated, detached copy of a profile
 beside the exact provider/model identity and prompt-template version, and JSON

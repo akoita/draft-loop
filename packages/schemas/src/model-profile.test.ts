@@ -39,6 +39,18 @@ describe("model profile schema", () => {
     }
   });
 
+  it("accepts and preserves provider-default effort through JSON round-trips", () => {
+    const profile = fictionalProfile();
+    const input = {
+      ...profile,
+      runtime: { ...profile.runtime, effort: "provider-default" },
+    };
+    const parsed = modelProfileSchema.parse(input);
+
+    expect(parsed.runtime.effort).toBe("provider-default");
+    expect(modelProfileSchema.parse(JSON.parse(JSON.stringify(parsed)))).toEqual(parsed);
+  });
+
   it("trims identity strings and permits context and output limits to remain independent", () => {
     const input = {
       ...fictionalProfile(),
