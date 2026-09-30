@@ -78,10 +78,10 @@ describe("model profile registry", () => {
     ]);
   });
 
-  it("adds standard, premium, and current economy role-specific profiles without changing defaults", () => {
+  it("keeps historical versions and appends the current exact profile versions", () => {
     const profiles = defaultModelProfileRegistry.list();
-    expect(profiles).toHaveLength(7);
-    expect(profiles.slice(2)).toEqual([
+    expect(profiles).toHaveLength(9);
+    expect(profiles.slice(2, 7)).toEqual([
       {
         id: "standard-anthropic-author",
         version: 1,
@@ -153,11 +153,47 @@ describe("model profile registry", () => {
         knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
       },
     ]);
+    expect(profiles.slice(7)).toEqual([
+      {
+        id: "economy-anthropic-author",
+        version: 1,
+        provider: "anthropic",
+        modelId: "claude-sonnet-5-5",
+        tier: "economy",
+        roles: ["author"],
+        runtime: {
+          effort: "medium",
+          maxOutputTokens: 32768,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1000000 },
+      },
+      {
+        id: "standard-openai-critic",
+        version: 2,
+        provider: "openai",
+        modelId: "gpt-6.1-sol",
+        tier: "standard",
+        roles: ["critic"],
+        runtime: {
+          effort: "low",
+          maxOutputTokens: 16384,
+          thinking: { mode: "provider-default" },
+        },
+        knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
+      },
+    ]);
     expect(defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author")).toEqual(
       profiles[0],
     );
     expect(defaultModelProfileRegistry.resolve("legacy-openai-critic", 1, "critic")).toEqual(
       profiles[1],
+    );
+    expect(defaultModelProfileRegistry.resolve("standard-openai-critic", 1, "critic")).toEqual(
+      profiles[3],
+    );
+    expect(defaultModelProfileRegistry.resolve("standard-openai-critic", 2, "critic")).toEqual(
+      profiles[8],
     );
   });
 

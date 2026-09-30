@@ -19,11 +19,11 @@ describe("desktop model profile bridge projections", () => {
     expect(
       parseModelProfileReferences({
         author: { id: "standard-anthropic-author", version: 1 },
-        critic: { id: "standard-openai-critic", version: 1 },
+        critic: { id: "standard-openai-critic", version: 2 },
       }),
     ).toEqual({
       author: { id: "standard-anthropic-author", version: 1 },
-      critic: { id: "standard-openai-critic", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2 },
     });
 
     for (const malformed of [
@@ -70,7 +70,7 @@ describe("desktop model profile bridge projections", () => {
     if (first === undefined) throw new Error("Expected a registered profile.");
     first.supported = false;
     mutable.profiles.pop();
-    expect(projectModelProfileSupport("workspace-1", apiKeyModes).profiles).toHaveLength(7);
+    expect(projectModelProfileSupport("workspace-1", apiKeyModes).profiles).toHaveLength(9);
   });
 
   it("rejects malformed support results and bounded-list violations", () => {

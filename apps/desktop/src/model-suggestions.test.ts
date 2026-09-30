@@ -4,8 +4,14 @@ import {
 } from "@draft-loop/application/model-profiles";
 
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { hasFallbackModelSuggestions, projectModelSuggestions } from "./model-suggestions.js";
+import {
+  hasFallbackModelSuggestions,
+  ModelSuggestionDatalist,
+  projectModelSuggestions,
+} from "./model-suggestions.js";
 
 describe("registered model suggestions", () => {
   it("projects the current registry by company and marks unsupported roles", () => {
@@ -83,5 +89,33 @@ describe("registered model suggestions", () => {
     expect(hasFallbackModelSuggestions("anthropic", "ready", 3)).toBe(false);
     expect(hasFallbackModelSuggestions("anthropic", "loading", 0)).toBe(false);
     expect(hasFallbackModelSuggestions("local", "unavailable", 0)).toBe(false);
+  });
+
+  it("limits fallback datalists to the active catalog while keeping IDs free to type", () => {
+    const anthropic = renderToStaticMarkup(
+      createElement(ModelSuggestionDatalist, {
+        id: "author-models",
+        company: "anthropic",
+        role: "author",
+      }),
+    );
+    const openai = renderToStaticMarkup(
+      createElement(ModelSuggestionDatalist, {
+        id: "critic-models",
+        company: "openai",
+        role: "critic",
+      }),
+    );
+
+    expect(anthropic).toContain('value="claude-sonnet-5-5"');
+    expect(anthropic).toContain('value="claude-opus-5-5"');
+    expect(anthropic).not.toContain('value="claude-sonnet-4-5"');
+    expect(anthropic).not.toContain('value="claude-fable-5-1"');
+    expect(openai).toContain('value="gpt-6-luna"');
+    expect(openai).toContain('value="gpt-6.1-sol"');
+    expect(openai).not.toContain('value="gpt-5.6-luna"');
+    expect(openai).not.toContain('value="gpt-6-sol"');
+    expect(anthropic).toContain("Author profile · registered for Author");
+    expect(openai).toContain("Critic profile · registered for Critic");
   });
 });

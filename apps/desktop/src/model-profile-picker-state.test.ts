@@ -62,17 +62,17 @@ function stateWithPair(refs: ModelProfileReferences) {
 
 describe("desktop model profile picker state", () => {
   it("resolves role-safe presets and maps exact profiles to workspace destinations", () => {
-    expect(modelProfilePresets.map(({ id }) => id)).toEqual(["economy", "standard", "premium"]);
+    expect(modelProfilePresets.map(({ id }) => id)).toEqual(["economy", "standard"]);
     expect(economy).toEqual({
-      author: { id: "legacy-anthropic-author", version: 1 },
-      critic: { id: "legacy-openai-critic", version: 1 },
+      author: { id: "economy-anthropic-author", version: 1 },
+      critic: { id: "economy-openai-critic", version: 1 },
     });
     expect(modelProfileEntryForReference(economy.author, "critic")).toBeUndefined();
     expect(workspaceModelsForProfileReferences(economy)).toEqual({
       authorCompany: "anthropic",
-      authorModel: "claude-sonnet-4-5",
+      authorModel: "claude-sonnet-5-5",
       criticCompany: "openai",
-      criticModel: "gpt-5.6-luna",
+      criticModel: "gpt-6-luna",
     });
     expect(modelProfileCatalog.every(({ profile }) => profile.roles.length > 0)).toBe(true);
   });

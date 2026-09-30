@@ -23,16 +23,18 @@ pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
 pnpm --filter @draft-loop/cli start start ./workspace \
   --author-profile standard-anthropic-author@1 \
-  --critic-profile standard-openai-critic@1
+  --critic-profile standard-openai-critic@2
 ```
 
 `start` accepts either one pair preset or both exact `--author-profile` and
 `--critic-profile` references. Each reference uses `profile-id@version` and
-must support its selected role. Economy is the current default pair;
-standard and premium are unvalidated opt-ins. A selected pair is recorded on
-that run only. It does not change workspace model defaults, transmission
-approval, or credentials. Resume uses the pair already recorded in run history.
-Omitting profile options preserves the existing workspace-configured behavior.
+must support its selected role. Economy and standard are unvalidated opt-in
+pairs. The active catalog contains four exact profile versions; older profile
+versions remain available for historical references but are not current
+choices. A CLI-selected pair is recorded on that run only. It does not change
+workspace model settings, transmission approval, or credentials. Resume uses
+the pair already recorded in run history. Omitting profile options preserves
+the existing workspace-configured behavior.
 
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
@@ -173,32 +175,29 @@ legacy controls for the next start. The next-run profile choice belongs to the
 current window; manual model saves and workspace changes clear it.
 
 When provider model discovery fails or returns no IDs, the setup and **Change
-models** forms offer exact IDs from the default application profile registry.
+models** forms offer exact IDs from the active application profile catalog.
 Labels show only each entry's configured tier and registered author or critic
 role. These fields do not establish account, plan, or CV-quality suitability.
 Suggested IDs are not guaranteed to work with your account, plan, or CLI version.
 You can still enter any exact model ID, and successful live discovery remains
 the displayed source. The catalog was reviewed on 2026-09-30; CLI-specific live
-availability for these suggestions has not been reverified. Economy remains
-the current default pair; standard and premium pair presets are explicitly
-unvalidated opt-ins. All catalog quality entries are unvalidated and
-availability has not been checked; the review date documents metadata review,
-not a live provider probe. The registry also includes `gpt-6-luna` as an
-economy critic profile. Local endpoints remain free-text because there are no
-local server profile IDs.
+availability for these suggestions has not been reverified. Economy and
+standard are the two unvalidated pair presets. The active catalog lists
+Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, and GPT-6.1 Sol. Historical
+profile versions, including premium-tier entries, remain resolvable but are
+not offered as current suggestions or presets. All catalog quality entries
+are unvalidated and availability has not been checked; the review date
+documents metadata review, not a live provider probe. Local endpoints remain
+free-text because there are no local server profile IDs.
 
 Catalog price metadata covers the standard, uncached text API at up to 200,000
 input tokens. It excludes cache, tool, batch, regional, and subscription
-pricing. Sources are the official [Anthropic model overview], [Sonnet 4.5
-overview], and [Anthropic pricing page], plus official OpenAI pages for
-[GPT-5.6 Luna], [GPT-6 Sol], [GPT-6 Astra], and [GPT-6 Luna].
+pricing. Sources are the official [Anthropic model overview] and [Sonnet 5.5
+overview], plus official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna].
 
 [Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
-[Sonnet 4.5 overview]: https://platform.claude.com/docs/fr/models/sonnet-4-5/overview
-[Anthropic pricing page]: https://platform.claude.com/docs/en/about-claude/pricing
-[GPT-5.6 Luna]: https://developers.openai.com/api/docs/models/gpt-5.6-luna
-[GPT-6 Sol]: https://developers.openai.com/api/docs/models/gpt-6-sol
-[GPT-6 Astra]: https://developers.openai.com/api/docs/models/gpt-6-astra
+[Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
+[GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
 [GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
 
 ## Writing policies

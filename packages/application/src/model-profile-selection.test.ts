@@ -18,7 +18,7 @@ describe("application model profile selection", () => {
     const result = resolveModelProfilePair(
       {
         author: { id: "standard-anthropic-author", version: 1 },
-        critic: { id: "standard-openai-critic", version: 1 },
+        critic: { id: "standard-openai-critic", version: 2 },
       },
       apiKeyModes,
     );
@@ -30,7 +30,7 @@ describe("application model profile selection", () => {
     });
     expect(result.critic).toMatchObject({
       id: "standard-openai-critic",
-      modelId: "gpt-6-sol",
+      modelId: "gpt-6.1-sol",
       roles: ["critic"],
     });
   });

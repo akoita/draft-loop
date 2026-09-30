@@ -40,9 +40,20 @@ describe("model profile CLI commands", () => {
     expect(harness.resume).not.toHaveBeenCalled();
   });
 
-  it.each(["economy", "standard", "premium"] as const)(
-    "forwards only the exact %s preset references to start",
-    async (modelPreset) => {
+  it.each([
+    {
+      modelPreset: "economy",
+      author: { id: "economy-anthropic-author", version: 1 },
+      critic: { id: "economy-openai-critic", version: 1 },
+    },
+    {
+      modelPreset: "standard",
+      author: { id: "standard-anthropic-author", version: 1 },
+      critic: { id: "standard-openai-critic", version: 2 },
+    },
+  ] as const)(
+    "forwards only the exact $modelPreset preset references to start",
+    async ({ modelPreset, author, critic }) => {
       const harness = createHarness();
 
       await harness.invoke("start", "workspace", "--model-preset", modelPreset);
@@ -50,20 +61,7 @@ describe("model profile CLI commands", () => {
       expect(harness.startCommands).toEqual([
         {
           root: expect.stringContaining("workspace"),
-          modelProfiles: {
-            author: {
-              id:
-                modelPreset === "economy"
-                  ? "legacy-anthropic-author"
-                  : `${modelPreset}-anthropic-author`,
-              version: 1,
-            },
-            critic: {
-              id:
-                modelPreset === "economy" ? "legacy-openai-critic" : `${modelPreset}-openai-critic`,
-              version: 1,
-            },
-          },
+          modelProfiles: { author, critic },
           allowProviderData: false,
         },
       ]);
@@ -134,6 +132,7 @@ describe("model profile CLI commands", () => {
     ["--author-profile", "legacy-anthropic-author@2", "--critic-profile", "legacy-openai-critic@1"],
     ["--author-profile", "legacy-openai-critic@1", "--critic-profile", "legacy-openai-critic@1"],
     ["--model-preset", "unknown-secret-preset"],
+    ["--model-preset", "premium"],
   ] as const)("rejects invalid profile selection %j before calling start", async (...options) => {
     const harness = createHarness();
 

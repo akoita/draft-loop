@@ -1392,10 +1392,10 @@ describe("desktop workspace setup", () => {
     for (const html of [setup, edit, empty]) {
       expect(html).toContain('list="setup-model-suggestions-author"');
       expect(html).toContain(
-        'value="claude-sonnet-4-5" label="Economy tier · Author profile · registered for Author"',
+        'value="claude-sonnet-5-5" label="Economy tier · Author profile · registered for Author"',
       );
       expect(html).toContain(
-        'value="gpt-5.6-luna" label="Economy tier · Critic profile · registered for Critic"',
+        'value="gpt-6-luna" label="Economy tier · Critic profile · registered for Critic"',
       );
       expect(html).toContain('value="private/deployment:rev-7"');
       expect(html).toContain('value="custom-critic-model"');
@@ -1406,7 +1406,7 @@ describe("desktop workspace setup", () => {
     }
     expect(edit).not.toContain("Workspace name");
     expect(wrongRole).toContain(
-      'value="gpt-5.6-luna" label="Economy tier · Critic profile · not registered for Author"',
+      'value="gpt-6-luna" label="Economy tier · Critic profile · not registered for Author"',
     );
   });
 

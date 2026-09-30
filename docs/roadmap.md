@@ -43,27 +43,21 @@ the default pair is cross-company and provider/model identities are recorded.
 
 ### Model strategy
 
-Candidates want the strongest possible CV for an application, so production
-quality targets **frontier models for both roles**:
+Model choice balances capability, cost, and the amount of configuration the
+project can maintain. The current scope is two Anthropic authors and two OpenAI
+critics: Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, and GPT-6.1 Sol.
+Representative CV quality has not been validated for these choices.
 
-- **Author:** the latest Anthropic frontier models, such as current Opus and
-  Fable versions.
-- **Critic:** the latest OpenAI frontier models, such as GPT-6 Sol and Astra.
+The current curated choices use two tiers:
 
-Exact model IDs are confirmed when the reference pair is selected. Model cost
-is secondary for the default product, because candidates will pay for the best
-result.
+| Tier | Pair | Purpose |
+| ---- | ---- | ------- |
+| **Economy** | Claude Sonnet 5.5 + GPT-6 Luna | Lower-cost configuration and workflow checks |
+| **Standard** | Claude Opus 5.5 + GPT-6.1 Sol | Opt-in configuration for more demanding work |
 
-Models are organised in three tiers:
-
-| Tier | Purpose | Examples |
-| ---- | ------- | -------- |
-| **Premium** | An optional, paid choice for candidates who want maximum confidence in the result | Fable (Anthropic), GPT-6 Astra (OpenAI) |
-| **Standard frontier** | The production default, expected to meet most candidates' needs; the reference tier for validation | Latest Opus (Anthropic), GPT-6 Sol (OpenAI) |
-| **Economy** | Cost-conscious users, plus fast and cheap development, replay, and route diagnostics | Smaller models such as Sonnet (Anthropic) and GPT-6 Luna (OpenAI) |
-
-Both providers offer every tier, and the user can choose the finest models
-even when they cost more.
+These are configuration choices, not validated CV-quality rankings. Premium
+choices are deferred. Older exact profile versions remain available for
+compatibility with existing selections and saved runs.
 
 Validation has two levels, and each claim applies only to the models that
 produced it:
@@ -77,8 +71,8 @@ produced it:
 The evaluation proceeds **step by step**:
 
 1. Make the basic scenario work end to end on the economy pair.
-2. Validate quality on the standard frontier pair (Opus and GPT-6 Sol).
-3. Add the premium tier last.
+2. Validate quality on the standard pair (Opus 5.5 and GPT-6.1 Sol).
+3. Reconsider premium choices only after the four current choices are validated.
 
 Anthropic and OpenAI stay the first and default providers. Other providers,
 including local models, are integrated only after the main CV use cases work
@@ -99,9 +93,9 @@ separation is intentional. Selection for an application must be explicit.
 - Local by default: provider transmission is explicit and scoped.
 - Independent review: provider and model identities are visible, with
   cross-company diversity as the default.
-- Frontier quality by default: the standard frontier tier is the default, the
-  premium tier is an explicit paid option, and the economy tier is an explicit
-  user or development choice.
+- Explicit model choice: economy and standard presets expose four current
+  Anthropic/OpenAI models. Preset labels do not establish CV quality; default
+  promotion requires an explicit decision and preserves existing workspaces.
 - Validation names its models: every quality claim records the exact model
   profile, provider, model ID, prompt version, and runtime controls, and
   applies only to that profile.
@@ -246,7 +240,7 @@ applications.
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
 | Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, registry, supported controls, CLI selection, desktop picker, and pricing scenarios integrated; availability checks next | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned profiles and controls; #684/#686 expose exact run selection. Pricing scenarios (#687) are delivered; local availability preflight (#679) remains. Default promotion is separate (#683). |
+| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, supported controls, CLI/desktop selection, and pricing integrated; four-model curation and availability acceptance pending | Offer versioned model profiles and tier presets while retaining current defaults | #511 delivered versioned profiles and controls; #684/#686 expose exact run selection. Pricing scenarios (#687) are delivered; local availability preflight (#679) remains. Default promotion is separate (#683). |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1427,9 +1421,9 @@ separate authorization.
 
 ### Now — Model profiles and tiers
 
-Make the current workspace defaults (`claude-sonnet-4-5` and `gpt-5.6-luna`)
-available as versioned economy profiles, alongside opt-in standard and premium
-profiles. A profile holds:
+Offer four curated models: `claude-sonnet-5-5`, `claude-opus-5-5`,
+`gpt-6-luna`, and `gpt-6.1-sol`, grouped into economy and standard presets.
+Existing exact profile versions and run snapshots remain compatible. A profile holds:
 
 - provider and exact model ID;
 - tier (`premium`, `standard`, or `economy`);
@@ -1453,8 +1447,9 @@ and quality limitations. Pricing and explicit token/call scenarios are delivered
 [#687](https://github.com/akoita/draft-loop/issues/687); local availability
 preflight follows in [#679](https://github.com/akoita/draft-loop/issues/679).
 
-On 2026-09-30 the user approved retaining current defaults while finishing
-configurable profiles, tiers, pricing, and availability checks. Frontier options
+On 2026-09-30 the user narrowed curated choices to Sonnet 5.5, Opus 5.5,
+GPT-6 Luna, and GPT-6.1 Sol. This supersedes the seven-model catalog and premium
+preset. New-workspace defaults are awaiting an explicit decision. Frontier options
 remain unvalidated for representative CV quality; tier labels are not quality
 recommendations. Default promotion moves to
 [#683](https://github.com/akoita/draft-loop/issues/683), requiring a separately
@@ -1463,7 +1458,7 @@ failures remain recorded; this milestone does not authorize another live cohort.
 Broad cross-profession and multilingual validation (#583) stays deferred.
 
 **Exit criterion:** Users can choose supported versioned author/critic profiles
-and economy, standard, or premium pair presets. Profile-selected runs record
+and economy or standard pair presets. Profile-selected runs record
 the full controls and resume from their snapshots; the legacy path remains
 available. The catalog discloses API pricing, estimated-budget assumptions,
 and availability and quality limitations. Current defaults stay unchanged;

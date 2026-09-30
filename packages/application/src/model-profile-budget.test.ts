@@ -8,14 +8,10 @@ import {
 const apiKeyModes = { anthropic: "api-key", openai: "api-key" } as const;
 const standard: ModelProfileReferences = {
   author: { id: "standard-anthropic-author", version: 1 },
-  critic: { id: "standard-openai-critic", version: 1 },
-};
-const premium: ModelProfileReferences = {
-  author: { id: "premium-anthropic-author", version: 1 },
-  critic: { id: "premium-openai-critic", version: 1 },
+  critic: { id: "standard-openai-critic", version: 2 },
 };
 const economy: ModelProfileReferences = {
-  author: { id: "legacy-anthropic-author", version: 1 },
+  author: { id: "economy-anthropic-author", version: 1 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
 
@@ -38,13 +34,7 @@ describe("model profile public API scenario estimates", () => {
     });
   });
 
-  it("uses the selected premium and economy catalog rates and permits zero calls", () => {
-    expect(estimateModelProfileApiScenario(scenario(premium))).toMatchObject({
-      status: "available",
-      authorUsd: expect.closeTo(0.3, 8),
-      criticUsd: expect.closeTo(0.15, 8),
-      totalUsd: expect.closeTo(0.45, 8),
-    });
+  it("uses the active economy catalog rates and permits zero calls", () => {
     const zero = scenario(economy);
     expect(
       estimateModelProfileApiScenario({
@@ -55,28 +45,27 @@ describe("model profile public API scenario estimates", () => {
     ).toEqual({ status: "available", authorUsd: 0, criticUsd: 0, totalUsd: 0 });
     expect(estimateModelProfileApiScenario(scenario(economy))).toMatchObject({
       status: "available",
-      authorUsd: 0.09,
+      authorUsd: 0.06,
       criticUsd: 0.0015,
-      totalUsd: 0.0915,
+      totalUsd: 0.0615,
     });
   });
 
-  it("accepts the registered combined context boundary and rejects unsupported limits", () => {
+  it("accepts the active input-pricing boundary and rejects unsupported limits", () => {
     const sonnet: ModelProfileReferences = {
-      author: { id: "legacy-anthropic-author", version: 1 },
+      author: { id: "economy-anthropic-author", version: 1 },
       critic: standard.critic,
     };
     const boundary = scenario(sonnet);
     expect(
       estimateModelProfileApiScenario({
         ...boundary,
-        author: { inputTokens: 167_232, outputTokens: 32_768, calls: 1 },
+        author: { inputTokens: 200_000, outputTokens: 32_768, calls: 1 },
       }),
     ).toMatchObject({ status: "available" });
     for (const author of [
       { inputTokens: 200_001, outputTokens: 0, calls: 1 },
       { inputTokens: 0, outputTokens: 32_769, calls: 1 },
-      { inputTokens: 200_000, outputTokens: 1, calls: 1 },
     ]) {
       expect(estimateModelProfileApiScenario({ ...boundary, author })).toEqual({
         status: "unavailable",
@@ -151,5 +140,17 @@ describe("model profile public API scenario estimates", () => {
         authModes: { anthropic: "oauth", openai: "api-key" } as never,
       }),
     ).toEqual({ status: "unavailable", reason: "authentication-unavailable" });
+  });
+
+  it("does not estimate retired historical profile versions", () => {
+    expect(
+      estimateModelProfileApiScenario({
+        ...scenario(),
+        profiles: {
+          author: { id: "legacy-anthropic-author", version: 1 },
+          critic: standard.critic,
+        },
+      }),
+    ).toEqual({ status: "unavailable", reason: "unknown-profile" });
   });
 });

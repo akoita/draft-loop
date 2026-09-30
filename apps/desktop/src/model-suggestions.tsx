@@ -1,7 +1,5 @@
-import {
-  defaultModelProfileRegistry,
-  type ModelProfileRegistry,
-} from "@draft-loop/application/model-profiles";
+import { listModelProfileCatalog } from "@draft-loop/application/model-profile-catalog";
+import type { ModelProfileRegistry } from "@draft-loop/application/model-profiles";
 import type { AgentRole } from "@draft-loop/domain";
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import type { ModelCompany } from "./bridge.js";
@@ -19,6 +17,10 @@ export type ModelProfileSource = readonly ModelProfile[] | Pick<ModelProfileRegi
 
 function sourceProfiles(source: ModelProfileSource): readonly ModelProfile[] {
   return Array.isArray(source) ? source : (source as Pick<ModelProfileRegistry, "list">).list();
+}
+
+function activeCatalogProfiles(): ModelProfile[] {
+  return listModelProfileCatalog().map(({ profile }) => profile);
 }
 
 function readableRole(role: AgentRole): string {
@@ -89,7 +91,7 @@ export function hasFallbackModelSuggestions(
   ) {
     return false;
   }
-  return projectModelSuggestions(defaultModelProfileRegistry, company, "author").length > 0;
+  return projectModelSuggestions(activeCatalogProfiles(), company, "author").length > 0;
 }
 
 export function ModelSuggestionDatalist({
@@ -101,7 +103,7 @@ export function ModelSuggestionDatalist({
   readonly company: ModelCompany;
   readonly role: AgentRole;
 }) {
-  const suggestions = projectModelSuggestions(defaultModelProfileRegistry, company, role);
+  const suggestions = projectModelSuggestions(activeCatalogProfiles(), company, role);
   if (suggestions.length === 0) return null;
   return (
     <datalist id={id}>

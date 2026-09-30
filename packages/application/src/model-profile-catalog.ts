@@ -17,7 +17,7 @@ export interface ModelProfileCatalogEntry {
   readonly apiPricing: ModelProfileCatalogPricing;
 }
 
-export type ModelProfilePresetId = "economy" | "standard" | "premium";
+export type ModelProfilePresetId = "economy" | "standard";
 
 export interface ModelProfilePreset {
   readonly id: ModelProfilePresetId;
@@ -46,8 +46,7 @@ interface CatalogMetadata {
 }
 
 const anthropicOverview = "https://platform.claude.com/docs/en/models/overview";
-const anthropicSonnet45Overview = "https://platform.claude.com/docs/fr/models/sonnet-4-5/overview";
-const anthropicPricing = "https://platform.claude.com/docs/en/about-claude/pricing";
+const anthropicSonnet55Overview = "https://platform.claude.com/docs/en/models/sonnet-5-5/overview";
 
 function openAIModelPage(modelId: string): string {
   return `https://developers.openai.com/api/docs/models/${modelId}`;
@@ -55,33 +54,21 @@ function openAIModelPage(modelId: string): string {
 
 /** Metadata is pinned to exact profile versions; model IDs are not catalog keys. */
 const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
-  "legacy-anthropic-author@1": {
-    sources: [anthropicSonnet45Overview, anthropicPricing],
-    apiPricing: { inputUsdPerMillion: 3, outputUsdPerMillion: 15 },
-  },
-  "legacy-openai-critic@1": {
-    sources: [openAIModelPage("gpt-5.6-luna")],
-    apiPricing: { inputUsdPerMillion: 0.2, outputUsdPerMillion: 1.2 },
-  },
   "standard-anthropic-author@1": {
     sources: [anthropicOverview],
     apiPricing: { inputUsdPerMillion: 4, outputUsdPerMillion: 20 },
   },
-  "standard-openai-critic@1": {
-    sources: [openAIModelPage("gpt-6-sol")],
-    apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
-  },
-  "premium-anthropic-author@1": {
-    sources: [anthropicOverview],
-    apiPricing: { inputUsdPerMillion: 10, outputUsdPerMillion: 50 },
-  },
-  "premium-openai-critic@1": {
-    sources: [openAIModelPage("gpt-6-astra")],
-    apiPricing: { inputUsdPerMillion: 10, outputUsdPerMillion: 50 },
-  },
   "economy-openai-critic@1": {
     sources: [openAIModelPage("gpt-6-luna")],
     apiPricing: { inputUsdPerMillion: 0.1, outputUsdPerMillion: 0.5 },
+  },
+  "economy-anthropic-author@1": {
+    sources: [anthropicSonnet55Overview],
+    apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
+  },
+  "standard-openai-critic@2": {
+    sources: [openAIModelPage("gpt-6.1-sol")],
+    apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
   },
 };
 
@@ -93,24 +80,17 @@ const pricingScope = {
 const presetDefinitions: readonly ModelProfilePreset[] = [
   {
     id: "economy",
-    label: "Economy — current defaults",
+    label: "Economy — unvalidated",
     tier: "economy",
-    author: { id: "legacy-anthropic-author", version: 1 },
-    critic: { id: "legacy-openai-critic", version: 1 },
+    author: { id: "economy-anthropic-author", version: 1 },
+    critic: { id: "economy-openai-critic", version: 1 },
   },
   {
     id: "standard",
     label: "Standard — unvalidated",
     tier: "standard",
     author: { id: "standard-anthropic-author", version: 1 },
-    critic: { id: "standard-openai-critic", version: 1 },
-  },
-  {
-    id: "premium",
-    label: "Premium — unvalidated",
-    tier: "premium",
-    author: { id: "premium-anthropic-author", version: 1 },
-    critic: { id: "premium-openai-critic", version: 1 },
+    critic: { id: "standard-openai-critic", version: 2 },
   },
 ];
 
@@ -127,7 +107,12 @@ function detachedPreset(preset: ModelProfilePreset): ModelProfilePreset {
 }
 
 export function listModelProfileCatalog(): ModelProfileCatalogEntry[] {
-  return defaultModelProfileRegistry.list().map((profile) => {
+  const activeReferences = presetDefinitions.flatMap((preset) => [
+    { ...preset.author, role: "author" as const },
+    { ...preset.critic, role: "critic" as const },
+  ]);
+  return activeReferences.map(({ id, version, role }) => {
+    const profile = defaultModelProfileRegistry.resolve(id, version, role);
     const metadata = catalogMetadata[`${profile.id}@${profile.version}`];
     if (metadata === undefined) throw new ModelProfileCatalogError("missing-metadata");
     return {
