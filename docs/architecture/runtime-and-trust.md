@@ -66,10 +66,18 @@ At the provider adapter boundary, matching configured and requested profile
 snapshots are validated before SDK calls. Anthropic receives explicit effort
 and supported thinking controls; OpenAI receives explicit reasoning effort and
 rejects thinking modes it cannot represent. Provider-default controls remain
-omitted. Current workspace runs do not select profiles yet, so this does not
-change workspace or default model behavior. User-session transport controls
-in #670 and application integration in #671 remain pending. Promotion of the
-observed reference pair to workspace defaults also remains pending.
+omitted. The Claude user-session adapter also applies profile output limits,
+effort, and verified Sonnet 4.5 thinking modes after removing inherited CLI
+control overrides ([Claude Code environment-variable reference](https://code.claude.com/docs/en/env-vars)).
+
+Codex user sessions reject profiles pending #674 because the CLI adapter cannot
+enforce profile output ceilings before generation. The [Codex configuration
+reference](https://developers.openai.com/codex/config-reference/) documents its
+model reasoning-effort controls. The local adapter also rejects profiles;
+local profile support is outside this change. Current workspace runs do not
+select profiles, so these adapter changes do not alter workspace or default
+behavior. Application integration in #671 and promotion of the observed
+reference pair to workspace defaults remain pending.
 
 Context model selections can carry a validated, detached copy of a profile
 beside the exact provider/model identity and prompt-template version, and JSON
