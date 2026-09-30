@@ -70,14 +70,29 @@ omitted. The Claude user-session adapter also applies profile output limits,
 effort, and verified Sonnet 4.5 thinking modes after removing inherited CLI
 control overrides ([Claude Code environment-variable reference](https://code.claude.com/docs/en/env-vars)).
 
-Codex user sessions reject profiles pending #674 because the CLI adapter cannot
-enforce profile output ceilings before generation. The [Codex configuration
-reference](https://developers.openai.com/codex/config-reference/) documents its
-model reasoning-effort controls. The local adapter also rejects profiles;
-local profile support is outside this change. Current workspace runs do not
-select profiles, so these adapter changes do not alter workspace or default
-behavior. Application integration in #671 and promotion of the observed
-reference pair to workspace defaults remain pending.
+The supported routes for recorded model profiles are:
+
+| Provider route | Profile support |
+| --- | --- |
+| Anthropic API key | Output budget, effort, and supported thinking controls |
+| Anthropic Claude user session | Output budget and effort; budgeted/disabled thinking only for the verified Sonnet 4.5 alias and snapshot |
+| OpenAI API key | Output budget and effort; thinking must remain `provider-default` |
+| OpenAI Codex user session | Rejected before launch: no verified generation-output cap |
+| Local adapter | Rejected before invocation: profile controls are not implemented |
+
+[#674](https://github.com/akoita/draft-loop/issues/674) records this route
+restriction for application integration. Verification on 2026-09-30 found no
+supported generation-output cap in the current [Codex configuration
+reference](https://developers.openai.com/codex/config-reference/); the installed
+CLI is 0.159.1. Its post-generation usage check remains a legacy acceptance
+check, not a generation cap. Codex profiles remain unavailable until a control
+can be verified and implemented in a separate issue. Profile selection must
+reject an unsupported configured route visibly; it must not switch
+transports, authentication, or providers automatically.
+
+Current workspace runs do not select profiles, so these adapter changes do
+not alter workspace or default behavior. Application integration in #671 and
+promotion of the observed reference pair to workspace defaults remain pending.
 
 Context model selections can carry a validated, detached copy of a profile
 beside the exact provider/model identity and prompt-template version, and JSON
