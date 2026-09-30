@@ -9,6 +9,36 @@ Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
 candidate material out of the repository.
 
+## CLI model profiles
+
+Use `model-profiles` to print the registered profile catalog and pair presets
+as JSON. The output includes exact versions, roles, bounded API pricing scope,
+and separate quality and availability statuses. Catalog quality is unvalidated
+and account or provider availability has not been checked. Listing is
+content-free and does not call a provider.
+
+```sh
+pnpm --filter @draft-loop/cli start model-profiles
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
+pnpm --filter @draft-loop/cli start start ./workspace \
+  --author-profile standard-anthropic-author@1 \
+  --critic-profile standard-openai-critic@1
+```
+
+`start` accepts either one pair preset or both exact `--author-profile` and
+`--critic-profile` references. Each reference uses `profile-id@version` and
+must support its selected role. Economy is the current default pair;
+standard and premium are unvalidated opt-ins. A selected pair is recorded on
+that run only. It does not change workspace model defaults, transmission
+approval, or credentials. Resume uses the pair already recorded in run history.
+Omitting profile options preserves the existing workspace-configured behavior.
+
+Profile selection requires a supported configured authentication route. Current
+OpenAI Codex user-session and local routes reject profile selections; the CLI
+does not switch authentication modes automatically. Account and provider
+availability remains unchecked.
+
 ## Desktop diagnostics
 
 Packaged builds keep host-error diagnostics in `diagnostics/host-errors.jsonl`
