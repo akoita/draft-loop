@@ -190,11 +190,12 @@ async function writeSyntheticInputs(paths) {
   await chmod(paths.candidate, 0o600);
 }
 
-function launchLiveE2E(
+export function launchLiveE2E(
   paths,
   executable,
   models = resolveGateModels(),
   authModes = resolveGateAuthModes(process.env),
+  spawnProcess = spawn,
 ) {
   return new Promise((resolveLaunch, rejectLaunch) => {
     const packaged = executable !== undefined;
@@ -209,8 +210,8 @@ function launchLiveE2E(
     const command = packaged ? executable : pnpm;
     const commandArguments = packaged
       ? [...PACKAGED_LAUNCH_ARGUMENTS, `--user-data-dir=${paths.userData}`]
-      : ["--filter", "@draft-loop/desktop", "start"];
-    const child = spawn(command, commandArguments, {
+      : ["--filter", "@draft-loop/desktop", "start", "--", `--user-data-dir=${paths.userData}`];
+    const child = spawnProcess(command, commandArguments, {
       cwd: resolve(process.cwd()),
       env: {
         ...Object.fromEntries(
