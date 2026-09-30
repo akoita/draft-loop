@@ -1,12 +1,17 @@
 import { readFile } from "node:fs/promises";
 
 import { defaultRequiredSections } from "@draft-loop/application";
+import {
+  listModelProfileCatalog,
+  listModelProfilePresets,
+} from "@draft-loop/application/model-profile-catalog";
 import { Command } from "commander";
 import packageJson from "../package.json";
 
 import { printRejectedAuthorCaptureReport } from "./capture-report.js";
 import { isEntryPoint } from "./entry-point.js";
 import { independentReviewLines } from "./independent-review.js";
+import { resolveModelProfileSelection } from "./model-profile-selection.js";
 import { generateSanitizedPilotReport } from "./pilot-report.js";
 import {
   type AddKnowledgeSourceDirectoryMembersResult,
@@ -1366,6 +1371,22 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .showHelpAfterError();
 
   command
+    .command("model-profiles")
+    .description(
+      "Print the content-free JSON catalog and presets; quality is unvalidated and account/provider availability has not been checked",
+    )
+    .addHelpText(
+      "after",
+      "\nProfile quality is unvalidated and account/provider availability has not been checked. Listing is content-free and makes no provider calls.\n",
+    )
+    .action(() => {
+      writeJson(io, {
+        profiles: listModelProfileCatalog(),
+        presets: listModelProfilePresets(),
+      });
+    });
+
+  command
     .command("init")
     .description("Create a local workspace manifest")
     .argument("[workspace]", "workspace directory", ".")
@@ -1500,8 +1521,16 @@ export function createCli(dependencies: CliDependencies = {}): Command {
 
   command
     .command("start")
-    .description("Ingest local inputs and start a run, optionally from one reviewed opportunity")
+    .description(
+      "Start a run with optional exact profile versions pinned to this run; omitted profiles use workspace settings",
+    )
     .argument("[workspace]", "workspace directory", ".")
+    .option(
+      "--model-preset <id>",
+      "exact registered author/critic pair preset; standard and premium are unvalidated",
+    )
+    .option("--author-profile <id@version>", "exact registered author profile version")
+    .option("--critic-profile <id@version>", "exact registered critic profile version")
     .option("--opportunity-brief-id <id>", "exact reviewed opportunity brief id")
     .option(
       "--opportunity-version <number>",
@@ -1520,6 +1549,10 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       positiveIntegerOption,
     )
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
+    .addHelpText(
+      "after",
+      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles does not change workspace defaults.\n",
+    )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;
       const hasVersion = options.opportunityVersion !== undefined;
@@ -1541,8 +1574,14 @@ export function createCli(dependencies: CliDependencies = {}): Command {
           "--candidate-profile-id and --candidate-profile-version must be provided together.",
         );
       }
+      const modelProfiles = resolveModelProfileSelection({
+        modelPreset: options.modelPreset,
+        authorProfile: options.authorProfile,
+        criticProfile: options.criticProfile,
+      });
       await service.start({
         root: workspaceRoot(workspace),
+        ...(modelProfiles === undefined ? {} : { modelProfiles }),
         ...(hasBriefId
           ? {
               opportunityBrief: {
