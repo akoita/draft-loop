@@ -58,6 +58,7 @@ describe("desktop model profile picker rendering", () => {
     expect(legacyHtml).toContain(
       "Applied next-run selection: workspace model settings (legacy path)",
     );
+    expect(legacyHtml).not.toContain("Illustrative public API token-cost scenario");
     const html = renderPicker(supportState(true), economy);
     expect(html).toContain("Applied next-run profiles");
     expect(html).toContain("Economy — current defaults");
@@ -73,7 +74,8 @@ describe("desktop model profile picker rendering", () => {
     expect(html).toContain("Quality unvalidated; account availability unchecked");
     expect(html).toContain("CV quality has not been validated");
     expect(html).toContain("Authentication is never switched automatically.");
-    expect(html).not.toContain("USD");
+    expect(html).toContain("Public uncached API list rates");
+    expect(html).toContain("Combined scenario estimate");
     expect(modelProfileCatalog.length).toBeGreaterThan(0);
   });
 

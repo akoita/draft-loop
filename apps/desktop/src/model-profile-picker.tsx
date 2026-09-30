@@ -2,6 +2,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ModelProfileSupportResult } from "./bridge.js";
+import { ModelProfileBudget } from "./model-profile-budget.js";
 import {
   type ModelProfileSupportState,
   modelProfileApplyDisabledMessage,
@@ -367,6 +368,13 @@ export function ModelProfilePicker({
           );
         })}
       </div>
+      {selectedProfiles === null ? null : (
+        <ModelProfileBudget
+          references={selectedProfiles}
+          {...(supportResult === undefined ? {} : { authModes: supportResult.authModes })}
+          disabled={disabled}
+        />
+      )}
       {currentDraftReferences === null ? (
         <p className="model-profile-picker-status">{modelProfileApplyDisabledMessage}</p>
       ) : null}
