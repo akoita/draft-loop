@@ -3,7 +3,14 @@ import type { AgentRole, ModelCompany } from "./index.js";
 export const modelProfileTiers = ["premium", "standard", "economy"] as const;
 export type ModelProfileTier = (typeof modelProfileTiers)[number];
 
-export const modelProfileEfforts = ["low", "medium", "high", "xhigh", "max"] as const;
+export const modelProfileEfforts = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+  "provider-default",
+] as const;
 export type ModelProfileEffort = (typeof modelProfileEfforts)[number];
 
 export const modelProfileThinkingModes = ["provider-default", "disabled", "budgeted"] as const;
@@ -25,6 +32,7 @@ export interface BudgetedThinking {
 export type ModelProfileThinking = ProviderDefaultThinking | DisabledThinking | BudgetedThinking;
 
 export interface ModelProfileRuntime {
+  /** `provider-default` omits an effort override and makes no numeric or capability claim. */
   readonly effort: ModelProfileEffort;
   readonly maxOutputTokens: number;
   readonly thinking: ModelProfileThinking;

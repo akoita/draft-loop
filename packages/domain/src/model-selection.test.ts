@@ -106,6 +106,20 @@ describe("model selection profile snapshots", () => {
     });
   });
 
+  it("preserves provider-default effort in a detached context profile", () => {
+    const baseProfile = validProfile();
+    const profile: ModelProfile = {
+      ...baseProfile,
+      runtime: { ...baseProfile.runtime, effort: "provider-default" },
+    };
+    const snapshot = createContextSnapshot(validInput(profile));
+
+    const mutableProfile = profile as unknown as { runtime: { effort: string } };
+    mutableProfile.runtime.effort = "high";
+
+    expect(snapshot.modelConfiguration.author.profile?.runtime.effort).toBe("provider-default");
+  });
+
   it("preserves legacy selections without injecting a profile", () => {
     const snapshot = createContextSnapshot(validInput());
 
@@ -130,6 +144,13 @@ describe("model selection profile snapshots", () => {
     [
       "unknown profile roles",
       (profile: Record<string, unknown>) => ({ ...profile, roles: ["tool"] }),
+    ],
+    [
+      "unknown effort values",
+      (profile: Record<string, unknown>) => ({
+        ...profile,
+        runtime: { ...(profile.runtime as object), effort: "automatic" },
+      }),
     ],
     [
       "unsafe profile versions",
