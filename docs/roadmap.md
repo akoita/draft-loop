@@ -1453,10 +1453,11 @@ delivered the framework-free profile contract and strict schema. The remaining
    delivered recorded controls in API adapters,
    [#670](https://github.com/akoita/draft-loop/issues/670) handles authenticated
    user-session transports through
-   [#673](https://github.com/akoita/draft-loop/issues/673) (verified Claude
+   [#673](https://github.com/akoita/draft-loop/issues/673) (delivered Claude
    controls and unsupported-route rejection) and
-   [#674](https://github.com/akoita/draft-loop/issues/674) (unverified Codex
-   generation-cap support), then
+   [#674](https://github.com/akoita/draft-loop/issues/674) (supported-route
+   decision: API and verified Claude-session profile controls; Codex/local
+   profiles remain unavailable), then
    [#671](https://github.com/akoita/draft-loop/issues/671) pins profiles for
    new runs and preserves recorded-control and legacy resume. Each child stays
    within one execution boundary and may be split again before coding.
