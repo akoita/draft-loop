@@ -18,24 +18,35 @@ describe("registered model suggestions", () => {
     );
     const wrongRole = projectModelSuggestions(profiles, "openai", "author");
 
-    expect(authorSuggestions).toEqual([
-      expect.objectContaining({
-        modelId: "claude-sonnet-4-5",
-        tiers: ["economy"],
-        roles: ["author"],
-        registeredForRole: true,
-        label: "Economy tier · Author profile · registered for Author",
-      }),
-    ]);
-    expect(criticSuggestions).toEqual([
-      expect.objectContaining({
-        modelId: "gpt-5.6-luna",
-        tiers: ["economy"],
-        roles: ["critic"],
-        registeredForRole: true,
-      }),
-    ]);
-    expect(wrongRole[0]).toMatchObject({
+    expect(authorSuggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          modelId: "claude-sonnet-4-5",
+          tiers: ["economy"],
+          roles: ["author"],
+          registeredForRole: true,
+          label: "Economy tier · Author profile · registered for Author",
+        }),
+        expect.objectContaining({ modelId: "claude-opus-5-5", roles: ["author"] }),
+        expect.objectContaining({ modelId: "claude-fable-5-1", roles: ["author"] }),
+      ]),
+    );
+    expect(authorSuggestions.every(({ modelId }) => !modelId.startsWith("gpt-"))).toBe(true);
+    expect(criticSuggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          modelId: "gpt-5.6-luna",
+          tiers: ["economy"],
+          roles: ["critic"],
+          registeredForRole: true,
+        }),
+        expect.objectContaining({ modelId: "gpt-6-sol", roles: ["critic"] }),
+        expect.objectContaining({ modelId: "gpt-6-astra", roles: ["critic"] }),
+        expect.objectContaining({ modelId: "gpt-6-luna", roles: ["critic"] }),
+      ]),
+    );
+    const gptLunaWrongRole = wrongRole.find(({ modelId }) => modelId === "gpt-5.6-luna");
+    expect(gptLunaWrongRole).toMatchObject({
       modelId: "gpt-5.6-luna",
       registeredForRole: false,
       label: "Economy tier · Critic profile · not registered for Author",

@@ -14,6 +14,10 @@
     "./model-profiles": {
       "types": "./src/model-profiles.ts",
       "import": "./src/model-profiles.ts"
+    },
+    "./model-profile-catalog": {
+      "types": "./src/model-profile-catalog.ts",
+      "import": "./src/model-profile-catalog.ts"
     }
   },
   "files": [

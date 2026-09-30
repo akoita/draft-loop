@@ -123,10 +123,27 @@ role. These fields do not establish account, plan, or CV-quality suitability.
 Suggested IDs are not guaranteed to work with your account, plan, or CLI version.
 You can still enter any exact model ID, and successful live discovery remains
 the displayed source. The catalog was reviewed on 2026-09-30; CLI-specific live
-availability for these suggestions has not been reverified. Current entries
-are `claude-sonnet-4-5` (economy, author) and `gpt-5.6-luna` (economy, critic).
-Local endpoints remain free-text because the registry has no local-server IDs.
-Provider documentation: Anthropic and OpenAI.
+availability for these suggestions has not been reverified. Economy remains
+the current default pair; standard and premium pair presets are explicitly
+unvalidated opt-ins. All catalog quality entries are unvalidated and
+availability has not been checked; the review date documents metadata review,
+not a live provider probe. The registry also includes `gpt-6-luna` as an
+economy critic profile. Local endpoints remain free-text because there are no
+local server profile IDs.
+
+Catalog price metadata covers the standard, uncached text API at up to 200,000
+input tokens. It excludes cache, tool, batch, regional, and subscription
+pricing. Sources are the official [Anthropic model overview], [Sonnet 4.5
+overview], and [Anthropic pricing page], plus official OpenAI pages for
+[GPT-5.6 Luna], [GPT-6 Sol], [GPT-6 Astra], and [GPT-6 Luna].
+
+[Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
+[Sonnet 4.5 overview]: https://platform.claude.com/docs/fr/models/sonnet-4-5/overview
+[Anthropic pricing page]: https://platform.claude.com/docs/en/about-claude/pricing
+[GPT-5.6 Luna]: https://developers.openai.com/api/docs/models/gpt-5.6-luna
+[GPT-6 Sol]: https://developers.openai.com/api/docs/models/gpt-6-sol
+[GPT-6 Astra]: https://developers.openai.com/api/docs/models/gpt-6-astra
+[GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
 
 ## Writing policies
 

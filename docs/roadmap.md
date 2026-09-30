@@ -246,7 +246,7 @@ applications.
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
 | Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, registry, supported provider controls, and explicit run integration and desktop model editing implemented; profile selection next | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: contracts, provider controls, and #671 run integration delivered; desktop model changes delivered in #536; profile selection follows. Default promotion remains a separate decision. |
+| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, registry, supported provider controls, and explicit run integration and desktop model editing implemented; profile selection next | Offer versioned model profiles and tier presets while retaining current defaults | #511 rollup: contracts, provider controls, and #671 run integration delivered; desktop model changes delivered in #536; profile selection follows. Default promotion remains a separate decision. |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1427,9 +1427,9 @@ separate authorization.
 
 ### Now — Model profiles and tiers
 
-Replace the hard-coded workspace defaults (`claude-sonnet-4-5` and
-`gpt-5.6-luna`) and the per-adapter thinking assumptions with **versioned
-model profiles**. A profile holds:
+Make the current workspace defaults (`claude-sonnet-4-5` and `gpt-5.6-luna`)
+available as versioned economy profiles, alongside opt-in standard and premium
+profiles. A profile holds:
 
 - provider and exact model ID;
 - tier (`premium`, `standard`, or `economy`);
@@ -1472,14 +1472,21 @@ shared contracts.
 fallback IDs for setup and model editing, with tier/role labels, unrestricted
 typed IDs, and explicit availability and quality limitations.
 [#679](https://github.com/akoita/draft-loop/issues/679) adds local release
-validation. Model capability verification and the explicit workspace-default
-decision remain required before promoting presets. Earlier generalization
+validation. On 2026-09-30 the user approved retaining current defaults and
+finishing configurable profiles, tiers, pricing, and availability checks.
+Frontier options remain unvalidated for representative CV quality; tier labels
+are not quality recommendations. Default promotion moves to
+[#683](https://github.com/akoita/draft-loop/issues/683), which requires a separately
+admitted validation plan and explicit migration decision. Earlier generalization
 failures remain recorded; this milestone does not authorize another live cohort.
 Broad cross-profession and multilingual validation (#583) stays deferred.
 
-**Exit criterion:** New runs choose models only through recorded profiles.
-The reference and economy presets exist, existing runs resume unchanged, and
-the validated reference pair is the default.
+**Exit criterion:** Users can choose supported versioned author/critic profiles
+and economy, standard, or premium pair presets. Profile-selected runs record
+the full controls and resume from their snapshots; the legacy path remains
+available. The catalog discloses API pricing, estimated-budget assumptions,
+and availability and quality limitations. Current defaults stay unchanged;
+representative validation and default promotion are tracked separately.
 
 ### Later — Production-ready beta
 
