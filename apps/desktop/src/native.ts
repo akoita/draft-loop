@@ -30,6 +30,7 @@ import {
   type ProviderAuthMode,
   type ProviderAuthModeResult,
   type ProviderAuthModeStatus,
+  type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
 } from "./bridge.js";
 import {
@@ -73,6 +74,10 @@ export interface WorkspaceSetupCapabilities {
   readonly createWorkspace?: (
     name: string,
     selection?: WorkspaceModelSelection,
+  ) => Promise<DesktopReviewState>;
+  readonly configureModels?: (
+    workspaceId: string,
+    selection: Omit<WorkspaceConfigureModelsInput, "workspaceId">,
   ) => Promise<DesktopReviewState>;
   readonly listModels?: (provider: ModelDiscoveryProvider) => Promise<ModelsListResult>;
   readonly previewIndependence?: (
@@ -262,6 +267,22 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
       );
       return refresh();
     },
+    ...(capabilityPort.hasCapability("workspace.configure-models")
+      ? {
+          configureModels: async (
+            workspaceId: string,
+            selection: Omit<WorkspaceConfigureModelsInput, "workspaceId">,
+          ) => {
+            unwrap(
+              await capabilityPort.execute({
+                type: "workspace.configure-models",
+                input: { workspaceId, ...selection },
+              }),
+            );
+            return refresh();
+          },
+        }
+      : {}),
     createDemoWorkspace: async (name) => {
       const result = unwrap(
         await capabilityPort.execute({ type: "workspace.create", input: { name, mode: "demo" } }),

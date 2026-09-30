@@ -109,6 +109,13 @@ references. The collecting workspace includes a dedicated profile surface for
 derivation approval, immutable version selection, fact-value and issue-status
 editing, review, and exact reviewed-version selection for the next run.
 
+When the native host advertises `workspace.configure-models`, **Change models**
+opens the same discovery and independence checks used during workspace setup.
+Saving replaces the author and critic pair for future runs without changing the
+workspace name, round limit, or existing run records. A changed provider
+transmission identity requires fresh acknowledgement before a later run starts
+or resumes; saving settings never sends candidate material to a provider.
+
 ## Writing policies
 
 Writing policies are local, immutable versions. `policy activate` imports a

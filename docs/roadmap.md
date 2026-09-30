@@ -246,7 +246,7 @@ applications.
 | Previous | Structured-block author guidance ([milestone](https://github.com/akoita/draft-loop/milestone/15))                | [Guidance not effective](evaluation/structured-block-author-guidance.md): v3 drafts averaged 15.3 capture issues against 9.3 under v1 | Get the author to copy and claim structured fields verbatim from evidence             | The user chose to test a current-generation author model next |
 | Previous | Reference model pair ([milestone](https://github.com/akoita/draft-loop/milestone/16)) | [Candidate-accepted bounded normal observation](evaluation/author-model-revalidation.md#bounded-normal-reference-observation-601); automatic readiness false | Establish one working frontier Anthropic author and OpenAI critic reference | One medium-effort Opus 5.5 author and one low-effort GPT-6 Sol critic completed #601; 840 words, zero deterministic or critic errors, disclosed warnings accepted. No model-default or release decision. |
 | Previous | Software-engineering generalization ([milestone](https://github.com/akoita/draft-loop/milestone/18)) | Closed with indeterminate live observation; later bounded follow-ups also closed | Demonstrate the workflow on unfamiliar engineers without candidate-specific code patches | Historical coverage exits remain unmet; frozen cohorts cannot be rerun under their consumed admissions. |
-| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, registry, supported provider controls, and explicit run integration implemented; selection UI next | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: contracts and #669/#670 complete; #671 run integration prepared; user-facing selection follows. Default promotion remains a separate decision. |
+| Now | Model profiles and tiers ([milestone](https://github.com/akoita/draft-loop/milestone/17)) | Profile contracts, registry, supported provider controls, and explicit run integration and desktop model editing implemented; profile selection next | Replace hard-coded defaults with versioned model profiles and tier presets | #511 rollup: contracts, provider controls, and #671 run integration delivered; desktop model changes delivered in #536; profile selection follows. Default promotion remains a separate decision. |
 | Later    | Production-ready beta                                                                                             | Partial implementation; not production-validated     | Distribute a safe, dependable desktop application                                     | Signed installers, safe migrations, recovery, accessibility, and platform evidence                                      |
 | Later    | Controlled expansion                                                                                              | Prototypes and components; gated                     | Extend a proven workflow without weakening trust boundaries                           | Core CV evidence plus separate integration, privacy, and threat decisions                                               |
 
@@ -1448,7 +1448,7 @@ delivered the framework-free profile contract and strict schema. The remaining
    effort override without inventing a numeric setting.
 3. [#663](https://github.com/akoita/draft-loop/issues/663) delivered a provider-free,
    versioned application registry with verified legacy economy presets.
-4. [#664](https://github.com/akoita/draft-loop/issues/664) is the runtime
+4. [#664](https://github.com/akoita/draft-loop/issues/664) delivered the runtime
    integration rollup: [#669](https://github.com/akoita/draft-loop/issues/669)
    delivered recorded controls in API adapters,
    [#670](https://github.com/akoita/draft-loop/issues/670) handles authenticated
@@ -1458,15 +1458,19 @@ delivered the framework-free profile contract and strict schema. The remaining
    [#674](https://github.com/akoita/draft-loop/issues/674) (supported-route
    decision: API and verified Claude-session profile controls; Codex/local
    profiles remain unavailable), then
-   [#671](https://github.com/akoita/draft-loop/issues/671) adds explicit profile
+   [#671](https://github.com/akoita/draft-loop/issues/671) delivered explicit profile
    selection to shared begin/start contracts and preserves recorded-control
-   and legacy resume. Each child stays
-   within one execution boundary and may be split again before coding.
+   and legacy resume.
 
 Shared application callers can select exact profile versions for a run. Profiled
 runs persist the full controls and reuse them on resume; unprofiled runs retain
-the existing path. User-facing selection (#84), including desktop model changes
-(#536) and unavailable-list suggestions (#527), follows these shared contracts. Model capability verification and the explicit workspace-default
+the existing path. Desktop model changes (#536) reuse setup discovery and independence checks,
+apply to future runs, and refresh transmission acknowledgement. User-facing
+profile selection (#84) and unavailable-list suggestions (#527) follow these
+shared contracts.
+The suggestion work is split into [#678](https://github.com/akoita/draft-loop/issues/678)
+for the UI and [#679](https://github.com/akoita/draft-loop/issues/679) for local
+release validation. Model capability verification and the explicit workspace-default
 decision remain required before promoting presets. Earlier generalization
 failures remain recorded; this milestone does not authorize another live cohort.
 Broad cross-profession and multilingual validation (#583) stays deferred.

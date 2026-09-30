@@ -423,3 +423,77 @@ describe("desktop native profile capabilities", () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 });
+
+describe("desktop workspace model settings capability", () => {
+  it("configures the exact full pair and reloads the refreshed preflight", async () => {
+    const state = createFixtureReviewState();
+    const refreshed = {
+      ...state,
+      providerTransmissionPreflight: {
+        ...state.providerTransmissionPreflight,
+        acknowledged: false,
+        acknowledgedAt: null,
+        fingerprint: "c".repeat(64),
+      },
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
+      if (command.type === "review.load") return { ok: true, value: refreshed };
+      if (command.type === "workspace.configure-models") {
+        return {
+          ok: true,
+          value: {
+            workspaceId: state.workspaceId,
+            authorCompany: "anthropic",
+            authorModel: "claude-sonnet-4-5",
+            criticCompany: "openai",
+            criticModel: "gpt-5.6-luna",
+            localEndpoint: null,
+          },
+        };
+      }
+      throw new Error("Unexpected command in native model-settings test.");
+    });
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["workspace.configure-models", "review.load"],
+        invoke,
+      }),
+    );
+
+    await expect(
+      port.configureModels?.(state.workspaceId, {
+        authorCompany: "anthropic",
+        authorModel: "claude-sonnet-4-5",
+        criticCompany: "openai",
+        criticModel: "gpt-5.6-luna",
+      }),
+    ).resolves.toMatchObject({
+      workspaceId: state.workspaceId,
+      providerTransmissionPreflight: { acknowledged: false, fingerprint: "c".repeat(64) },
+    });
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual([
+      {
+        type: "workspace.configure-models",
+        input: {
+          workspaceId: state.workspaceId,
+          authorCompany: "anthropic",
+          authorModel: "claude-sonnet-4-5",
+          criticCompany: "openai",
+          criticModel: "gpt-5.6-luna",
+        },
+      },
+      { type: "review.load", input: {} },
+    ]);
+  });
+
+  it("omits configuration when the host lacks its capability", () => {
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load"],
+        invoke: vi.fn<NativeBridge["invoke"]>(),
+      }),
+    );
+
+    expect(port.configureModels).toBeUndefined();
+  });
+});
