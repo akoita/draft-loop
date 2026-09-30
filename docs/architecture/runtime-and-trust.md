@@ -62,10 +62,14 @@ The economy `legacy-openai-critic` preset is critic-only and describes OpenAI's
 limits were verified on 2026-09-30. These aliases and their metadata do not pin
 provider-side model weights or claim account availability or quality.
 
-Provider-specific translation of profile controls remains pending in #664;
-registry profiles do not change live runtime, workspace selection, or default
-model behavior. Promotion of the observed reference pair to workspace defaults
-also remains pending.
+At the provider adapter boundary, matching configured and requested profile
+snapshots are validated before SDK calls. Anthropic receives explicit effort
+and supported thinking controls; OpenAI receives explicit reasoning effort and
+rejects thinking modes it cannot represent. Provider-default controls remain
+omitted. Current workspace runs do not select profiles yet, so this does not
+change workspace or default model behavior. User-session transport controls
+in #670 and application integration in #671 remain pending. Promotion of the
+observed reference pair to workspace defaults also remains pending.
 
 Context model selections can carry a validated, detached copy of a profile
 beside the exact provider/model identity and prompt-template version, and JSON
