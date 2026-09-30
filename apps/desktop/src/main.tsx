@@ -13,6 +13,7 @@ import type {
   FindingDecision,
   ReviewAction,
 } from "./model.js";
+import { hasFallbackModelSuggestions, ModelSuggestionDatalist } from "./model-suggestions.js";
 import {
   createDesktopReviewPort,
   DesktopBridgeError,
@@ -471,6 +472,11 @@ function ModelSideFields({
   const label = modelSideLabels[side];
   const mode = modelInputMode(company, discovery, localEndpointNamed, typingOwnModel);
   const note = modelDiscoveryNote(company, discovery, localEndpointNamed, editMode);
+  const fallbackSuggestions = hasFallbackModelSuggestions(
+    company,
+    discovery.status,
+    discovery.status === "ready" ? discovery.models.length : 0,
+  );
   const listed = discovery.status === "ready" ? discovery.models : [];
   const filtered = filterModelOptions(listed, filter, model);
   const filterNoteId = `setup-model-filter-note-${side}`;
@@ -558,10 +564,18 @@ function ModelSideFields({
             disabled={disabled}
             placeholder="model id"
             aria-label={`${label} model`}
+            {...(fallbackSuggestions ? { list: `setup-model-suggestions-${side}` } : {})}
             onChange={(event) => onModelChange(event.target.value)}
           />
         )}
       </label>
+      {mode === "text" && fallbackSuggestions ? (
+        <ModelSuggestionDatalist
+          id={`setup-model-suggestions-${side}`}
+          company={company}
+          role={side}
+        />
+      ) : null}
       {note === "" ? null : <p className="setup-note">{note}</p>}
     </fieldset>
   );
@@ -617,6 +631,15 @@ export function WorkspaceSetupForm({
   const blocker = editMode
     ? workspaceModelSettingsBlocker(draft, preview)
     : workspaceSetupBlocker(draft, preview);
+  const showSuggestionNotice = (side: ModelSide) => {
+    const company = side === "author" ? draft.authorCompany : draft.criticCompany;
+    const discoveryState = discovery[company];
+    return hasFallbackModelSuggestions(
+      company,
+      discoveryState.status,
+      discoveryState.status === "ready" ? discoveryState.models.length : 0,
+    );
+  };
   return (
     <form
       className="setup-form"
@@ -670,6 +693,15 @@ export function WorkspaceSetupForm({
           {errorMessage}
         </p>
       )}
+      {showSuggestionNotice("author") || showSuggestionNotice("critic") ? (
+        <p className="setup-note model-suggestion-note">
+          Suggestions show only the tier and role registered in DraftLoop; they do not establish
+          account or plan availability or CV quality. IDs are not guaranteed to work with your
+          account, plan, or CLI version. You may type any exact model id. CLI-specific live
+          availability for these suggestions has not been reverified; catalog review date:
+          2026-09-30. Provider documentation: Anthropic and OpenAI.
+        </p>
+      ) : null}
       <div className="setup-sides">
         <ModelSideFields
           side="author"

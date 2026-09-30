@@ -116,6 +116,18 @@ workspace name, round limit, or existing run records. A changed provider
 transmission identity requires fresh acknowledgement before a later run starts
 or resumes; saving settings never sends candidate material to a provider.
 
+When provider model discovery fails or returns no IDs, the setup and **Change
+models** forms offer exact IDs from the default application profile registry.
+Labels show only each entry's configured tier and registered author or critic
+role. These fields do not establish account, plan, or CV-quality suitability.
+Suggested IDs are not guaranteed to work with your account, plan, or CLI version.
+You can still enter any exact model ID, and successful live discovery remains
+the displayed source. The catalog was reviewed on 2026-09-30; CLI-specific live
+availability for these suggestions has not been reverified. Current entries
+are `claude-sonnet-4-5` (economy, author) and `gpt-5.6-luna` (economy, critic).
+Local endpoints remain free-text because the registry has no local-server IDs.
+Provider documentation: Anthropic and OpenAI.
+
 ## Writing policies
 
 Writing policies are local, immutable versions. `policy activate` imports a

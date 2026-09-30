@@ -1355,6 +1355,96 @@ describe("desktop workspace setup", () => {
     expect(html).not.toContain('type="submit" disabled=""');
   });
 
+  it("offers registered exact ids only in unavailable or empty discovery fallbacks", () => {
+    const unavailable: Readonly<Record<ModelCompany, ModelDiscoveryState>> = {
+      ...idleDiscovery,
+      anthropic: { status: "unavailable", reason: "Discovery is unavailable." },
+      openai: { status: "unavailable", reason: "Discovery is unavailable." },
+    };
+    const draftWithArbitraryIds = {
+      ...named,
+      authorModel: "private/deployment:rev-7",
+      criticModel: "custom-critic-model",
+    };
+    const setup = renderForm(draftWithArbitraryIds, { status: "idle" }, unavailable);
+    const edit = renderForm(
+      draftWithArbitraryIds,
+      { status: "idle" },
+      unavailable,
+      undefined,
+      true,
+    );
+    const wrongRole = renderForm(
+      { ...draftWithArbitraryIds, authorCompany: "openai" },
+      { status: "idle" },
+      unavailable,
+    );
+    const empty = renderForm(
+      draftWithArbitraryIds,
+      { status: "idle" },
+      {
+        ...idleDiscovery,
+        anthropic: { status: "ready", models: [], source: "live", truncated: false },
+        openai: { status: "ready", models: [], source: "live", truncated: false },
+      },
+    );
+
+    for (const html of [setup, edit, empty]) {
+      expect(html).toContain('list="setup-model-suggestions-author"');
+      expect(html).toContain(
+        'value="claude-sonnet-4-5" label="Economy tier · Author profile · registered for Author"',
+      );
+      expect(html).toContain(
+        'value="gpt-5.6-luna" label="Economy tier · Critic profile · registered for Critic"',
+      );
+      expect(html).toContain('value="private/deployment:rev-7"');
+      expect(html).toContain('value="custom-critic-model"');
+      expect(html).toContain(
+        "CLI-specific live availability for these suggestions has not been reverified",
+      );
+      expect(html).toContain("account or plan availability or CV quality");
+    }
+    expect(edit).not.toContain("Workspace name");
+    expect(wrongRole).toContain(
+      'value="gpt-5.6-luna" label="Economy tier · Critic profile · not registered for Author"',
+    );
+  });
+
+  it("keeps successful discovery canonical and leaves local endpoints typed", () => {
+    const discovered: Readonly<Record<ModelCompany, ModelDiscoveryState>> = {
+      ...idleDiscovery,
+      anthropic: {
+        status: "ready",
+        models: ["claude-from-live"],
+        source: "live",
+        truncated: false,
+      },
+      openai: {
+        status: "ready",
+        models: ["gpt-from-live"],
+        source: "live",
+        truncated: false,
+      },
+    };
+    const live = renderForm(named, { status: "idle" }, discovered);
+    const local = renderForm(
+      {
+        ...named,
+        authorCompany: "local",
+        criticCompany: "local",
+        localEndpoint: "http://127.0.0.1:11434/v1",
+      },
+      { status: "idle" },
+      { ...idleDiscovery, local: { status: "unavailable", reason: "Use a local endpoint." } },
+    );
+
+    expect(live).toContain('value="claude-from-live"');
+    expect(live).toContain('value="gpt-from-live"');
+    expect(live).not.toContain("setup-model-suggestions");
+    expect(local).not.toContain("setup-model-suggestions");
+    expect(local).toContain('aria-label="Local model server address"');
+  });
+
   it("reveals a local endpoint field and states what a local address may be", () => {
     const local: WorkspaceSetupDraft = { ...named, authorCompany: "local", authorModel: "qwen3" };
 
