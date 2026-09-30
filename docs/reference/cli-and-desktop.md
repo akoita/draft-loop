@@ -158,6 +158,16 @@ and provider-transmission acknowledgement is still required. OpenAI Codex
 user-session routes do not support these profiles, and authentication is never
 switched automatically.
 
+For a selected draft pair, the picker also provides an editable API token-cost
+scenario based on the catalog's dated public, uncached text API rates. Its
+initial 10,000-input/1,000-output-token example plans two author calls and one
+critic call; change the values to describe another scenario. The estimate is
+not a forecast, hard cap, or bill and does not set runtime token budgets. It
+excludes extra calls and retries, input growth, cache, tools, batch, regional
+premiums, and unsupported long context. User-session routes show public rates
+only and do not estimate subscription quota or charges. The reusable
+application boundary is `@draft-loop/application/model-profile-budget`.
+
 **Use workspace models** keeps the saved provider/model destinations and uses
 legacy controls for the next start. The next-run profile choice belongs to the
 current window; manual model saves and workspace changes clear it.
