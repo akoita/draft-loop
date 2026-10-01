@@ -48,6 +48,10 @@ const authorRevisionInstructionsV5 = authorRevisionInstructions.replace(
   "Copy dates, titles, employers, and names exactly as the cited evidence states them.",
   "Copy dates, titles, employers, and structured names exactly as the cited evidence states them; descriptive capitalized multiword terms may vary only when every whole-word component occurs in one cited chunk and at least two components appear together there.",
 );
+const authorSystemPromptV6 = authorSystemPromptV5.replace(
+  "preserve chronology and factual wording",
+  "preserve chronology and factual meaning; rewrite editable body prose without changing protected factual values",
+);
 
 const claimCoverageInstructions =
   " Cover every factual span of block text with substantive claims using the same contiguous wording. A narrower claim cannot stand in for a broader sentence. Only section labels and explicit missing-data notices may remain outside claims. For substantive_text_uncovered retry feedback, cover the entire supported assertion or remove unsupported prose from the block; do not merely edit the claim list to hide it.";
@@ -60,6 +64,9 @@ const compositionalTerminologyInstructions =
 
 const compositionalTerminologyRevisionInstructions =
   " For descriptive capitalized multiword terms only, word order or grouping may vary when every whole-word component appears in the same cited chunk and at least two components appear together there; this lexical support does not establish meaning, which remains for independent critique. Preserve exact dates and structured heading, contact, skills and tool-list fields, and keep each factual claim cited to supporting retrieved evidence.";
+
+const professionalCvProseInstructions =
+  " For editable body prose, write concise professional CV language: a coherent summary and accomplishment bullets, not a source diary, status report, or third-person reviewer annotation. Rewrite supported descriptive sentences into candidate-focused CV prose, and use action-led accomplishment bullets. Group related supported facts into coherent summaries or bullets, preserve the candidate's agency, and avoid first-person and third-person narration. Retain material scope and limits from the evidence, including production versus staging and whether a credential was earned, in progress, or only planned. Do not apply job-specific formatting or selection rules, or invent ownership, outcomes, numbers, or technologies. All factual details remain subject to the evidence and claim-coverage rules above.";
 
 interface AuthorPromptTemplate {
   /** Version-specific guidance placed after the shared claim-coverage instructions. */
@@ -86,6 +93,10 @@ const authorPromptTemplateVersions = Object.freeze({
     `${structuredFieldInstructions}${compositionalTerminologyInstructions}`,
     32_768,
   ),
+  "cli-author-v6": authorPromptTemplate(
+    `${structuredFieldInstructions}${compositionalTerminologyInstructions}${professionalCvProseInstructions}`,
+    32_768,
+  ),
 } as const satisfies Readonly<Record<string, AuthorPromptTemplate>>);
 
 /**
@@ -95,7 +106,7 @@ const authorPromptTemplateVersions = Object.freeze({
  * author version to `createAuthorAdjudicationPrompt`, never this value.
  */
 export function promptTemplateVersion(role: "author" | "critic"): string {
-  return role === "author" ? "cli-author-v5" : "cli-critic-v3";
+  return role === "author" ? "cli-author-v6" : "cli-critic-v3";
 }
 
 /** The template of a known author version; unknown versions fail closed. */
@@ -145,12 +156,20 @@ export function createAuthorAdjudicationPrompt(
     requestedOutputBudget === undefined
       ? template.outputBudget
       : { maxOutputTokens: requestedOutputBudget };
-  const isV5 = authorPromptTemplateVersion === "cli-author-v5";
-  const shared = `${isV5 ? authorSystemPromptV5 : authorSystemPrompt}${authorOutputBudgetInstructions(outputBudget)}${isV5 ? authorGroundingGuideInstructionsV5 : authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
+  const usesV5FactualityRules =
+    authorPromptTemplateVersion === "cli-author-v5" ||
+    authorPromptTemplateVersion === "cli-author-v6";
+  const systemPrompt =
+    authorPromptTemplateVersion === "cli-author-v6"
+      ? authorSystemPromptV6
+      : usesV5FactualityRules
+        ? authorSystemPromptV5
+        : authorSystemPrompt;
+  const shared = `${systemPrompt}${authorOutputBudgetInstructions(outputBudget)}${usesV5FactualityRules ? authorGroundingGuideInstructionsV5 : authorGroundingGuideInstructions}${claimCoverageInstructions}${guidance}`;
   const revisionInstructions =
     revision === undefined
       ? ""
-      : isV5
+      : usesV5FactualityRules
         ? `${authorRevisionInstructionsV5}${compositionalTerminologyRevisionInstructions}`
         : authorRevisionInstructions;
   const retry = `${retryFeedback === undefined ? "" : authorRetryInstructions}${revisionInstructions}`;

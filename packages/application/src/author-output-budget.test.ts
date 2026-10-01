@@ -133,7 +133,7 @@ it("retains the exact per-generation cap and adjudication through a factuality r
     const input = JSON.parse(options.stdin) as Record<string, unknown>;
     inputs.push(input);
     const cap = Number(options.env.CLAUDE_CODE_MAX_OUTPUT_TOKENS);
-    // New runs record cli-author-v5, whose budget is 32,768 tokens.
+    // New runs record cli-author-v6, whose budget is 32,768 tokens.
     expect(cap).toBe(32768);
     expect(input.outputBudget).toEqual({ maxOutputTokens: cap });
     const system = args[args.indexOf("--system-prompt") + 1] ?? "";
