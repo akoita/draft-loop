@@ -166,13 +166,22 @@ citations, and changed exact invariants such as dates, metrics, credentials,
 links, employers, and multi-word titles. Missing configured sections remain
 visible to the existing deterministic completeness check.
 
-New runs record author template `cli-author-v5`, which states and sends a
+New runs record author template `cli-author-v6`, which states and sends a
 32,768-token output ceiling for the structured proposal, including repeated claim
 text and JSON overhead. This is a ceiling, not a target, and permits more output
 and potentially higher request cost. It does not raise reasoning effort or alter
 model selection, critique, grounding or approval. Stored author versions remain
 fixed on resume and retries: v1/v2 retain 8,192 tokens, v3 retains 16,384, and
-v4/v5 retain 32,768.
+v4/v5/v6 retain 32,768.
+
+Author v6 asks for concise professional body prose: a coherent summary and
+accomplishment bullets that group related supported facts instead of repeating
+source notes, status reports, or reviewer commentary. It preserves documented
+agency and limits such as production versus staging and credential status. It
+instructs the author to rewrite supported descriptive sentences into
+candidate-focused prose and action-led bullets while retaining factual meaning
+and protected values. The guidance does not add job-specific rules or relax
+factual grounding and exact structured-field requirements.
 
 New runs record critic template `cli-critic-v3`. It retains evidence-linked
 claim review for attribution, work maturity, and credential scope, and also

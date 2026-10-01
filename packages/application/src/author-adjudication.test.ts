@@ -245,8 +245,8 @@ const adjudicationInstruction = "This is an adjudicated revision.";
 const retryInstruction = "When retryFeedback is present";
 
 describe("author prompt template versions", () => {
-  it("records v5 for new author runs and v3 for the critic", () => {
-    expect(promptTemplateVersion("author")).toBe("cli-author-v5");
+  it("records v6 for new author runs and v3 for the critic", () => {
+    expect(promptTemplateVersion("author")).toBe("cli-author-v6");
     expect(promptTemplateVersion("critic")).toBe("cli-critic-v3");
   });
 
@@ -382,7 +382,88 @@ describe("author prompt template versions", () => {
     expect(v4.systemPrompt).not.toContain("word order or grouping may vary");
   });
 
-  it.each(["cli-author-v2", "cli-author-v3", "cli-author-v4", "cli-author-v5"])(
+  it("pins the pre-v6 initial v5 prompt bytes", () => {
+    const v5 = createAuthorAdjudicationPrompt("cli-author-v5", undefined);
+
+    expect([v5.systemPrompt.length, sha256(v5.systemPrompt)]).toEqual([
+      4_376,
+      "7b4440b304689db57a2c6a780b70a7384ce770018b120275cee93d31bc5896b7",
+    ]);
+    expect(v5.providerInput.outputBudget).toEqual({ maxOutputTokens: 32_768 });
+  });
+
+  it("adds professional CV body guidance in v6 while retaining every v5 prompt variant", () => {
+    const pending = pendingAdjudication();
+    const feedback = retryFeedback();
+    const guide = groundingGuide();
+    const revision = {
+      rejectedProposal: { sections: [] },
+      report: [
+        {
+          path: "sections.0.blocks.0.claims.0.text",
+          code: "factual_invariant_violation",
+          text: "Rejected claim",
+          problems: ['protected value "2023" is not stated in cited evidence'],
+        },
+      ],
+    };
+    const variants = [
+      [undefined, undefined, [], undefined] as const,
+      [pending, undefined, guide, undefined] as const,
+      [undefined, feedback, guide, undefined] as const,
+      [pending, feedback, guide, revision] as const,
+    ];
+
+    for (const [carrier, retry, groundingGuide, revisionInput] of variants) {
+      const v5 = createAuthorAdjudicationPrompt(
+        "cli-author-v5",
+        carrier,
+        retry,
+        groundingGuide,
+        revisionInput,
+      );
+      const v6 = createAuthorAdjudicationPrompt(
+        "cli-author-v6",
+        carrier,
+        retry,
+        groundingGuide,
+        revisionInput,
+      );
+      expect(v6.providerInput).toEqual(v5.providerInput);
+      expect(v6.providerInput.outputBudget).toEqual({ maxOutputTokens: 32_768 });
+      expect(
+        v6.systemPrompt
+          .replace(/ For editable body prose,[\s\S]*?claim-coverage rules above\./u, "")
+          .replace(
+            "preserve chronology and factual meaning; rewrite editable body prose without changing protected factual values",
+            "preserve chronology and factual wording",
+          ),
+      ).toBe(v5.systemPrompt);
+    }
+
+    const v6 = createAuthorAdjudicationPrompt("cli-author-v6", undefined);
+    expect(v6.systemPrompt).toContain(
+      "preserve chronology and factual meaning; rewrite editable body prose without changing protected factual values",
+    );
+    expect(v6.systemPrompt).toContain("write concise professional CV language");
+    expect(v6.systemPrompt).toContain(
+      "not a source diary, status report, or third-person reviewer annotation",
+    );
+    expect(v6.systemPrompt).toContain(
+      "Rewrite supported descriptive sentences into candidate-focused CV prose",
+    );
+    expect(v6.systemPrompt).toContain("use action-led accomplishment bullets");
+    expect(v6.systemPrompt).toContain("avoid first-person and third-person narration");
+    expect(v6.systemPrompt).toContain("production versus staging");
+    expect(v6.systemPrompt).toContain(
+      "whether a credential was earned, in progress, or only planned",
+    );
+    expect(v6.systemPrompt).toContain("Do not apply job-specific formatting or selection rules");
+    expect(v6.systemPrompt).toContain("Do not rephrase, abbreviate, translate, reorder words");
+    expectEvidenceGroundingContract(v6.systemPrompt);
+  });
+
+  it.each(["cli-author-v2", "cli-author-v3", "cli-author-v4", "cli-author-v5", "cli-author-v6"])(
     "adds structured-field guidance to %s after claim coverage and before revision and retry text",
     (version) => {
       const feedback = retryFeedback();
