@@ -141,6 +141,11 @@ application schema and source-grounding checks remain authoritative. Requests
 require exact contiguous evidence quotes, unique fact and issue references,
 and grounded facts for both sides of any conflict.
 
+The extractor may remove one outer Markdown emphasis pair from a quote only
+when the remaining exact source text contains the entire unchanged fact value.
+Other quote mismatches remain fail-closed; fact values and source text are not
+rewritten.
+
 Coverage instructions direct the extractor to scan every supplied source
 rather than return only highlights; they do not guarantee that every supported
 fact will be found. The 32,768-token extraction ceiling applies only to API-key
