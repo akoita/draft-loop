@@ -146,6 +146,8 @@ If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
 preparation, response format, and grounding failures have distinct messages.
+An explicit Anthropic credit-balance or enforced spending-limit response shows
+billing guidance; the app does not estimate charges from failed attempts.
 
 The desktop distinguishes a saved extraction failure, an empty profile, a draft
 that still needs human review, open issue blockers, and a reviewed version. An
