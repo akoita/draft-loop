@@ -27,12 +27,18 @@ function material(
   };
 }
 
-function skillFact(key: string, value: string, sourceId: string, subjectKey?: string) {
+function skillFact(
+  key: string,
+  value: string,
+  sourceId: string,
+  subjectKey?: string,
+  field = "name",
+) {
   return {
     key,
     category: "skill",
     ...(subjectKey === undefined ? {} : { subjectKey }),
-    field: "name",
+    field,
     value,
     evidence: [{ sourceId, quote: value }],
   };
@@ -90,7 +96,7 @@ describe("canonical candidate profile skill conflict detection", () => {
     ]);
   });
 
-  it("reports differing skill values as a conflict when they share a subject", async () => {
+  it("keeps differing skill collection values even when they share a subject", async () => {
     const first = material("source-a", "TypeScript");
     const second = material("source-b", "React");
     const result = await extract(
@@ -101,14 +107,32 @@ describe("canonical candidate profile skill conflict detection", () => {
       ],
     );
 
-    const conflict = result.issues.find((issue) => issue.code === "conflict-value");
     expect(result.facts).toHaveLength(2);
-    expect(conflict?.factIds).toHaveLength(2);
-    expect(conflict?.sourceRefs).toEqual([first.reference, second.reference]);
     expect(new Set(result.facts.map((fact) => fact.subjectId)).size).toBe(1);
+    expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
   });
 
-  it("preserves provider-proposed conflicts for unscoped skill facts", async () => {
+  it("keeps duplicate warnings for scoped skills with the same value", async () => {
+    const first = material("source-a", "TypeScript");
+    const second = material("source-b", "TypeScript", "b".repeat(64));
+    const result = await extract(
+      [first, second],
+      [
+        skillFact("typescript-a", "TypeScript", first.id, "skill-set"),
+        skillFact("typescript-b", "TypeScript", second.id, "skill-set"),
+      ],
+    );
+
+    expect(result.facts).toHaveLength(2);
+    expect(result.issues.filter((issue) => issue.code === "duplicate")).toHaveLength(1);
+    expect(result.issues.some((issue) => issue.code === "conflict-value")).toBe(false);
+    expect(result.issues.find((issue) => issue.code === "duplicate")?.sourceRefs).toEqual([
+      first.reference,
+      second.reference,
+    ]);
+  });
+
+  it("preserves provider-proposed conflicts for unscoped skills", async () => {
     const first = material("source-a", "TypeScript");
     const second = material("source-b", "React");
     const additional = material("source-c", "Skills documented");
@@ -126,6 +150,36 @@ describe("canonical candidate profile skill conflict detection", () => {
 
     const conflicts = result.issues.filter((issue) => issue.code === "conflict-value");
     expect(result.facts).toHaveLength(2);
+    expect(conflicts).toHaveLength(1);
+    expect(conflicts[0]?.sourceRefs).toEqual([
+      first.reference,
+      second.reference,
+      additional.reference,
+    ]);
+  });
+
+  it("preserves provider-proposed proficiency conflicts for scoped skills", async () => {
+    const first = material("source-a", "Advanced TypeScript proficiency");
+    const second = material("source-b", "Beginner TypeScript proficiency");
+    const additional = material("source-c", "Skills documented");
+    const result = await extract(
+      [first, second, additional],
+      [
+        skillFact("skill-a", "Advanced", first.id, "typescript", "proficiency"),
+        skillFact("skill-b", "Beginner", second.id, "typescript", "proficiency"),
+      ],
+      [
+        {
+          code: "conflict-value",
+          factKeys: ["skill-a", "skill-b"],
+          sourceIds: [first.id, second.id, additional.id],
+        },
+      ],
+    );
+
+    const conflicts = result.issues.filter((issue) => issue.code === "conflict-value");
+    expect(result.facts).toHaveLength(2);
+    expect(new Set(result.facts.map((fact) => fact.subjectId)).size).toBe(1);
     expect(conflicts).toHaveLength(1);
     expect(conflicts[0]?.sourceRefs).toEqual([
       first.reference,
