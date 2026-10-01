@@ -147,6 +147,7 @@ import type {
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport } from "../model-profile-bridge.js";
+import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 import {
@@ -752,7 +753,12 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
       : null;
   return {
     code,
-    explanation: providerFailureExplanations[code],
+    explanation: providerSessionModelFeedback({
+      code,
+      provider: snapshot.lastError.provider,
+      diagnostics: snapshot.lastError.diagnostics ?? [],
+      fallbackExplanation: providerFailureExplanations[code],
+    }),
     provider: snapshot.lastError.provider,
     model: snapshot.lastError.modelId,
     step: snapshot.lastError.step,

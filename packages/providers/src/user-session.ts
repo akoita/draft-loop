@@ -11,6 +11,7 @@ import {
   claudeOAuthRefreshContentionDiagnosticCode,
 } from "./claude-api-error-cause.js";
 import { captureUnknownClaudeCategories } from "./claude-category-capture.js";
+import { codexSessionModelUnsupportedError } from "./codex-session-model-error.js";
 import {
   assertDataExposureAllowed,
   type JsonValue,
@@ -19,6 +20,8 @@ import {
   ProviderAdapterError,
 } from "./index.js";
 import { resolveClaudeSessionProfileControls } from "./session-profile-controls.js";
+
+export { codexSessionModelUnsupportedDiagnosticCode } from "./codex-session-model-error.js";
 
 export const defaultUserSessionTimeoutMs = 120_000;
 export const maximumUserSessionTimeoutMs = 1_200_000;
@@ -420,6 +423,10 @@ function resultOrError(
   result: UserSessionProcessResult,
 ): UserSessionProcessResult {
   if (result.exitCode === 0) return result;
+  if (provider === "openai") {
+    const unsupportedModelError = codexSessionModelUnsupportedError(provider, result);
+    if (unsupportedModelError !== undefined) throw unsupportedModelError;
+  }
   const details = `${result.stdout}\n${result.stderr}`.toLowerCase();
   let code: "authentication" | "quota-exhausted" | "rate-limit" | "unknown" = "unknown";
   if (

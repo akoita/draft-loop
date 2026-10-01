@@ -50,6 +50,10 @@ OpenAI Codex user-session and local routes reject profile selections; the CLI
 does not switch authentication modes automatically. Account and provider
 availability remains unchecked.
 
+If a Codex ChatGPT session explicitly rejects a selected model, the desktop
+shows that diagnosis and suggests choosing a supported model or explicitly
+switching OpenAI authentication to an API key. It never switches automatically.
+
 ## Desktop diagnostics
 
 Packaged builds keep host-error diagnostics in `diagnostics/host-errors.jsonl`
