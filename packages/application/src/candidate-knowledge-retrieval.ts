@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 
 import type {
+  CandidateKnowledgeLexicalChunkInput,
   CandidateKnowledgeLexicalHit,
   CandidateKnowledgeRetrievalSourceVersionReference,
   CandidateKnowledgeRetrievalStatus,
@@ -8,6 +9,7 @@ import type {
   RetrievalPort,
   ScoredEvidenceChunk,
 } from "@draft-loop/domain";
+import { createCandidateKnowledgeLexicalHit } from "@draft-loop/domain";
 import type { SqliteStorage } from "@draft-loop/storage";
 import {
   candidateContactEvidenceQuery,
@@ -16,14 +18,16 @@ import {
 } from "./candidate-contact-evidence.js";
 import {
   composeCandidateExperienceBodyEvidence,
-  createPinnedCandidateKnowledgeSourceChunkLoader,
+  createPinnedCandidateKnowledgeSourceReferenceChunkLoader,
 } from "./candidate-experience-body-evidence.js";
 import {
   assertCandidateKnowledgeProviderBounds,
+  candidateKnowledgeChronologyLocalSourceByteLimit,
   candidateKnowledgeChronologyQueries,
   candidateKnowledgeChronologyQueryLimit,
   requiresExperienceChronology,
   selectCandidateKnowledgeChronologyHits,
+  selectCandidateKnowledgeChronologySourceChunks,
 } from "./candidate-knowledge-chronology.js";
 import { isLeadingMarkdownHeadingOnly } from "./candidate-knowledge-heading.js";
 import {
@@ -211,10 +215,12 @@ export function candidateKnowledgeRuntimeRetrieval(
   if (binding === undefined || selection === undefined) return undefined;
 
   const service = createCandidateKnowledgeStoreService();
-  const loadPinnedSourceChunks = createPinnedCandidateKnowledgeSourceChunkLoader(
+  const loadPinnedSourceReferences = createPinnedCandidateKnowledgeSourceReferenceChunkLoader(
     binding.entries,
     selection,
   );
+  const loadPinnedSourceChunks = (hits: readonly CandidateKnowledgeLexicalHit[]) =>
+    loadPinnedSourceReferences(hits.map((hit) => hit.metadata.provenance));
   const rawCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const combinedCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const rawQuery = (text: string, limit: number): Promise<CandidateKnowledgeRetrievalResult> => {
@@ -284,9 +290,38 @@ export function candidateKnowledgeRuntimeRetrieval(
           );
         }
       }
-      const chronologyHits = selectCandidateKnowledgeChronologyHits(chronologyRawResults, limit);
-      const sourceChunks =
-        chronologyHits.length === 0 ? [] : await loadPinnedSourceChunks(chronologyHits);
+      const chronologySaturated = chronologyRawResults.some(
+        (result) =>
+          result.status === "matched" &&
+          result.hits.length >= candidateKnowledgeChronologyQueryLimit,
+      );
+      let chronologyHits: readonly CandidateKnowledgeLexicalHit[];
+      let sourceChunks: readonly CandidateKnowledgeLexicalChunkInput[];
+      if (chronologySaturated) {
+        const sourceReferences = selection.entries.flatMap((entry) =>
+          entry.sources.map((source) => ({
+            storeId: entry.storeId,
+            knowledgeBaseId: entry.knowledgeBaseId,
+            sourceId: source.sourceId,
+            versionId: source.versionId,
+          })),
+        );
+        sourceChunks = await loadPinnedSourceReferences(
+          sourceReferences,
+          candidateKnowledgeChronologyLocalSourceByteLimit,
+        );
+        chronologyHits = selectCandidateKnowledgeChronologySourceChunks(sourceChunks, limit).map(
+          (chunk) =>
+            createCandidateKnowledgeLexicalHit({
+              ...chunk,
+              bm25Rank: 0,
+            }),
+        );
+      } else {
+        chronologyHits = selectCandidateKnowledgeChronologyHits(chronologyRawResults, limit);
+        sourceChunks =
+          chronologyHits.length === 0 ? [] : await loadPinnedSourceChunks(chronologyHits);
+      }
       const composition =
         chronologyHits.length === 0
           ? { chronologyHits, requestedProjectOverflowHits: [] }

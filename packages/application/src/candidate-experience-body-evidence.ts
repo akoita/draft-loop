@@ -1,6 +1,7 @@
 import type {
   CandidateKnowledgeLexicalChunkInput,
   CandidateKnowledgeLexicalHit,
+  CandidateKnowledgeRetrievalSourceVersionReferenceInput,
   CandidateKnowledgeSelectionSnapshot,
   CandidateKnowledgeSelectionSnapshotEntry,
 } from "@draft-loop/domain";
@@ -27,6 +28,8 @@ import {
 } from "./candidate-role-contribution-blocks.js";
 
 const sourceReadFailureMessage = "Pinned candidate knowledge evidence could not be verified.";
+const sourceScanBudgetFailureMessage =
+  "Pinned candidate knowledge scan exceeded its local text limit.";
 
 export interface CandidateKnowledgeStoreBinding {
   readonly storeRoot: string;
@@ -57,16 +60,17 @@ async function closeHandle(handle: CandidateKnowledgeStoreHandle | undefined): P
 }
 
 /** Cache exact pinned-source normalization for this runtime; no origin is opened. */
-export function createPinnedCandidateKnowledgeSourceChunkLoader(
+export function createPinnedCandidateKnowledgeSourceReferenceChunkLoader(
   bindings: readonly CandidateKnowledgeStoreBinding[],
   snapshot: CandidateKnowledgeSelectionSnapshot,
 ): (
-  hits: readonly CandidateKnowledgeLexicalHit[],
+  references: readonly CandidateKnowledgeRetrievalSourceVersionReferenceInput[],
+  maxSourceTextBytes?: number,
 ) => Promise<readonly CandidateKnowledgeLexicalChunkInput[]> {
   const cache = new Map<string, Promise<readonly CandidateKnowledgeLexicalChunkInput[]>>();
 
   const loadOne = (
-    reference: CandidateKnowledgeLexicalHit["metadata"]["provenance"],
+    reference: CandidateKnowledgeRetrievalSourceVersionReferenceInput,
   ): Promise<readonly CandidateKnowledgeLexicalChunkInput[]> => {
     const key = provenanceKey(reference);
     const existing = cache.get(key);
@@ -123,13 +127,50 @@ export function createPinnedCandidateKnowledgeSourceChunkLoader(
     return pending;
   };
 
-  return async (hits) => {
-    const unique = new Map<string, CandidateKnowledgeLexicalHit["metadata"]["provenance"]>();
-    for (const hit of hits)
-      unique.set(provenanceKey(hit.metadata.provenance), hit.metadata.provenance);
-    const loaded = await Promise.all([...unique.values()].map(loadOne));
-    return loaded.flat();
+  return async (references, maxSourceTextBytes) => {
+    if (
+      maxSourceTextBytes !== undefined &&
+      (!Number.isSafeInteger(maxSourceTextBytes) || maxSourceTextBytes < 1)
+    ) {
+      throw new Error(sourceScanBudgetFailureMessage);
+    }
+    const unique = new Map<string, CandidateKnowledgeRetrievalSourceVersionReferenceInput>();
+    for (const reference of references) unique.set(provenanceKey(reference), reference);
+    const distinctReferences = [...unique.values()];
+    if (maxSourceTextBytes === undefined) {
+      const loaded = await Promise.all(distinctReferences.map(loadOne));
+      return loaded.flat();
+    }
+
+    const loaded: CandidateKnowledgeLexicalChunkInput[] = [];
+    let sourceTextBytes = 0;
+    for (const reference of distinctReferences) {
+      const chunks = await loadOne(reference);
+      sourceTextBytes += chunks.reduce(
+        (total, chunk) => total + Buffer.byteLength(chunk.text, "utf8"),
+        0,
+      );
+      if (sourceTextBytes > maxSourceTextBytes) {
+        throw new Error(sourceScanBudgetFailureMessage);
+      }
+      loaded.push(...chunks);
+    }
+    return loaded;
   };
+}
+
+/** Compatibility hit-loader retained for existing retrieval callers. */
+export function createPinnedCandidateKnowledgeSourceChunkLoader(
+  bindings: readonly CandidateKnowledgeStoreBinding[],
+  snapshot: CandidateKnowledgeSelectionSnapshot,
+): (
+  hits: readonly CandidateKnowledgeLexicalHit[],
+) => Promise<readonly CandidateKnowledgeLexicalChunkInput[]> {
+  const loadReferences = createPinnedCandidateKnowledgeSourceReferenceChunkLoader(
+    bindings,
+    snapshot,
+  );
+  return (hits) => loadReferences(hits.map((hit) => hit.metadata.provenance));
 }
 
 /** Compose bounded role records and complete requested projects that overflow those records. */

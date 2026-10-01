@@ -1,4 +1,5 @@
 import type {
+  CandidateKnowledgeLexicalChunkInput,
   CandidateKnowledgeLexicalHit,
   CandidateKnowledgeRetrievalStatus,
   ScoredEvidenceChunk,
@@ -7,6 +8,7 @@ import { parseLeadingMarkdownHeading } from "./candidate-knowledge-heading.js";
 
 export const candidateKnowledgeChronologyQueryLimit = 100;
 export const candidateKnowledgeChronologyProviderByteLimit = 131_072;
+export const candidateKnowledgeChronologyLocalSourceByteLimit = 512 * 1024;
 
 const monthAndOpenRangeTerms = [
   "jan",
@@ -64,9 +66,23 @@ function compareStrings(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
 }
 
-function compareChronologyHits(
-  left: CandidateKnowledgeLexicalHit,
-  right: CandidateKnowledgeLexicalHit,
+interface ChronologyCandidate {
+  readonly chunkId: string;
+  readonly ordinal: number;
+  readonly text: string;
+  readonly metadata: {
+    readonly provenance: {
+      readonly storeId: string;
+      readonly knowledgeBaseId: string;
+      readonly sourceId: string;
+      readonly versionId: string;
+    };
+  };
+}
+
+function compareChronologyCandidates(
+  left: ChronologyCandidate,
+  right: ChronologyCandidate,
 ): number {
   const leftProvenance = left.metadata.provenance;
   const rightProvenance = right.metadata.provenance;
@@ -80,6 +96,27 @@ function compareChronologyHits(
     if (comparison !== 0) return comparison;
   }
   return left.ordinal - right.ordinal || compareStrings(left.chunkId, right.chunkId);
+}
+
+function selectDatedChronologyCandidates<T extends ChronologyCandidate>(
+  candidates: readonly T[],
+  providerLimit: number,
+): readonly T[] {
+  const dated = candidates.filter((candidate) => {
+    const heading = parseLeadingMarkdownHeading(candidate.text);
+    return heading !== undefined && datedMarkdownHeadingPattern.test(heading.line);
+  });
+  dated.sort(compareChronologyCandidates);
+  const seenIds = new Set<string>();
+  const selected = dated.filter((candidate) => {
+    if (seenIds.has(candidate.chunkId)) return false;
+    seenIds.add(candidate.chunkId);
+    return true;
+  });
+  if (selected.length > providerLimit) {
+    throw new Error("Chronology heading count exceeds the provider retrieval limit.");
+  }
+  return Object.freeze(selected);
 }
 
 /**
@@ -101,25 +138,21 @@ export function selectCandidateKnowledgeChronologyHits(
     if (result.hits.length >= candidateKnowledgeChronologyQueryLimit) {
       throw new Error("Chronology query saturated its retrieval limit.");
     }
-    candidates.push(
-      ...result.hits.filter((hit) => {
-        const heading = parseLeadingMarkdownHeading(hit.text);
-        return heading !== undefined && datedMarkdownHeadingPattern.test(heading.line);
-      }),
-    );
+    candidates.push(...result.hits);
   }
 
-  candidates.sort(compareChronologyHits);
-  const seenIds = new Set<string>();
-  const selected = candidates.filter((hit) => {
-    if (seenIds.has(hit.chunkId)) return false;
-    seenIds.add(hit.chunkId);
-    return true;
-  });
-  if (selected.length > providerLimit) {
-    throw new Error("Chronology heading count exceeds the provider retrieval limit.");
+  return selectDatedChronologyCandidates(candidates, providerLimit);
+}
+
+/** Select the complete dated-heading set from verified chunks of pinned sources. */
+export function selectCandidateKnowledgeChronologySourceChunks(
+  sourceChunks: readonly CandidateKnowledgeLexicalChunkInput[],
+  providerLimit: number,
+): readonly CandidateKnowledgeLexicalChunkInput[] {
+  if (!Number.isSafeInteger(providerLimit) || providerLimit < 1) {
+    throw new Error("Chronology evidence exceeds provider bounds.");
   }
-  return Object.freeze(selected);
+  return selectDatedChronologyCandidates(sourceChunks, providerLimit);
 }
 
 /** Fail closed when merged provider evidence exceeds its item or byte bounds. */

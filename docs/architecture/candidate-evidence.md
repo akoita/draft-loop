@@ -115,6 +115,14 @@ the current local binding and compares its complete canonical entries with that
 record. Missing, replaced, unready, or changed evidence fails with a path-free
 review-required error before provider execution or run-state mutation.
 
+For Experience chronology, a saturated date probe triggers a bounded scan of
+the exact managed source versions in that recorded snapshot. The application
+verifies and normalizes those sources locally, then selects dated headings;
+it never reads source origins for this fallback. The scan is limited to 512
+KiB of normalized text and fails closed when that limit is exceeded or the
+complete heading set cannot fit the existing 20-item and 128-KiB provider
+bounds.
+
 The portable store is local and plaintext. Restrictive filesystem permissions
 are best-effort and are not encryption or protection from another process run
 by the same user. A SQLite-only copy is not a complete CKB backup because raw
