@@ -2288,6 +2288,158 @@ describe("native host", () => {
     }
   });
 
+  it("reloads exact persisted readiness after the lifecycle rejects approval", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-approval-readiness-"));
+    const readinessDecision = {
+      artifact: { id: "artifact-native", version: 1 },
+      applicationReady: false,
+      blockers: [{ code: "unmet-rubric-threshold", dimension: "relevance" }],
+      report: {
+        evaluation: {
+          thresholdResults: [{ dimension: "relevance", score: 0, threshold: 0.8, meets: false }],
+        },
+      },
+    };
+    const fixture = service(root, { findings: [], readinessDecision });
+    fixture.service.lifecycle.mockRejectedValueOnce(
+      new Error("The current artifact is not application-ready (unmet-rubric-threshold)."),
+    );
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const result = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "approve" },
+        },
+      });
+
+      expect(result).toMatchObject({
+        ok: true,
+        value: {
+          state: "awaiting-approval",
+          approval: "pending",
+          approvalReadiness: {
+            artifactId: "artifact-native",
+            artifactVersion: 1,
+            applicationReady: false,
+            blockers: [
+              {
+                code: "unmet-rubric-threshold",
+                dimension: "relevance",
+                score: 0,
+                threshold: 0.8,
+              },
+            ],
+          },
+        },
+      });
+      expect(fixture.service.status).toHaveBeenCalled();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the normal approval path available for an exact ready decision", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-approval-ready-"));
+    const fixture = service(root, {
+      findings: [],
+      readinessDecision: {
+        artifact: { id: "artifact-native", version: 1 },
+        applicationReady: true,
+        blockers: [],
+      },
+    });
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    try {
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const result = await host.invoke({
+        type: "review.dispatch",
+        input: {
+          workspaceId: "workspace-native",
+          runId: "run-native",
+          action: { type: "approve" },
+        },
+      });
+
+      expect(result).toMatchObject({ ok: true });
+      expect(fixture.service.lifecycle).toHaveBeenCalledWith(
+        { root, runId: "run-native", action: "approve" },
+        expect.anything(),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not turn unrelated or stale-artifact approval failures into review states", async () => {
+    for (const scenario of [
+      {
+        message: "unrelated lifecycle failure",
+        readinessDecision: {
+          artifact: { id: "artifact-native", version: 1 },
+          applicationReady: false,
+          blockers: [{ code: "unmet-rubric-threshold", dimension: "relevance" }],
+          report: {
+            evaluation: {
+              thresholdResults: [
+                { dimension: "relevance", score: 0, threshold: 0.8, meets: false },
+              ],
+            },
+          },
+        },
+      },
+      {
+        message: "The current artifact is not application-ready (unmet-rubric-threshold).",
+        readinessDecision: {
+          artifact: { id: "older-artifact", version: 1 },
+          applicationReady: false,
+          blockers: [{ code: "unmet-rubric-threshold", dimension: "relevance" }],
+          report: {
+            evaluation: {
+              thresholdResults: [
+                { dimension: "relevance", score: 0, threshold: 0.8, meets: false },
+              ],
+            },
+          },
+        },
+      },
+    ]) {
+      const root = await mkdtemp(join(tmpdir(), "draft-loop-host-stale-approval-readiness-"));
+      const fixture = service(root, {
+        findings: [],
+        readinessDecision: scenario.readinessDecision,
+      });
+      fixture.service.lifecycle.mockRejectedValueOnce(new Error(scenario.message));
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      try {
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+        const result = await host.invoke({
+          type: "review.dispatch",
+          input: {
+            workspaceId: "workspace-native",
+            runId: "run-native",
+            action: { type: "approve" },
+          },
+        });
+        expect(result).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
   it("routes explicit round-limit recovery through the application lifecycle", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-round-limit-recovery-"));
     const previousCritique = {
@@ -2647,7 +2799,14 @@ describe("native host", () => {
           action: { type: "approve" },
         },
       });
-      expect(blockedApproval).toMatchObject({ ok: false, error: { code: "operation-failed" } });
+      expect(blockedApproval).toMatchObject({
+        ok: true,
+        value: {
+          state: "awaiting-approval",
+          approval: "pending",
+          approvalReadiness: { applicationReady: false, blockers: expect.any(Array) },
+        },
+      });
       const revision = await host.invoke({
         type: "review.dispatch",
         input: {

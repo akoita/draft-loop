@@ -135,6 +135,13 @@ new run, only while its exact CKB selection still matches the workspace's
 current lifecycle-ready selection. Historical profile versions and existing
 run/export records remain available for audit after lifecycle changes.
 
+Before approval, the desktop can show blockers from the readiness decision
+persisted for the exact artifact. A rubric blocker includes its recorded score
+and required threshold. The score is a check result, not a confirmed candidate
+gap; token matching can miss equivalent phrasing. Accepting a finding does not
+change coverage or bypass the gate. Review requirements and coverage evidence;
+readiness can remain blocked after a revision or new run.
+
 If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input

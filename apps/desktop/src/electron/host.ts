@@ -62,7 +62,7 @@ import {
   probeOpenAICodexUserSession,
   type UserSessionLoginStatus,
 } from "@draft-loop/providers";
-
+import { isApplicationNotReadyFailure, projectApprovalReadiness } from "../approval-readiness.js";
 import {
   type BridgeCapability,
   type BridgeCommand,
@@ -954,6 +954,7 @@ function reviewState(
     execution: reviewExecution(descriptor, snapshot, executionRunning),
     round: snapshot.round,
     approval: snapshot.approval,
+    approvalReadiness: projectApprovalReadiness(snapshot.readinessDecision, artifact),
     reviewComplete: hasCompletedIndependentCritique(snapshot),
     totalCostUsd: snapshot.totalCostUsd,
     budgetUsd: descriptor.maxCostUsd ?? null,
@@ -3214,21 +3215,44 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             "Resolve, reject, or override blocking findings before approval.",
           );
         }
-        await service.lifecycle(
-          {
-            root: workspace.root,
-            runId: input.runId,
-            action:
-              action.type === "request-revision"
-                ? "revision"
-                : action.type === "recover-to-review"
-                  ? "recover-review"
-                  : action.type === "recover-round-limit"
-                    ? "recover-round-budget"
-                    : action.type,
-          },
-          io(),
-        );
+        try {
+          await service.lifecycle(
+            {
+              root: workspace.root,
+              runId: input.runId,
+              action:
+                action.type === "request-revision"
+                  ? "revision"
+                  : action.type === "recover-to-review"
+                    ? "recover-review"
+                    : action.type === "recover-round-limit"
+                      ? "recover-round-budget"
+                      : action.type,
+            },
+            io(),
+          );
+        } catch (error) {
+          if (action.type !== "approve") throw error;
+          let refreshed: RunSnapshot | undefined;
+          try {
+            refreshed = await service.status({ root: workspace.root, runId: input.runId });
+          } catch {
+            throw error;
+          }
+          const readiness =
+            refreshed?.artifact === null || refreshed?.artifact === undefined
+              ? null
+              : projectApprovalReadiness(refreshed.readinessDecision, refreshed.artifact);
+          if (
+            refreshed === undefined ||
+            refreshed.artifact === null ||
+            readiness?.applicationReady !== false ||
+            !isApplicationNotReadyFailure(error, refreshed.readinessDecision)
+          ) {
+            throw error;
+          }
+          dispatchedSnapshot = refreshed;
+        }
         break;
       case "stop":
         if (currentSnapshot === undefined) {

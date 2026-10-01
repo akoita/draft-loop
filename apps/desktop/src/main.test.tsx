@@ -393,6 +393,68 @@ describe("desktop trust-centered review", () => {
     expect(html).not.toContain(">unverified<");
   });
 
+  it("shows persisted rubric readiness blockers and keeps approval disabled after accepted warnings", () => {
+    const fixture = createFixtureReviewState();
+    const state: DesktopReviewState = {
+      ...fixture,
+      state: "awaiting-approval",
+      findings: fixture.findings
+        .filter((finding) => finding.severity === "warning")
+        .map((finding) => ({ ...finding, decision: "accepted" as const })),
+      approvalReadiness: {
+        artifactId: fixture.artifact.id,
+        artifactVersion: fixture.artifact.version,
+        applicationReady: false,
+        blockers: [
+          {
+            code: "unmet-rubric-threshold",
+            dimension: "relevance",
+            score: 0,
+            threshold: 0.8,
+          },
+        ],
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).toContain("Final CV checks block approval");
+    expect(html).toContain("Relevance score 0%; 80% required");
+    expect(html).toContain(
+      "Accepting a finding records your decision but does not change coverage.",
+    );
+    expect(html).toContain("Final CV checks passed");
+    expect(html).toMatch(/title="Approve artifact \(Alt\+A\)" disabled=""/u);
+  });
+
+  it("ignores readiness projected for an older artifact version", () => {
+    const fixture = createFixtureReviewState();
+    const state: DesktopReviewState = {
+      ...fixture,
+      state: "awaiting-approval",
+      findings: fixture.findings
+        .filter((finding) => finding.severity === "warning")
+        .map((finding) => ({ ...finding, decision: "accepted" as const })),
+      approvalReadiness: {
+        artifactId: fixture.artifact.id,
+        artifactVersion: fixture.artifact.version - 1,
+        applicationReady: false,
+        blockers: [
+          {
+            code: "unmet-rubric-threshold",
+            dimension: "relevance",
+            score: 0,
+            threshold: 0.8,
+          },
+        ],
+      },
+    };
+    const html = renderToStaticMarkup(<ReviewWorkspace state={state} onAction={() => undefined} />);
+
+    expect(html).not.toContain("Final CV checks block approval");
+    expect(html).not.toContain("Final CV checks passed");
+    expect(html).toMatch(/title="Approve artifact \(Alt\+A\)"(?! disabled)/u);
+  });
+
   it("shows bounded provider recovery actions without exposing provider payloads", () => {
     const state = {
       ...createFixtureReviewState(),
