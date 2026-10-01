@@ -145,6 +145,12 @@ application schema and source-grounding checks remain authoritative. Requests
 require exact contiguous evidence quotes, unique fact and issue references,
 and grounded facts for both sides of any conflict.
 
+Extraction guidance gives each subject key one specific real-world entity and
+distinguishes attributes, events, and contexts before proposing conflicts. For
+example, separate credentials remain separate when they share an issuer, and a
+launch date differs from a publication date. The prompt still requires genuine
+disputed claims to remain conflicts without choosing an authoritative answer.
+
 The extractor may remove one outer Markdown emphasis pair from a quote only
 when the remaining exact source text contains the entire unchanged fact value.
 Other quote mismatches remain fail-closed; fact values and source text are not
