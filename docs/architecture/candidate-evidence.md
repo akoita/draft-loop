@@ -123,6 +123,12 @@ KiB of normalized text and fails closed when that limit is exceeded or the
 complete heading set cannot fit the existing 20-item and 128-KiB provider
 bounds.
 
+Candidate-knowledge lexical queries longer than the storage limit are reduced
+to the same first 48 normalized, distinct, non-stopword terms used by storage.
+The original job text remains in the run context and author input; only local
+lexical search text and its trace checksum are adapted. If the resulting terms
+still exceed the storage limit, retrieval stops with a safe bounds error.
+
 The portable store is local and plaintext. Restrictive filesystem permissions
 are best-effort and are not encryption or protection from another process run
 by the same user. A SQLite-only copy is not a complete CKB backup because raw

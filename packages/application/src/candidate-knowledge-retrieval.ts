@@ -30,6 +30,7 @@ import {
   selectCandidateKnowledgeChronologySourceChunks,
 } from "./candidate-knowledge-chronology.js";
 import { isLeadingMarkdownHeadingOnly } from "./candidate-knowledge-heading.js";
+import { candidateKnowledgeSearchText } from "./candidate-knowledge-query.js";
 import {
   candidatePriorityEvidenceChunkLimit,
   candidatePriorityEvidenceQuery,
@@ -224,7 +225,8 @@ export function candidateKnowledgeRuntimeRetrieval(
   const rawCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const combinedCache = new Map<string, Promise<CandidateKnowledgeRetrievalResult>>();
   const rawQuery = (text: string, limit: number): Promise<CandidateKnowledgeRetrievalResult> => {
-    const key = JSON.stringify([text, limit]);
+    const searchText = candidateKnowledgeSearchText(text);
+    const key = JSON.stringify([searchText, limit]);
     const existing = rawCache.get(key);
     if (existing !== undefined) return existing;
     const pending = (async () => {
@@ -239,11 +241,11 @@ export function candidateKnowledgeRuntimeRetrieval(
           ? {}
           : { combinationApproved: binding.combinationApproved }),
         purpose: "achievement-recall",
-        query: text,
+        query: searchText,
         limit,
       });
       const createdAt = timestamp();
-      const queryChecksum = createHash("sha256").update(text, "utf8").digest("hex");
+      const queryChecksum = createHash("sha256").update(searchText, "utf8").digest("hex");
       const latencyMs = Math.max(0, Date.now() - startedAt);
       for (const diagnostic of result.diagnostics) {
         await storage.appendCandidateKnowledgeRetrievalTrace({

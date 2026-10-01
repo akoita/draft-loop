@@ -14,6 +14,10 @@
     "./writer-lease": {
       "types": "./src/writer-lease.ts",
       "import": "./src/writer-lease.ts"
+    },
+    "./evidence-retrieval-precision": {
+      "types": "./src/evidence-retrieval-precision.ts",
+      "import": "./src/evidence-retrieval-precision.ts"
     }
   },
   "files": [
