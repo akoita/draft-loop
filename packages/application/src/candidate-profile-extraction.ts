@@ -344,7 +344,10 @@ function detectedIssues(
         );
       }
     }
-    if (byValue.size > 1) {
+    const firstFact = group[0];
+    const hasUnscopedCertificationValues =
+      firstFact?.category === "certification" && firstFact.subjectId === undefined;
+    if (byValue.size > 1 && !hasUnscopedCertificationValues) {
       const issueFacts = boundedIssueFacts(group);
       issues.push(
         buildIssue(

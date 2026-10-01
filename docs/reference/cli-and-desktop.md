@@ -143,6 +143,9 @@ the extractor to scan every supplied source rather than return only highlights;
 they do not guarantee that every supported fact will be found. The 32,768-token
 extraction ceiling applies only to API-key requests for Claude Sonnet 5.5 and
 Opus 5.5; user-session, local, and all other model routes keep 8,192 tokens.
+Distinct certifications without a shared subject are kept without an automatic
+conflict; equal values can still raise duplicate warnings, and certifications
+with an explicit shared subject can still be flagged as conflicting.
 
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
