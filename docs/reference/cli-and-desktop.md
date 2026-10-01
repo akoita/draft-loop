@@ -138,9 +138,11 @@ preparation, response format, and grounding failures have distinct messages.
 Anthropic structured output uses the SDK-normalized provider schema, while
 application schema and source-grounding checks remain authoritative. Requests
 require exact contiguous evidence quotes, unique fact and issue references,
-and grounded facts for both sides of any conflict. The 32,768-token extraction
-ceiling applies only to API-key requests for Claude Sonnet 5.5 and Opus 5.5;
-user-session, local, and all other model routes keep the 8,192-token ceiling.
+and grounded facts for both sides of any conflict. Coverage instructions direct
+the extractor to scan every supplied source rather than return only highlights;
+they do not guarantee that every supported fact will be found. The 32,768-token
+extraction ceiling applies only to API-key requests for Claude Sonnet 5.5 and
+Opus 5.5; user-session, local, and all other model routes keep 8,192 tokens.
 
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
