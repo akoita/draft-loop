@@ -23,6 +23,7 @@ import {
   type CandidateProfileExtractionStage,
   candidateProfileExtractionFailureMessage,
 } from "./candidate-profile-extraction-errors.js";
+import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
 export const maximumCanonicalCandidateProfileExtractionSources = 64;
@@ -131,7 +132,6 @@ function uniqueSorted<T>(values: readonly T[], key: (value: T) => string): reado
 function validateInput(input: CanonicalCandidateProfileExtractionInput): {
   readonly request: CanonicalCandidateProfileExtractionRequest;
   readonly references: ReadonlyMap<string, CanonicalCandidateProfileProvenanceReference>;
-  readonly sourceTexts: ReadonlyMap<string, string>;
 } {
   if (
     !isRecord(input) ||
@@ -149,7 +149,6 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
   let characterCount = 0;
   const ids = new Set<string>();
   const references = new Map<string, CanonicalCandidateProfileProvenanceReference>();
-  const sourceTexts = new Map<string, string>();
   const sources: CanonicalCandidateProfileExtractionSource[] = [];
   for (const source of input.sources) {
     if (
@@ -176,7 +175,6 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
     }
     ids.add(source.id);
     references.set(source.id, reference);
-    sourceTexts.set(source.id, source.text);
     characterCount += source.text.length;
     sources.push(
       Object.freeze({
@@ -197,7 +195,6 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
       ...(input.signal === undefined ? {} : { signal: input.signal }),
     }),
     references,
-    sourceTexts,
   };
 }
 
@@ -368,16 +365,19 @@ function detectedIssues(
 
 function mapProposal(
   proposal: CanonicalCandidateProfileExtractionProposal,
-  references: ReadonlyMap<string, CanonicalCandidateProfileProvenanceReference>,
+  referencesByRepresentativeId: ReadonlyMap<
+    string,
+    readonly CanonicalCandidateProfileProvenanceReference[]
+  >,
   sourceTexts: ReadonlyMap<string, string>,
 ): CanonicalCandidateProfileExtractionResult {
   const factByKey = new Map<string, CanonicalCandidateProfileFact>();
   const facts = proposal.facts.map((candidate) => {
     const provenance = uniqueSorted(
-      candidate.evidence.map((evidence) => {
-        const reference = references.get(evidence.sourceId);
+      candidate.evidence.flatMap((evidence) => {
+        const references = referencesByRepresentativeId.get(evidence.sourceId);
         const sourceText = sourceTexts.get(evidence.sourceId);
-        if (reference === undefined)
+        if (references === undefined)
           throw new Error("The extraction proposal cites an unavailable source.");
         if (
           sourceText === undefined ||
@@ -385,7 +385,7 @@ function mapProposal(
         ) {
           throw new Error("The extraction proposal evidence does not support its proposed value.");
         }
-        return reference;
+        return references;
       }),
       referenceKey,
     );
@@ -415,11 +415,11 @@ function mapProposal(
         throw new Error("The extraction issue references an unavailable fact.");
       return fact;
     });
-    const citedReferences = candidate.sourceIds.map((sourceId) => {
-      const reference = references.get(sourceId);
-      if (reference === undefined)
+    const citedReferences = candidate.sourceIds.flatMap((sourceId) => {
+      const references = referencesByRepresentativeId.get(sourceId);
+      if (references === undefined)
         throw new Error("The extraction issue cites an unavailable source.");
-      return reference;
+      return references;
     });
     return buildIssue(
       candidate.code,
@@ -469,12 +469,22 @@ export async function processCanonicalCandidateProfileExtraction(
   let stage: CandidateProfileExtractionStage = "input-preparation";
   try {
     const validated = validateInput(input);
+    const preparedSources = prepareCanonicalCandidateProfileExtractionSources(
+      validated.request.sources,
+      validated.references,
+    );
     stage = "provider";
-    const output = await port.extract(validated.request);
+    const output = await port.extract(
+      Object.freeze({ ...validated.request, sources: preparedSources.sources }),
+    );
     stage = "response-schema";
     const proposal = canonicalCandidateProfileExtractionProposalSchema.parse(output);
     stage = "grounding";
-    return mapProposal(proposal, validated.references, validated.sourceTexts);
+    return mapProposal(
+      proposal,
+      preparedSources.referencesByRepresentativeId,
+      preparedSources.sourceTextsByRepresentativeId,
+    );
   } catch (error) {
     if (input.signal?.aborted === true || (error instanceof Error && error.name === "AbortError")) {
       throw error;

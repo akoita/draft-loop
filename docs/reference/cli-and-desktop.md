@@ -135,17 +135,24 @@ If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
 preparation, response format, and grounding failures have distinct messages.
+
 Anthropic structured output uses the SDK-normalized provider schema, while
 application schema and source-grounding checks remain authoritative. Requests
 require exact contiguous evidence quotes, unique fact and issue references,
-and grounded facts for both sides of any conflict. Coverage instructions direct
-the extractor to scan every supplied source rather than return only highlights;
-they do not guarantee that every supported fact will be found. The 32,768-token
-extraction ceiling applies only to API-key requests for Claude Sonnet 5.5 and
-Opus 5.5; user-session, local, and all other model routes keep 8,192 tokens.
+and grounded facts for both sides of any conflict.
+
+Coverage instructions direct the extractor to scan every supplied source
+rather than return only highlights; they do not guarantee that every supported
+fact will be found. The 32,768-token extraction ceiling applies only to API-key
+requests for Claude Sonnet 5.5 and Opus 5.5; user-session, local, and all other
+model routes keep 8,192 tokens.
+
 Distinct certifications without a shared subject are kept without an automatic
 conflict; equal values can still raise duplicate warnings, and certifications
 with an explicit shared subject can still be flagged as conflicting.
+
+Exact duplicate source contents are sent once per bounded group while every
+original source version remains attached to facts as local provenance.
 
 ```sh
 pnpm --filter @draft-loop/cli start profile derive ./workspace \
