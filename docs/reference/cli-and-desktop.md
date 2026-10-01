@@ -147,6 +147,19 @@ opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
 preparation, response format, and grounding failures have distinct messages.
 
+The desktop distinguishes a saved extraction failure, an empty profile, a draft
+that still needs human review, open issue blockers, and a reviewed version. An
+empty failed version shows up to three deduplicated, sanitized issue reasons.
+The action is labeled **Retry profile generation**; the existing provider-data
+approval must be granted again before selected material is sent.
+
+Before retrying, follow the recorded cause and recovery guidance. Renaming the
+profile does not fix the underlying failure. Retrying sends selected material
+again, may consume provider credits, and bounded recovery can make multiple
+requests. Empty profiles and drafts with open issues cannot be marked reviewed;
+warnings also block until acknowledged or resolved and saved. A reviewed profile
+is a human-reviewed record, not a claim of application readiness or quality.
+
 Anthropic structured output uses the SDK-normalized provider schema, while
 application schema and source-grounding checks remain authoritative. Requests
 require exact contiguous evidence quotes, unique fact and issue references,

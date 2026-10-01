@@ -13,10 +13,17 @@ import type {
 } from "./bridge.js";
 import type { CandidateProfileSelection } from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
+import {
+  type CanonicalCandidateProfileOutcome,
+  canReviewCanonicalCandidateProfile,
+  canSelectReviewedCanonicalCandidateProfile,
+  projectCanonicalCandidateProfileOperationResult,
+  projectCanonicalCandidateProfileOutcome,
+  safeCanonicalCandidateProfileFeedback,
+} from "./profile-outcome.js";
 
 const profileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/giu;
-const absoluteUrlTestPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
 const maximumProfileIdLength = maximumCanonicalCandidateProfileIdLength;
 
 export type CanonicalCandidateProfileCapabilities = Required<DesktopProfileCapabilities>;
@@ -113,30 +120,92 @@ export function canEditCanonicalCandidateProfile(
 export function candidateProfileSelectionForRecord(
   record: CanonicalCandidateProfileRecordResult | null,
 ): CandidateProfileSelection | null {
-  return record?.status === "reviewed"
+  return record !== null && canSelectReviewedCanonicalCandidateProfile(record)
     ? { profileId: record.profileId, version: record.version }
     : null;
 }
 
-function profileErrorMessage(reason: unknown): string {
-  const message = reason instanceof Error ? reason.message.trim() : "";
-  // Provider/host failures are expected to be content-free. If a fixture or
-  // future adapter violates that contract, do not let a path or URL reach the
-  // renderer's alert.
-  if (
-    message === "" ||
-    message.length > 240 ||
-    message.includes("/") ||
-    message.includes("\\") ||
-    absoluteUrlTestPattern.test(message)
-  ) {
-    return "The canonical candidate profile operation could not be completed.";
-  }
-  return message;
-}
-
 function shortChecksum(checksum: string): string {
   return `${checksum.slice(0, 12)}…`;
+}
+
+export function ProfileOutcomeFeedback({
+  outcome,
+  showMessage = true,
+}: {
+  readonly outcome: CanonicalCandidateProfileOutcome;
+  readonly showMessage?: boolean;
+}) {
+  return (
+    <section className="profile-outcome" aria-label="Canonical profile status">
+      {showMessage ? <p>{outcome.message}</p> : null}
+      {outcome.failureReasons.length === 0 ? null : (
+        <>
+          <p>Saved issue guidance</p>
+          <ul aria-label="Saved profile issue guidance">
+            {outcome.failureReasons.map((reason) => (
+              <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {outcome.kind === "extraction-failure" ? (
+        <p>
+          Follow the displayed cause and recovery steps first; changing the profile name alone will
+          not fix the underlying input or provider failure.
+        </p>
+      ) : outcome.kind === "empty" && outcome.retry ? (
+        <p>
+          Check that the selected source material includes the facts you need; renaming adds no
+          evidence.
+        </p>
+      ) : null}
+      {outcome.retry ? (
+        <p>
+          Retrying sends the selected material again, can consume provider credits, and bounded
+          recovery may make multiple requests.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+export function ProfileGenerationAction({
+  outcome,
+  profileIdValid,
+  providerTransmissionApproved,
+  busy,
+  onApprovalChange,
+  onDerive,
+}: {
+  readonly outcome: CanonicalCandidateProfileOutcome;
+  readonly profileIdValid: boolean;
+  readonly providerTransmissionApproved: boolean;
+  readonly busy: boolean;
+  readonly onApprovalChange: (approved: boolean) => void;
+  readonly onDerive: () => void;
+}) {
+  return (
+    <>
+      <label className="profile-approval-label">
+        <input
+          type="checkbox"
+          checked={providerTransmissionApproved}
+          disabled={busy}
+          onChange={(event) => onApprovalChange(event.target.checked)}
+        />
+        <span>I approve sending selected candidate material to the configured provider.</span>
+      </label>
+      <button
+        className="button button-primary"
+        type="button"
+        disabled={busy || !profileIdValid || !providerTransmissionApproved}
+        onClick={onDerive}
+      >
+        {busy ? "Deriving profile…" : outcome.retry ? "Retry profile generation" : "Derive profile"}
+      </button>
+    </>
+  );
 }
 
 function latestVersionOf(
@@ -320,6 +389,7 @@ export function ProfileDetails({
     [draftIssues],
   );
   const historical = history.length > 0 && record.version !== history.at(-1)?.version;
+  const reviewAllowed = canReviewCanonicalCandidateProfile(record, draftFacts, draftIssues);
 
   return (
     <>
@@ -448,7 +518,7 @@ export function ProfileDetails({
         <button
           className="button button-primary"
           type="button"
-          disabled={!editable || busy}
+          disabled={!editable || busy || !reviewAllowed}
           onClick={onReview}
         >
           Mark latest draft reviewed
@@ -478,11 +548,20 @@ export function ProfileWorkspace({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const available = hasCanonicalCandidateProfileCapabilities(capabilities);
+  const normalizedProfileId = profileId.trim();
   const latestVersion = latestVersionOf(history, record);
   const editable = canEditCanonicalCandidateProfile(record, latestVersion);
+  const currentOutcome = projectCanonicalCandidateProfileOutcome(
+    record,
+    normalizedProfileId,
+    loadedProfileId,
+    draftFacts,
+    draftIssues,
+  );
   const selectedThisRecord =
     selectedProfile !== null &&
     record !== null &&
+    currentOutcome.kind === "reviewed" &&
     selectedProfile.profileId === record.profileId &&
     selectedProfile.version === record.version;
 
@@ -508,23 +587,27 @@ export function ProfileWorkspace({
     onSelectionChange(candidateProfileSelectionForRecord(nextRecord));
   };
 
-  const withBusy = async (operation: () => Promise<void>): Promise<void> => {
+  const withBusy = async (
+    operation: () => Promise<CanonicalCandidateProfileRecordResult | null>,
+  ): Promise<void> => {
     setBusy(true);
     setErrorMessage(null);
     setStatusMessage("Working with the canonical candidate profile…");
     try {
-      await operation();
-      setStatusMessage("Canonical candidate profile ready.");
+      const result = await operation();
+      setStatusMessage(projectCanonicalCandidateProfileOperationResult(result).message);
     } catch (reason: unknown) {
-      setErrorMessage(profileErrorMessage(reason));
-      setStatusMessage("The canonical candidate profile operation failed.");
+      setErrorMessage(safeCanonicalCandidateProfileFeedback(reason));
+      setStatusMessage("The operation did not complete. No new profile version was confirmed.");
     } finally {
       setBusy(false);
     }
   };
 
-  const normalizedProfileId = profileId.trim();
-  const refresh = async (id: string, version?: number): Promise<void> => {
+  const refresh = async (
+    id: string,
+    version?: number,
+  ): Promise<CanonicalCandidateProfileRecordResult | null> => {
     const listing: CanonicalCandidateProfileListResult =
       await capabilities.listCanonicalCandidateProfileVersions(id);
     setHistory(listing.versions);
@@ -535,11 +618,12 @@ export function ProfileWorkspace({
       setDraftFacts([]);
       setDraftIssues([]);
       onSelectionChange(null);
-      return;
+      return null;
     }
     const nextRecord = await capabilities.getCanonicalCandidateProfile(id, targetVersion);
     setLoadedProfileId(id);
     applyRecord(nextRecord);
+    return nextRecord;
   };
 
   const loadLatest = (): void => {
@@ -555,6 +639,7 @@ export function ProfileWorkspace({
     void withBusy(async () => {
       const nextRecord = await capabilities.getCanonicalCandidateProfile(loadedProfileId, version);
       applyRecord(nextRecord);
+      return nextRecord;
     });
   };
 
@@ -567,7 +652,7 @@ export function ProfileWorkspace({
         profileId: normalizedProfileId,
         providerTransmissionApproved: true,
       });
-      await refresh(normalizedProfileId, derived.version);
+      return refresh(normalizedProfileId, derived.version);
     });
   };
 
@@ -582,7 +667,7 @@ export function ProfileWorkspace({
           issues: draftIssues,
         },
       });
-      await refresh(record.profileId, nextRecord.version);
+      return refresh(record.profileId, nextRecord.version);
     });
   };
 
@@ -593,7 +678,7 @@ export function ProfileWorkspace({
         record.profileId,
         record.version,
       );
-      await refresh(record.profileId, reviewed.version);
+      return refresh(record.profileId, reviewed.version);
     });
   };
 
@@ -633,6 +718,7 @@ export function ProfileWorkspace({
                   candidateProfileApprovalAfterIdChange(approved, profileId, next),
                 );
                 setProfileId(next);
+                setStatusMessage("");
                 setErrorMessage(null);
                 if (loadedProfileId !== next) {
                   setLoadedProfileId(null);
@@ -658,28 +744,26 @@ export function ProfileWorkspace({
           Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval
           applies to this name only.
         </p>
-        <label className="profile-approval-label">
-          <input
-            type="checkbox"
-            checked={providerTransmissionApproved}
-            disabled={busy}
-            onChange={(event) => setProviderTransmissionApproved(event.target.checked)}
-          />
-          <span>I approve sending selected candidate material to the configured provider.</span>
-        </label>
-        <button
-          className="button button-primary"
-          type="button"
-          disabled={
-            busy ||
-            !isCanonicalCandidateProfileId(normalizedProfileId) ||
-            !providerTransmissionApproved
-          }
-          onClick={derive}
-        >
-          {busy ? "Deriving profile…" : "Derive profile"}
-        </button>
+        <ProfileGenerationAction
+          outcome={currentOutcome}
+          profileIdValid={isCanonicalCandidateProfileId(normalizedProfileId)}
+          providerTransmissionApproved={providerTransmissionApproved}
+          busy={busy}
+          onApprovalChange={setProviderTransmissionApproved}
+          onDerive={derive}
+        />
       </div>
+      {record === null ||
+      busy ||
+      errorMessage !== null ||
+      (!currentOutcome.retry &&
+        currentOutcome.failureReasons.length === 0 &&
+        statusMessage === currentOutcome.message) ? null : (
+        <ProfileOutcomeFeedback
+          outcome={currentOutcome}
+          showMessage={statusMessage !== currentOutcome.message}
+        />
+      )}
       <div className="profile-status" role="status" aria-live="polite">
         {statusMessage}
       </div>
@@ -707,7 +791,9 @@ export function ProfileWorkspace({
       )}
       {record === null ? (
         <p className="profile-empty">
-          Enter a profile name and choose Load latest to see its history.
+          {currentOutcome.kind === "no-version"
+            ? currentOutcome.message
+            : "Enter a profile name and choose Load latest to see its history."}
         </p>
       ) : (
         <ProfileDetails
