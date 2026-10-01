@@ -11,6 +11,12 @@ import {
 } from "@draft-loop/schemas";
 
 import type { CanonicalCandidateProfileExtractionRequest } from "./candidate-profile-extraction.js";
+import {
+  type CanonicalProfileExtractionTextWindow,
+  canonicalProfileExtractionSectionFocus,
+  canonicalProfileExtractionSectionFocusInstructions,
+  planCanonicalProfileExtractionTextWindows,
+} from "./canonical-profile-extraction-sections.js";
 
 const maximumFocusedSourceCount = 4;
 const outputName = "canonical_candidate_profile_extraction";
@@ -72,6 +78,22 @@ function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted === true) signal.throwIfAborted();
 }
 
+async function executeWithCancellation(
+  executor: CanonicalProfileExtractionExecutor,
+  request: ModelRequest<JsonObject>,
+  signal: AbortSignal | undefined,
+): Promise<ModelResponse<JsonObject>> {
+  throwIfAborted(signal);
+  try {
+    const response = await executor.execute(request);
+    throwIfAborted(signal);
+    return response;
+  } catch (error) {
+    throwIfAborted(signal);
+    throw error;
+  }
+}
+
 function canFocusSources(request: CanonicalCandidateProfileExtractionRequest): boolean {
   if (request.sources.length < 2 || request.sources.length > maximumFocusedSourceCount) {
     return false;
@@ -83,11 +105,20 @@ function buildRequest(
   request: CanonicalCandidateProfileExtractionRequest,
   controls: CanonicalProfileExtractionControls,
   focusSourceId?: string,
+  focusWindow?: CanonicalProfileExtractionTextWindow,
 ): ModelRequest<JsonObject> {
+  const sectionFocus =
+    focusSourceId === undefined || focusWindow === undefined
+      ? undefined
+      : canonicalProfileExtractionSectionFocus(focusSourceId, focusWindow);
   const input = JSON.parse(
     JSON.stringify({
       sources: request.sources,
-      ...(focusSourceId === undefined ? {} : { extractionFocusSourceId: focusSourceId }),
+      ...(focusSourceId === undefined
+        ? {}
+        : sectionFocus === undefined
+          ? { extractionFocusSourceId: focusSourceId }
+          : sectionFocus),
     }),
   ) as JsonObject;
   return {
@@ -96,7 +127,7 @@ function buildRequest(
     systemPrompt:
       focusSourceId === undefined
         ? controls.systemPrompt
-        : `${controls.systemPrompt} ${focusInstructions}`,
+        : `${controls.systemPrompt} ${focusInstructions}${focusWindow === undefined ? "" : ` ${canonicalProfileExtractionSectionFocusInstructions}`}`,
     input,
     outputSchema: canonicalCandidateProfileExtractionProposalJsonSchema as JsonObject,
     outputName,
@@ -161,7 +192,7 @@ export async function executeCanonicalProfileExtractionWithFallback(
 
   let initialResponse: ModelResponse<JsonObject>;
   try {
-    initialResponse = await executor.execute(initialRequest);
+    initialResponse = await executeWithCancellation(executor, initialRequest, request.signal);
   } catch (error) {
     throwIfAborted(request.signal);
     if (!isOutputLimitFailure(error) || !canFocusSources(request)) throw error;
@@ -169,16 +200,40 @@ export async function executeCanonicalProfileExtractionWithFallback(
     const batches: CanonicalCandidateProfileExtractionProposal[] = [];
     for (const source of request.sources) {
       throwIfAborted(request.signal);
-      let response: ModelResponse<JsonObject>;
+      let focusedResponse: ModelResponse<JsonObject>;
       try {
-        response = await executor.execute(buildRequest(request, controls, source.id));
+        focusedResponse = await executeWithCancellation(
+          executor,
+          buildRequest(request, controls, source.id),
+          request.signal,
+        );
       } catch (batchError) {
         throwIfAborted(request.signal);
-        if (isOutputLimitFailure(batchError)) throw outputLimitFailure(controls.model.company);
-        throw batchError;
+        if (!isOutputLimitFailure(batchError)) throw batchError;
+        const windows = planCanonicalProfileExtractionTextWindows(source.text);
+        if (windows === null) throw outputLimitFailure(controls.model.company);
+        for (const window of windows) {
+          throwIfAborted(request.signal);
+          let sectionResponse: ModelResponse<JsonObject>;
+          try {
+            sectionResponse = await executeWithCancellation(
+              executor,
+              buildRequest(request, controls, source.id, window),
+              request.signal,
+            );
+          } catch (sectionError) {
+            throwIfAborted(request.signal);
+            if (isOutputLimitFailure(sectionError)) {
+              throw outputLimitFailure(controls.model.company);
+            }
+            throw sectionError;
+          }
+          batches.push(parseBatch(sectionResponse.output, controls.model.company));
+        }
+        continue;
       }
       throwIfAborted(request.signal);
-      batches.push(parseBatch(response.output, controls.model.company));
+      batches.push(parseBatch(focusedResponse.output, controls.model.company));
     }
 
     const aggregate = aggregateBatches(batches, controls.model.company);
