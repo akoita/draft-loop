@@ -147,6 +147,12 @@ fact will be found. The 32,768-token extraction ceiling applies only to API-key
 requests for Claude Sonnet 5.5 and Opus 5.5; user-session, local, and all other
 model routes keep 8,192 tokens.
 
+If the provider explicitly reports output-token truncation for two to four
+prepared sources, extraction can make one focused call per source, up to five
+calls total including the original request. Every call keeps the full selected
+source set as context and uses the same per-call token cap. The results must all
+validate and ground successfully; partial batches never save facts.
+
 Skills are treated as collection values, so distinct skill facts do not become
 automatic conflicts even when they share a subject. Equal values can still
 raise duplicate warnings. Unscoped certifications are also collections, while

@@ -58,7 +58,6 @@ import {
   renderArtifact,
 } from "@draft-loop/rendering";
 import {
-  canonicalCandidateProfileExtractionProposalJsonSchema,
   contextSnapshotSchema,
   type DraftArtifact,
   opportunityExtractionProposalJsonSchema,
@@ -89,6 +88,7 @@ import type {
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
+import { executeCanonicalProfileExtractionWithFallback } from "./canonical-profile-extraction-fallback.js";
 import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import * as criticPrompt from "./critic-adjudication.js";
@@ -3093,22 +3093,16 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
         options.userSessionRunners,
         options.userSessionTimeoutMs,
       );
-      const response = await adapter.execute({
-        contextSnapshotId: request.operationId,
+      return executeCanonicalProfileExtractionWithFallback(adapter, request, {
         model,
         systemPrompt: requestContract.systemPrompt,
-        input: asJsonObject({ sources: request.sources }),
-        outputSchema: canonicalCandidateProfileExtractionProposalJsonSchema as JsonObject,
-        outputName: "canonical_candidate_profile_extraction",
         maxOutputTokens: requestContract.maxOutputTokens,
         dataPolicy: providerDataPolicy(
           config.authorCompany,
           options.allowProviderData === true,
           providerAuthModeConfiguration,
         ),
-        ...(request.signal === undefined ? {} : { signal: request.signal }),
       });
-      return response.output;
     },
   });
 }
