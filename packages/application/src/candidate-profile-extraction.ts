@@ -19,6 +19,7 @@ import {
   canonicalCandidateProfileExtractionProposalSchema,
   canonicalCandidateProfileProvenanceReferenceSchema,
 } from "@draft-loop/schemas";
+import { isUnscopedCandidateProfileCollectionFact } from "./candidate-profile-collection-conflicts.js";
 import {
   type CandidateProfileExtractionStage,
   candidateProfileExtractionFailureMessage,
@@ -342,9 +343,7 @@ function detectedIssues(
       }
     }
     const firstFact = group[0];
-    const hasUnscopedCertificationValues =
-      firstFact?.category === "certification" && firstFact.subjectId === undefined;
-    if (byValue.size > 1 && !hasUnscopedCertificationValues) {
+    if (byValue.size > 1 && !(firstFact && isUnscopedCandidateProfileCollectionFact(firstFact))) {
       const issueFacts = boundedIssueFacts(group);
       issues.push(
         buildIssue(
