@@ -19,7 +19,7 @@ import {
   canonicalCandidateProfileExtractionProposalSchema,
   canonicalCandidateProfileProvenanceReferenceSchema,
 } from "@draft-loop/schemas";
-import { isUnscopedCandidateProfileCollectionFact } from "./candidate-profile-collection-conflicts.js";
+import { isCandidateProfileCollectionFact } from "./candidate-profile-collection-conflicts.js";
 import {
   type CandidateProfileExtractionStage,
   candidateProfileExtractionFailureMessage,
@@ -343,7 +343,7 @@ function detectedIssues(
       }
     }
     const firstFact = group[0];
-    if (byValue.size > 1 && !(firstFact && isUnscopedCandidateProfileCollectionFact(firstFact))) {
+    if (byValue.size > 1 && !(firstFact && isCandidateProfileCollectionFact(firstFact))) {
       const issueFacts = boundedIssueFacts(group);
       issues.push(
         buildIssue(

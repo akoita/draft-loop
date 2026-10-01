@@ -147,10 +147,11 @@ fact will be found. The 32,768-token extraction ceiling applies only to API-key
 requests for Claude Sonnet 5.5 and Opus 5.5; user-session, local, and all other
 model routes keep 8,192 tokens.
 
-Distinct unscoped skills and certifications are kept without automatic
-differing-value conflicts. Equal values can still raise duplicate warnings,
-and either category with an explicit shared subject can still be flagged as
-conflicting.
+Skills are treated as collection values, so distinct skill facts do not become
+automatic conflicts even when they share a subject. Equal values can still
+raise duplicate warnings. Unscoped certifications are also collections, while
+scoped certifications retain automatic conflict detection. Explicitly proposed
+conflicts remain visible for skills and certifications.
 
 Exact duplicate source contents are sent once per bounded group while every
 original source version remains attached to facts as local provenance.
