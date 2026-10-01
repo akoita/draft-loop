@@ -1,7 +1,7 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
 
 export type CanonicalProfileAnthropicAuthMode = "api-key" | "user-session";
-export const promptVersion = "canonical-candidate-profile-extraction-v3" as const;
+export const promptVersion = "canonical-candidate-profile-extraction-v4" as const;
 
 export interface CanonicalProfileProviderRequestContract {
   readonly systemPrompt: string;
