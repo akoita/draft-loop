@@ -170,10 +170,11 @@ requests for Claude Sonnet 5.5 and Opus 5.5; user-session, local, and all other
 model routes keep 8,192 tokens.
 
 If the provider explicitly reports output-token truncation for two to four
-prepared sources, extraction can make one focused call per source, up to five
-calls total including the original request. Every call keeps the full selected
-source set as context and uses the same per-call token cap. The results must all
-validate and ground successfully; partial batches never save facts.
+prepared sources, extraction can make one focused call per source. If one source
+call also truncates, it can be retried in four contiguous text windows. The
+bounded path makes at most 21 application calls including the original request;
+each keeps the full selected source set as context and the same per-call token
+cap. Every result must validate and ground successfully, or no facts are saved.
 
 Skills are treated as collection values, so distinct skill facts do not become
 automatic conflicts even when they share a subject. Equal values can still
