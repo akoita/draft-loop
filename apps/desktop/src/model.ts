@@ -1,5 +1,6 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ArtifactSection } from "@draft-loop/artifacts";
+import type { ApprovalReadiness } from "./approval-readiness.js";
 import type { CredentialStatus } from "./bridge.js";
 
 /**
@@ -266,6 +267,8 @@ export interface DesktopReviewState {
   readonly execution: ReviewExecutionView;
   readonly round: number;
   readonly approval: "pending" | "approved" | "rejected";
+  /** Safe persisted readiness blockers bound to this exact artifact, when available. */
+  readonly approvalReadiness?: ApprovalReadiness | null;
   readonly reviewComplete: boolean;
   readonly totalCostUsd: number;
   readonly budgetUsd: number | null;

@@ -32,6 +32,7 @@ import {
   maximumCanonicalCandidateProfileSubjectIdLength,
   maximumCanonicalCandidateProfileValueLength,
 } from "@draft-loop/domain";
+import { normalizeApprovalReadiness } from "./approval-readiness.js";
 import type {
   DesktopReviewState,
   IndependentReviewView,
@@ -1780,6 +1781,7 @@ const desktopReviewStateKeys = [
   "execution",
   "round",
   "approval",
+  "approvalReadiness",
   "reviewComplete",
   "totalCostUsd",
   "budgetUsd",
@@ -6114,6 +6116,17 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     value.writingPolicy === undefined || value.writingPolicy === null
       ? value.writingPolicy
       : normalizeRunWritingPolicyProjection(value.writingPolicy);
+  const approvalReadiness =
+    value.approvalReadiness === undefined || value.approvalReadiness === null
+      ? value.approvalReadiness
+      : normalizeApprovalReadiness(value.approvalReadiness);
+  if (
+    value.approvalReadiness !== undefined &&
+    value.approvalReadiness !== null &&
+    approvalReadiness === null
+  ) {
+    return invalidInput();
+  }
   const exposure = requireRecord(value.providerExposure);
   if (!hasOnlyKeys(exposure, providerExposureResultKeys)) return invalidInput();
   const independentReview = exposure.independentReview;
@@ -6190,6 +6203,7 @@ function normalizeReviewState(value: unknown): ReviewStateResult {
     ...value,
     ...(normalizedSetup === undefined ? {} : { setup: normalizedSetup }),
     ...(normalizedRunPolicy === undefined ? {} : { writingPolicy: normalizedRunPolicy }),
+    ...(approvalReadiness === undefined ? {} : { approvalReadiness }),
   } as unknown as DesktopReviewState;
 }
 

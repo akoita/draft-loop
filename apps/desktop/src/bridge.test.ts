@@ -1776,6 +1776,63 @@ describe("desktop capability bridge", () => {
     });
   });
 
+  it("accepts bounded artifact-bound readiness and rejects malformed blocker details", async () => {
+    const fixture = createFixtureReviewState();
+    const approvalReadiness = {
+      artifactId: fixture.artifact.id,
+      artifactVersion: fixture.artifact.version,
+      applicationReady: false,
+      blockers: [
+        { code: "unmet-rubric-threshold", dimension: "relevance", score: 0, threshold: 0.8 },
+      ],
+    } as const;
+    const safeState = { ...fixture, approvalReadiness };
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: safeState }), ["review.load"]),
+    );
+    await expect(
+      port.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+    ).resolves.toEqual({ ok: true, value: safeState });
+
+    for (const malformed of [
+      { ...approvalReadiness, privateRationale: "must not cross the bridge" },
+      {
+        ...approvalReadiness,
+        blockers: [
+          {
+            code: "unmet-rubric-threshold",
+            dimension: "relevance",
+            score: Number.POSITIVE_INFINITY,
+            threshold: 0.8,
+          },
+        ],
+      },
+      {
+        ...approvalReadiness,
+        blockers: [
+          { code: "unmet-rubric-threshold", dimension: "relevance", score: 0.8, threshold: 0.8 },
+        ],
+      },
+    ]) {
+      const hostilePort = createCapabilityPort(
+        bridge(
+          async () => ({ ok: true, value: { ...fixture, approvalReadiness: malformed } }),
+          ["review.load"],
+        ),
+      );
+      await expect(
+        hostilePort.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+
+    const legacyPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: fixture }), ["review.load"]),
+    );
+    await expect(
+      legacyPort.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+    ).resolves.toEqual({ ok: true, value: fixture });
+  });
+
   it("rejects independence claims the host could not honestly have recorded", async () => {
     const fixture = createFixtureReviewState();
     for (const independentReview of [
