@@ -6,6 +6,8 @@ import { isIP } from "node:net";
 import { extname, isAbsolute, join, relative } from "node:path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 
+import { PdfTextLayoutCollector } from "./pdf-text-layout.js";
+
 export const supportedMediaTypes = [
   "text/plain",
   "text/markdown",
@@ -1069,8 +1071,9 @@ function decodePdfHex(hex: string, cmaps: Map<number, string>): string {
 }
 
 function extractPdfOperators(content: string, cmaps: Map<number, string>): string {
-  let result = "";
+  const layout = new PdfTextLayoutCollector();
   let index = 0;
+  let lastTextShowEndOffset = 0;
   while (index < content.length) {
     const character = content[index];
     if (character === "(") {
@@ -1078,7 +1081,8 @@ function extractPdfOperators(content: string, cmaps: Map<number, string>): strin
       let cursor = parsed.end;
       while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
       if (content.startsWith("Tj", cursor)) {
-        result += `${parsed.value}\n`;
+        layout.append(parsed.value, content.slice(lastTextShowEndOffset, index));
+        lastTextShowEndOffset = cursor + 2;
         index = cursor + 2;
         continue;
       }
@@ -1093,7 +1097,8 @@ function extractPdfOperators(content: string, cmaps: Map<number, string>): strin
           let cursor = closing + 1;
           while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
           if (content.startsWith("Tj", cursor)) {
-            result += `${decodePdfHex(hex, cmaps)}\n`;
+            layout.append(decodePdfHex(hex, cmaps), content.slice(lastTextShowEndOffset, index));
+            lastTextShowEndOffset = cursor + 2;
             index = cursor + 2;
             continue;
           }
@@ -1122,9 +1127,8 @@ function extractPdfOperators(content: string, cmaps: Map<number, string>): strin
               }
             }
           }
-          if (textChunk !== "") {
-            result += `${textChunk}\n`;
-          }
+          layout.append(textChunk, content.slice(lastTextShowEndOffset, index));
+          lastTextShowEndOffset = cursor + 2;
           index = cursor + 2;
           continue;
         }
@@ -1133,7 +1137,8 @@ function extractPdfOperators(content: string, cmaps: Map<number, string>): strin
       let cursor = parsed.end;
       while (/\s/u.test(content[cursor] ?? "")) cursor += 1;
       if (content.startsWith("TJ", cursor)) {
-        result += `${parsed.value}\n`;
+        layout.append(parsed.value, content.slice(lastTextShowEndOffset, index));
+        lastTextShowEndOffset = cursor + 2;
         index = cursor + 2;
         continue;
       }
@@ -1142,7 +1147,7 @@ function extractPdfOperators(content: string, cmaps: Map<number, string>): strin
     }
     index += 1;
   }
-  return normalizeText(result);
+  return normalizeText(layout.toString());
 }
 
 function extractPdf(bytes: Uint8Array): string {

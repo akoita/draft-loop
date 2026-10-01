@@ -136,6 +136,12 @@ copies exact bytes under an opaque ID-derived name. A changed append creates
 the next parent-linked version; identical current bytes are a no-op and do not
 advance time or imply freshness.
 
+PDF extraction joins adjacent text fragments on the same line using text-position
+operators, while retaining line changes and separate text objects. This keeps
+browser-generated PDFs that draw individual characters readable. Existing saved
+job text retains its previous extraction until the job document is replaced or
+imported again.
+
 Approved URL intake reuses the HTTPS-only boundary, including public-address
 resolution, manual redirects, response and extraction limits, and usable-text
 checks. It stores exact response bytes and sensitive per-version provenance for
