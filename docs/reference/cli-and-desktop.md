@@ -140,6 +140,11 @@ new run, only while its exact CKB selection still matches the workspace's
 current lifecycle-ready selection. Historical profile versions and existing
 run/export records remain available for audit after lifecycle changes.
 
+Application consumers can omit `profileId` when listing profile versions to
+load every complete history in the workspace, ordered by profile name and
+version. The catalog is bounded to 256 profile names and fails closed when
+larger; supplying a name keeps the existing exact-history behavior.
+
 Before approval, the desktop can show blockers from the readiness decision
 persisted for the exact artifact. A rubric blocker includes its recorded score
 and required threshold. The score is a check result, not a confirmed candidate
