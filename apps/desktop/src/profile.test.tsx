@@ -197,6 +197,7 @@ describe("desktop canonical candidate profile", () => {
     expect(html).toContain("Retry profile generation");
     expect(html).toContain('disabled=""');
     expect(html).toContain("I approve sending selected candidate material");
+    expect(html).not.toContain("Existing reviewed profiles");
     expect(html).toContain("can consume provider credits");
     expect(html).toContain("bounded recovery may make multiple requests");
     expect(html).not.toContain('checked=""');
@@ -295,5 +296,35 @@ describe("desktop canonical candidate profile", () => {
         />,
       ),
     ).toBe("");
+  });
+
+  it("shows the optional reviewed-profile picker without changing the legacy profile gate", () => {
+    const capabilities = {
+      deriveCanonicalCandidateProfile: vi.fn(async () => record()),
+      getCanonicalCandidateProfile: vi.fn(async () => record("reviewed")),
+      listCanonicalCandidateProfileVersions: vi.fn(async () => ({
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        versions: [record("reviewed")],
+      })),
+      editCanonicalCandidateProfile: vi.fn(async () => record()),
+      reviewCanonicalCandidateProfile: vi.fn(async () => record("reviewed")),
+      listReviewedCanonicalCandidateProfiles: vi.fn(async () => ({
+        workspaceId: "workspace-1",
+        profiles: [{ profileId: "profile-1", version: 1, reviewedAt: capturedAt }],
+      })),
+    };
+    const markup = renderToStaticMarkup(
+      <ProfileWorkspace
+        workspaceId="workspace-1"
+        capabilities={capabilities}
+        selectedProfile={null}
+        onSelectionChange={() => undefined}
+      />,
+    );
+    expect(markup).toContain('aria-label="Existing reviewed profiles"');
+    expect(markup).toContain("Choose a reviewed profile…");
+    expect(markup).toContain("Source compatibility is checked again before starting a review.");
+    expect(markup).toContain("Loading reviewed profiles…");
   });
 });

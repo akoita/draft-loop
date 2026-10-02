@@ -117,6 +117,7 @@ import {
   type OpportunityRecordResult,
   type ProviderAuthModeStatus,
   type ReviewDispatchInput,
+  type ReviewedCanonicalCandidateProfileCatalogResult,
   type RunWritingPolicyProjection,
   type SelectedFile,
   type SourceAddUrlInput,
@@ -149,6 +150,7 @@ import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport } from "../model-profile-bridge.js";
 import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
+import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
@@ -2754,6 +2756,25 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
   }
 
+  async function listReviewedCanonicalCandidateProfiles(
+    input: Extract<BridgeCommand, { type: "profile.catalog" }>["input"],
+  ): Promise<ReviewedCanonicalCandidateProfileCatalogResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const records = await service.listCanonicalCandidateProfileVersions({ root: workspace.root });
+    try {
+      return projectReviewedCanonicalCandidateProfileCatalog(
+        workspace.descriptor.id,
+        records,
+        (record) => projectCanonicalCandidateProfileRecord(workspace.descriptor.id, record),
+      );
+    } catch {
+      return fail(
+        "operation-failed",
+        "The reviewed profile catalog is invalid or not a contiguous immutable history.",
+      );
+    }
+  }
+
   async function editCanonicalCandidateProfile(
     input: Extract<BridgeCommand, { type: "profile.edit" }>["input"],
   ): Promise<CanonicalCandidateProfileRecordResult> {
@@ -4638,6 +4659,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await getCanonicalCandidateProfile(command.input) };
         case "profile.list":
           return { ok: true, value: await listCanonicalCandidateProfileVersions(command.input) };
+        case "profile.catalog":
+          return { ok: true, value: await listReviewedCanonicalCandidateProfiles(command.input) };
         case "profile.edit":
           return { ok: true, value: await editCanonicalCandidateProfile(command.input) };
         case "profile.review":

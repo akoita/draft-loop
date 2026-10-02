@@ -53,6 +53,12 @@ import {
   parseModelProfileSupportInput,
   parseModelProfileSupportResult,
 } from "./model-profile-bridge.js";
+import {
+  parseReviewedCanonicalCandidateProfileCatalogInput,
+  parseReviewedCanonicalCandidateProfileCatalogResult,
+  type ReviewedCanonicalCandidateProfileCatalogInput,
+  type ReviewedCanonicalCandidateProfileCatalogResult,
+} from "./profile-catalog.js";
 
 // Re-export the safe policy vocabulary from the bridge so consumers that only
 // depend on renderer contracts do not need to import the model module.
@@ -116,6 +122,7 @@ export const bridgeCapabilities = [
   "profile.list",
   "profile.edit",
   "profile.review",
+  "profile.catalog",
   "run.status",
   "run.start",
   "run.pause",
@@ -142,6 +149,10 @@ export type {
   ModelProfileSupportInput,
   ModelProfileSupportResult,
 } from "./model-profile-bridge.js";
+export type {
+  ReviewedCanonicalCandidateProfileCatalogInput,
+  ReviewedCanonicalCandidateProfileCatalogResult,
+} from "./profile-catalog.js";
 
 export const supportedFileExtensions = [
   ".docx",
@@ -2642,6 +2653,7 @@ export interface BridgeCommandInputMap {
   "profile.list": CanonicalCandidateProfileListInput;
   "profile.edit": CanonicalCandidateProfileEditInput;
   "profile.review": CanonicalCandidateProfileReviewInput;
+  "profile.catalog": ReviewedCanonicalCandidateProfileCatalogInput;
   "run.status": RunStatusInput;
   "run.start": RunStartInput;
   "run.pause": RunLifecycleInput;
@@ -2713,6 +2725,7 @@ export interface BridgeCommandOutputMap {
   "profile.list": CanonicalCandidateProfileListResult;
   "profile.edit": CanonicalCandidateProfileRecordResult;
   "profile.review": CanonicalCandidateProfileRecordResult;
+  "profile.catalog": ReviewedCanonicalCandidateProfileCatalogResult;
   "run.status": RunStatus;
   "run.start": RunStatus;
   "run.pause": RunStatus;
@@ -4727,6 +4740,11 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "profile.review",
         input: validateCanonicalCandidateProfileReviewInput(command.input),
+      };
+    case "profile.catalog":
+      return {
+        type: "profile.catalog",
+        input: parseReviewedCanonicalCandidateProfileCatalogInput(command.input),
       };
     case "run.status":
       return { type: "run.status", input: validateRunStatusInput(command.input) };
@@ -6752,6 +6770,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       );
     case "profile.list":
       return normalizeCanonicalCandidateProfileListResult(value);
+    case "profile.catalog":
+      return parseReviewedCanonicalCandidateProfileCatalogResult(value, command.input.workspaceId);
     case "knowledge.readiness":
       return normalizeKnowledgeReadinessResult(value);
     case "knowledge.sources":
