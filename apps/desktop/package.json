@@ -29,7 +29,7 @@
     "@electron-forge/plugin-auto-unpack-natives": "7.11.2",
     "@electron-forge/plugin-vite": "7.11.2",
     "@electron-forge/shared-types": "7.11.2",
-    "@vitejs/plugin-react": "6.0.5",
+    "@vitejs/plugin-react": "6.1.1",
     "electron": "43.4.0",
     "vite": "8.2.2"
   }
