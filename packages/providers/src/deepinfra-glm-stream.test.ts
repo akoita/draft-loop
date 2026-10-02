@@ -73,6 +73,26 @@ function chunk(
   } as unknown as ChatCompletionChunk;
 }
 
+function documentedChunk(options: {
+  readonly omitId?: boolean;
+  readonly id?: unknown;
+  readonly model?: unknown;
+  readonly created?: unknown;
+  readonly choices: unknown[];
+  readonly usage?: unknown;
+}): ChatCompletionChunk {
+  return {
+    ...(options.omitId
+      ? {}
+      : { id: Object.hasOwn(options, "id") ? options.id : "chatcmpl-documented" }),
+    object: "chat.completion.chunk",
+    choices: options.choices,
+    ...(Object.hasOwn(options, "model") ? { model: options.model } : {}),
+    ...(Object.hasOwn(options, "created") ? { created: options.created } : {}),
+    ...(Object.hasOwn(options, "usage") ? { usage: options.usage } : {}),
+  } as unknown as ChatCompletionChunk;
+}
+
 function iterable(chunks: readonly ChatCompletionChunk[]): AsyncIterable<ChatCompletionChunk> {
   return {
     async *[Symbol.asyncIterator]() {
@@ -233,6 +253,90 @@ describe("DeepInfra GLM streaming response", () => {
       retryable: false,
     });
     expect(fixture.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("accepts documented chunks with omitted metadata and later supplied metadata", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          model: deepInfraGLMModelId,
+          created: 42,
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+      ]),
+    );
+
+    const result = await fixture.adapter.execute(request());
+
+    expect(result.output).toEqual({ answer: "ok" });
+    expect(result.usage).toMatchObject({ inputTokens: 12, outputTokens: 3, totalTokens: 15 });
+  });
+
+  it("uses the explicit request model when every chunk omits model metadata", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          choices: [{ delta: {}, finish_reason: "stop" }],
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+      ]),
+    );
+
+    await expect(fixture.adapter.execute(request())).resolves.toMatchObject({
+      output: { answer: "ok" },
+      modelId: deepInfraGLMModelId,
+      usage: { inputTokens: 12, outputTokens: 3, totalTokens: 15 },
+    });
+  });
+
+  it.each([
+    ["missing identity", { omitId: true }],
+    ["null identity", { id: null }],
+    ["blank identity", { id: "   " }],
+    ["null model", { model: null }],
+    ["wrong model", { model: "other-model" }],
+    ["null timestamp", { created: null }],
+    ["invalid timestamp", { created: "not-a-time" }],
+    ["null index", { choices: [{ index: null, delta: {}, finish_reason: "stop" }] }],
+    ["wrong index", { choices: [{ index: 1, delta: {}, finish_reason: "stop" }] }],
+  ])("rejects malformed supplied metadata: %s", async (_label, metadata) => {
+    const options = {
+      choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: "stop" }],
+      ...metadata,
+    } as Parameters<typeof documentedChunk>[0];
+    const fixture = harness(iterable([documentedChunk(options)]));
+
+    await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream" }],
+    });
+  });
+
+  it("rejects inconsistent supplied creation times", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          created: 41,
+          choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          created: 42,
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        }),
+      ]),
+    );
+
+    await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream" }],
+    });
   });
 
   it("requires a terminal finish and rejects length-truncated output", async () => {
