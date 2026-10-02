@@ -184,8 +184,8 @@ describe("provider-neutral model adapters", () => {
         input_tokens: 13,
         output_tokens: 5,
         total_tokens: 18,
-        input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
-        output_tokens_details: { reasoning_tokens: 0 },
+        input_tokens_details: { cached_tokens: 3, cache_write_tokens: 2 },
+        output_tokens_details: { reasoning_tokens: 2 },
       },
       _request_id: "openai-request-1",
     };
@@ -206,7 +206,12 @@ describe("provider-neutral model adapters", () => {
     };
     const adapter = new OpenAIAdapter(client, {
       configuredModel: openAIModel,
-      pricing: { inputUsdPerMillionTokens: 3, outputUsdPerMillionTokens: 4 },
+      pricing: {
+        inputUsdPerMillionTokens: 3,
+        outputUsdPerMillionTokens: 4,
+        cachedInputUsdPerMillionTokens: 1,
+        cacheWriteInputUsdPerMillionTokens: 5,
+      },
     });
 
     const controller = new AbortController();
@@ -233,8 +238,15 @@ describe("provider-neutral model adapters", () => {
       company: "openai",
       modelId: openAIModel.modelId,
       providerRequestId: "openai-request-1",
-      usage: { inputTokens: 13, outputTokens: 5, totalTokens: 18 },
-      cost: { estimatedUsd: 0.000059 },
+      usage: {
+        inputTokens: 13,
+        outputTokens: 5,
+        totalTokens: 18,
+        cachedInputTokens: 3,
+        cacheWriteInputTokens: 2,
+        reasoningOutputTokens: 2,
+      },
+      cost: { estimatedUsd: 0.000057 },
     });
     expect(seenOptions?.signal).toBe(controller.signal);
   });
