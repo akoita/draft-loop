@@ -48,6 +48,11 @@ import {
   workspaceModelSettingsNeedsFreshAcknowledgement,
 } from "./workspace-model-settings.js";
 import {
+  runWorkspaceCloseIfAllowed,
+  WorkspaceNavigation,
+  workspaceCloseDisabledReason,
+} from "./workspace-navigation.js";
+import {
   isWorkspaceContextCurrent,
   isWorkspaceContextLost,
   WorkspaceRecovery,
@@ -159,13 +164,17 @@ export const candidateProfileStartBlockerMessage =
   "Select an exact reviewed candidate profile before starting a review.";
 export const candidateKnowledgePendingBlockerMessage =
   "Wait for candidate knowledge selection to finish before starting a review.";
+export const candidateProfilePendingBlockerMessage =
+  "Wait for the candidate profile operation to finish before starting a review.";
 
 export function candidateProfileStartDisabledReason(
   profileCapabilitiesPresent: boolean,
   selectedProfile: CandidateProfileSelection | null,
   knowledgePending = false,
+  profilePending = false,
 ): string | null {
   if (knowledgePending) return candidateKnowledgePendingBlockerMessage;
+  if (profilePending) return candidateProfilePendingBlockerMessage;
   return profileCapabilitiesPresent && selectedProfile === null
     ? candidateProfileStartBlockerMessage
     : null;
@@ -857,6 +866,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const activePort = useMemo(() => port ?? createDesktopReviewPort(), [port]);
   const [state, setState] = useState<DesktopReviewState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [workspaceSetupVisible, setWorkspaceSetupVisible] = useState(false);
+  const [workspaceCloseConfirmationOpen, setWorkspaceCloseConfirmationOpen] = useState(false);
   const [workspaceRecoveryRequired, setWorkspaceRecoveryRequired] = useState(false);
   const [workspaceRecoveryError, setWorkspaceRecoveryError] = useState<string | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -865,6 +876,11 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [pendingBulkFindingCount, setPendingBulkFindingCount] = useState<number | null>(null);
   const [knowledgePending, setKnowledgePending] = useState(false);
   const knowledgePendingRef = useRef(false);
+  const [profilePendingScope, setProfilePendingScope] = useState<{
+    readonly workspaceId: string;
+    readonly generation: number;
+  } | null>(null);
+  const profilePendingScopeRef = useRef(profilePendingScope);
   const activeWorkspaceIdRef = useRef<string | null>(null);
   const contextGenerationRef = useRef(0);
   const [profileResetEpoch, setProfileResetEpoch] = useState(0);
@@ -905,6 +921,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const activeExecutionStatus = state?.execution.status;
   const activeWorkspaceId = state?.workspaceId ?? null;
   const workspaceGeneration = contextGenerationRef.current;
+  const profilePendingForActiveWorkspace =
+    activeWorkspaceId !== null &&
+    profilePendingScopeRef.current?.workspaceId === activeWorkspaceId &&
+    profilePendingScopeRef.current.generation === workspaceGeneration;
   const previousWorkspaceIdRef = useRef<string | null>(null);
   activeWorkspaceIdRef.current = activeWorkspaceId;
   const isCurrentWorkspaceContext = useCallback(
@@ -916,6 +936,26 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         contextGenerationRef.current,
       ),
     [],
+  );
+  const onProfilePendingChange = useCallback(
+    (workspaceId: string, generation: number, pending: boolean) => {
+      if (!isCurrentWorkspaceContext(workspaceId, generation)) return;
+      const current = profilePendingScopeRef.current;
+      if (pending) {
+        const next = { workspaceId, generation };
+        profilePendingScopeRef.current = next;
+        setProfilePendingScope(next);
+      } else if (current?.workspaceId === workspaceId && current.generation === generation) {
+        profilePendingScopeRef.current = null;
+        setProfilePendingScope(null);
+      }
+    },
+    [isCurrentWorkspaceContext],
+  );
+  const profilePendingChange = useMemo(
+    () => (workspaceId: string, pending: boolean) =>
+      onProfilePendingChange(workspaceId, workspaceGeneration, pending),
+    [onProfilePendingChange, workspaceGeneration],
   );
   const enterWorkspaceRecovery = useCallback(
     (workspaceId: string, generation: number, reason: unknown): boolean => {
@@ -934,11 +974,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       activeWorkspaceIdRef.current = null;
       setState(null);
       setError(null);
+      setWorkspaceSetupVisible(false);
+      setWorkspaceCloseConfirmationOpen(false);
       setImportError(null);
       setPendingReviewAction(null);
       setPendingBulkFindingCount(null);
       knowledgePendingRef.current = false;
       setKnowledgePending(false);
+      profilePendingScopeRef.current = null;
+      setProfilePendingScope(null);
       setBusy(false);
       setCandidateProfileSelection((current) =>
         current?.workspaceId === workspaceId ? null : current,
@@ -1031,6 +1075,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       (state.state === "collecting" || state.state === "stopped"),
     selectedCandidateProfile,
     knowledgePending,
+    profilePendingForActiveWorkspace,
   );
   const modelProfileStartReason =
     selectedModelProfiles === null || state === null
@@ -1279,6 +1324,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       activeWorkspaceIdRef.current = loaded.workspaceId;
       setWorkspaceRecoveryRequired(false);
       setWorkspaceRecoveryError(null);
+      setWorkspaceSetupVisible(false);
+      setWorkspaceCloseConfirmationOpen(false);
+      profilePendingScopeRef.current = null;
+      setProfilePendingScope(null);
       setState(loaded);
     } catch (reason: unknown) {
       setError(describeFailure(reason));
@@ -1298,6 +1347,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       activeWorkspaceIdRef.current = loaded.workspaceId;
       setWorkspaceRecoveryRequired(false);
       setWorkspaceRecoveryError(null);
+      setWorkspaceSetupVisible(false);
+      setWorkspaceCloseConfirmationOpen(false);
+      profilePendingScopeRef.current = null;
+      setProfilePendingScope(null);
       setError(null);
       setImportError(null);
       setState(loaded);
@@ -1308,7 +1361,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     }
   };
 
-  const setupVisible = (error !== null && !workspaceRecoveryRequired) || editingModels;
+  const setupFormVisible =
+    (error !== null && !workspaceRecoveryRequired) || workspaceSetupVisible || editingModels;
   const listModels = activePort.listModels;
   const previewIndependence = activePort.previewIndependence;
   const localEndpointNamed = draft.localEndpoint.trim() !== "";
@@ -1320,8 +1374,75 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const modelSettingsDisabled =
     busy ||
     knowledgePending ||
+    profilePendingForActiveWorkspace ||
     pendingReviewAction !== null ||
     state?.execution.status === "running";
+
+  const currentWorkspaceCloseGuard = () => {
+    const profilePendingForActiveWorkspace =
+      state !== null &&
+      profilePendingScopeRef.current?.workspaceId === state.workspaceId &&
+      profilePendingScopeRef.current.generation === workspaceGeneration;
+    return {
+      busy,
+      knowledgePending: knowledgePending || knowledgePendingRef.current,
+      pendingReviewAction: pendingReviewAction !== null,
+      profilePending: profilePendingForActiveWorkspace,
+      running: state?.execution.status === "running",
+    };
+  };
+  const closeDisabledReason =
+    state === null ? null : workspaceCloseDisabledReason(currentWorkspaceCloseGuard());
+
+  const requestWorkspaceClose = () => {
+    if (state === null) return;
+    runWorkspaceCloseIfAllowed(currentWorkspaceCloseGuard(), () =>
+      setWorkspaceCloseConfirmationOpen(true),
+    );
+  };
+
+  const closeWorkspace = () => {
+    if (state === null) return;
+    runWorkspaceCloseIfAllowed(currentWorkspaceCloseGuard(), () => {
+      contextGenerationRef.current += 1;
+      activeWorkspaceIdRef.current = null;
+      knowledgePendingRef.current = false;
+      profilePendingScopeRef.current = null;
+      requestedCompanies.current.clear();
+
+      setState(null);
+      setWorkspaceSetupVisible(true);
+      setWorkspaceCloseConfirmationOpen(false);
+      setError(null);
+      setImportError(null);
+      setWorkspaceRecoveryRequired(false);
+      setWorkspaceRecoveryError(null);
+      setPendingReviewAction(null);
+      setPendingBulkFindingCount(null);
+      setKnowledgePending(false);
+      setProfilePendingScope(null);
+      setCandidateProfileSelection(null);
+      setAppliedModelProfiles(null);
+      setModelProfileSupport({ status: "idle" });
+      setModelProfileSupportEpoch((current) => current + 1);
+      setProfileResetEpoch((current) => current + 1);
+      setDraft(initialWorkspaceSetupDraft);
+      setModelFilters({
+        author: { company: initialWorkspaceSetupDraft.authorCompany, text: "" },
+        critic: { company: initialWorkspaceSetupDraft.criticCompany, text: "" },
+      });
+      setTypingOwnModel({ author: false, critic: false });
+      setDiscovery({
+        anthropic: { status: "idle" },
+        openai: { status: "idle" },
+        zai: { status: "idle" },
+        local: { status: "idle" },
+      });
+      setPreview({ status: "idle" });
+      setEditingModels(false);
+      setModelSettingsError(null);
+    });
+  };
 
   const openModelSettings = () => {
     if (state === null || activePort.configureModels === undefined || modelSettingsDisabled) return;
@@ -1469,7 +1590,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
    * and this workspace does not exist yet.
    */
   useEffect(() => {
-    if (!setupVisible) return;
+    if (!setupFormVisible) return;
     let active = true;
     for (const company of new Set<ModelCompany>([authorCompany, criticCompany])) {
       if (company === "local" && localEndpointNamed) continue;
@@ -1513,7 +1634,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     return () => {
       active = false;
     };
-  }, [setupVisible, listModels, authorCompany, criticCompany, localEndpointNamed]);
+  }, [setupFormVisible, listModels, authorCompany, criticCompany, localEndpointNamed]);
 
   /**
    * Ask the domain what this pairing would record, every time it changes.
@@ -1523,7 +1644,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
    * which is exactly the defect the trust strip was corrected for.
    */
   useEffect(() => {
-    if (!setupVisible) return;
+    if (!setupFormVisible) return;
     if (authorModel === "" || criticModel === "") {
       setPreview({ status: "idle" });
       return;
@@ -1557,7 +1678,14 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       active = false;
       window.clearTimeout(timer);
     };
-  }, [setupVisible, previewIndependence, authorCompany, authorModel, criticCompany, criticModel]);
+  }, [
+    setupFormVisible,
+    previewIndependence,
+    authorCompany,
+    authorModel,
+    criticCompany,
+    criticModel,
+  ]);
 
   if (workspaceRecoveryRequired) {
     return (
@@ -1571,7 +1699,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     );
   }
 
-  if (error !== null && !editingModels) {
+  if ((error !== null || workspaceSetupVisible) && !editingModels) {
     const openWorkspace = nativeActions.open;
     const createWorkspace = nativeActions.create;
     const createDemoWorkspace = nativeActions.createDemo;
@@ -1583,9 +1711,13 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             <span className="brand-name">DraftLoop</span>
             <ThemeToggle />
           </div>
-          <p className="eyebrow">First run</p>
-          <h1>Set up a review workspace</h1>
-          <p>{error}</p>
+          <p className="eyebrow">{workspaceSetupVisible ? "Workspace navigation" : "First run"}</p>
+          <h1>
+            {workspaceSetupVisible
+              ? "Create or open a review workspace"
+              : "Set up a review workspace"}
+          </h1>
+          {error === null ? null : <p>{error}</p>}
           {openWorkspace === undefined &&
           createWorkspace === undefined &&
           createDemoWorkspace === undefined ? null : (
@@ -1704,6 +1836,15 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               </button>
             ),
           })}
+      workspaceNavigationAction={
+        <WorkspaceNavigation
+          closeDisabledReason={closeDisabledReason}
+          confirmationOpen={workspaceCloseConfirmationOpen}
+          onRequestClose={requestWorkspaceClose}
+          onCancelClose={() => setWorkspaceCloseConfirmationOpen(false)}
+          onConfirmClose={closeWorkspace}
+        />
+      }
       profilePanel={
         state.state === "collecting" || state.state === "stopped" ? (
           <>
@@ -1712,7 +1853,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               workspaceId={state.workspaceId}
               capabilities={activePort}
               disabled={
-                busy || pendingReviewAction !== null || state.execution.status === "running"
+                busy ||
+                profilePendingForActiveWorkspace ||
+                pendingReviewAction !== null ||
+                state.execution.status === "running"
               }
               onPendingChange={(workspaceId, pending) =>
                 onKnowledgePendingChange(workspaceId, workspaceGeneration, pending)
@@ -1753,6 +1897,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                   capabilities={profileCapabilities}
                   selectedProfile={selectedCandidateProfile}
                   onSelectionChange={onCandidateProfileSelectionChange}
+                  onPendingChange={profilePendingChange}
                 />
               </fieldset>
             )}
