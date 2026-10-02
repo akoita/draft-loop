@@ -81,6 +81,10 @@ with the reference pair.
 **The immediate priority is unchanged:** a first working version on one
 reference Anthropic author and OpenAI critic pair.
 
+An opt-in provider adapter supports DeepInfra's GLM-5.3-Flash for development
+experiments. This exception does not change the default Anthropic/OpenAI pair
+or imply representative-CV quality validation.
+
 Current cost-reporting work preserves validated OpenAI cached-input,
 cache-write, and reasoning-output counts in adapter results. Estimates use
 explicitly supplied rates and remain unknown when usage or an applicable rate
