@@ -59,6 +59,8 @@ interface ReviewWorkspaceProps {
   readonly startDisabledReason?: string | null;
   /** Optional native model-settings action shown in the workspace header. */
   readonly modelSettingsAction?: ReactNode;
+  /** Optional workspace navigation shown in the workspace header. */
+  readonly workspaceNavigationAction?: ReactNode;
   /** Profile controls rendered in the collecting/setup workspace. */
   readonly profilePanel?: ReactNode;
   readonly getCredentialStatus?: (provider: CredentialProvider) => Promise<CredentialStatus>;
@@ -1255,6 +1257,7 @@ export function ReviewWorkspace({
   errorMessage,
   startDisabledReason = null,
   modelSettingsAction,
+  workspaceNavigationAction,
   profilePanel,
   getCredentialStatus,
   onSetCredential,
@@ -2618,7 +2621,10 @@ export function ReviewWorkspace({
                 </div>
               </div>
               <div className="spine-loop" />
-              <div className="spine-meta">{modelSettingsAction}</div>
+              <div className="spine-meta">
+                {modelSettingsAction}
+                {workspaceNavigationAction}
+              </div>
             </header>
             <section className="panel onboarding-panel" aria-labelledby="onboarding-title">
               <p className="eyebrow">Before the first run</p>
@@ -2942,6 +2948,7 @@ export function ReviewWorkspace({
                 )}
               </div>
               {modelSettingsAction}
+              {workspaceNavigationAction}
             </div>
           </header>
 

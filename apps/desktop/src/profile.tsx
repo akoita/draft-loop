@@ -42,6 +42,7 @@ export interface ProfileWorkspaceProps {
   readonly capabilities: DesktopProfileCapabilities;
   readonly selectedProfile: CandidateProfileSelection | null;
   readonly onSelectionChange: (selection: CandidateProfileSelection | null) => void;
+  readonly onPendingChange?: (workspaceId: string, pending: boolean) => void;
 }
 
 /** The packaged host exposes the profile panel only when the whole API is present. */
@@ -542,6 +543,7 @@ export function ProfileWorkspace({
   capabilities,
   selectedProfile,
   onSelectionChange,
+  onPendingChange,
 }: ProfileWorkspaceProps) {
   const [profileId, setProfileId] = useState("");
   const [loadedProfileId, setLoadedProfileId] = useState<string | null>(null);
@@ -594,6 +596,10 @@ export function ProfileWorkspace({
     currentOutcome.kind === "reviewed" &&
     selectedProfile.profileId === record.profileId &&
     selectedProfile.version === record.version;
+
+  useEffect(() => {
+    onPendingChange?.(workspaceId, busy);
+  }, [busy, onPendingChange, workspaceId]);
 
   useEffect(() => {
     if (workspaceId.trim() === "") return;
@@ -781,7 +787,9 @@ export function ProfileWorkspace({
         "Could not load that reviewed profile version. Choose it again or load by name.",
       );
     } finally {
-      if (current()) setBusy(false);
+      if (current()) {
+        setBusy(false);
+      }
     }
   };
 

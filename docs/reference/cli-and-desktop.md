@@ -92,6 +92,16 @@ filenames, source content, and provider responses are excluded. The current log
 and one rotated backup are each bounded to 64 KiB. Logging failures do not
 interrupt a review operation. Logs stay local and are not uploaded automatically.
 
+## Desktop workspace navigation
+
+Use **Close workspace** to return to the create/open screen. Saved workspace
+files, run history, and profile versions remain on this device; unsaved setup or
+profile form edits are discarded. Closing does not rewrite persisted run state.
+
+Stop a running review with its existing **Stop review** control before closing.
+The desktop keeps the workspace open while a review action, knowledge update, or
+candidate-profile operation is pending and says when to wait for it to finish.
+
 ## Opportunity briefs
 
 The `opportunity` command group creates and reloads one durable brief, lists
