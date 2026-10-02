@@ -2,10 +2,15 @@ import { createHash } from "node:crypto";
 import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resources/messages/messages.js";
 import type { AgentRole, ModelCompany, ModelSelection } from "@draft-loop/domain";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses.js";
+import {
+  anthropicBillingLimitDiagnosticCode,
+  classifyAnthropicBillingError,
+} from "./anthropic-billing-error.js";
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
 
+export * from "./anthropic-billing-error.js";
 export * from "./author-model-preflight.js";
 export * from "./user-session.js";
 
@@ -347,6 +352,8 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
     .filter((value): value is string => value !== undefined)
     .join(" ")
     .toLowerCase();
+  const anthropicBillingDiagnostic =
+    provider === "anthropic" ? classifyAnthropicBillingError(error) : null;
 
   let code: ProviderErrorCode = "unknown";
   if (
@@ -365,6 +372,11 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
       combined.includes("quota exceeded") ||
       combined.includes("quota exhausted") ||
       combined.includes("quota_exhausted"))
+  ) {
+    code = "quota-exhausted";
+  } else if (
+    provider === "anthropic" &&
+    anthropicBillingDiagnostic === anthropicBillingLimitDiagnosticCode
   ) {
     code = "quota-exhausted";
   } else if (
@@ -393,7 +405,14 @@ export function normalizeProviderError(provider: ProviderId, error: unknown): Pr
   const message =
     code === "unknown" ? "The provider request failed." : `The provider request failed (${code}).`;
   const retryAfterMs = parseRetryAfterMs(details);
+  const diagnostics =
+    provider === "anthropic" &&
+    code === "quota-exhausted" &&
+    anthropicBillingDiagnostic === anthropicBillingLimitDiagnosticCode
+      ? [{ code: anthropicBillingLimitDiagnosticCode, path: "error" }]
+      : undefined;
   return new ProviderAdapterError(provider, code, message, {
+    ...(diagnostics === undefined ? {} : { retryable: false, diagnostics }),
     ...(status === undefined ? {} : { status }),
     ...(requestId === undefined ? {} : { requestId }),
     ...(retryAfterMs === undefined ? {} : { retryAfterMs }),

@@ -1,4 +1,4 @@
-import { ProviderAdapterError } from "@draft-loop/providers";
+import { anthropicBillingLimitDiagnosticCode, ProviderAdapterError } from "@draft-loop/providers";
 
 export type CandidateProfileExtractionStage =
   | "input-preparation"
@@ -16,6 +16,13 @@ const stageFailureMessages: Record<Exclude<CandidateProfileExtractionStage, "pro
 };
 
 function providerFailureMessage(error: ProviderAdapterError): string {
+  if (
+    error.provider === "anthropic" &&
+    error.code === "quota-exhausted" &&
+    error.diagnostics.some((diagnostic) => diagnostic.code === anthropicBillingLimitDiagnosticCode)
+  ) {
+    return "Anthropic API credits or the configured spending limit prevented this request. Check billing or the spending limit, then retry after resolving it.";
+  }
   if (error.code === "invalid-response" && error.failureStage === "response-schema-validation") {
     return stageFailureMessages["response-schema"];
   }

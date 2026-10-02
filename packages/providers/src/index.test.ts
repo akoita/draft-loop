@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AnthropicAdapter,
   type AnthropicClient,
+  anthropicBillingLimitDiagnosticCode,
   type JsonSchema,
   type ModelRequest,
   normalizeProviderError,
@@ -50,6 +51,41 @@ function request(overrides: Partial<ModelRequest> = {}): ModelRequest {
 }
 
 describe("provider-neutral model adapters", () => {
+  it("classifies explicit Anthropic billing exhaustion without retrying or echoing details", async () => {
+    const privateBillingError = Object.assign(new Error("private credit account narrative"), {
+      status: 400,
+      error: {
+        type: "enforced_spend_limit_reached",
+        message: "private billing response text",
+      },
+      requestID: "private-billing-request-id",
+    });
+    const create = vi.fn(() => Promise.reject(privateBillingError));
+    const adapter = new AnthropicAdapter(
+      { messages: { create } as unknown as AnthropicClient["messages"] },
+      { configuredModel: model },
+    );
+
+    const error = await adapter.execute(request()).catch((value: unknown) => value);
+    const normalizedError = error as ProviderAdapterError;
+
+    expect(create).toHaveBeenCalledOnce();
+    expect(normalizedError).toMatchObject({
+      code: "quota-exhausted",
+      retryable: false,
+      diagnostics: [{ code: anthropicBillingLimitDiagnosticCode, path: "error" }],
+    });
+    expect(normalizedError).toMatchObject({
+      message: "The provider request failed (quota-exhausted).",
+    });
+    expect(
+      JSON.stringify({
+        message: normalizedError.message,
+        diagnostics: normalizedError.diagnostics,
+      }),
+    ).not.toMatch(/private credit account|private billing response|private-billing-request-id/u);
+  });
+
   it("normalizes explicit Anthropic and OpenAI cancellation signals without retry", () => {
     const anthropic = normalizeProviderError(
       "anthropic",
