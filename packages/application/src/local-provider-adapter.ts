@@ -132,6 +132,6 @@ export async function createProviderAdapter(
   const client = providerClientFactories?.openai?.(apiKey) ?? new OpenAI({ apiKey, maxRetries: 0 });
   return new OpenAIAdapter<JsonObject, JsonObject>(client, {
     configuredModel: model,
-    ...(config.retry === undefined ? {} : { retry: config.retry }),
+    retry: { ...config.retry, maxRetries: config.retry?.maxRetries ?? 0 },
   });
 }
