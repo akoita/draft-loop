@@ -14,7 +14,13 @@ import {
   approvalReadinessGuidance,
   formatApprovalReadinessBlocker,
 } from "./approval-readiness.js";
-import type { CredentialStatus, ProviderAuthMode, ProviderAuthModeStatus } from "./bridge.js";
+import type {
+  CredentialProvider,
+  CredentialStatus,
+  ProviderAuthMode,
+  ProviderAuthModeProvider,
+  ProviderAuthModeStatus,
+} from "./bridge.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { type DiffOp, diffWords } from "./diff.js";
 import {
@@ -54,14 +60,14 @@ interface ReviewWorkspaceProps {
   readonly modelSettingsAction?: ReactNode;
   /** Profile controls rendered in the collecting/setup workspace. */
   readonly profilePanel?: ReactNode;
-  readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
-  readonly onSetCredential?: (provider: "anthropic" | "openai", apiKey: string) => Promise<void>;
-  readonly onRemoveCredential?: (provider: "anthropic" | "openai") => Promise<void>;
+  readonly getCredentialStatus?: (provider: CredentialProvider) => Promise<CredentialStatus>;
+  readonly onSetCredential?: (provider: CredentialProvider, apiKey: string) => Promise<void>;
+  readonly onRemoveCredential?: (provider: CredentialProvider) => Promise<void>;
   readonly getProviderAuthModeStatus?: (
-    provider: "anthropic" | "openai",
+    provider: ProviderAuthModeProvider,
   ) => Promise<ProviderAuthModeStatus>;
   readonly onSetProviderAuthMode?: (
-    provider: "anthropic" | "openai",
+    provider: ProviderAuthModeProvider,
     mode: ProviderAuthMode,
   ) => Promise<ProviderAuthModeStatus>;
 }
@@ -595,6 +601,12 @@ function retryWaitLabel(waitMs: number): string {
   return `${seconds} second${seconds === 1 ? "" : "s"}`;
 }
 
+const credentialProviderLabels: Readonly<Record<CredentialProvider, string>> = {
+  anthropic: "Anthropic",
+  openai: "OpenAI",
+  deepinfra: "DeepInfra",
+};
+
 const credentialSourceLabels: Readonly<Record<CredentialStatus["source"], string>> = {
   app: "Configured in app",
   env: "Configured via env",
@@ -624,7 +636,7 @@ interface CredentialRowProps {
   readonly onRemove: () => void;
 }
 
-function CredentialRow({
+export function CredentialRow({
   title,
   placeholder,
   status,
@@ -1348,7 +1360,7 @@ export function ReviewWorkspace({
   const traceabilitySummaryRef = useRef<HTMLElement | null>(null);
   const reviewColumnRef = useRef<HTMLElement | null>(null);
   const findingQueueRef = useRef<HTMLElement | null>(null);
-  const emptyCredentialStatus = (provider: "anthropic" | "openai"): CredentialStatus => ({
+  const emptyCredentialStatus = (provider: CredentialProvider): CredentialStatus => ({
     provider,
     configured: false,
     source: "none",
@@ -1359,6 +1371,9 @@ export function ReviewWorkspace({
   );
   const [openaiStatus, setOpenaiStatus] = useState<CredentialStatus>(() =>
     emptyCredentialStatus("openai"),
+  );
+  const [deepinfraStatus, setDeepinfraStatus] = useState<CredentialStatus>(() =>
+    emptyCredentialStatus("deepinfra"),
   );
   const [anthropicAuthModeStatus, setAnthropicAuthModeStatus] = useState<ProviderAuthModeStatus>(
     () => ({
@@ -1378,8 +1393,10 @@ export function ReviewWorkspace({
   }));
   const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
   const [openaiKeyInput, setOpenaiKeyInput] = useState("");
+  const [deepinfraKeyInput, setDeepinfraKeyInput] = useState("");
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [showDeepinfraKey, setShowDeepinfraKey] = useState(false);
   const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
   const hasPreviousArtifact = state.previousArtifact !== null;
   // Nothing to compare against on a first version, so the redline is unavailable, not empty.
@@ -1622,6 +1639,9 @@ export function ReviewWorkspace({
     void getCredentialStatus("openai")
       .then(setOpenaiStatus)
       .catch(() => undefined);
+    void getCredentialStatus("deepinfra")
+      .then(setDeepinfraStatus)
+      .catch(() => undefined);
   }, [getCredentialStatus]);
 
   useEffect(() => {
@@ -1642,27 +1662,29 @@ export function ReviewWorkspace({
     refreshProviderAuthMode();
   }, [refreshProviderAuthMode]);
 
-  const handleSaveCredential = async (provider: "anthropic" | "openai", key: string) => {
+  const handleSaveCredential = async (provider: CredentialProvider, key: string) => {
     if (onSetCredential === undefined || key.trim() === "") return;
     try {
       await onSetCredential(provider, key.trim());
+      const label = credentialProviderLabels[provider];
       setCredentialFeedback(
-        `${provider === "anthropic" ? "Anthropic" : "OpenAI"} API key saved in app storage. Review the protection status below.`,
+        `${label} API key saved in app storage. Review the protection status below.`,
       );
       if (provider === "anthropic") setAnthropicKeyInput("");
-      else setOpenaiKeyInput("");
+      else if (provider === "openai") setOpenaiKeyInput("");
+      else setDeepinfraKeyInput("");
       refreshCredentials();
     } catch (error: unknown) {
       setCredentialFeedback(error instanceof Error ? error.message : "Failed to save API key.");
     }
   };
 
-  const handleRemoveCredential = async (provider: "anthropic" | "openai") => {
+  const handleRemoveCredential = async (provider: CredentialProvider) => {
     if (onRemoveCredential === undefined) return;
     try {
       await onRemoveCredential(provider);
       setCredentialFeedback(
-        `${provider === "anthropic" ? "Anthropic" : "OpenAI"} API key removed from app storage.`,
+        `${credentialProviderLabels[provider]} API key removed from app storage.`,
       );
       refreshCredentials();
     } catch {
@@ -2313,8 +2335,8 @@ export function ReviewWorkspace({
             </button>
           </div>
           <p className="modal-copy" id="settings-dialog-copy">
-            Choose how each hosted provider authenticates. App-managed API keys override provider
-            API-key environment variables; the selected mode changes after you restart DraftLoop.
+            Manage API keys for Anthropic, OpenAI, and DeepInfra. Anthropic and OpenAI also support
+            provider-managed sessions; app keys override their API-key environment variables.
           </p>
           {credentialFeedback ? (
             <div className="feedback-banner" role="status">
@@ -2355,6 +2377,17 @@ export function ReviewWorkspace({
                 onRemove={() => void handleRemoveCredential("openai")}
               />
             ) : null}
+            <CredentialRow
+              title="DeepInfra API key (Z.ai GLM)"
+              placeholder="DeepInfra API key"
+              status={deepinfraStatus}
+              value={deepinfraKeyInput}
+              revealed={showDeepinfraKey}
+              onReveal={setShowDeepinfraKey}
+              onChange={setDeepinfraKeyInput}
+              onSave={() => void handleSaveCredential("deepinfra", deepinfraKeyInput)}
+              onRemove={() => void handleRemoveCredential("deepinfra")}
+            />
           </div>
         </div>
       </div>
