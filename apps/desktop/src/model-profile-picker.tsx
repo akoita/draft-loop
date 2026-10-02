@@ -20,10 +20,12 @@ interface ModelProfilePickerProps {
   readonly workspaceId: string;
   readonly generation: number;
   readonly applied: ModelProfileReferences | null;
+  readonly pendingSelectionMessage?: string;
   readonly support: ModelProfileSupportState;
   readonly disabled: boolean;
   readonly onApply: (references: ModelProfileReferences) => Promise<boolean>;
-  readonly onUseWorkspaceModels: () => void;
+  readonly onUseWorkspaceModels?: () => void;
+  readonly onCancel?: () => void;
   readonly onRetrySupport: () => void;
   readonly isContextCurrent: (workspaceId: string, generation: number) => boolean;
 }
@@ -130,10 +132,12 @@ export function ModelProfilePicker({
   workspaceId,
   generation,
   applied,
+  pendingSelectionMessage,
   support,
   disabled,
   onApply,
   onUseWorkspaceModels,
+  onCancel,
   onRetrySupport,
   isContextCurrent,
 }: ModelProfilePickerProps) {
@@ -242,14 +246,26 @@ export function ModelProfilePicker({
             for future runs; provider transmission requires current consent.
           </p>
         </div>
-        <button
-          className="button button-quiet"
-          type="button"
-          disabled={disabled || saving || applied === null}
-          onClick={onUseWorkspaceModels}
-        >
-          Use workspace models
-        </button>
+        {onUseWorkspaceModels === undefined ? null : (
+          <button
+            className="button button-quiet"
+            type="button"
+            disabled={disabled || saving || applied === null}
+            onClick={onUseWorkspaceModels}
+          >
+            Use workspace models
+          </button>
+        )}
+        {onCancel === undefined ? null : (
+          <button
+            className="button button-quiet"
+            type="button"
+            disabled={disabled || saving}
+            onClick={onCancel}
+          >
+            Cancel
+          </button>
+        )}
       </div>
       <p className="model-profile-picker-notice">
         CV quality has not been validated; account availability has not been checked. OpenAI Codex
@@ -278,7 +294,8 @@ export function ModelProfilePicker({
       ) : null}
       {applied === null ? (
         <p className="model-profile-picker-applied">
-          Applied next-run selection: workspace model settings (legacy path).
+          {pendingSelectionMessage ??
+            "Applied next-run selection: workspace model settings (legacy path)."}
         </p>
       ) : (
         <div className="model-profile-picker-applied">
