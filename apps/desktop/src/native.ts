@@ -41,6 +41,7 @@ import {
   type DesktopReviewState,
   type ReviewAction,
 } from "./model.js";
+import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
 
 export type { NativeBridge } from "./bridge.js";
 
@@ -642,13 +643,32 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
   };
 }
 
-/** Uses a host-backed review port when available and a fixture only in browser mode. */
-export function createDesktopReviewPort(): DesktopSetupPort {
-  const capabilityPort = createNativeCapabilityPort(getNativeBridge());
-  return capabilityPort.hasCapability("review.load") &&
-    capabilityPort.hasCapability("review.dispatch")
-    ? createBridgeReviewPort(capabilityPort)
-    : createFixtureReviewPort();
+export interface DesktopReviewPortStartupOptions {
+  /** Override the preload bridge for tests and isolated renderer startup. */
+  readonly nativeBridge?: unknown;
+  /** Override runtime detection without granting additional bridge capability. */
+  readonly electronRuntime?: boolean;
+}
+
+/** Uses a host-backed review port when available; only browser mode gets the fixture. */
+export function createDesktopReviewPort(
+  options: DesktopReviewPortStartupOptions = {},
+): DesktopSetupPort {
+  const nativeBridge =
+    "nativeBridge" in options ? options.nativeBridge : getNativeBridgeCandidate();
+  const electronRuntime = options.electronRuntime ?? isElectronRendererRuntime();
+
+  if (isNativeBridge(nativeBridge)) {
+    const capabilityPort = createNativeCapabilityPort(nativeBridge);
+    if (
+      capabilityPort.hasCapability("review.load") &&
+      capabilityPort.hasCapability("review.dispatch")
+    ) {
+      return createBridgeReviewPort(capabilityPort);
+    }
+  }
+
+  return electronRuntime ? createNativeStartupUnavailablePort() : createFixtureReviewPort();
 }
 
 const nativeBridgeGlobalKey = "__DRAFT_LOOP_NATIVE_BRIDGE__";
@@ -673,6 +693,10 @@ function isNativeBridge(value: unknown): value is NativeBridge {
  * applied its permission, filesystem-scope, and user-gesture checks.
  */
 export function getNativeBridge(): NativeBridge {
-  const candidate = (globalThis as Record<string, unknown>)[nativeBridgeGlobalKey];
+  const candidate = getNativeBridgeCandidate();
   return isNativeBridge(candidate) ? candidate : createBrowserNativeBridge();
+}
+
+function getNativeBridgeCandidate(): unknown {
+  return (globalThis as Record<string, unknown>)[nativeBridgeGlobalKey];
 }

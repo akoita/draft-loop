@@ -102,6 +102,11 @@ Stop a running review with its existing **Stop review** control before closing.
 The desktop keeps the workspace open while a review action, knowledge update, or
 candidate-profile operation is pending and says when to wait for it to finish.
 
+Packaged desktop startup uses the native workspace setup. If the preload bridge
+is unavailable, the desktop shows a connection error instead of loading the
+browser fixture or creating a demo workspace. Choose **Try demo workspace**
+explicitly when you want the fixture.
+
 ## Opportunity briefs
 
 The `opportunity` command group creates and reloads one durable brief, lists
