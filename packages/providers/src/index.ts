@@ -3,6 +3,7 @@ import type { MessageCreateParamsNonStreaming } from "@anthropic-ai/sdk/resource
 import type { AgentRole, ModelCompany, ModelSelection } from "@draft-loop/domain";
 import type { ResponseCreateParamsNonStreaming } from "openai/resources/responses/responses.js";
 import { normalizeAnthropicOutputSchema } from "./anthropic-output-schema.js";
+import { accountOpenAIUsage } from "./openai-usage.js";
 import { resolveProfileRuntimeControls } from "./profile-runtime-controls.js";
 
 export * from "./author-model-preflight.js";
@@ -98,6 +99,9 @@ export interface ModelUsage {
   readonly inputTokens: number;
   readonly outputTokens: number;
   readonly totalTokens: number;
+  readonly cachedInputTokens?: number;
+  readonly cacheWriteInputTokens?: number;
+  readonly reasoningOutputTokens?: number;
 }
 
 export interface ModelResponse<Output extends JsonValue = JsonValue> {
@@ -115,6 +119,8 @@ export interface ModelResponse<Output extends JsonValue = JsonValue> {
 export interface ModelPricing {
   readonly inputUsdPerMillionTokens: number;
   readonly outputUsdPerMillionTokens: number;
+  readonly cachedInputUsdPerMillionTokens?: number;
+  readonly cacheWriteInputUsdPerMillionTokens?: number;
 }
 
 export type ProviderErrorCode =
@@ -827,9 +833,7 @@ export class OpenAIAdapter<
           ...(request.signal === undefined ? [] : [{ signal: request.signal }]),
         );
         const output = parseJson<Output>(this.provider, response.output_text, "output_text");
-        const inputTokens = response.usage?.input_tokens ?? 0;
-        const outputTokens = response.usage?.output_tokens ?? 0;
-        const accounting = usage(inputTokens, outputTokens, this.pricing);
+        const accounting = accountOpenAIUsage(response.usage, this.pricing);
         const elapsedMs = Date.now() - startTime;
         request.onProgress?.({
           stage: "completed",

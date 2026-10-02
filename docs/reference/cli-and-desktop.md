@@ -271,6 +271,13 @@ input tokens. It excludes cache, tool, batch, regional, and subscription
 pricing. Sources are the official [Anthropic model overview] and [Sonnet 5.5
 overview], plus official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna].
 
+OpenAI adapter responses retain valid cached-input, cache-write, and reasoning
+token details alongside input/output totals. A rate estimate accounts for
+reported cache categories only when their rates are supplied; malformed or
+missing usage, or a missing applicable rate, leaves cost unknown. Missing usage
+keeps zero token totals for compatibility. These estimates are adapter results,
+not persisted run totals or invoice amounts.
+
 [Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
 [Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
 [GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
