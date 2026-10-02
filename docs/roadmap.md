@@ -81,6 +81,11 @@ with the reference pair.
 **The immediate priority is unchanged:** a first working version on one
 reference Anthropic author and OpenAI critic pair.
 
+Current cost-reporting work preserves validated OpenAI cached-input,
+cache-write, and reasoning-output counts in adapter results. Estimates use
+explicitly supplied rates and remain unknown when usage or an applicable rate
+is missing or malformed; they are not persisted billing records.
+
 The reusable corpus is a Candidate Knowledge Base (CKB). A candidate normally
 maintains one default CKB, with additional isolated CKBs available when
 separation is intentional. Selection for an application must be explicit.

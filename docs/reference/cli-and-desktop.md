@@ -50,6 +50,15 @@ OpenAI Codex user-session and local routes reject profile selections; the CLI
 does not switch authentication modes automatically. Account and provider
 availability remains unchecked.
 
+Each application OpenAI API-key adapter invocation makes one provider request
+by default. Callers can explicitly configure retries; Anthropic, local, and
+user-session adapters keep their existing retry behavior. This does not change
+orchestration recovery.
+
+If a Codex ChatGPT session explicitly rejects a selected model, the desktop
+shows that diagnosis and suggests choosing a supported model or explicitly
+switching OpenAI authentication to an API key. It never switches automatically.
+
 ## Desktop diagnostics
 
 Packaged builds keep host-error diagnostics in `diagnostics/host-errors.jsonl`
@@ -131,15 +140,58 @@ new run, only while its exact CKB selection still matches the workspace's
 current lifecycle-ready selection. Historical profile versions and existing
 run/export records remain available for audit after lifecycle changes.
 
+Application consumers can omit `profileId` when listing profile versions to
+load every complete history in the workspace, ordered by profile name and
+version. The catalog is bounded to 256 profile names and fails closed when
+larger; supplying a name keeps the existing exact-history behavior.
+
+The desktop's optional **Existing reviewed profiles** picker loads the exact
+reviewed version locally; it does not derive or transmit candidate material.
+Source compatibility is checked again before starting a review. Older hosts
+without the catalog capability retain the profile-name and history controls.
+
+Before approval, the desktop can show blockers from the readiness decision
+persisted for the exact artifact. A rubric blocker includes its recorded score
+and required threshold. The score is a check result, not a confirmed candidate
+gap; token matching can miss equivalent phrasing. Accepting a finding does not
+change coverage or bypass the gate. Review requirements and coverage evidence;
+readiness can remain blocked after a revision or new run.
+
 If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
 preparation, response format, and grounding failures have distinct messages.
+An explicit Anthropic credit-balance or enforced spending-limit response shows
+billing guidance; the app does not estimate charges from failed attempts.
+
+The desktop distinguishes a saved extraction failure, an empty profile, a draft
+that still needs human review, open issue blockers, and a reviewed version. An
+empty failed version shows up to three deduplicated, sanitized issue reasons.
+The action is labeled **Retry profile generation**; the existing provider-data
+approval must be granted again before selected material is sent.
+
+Before retrying, follow the recorded cause and recovery guidance. Renaming the
+profile does not fix the underlying failure. Retrying sends selected material
+again, may consume provider credits, and bounded recovery can make multiple
+requests. Empty profiles and drafts with open issues cannot be marked reviewed;
+warnings also block until acknowledged or resolved and saved. A reviewed profile
+is a human-reviewed record, not a claim of application readiness or quality.
 
 Anthropic structured output uses the SDK-normalized provider schema, while
 application schema and source-grounding checks remain authoritative. Requests
 require exact contiguous evidence quotes, unique fact and issue references,
 and grounded facts for both sides of any conflict.
+
+Extraction guidance gives each subject key one specific real-world entity and
+distinguishes attributes, events, and contexts before proposing conflicts. For
+example, separate credentials remain separate when they share an issuer, and a
+launch date differs from a publication date. The prompt still requires genuine
+disputed claims to remain conflicts without choosing an authoritative answer.
+
+The extractor may remove one outer Markdown emphasis pair from a quote only
+when the remaining exact source text contains the entire unchanged fact value.
+Other quote mismatches remain fail-closed; fact values and source text are not
+rewritten.
 
 Coverage instructions direct the extractor to scan every supplied source
 rather than return only highlights; they do not guarantee that every supported
@@ -147,10 +199,18 @@ fact will be found. The 32,768-token extraction ceiling applies only to API-key
 requests for Claude Sonnet 5.5 and Opus 5.5; user-session, local, and all other
 model routes keep 8,192 tokens.
 
-Distinct unscoped skills and certifications are kept without automatic
-differing-value conflicts. Equal values can still raise duplicate warnings,
-and either category with an explicit shared subject can still be flagged as
-conflicting.
+If the provider explicitly reports output-token truncation for two to four
+prepared sources, extraction can make one focused call per source. If one source
+call also truncates, it can be retried in four contiguous text windows. The
+bounded path makes at most 21 application calls including the original request;
+each keeps the full selected source set as context and the same per-call token
+cap. Every result must validate and ground successfully, or no facts are saved.
+
+Skills are treated as collection values, so distinct skill facts do not become
+automatic conflicts even when they share a subject. Equal values can still
+raise duplicate warnings. Unscoped certifications are also collections, while
+scoped certifications retain automatic conflict detection. Explicitly proposed
+conflicts remain visible for skills and certifications.
 
 Exact duplicate source contents are sent once per bounded group while every
 original source version remains attached to facts as local provenance.
@@ -227,6 +287,13 @@ Catalog price metadata covers the standard, uncached text API at up to 200,000
 input tokens. It excludes cache, tool, batch, regional, and subscription
 pricing. Sources are the official [Anthropic model overview] and [Sonnet 5.5
 overview], plus official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna].
+
+OpenAI adapter responses retain valid cached-input, cache-write, and reasoning
+token details alongside input/output totals. A rate estimate accounts for
+reported cache categories only when their rates are supplied; malformed or
+missing usage, or a missing applicable rate, leaves cost unknown. Missing usage
+keeps zero token totals for compatibility. These estimates are adapter results,
+not persisted run totals or invoice amounts.
 
 [Anthropic model overview]: https://platform.claude.com/docs/en/models/overview
 [Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview

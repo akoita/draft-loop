@@ -31,6 +31,7 @@ import {
   type ProviderAuthMode,
   type ProviderAuthModeResult,
   type ProviderAuthModeStatus,
+  type ReviewedCanonicalCandidateProfileCatalogResult,
   type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
 } from "./bridge.js";
@@ -121,6 +122,9 @@ export interface DesktopProfileCapabilities {
     profileId: string,
     expectedVersion: number,
   ) => Promise<CanonicalCandidateProfileRecordResult>;
+  readonly listReviewedCanonicalCandidateProfiles?: (
+    workspaceId: string,
+  ) => Promise<ReviewedCanonicalCandidateProfileCatalogResult>;
 }
 
 export interface DesktopKnowledgeCapabilities {
@@ -594,6 +598,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               }),
             );
           },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.catalog")
+      ? {
+          listReviewedCanonicalCandidateProfiles: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "profile.catalog",
+                input: { workspaceId },
+              }),
+            ),
         }
       : {}),
     ...(capabilityPort.hasCapability("profile.edit")

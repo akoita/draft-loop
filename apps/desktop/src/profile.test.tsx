@@ -14,9 +14,12 @@ import {
   groupCanonicalCandidateProfileIssues,
   hasCanonicalCandidateProfileCapabilities,
   ProfileDetails,
+  ProfileGenerationAction,
+  ProfileOutcomeFeedback,
   ProfileWorkspace,
   safeCanonicalCandidateProfileText,
 } from "./profile.js";
+import { projectCanonicalCandidateProfileOutcome } from "./profile-outcome.js";
 
 const capturedAt = "2026-08-28T10:00:00.000Z";
 const provenance = {
@@ -104,10 +107,16 @@ describe("desktop canonical candidate profile", () => {
   });
 
   it("keeps review selection exact and disables historical edits", () => {
-    expect(candidateProfileSelectionForRecord(record("reviewed"))).toEqual({
+    const reviewed = record("reviewed");
+    const reviewable = {
+      ...reviewed,
+      issues: reviewed.issues.map((issue) => ({ ...issue, status: "resolved" as const })),
+    };
+    expect(candidateProfileSelectionForRecord(reviewable)).toEqual({
       profileId: "profile-1",
       version: 1,
     });
+    expect(candidateProfileSelectionForRecord({ ...reviewable, facts: [] })).toBeNull();
     expect(candidateProfileSelectionForRecord(record("draft"))).toBeNull();
     expect(canEditCanonicalCandidateProfile(record("draft", 1), 1)).toBe(true);
     expect(canEditCanonicalCandidateProfile(record("draft", 1), 2)).toBe(false);
@@ -154,6 +163,95 @@ describe("desktop canonical candidate profile", () => {
     expect(html).not.toContain("/private");
   });
 
+  it("renders saved failure guidance and keeps retry behind the existing consent checkbox", () => {
+    const failureIssue: CanonicalCandidateProfileIssueResult = {
+      id: "issue-extraction-failure",
+      code: "omission",
+      severity: "error",
+      status: "open",
+      message: "Profile extraction exceeded the available output limit. No facts were saved.",
+      factIds: [],
+      sourceRefs: [],
+    };
+    const failure = {
+      ...record(),
+      facts: [],
+      issues: [failureIssue],
+    };
+    const outcome = projectCanonicalCandidateProfileOutcome(failure, "profile-1", "profile-1");
+    const onDerive = vi.fn();
+    const html = renderToStaticMarkup(
+      <>
+        <ProfileGenerationAction
+          outcome={outcome}
+          profileIdValid
+          providerTransmissionApproved={false}
+          busy={false}
+          onApprovalChange={() => undefined}
+          onDerive={onDerive}
+        />
+        <ProfileOutcomeFeedback outcome={outcome} />
+      </>,
+    );
+
+    expect(html).toContain("Retry profile generation");
+    expect(html).toContain('disabled=""');
+    expect(html).toContain("I approve sending selected candidate material");
+    expect(html).not.toContain("Existing reviewed profiles");
+    expect(html).toContain("can consume provider credits");
+    expect(html).toContain("bounded recovery may make multiple requests");
+    expect(html).not.toContain('checked=""');
+    expect(html).not.toContain("/private");
+    expect(onDerive).not.toHaveBeenCalled();
+  });
+
+  it("disables review for empty facts and for open warning issues", () => {
+    const emptyRecord = { ...record(), facts: [] };
+    const emptyMarkup = renderToStaticMarkup(
+      <ProfileDetails
+        record={emptyRecord}
+        history={[emptyRecord]}
+        draftFacts={[]}
+        draftIssues={[]}
+        editable
+        busy={false}
+        onFactValueChange={() => undefined}
+        onRemoveFact={() => undefined}
+        onIssueStatusChange={() => undefined}
+        onSave={() => undefined}
+        onReview={() => undefined}
+      />,
+    );
+    const warning: CanonicalCandidateProfileIssueResult = {
+      id: "issue-open-warning",
+      code: "duplicate",
+      severity: "warning",
+      status: "open",
+      message: "Confirm whether these facts are duplicates.",
+      factIds: [],
+      sourceRefs: [],
+    };
+    const warningMarkup = renderToStaticMarkup(
+      <ProfileDetails
+        record={record()}
+        history={[record()]}
+        draftFacts={facts}
+        draftIssues={[...issues.slice(1), warning]}
+        editable
+        busy={false}
+        onFactValueChange={() => undefined}
+        onRemoveFact={() => undefined}
+        onIssueStatusChange={() => undefined}
+        onSave={() => undefined}
+        onReview={() => undefined}
+      />,
+    );
+
+    expect(emptyMarkup).toContain("Mark latest draft reviewed");
+    expect(emptyMarkup).toMatch(/<button[^>]*disabled=""[^>]*>Mark latest draft reviewed/u);
+    expect(warningMarkup).toMatch(/<button[^>]*disabled=""[^>]*>Mark latest draft reviewed/u);
+  });
+
   it("renders an accessible, path-free approval gate only for complete capabilities", () => {
     const capabilities = {
       deriveCanonicalCandidateProfile: vi.fn(async () => record()),
@@ -198,5 +296,35 @@ describe("desktop canonical candidate profile", () => {
         />,
       ),
     ).toBe("");
+  });
+
+  it("shows the optional reviewed-profile picker without changing the legacy profile gate", () => {
+    const capabilities = {
+      deriveCanonicalCandidateProfile: vi.fn(async () => record()),
+      getCanonicalCandidateProfile: vi.fn(async () => record("reviewed")),
+      listCanonicalCandidateProfileVersions: vi.fn(async () => ({
+        workspaceId: "workspace-1",
+        profileId: "profile-1",
+        versions: [record("reviewed")],
+      })),
+      editCanonicalCandidateProfile: vi.fn(async () => record()),
+      reviewCanonicalCandidateProfile: vi.fn(async () => record("reviewed")),
+      listReviewedCanonicalCandidateProfiles: vi.fn(async () => ({
+        workspaceId: "workspace-1",
+        profiles: [{ profileId: "profile-1", version: 1, reviewedAt: capturedAt }],
+      })),
+    };
+    const markup = renderToStaticMarkup(
+      <ProfileWorkspace
+        workspaceId="workspace-1"
+        capabilities={capabilities}
+        selectedProfile={null}
+        onSelectionChange={() => undefined}
+      />,
+    );
+    expect(markup).toContain('aria-label="Existing reviewed profiles"');
+    expect(markup).toContain("Choose a reviewed profile…");
+    expect(markup).toContain("Source compatibility is checked again before starting a review.");
+    expect(markup).toContain("Loading reviewed profiles…");
   });
 });

@@ -1,4 +1,4 @@
-import { ProviderAdapterError } from "@draft-loop/providers";
+import { anthropicBillingLimitDiagnosticCode, ProviderAdapterError } from "@draft-loop/providers";
 
 export type CandidateProfileExtractionStage =
   | "input-preparation"
@@ -16,8 +16,23 @@ const stageFailureMessages: Record<Exclude<CandidateProfileExtractionStage, "pro
 };
 
 function providerFailureMessage(error: ProviderAdapterError): string {
-  if (error.failureStage === "output-token-budget-exceeded") {
-    return "The provider response exceeded the profile extraction output limit. Report this error before retrying.";
+  if (
+    error.provider === "anthropic" &&
+    error.code === "quota-exhausted" &&
+    error.diagnostics.some((diagnostic) => diagnostic.code === anthropicBillingLimitDiagnosticCode)
+  ) {
+    return "Anthropic API credits or the configured spending limit prevented this request. Check billing or the spending limit, then retry after resolving it.";
+  }
+  if (error.code === "invalid-response" && error.failureStage === "response-schema-validation") {
+    return stageFailureMessages["response-schema"];
+  }
+  if (
+    error.failureStage === "output-token-budget-exceeded" ||
+    (error.code === "invalid-response" &&
+      (error.diagnostics.some((diagnostic) => diagnostic.code === "max_tokens") ||
+        error.diagnosticCounts.some((diagnostic) => diagnostic.code === "max_tokens")))
+  ) {
+    return "Profile extraction exceeded the available output limit. No facts were saved; try fewer or shorter sources, or use a supported model with a larger output allowance.";
   }
 
   switch (error.code) {

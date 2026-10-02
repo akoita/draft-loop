@@ -4,7 +4,7 @@ import type {
   CanonicalCandidateProfileIssueStatus,
 } from "@draft-loop/domain";
 import { maximumCanonicalCandidateProfileIdLength } from "@draft-loop/domain";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CanonicalCandidateProfileFactResult,
   CanonicalCandidateProfileIssueResult,
@@ -13,13 +13,29 @@ import type {
 } from "./bridge.js";
 import type { CandidateProfileSelection } from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
+import {
+  findReviewedCanonicalCandidateProfileChoice,
+  parseReviewedCanonicalCandidateProfileCatalogResult,
+  type ReviewedCanonicalCandidateProfileSummary,
+  reviewedCanonicalCandidateProfileChoice,
+} from "./profile-catalog.js";
+import {
+  type CanonicalCandidateProfileOutcome,
+  canReviewCanonicalCandidateProfile,
+  canSelectReviewedCanonicalCandidateProfile,
+  projectCanonicalCandidateProfileOperationResult,
+  projectCanonicalCandidateProfileOutcome,
+  safeCanonicalCandidateProfileFeedback,
+} from "./profile-outcome.js";
 
 const profileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/giu;
-const absoluteUrlTestPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
 const maximumProfileIdLength = maximumCanonicalCandidateProfileIdLength;
 
-export type CanonicalCandidateProfileCapabilities = Required<DesktopProfileCapabilities>;
+export type CanonicalCandidateProfileCapabilities = Required<
+  Omit<DesktopProfileCapabilities, "listReviewedCanonicalCandidateProfiles">
+> &
+  Pick<DesktopProfileCapabilities, "listReviewedCanonicalCandidateProfiles">;
 
 export interface ProfileWorkspaceProps {
   readonly workspaceId: string;
@@ -113,30 +129,92 @@ export function canEditCanonicalCandidateProfile(
 export function candidateProfileSelectionForRecord(
   record: CanonicalCandidateProfileRecordResult | null,
 ): CandidateProfileSelection | null {
-  return record?.status === "reviewed"
+  return record !== null && canSelectReviewedCanonicalCandidateProfile(record)
     ? { profileId: record.profileId, version: record.version }
     : null;
 }
 
-function profileErrorMessage(reason: unknown): string {
-  const message = reason instanceof Error ? reason.message.trim() : "";
-  // Provider/host failures are expected to be content-free. If a fixture or
-  // future adapter violates that contract, do not let a path or URL reach the
-  // renderer's alert.
-  if (
-    message === "" ||
-    message.length > 240 ||
-    message.includes("/") ||
-    message.includes("\\") ||
-    absoluteUrlTestPattern.test(message)
-  ) {
-    return "The canonical candidate profile operation could not be completed.";
-  }
-  return message;
-}
-
 function shortChecksum(checksum: string): string {
   return `${checksum.slice(0, 12)}…`;
+}
+
+export function ProfileOutcomeFeedback({
+  outcome,
+  showMessage = true,
+}: {
+  readonly outcome: CanonicalCandidateProfileOutcome;
+  readonly showMessage?: boolean;
+}) {
+  return (
+    <section className="profile-outcome" aria-label="Canonical profile status">
+      {showMessage ? <p>{outcome.message}</p> : null}
+      {outcome.failureReasons.length === 0 ? null : (
+        <>
+          <p>Saved issue guidance</p>
+          <ul aria-label="Saved profile issue guidance">
+            {outcome.failureReasons.map((reason) => (
+              <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
+            ))}
+          </ul>
+        </>
+      )}
+      {outcome.kind === "extraction-failure" ? (
+        <p>
+          Follow the displayed cause and recovery steps first; changing the profile name alone will
+          not fix the underlying input or provider failure.
+        </p>
+      ) : outcome.kind === "empty" && outcome.retry ? (
+        <p>
+          Check that the selected source material includes the facts you need; renaming adds no
+          evidence.
+        </p>
+      ) : null}
+      {outcome.retry ? (
+        <p>
+          Retrying sends the selected material again, can consume provider credits, and bounded
+          recovery may make multiple requests.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+export function ProfileGenerationAction({
+  outcome,
+  profileIdValid,
+  providerTransmissionApproved,
+  busy,
+  onApprovalChange,
+  onDerive,
+}: {
+  readonly outcome: CanonicalCandidateProfileOutcome;
+  readonly profileIdValid: boolean;
+  readonly providerTransmissionApproved: boolean;
+  readonly busy: boolean;
+  readonly onApprovalChange: (approved: boolean) => void;
+  readonly onDerive: () => void;
+}) {
+  return (
+    <>
+      <label className="profile-approval-label">
+        <input
+          type="checkbox"
+          checked={providerTransmissionApproved}
+          disabled={busy}
+          onChange={(event) => onApprovalChange(event.target.checked)}
+        />
+        <span>I approve sending selected candidate material to the configured provider.</span>
+      </label>
+      <button
+        className="button button-primary"
+        type="button"
+        disabled={busy || !profileIdValid || !providerTransmissionApproved}
+        onClick={onDerive}
+      >
+        {busy ? "Working…" : outcome.retry ? "Retry profile generation" : "Derive profile"}
+      </button>
+    </>
+  );
 }
 
 function latestVersionOf(
@@ -320,6 +398,7 @@ export function ProfileDetails({
     [draftIssues],
   );
   const historical = history.length > 0 && record.version !== history.at(-1)?.version;
+  const reviewAllowed = canReviewCanonicalCandidateProfile(record, draftFacts, draftIssues);
 
   return (
     <>
@@ -448,7 +527,7 @@ export function ProfileDetails({
         <button
           className="button button-primary"
           type="button"
-          disabled={!editable || busy}
+          disabled={!editable || busy || !reviewAllowed}
           onClick={onReview}
         >
           Mark latest draft reviewed
@@ -476,18 +555,53 @@ export function ProfileWorkspace({
   const [busy, setBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [catalogProfiles, setCatalogProfiles] = useState<
+    readonly ReviewedCanonicalCandidateProfileSummary[]
+  >([]);
+  const [catalogWorkspaceId, setCatalogWorkspaceId] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(
+    capabilities.listReviewedCanonicalCandidateProfiles !== undefined,
+  );
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogChoice, setCatalogChoice] = useState("");
+  const [catalogEpoch, setCatalogEpoch] = useState(0);
+  const workspaceIdRef = useRef(workspaceId);
+  const catalogRequestRef = useRef(0);
+  const selectionRequestRef = useRef(0);
+  const catalogChoiceRef = useRef<string | null>(null);
+  const selectedProfileRef = useRef(selectedProfile);
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  const catalogEpochRef = useRef(catalogEpoch);
+  workspaceIdRef.current = workspaceId;
+  selectedProfileRef.current = selectedProfile;
+  onSelectionChangeRef.current = onSelectionChange;
+  catalogEpochRef.current = catalogEpoch;
 
   const available = hasCanonicalCandidateProfileCapabilities(capabilities);
+  const normalizedProfileId = profileId.trim();
   const latestVersion = latestVersionOf(history, record);
   const editable = canEditCanonicalCandidateProfile(record, latestVersion);
+  const currentOutcome = projectCanonicalCandidateProfileOutcome(
+    record,
+    normalizedProfileId,
+    loadedProfileId,
+    draftFacts,
+    draftIssues,
+  );
   const selectedThisRecord =
     selectedProfile !== null &&
     record !== null &&
+    currentOutcome.kind === "reviewed" &&
     selectedProfile.profileId === record.profileId &&
     selectedProfile.version === record.version;
 
   useEffect(() => {
     if (workspaceId.trim() === "") return;
+    selectionRequestRef.current += 1;
+    catalogChoiceRef.current = null;
+    setCatalogChoice("");
+    setCatalogProfiles([]);
+    setCatalogWorkspaceId(null);
     setProfileId("");
     setLoadedProfileId(null);
     setHistory([]);
@@ -495,9 +609,61 @@ export function ProfileWorkspace({
     setDraftFacts([]);
     setDraftIssues([]);
     setProviderTransmissionApproved(false);
+    setBusy(false);
     setStatusMessage("");
     setErrorMessage(null);
   }, [workspaceId]);
+
+  useEffect(() => {
+    const listCatalog = capabilities.listReviewedCanonicalCandidateProfiles;
+    if (!available || listCatalog === undefined || workspaceId.trim() === "") {
+      setCatalogProfiles([]);
+      setCatalogWorkspaceId(null);
+      setCatalogLoading(false);
+      setCatalogError(null);
+      return;
+    }
+    const epoch = catalogEpoch;
+    const request = ++catalogRequestRef.current;
+    let active = true;
+    setCatalogLoading(true);
+    setCatalogError(null);
+    setCatalogWorkspaceId(null);
+    void listCatalog(workspaceId)
+      .then((value) => parseReviewedCanonicalCandidateProfileCatalogResult(value, workspaceId))
+      .then((catalog) => {
+        if (!active || request !== catalogRequestRef.current || epoch !== catalogEpochRef.current)
+          return;
+        const selectedChoice = catalogChoiceRef.current;
+        if (
+          selectedChoice !== null &&
+          findReviewedCanonicalCandidateProfileChoice(selectedChoice, catalog.profiles) ===
+            undefined
+        ) {
+          catalogChoiceRef.current = null;
+          setCatalogChoice("");
+          if (
+            selectedProfileRef.current !== null &&
+            `${selectedProfileRef.current.profileId}@${selectedProfileRef.current.version}` ===
+              selectedChoice
+          ) {
+            onSelectionChangeRef.current(null);
+          }
+        }
+        setCatalogProfiles(catalog.profiles);
+        setCatalogWorkspaceId(catalog.workspaceId);
+        setCatalogLoading(false);
+      })
+      .catch(() => {
+        if (!active || request !== catalogRequestRef.current || epoch !== catalogEpochRef.current)
+          return;
+        setCatalogLoading(false);
+        setCatalogError("Could not load reviewed profiles. Refresh to try again.");
+      });
+    return () => {
+      active = false;
+    };
+  }, [available, workspaceId, capabilities.listReviewedCanonicalCandidateProfiles, catalogEpoch]);
 
   if (!available) return null;
 
@@ -508,23 +674,27 @@ export function ProfileWorkspace({
     onSelectionChange(candidateProfileSelectionForRecord(nextRecord));
   };
 
-  const withBusy = async (operation: () => Promise<void>): Promise<void> => {
+  const withBusy = async (
+    operation: () => Promise<CanonicalCandidateProfileRecordResult | null>,
+  ): Promise<void> => {
     setBusy(true);
     setErrorMessage(null);
     setStatusMessage("Working with the canonical candidate profile…");
     try {
-      await operation();
-      setStatusMessage("Canonical candidate profile ready.");
+      const result = await operation();
+      setStatusMessage(projectCanonicalCandidateProfileOperationResult(result).message);
     } catch (reason: unknown) {
-      setErrorMessage(profileErrorMessage(reason));
-      setStatusMessage("The canonical candidate profile operation failed.");
+      setErrorMessage(safeCanonicalCandidateProfileFeedback(reason));
+      setStatusMessage("The operation did not complete. No new profile version was confirmed.");
     } finally {
       setBusy(false);
     }
   };
 
-  const normalizedProfileId = profileId.trim();
-  const refresh = async (id: string, version?: number): Promise<void> => {
+  const refresh = async (
+    id: string,
+    version?: number,
+  ): Promise<CanonicalCandidateProfileRecordResult | null> => {
     const listing: CanonicalCandidateProfileListResult =
       await capabilities.listCanonicalCandidateProfileVersions(id);
     setHistory(listing.versions);
@@ -535,11 +705,84 @@ export function ProfileWorkspace({
       setDraftFacts([]);
       setDraftIssues([]);
       onSelectionChange(null);
-      return;
+      return null;
     }
     const nextRecord = await capabilities.getCanonicalCandidateProfile(id, targetVersion);
     setLoadedProfileId(id);
     applyRecord(nextRecord);
+    return nextRecord;
+  };
+
+  const refreshCatalog = (): void => {
+    if (capabilities.listReviewedCanonicalCandidateProfiles !== undefined) {
+      setCatalogEpoch((epoch) => epoch + 1);
+    }
+  };
+
+  const selectReviewedProfile = async (choice: string): Promise<void> => {
+    const summary = findReviewedCanonicalCandidateProfileChoice(choice, catalogProfiles);
+    if (summary === undefined || catalogWorkspaceId !== workspaceId) return;
+    const request = ++selectionRequestRef.current;
+    const selectedWorkspaceId = workspaceId;
+    const current = (): boolean =>
+      request === selectionRequestRef.current && workspaceIdRef.current === selectedWorkspaceId;
+    catalogChoiceRef.current = reviewedCanonicalCandidateProfileChoice(summary);
+    setCatalogChoice(choice);
+    setProfileId(summary.profileId);
+    setProviderTransmissionApproved(false);
+    setStatusMessage("Loading the selected reviewed profile locally…");
+    setErrorMessage(null);
+    setLoadedProfileId(null);
+    setHistory([]);
+    setRecord(null);
+    setDraftFacts([]);
+    setDraftIssues([]);
+    onSelectionChange(null);
+    setBusy(true);
+    try {
+      const listing = await capabilities.listCanonicalCandidateProfileVersions(summary.profileId);
+      if (!current()) return;
+      if (
+        listing.workspaceId !== selectedWorkspaceId ||
+        listing.profileId !== summary.profileId ||
+        !listing.versions.some((entry) => entry.version === summary.version)
+      ) {
+        throw new Error("catalog selection mismatch");
+      }
+      const selected = await capabilities.getCanonicalCandidateProfile(
+        summary.profileId,
+        summary.version,
+      );
+      if (!current()) return;
+      if (
+        selected.workspaceId !== selectedWorkspaceId ||
+        selected.profileId !== summary.profileId ||
+        selected.version !== summary.version ||
+        !canSelectReviewedCanonicalCandidateProfile(selected)
+      ) {
+        throw new Error("catalog selection mismatch");
+      }
+      setHistory(listing.versions);
+      setLoadedProfileId(summary.profileId);
+      applyRecord(selected);
+      setStatusMessage(`Loaded reviewed profile version ${summary.version} locally.`);
+    } catch {
+      if (!current()) return;
+      catalogChoiceRef.current = null;
+      setCatalogChoice("");
+      setLoadedProfileId(null);
+      setHistory([]);
+      setRecord(null);
+      setDraftFacts([]);
+      setDraftIssues([]);
+      onSelectionChange(null);
+      setStatusMessage("");
+      setErrorMessage(
+        "Could not load that reviewed profile version. Choose it again or load by name.",
+      );
+    } finally {
+      if (current()) setBusy(false);
+    }
   };
 
   const loadLatest = (): void => {
@@ -547,14 +790,20 @@ export function ProfileWorkspace({
       setErrorMessage("Enter a valid opaque profile ID.");
       return;
     }
+    selectionRequestRef.current += 1;
+    catalogChoiceRef.current = null;
+    setCatalogChoice("");
     void withBusy(() => refresh(normalizedProfileId));
   };
 
   const loadVersion = (version: number): void => {
     if (loadedProfileId === null || !Number.isSafeInteger(version) || version < 1) return;
+    catalogChoiceRef.current = null;
+    setCatalogChoice("");
     void withBusy(async () => {
       const nextRecord = await capabilities.getCanonicalCandidateProfile(loadedProfileId, version);
       applyRecord(nextRecord);
+      return nextRecord;
     });
   };
 
@@ -567,7 +816,9 @@ export function ProfileWorkspace({
         profileId: normalizedProfileId,
         providerTransmissionApproved: true,
       });
-      await refresh(normalizedProfileId, derived.version);
+      const refreshed = await refresh(normalizedProfileId, derived.version);
+      refreshCatalog();
+      return refreshed;
     });
   };
 
@@ -582,7 +833,9 @@ export function ProfileWorkspace({
           issues: draftIssues,
         },
       });
-      await refresh(record.profileId, nextRecord.version);
+      const refreshed = await refresh(record.profileId, nextRecord.version);
+      refreshCatalog();
+      return refreshed;
     });
   };
 
@@ -593,7 +846,9 @@ export function ProfileWorkspace({
         record.profileId,
         record.version,
       );
-      await refresh(record.profileId, reviewed.version);
+      const refreshed = await refresh(record.profileId, reviewed.version);
+      refreshCatalog();
+      return refreshed;
     });
   };
 
@@ -610,6 +865,71 @@ export function ProfileWorkspace({
         Derive a bounded, provider-independent profile from the configured candidate knowledge. Only
         an exact reviewed version can be selected for a new review run.
       </p>
+      <p className="profile-note">
+        Source compatibility is checked again before starting a review.
+      </p>
+      {capabilities.listReviewedCanonicalCandidateProfiles === undefined ? null : (
+        <div className="profile-catalog-picker">
+          <label htmlFor="reviewed-profile-catalog">Existing reviewed profiles</label>
+          <div className="profile-catalog-controls">
+            <select
+              id="reviewed-profile-catalog"
+              aria-label="Existing reviewed profiles"
+              value={catalogChoice}
+              disabled={busy || catalogLoading}
+              onChange={(event) => {
+                const choice = event.target.value;
+                if (choice === "") {
+                  selectionRequestRef.current += 1;
+                  catalogChoiceRef.current = null;
+                  setCatalogChoice("");
+                  setProviderTransmissionApproved(false);
+                  setLoadedProfileId(null);
+                  setHistory([]);
+                  setRecord(null);
+                  setDraftFacts([]);
+                  setDraftIssues([]);
+                  onSelectionChange(null);
+                  setStatusMessage("");
+                  setErrorMessage(null);
+                  return;
+                }
+                void selectReviewedProfile(choice);
+              }}
+            >
+              <option value="">Choose a reviewed profile…</option>
+              {(catalogWorkspaceId === workspaceId ? catalogProfiles : []).map((profile) => {
+                const choice = reviewedCanonicalCandidateProfileChoice(profile);
+                return (
+                  <option key={choice} value={choice}>
+                    {profile.profileId} · v{profile.version}
+                  </option>
+                );
+              })}
+            </select>
+            <button
+              className="button button-outline"
+              type="button"
+              disabled={busy || catalogLoading}
+              onClick={() => setCatalogEpoch((epoch) => epoch + 1)}
+            >
+              Refresh
+            </button>
+          </div>
+          {catalogLoading ? <p role="status">Loading reviewed profiles…</p> : null}
+          {catalogError === null ? null : (
+            <p className="profile-error" role="alert">
+              {catalogError}
+            </p>
+          )}
+          {!catalogLoading &&
+          catalogError === null &&
+          catalogWorkspaceId === workspaceId &&
+          catalogProfiles.length === 0 ? (
+            <p className="profile-empty">No reviewed profiles are available in this workspace.</p>
+          ) : null}
+        </div>
+      )}
       <div className="profile-controls">
         <label className="profile-id-label">
           <span>Profile name</span>
@@ -629,10 +949,14 @@ export function ProfileWorkspace({
                 next === "" ||
                 (next.length <= maximumProfileIdLength && profileIdPattern.test(next))
               ) {
+                selectionRequestRef.current += 1;
+                catalogChoiceRef.current = null;
+                setCatalogChoice("");
                 setProviderTransmissionApproved((approved) =>
                   candidateProfileApprovalAfterIdChange(approved, profileId, next),
                 );
                 setProfileId(next);
+                setStatusMessage("");
                 setErrorMessage(null);
                 if (loadedProfileId !== next) {
                   setLoadedProfileId(null);
@@ -658,28 +982,26 @@ export function ProfileWorkspace({
           Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval
           applies to this name only.
         </p>
-        <label className="profile-approval-label">
-          <input
-            type="checkbox"
-            checked={providerTransmissionApproved}
-            disabled={busy}
-            onChange={(event) => setProviderTransmissionApproved(event.target.checked)}
-          />
-          <span>I approve sending selected candidate material to the configured provider.</span>
-        </label>
-        <button
-          className="button button-primary"
-          type="button"
-          disabled={
-            busy ||
-            !isCanonicalCandidateProfileId(normalizedProfileId) ||
-            !providerTransmissionApproved
-          }
-          onClick={derive}
-        >
-          {busy ? "Deriving profile…" : "Derive profile"}
-        </button>
+        <ProfileGenerationAction
+          outcome={currentOutcome}
+          profileIdValid={isCanonicalCandidateProfileId(normalizedProfileId)}
+          providerTransmissionApproved={providerTransmissionApproved}
+          busy={busy}
+          onApprovalChange={setProviderTransmissionApproved}
+          onDerive={derive}
+        />
       </div>
+      {record === null ||
+      busy ||
+      errorMessage !== null ||
+      (!currentOutcome.retry &&
+        currentOutcome.failureReasons.length === 0 &&
+        statusMessage === currentOutcome.message) ? null : (
+        <ProfileOutcomeFeedback
+          outcome={currentOutcome}
+          showMessage={statusMessage !== currentOutcome.message}
+        />
+      )}
       <div className="profile-status" role="status" aria-live="polite">
         {statusMessage}
       </div>
@@ -707,7 +1029,9 @@ export function ProfileWorkspace({
       )}
       {record === null ? (
         <p className="profile-empty">
-          Enter a profile name and choose Load latest to see its history.
+          {currentOutcome.kind === "no-version"
+            ? currentOutcome.message
+            : "Enter a profile name and choose Load latest to see its history."}
         </p>
       ) : (
         <ProfileDetails

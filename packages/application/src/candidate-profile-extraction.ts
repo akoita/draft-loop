@@ -19,12 +19,13 @@ import {
   canonicalCandidateProfileExtractionProposalSchema,
   canonicalCandidateProfileProvenanceReferenceSchema,
 } from "@draft-loop/schemas";
-import { isUnscopedCandidateProfileCollectionFact } from "./candidate-profile-collection-conflicts.js";
+import { isCandidateProfileCollectionFact } from "./candidate-profile-collection-conflicts.js";
 import {
   type CandidateProfileExtractionStage,
   candidateProfileExtractionFailureMessage,
 } from "./candidate-profile-extraction-errors.js";
 import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
+import { repairCanonicalProfileEvidenceQuotes } from "./canonical-profile-evidence-quotes.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
 export const maximumCanonicalCandidateProfileExtractionSources = 64;
@@ -343,7 +344,7 @@ function detectedIssues(
       }
     }
     const firstFact = group[0];
-    if (byValue.size > 1 && !(firstFact && isUnscopedCandidateProfileCollectionFact(firstFact))) {
+    if (byValue.size > 1 && !(firstFact && isCandidateProfileCollectionFact(firstFact))) {
       const issueFacts = boundedIssueFacts(group);
       issues.push(
         buildIssue(
@@ -477,7 +478,10 @@ export async function processCanonicalCandidateProfileExtraction(
       Object.freeze({ ...validated.request, sources: preparedSources.sources }),
     );
     stage = "response-schema";
-    const proposal = canonicalCandidateProfileExtractionProposalSchema.parse(output);
+    const proposal = repairCanonicalProfileEvidenceQuotes(
+      canonicalCandidateProfileExtractionProposalSchema.parse(output),
+      preparedSources.sourceTextsByRepresentativeId,
+    );
     stage = "grounding";
     return mapProposal(
       proposal,

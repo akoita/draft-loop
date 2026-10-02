@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AnthropicAdapter,
   type AnthropicClient,
+  anthropicBillingLimitDiagnosticCode,
   type JsonSchema,
   type ModelRequest,
   normalizeProviderError,
@@ -50,6 +51,41 @@ function request(overrides: Partial<ModelRequest> = {}): ModelRequest {
 }
 
 describe("provider-neutral model adapters", () => {
+  it("classifies explicit Anthropic billing exhaustion without retrying or echoing details", async () => {
+    const privateBillingError = Object.assign(new Error("private credit account narrative"), {
+      status: 400,
+      error: {
+        type: "enforced_spend_limit_reached",
+        message: "private billing response text",
+      },
+      requestID: "private-billing-request-id",
+    });
+    const create = vi.fn(() => Promise.reject(privateBillingError));
+    const adapter = new AnthropicAdapter(
+      { messages: { create } as unknown as AnthropicClient["messages"] },
+      { configuredModel: model },
+    );
+
+    const error = await adapter.execute(request()).catch((value: unknown) => value);
+    const normalizedError = error as ProviderAdapterError;
+
+    expect(create).toHaveBeenCalledOnce();
+    expect(normalizedError).toMatchObject({
+      code: "quota-exhausted",
+      retryable: false,
+      diagnostics: [{ code: anthropicBillingLimitDiagnosticCode, path: "error" }],
+    });
+    expect(normalizedError).toMatchObject({
+      message: "The provider request failed (quota-exhausted).",
+    });
+    expect(
+      JSON.stringify({
+        message: normalizedError.message,
+        diagnostics: normalizedError.diagnostics,
+      }),
+    ).not.toMatch(/private credit account|private billing response|private-billing-request-id/u);
+  });
+
   it("normalizes explicit Anthropic and OpenAI cancellation signals without retry", () => {
     const anthropic = normalizeProviderError(
       "anthropic",
@@ -184,8 +220,8 @@ describe("provider-neutral model adapters", () => {
         input_tokens: 13,
         output_tokens: 5,
         total_tokens: 18,
-        input_tokens_details: { cached_tokens: 0, cache_write_tokens: 0 },
-        output_tokens_details: { reasoning_tokens: 0 },
+        input_tokens_details: { cached_tokens: 3, cache_write_tokens: 2 },
+        output_tokens_details: { reasoning_tokens: 2 },
       },
       _request_id: "openai-request-1",
     };
@@ -206,7 +242,12 @@ describe("provider-neutral model adapters", () => {
     };
     const adapter = new OpenAIAdapter(client, {
       configuredModel: openAIModel,
-      pricing: { inputUsdPerMillionTokens: 3, outputUsdPerMillionTokens: 4 },
+      pricing: {
+        inputUsdPerMillionTokens: 3,
+        outputUsdPerMillionTokens: 4,
+        cachedInputUsdPerMillionTokens: 1,
+        cacheWriteInputUsdPerMillionTokens: 5,
+      },
     });
 
     const controller = new AbortController();
@@ -233,8 +274,15 @@ describe("provider-neutral model adapters", () => {
       company: "openai",
       modelId: openAIModel.modelId,
       providerRequestId: "openai-request-1",
-      usage: { inputTokens: 13, outputTokens: 5, totalTokens: 18 },
-      cost: { estimatedUsd: 0.000059 },
+      usage: {
+        inputTokens: 13,
+        outputTokens: 5,
+        totalTokens: 18,
+        cachedInputTokens: 3,
+        cacheWriteInputTokens: 2,
+        reasoningOutputTokens: 2,
+      },
+      cost: { estimatedUsd: 0.000057 },
     });
     expect(seenOptions?.signal).toBe(controller.signal);
   });
