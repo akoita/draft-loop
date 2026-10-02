@@ -1018,6 +1018,7 @@ export function createLocalModelAdapter<
   return new LocalModelAdapter<Input, Output>(client, options);
 }
 
+export * from "./deepinfra-glm.js";
 /**
  * Model discovery: which model ids a configured credential can actually reach.
  *
