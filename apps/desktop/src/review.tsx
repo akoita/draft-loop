@@ -9,6 +9,11 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  approvalReadinessForArtifact,
+  approvalReadinessGuidance,
+  formatApprovalReadinessBlocker,
+} from "./approval-readiness.js";
 import type { CredentialStatus, ProviderAuthMode, ProviderAuthModeStatus } from "./bridge.js";
 import { CompareSplitHandle, useCompareSplit } from "./compare-split.js";
 import { type DiffOp, diffWords } from "./diff.js";
@@ -1250,6 +1255,7 @@ export function ReviewWorkspace({
     (finding) => finding.decision === "accepted",
   );
   const hasArtifact = state.artifact.version > 0;
+  const approvalReadiness = approvalReadinessForArtifact(state.approvalReadiness, state.artifact);
   const maximumRounds = state.providerTransmissionPreflight.budget.maxRounds;
   const roundLimitRecovery = roundLimitRecoveryRequired(state);
   const roundLimitReached = state.round >= maximumRounds;
@@ -1261,24 +1267,27 @@ export function ReviewWorkspace({
     hasArtifact &&
     state.state === "awaiting-approval" &&
     state.reviewComplete &&
-    blockingFindings.length === 0;
+    blockingFindings.length === 0 &&
+    approvalReadiness?.applicationReady !== false;
   const canExport = canExportReview(state, pendingReviewAction);
   const exportPending = pendingReviewAction?.action === "export";
   const approvalExportErrorVisible =
     errorMessage !== undefined && errorMessage !== null && state.state !== "collecting";
   const validationLabel = !hasArtifact
     ? "No draft artifact available"
-    : roundLimitRecovery
-      ? "Round limit recovery required"
-      : !state.reviewComplete
-        ? "Independent critique did not complete"
-        : state.state === "provider-error"
-          ? "Provider recovery remains before approval"
-          : findingSummary.status === "blocked"
-            ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
-            : findingSummary.status === "warnings"
-              ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
-              : "No unresolved findings";
+    : approvalReadiness?.applicationReady === false && state.approval !== "approved"
+      ? "Final CV checks block approval"
+      : roundLimitRecovery
+        ? "Round limit recovery required"
+        : !state.reviewComplete
+          ? "Independent critique did not complete"
+          : state.state === "provider-error"
+            ? "Provider recovery remains before approval"
+            : findingSummary.status === "blocked"
+              ? `${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"}`
+              : findingSummary.status === "warnings"
+                ? `${warnings.length} unresolved warning${warnings.length === 1 ? "" : "s"}`
+                : "No unresolved findings";
   const [jobUrl, setJobUrl] = useState("");
   const [evidenceUrl, setEvidenceUrl] = useState("");
   const [overrideReasons, setOverrideReasons] = useState<Readonly<Record<string, string>>>({});
@@ -1426,6 +1435,15 @@ export function ReviewWorkspace({
       label: "Blocking findings resolved or overridden",
       met: hasArtifact && blockingFindings.length === 0,
     },
+    ...(approvalReadiness !== null && state.approval !== "approved"
+      ? [
+          {
+            id: "application-readiness",
+            label: "Final CV checks passed",
+            met: approvalReadiness.applicationReady,
+          },
+        ]
+      : []),
     ...(state.providerTransmissionPreflight.required
       ? [
           {
@@ -2985,13 +3003,15 @@ export function ReviewWorkspace({
                 ? "Complete or recover the author step before reviewing findings or approving an artifact."
                 : roundLimitRecovery
                   ? `Round ${state.round} exceeded the ${maximumRounds}-round limit before any provider work began. Return to reviewed Round ${state.round - 1}; its draft and critique remain intact.`
-                  : !state.reviewComplete
-                    ? "Complete an independent critic review before approval or export."
-                    : findingSummary.status === "blocked"
-                      ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
-                      : findingSummary.status === "warnings"
-                        ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
-                        : "All findings have a recorded decision."}
+                  : approvalReadiness?.applicationReady === false && state.approval !== "approved"
+                    ? "Final CV checks for this artifact are not met. This score does not confirm a candidate gap; token matching can miss equivalent phrasing. Review the requirements and coverage evidence before deciding what to change."
+                    : !state.reviewComplete
+                      ? "Complete an independent critic review before approval or export."
+                      : findingSummary.status === "blocked"
+                        ? "Approval is unavailable until every blocking finding is resolved or explicitly overridden."
+                        : findingSummary.status === "warnings"
+                          ? "Approval remains your decision; unresolved warnings will stay visible in the review history."
+                          : "All findings have a recorded decision."}
             </span>
           </section>
 
@@ -3788,6 +3808,14 @@ export function ReviewWorkspace({
                     ? `Request a revision for ${acceptedBlockingFindings.length} accepted blocking finding${acceptedBlockingFindings.length === 1 ? "" : "s"}, or reject or override the finding if it does not apply.`
                     : `Resolve or override ${blockingFindings.length} blocking finding${blockingFindings.length === 1 ? "" : "s"} before approval.`}
               </p>
+            ) : approvalReadiness?.applicationReady === false && state.approval !== "approved" ? (
+              <div className="warning-copy">
+                <p>
+                  Final CV checks block approval:{" "}
+                  {approvalReadiness.blockers.map(formatApprovalReadinessBlocker).join("; ")}.
+                </p>
+                <p>{approvalReadinessGuidance}</p>
+              </div>
             ) : warnings.length > 0 ? (
               <p className="warning-copy">
                 Approval is available with {warnings.length} unresolved non-blocking warning

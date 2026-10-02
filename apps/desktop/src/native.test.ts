@@ -56,6 +56,15 @@ describe("desktop native profile capabilities", () => {
           },
         };
       }
+      if (command.type === "profile.catalog") {
+        return {
+          ok: true,
+          value: {
+            workspaceId: state.workspaceId,
+            profiles: [{ profileId: "profile-1", version: 1, reviewedAt: "2026-09-30T12:00:00Z" }],
+          },
+        };
+      }
       return { ok: true, value: canonicalCandidateProfileResult(state.workspaceId) };
     });
     const port = createBridgeReviewPort(
@@ -67,6 +76,7 @@ describe("desktop native profile capabilities", () => {
           "profile.list",
           "profile.edit",
           "profile.review",
+          "profile.catalog",
         ],
         invoke,
       }),
@@ -115,6 +125,12 @@ describe("desktop native profile capabilities", () => {
     await expect(port.reviewCanonicalCandidateProfile?.("profile-1", 1)).resolves.toMatchObject({
       profileId: "profile-1",
       version: 1,
+    });
+    await expect(
+      port.listReviewedCanonicalCandidateProfiles?.(state.workspaceId),
+    ).resolves.toMatchObject({
+      workspaceId: state.workspaceId,
+      profiles: [{ profileId: "profile-1", version: 1 }],
     });
 
     const operations = invoke.mock.calls
@@ -168,6 +184,10 @@ describe("desktop native profile capabilities", () => {
         type: "profile.review",
         input: { workspaceId: state.workspaceId, profileId: "profile-1", expectedVersion: 1 },
       },
+      {
+        type: "profile.catalog",
+        input: { workspaceId: state.workspaceId },
+      },
     ]);
   });
 
@@ -190,6 +210,7 @@ describe("desktop native profile capabilities", () => {
     expect(port.listCanonicalCandidateProfileVersions).toBeUndefined();
     expect(port.editCanonicalCandidateProfile).toBeUndefined();
     expect(port.reviewCanonicalCandidateProfile).toBeUndefined();
+    expect(port.listReviewedCanonicalCandidateProfiles).toBeUndefined();
   });
 
   it("binds candidate knowledge operations to native dialogs and one explicit workspace selection", async () => {

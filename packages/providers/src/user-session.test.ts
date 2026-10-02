@@ -1610,6 +1610,53 @@ describe("OpenAICodexUserSessionAdapter", () => {
       diagnostics: [{ code: "output_token_budget_exceeded", path: "usage.outputTokens" }],
     });
   });
+
+  it("classifies the explicit Codex ChatGPT unsupported-model rejection without leaking output", async () => {
+    const privateMarker = "private-account-response-731";
+    const adapter = new OpenAICodexUserSessionAdapter({
+      configuredModel: openAIModel,
+      runner: async () => ({
+        exitCode: 1,
+        stdout: "Model is not supported when using Codex with a ChatGPT account.",
+        stderr: privateMarker,
+      }),
+    });
+    const error = await adapter.execute(request(openAIModel)).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({
+      code: "invalid-request",
+      retryable: false,
+      message: "The selected model is not supported by this Codex ChatGPT account.",
+      diagnostics: [{ code: "codex_session_model_unsupported", path: "model" }],
+    });
+    expect(JSON.stringify(error)).not.toContain(privateMarker);
+  });
+
+  it("does not treat successful Codex output metadata as a model rejection", async () => {
+    const adapter = new OpenAICodexUserSessionAdapter({
+      configuredModel: openAIModel,
+      runner: async (_command, args) => {
+        const outputPath = args[args.indexOf("--output-last-message") + 1];
+        if (outputPath === undefined) throw new Error("output path missing");
+        await writeFile(outputPath, '{"answer":"ok"}');
+        return {
+          exitCode: 0,
+          stdout: [
+            JSON.stringify({ type: "thread.started", thread_id: "thread" }),
+            JSON.stringify({
+              type: "turn.completed",
+              usage: { input_tokens: 1, output_tokens: 1 },
+            }),
+          ].join("\n"),
+          stderr: "model is not supported when using Codex with a ChatGPT account",
+        };
+      },
+    });
+
+    await expect(adapter.execute(request(openAIModel))).resolves.toMatchObject({
+      output: { answer: "ok" },
+    });
+  });
 });
 
 describe("user-session error normalization and login probes", () => {

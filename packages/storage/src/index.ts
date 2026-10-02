@@ -52,6 +52,7 @@ import {
 } from "@draft-loop/schemas";
 import type { ArtifactVersionInput, ArtifactVersionRecord } from "./artifact-history.js";
 import { artifactHistoryMigration, artifactVersionFromRow } from "./artifact-history.js";
+import { listCanonicalCandidateProfileCatalog } from "./canonical-profile-catalog.js";
 import {
   type ApprovedEvidenceSources,
   readApprovedChronology,
@@ -880,7 +881,7 @@ export interface CanonicalCandidateProfileStoragePort {
   ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;
   readonly listCanonicalCandidateProfileVersions: (
     workspaceId: string,
-    profileId: string,
+    profileId?: string,
   ) => Promise<readonly CanonicalCandidateProfileVersionRecord[]>;
 }
 
@@ -10871,19 +10872,18 @@ export class SqliteStorage
 
   public async listCanonicalCandidateProfileVersions(
     workspaceId: string,
-    profileId: string,
+    profileId?: string,
   ): Promise<readonly CanonicalCandidateProfileVersionRecord[]> {
     this.ensureOpen();
     const normalizedWorkspaceId = requireNonEmpty(
       workspaceId,
       "canonical candidate profile workspaceId",
     ).trim();
-    const normalizedProfileId = requireNonEmpty(profileId, "canonical candidate profileId").trim();
-    return canonicalCandidateProfileHistory(
-      this.database,
-      normalizedWorkspaceId,
-      normalizedProfileId,
-    );
+    const loadHistory = (id: string) =>
+      canonicalCandidateProfileHistory(this.database, normalizedWorkspaceId, id);
+    return profileId === undefined
+      ? listCanonicalCandidateProfileCatalog(this.database, normalizedWorkspaceId, loadHistory)
+      : loadHistory(requireNonEmpty(profileId, "canonical candidate profileId").trim());
   }
 
   public async saveWritingPolicyVersion(

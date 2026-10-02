@@ -1549,7 +1549,7 @@ describe("desktop capability bridge", () => {
     ]);
   });
 
-  it("keeps canonical profile commands strict, path-free, and explicitly approved", () => {
+  it("keeps canonical profile commands strict, path-free, and explicitly approved", async () => {
     const reference = {
       storeId: "store-1",
       knowledgeBaseId: "knowledge-1",
@@ -1594,11 +1594,45 @@ describe("desktop capability bridge", () => {
         type: "profile.review" as const,
         input: { workspaceId: "workspace-1", profileId: "profile-1", expectedVersion: 1 },
       },
+      {
+        type: "profile.catalog" as const,
+        input: { workspaceId: "workspace-1" },
+      },
     ];
 
     for (const command of commands) {
       expect(validateBridgeCommand(command)).toEqual(command);
     }
+    const catalogInput = {
+      type: "profile.catalog" as const,
+      input: { workspaceId: "workspace-1" },
+    };
+    const catalog = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            profiles: [{ profileId: "profile-1", version: 2, reviewedAt: "2026-09-30T12:00:00Z" }],
+          },
+        }),
+        ["profile.catalog"],
+      ),
+    );
+    await expect(catalog.execute(catalogInput)).resolves.toMatchObject({
+      ok: true,
+      value: { workspaceId: "workspace-1", profiles: [{ profileId: "profile-1", version: 2 }] },
+    });
+    const foreignCatalog = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { workspaceId: "workspace-other", profiles: [] } }),
+        ["profile.catalog"],
+      ),
+    );
+    await expect(foreignCatalog.execute(catalogInput)).resolves.toMatchObject({
+      ok: false,
+      error: { code: "operation-failed" },
+    });
     expect(
       validateBridgeCommand({
         type: "profile.derive",
@@ -1774,6 +1808,63 @@ describe("desktop capability bridge", () => {
         },
       },
     });
+  });
+
+  it("accepts bounded artifact-bound readiness and rejects malformed blocker details", async () => {
+    const fixture = createFixtureReviewState();
+    const approvalReadiness = {
+      artifactId: fixture.artifact.id,
+      artifactVersion: fixture.artifact.version,
+      applicationReady: false,
+      blockers: [
+        { code: "unmet-rubric-threshold", dimension: "relevance", score: 0, threshold: 0.8 },
+      ],
+    } as const;
+    const safeState = { ...fixture, approvalReadiness };
+    const port = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: safeState }), ["review.load"]),
+    );
+    await expect(
+      port.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+    ).resolves.toEqual({ ok: true, value: safeState });
+
+    for (const malformed of [
+      { ...approvalReadiness, privateRationale: "must not cross the bridge" },
+      {
+        ...approvalReadiness,
+        blockers: [
+          {
+            code: "unmet-rubric-threshold",
+            dimension: "relevance",
+            score: Number.POSITIVE_INFINITY,
+            threshold: 0.8,
+          },
+        ],
+      },
+      {
+        ...approvalReadiness,
+        blockers: [
+          { code: "unmet-rubric-threshold", dimension: "relevance", score: 0.8, threshold: 0.8 },
+        ],
+      },
+    ]) {
+      const hostilePort = createCapabilityPort(
+        bridge(
+          async () => ({ ok: true, value: { ...fixture, approvalReadiness: malformed } }),
+          ["review.load"],
+        ),
+      );
+      await expect(
+        hostilePort.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "operation-failed" } });
+    }
+
+    const legacyPort = createCapabilityPort(
+      bridge(async () => ({ ok: true, value: fixture }), ["review.load"]),
+    );
+    await expect(
+      legacyPort.execute({ type: "review.load", input: { workspaceId: fixture.workspaceId } }),
+    ).resolves.toEqual({ ok: true, value: fixture });
   });
 
   it("rejects independence claims the host could not honestly have recorded", async () => {

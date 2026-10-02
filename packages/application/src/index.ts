@@ -302,7 +302,7 @@ export interface GetCanonicalCandidateProfileCommand {
 
 export interface ListCanonicalCandidateProfileVersionsCommand {
   readonly root: string;
-  readonly profileId: string;
+  readonly profileId?: string;
 }
 
 export interface EditCanonicalCandidateProfileCommand {

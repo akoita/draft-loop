@@ -11,6 +11,7 @@ import {
   buildCanonicalCandidateProfile,
   canonicalCandidateProfileChecksum,
 } from "./candidate-profile.js";
+import { normalizeCanonicalCandidateProfileCatalog } from "./candidate-profile-catalog.js";
 
 /** Only canonical facts and issues may be replaced by a profile edit. */
 export interface CanonicalCandidateProfilePatch {
@@ -83,7 +84,7 @@ export interface CanonicalCandidateProfilePersistenceService {
   ) => Promise<CanonicalCandidateProfileVersionRecord | undefined>;
   readonly listCanonicalCandidateProfileVersions: (
     workspaceId: string,
-    profileId: string,
+    profileId?: string,
   ) => Promise<readonly CanonicalCandidateProfileVersionRecord[]>;
   readonly editLatestCanonicalCandidateProfile: (
     command: EditLatestCanonicalCandidateProfileCommand,
@@ -283,9 +284,18 @@ export function createCanonicalCandidateProfilePersistenceService(
 
   const listCanonicalCandidateProfileVersions = async (
     workspaceId: string,
-    profileId: string,
+    profileId?: string,
   ): Promise<readonly CanonicalCandidateProfileVersionRecord[]> => {
     assertCanonicalIdentity(workspaceId);
+    if (profileId === undefined) {
+      return normalizeCanonicalCandidateProfileCatalog(
+        await storage.listCanonicalCandidateProfileVersions(workspaceId),
+        workspaceId,
+        (history, expectedProfileId) =>
+          normalizeRecordList(history, { workspaceId, profileId: expectedProfileId }),
+        corruptRecord,
+      );
+    }
     assertCanonicalIdentity(profileId);
     return normalizeRecordList(
       await storage.listCanonicalCandidateProfileVersions(workspaceId, profileId),

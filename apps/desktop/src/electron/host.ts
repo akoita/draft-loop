@@ -62,7 +62,7 @@ import {
   probeOpenAICodexUserSession,
   type UserSessionLoginStatus,
 } from "@draft-loop/providers";
-
+import { isApplicationNotReadyFailure, projectApprovalReadiness } from "../approval-readiness.js";
 import {
   type BridgeCapability,
   type BridgeCommand,
@@ -117,6 +117,7 @@ import {
   type OpportunityRecordResult,
   type ProviderAuthModeStatus,
   type ReviewDispatchInput,
+  type ReviewedCanonicalCandidateProfileCatalogResult,
   type RunWritingPolicyProjection,
   type SelectedFile,
   type SourceAddUrlInput,
@@ -147,7 +148,9 @@ import type {
 } from "../model.js";
 import { isUnresolvedFinding } from "../model.js";
 import { projectModelProfileSupport } from "../model-profile-bridge.js";
+import { providerSessionModelFeedback } from "../provider-session-model-feedback.js";
 import { projectKnowledgeDirectoryImportResult } from "./knowledge-directory-intake.js";
+import { projectReviewedCanonicalCandidateProfileCatalog } from "./profile-catalog.js";
 import { userFixableProfileDerivationMessage } from "./profile-derivation-errors.js";
 import {
   createMemoryProviderAuthModePreferenceStore,
@@ -752,7 +755,12 @@ function providerFailure(snapshot: RunSnapshot): ProviderFailureView | null {
       : null;
   return {
     code,
-    explanation: providerFailureExplanations[code],
+    explanation: providerSessionModelFeedback({
+      code,
+      provider: snapshot.lastError.provider,
+      diagnostics: snapshot.lastError.diagnostics ?? [],
+      fallbackExplanation: providerFailureExplanations[code],
+    }),
     provider: snapshot.lastError.provider,
     model: snapshot.lastError.modelId,
     step: snapshot.lastError.step,
@@ -948,6 +956,7 @@ function reviewState(
     execution: reviewExecution(descriptor, snapshot, executionRunning),
     round: snapshot.round,
     approval: snapshot.approval,
+    approvalReadiness: projectApprovalReadiness(snapshot.readinessDecision, artifact),
     reviewComplete: hasCompletedIndependentCritique(snapshot),
     totalCostUsd: snapshot.totalCostUsd,
     budgetUsd: descriptor.maxCostUsd ?? null,
@@ -2747,6 +2756,25 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     };
   }
 
+  async function listReviewedCanonicalCandidateProfiles(
+    input: Extract<BridgeCommand, { type: "profile.catalog" }>["input"],
+  ): Promise<ReviewedCanonicalCandidateProfileCatalogResult> {
+    const workspace = workspaceFor(input.workspaceId);
+    const records = await service.listCanonicalCandidateProfileVersions({ root: workspace.root });
+    try {
+      return projectReviewedCanonicalCandidateProfileCatalog(
+        workspace.descriptor.id,
+        records,
+        (record) => projectCanonicalCandidateProfileRecord(workspace.descriptor.id, record),
+      );
+    } catch {
+      return fail(
+        "operation-failed",
+        "The reviewed profile catalog is invalid or not a contiguous immutable history.",
+      );
+    }
+  }
+
   async function editCanonicalCandidateProfile(
     input: Extract<BridgeCommand, { type: "profile.edit" }>["input"],
   ): Promise<CanonicalCandidateProfileRecordResult> {
@@ -3208,21 +3236,44 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             "Resolve, reject, or override blocking findings before approval.",
           );
         }
-        await service.lifecycle(
-          {
-            root: workspace.root,
-            runId: input.runId,
-            action:
-              action.type === "request-revision"
-                ? "revision"
-                : action.type === "recover-to-review"
-                  ? "recover-review"
-                  : action.type === "recover-round-limit"
-                    ? "recover-round-budget"
-                    : action.type,
-          },
-          io(),
-        );
+        try {
+          await service.lifecycle(
+            {
+              root: workspace.root,
+              runId: input.runId,
+              action:
+                action.type === "request-revision"
+                  ? "revision"
+                  : action.type === "recover-to-review"
+                    ? "recover-review"
+                    : action.type === "recover-round-limit"
+                      ? "recover-round-budget"
+                      : action.type,
+            },
+            io(),
+          );
+        } catch (error) {
+          if (action.type !== "approve") throw error;
+          let refreshed: RunSnapshot | undefined;
+          try {
+            refreshed = await service.status({ root: workspace.root, runId: input.runId });
+          } catch {
+            throw error;
+          }
+          const readiness =
+            refreshed?.artifact === null || refreshed?.artifact === undefined
+              ? null
+              : projectApprovalReadiness(refreshed.readinessDecision, refreshed.artifact);
+          if (
+            refreshed === undefined ||
+            refreshed.artifact === null ||
+            readiness?.applicationReady !== false ||
+            !isApplicationNotReadyFailure(error, refreshed.readinessDecision)
+          ) {
+            throw error;
+          }
+          dispatchedSnapshot = refreshed;
+        }
         break;
       case "stop":
         if (currentSnapshot === undefined) {
@@ -4608,6 +4659,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await getCanonicalCandidateProfile(command.input) };
         case "profile.list":
           return { ok: true, value: await listCanonicalCandidateProfileVersions(command.input) };
+        case "profile.catalog":
+          return { ok: true, value: await listReviewedCanonicalCandidateProfiles(command.input) };
         case "profile.edit":
           return { ok: true, value: await editCanonicalCandidateProfile(command.input) };
         case "profile.review":
