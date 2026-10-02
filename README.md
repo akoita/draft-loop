@@ -178,10 +178,12 @@ approving or exporting.
   applies a different pair, and saved run records remain unchanged. The labels
   do not establish provider availability or CV quality. See the
   [roadmap](docs/roadmap.md#model-strategy).
-- Development-only: the exact Z.ai `zai-org/GLM-5.3-Flash` author route uses
-  the dedicated `DEEPINFRA_API_KEY`. Select `dev-deepinfra-glm-author@1` with
-  `economy-openai-critic@1` explicitly for a run; this profile is not an active
-  preset, and model quality and account availability are unvalidated.
+- The opt-in `development-glm` preset adds the Z.ai
+  `zai-org/GLM-5.3-Flash` author through DeepInfra and keeps the GPT-6 Luna
+  critic. It requires the dedicated `DEEPINFRA_API_KEY`; pricing metadata uses
+  standard $0.15/$0.50 per million input/output rates reviewed on 2026-10-02.
+  CV quality is unvalidated and account availability is unchecked. This choice
+  does not change defaults or existing workspaces.
 - DraftLoop prepares local artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.

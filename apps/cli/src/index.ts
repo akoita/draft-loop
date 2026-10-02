@@ -1539,7 +1539,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .argument("[workspace]", "workspace directory", ".")
     .option(
       "--model-preset <id>",
-      "exact registered author/critic pair preset; economy and standard are unvalidated",
+      "exact pair preset; economy and standard are unvalidated; development-glm uses DEEPINFRA_API_KEY and is also unvalidated",
     )
     .option(
       "--author-profile <id@version>",
@@ -1566,7 +1566,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .addHelpText(
       "after",
-      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles does not change workspace defaults. Development GLM: pair --author-profile dev-deepinfra-glm-author@1 with --critic-profile economy-openai-critic@1 and set DEEPINFRA_API_KEY; quality and account availability are unvalidated.\n",
+      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles does not change workspace defaults. Opt-in development GLM: use --model-preset development-glm (author dev-deepinfra-glm-author@1, critic economy-openai-critic@1) and set DEEPINFRA_API_KEY; quality is unvalidated and account availability is unchecked.\n",
     )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;

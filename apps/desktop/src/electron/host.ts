@@ -360,7 +360,7 @@ const modelCatalogueCacheTtlMs = 5 * 60_000;
 
 /** Which catalogue to read, with the address already checked for `local`. */
 type ModelDiscoveryTarget =
-  | { readonly provider: "anthropic" | "openai" }
+  | { readonly provider: "anthropic" | "openai" | "zai" }
   | { readonly provider: "local"; readonly endpoint: string };
 
 interface CachedModelCatalogue {
@@ -431,6 +431,8 @@ function providerEndpoint(
       return providerAuthModeConfiguration.openai === "user-session"
         ? "local Codex runtime → OpenAI subscription"
         : "https://api.openai.com/v1/responses";
+    case "zai":
+      return "https://api.deepinfra.com/v1/openai/chat/completions";
     case "local":
       return localEndpoint ?? defaultLocalModelEndpoint;
     default:
@@ -2124,6 +2126,12 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     try {
       if (target.provider === "local") {
         return await listLocalModels({ endpoint: target.endpoint, fetch: discoveryFetch });
+      }
+      if (target.provider === "zai") {
+        return fail(
+          "capability-unavailable",
+          "DeepInfra model discovery is unavailable. Enter the exact model id zai-org/GLM-5.3-Flash.",
+        );
       }
       const provider = target.provider;
       if (providerAuthModeConfiguration[provider] === "user-session") {

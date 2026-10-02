@@ -20,10 +20,10 @@ describe("model profile catalog", () => {
       "economy-openai-critic@1",
       "standard-anthropic-author@1",
       "standard-openai-critic@2",
+      "dev-deepinfra-glm-author@1",
     ]);
     for (const entry of catalog) {
       expect(entry).toMatchObject({
-        reviewedAt: "2026-09-30",
         qualityStatus: "unvalidated",
         availabilityStatus: "not-checked",
         apiPricing: {
@@ -33,6 +33,9 @@ describe("model profile catalog", () => {
       });
       expect(entry.sources.length).toBeGreaterThan(0);
       expect(entry.sources.every((source) => source.startsWith("https://"))).toBe(true);
+      expect(entry.reviewedAt).toBe(
+        entry.profile.id === "dev-deepinfra-glm-author" ? "2026-10-02" : "2026-09-30",
+      );
     }
 
     expect(
@@ -47,6 +50,7 @@ describe("model profile catalog", () => {
       "economy-openai-critic@1": [0.1, 0.5],
       "standard-anthropic-author@1": [4, 20],
       "standard-openai-critic@2": [2, 10],
+      "dev-deepinfra-glm-author@1": [0.15, 0.5],
     });
     expect(byId.get("economy-anthropic-author@1")?.sources).toEqual([
       "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
@@ -57,6 +61,19 @@ describe("model profile catalog", () => {
     expect(byId.get("standard-openai-critic@2")?.sources).toEqual([
       "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
     ]);
+    expect(byId.get("dev-deepinfra-glm-author@1")?.sources).toEqual([
+      "https://deepinfra.com/zai-org/GLM-5.3-Flash/api",
+      "https://deepinfra.com/blog/glm-5-3-flash-deepinfra",
+    ]);
+    expect(catalog.filter(({ profile }) => profile.id === "economy-openai-critic")).toHaveLength(1);
+    expect(byId.get("dev-deepinfra-glm-author@1")).toMatchObject({
+      profile: {
+        provider: "zai",
+        modelId: "zai-org/GLM-5.3-Flash",
+        roles: ["author"],
+        runtime: { effort: "low", maxOutputTokens: 32768, thinking: { mode: "provider-default" } },
+      },
+    });
   });
 
   it("returns detached catalog, nested metadata, and profile snapshots", () => {
@@ -71,7 +88,7 @@ describe("model profile catalog", () => {
     catalog.pop();
 
     const next = listModelProfileCatalog();
-    expect(next).toHaveLength(4);
+    expect(next).toHaveLength(5);
     expect(next[0]).toMatchObject({
       profile: {
         id: "economy-anthropic-author",
@@ -87,7 +104,7 @@ describe("model profile catalog", () => {
     ).toEqual(["author"]);
   });
 
-  it("lists only economy and standard exact, role-safe presets", () => {
+  it("lists opt-in economy, standard, and development GLM exact, role-safe presets", () => {
     const presets = listModelProfilePresets();
 
     expect(presets).toEqual([
@@ -104,6 +121,13 @@ describe("model profile catalog", () => {
         tier: "standard",
         author: { id: "standard-anthropic-author", version: 1 },
         critic: { id: "standard-openai-critic", version: 2 },
+      },
+      {
+        id: "development-glm",
+        label: "Development — GLM Flash — unvalidated",
+        tier: "economy",
+        author: { id: "dev-deepinfra-glm-author", version: 1 },
+        critic: { id: "economy-openai-critic", version: 1 },
       },
     ]);
     for (const preset of presets) {

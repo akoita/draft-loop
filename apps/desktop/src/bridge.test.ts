@@ -2205,6 +2205,33 @@ describe("desktop capability bridge", () => {
     }
   });
 
+  it("accepts Z.ai as a model company while keeping auth-mode providers separate", () => {
+    expect(validateBridgeCommand({ type: "models.list", input: { provider: "zai" } })).toEqual({
+      type: "models.list",
+      input: { provider: "zai" },
+    });
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: {
+          name: "glm-development",
+          mode: "real",
+          authorCompany: "zai",
+          authorModel: "zai-org/GLM-5.3-Flash",
+        },
+      }),
+    ).toMatchObject({
+      type: "workspace.create",
+      input: {
+        authorCompany: "zai",
+        authorModel: "zai-org/GLM-5.3-Flash",
+      },
+    });
+    expect(() =>
+      validateBridgeCommand({ type: "provider-auth.status", input: { provider: "zai" } }),
+    ).toThrow("invalid");
+  });
+
   it("keeps candidate-knowledge paths behind the native bridge", async () => {
     expect(
       validateBridgeCommand({

@@ -135,6 +135,7 @@ export type ModelSide = "author" | "critic";
 const modelCompanyLabels: Readonly<Record<ModelCompany, string>> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
+  zai: "Z.ai (DeepInfra)",
   local: "Local model server",
 };
 
@@ -714,9 +715,9 @@ export function WorkspaceSetupForm({
         <p className="setup-note model-suggestion-note">
           Suggestions show only the tier and role registered in DraftLoop; they do not establish
           account or plan availability or CV quality. IDs are not guaranteed to work with your
-          account, plan, or CLI version. You may type any exact model id. CLI-specific live
-          availability for these suggestions has not been reverified; catalog review date:
-          2026-09-30. Provider documentation: Anthropic and OpenAI.
+          account, plan, or CLI version. You may type any exact model id. Catalog entries show their
+          review dates; CLI-specific live availability has not been reverified. Provider
+          documentation: Anthropic, OpenAI, and DeepInfra.
         </p>
       ) : null}
       <div className="setup-sides">
@@ -896,6 +897,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   const [discovery, setDiscovery] = useState<Readonly<Record<ModelCompany, ModelDiscoveryState>>>({
     anthropic: { status: "idle" },
     openai: { status: "idle" },
+    zai: { status: "idle" },
     local: { status: "idle" },
   });
   const [preview, setPreview] = useState<IndependencePreviewState>({ status: "idle" });
@@ -1335,6 +1337,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       setDiscovery({
         anthropic: { status: "idle" },
         openai: { status: "idle" },
+        zai: { status: "idle" },
         local: { status: "idle" },
       });
       setPreview({ status: "idle" });
