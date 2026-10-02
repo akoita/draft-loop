@@ -59,6 +59,16 @@ If a Codex ChatGPT session explicitly rejects a selected model, the desktop
 shows that diagnosis and suggests choosing a supported model or explicitly
 switching OpenAI authentication to an API key. It never switches automatically.
 
+## Provider credentials
+
+Desktop provider settings can save or remove a dedicated DeepInfra API key for
+Z.ai models served by DeepInfra. It uses the same local credential store as the Anthropic
+and OpenAI keys, and saved app keys take precedence over environment variables.
+The host reads `DEEPINFRA_API_KEY` when no app key is saved. DeepInfra remains API-key-only:
+provider-managed session preferences are still limited to Anthropic and OpenAI.
+The renderer receives only whether a key is configured and its storage source
+and protection, never the stored key.
+
 ## Desktop diagnostics
 
 Packaged builds keep host-error diagnostics in `diagnostics/host-errors.jsonl`

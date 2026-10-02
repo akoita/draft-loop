@@ -1,7 +1,7 @@
 import type { ModelProfileReferences } from "@draft-loop/application/model-profile-selection";
 import type { ArtifactSection } from "@draft-loop/artifacts";
 import type { ApprovalReadiness } from "./approval-readiness.js";
-import type { CredentialStatus } from "./bridge.js";
+import type { CredentialProvider, CredentialStatus } from "./bridge.js";
 
 /**
  * Renderer-safe identity for one immutable writing-policy version.
@@ -331,12 +331,12 @@ export interface DesktopReviewPort {
     target: "evidence" | "job-description",
     url: string,
   ) => Promise<DesktopReviewState>;
-  readonly getCredentialStatus?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
+  readonly getCredentialStatus?: (provider: CredentialProvider) => Promise<CredentialStatus>;
   readonly setCredential?: (
-    provider: "anthropic" | "openai",
+    provider: CredentialProvider,
     apiKey: string,
   ) => Promise<CredentialStatus>;
-  readonly removeCredential?: (provider: "anthropic" | "openai") => Promise<CredentialStatus>;
+  readonly removeCredential?: (provider: CredentialProvider) => Promise<CredentialStatus>;
 }
 
 export type ReviewValidationStatus = "blocked" | "warnings" | "clear";
@@ -701,7 +701,7 @@ export function createFixtureReviewState(): DesktopReviewState {
 }
 
 export function createFixtureReviewPort(): DesktopReviewPort {
-  const credentials = new Map<"anthropic" | "openai", string>();
+  const credentials = new Map<CredentialProvider, string>();
   return {
     load: async () => createFixtureReviewState(),
     dispatch: async (state, action) => reduceReviewState(state, action),

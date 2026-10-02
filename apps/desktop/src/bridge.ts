@@ -180,8 +180,11 @@ export type SupportedMediaType = (typeof supportedMediaTypes)[number];
 export const exportFormats = ["docx", "markdown", "pdf"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
-export const credentialProviders = ["anthropic", "openai"] as const;
+export const credentialProviders = ["anthropic", "openai", "deepinfra"] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
+
+export const providerAuthModeProviders = ["anthropic", "openai"] as const;
+export type ProviderAuthModeProvider = (typeof providerAuthModeProviders)[number];
 
 export const providerAuthModes = ["api-key", "user-session"] as const;
 export type ProviderAuthMode = (typeof providerAuthModes)[number];
@@ -199,12 +202,9 @@ export type ModelCompany = (typeof modelCompanies)[number];
 /**
  * The companies whose catalogue can be listed.
  *
- * Wider than `credentialProviders` because `local` has no credential: its
- * catalogue comes from a server on this machine, named by the workspace. It is
- * `modelCompanies` itself rather than a copy of it, because a catalogue exists
- * only to fill in a workspace's model choice: a company that could be listed
- * but not configured, or configured but not listed, would be a defect in one
- * of the two rather than a distinction worth encoding.
+ * Model discovery follows workspace companies rather than credential hosts:
+ * `local` has no credential, and Z.ai uses DeepInfra as its credential host.
+ * The list is exactly the set of companies accepted for workspace choices.
  */
 export const modelDiscoveryProviders = modelCompanies;
 export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
@@ -858,11 +858,11 @@ export interface CredentialRemoveInput {
 }
 
 export interface ProviderAuthModeStatusInput {
-  readonly provider: CredentialProvider;
+  readonly provider: ProviderAuthModeProvider;
 }
 
 export interface ProviderAuthModeSetInput {
-  readonly provider: CredentialProvider;
+  readonly provider: ProviderAuthModeProvider;
   readonly mode: ProviderAuthMode;
 }
 
@@ -2525,7 +2525,7 @@ const credentialResultKeys = resultKeys<CredentialResult>()([
 ]);
 
 export interface ProviderAuthModeStatus {
-  readonly provider: CredentialProvider;
+  readonly provider: ProviderAuthModeProvider;
   readonly activeMode: ProviderAuthMode;
   readonly preferredMode: ProviderAuthMode;
   readonly restartRequired: boolean;
@@ -4473,14 +4473,14 @@ function validateCredentialSetInput(value: unknown): CredentialSetInput {
 function validateProviderAuthModeStatusInput(value: unknown): ProviderAuthModeStatusInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, providerAuthModeStatusKeys)) return invalidInput();
-  return { provider: enumValue(input.provider, credentialProviders) };
+  return { provider: enumValue(input.provider, providerAuthModeProviders) };
 }
 
 function validateProviderAuthModeSetInput(value: unknown): ProviderAuthModeSetInput {
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, providerAuthModeSetKeys)) return invalidInput();
   return {
-    provider: enumValue(input.provider, credentialProviders),
+    provider: enumValue(input.provider, providerAuthModeProviders),
     mode: enumValue(input.mode, providerAuthModes),
   };
 }
@@ -6674,7 +6674,7 @@ function normalizeProviderAuthModeResult(value: unknown): ProviderAuthModeResult
   const result = requireRecord(value);
   if (!hasOnlyKeys(result, providerAuthModeResultKeys)) return invalidInput();
   return {
-    provider: enumValue(result.provider, credentialProviders),
+    provider: enumValue(result.provider, providerAuthModeProviders),
     activeMode: enumValue(result.activeMode, providerAuthModes),
     preferredMode: enumValue(result.preferredMode, providerAuthModes),
     restartRequired: booleanValue(result.restartRequired),

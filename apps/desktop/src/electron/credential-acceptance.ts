@@ -38,6 +38,7 @@ function requireAppProtection(value: CredentialProtection): void {
 export async function runCredentialAcceptance(options: CredentialAcceptanceOptions): Promise<void> {
   process.env.ANTHROPIC_API_KEY = options.credentials.anthropic.environment;
   process.env.OPENAI_API_KEY = options.credentials.openai.environment;
+  process.env.DEEPINFRA_API_KEY = options.credentials.deepinfra.environment;
 
   if (options.phase === "prepare") {
     for (const provider of credentialProviders) {

@@ -14,6 +14,7 @@ describe("packaged credential acceptance logic", () => {
     const evidencePath = join(root, "evidence.json");
     const previousAnthropic = process.env.ANTHROPIC_API_KEY;
     const previousOpenai = process.env.OPENAI_API_KEY;
+    const previousDeepinfra = process.env.DEEPINFRA_API_KEY;
     const secrets = {
       anthropic: {
         initial: `anthropic-initial-${randomUUID()}`,
@@ -24,6 +25,11 @@ describe("packaged credential acceptance logic", () => {
         initial: `openai-initial-${randomUUID()}`,
         replacement: `openai-replacement-${randomUUID()}`,
         environment: `openai-environment-${randomUUID()}`,
+      },
+      deepinfra: {
+        initial: `deepinfra-initial-${randomUUID()}`,
+        replacement: `deepinfra-replacement-${randomUUID()}`,
+        environment: `deepinfra-environment-${randomUUID()}`,
       },
     };
     const safeStorage: SafeStorageAdapter = {
@@ -56,7 +62,11 @@ describe("packaged credential acceptance logic", () => {
         schemaVersion: 1,
         appVersion: "test",
         electronSafeStorage: { available: true, selectedBackend: "kwallet6" },
-        protection: { anthropic: "os-backed", openai: "os-backed" },
+        protection: {
+          anthropic: "os-backed",
+          openai: "os-backed",
+          deepinfra: "os-backed",
+        },
         checks: {
           restart: true,
           replace: true,
@@ -74,6 +84,8 @@ describe("packaged credential acceptance logic", () => {
       else process.env.ANTHROPIC_API_KEY = previousAnthropic;
       if (previousOpenai === undefined) delete process.env.OPENAI_API_KEY;
       else process.env.OPENAI_API_KEY = previousOpenai;
+      if (previousDeepinfra === undefined) delete process.env.DEEPINFRA_API_KEY;
+      else process.env.DEEPINFRA_API_KEY = previousDeepinfra;
       await rm(root, { recursive: true, force: true });
     }
   });

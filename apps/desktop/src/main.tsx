@@ -2,6 +2,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
+  type CredentialProvider,
   type ModelCompany,
   type ModelsPreviewIndependenceResult,
   modelCompanies,
@@ -1815,14 +1816,14 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       {...(activePort.setCredential === undefined
         ? {}
         : {
-            onSetCredential: async (provider: "anthropic" | "openai", apiKey: string) => {
+            onSetCredential: async (provider: CredentialProvider, apiKey: string) => {
               await activePort.setCredential?.(provider, apiKey);
             },
           })}
       {...(activePort.removeCredential === undefined
         ? {}
         : {
-            onRemoveCredential: async (provider: "anthropic" | "openai") => {
+            onRemoveCredential: async (provider: CredentialProvider) => {
               await activePort.removeCredential?.(provider);
             },
           })}

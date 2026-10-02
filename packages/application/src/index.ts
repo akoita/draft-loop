@@ -574,6 +574,7 @@ export * from "./candidate-profile.js";
 export * from "./candidate-profile-derivation.js";
 export * from "./candidate-profile-extraction.js";
 export * from "./candidate-profile-persistence.js";
+export { environmentCredentialResolver } from "./glm-provider-routing.js";
 export * from "./knowledge-base.js";
 export * from "./local.js";
 export * from "./local-endpoint.js";

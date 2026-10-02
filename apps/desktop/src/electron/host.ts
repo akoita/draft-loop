@@ -12,6 +12,7 @@ import {
   createCandidateKnowledgeStoreService,
   createLocalApplicationDriver,
   defaultLocalModelEndpoint,
+  environmentCredentialResolver,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
   type OpportunityDraftPatch,
@@ -115,7 +116,9 @@ import {
   type OpportunityCreateInput,
   type OpportunityCreateSource,
   type OpportunityRecordResult,
+  type ProviderAuthModeProvider,
   type ProviderAuthModeStatus,
+  providerAuthModeProviders,
   type ReviewDispatchInput,
   type ReviewedCanonicalCandidateProfileCatalogResult,
   type RunWritingPolicyProjection,
@@ -302,10 +305,12 @@ export interface NativeHostOptions {
   readonly providerAuthMode?: ProviderAuthMode;
   readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
   readonly providerAuthModePreference?: ProviderAuthModePreferenceStore;
-  readonly providerAuthModeEnvironmentOverrides?: Readonly<Record<CredentialProvider, boolean>>;
+  readonly providerAuthModeEnvironmentOverrides?: Readonly<
+    Record<ProviderAuthModeProvider, boolean>
+  >;
   readonly userSessionRunners?: ProviderUserSessionRunners;
   readonly userSessionProbes?: Partial<
-    Readonly<Record<CredentialProvider, () => Promise<UserSessionLoginStatus>>>
+    Readonly<Record<ProviderAuthModeProvider, () => Promise<UserSessionLoginStatus>>>
   >;
   /** Acceptance-only switch for exercising the preflight with offline fixtures. */
   readonly requireProviderPreflight?: boolean;
@@ -2010,10 +2015,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     createApplicationService(
       createLocalApplicationDriver({
         providerAuthModeConfiguration,
-        resolveCredential: async (provider) =>
-          provider === "deepinfra"
-            ? process.env.DEEPINFRA_API_KEY
-            : resolveCredential(credentials, provider),
+        resolveCredential: async (provider) => resolveCredential(credentials, provider),
         ...(options.userSessionRunners === undefined
           ? {}
           : { userSessionRunners: options.userSessionRunners }),
@@ -2280,7 +2282,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   }
 
   async function providerAuthModeStatus(
-    provider: CredentialProvider,
+    provider: ProviderAuthModeProvider,
   ): Promise<ProviderAuthModeStatus> {
     const preferredMode = (await providerAuthModePreference.get(provider)) ?? "api-key";
     const activeMode = providerAuthModeConfiguration[provider];
@@ -2295,7 +2297,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   }
 
   async function setProviderAuthMode(
-    provider: CredentialProvider,
+    provider: ProviderAuthModeProvider,
     mode: ProviderAuthMode,
   ): Promise<ProviderAuthModeStatus> {
     if (providerAuthModeEnvironmentOverrides[provider]) {
@@ -4849,18 +4851,22 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           };
         }
         case "credential.status": {
-          if (providerAuthModeConfiguration[command.input.provider] === "user-session") {
-            const provider = command.input.provider;
+          const provider = command.input.provider;
+          if (
+            providerAuthModeProviders.includes(provider as ProviderAuthModeProvider) &&
+            providerAuthModeConfiguration[provider as ProviderAuthModeProvider] === "user-session"
+          ) {
+            const sessionProvider = provider as ProviderAuthModeProvider;
             const probe =
-              options.userSessionProbes?.[provider] ??
-              (provider === "anthropic"
+              options.userSessionProbes?.[sessionProvider] ??
+              (sessionProvider === "anthropic"
                 ? probeAnthropicClaudeUserSession
                 : probeOpenAICodexUserSession);
             const session = await probe();
             return {
               ok: true,
               value: {
-                provider,
+                provider: sessionProvider,
                 configured: session.available && session.authenticated,
                 source: "user-session",
                 protection: "provider-managed-session",
@@ -4961,8 +4967,7 @@ export function createMemoryCredentialStore(): NativeCredentialStore {
       if (store.has(provider)) {
         return { configured: true, source: "app", protection: "session-memory" };
       }
-      const envKey =
-        provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
+      const envKey = await environmentCredentialResolver(provider);
       if (envKey !== undefined && envKey.trim().length > 0) {
         return { configured: true, source: "env", protection: "environment" };
       }
@@ -4997,8 +5002,7 @@ export async function resolveCredential(
 ): Promise<string | undefined> {
   const managed = (await store.get?.(provider))?.trim();
   if (managed !== undefined && managed.length > 0) return managed;
-  const environment =
-    provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
+  const environment = await environmentCredentialResolver(provider);
   const normalized = environment?.trim();
   return normalized === undefined || normalized.length === 0 ? undefined : normalized;
 }
@@ -5131,8 +5135,7 @@ export function createSafeStorageCredentialStore(options: {
             : "os-backed";
         return { configured: true, source: "app", protection };
       }
-      const envKey =
-        provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
+      const envKey = await environmentCredentialResolver(provider);
       if (envKey !== undefined && envKey.trim().length > 0) {
         return { configured: true, source: "env", protection: "environment" };
       }

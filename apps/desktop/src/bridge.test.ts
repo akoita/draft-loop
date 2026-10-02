@@ -1109,6 +1109,47 @@ describe("desktop capability bridge", () => {
     });
   });
 
+  it("accepts DeepInfra credential operations without extending subscription auth modes", async () => {
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: {
+        provider: "deepinfra",
+        configured: true,
+        source: "app",
+        protection: "os-backed",
+      },
+    }));
+    const port = createCapabilityPort(
+      bridge(invoke, ["credential.set", "credential.status", "credential.remove"]),
+    );
+
+    await expect(
+      port.execute({
+        type: "credential.set",
+        input: { provider: "deepinfra", apiKey: "synthetic-deepinfra-key" },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { provider: "deepinfra", configured: true, source: "app" },
+    });
+    await expect(
+      port.execute({ type: "credential.status", input: { provider: "deepinfra" } }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { provider: "deepinfra", configured: true, protection: "os-backed" },
+    });
+    expect(invoke).toHaveBeenCalledTimes(2);
+    expect(() =>
+      validateBridgeCommand({ type: "provider-auth.status", input: { provider: "deepinfra" } }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "provider-auth.set",
+        input: { provider: "deepinfra", mode: "user-session" },
+      }),
+    ).toThrow("invalid");
+  });
+
   it("strictly validates provider-managed user-session credential status", async () => {
     const accepted = createCapabilityPort(
       bridge(

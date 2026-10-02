@@ -3149,6 +3149,94 @@ describe("native host", () => {
       }
     });
 
+    it("isolates DeepInfra environment fallback, encrypted persistence, and secret-free status", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-deepinfra-credentials-"));
+      const filename = join(parent, "credentials.json");
+      const names = {
+        anthropic: "ANTHROPIC_API_KEY",
+        openai: "OPENAI_API_KEY",
+        deepinfra: "DEEPINFRA_API_KEY",
+      } as const;
+      const previous = Object.fromEntries(
+        Object.values(names).map((name) => [name, process.env[name]]),
+      );
+      const environment = {
+        anthropic: `synthetic-anthropic-${crypto.randomUUID()}`,
+        openai: `synthetic-openai-${crypto.randomUUID()}`,
+        deepinfra: `synthetic-deepinfra-env-${crypto.randomUUID()}`,
+      };
+      const appKey = `synthetic-deepinfra-app-${crypto.randomUUID()}`;
+      const safeStorage: SafeStorageAdapter = {
+        isEncryptionAvailable: () => true,
+        encryptString: (plain) => Buffer.from(`mock:${plain}`),
+        decryptString: (encrypted) => encrypted.toString("utf8").replace(/^mock:/u, ""),
+      };
+
+      for (const provider of ["anthropic", "openai", "deepinfra"] as const) {
+        process.env[names[provider]] = environment[provider];
+      }
+      try {
+        const store = createSafeStorageCredentialStore({ safeStorage, filename });
+        for (const provider of ["anthropic", "openai", "deepinfra"] as const) {
+          expect(await store.status(provider)).toMatchObject({
+            configured: true,
+            source: "env",
+            protection: "environment",
+          });
+          expect(await resolveCredential(store, provider)).toBe(environment[provider]);
+        }
+
+        const host = createNativeHost({
+          dialogs: { chooseDirectory: async () => undefined, chooseFiles: async () => [] },
+          credentials: store,
+        });
+        const status = await host.invoke({
+          type: "credential.status",
+          input: { provider: "deepinfra" },
+        });
+        expect(status).toMatchObject({
+          ok: true,
+          value: { provider: "deepinfra", configured: true, source: "env" },
+        });
+        expect(JSON.stringify(status)).not.toContain(environment.deepinfra);
+
+        expect(await store.set("deepinfra", appKey)).toBe(true);
+        expect(await resolveCredential(store, "deepinfra")).toBe(appKey);
+        expect(await store.status("deepinfra")).toMatchObject({ source: "app" });
+        const appStatus = await host.invoke({
+          type: "credential.status",
+          input: { provider: "deepinfra" },
+        });
+        expect(appStatus).toMatchObject({
+          ok: true,
+          value: { provider: "deepinfra", configured: true, source: "app" },
+        });
+        expect(JSON.stringify(appStatus)).not.toContain(appKey);
+        const stored = await readFile(filename, "utf8");
+        expect(stored).not.toContain(appKey);
+
+        const reopened = createSafeStorageCredentialStore({ safeStorage, filename });
+        expect(await reopened.status("deepinfra")).toMatchObject({
+          configured: true,
+          source: "app",
+          protection: "os-backed",
+        });
+        expect(await resolveCredential(reopened, "deepinfra")).toBe(appKey);
+        expect(await reopened.remove("deepinfra")).toBe(true);
+        expect(await reopened.status("deepinfra")).toMatchObject({
+          configured: true,
+          source: "env",
+        });
+        expect(await resolveCredential(reopened, "deepinfra")).toBe(environment.deepinfra);
+      } finally {
+        for (const [name, value] of Object.entries(previous)) {
+          if (value === undefined) delete process.env[name];
+          else process.env[name] = value;
+        }
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
     it("discloses Electron basic_text as weak Linux protection", async () => {
       const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-basic-text-"));
       const store = createSafeStorageCredentialStore({
