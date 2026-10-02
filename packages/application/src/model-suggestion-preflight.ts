@@ -5,6 +5,7 @@ import {
   ProviderAdapterError,
   type ProviderErrorCode,
 } from "@draft-loop/providers";
+import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import {
   createProviderAdapter,
   type ProviderClientFactories,
@@ -178,6 +179,16 @@ export function buildModelSuggestionPreflightPlan(
       throw new ModelSuggestionPreflightInputError();
     }
     const profile = entry.profile as unknown as ModelProfile;
+    if (
+      profile.provider === "zai" &&
+      Array.isArray(profile.roles) &&
+      isRecord(profile.runtime) &&
+      isRecord(profile.runtime.thinking) &&
+      isRecord(profile.knownLimits) &&
+      isDeepInfraGLMAuthorProfile(profile)
+    ) {
+      continue;
+    }
     if (
       !isRecord(profile) ||
       (profile.provider !== "anthropic" && profile.provider !== "openai") ||
