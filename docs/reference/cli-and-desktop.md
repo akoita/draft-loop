@@ -50,6 +50,11 @@ OpenAI Codex user-session and local routes reject profile selections; the CLI
 does not switch authentication modes automatically. Account and provider
 availability remains unchecked.
 
+Each application OpenAI API-key adapter invocation makes one provider request
+by default. Callers can explicitly configure retries; Anthropic, local, and
+user-session adapters keep their existing retry behavior. This does not change
+orchestration recovery.
+
 If a Codex ChatGPT session explicitly rejects a selected model, the desktop
 shows that diagnosis and suggests choosing a supported model or explicitly
 switching OpenAI authentication to an API key. It never switches automatically.
