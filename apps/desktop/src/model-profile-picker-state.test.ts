@@ -62,7 +62,11 @@ function stateWithPair(refs: ModelProfileReferences) {
 
 describe("desktop model profile picker state", () => {
   it("resolves role-safe presets and maps exact profiles to workspace destinations", () => {
-    expect(modelProfilePresets.map(({ id }) => id)).toEqual(["economy", "standard"]);
+    expect(modelProfilePresets.map(({ id }) => id)).toEqual([
+      "economy",
+      "standard",
+      "development-glm",
+    ]);
     expect(economy).toEqual({
       author: { id: "economy-anthropic-author", version: 1 },
       critic: { id: "economy-openai-critic", version: 1 },
