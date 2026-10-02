@@ -2010,7 +2010,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     createApplicationService(
       createLocalApplicationDriver({
         providerAuthModeConfiguration,
-        resolveCredential: async (provider) => resolveCredential(credentials, provider),
+        resolveCredential: async (provider) =>
+          provider === "deepinfra"
+            ? process.env.DEEPINFRA_API_KEY
+            : resolveCredential(credentials, provider),
         ...(options.userSessionRunners === undefined
           ? {}
           : { userSessionRunners: options.userSessionRunners }),

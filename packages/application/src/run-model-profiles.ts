@@ -8,6 +8,7 @@ import {
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import type { RunBudget } from "@draft-loop/orchestrator";
 import { modelProfileSchema } from "@draft-loop/schemas/model-profile";
+import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import type {
   CandidateProfileSelection,
   ModelProfileReferences,
@@ -124,10 +125,14 @@ export function validateProfileRoute(
   profile: ModelProfile,
   authModes: RunProviderAuthModeConfiguration,
 ): void {
-  if (
-    profile.runtime.maxOutputTokens > maximumProfileOutputTokens ||
-    (profile.provider !== "anthropic" && profile.provider !== "openai")
-  ) {
+  if (profile.runtime.maxOutputTokens > maximumProfileOutputTokens) {
+    throw new RunModelProfileError();
+  }
+  if (profile.provider === "zai") {
+    if (!isDeepInfraGLMAuthorProfile(profile)) throw new RunModelProfileError();
+    return;
+  }
+  if (profile.provider !== "anthropic" && profile.provider !== "openai") {
     throw new RunModelProfileError();
   }
   if (profile.provider === "openai" && profile.runtime.thinking.mode !== "provider-default") {

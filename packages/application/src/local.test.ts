@@ -22,6 +22,7 @@ import {
   createProviderOpportunityExtractionPort,
   defaultRequiredSections,
   type ProviderClientFactories,
+  type ProviderCredentialResolver,
   readWorkspace,
   resolveProviderAuthModes,
   SourceIngestionUserError,
@@ -2529,7 +2530,7 @@ describe("local application driver", () => {
   it("routes Anthropic through its API key and OpenAI through its user session", async () => {
     const root = await providerWorkspace("draft-loop-mixed-provider-auth-");
     const io = { write: () => undefined };
-    const resolveCredential = vi.fn(async (provider: "anthropic" | "openai") => {
+    const resolveCredential = vi.fn<ProviderCredentialResolver>(async (provider) => {
       if (provider === "openai") throw new Error("OpenAI API key must not be resolved.");
       return "fake-anthropic-key";
     });

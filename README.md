@@ -178,6 +178,10 @@ approving or exporting.
   applies a different pair, and saved run records remain unchanged. The labels
   do not establish provider availability or CV quality. See the
   [roadmap](docs/roadmap.md#model-strategy).
+- Development-only: the exact Z.ai `zai-org/GLM-5.3-Flash` author route uses
+  the dedicated `DEEPINFRA_API_KEY`. Select `dev-deepinfra-glm-author@1` with
+  `economy-openai-critic@1` explicitly for a run; this profile is not an active
+  preset, and model quality and account availability are unvalidated.
 - DraftLoop prepares local artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.

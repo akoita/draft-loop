@@ -1,6 +1,7 @@
 import type { AgentRole } from "@draft-loop/domain";
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import { modelProfileSchema } from "@draft-loop/schemas/model-profile";
+import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 
 export type ModelProfileRegistryErrorCode =
   | "invalid-profile"
@@ -240,4 +241,5 @@ export const defaultModelProfileRegistry = createModelProfileRegistry([
     },
     knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
   },
+  createDeepInfraGLMAuthorProfile(),
 ]);
