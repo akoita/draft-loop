@@ -6048,6 +6048,22 @@ describe("candidate knowledge native controls", () => {
       }),
     ).resolves.toMatchObject({ ok: true, value: { version: 2, status: "reviewed" } });
 
+    fixture.service.listCanonicalCandidateProfileVersions.mockResolvedValue([
+      canonicalCandidateProfileRecord(1, "reviewed"),
+    ] as never);
+    await expect(
+      host.invoke({
+        type: "profile.catalog",
+        input: { workspaceId: "workspace-native" },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        profiles: [{ profileId: "profile-native", version: 1 }],
+      },
+    });
+
     expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenNthCalledWith(1, {
       root,
       profileId: "profile-native",
@@ -6078,6 +6094,7 @@ describe("candidate knowledge native controls", () => {
       profileId: "profile-native",
       expectedVersion: 2,
     });
+    expect(fixture.service.listCanonicalCandidateProfileVersions).toHaveBeenCalledWith({ root });
 
     expect(denied).toMatchObject({
       ok: true,

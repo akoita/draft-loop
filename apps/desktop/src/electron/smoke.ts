@@ -4,6 +4,7 @@ import { basename, isAbsolute, relative, resolve } from "node:path";
 import type {
   BridgeCommand,
   BridgeResult,
+  ReviewedCanonicalCandidateProfileCatalogResult,
   ReviewStateResult,
   RunStatus,
   WorkspaceResult,
@@ -51,6 +52,14 @@ async function prepare(host: NativeHost, workspaceRoot: string): Promise<void> {
     "workspace creation",
   );
   const workspaceId = created.workspace.id;
+  const catalog = await invoke<ReviewedCanonicalCandidateProfileCatalogResult>(
+    host,
+    { type: "profile.catalog", input: { workspaceId } },
+    "fresh profile catalog",
+  );
+  if (catalog.workspaceId !== workspaceId || catalog.profiles.length !== 0) {
+    throw new Error("Fresh workspace returned an unexpected reviewed profile catalog.");
+  }
   const started = await invoke<RunStatus>(
     host,
     { type: "run.start", input: { workspaceId } },

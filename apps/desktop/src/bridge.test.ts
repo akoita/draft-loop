@@ -1549,7 +1549,7 @@ describe("desktop capability bridge", () => {
     ]);
   });
 
-  it("keeps canonical profile commands strict, path-free, and explicitly approved", () => {
+  it("keeps canonical profile commands strict, path-free, and explicitly approved", async () => {
     const reference = {
       storeId: "store-1",
       knowledgeBaseId: "knowledge-1",
@@ -1594,11 +1594,45 @@ describe("desktop capability bridge", () => {
         type: "profile.review" as const,
         input: { workspaceId: "workspace-1", profileId: "profile-1", expectedVersion: 1 },
       },
+      {
+        type: "profile.catalog" as const,
+        input: { workspaceId: "workspace-1" },
+      },
     ];
 
     for (const command of commands) {
       expect(validateBridgeCommand(command)).toEqual(command);
     }
+    const catalogInput = {
+      type: "profile.catalog" as const,
+      input: { workspaceId: "workspace-1" },
+    };
+    const catalog = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            profiles: [{ profileId: "profile-1", version: 2, reviewedAt: "2026-09-30T12:00:00Z" }],
+          },
+        }),
+        ["profile.catalog"],
+      ),
+    );
+    await expect(catalog.execute(catalogInput)).resolves.toMatchObject({
+      ok: true,
+      value: { workspaceId: "workspace-1", profiles: [{ profileId: "profile-1", version: 2 }] },
+    });
+    const foreignCatalog = createCapabilityPort(
+      bridge(
+        async () => ({ ok: true, value: { workspaceId: "workspace-other", profiles: [] } }),
+        ["profile.catalog"],
+      ),
+    );
+    await expect(foreignCatalog.execute(catalogInput)).resolves.toMatchObject({
+      ok: false,
+      error: { code: "operation-failed" },
+    });
     expect(
       validateBridgeCommand({
         type: "profile.derive",
