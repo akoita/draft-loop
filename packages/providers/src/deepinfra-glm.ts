@@ -581,8 +581,13 @@ async function collectStreamCompletion(
         throw malformedStream();
       }
       const delta = choice.delta;
-      if (delta.role !== undefined && delta.role !== "assistant") throw malformedStream();
-      if (delta.tool_calls !== undefined || delta.function_call !== undefined) {
+      if (delta.role !== undefined && delta.role !== null && delta.role !== "assistant") {
+        throw malformedStream();
+      }
+      if (
+        (delta.tool_calls !== undefined && delta.tool_calls !== null) ||
+        (delta.function_call !== undefined && delta.function_call !== null)
+      ) {
         throw malformedStream();
       }
       if (delta.content !== undefined && delta.content !== null) {
