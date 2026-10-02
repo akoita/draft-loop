@@ -41,7 +41,7 @@
     "@types/node": "26.2.0",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
-    "@vitejs/plugin-react": "6.0.5",
+    "@vitejs/plugin-react": "6.1.1",
     "eslint": "10.11.0",
     "lefthook": "2.1.12",
     "markdownlint-cli2": "0.23.2",
