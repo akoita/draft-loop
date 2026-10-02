@@ -1767,6 +1767,46 @@ describe("native host", () => {
     }
   });
 
+  it("records the dedicated DeepInfra destination for the Z.ai GLM company", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-deepinfra-endpoint-"));
+    const fixture = service(root);
+    const glmWorkspace = {
+      ...descriptor(root),
+      fixtureMode: false,
+      author: { company: "zai", model: "zai-org/GLM-5.3-Flash" },
+    };
+    fixture.service.readWorkspace.mockResolvedValue(glmWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: glmWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          providerTransmissionPreflight: {
+            author: {
+              company: "zai",
+              model: "zai-org/GLM-5.3-Flash",
+              endpoint: "https://api.deepinfra.com/v1/openai/chat/completions",
+            },
+          },
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("falls back to the adapter default endpoint when a local workspace configures none", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-local-default-"));
     const fixture = service(root);
@@ -2039,6 +2079,32 @@ describe("native host", () => {
         (refreshed as { readonly value: DesktopReviewState }).value.providerTransmissionPreflight
           .fingerprint,
       ).not.toBe(initialFingerprint);
+
+      const budgetFingerprint = (refreshed as { readonly value: DesktopReviewState }).value
+        .providerTransmissionPreflight.fingerprint;
+      liveWorkspace = {
+        ...liveWorkspace,
+        author: { company: "zai", model: "zai-org/GLM-5.3-Flash" },
+      };
+      const changedPair = await restarted.invoke({ type: "review.load", input: {} });
+      expect(changedPair).toMatchObject({
+        ok: true,
+        value: {
+          providerExposure: { transmissionAllowed: false },
+          providerTransmissionPreflight: {
+            acknowledged: false,
+            author: {
+              company: "zai",
+              model: "zai-org/GLM-5.3-Flash",
+              endpoint: "https://api.deepinfra.com/v1/openai/chat/completions",
+            },
+          },
+        },
+      });
+      expect(
+        (changedPair as { readonly value: DesktopReviewState }).value.providerTransmissionPreflight
+          .fingerprint,
+      ).not.toBe(budgetFingerprint);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -3660,6 +3726,26 @@ describe("native host", () => {
       } finally {
         vi.unstubAllEnvs();
       }
+    });
+
+    it("keeps GLM discovery manual and never falls through to OpenAI discovery", async () => {
+      const discoveryFetch = catalogueFetch({ data: [{ id: "must-not-be-returned" }] });
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("openai", "synthetic-openai-key");
+      const host = hostWith(discoveryFetch, { credentials });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "zai" } });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: "capability-unavailable",
+          capability: "models.list",
+          message:
+            "DeepInfra model discovery is unavailable. Enter the exact model id zai-org/GLM-5.3-Flash.",
+        },
+      });
+      expect(discoveryFetch).not.toHaveBeenCalled();
     });
 
     it("asks the local server the open workspace actually points at", async () => {

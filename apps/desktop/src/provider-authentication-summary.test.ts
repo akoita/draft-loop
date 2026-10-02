@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { providerAuthenticationSummary } from "./provider-authentication-summary.js";
+import {
+  providerAuthenticationForPair,
+  providerAuthenticationSummary,
+} from "./provider-authentication-summary.js";
 
 describe("providerAuthenticationSummary", () => {
   it("describes demo mode regardless of configuration", () => {
@@ -73,5 +76,67 @@ describe("providerAuthenticationSummary", () => {
         openaiMode: "user-session",
       }),
     ).toBe("Anthropic Claude session & OpenAI Codex session configured");
+  });
+
+  it("bases readiness on the applied GLM/OpenAI pair and its dedicated DeepInfra key", () => {
+    const missingDeepInfra = providerAuthenticationForPair({
+      fixtureMode: false,
+      anthropicConfigured: false,
+      openaiConfigured: true,
+      deepinfraConfigured: false,
+      anthropicMode: "api-key",
+      openaiMode: "api-key",
+      authorCompany: "zai",
+      criticCompany: "openai",
+    });
+    expect(missingDeepInfra).toEqual({
+      ready: false,
+      summary: "Configure DeepInfra API key for live review",
+    });
+
+    expect(
+      providerAuthenticationForPair({
+        fixtureMode: false,
+        anthropicConfigured: false,
+        openaiConfigured: true,
+        deepinfraConfigured: true,
+        anthropicMode: "api-key",
+        openaiMode: "api-key",
+        authorCompany: "zai",
+        criticCompany: "openai",
+      }),
+    ).toEqual({
+      ready: true,
+      summary: "DeepInfra API key & OpenAI API key configured",
+    });
+  });
+
+  it("does not require keys for a local side and fails closed for unsupported identities", () => {
+    const local = providerAuthenticationForPair({
+      fixtureMode: false,
+      anthropicConfigured: false,
+      openaiConfigured: false,
+      anthropicMode: "api-key",
+      openaiMode: "api-key",
+      authorCompany: "local",
+      criticCompany: "local",
+    });
+    expect(local).toEqual({
+      ready: true,
+      summary:
+        "Local model server (no provider key required) & Local model server (no provider key required) configured",
+    });
+
+    const unknown = providerAuthenticationForPair({
+      fixtureMode: false,
+      anthropicConfigured: false,
+      openaiConfigured: false,
+      anthropicMode: "api-key",
+      openaiMode: "api-key",
+      authorCompany: "unknown" as never,
+      criticCompany: "openai",
+    });
+    expect(unknown.ready).toBe(false);
+    expect(unknown.summary).toContain("Unsupported provider route");
   });
 });

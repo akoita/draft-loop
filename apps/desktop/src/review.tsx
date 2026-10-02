@@ -17,6 +17,7 @@ import {
 import type {
   CredentialProvider,
   CredentialStatus,
+  ModelCompany,
   ProviderAuthMode,
   ProviderAuthModeProvider,
   ProviderAuthModeStatus,
@@ -36,7 +37,7 @@ import {
   reviewFindingSummary,
   roundLimitRecoveryRequired,
 } from "./model.js";
-import { providerAuthenticationSummary } from "./provider-authentication-summary.js";
+import { providerAuthenticationForPair } from "./provider-authentication-summary.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
 import { ThemeToggle } from "./theme.js";
 
@@ -2592,8 +2593,17 @@ export function ReviewWorkspace({
   };
 
   if (state.state === "collecting") {
-    const modelKeysReady =
-      state.setup.fixtureMode || (anthropicStatus.configured && openaiStatus.configured);
+    const authentication = providerAuthenticationForPair({
+      fixtureMode: state.setup.fixtureMode,
+      anthropicConfigured: anthropicStatus.configured,
+      openaiConfigured: openaiStatus.configured,
+      deepinfraConfigured: deepinfraStatus.configured,
+      anthropicMode: anthropicAuthModeStatus.activeMode,
+      openaiMode: openaiAuthModeStatus.activeMode,
+      authorCompany: state.providerTransmissionPreflight.author.company as ModelCompany,
+      criticCompany: state.providerTransmissionPreflight.critic.company as ModelCompany,
+    });
+    const modelKeysReady = authentication.ready;
     return (
       <div className="app-frame">
         <SideRail onOpenSources={null} onOpenSettings={() => setSettingsOpen(true)} />
@@ -2826,15 +2836,7 @@ export function ReviewWorkspace({
                     </span>
                   </div>
                   <strong>Provider authentication</strong>
-                  <span>
-                    {providerAuthenticationSummary({
-                      fixtureMode: state.setup.fixtureMode,
-                      anthropicConfigured: anthropicStatus.configured,
-                      openaiConfigured: openaiStatus.configured,
-                      anthropicMode: anthropicAuthModeStatus.activeMode,
-                      openaiMode: openaiAuthModeStatus.activeMode,
-                    })}
-                  </span>
+                  <span>{authentication.summary}</span>
                   <button
                     className="button button-quiet"
                     type="button"

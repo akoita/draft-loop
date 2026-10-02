@@ -1130,6 +1130,7 @@ describe("desktop workspace setup", () => {
   const idleDiscovery: Readonly<Record<ModelCompany, ModelDiscoveryState>> = {
     anthropic: { status: "idle" },
     openai: { status: "idle" },
+    zai: { status: "idle" },
     local: { status: "idle" },
   };
 
@@ -1462,9 +1463,10 @@ describe("desktop workspace setup", () => {
       expect(html).toContain('value="private/deployment:rev-7"');
       expect(html).toContain('value="custom-critic-model"');
       expect(html).toContain(
-        "CLI-specific live availability for these suggestions has not been reverified",
+        "Catalog entries show their review dates; CLI-specific live availability has not been reverified",
       );
       expect(html).toContain("account or plan availability or CV quality");
+      expect(html).toContain("DeepInfra");
     }
     expect(edit).not.toContain("Workspace name");
     expect(wrongRole).toContain(
@@ -1487,8 +1489,22 @@ describe("desktop workspace setup", () => {
         source: "live",
         truncated: false,
       },
+      zai: { status: "ready", models: ["glm-from-live"], source: "live", truncated: false },
     };
     const live = renderForm(named, { status: "idle" }, discovered);
+    const glm = renderForm(
+      { ...named, authorCompany: "zai", authorModel: "zai-org/GLM-5.3-Flash" },
+      { status: "idle" },
+      {
+        ...idleDiscovery,
+        zai: { status: "unavailable", reason: "Manual exact id required." },
+      },
+    );
+    const glmLive = renderForm(
+      { ...named, authorCompany: "zai", authorModel: "glm-from-live" },
+      { status: "idle" },
+      discovered,
+    );
     const local = renderForm(
       {
         ...named,
@@ -1503,6 +1519,10 @@ describe("desktop workspace setup", () => {
     expect(live).toContain('value="claude-from-live"');
     expect(live).toContain('value="gpt-from-live"');
     expect(live).not.toContain("setup-model-suggestions");
+    expect(glm).toContain("Z.ai (DeepInfra)");
+    expect(glm).toContain('value="zai-org/GLM-5.3-Flash"');
+    expect(glm).toContain("registered for Author");
+    expect(glmLive).toContain('value="glm-from-live"');
     expect(local).not.toContain("setup-model-suggestions");
     expect(local).toContain('aria-label="Local model server address"');
   });

@@ -17,7 +17,7 @@ export interface ModelProfileCatalogEntry {
   readonly apiPricing: ModelProfileCatalogPricing;
 }
 
-export type ModelProfilePresetId = "economy" | "standard";
+export type ModelProfilePresetId = "economy" | "standard" | "development-glm";
 
 export interface ModelProfilePreset {
   readonly id: ModelProfilePresetId;
@@ -43,10 +43,13 @@ export class ModelProfileCatalogError extends Error {
 interface CatalogMetadata {
   readonly sources: readonly string[];
   readonly apiPricing: Omit<ModelProfileCatalogPricing, "scope" | "maxInputTokens">;
+  readonly reviewedAt?: string;
 }
 
 const anthropicOverview = "https://platform.claude.com/docs/en/models/overview";
 const anthropicSonnet55Overview = "https://platform.claude.com/docs/en/models/sonnet-5-5/overview";
+const deepInfraGlmModelApi = "https://deepinfra.com/zai-org/GLM-5.3-Flash/api";
+const deepInfraGlmOverview = "https://deepinfra.com/blog/glm-5-3-flash-deepinfra";
 
 function openAIModelPage(modelId: string): string {
   return `https://developers.openai.com/api/docs/models/${modelId}`;
@@ -70,6 +73,11 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     sources: [openAIModelPage("gpt-6.1-sol")],
     apiPricing: { inputUsdPerMillion: 2, outputUsdPerMillion: 10 },
   },
+  "dev-deepinfra-glm-author@1": {
+    sources: [deepInfraGlmModelApi, deepInfraGlmOverview],
+    apiPricing: { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.5 },
+    reviewedAt: "2026-10-02",
+  },
 };
 
 const pricingScope = {
@@ -92,6 +100,13 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     author: { id: "standard-anthropic-author", version: 1 },
     critic: { id: "standard-openai-critic", version: 2 },
   },
+  {
+    id: "development-glm",
+    label: "Development — GLM Flash — unvalidated",
+    tier: "economy",
+    author: { id: "dev-deepinfra-glm-author", version: 1 },
+    critic: { id: "economy-openai-critic", version: 1 },
+  },
 ];
 
 function detachedPreset(preset: ModelProfilePreset): ModelProfilePreset {
@@ -111,13 +126,16 @@ export function listModelProfileCatalog(): ModelProfileCatalogEntry[] {
     { ...preset.author, role: "author" as const },
     { ...preset.critic, role: "critic" as const },
   ]);
-  return activeReferences.map(({ id, version, role }) => {
+  const uniqueReferences = new Map(
+    activeReferences.map((reference) => [`${reference.id}@${reference.version}`, reference]),
+  );
+  return [...uniqueReferences.values()].map(({ id, version, role }) => {
     const profile = defaultModelProfileRegistry.resolve(id, version, role);
     const metadata = catalogMetadata[`${profile.id}@${profile.version}`];
     if (metadata === undefined) throw new ModelProfileCatalogError("missing-metadata");
     return {
       profile,
-      reviewedAt: "2026-09-30",
+      reviewedAt: metadata.reviewedAt ?? "2026-09-30",
       sources: [...metadata.sources],
       qualityStatus: "unvalidated",
       availabilityStatus: "not-checked",

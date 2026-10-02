@@ -51,6 +51,11 @@ describe("model profile CLI commands", () => {
       author: { id: "standard-anthropic-author", version: 1 },
       critic: { id: "standard-openai-critic", version: 2 },
     },
+    {
+      modelPreset: "development-glm",
+      author: { id: "dev-deepinfra-glm-author", version: 1 },
+      critic: { id: "economy-openai-critic", version: 1 },
+    },
   ] as const)(
     "forwards only the exact $modelPreset preset references to start",
     async ({ modelPreset, author, critic }) => {
@@ -155,6 +160,8 @@ describe("model profile CLI commands", () => {
     expect(startHelp).toContain("--author-profile <id@version>");
     expect(startHelp).toContain("--critic-profile <id@version>");
     expect(startHelp).toContain("unvalidated");
+    expect(startHelp).toContain("development-glm");
+    expect(startHelp).toContain("DEEPINFRA_API_KEY");
     expect(startHelp).toContain("pinned to this run");
     expect(modelProfilesHelp).toContain("unvalidated");
     expect(modelProfilesHelp).toContain("availability has not been checked");

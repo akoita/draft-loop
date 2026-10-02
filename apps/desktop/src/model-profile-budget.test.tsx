@@ -15,6 +15,10 @@ const standard: ModelProfileReferences = {
   author: { id: "standard-anthropic-author", version: 1 },
   critic: { id: "standard-openai-critic", version: 2 },
 };
+const development: ModelProfileReferences = {
+  author: { id: "dev-deepinfra-glm-author", version: 1 },
+  critic: { id: "economy-openai-critic", version: 1 },
+};
 const apiKeyModes: RunProviderAuthModeConfiguration = {
   anthropic: "api-key",
   openai: "api-key",
@@ -42,11 +46,21 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("$4/1M input · $20/1M output");
     expect(html).toContain("standard-openai-critic@2");
     expect(html).toContain("$2/1M input · $10/1M output");
+    expect(html).toContain("Official Anthropic model/pricing documentation");
+    expect(html).toContain("Official OpenAI model/pricing documentation");
     expect(html).toContain("up to 200,000 input tokens per call");
     expect(html).toContain("Formula: calls ×");
     expect(html).toContain("Combined scenario estimate</dt><dd>$0.150000");
     expect(html).toContain("Actual costs may differ");
     expect(html).toContain("does not change the selected profiles or their runtime budgets");
+  });
+
+  it("labels the development GLM public rates as DeepInfra documentation", () => {
+    const html = renderBudget(development, apiKeyModes);
+    expect(html).toContain("dev-deepinfra-glm-author@1");
+    expect(html).toContain("zai/zai-org/GLM-5.3-Flash");
+    expect(html).toContain("$0.15/1M input · $0.5/1M output");
+    expect(html).toContain("Official DeepInfra model/pricing documentation");
   });
 
   it("shows public rates but no combined estimate for subscription or unknown authentication", () => {

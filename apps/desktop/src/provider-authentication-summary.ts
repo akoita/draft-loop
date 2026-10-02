@@ -1,4 +1,4 @@
-import type { ProviderAuthMode } from "./bridge.js";
+import type { ModelCompany, ProviderAuthMode } from "./bridge.js";
 
 export interface ProviderAuthenticationSummaryInput {
   readonly fixtureMode: boolean;
@@ -6,6 +6,14 @@ export interface ProviderAuthenticationSummaryInput {
   readonly openaiConfigured: boolean;
   readonly anthropicMode: ProviderAuthMode;
   readonly openaiMode: ProviderAuthMode;
+  readonly deepinfraConfigured?: boolean;
+  readonly authorCompany?: ModelCompany;
+  readonly criticCompany?: ModelCompany;
+}
+
+export interface ProviderAuthenticationSummary {
+  readonly ready: boolean;
+  readonly summary: string;
 }
 
 const describeMode = (provider: "Anthropic" | "OpenAI", mode: ProviderAuthMode): string => {
@@ -21,22 +29,67 @@ const describeMode = (provider: "Anthropic" | "OpenAI", mode: ProviderAuthMode):
  * authenticated user session, so the summary names each provider's active
  * mode rather than assuming both providers share one mode.
  */
-export function providerAuthenticationSummary({
+export function providerAuthenticationForPair({
   fixtureMode,
   anthropicConfigured,
   openaiConfigured,
   anthropicMode,
   openaiMode,
-}: ProviderAuthenticationSummaryInput): string {
-  if (fixtureMode) return "Demo mode (no provider authentication required)";
-  if (!anthropicConfigured || !openaiConfigured) {
-    return "Configure provider authentication for live review";
+  deepinfraConfigured = false,
+  authorCompany,
+  criticCompany,
+}: ProviderAuthenticationSummaryInput): ProviderAuthenticationSummary {
+  if (fixtureMode) {
+    return { ready: true, summary: "Demo mode (no provider authentication required)" };
   }
-  if (anthropicMode === "api-key" && openaiMode === "api-key") {
-    return "Anthropic & OpenAI API keys configured";
+
+  // Keep the legacy pair wording stable while making its readiness derive from
+  // the same applied destinations shown in the transmission preflight.
+  if (authorCompany === undefined || criticCompany === undefined) {
+    const ready = anthropicConfigured && openaiConfigured;
+    if (!ready) {
+      return { ready, summary: "Configure provider authentication for live review" };
+    }
+    if (anthropicMode === "api-key" && openaiMode === "api-key") {
+      return { ready, summary: "Anthropic & OpenAI API keys configured" };
+    }
+    return {
+      ready,
+      summary: `Anthropic ${describeMode("Anthropic", anthropicMode)} & OpenAI ${describeMode(
+        "OpenAI",
+        openaiMode,
+      )} configured`,
+    };
   }
-  return `Anthropic ${describeMode("Anthropic", anthropicMode)} & OpenAI ${describeMode(
-    "OpenAI",
-    openaiMode,
-  )} configured`;
+
+  const describeCompany = (company: ModelCompany): { ready: boolean; text: string } => {
+    switch (company) {
+      case "anthropic":
+        return {
+          ready: anthropicConfigured,
+          text: `Anthropic ${describeMode("Anthropic", anthropicMode)}`,
+        };
+      case "openai":
+        return { ready: openaiConfigured, text: `OpenAI ${describeMode("OpenAI", openaiMode)}` };
+      case "zai":
+        return { ready: deepinfraConfigured, text: "DeepInfra API key" };
+      case "local":
+        return { ready: true, text: "Local model server (no provider key required)" };
+      default:
+        return { ready: false, text: "Unsupported provider route" };
+    }
+  };
+
+  const author = describeCompany(authorCompany);
+  const critic = describeCompany(criticCompany);
+  const ready = author.ready && critic.ready;
+  if (ready) return { ready, summary: `${author.text} & ${critic.text} configured` };
+  const missing = [author, critic]
+    .filter((provider) => !provider.ready)
+    .map((provider) => provider.text);
+  return { ready, summary: `Configure ${missing.join(" and ")} for live review` };
+}
+
+export function providerAuthenticationSummary(input: ProviderAuthenticationSummaryInput): string {
+  return providerAuthenticationForPair(input).summary;
 }

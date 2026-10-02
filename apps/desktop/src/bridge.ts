@@ -196,7 +196,7 @@ export type ProviderAuthMode = (typeof providerAuthModes)[number];
  * refuses to build an adapter for any other company, so a company outside this
  * list is invalid input rather than an option this host declined to offer.
  */
-export const modelCompanies = ["anthropic", "openai", "local"] as const;
+export const modelCompanies = ["anthropic", "openai", "zai", "local"] as const;
 export type ModelCompany = (typeof modelCompanies)[number];
 
 /**

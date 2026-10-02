@@ -7,7 +7,7 @@ export function isDeepInfraGLMModel(company: string, modelId: string): boolean {
   return company === deepInfraGLMCompany && modelId === deepInfraGLMModelId;
 }
 
-/** A detached explicit development profile; it is not an active catalog preset. */
+/** A detached, opt-in development profile used by the development GLM preset. */
 export function createDeepInfraGLMAuthorProfile(): ModelProfile {
   return {
     id: deepInfraGLMAuthorProfileId,

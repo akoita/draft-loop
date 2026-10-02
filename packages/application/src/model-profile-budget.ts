@@ -78,6 +78,7 @@ function validTokenScenario(value: unknown): value is ModelProfileTokenScenario 
 
 function usableAuthModes(
   authModes: RunProviderAuthModeConfiguration | undefined,
+  selectedProviders: readonly string[],
 ): ModelProfileApiScenarioUnavailableReason | null {
   if (!isRecord(authModes)) return "authentication-unavailable";
   const modes = authModes as unknown as Record<string, unknown>;
@@ -89,7 +90,10 @@ function usableAuthModes(
   ) {
     return "authentication-unavailable";
   }
-  if (modes.anthropic === "user-session" || modes.openai === "user-session") {
+  if (
+    (selectedProviders.includes("anthropic") && modes.anthropic === "user-session") ||
+    (selectedProviders.includes("openai") && modes.openai === "user-session")
+  ) {
     return "subscription-billing";
   }
   return null;
@@ -190,9 +194,6 @@ export function estimateModelProfileApiScenario(
   input: ModelProfileApiScenarioInput,
 ): ModelProfileApiScenarioEstimate {
   if (!validInput(input)) return unavailable("invalid-scenario");
-  const authError = usableAuthModes(input.authModes);
-  if (authError !== null) return unavailable(authError);
-
   if (!validTokenScenario(input.author) || !validTokenScenario(input.critic)) {
     return unavailable("invalid-scenario");
   }
@@ -208,6 +209,12 @@ export function estimateModelProfileApiScenario(
   const author = resolveCatalogEntry(input.profiles.author, "author", entries);
   const critic = resolveCatalogEntry(input.profiles.critic, "critic", entries);
   if (author === null || critic === null) return unavailable("unknown-profile");
+
+  const authError = usableAuthModes(input.authModes, [
+    author.profile.provider,
+    critic.profile.provider,
+  ]);
+  if (authError !== null) return unavailable(authError);
 
   const authorMetadataIssue = validatePricingMetadata(author.entry);
   const criticMetadataIssue = validatePricingMetadata(critic.entry);

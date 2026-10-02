@@ -118,7 +118,12 @@ function PublicRate({
     );
   }
   const { profile, apiPricing } = entry;
-  const documentationName = profile.provider === "anthropic" ? "Anthropic" : "OpenAI";
+  const documentationName =
+    profile.provider === "anthropic"
+      ? "Anthropic"
+      : profile.provider === "openai"
+        ? "OpenAI"
+        : "DeepInfra";
   return (
     <div className="model-profile-budget-rate">
       <strong>

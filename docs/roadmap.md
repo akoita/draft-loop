@@ -1432,6 +1432,10 @@ separate authorization.
 
 Offer four curated models: `claude-sonnet-5-5`, `claude-opus-5-5`,
 `gpt-6-luna`, and `gpt-6.1-sol`, grouped into economy and standard presets.
+The opt-in `development-glm` preset adds the GLM-5.3-Flash author through
+DeepInfra with the GPT-6 Luna critic; it uses the dedicated key and does not
+change defaults. Its conservative standard API price metadata was reviewed
+2026-10-02; quality is unvalidated and account availability unchecked.
 Existing exact profile versions and run snapshots remain compatible. A profile holds:
 
 - provider and exact model ID;
@@ -1472,8 +1476,9 @@ admitted validation plan and explicit migration decision. Earlier generalization
 failures remain recorded; this milestone does not authorize another live cohort.
 Broad cross-profession and multilingual validation (#583) stays deferred.
 
-**Exit criterion:** Users can choose supported versioned author/critic profiles
-and economy or standard pair presets. Profile-selected runs record
+**Exit criterion:** Users can choose supported versioned author/critic profiles,
+economy or standard pair presets, and the opt-in development GLM pair.
+Profile-selected runs record
 the full controls and resume from their snapshots; the legacy path remains
 available. The catalog discloses API pricing, estimated-budget assumptions,
 and availability and quality limitations. Current defaults stay unchanged;

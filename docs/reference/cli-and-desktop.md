@@ -35,6 +35,7 @@ cohort; listing a development preset does not add a provider to release checks.
 pnpm --filter @draft-loop/cli start model-profiles
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-glm
 pnpm --filter @draft-loop/cli start start ./workspace \
   --author-profile standard-anthropic-author@1 \
   --critic-profile standard-openai-critic@2
@@ -43,7 +44,10 @@ pnpm --filter @draft-loop/cli start start ./workspace \
 `start` accepts either one pair preset or both exact `--author-profile` and
 `--critic-profile` references. Each reference uses `profile-id@version` and
 must support its selected role. Economy and standard are unvalidated opt-in
-pairs. The active catalog contains four exact profile versions; older profile
+pairs. The separate `development-glm` opt-in pair uses the Z.ai
+`zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
+requires `DEEPINFRA_API_KEY`. The active catalog contains five unique exact
+profile versions; older profile
 versions remain available for historical references but are not current
 choices. A CLI-selected pair is recorded on that run only. It does not change
 workspace model settings, transmission approval, or credentials. Resume uses
@@ -288,20 +292,24 @@ Labels show only each entry's configured tier and registered author or critic
 role. These fields do not establish account, plan, or CV-quality suitability.
 Suggested IDs are not guaranteed to work with your account, plan, or CLI version.
 You can still enter any exact model ID, and successful live discovery remains
-the displayed source. The catalog was reviewed on 2026-09-30; CLI-specific live
-availability for these suggestions has not been reverified. Economy and
-standard are the two unvalidated pair presets. The active catalog lists
-Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, and GPT-6.1 Sol. Historical
-profile versions, including premium-tier entries, remain resolvable but are
-not offered as current suggestions or presets. All catalog quality entries
-are unvalidated and availability has not been checked; the review date
-documents metadata review, not a live provider probe. Local endpoints remain
-free-text because there are no local server profile IDs.
+the displayed source. Each catalog entry shows its metadata review date;
+CLI-specific live availability for these suggestions has not been reverified. Economy and
+standard remain the curated pair presets, with a separate development GLM
+preset. The active catalog lists Claude Sonnet 5.5, Claude Opus 5.5, GPT-6
+Luna, GPT-6.1 Sol, and GLM-5.3-Flash through DeepInfra. Its standard uncached
+API rates are $0.15 per million input tokens and $0.50 per million output
+tokens, reviewed 2026-10-02; quality is unvalidated and account availability
+unchecked. Historical profile versions, including premium-tier entries, remain
+resolvable but are not offered as current suggestions or presets. All catalog
+quality entries are unvalidated and availability has not been checked; the
+review date documents metadata review, not a live provider probe. Local
+endpoints remain free-text because there are no local server profile IDs.
 
 Catalog price metadata covers the standard, uncached text API at up to 200,000
 input tokens. It excludes cache, tool, batch, regional, and subscription
 pricing. Sources are the official [Anthropic model overview] and [Sonnet 5.5
-overview], plus official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna].
+overview], official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna], and the
+DeepInfra [GLM-5.3-Flash API page] and [model announcement].
 
 OpenAI adapter responses retain valid cached-input, cache-write, and reasoning
 token details alongside input/output totals. A rate estimate accounts for
@@ -314,6 +322,8 @@ not persisted run totals or invoice amounts.
 [Sonnet 5.5 overview]: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
 [GPT-6.1 Sol]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
 [GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
+[GLM-5.3-Flash API page]: https://deepinfra.com/zai-org/GLM-5.3-Flash/api
+[model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
 
 ## Writing policies
 

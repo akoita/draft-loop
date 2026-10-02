@@ -14,6 +14,10 @@ const economy: ModelProfileReferences = {
   author: { id: "economy-anthropic-author", version: 1 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
+const development: ModelProfileReferences = {
+  author: { id: "dev-deepinfra-glm-author", version: 1 },
+  critic: { id: "economy-openai-critic", version: 1 },
+};
 
 function scenario(profiles = standard): ModelProfileApiScenarioInput {
   return {
@@ -140,6 +144,27 @@ describe("model profile public API scenario estimates", () => {
         authModes: { anthropic: "oauth", openai: "api-key" } as never,
       }),
     ).toEqual({ status: "unavailable", reason: "authentication-unavailable" });
+  });
+
+  it("checks subscription billing only for providers in the selected profile pair", () => {
+    const deepInfraAndOpenAi = {
+      ...scenario(development),
+      authModes: { anthropic: "user-session", openai: "api-key" } as const,
+    };
+    expect(estimateModelProfileApiScenario(deepInfraAndOpenAi).status).toBe("available");
+    expect(
+      estimateModelProfileApiScenario({
+        ...deepInfraAndOpenAi,
+        authModes: { anthropic: "api-key", openai: "user-session" },
+      }),
+    ).toEqual({ status: "unavailable", reason: "subscription-billing" });
+
+    expect(
+      estimateModelProfileApiScenario({
+        ...scenario(standard),
+        authModes: { anthropic: "api-key", openai: "user-session" },
+      }),
+    ).toEqual({ status: "unavailable", reason: "subscription-billing" });
   });
 
   it("does not estimate retired historical profile versions", () => {
