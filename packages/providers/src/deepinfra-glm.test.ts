@@ -192,6 +192,8 @@ describe("DeepInfra GLM-5.3-Flash adapter", () => {
         type: "json_schema",
         json_schema: { name: "fixture_output", schema: jsonSchema, strict: true },
       },
+      stream: true,
+      stream_options: { include_usage: true },
     });
     expect(parameters).not.toHaveProperty("reasoning_effort");
     expect(parameters).not.toHaveProperty("max_completion_tokens");
@@ -474,7 +476,10 @@ describe("DeepInfra GLM-5.3-Flash adapter", () => {
     const controller = new AbortController();
     await fixture.adapter.execute(request(selection(), { signal: controller.signal }));
     const options = fixture.create.mock.calls[0]?.[1] as DeepInfraGLMRequestOptions | undefined;
-    expect(options).toEqual({ maxRetries: 0, timeout: 25_000, signal: controller.signal });
+    expect(options).toMatchObject({ maxRetries: 0, timeout: 25_000 });
+    expect(options?.signal).toBeInstanceOf(AbortSignal);
+    expect(options?.signal).not.toBe(controller.signal);
+    expect(options?.signal?.aborted).toBe(true);
 
     const failing = vi.fn<CreateCompletion>(async () => {
       throw Object.assign(new Error("private failure detail"), { status: 503 });

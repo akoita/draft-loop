@@ -78,6 +78,12 @@ provider-managed session preferences are still limited to Anthropic and OpenAI.
 The renderer receives only whether a key is configured and its storage source
 and protection, never the stored key.
 
+The DeepInfra GLM adapter reads structured output as a stream. It allows 120
+seconds for the initial response, resets a 120-second idle limit as chunks
+arrive, and stops after 10 minutes total. Adapter timeout diagnostics identify the
+initial response, idle stream, or total deadline without including provider
+content.
+
 ## Desktop diagnostics
 
 Packaged builds keep host-error diagnostics in `diagnostics/host-errors.jsonl`

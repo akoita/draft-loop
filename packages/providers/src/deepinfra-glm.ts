@@ -4,7 +4,9 @@ import { modelSelectionSchema } from "@draft-loop/schemas";
 import OpenAI from "openai";
 import type {
   ChatCompletion,
+  ChatCompletionChunk,
   ChatCompletionCreateParamsNonStreaming,
+  ChatCompletionCreateParamsStreaming,
 } from "openai/resources/chat/completions";
 import { z } from "zod";
 import {
@@ -28,9 +30,18 @@ export const deepInfraGLMModelId = "zai-org/GLM-5.3-Flash" as const;
 export const deepInfraGLMBaseUrl = "https://api.deepinfra.com/v1/openai";
 
 const defaultTimeoutMs = 120_000;
+const defaultStreamIdleTimeoutMs = 120_000;
+const defaultStreamTotalTimeoutMs = 600_000;
 const maxSupportedTimeoutMs = 2_147_483_647;
 const defaultMaxOutputTokens = 4096;
 const maxOutputTokens = 131_072;
+const maximumStreamOutputBytes = 8 * 1024 * 1024;
+
+type DeepInfraGLMCreateParameters =
+  | ChatCompletionCreateParamsNonStreaming
+  | ChatCompletionCreateParamsStreaming;
+type DeepInfraGLMCompletion = ChatCompletion | AsyncIterable<ChatCompletionChunk>;
+type StreamTimeoutPhase = "initial" | "idle" | "total";
 
 export interface DeepInfraGLMCreateOptions {
   readonly timeoutMs?: number;
@@ -46,9 +57,9 @@ export interface DeepInfraGLMClient {
   readonly chat: {
     readonly completions: {
       create(
-        parameters: ChatCompletionCreateParamsNonStreaming,
+        parameters: DeepInfraGLMCreateParameters,
         options?: DeepInfraGLMRequestOptions,
-      ): PromiseLike<ChatCompletion>;
+      ): PromiseLike<DeepInfraGLMCompletion>;
     };
   };
 }
@@ -378,6 +389,246 @@ function canceledError(): ProviderAdapterError {
   );
 }
 
+function streamTimeoutError(phase: StreamTimeoutPhase): ProviderAdapterError {
+  return new ProviderAdapterError(
+    deepInfraGLMProvider,
+    "timeout",
+    `The DeepInfra response timed out during the ${phase} phase.`,
+    {
+      retryable: true,
+      diagnostics: [{ code: `stream_timeout_${phase}`, path: `response.stream.${phase}` }],
+    },
+  );
+}
+
+function createRequestAbortScope(externalSignal: AbortSignal | undefined): {
+  readonly signal: AbortSignal;
+  readonly abort: () => void;
+  readonly dispose: () => void;
+} {
+  const controller = new AbortController();
+  const forwardAbort = () => controller.abort();
+  if (externalSignal?.aborted) controller.abort();
+  else externalSignal?.addEventListener("abort", forwardAbort, { once: true });
+  return {
+    signal: controller.signal,
+    abort: () => controller.abort(),
+    dispose: () => externalSignal?.removeEventListener("abort", forwardAbort),
+  };
+}
+
+function awaitWithinStreamDeadline<Value>(
+  operation: PromiseLike<Value>,
+  options: {
+    readonly signal: AbortSignal;
+    readonly deadlineAt: number;
+    readonly timeoutMs: number;
+    readonly phase: Exclude<StreamTimeoutPhase, "total">;
+    readonly abort: () => void;
+  },
+): Promise<Value> {
+  const remainingMs = options.deadlineAt - Date.now();
+  const timeoutPhase: StreamTimeoutPhase =
+    remainingMs <= options.timeoutMs ? "total" : options.phase;
+  const waitMs = Math.max(0, Math.min(remainingMs, options.timeoutMs));
+
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const cleanup = () => {
+      if (timer !== undefined) clearTimeout(timer);
+      options.signal.removeEventListener("abort", onAbort);
+    };
+    const settle = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      callback();
+    };
+    const onAbort = () => settle(() => reject(canceledError()));
+
+    if (options.signal.aborted) {
+      onAbort();
+      return;
+    }
+    options.signal.addEventListener("abort", onAbort, { once: true });
+    timer = setTimeout(() => {
+      settle(() => {
+        options.abort();
+        reject(streamTimeoutError(timeoutPhase));
+      });
+    }, waitMs);
+    Promise.resolve(operation).then(
+      (value) => settle(() => resolve(value)),
+      (error: unknown) =>
+        settle(() => {
+          const normalized = normalizeDeepInfraError(error);
+          reject(normalized.code === "timeout" ? streamTimeoutError(timeoutPhase) : normalized);
+        }),
+    );
+  });
+}
+
+function isAsyncIterable(value: unknown): value is AsyncIterable<ChatCompletionChunk> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    Symbol.asyncIterator in value &&
+    typeof (value as { readonly [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator] ===
+      "function"
+  );
+}
+
+function malformedStream(): ProviderAdapterError {
+  return failResponse("DeepInfra returned a malformed streamed response.", "malformed_stream");
+}
+
+async function collectStreamCompletion(
+  stream: AsyncIterable<ChatCompletionChunk>,
+  options: {
+    readonly signal: AbortSignal;
+    readonly abort: () => void;
+    readonly deadlineAt: number;
+  },
+): Promise<ChatCompletion> {
+  const iterator = stream[Symbol.asyncIterator]();
+  let completed = false;
+  let id: string | undefined;
+  let created: number | undefined;
+  let model: string | undefined;
+  let content = "";
+  let contentBytes = 0;
+  let refusal: string | null = null;
+  let finishReason: ChatCompletion.Choice["finish_reason"] | undefined;
+  let usage: ChatCompletion["usage"] | undefined;
+  let usageOnlyChunkSeen = false;
+
+  try {
+    while (true) {
+      if (Date.now() >= options.deadlineAt) throw streamTimeoutError("total");
+      const next = await awaitWithinStreamDeadline(iterator.next(), {
+        signal: options.signal,
+        deadlineAt: options.deadlineAt,
+        timeoutMs: defaultStreamIdleTimeoutMs,
+        phase: "idle",
+        abort: options.abort,
+      });
+      if (next.done) {
+        completed = true;
+        break;
+      }
+      if (Date.now() >= options.deadlineAt) throw streamTimeoutError("total");
+      const chunk: unknown = next.value;
+      if (!isRecord(chunk)) throw malformedStream();
+      if (
+        typeof chunk.id !== "string" ||
+        chunk.id.trim() === "" ||
+        (id !== undefined && id !== chunk.id) ||
+        typeof chunk.model !== "string" ||
+        chunk.model !== deepInfraGLMModelId ||
+        (model !== undefined && model !== chunk.model) ||
+        chunk.object !== "chat.completion.chunk" ||
+        typeof chunk.created !== "number" ||
+        !Number.isSafeInteger(chunk.created) ||
+        (created !== undefined && created !== chunk.created) ||
+        !Array.isArray(chunk.choices)
+      ) {
+        throw malformedStream();
+      }
+      id = chunk.id;
+      model = chunk.model;
+      created = chunk.created;
+
+      if (Object.hasOwn(chunk, "usage") && chunk.usage !== undefined) {
+        usage = chunk.usage as ChatCompletion["usage"];
+      }
+
+      if (chunk.choices.length === 0) {
+        if (
+          finishReason === undefined ||
+          chunk.usage === undefined ||
+          chunk.usage === null ||
+          usageOnlyChunkSeen
+        ) {
+          throw malformedStream();
+        }
+        usageOnlyChunkSeen = true;
+        continue;
+      }
+      if (finishReason !== undefined || chunk.choices.length !== 1) throw malformedStream();
+
+      const choice = chunk.choices[0];
+      if (!isRecord(choice) || choice.index !== 0 || !isRecord(choice.delta)) {
+        throw malformedStream();
+      }
+      const delta = choice.delta;
+      if (delta.role !== undefined && delta.role !== "assistant") throw malformedStream();
+      if (delta.tool_calls !== undefined || delta.function_call !== undefined) {
+        throw malformedStream();
+      }
+      if (delta.content !== undefined && delta.content !== null) {
+        if (typeof delta.content !== "string") throw malformedStream();
+        contentBytes += Buffer.byteLength(delta.content, "utf8");
+        if (contentBytes > maximumStreamOutputBytes) {
+          throw failResponse(
+            "DeepInfra returned an oversized structured response.",
+            "output_too_large",
+          );
+        }
+        content += delta.content;
+      }
+      if (delta.refusal !== undefined && delta.refusal !== null) {
+        if (typeof delta.refusal !== "string") throw malformedStream();
+        if (delta.refusal !== "") refusal = "DeepInfra refused the structured response.";
+      }
+      if (choice.finish_reason !== undefined && choice.finish_reason !== null) {
+        if (typeof choice.finish_reason !== "string") throw malformedStream();
+        finishReason = choice.finish_reason as ChatCompletion.Choice["finish_reason"];
+      }
+    }
+  } finally {
+    if (!completed && typeof iterator.return === "function") {
+      try {
+        void Promise.resolve(iterator.return()).catch(() => undefined);
+      } catch {
+        // Iterator cleanup is best effort and must never delay timeout or cancellation.
+      }
+    }
+  }
+
+  if (
+    id === undefined ||
+    model === undefined ||
+    created === undefined ||
+    finishReason === undefined
+  ) {
+    throw failResponse(
+      "DeepInfra ended the stream before completing the response.",
+      "incomplete_stream",
+    );
+  }
+
+  return {
+    id,
+    object: "chat.completion",
+    created,
+    model,
+    choices: [
+      {
+        index: 0,
+        finish_reason: finishReason,
+        logprobs: null,
+        message: {
+          role: "assistant",
+          content,
+          refusal,
+        },
+      },
+    ],
+    ...(usage === undefined ? {} : { usage }),
+  } as unknown as ChatCompletion;
+}
+
 export class DeepInfraGLMAdapter<
   Input extends JsonValue = JsonValue,
   Output extends JsonValue = JsonValue,
@@ -412,7 +663,7 @@ export class DeepInfraGLMAdapter<
       throw invalidRequest("The request input cannot be serialized as JSON.", "invalid_input_json");
     }
 
-    const parameters: ChatCompletionCreateParamsNonStreaming = {
+    const parameters: ChatCompletionCreateParamsStreaming = {
       model: deepInfraGLMModelId,
       messages: [
         { role: "system", content: request.systemPrompt },
@@ -428,19 +679,38 @@ export class DeepInfraGLMAdapter<
           strict: true,
         },
       },
+      stream: true,
+      stream_options: { include_usage: true },
       ...(controls.effort === undefined ? {} : { reasoning_effort: controls.effort }),
     };
 
     const startedAt = Date.now();
+    const deadlineAt = startedAt + defaultStreamTotalTimeoutMs;
     request.onProgress?.({ stage: "started", elapsedMs: 0 });
     return executeWithRetry(async () => {
       if (request.signal?.aborted) throw canceledError();
+      const abortScope = createRequestAbortScope(request.signal);
       try {
-        const response = await this.client.chat.completions.create(parameters, {
+        if (Date.now() >= deadlineAt) throw streamTimeoutError("total");
+        const pendingResponse = this.client.chat.completions.create(parameters, {
           maxRetries: 0,
           timeout: this.timeoutMs,
-          ...(request.signal === undefined ? {} : { signal: request.signal }),
+          signal: abortScope.signal,
         });
+        const initialResponse = await awaitWithinStreamDeadline(pendingResponse, {
+          signal: abortScope.signal,
+          deadlineAt,
+          timeoutMs: this.timeoutMs,
+          phase: "initial",
+          abort: abortScope.abort,
+        });
+        const response = isAsyncIterable(initialResponse)
+          ? await collectStreamCompletion(initialResponse, {
+              signal: abortScope.signal,
+              abort: abortScope.abort,
+              deadlineAt,
+            })
+          : initialResponse;
         if (response.model !== deepInfraGLMModelId) {
           throw failResponse(
             "DeepInfra returned a response from an unexpected model.",
@@ -493,6 +763,9 @@ export class DeepInfraGLMAdapter<
         } satisfies ModelResponse<Output>;
       } catch (error) {
         throw normalizeDeepInfraError(error);
+      } finally {
+        abortScope.abort();
+        abortScope.dispose();
       }
     }, this.retry);
   }
