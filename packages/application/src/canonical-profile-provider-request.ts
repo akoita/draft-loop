@@ -1,4 +1,5 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
+import { isDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
 
 export type CanonicalProfileAnthropicAuthMode = "api-key" | "user-session";
 export const promptVersion = "canonical-candidate-profile-extraction-v5" as const;
@@ -31,9 +32,15 @@ const canonicalCandidateProfileExtractionSystemPrompt = [
 
 /** Build the canonical extraction request controls for the resolved provider route. */
 export function canonicalProfileRequest(
-  model: Pick<ModelSelection, "company" | "modelId">,
+  model: Pick<ModelSelection, "company" | "modelId" | "profile">,
   anthropicAuthMode: CanonicalProfileAnthropicAuthMode,
 ): CanonicalProfileProviderRequestContract {
+  const deepInfraGLMProfile =
+    isDeepInfraGLMModel(model.company, model.modelId) &&
+    model.profile !== undefined &&
+    isDeepInfraGLMAuthorProfile(model.profile)
+      ? model.profile
+      : undefined;
   const isCuratedAnthropicApiModel =
     model.company === "anthropic" &&
     anthropicAuthMode === "api-key" &&
@@ -41,6 +48,8 @@ export function canonicalProfileRequest(
 
   return Object.freeze({
     systemPrompt: canonicalCandidateProfileExtractionSystemPrompt,
-    maxOutputTokens: isCuratedAnthropicApiModel ? 32768 : defaultCanonicalProfileOutputTokens,
+    maxOutputTokens:
+      deepInfraGLMProfile?.runtime.maxOutputTokens ??
+      (isCuratedAnthropicApiModel ? 32768 : defaultCanonicalProfileOutputTokens),
   });
 }

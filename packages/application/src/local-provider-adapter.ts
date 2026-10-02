@@ -3,6 +3,10 @@ import {
   AnthropicAdapter,
   AnthropicClaudeUserSessionAdapter,
   type AnthropicClient,
+  createDeepInfraGLMAdapter,
+  createDeepInfraGLMClient,
+  type DeepInfraGLMClient,
+  deepInfraGLMModelId,
   type JsonObject,
   type LocalClient,
   LocalModelAdapter,
@@ -15,15 +19,15 @@ import {
 } from "@draft-loop/providers";
 import OpenAI from "openai";
 import { createAnthropicSdkClient } from "./anthropic-sdk-client.js";
+import type { ProviderCredentialResolver } from "./glm-provider-routing.js";
+
+export type { ProviderCredentialResolver } from "./glm-provider-routing.js";
 
 /** Concrete local driver shared by CLI and the native desktop host. */
-export type ProviderCredentialResolver = (
-  provider: "anthropic" | "openai",
-) => Promise<string | undefined>;
-
 export interface ProviderClientFactories {
   readonly anthropic?: (apiKey: string) => AnthropicClient;
   readonly openai?: (apiKey: string) => OpenAIClient;
+  readonly deepinfra?: (apiKey: string) => DeepInfraGLMClient;
   /**
    * Builds the local transport. Receives the workspace's configured endpoint,
    * or `undefined` when the workspace leaves the adapter default in place.
@@ -43,8 +47,20 @@ type ProviderAuthModeConfiguration = Readonly<
 >;
 
 /** Resolve the literal transport company; model lineage remains a separate concern. */
-function providerId(company: string): "anthropic" | "openai" | "local" {
-  if (company === "anthropic" || company === "openai" || company === "local") return company;
+function providerId(model: ModelSelection): "anthropic" | "openai" | "local" | "deepinfra" {
+  if (model.company === "zai") {
+    if (model.modelId === deepInfraGLMModelId) return "deepinfra";
+    throw new ProviderAdapterError(
+      "deepinfra",
+      "invalid-request",
+      "The configured Z.ai model is unsupported.",
+      { retryable: false },
+    );
+  }
+  const { company } = model;
+  if (company === "anthropic") return "anthropic";
+  if (company === "openai") return "openai";
+  if (company === "local") return "local";
   throw new ProviderAdapterError(
     "anthropic",
     "invalid-request",
@@ -67,7 +83,7 @@ export async function createProviderAdapter(
   userSessionTimeoutMs?: number,
   localClaudeCategoryCaptureParent?: string,
 ) {
-  const provider = providerId(model.company);
+  const provider = providerId(model);
   if (!allowProviderData) {
     throw new ProviderAdapterError(
       provider,
@@ -83,6 +99,27 @@ export async function createProviderAdapter(
     return new LocalModelAdapter<JsonObject, JsonObject>(client, {
       configuredModel: model,
       ...(config.retry === undefined ? {} : { retry: config.retry }),
+    });
+  }
+  if (provider === "deepinfra") {
+    const apiKey = await resolveCredential("deepinfra");
+    if (apiKey === undefined || apiKey.trim() === "") {
+      throw new ProviderAdapterError(
+        provider,
+        "authentication",
+        "The DeepInfra API credential is not configured.",
+        { retryable: false },
+      );
+    }
+    const client = providerClientFactories?.deepinfra?.(apiKey) ?? createDeepInfraGLMClient(apiKey);
+    return createDeepInfraGLMAdapter<JsonObject, JsonObject>(client, {
+      configuredModel: model,
+      ...(config.retry === undefined ? {} : { retry: config.retry }),
+      pricing: {
+        inputUsdPerMillionTokens: 0.15,
+        outputUsdPerMillionTokens: 0.5,
+        cachedInputUsdPerMillionTokens: 0.03,
+      },
     });
   }
   if (provider === "anthropic") {

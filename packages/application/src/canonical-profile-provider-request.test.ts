@@ -1,7 +1,7 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
-
 import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
+import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 
 function model(company: ModelSelection["company"], modelId: string) {
   return { company, modelId };
@@ -26,6 +26,21 @@ describe("canonical candidate profile provider request contract", () => {
     ).toBe(8192);
     expect(
       canonicalProfileRequest(model("local", "claude-opus-5-5"), "api-key").maxOutputTokens,
+    ).toBe(8192);
+  });
+
+  it("uses the pinned budget only when the exact development GLM profile is bound", () => {
+    const glmModel = {
+      ...model("zai", "zai-org/GLM-5.3-Flash"),
+      profile: createDeepInfraGLMAuthorProfile(),
+    };
+    expect(canonicalProfileRequest(glmModel, "api-key").maxOutputTokens).toBe(32768);
+    expect(
+      canonicalProfileRequest(model("zai", "zai-org/GLM-5.3-Flash"), "api-key").maxOutputTokens,
+    ).toBe(8192);
+    expect(
+      canonicalProfileRequest({ ...glmModel, modelId: "other-glm-model" }, "api-key")
+        .maxOutputTokens,
     ).toBe(8192);
   });
 

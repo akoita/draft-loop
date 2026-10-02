@@ -94,6 +94,21 @@ import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
+import { createDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
+import type {
+  ProviderAuthMode,
+  ProviderAuthModeConfiguration,
+  SupportedModelCompany,
+} from "./glm-provider-routing.js";
+import {
+  environmentCredentialResolver,
+  isProviderAuthMode,
+  providerAuthModes,
+  providerDataPolicy,
+  resolveProviderAuthMode,
+  resolveProviderAuthModes,
+  supportedModelCompanies,
+} from "./glm-provider-routing.js";
 import type {
   ApplicationDriver,
   ApplicationIo,
@@ -162,6 +177,14 @@ export type {
   ProviderCredentialResolver,
   ProviderUserSessionRunners,
 } from "./local-provider-adapter.js";
+export type { ProviderAuthMode, ProviderAuthModeConfiguration, SupportedModelCompany };
+export {
+  isProviderAuthMode,
+  providerAuthModes,
+  resolveProviderAuthMode,
+  resolveProviderAuthModes,
+  supportedModelCompanies,
+};
 
 const configDirectory = ".draft-loop";
 const configFilename = "workspace.json";
@@ -422,46 +445,6 @@ export const defaultRequiredSections: readonly string[] = Object.freeze([
   "Skills",
 ]);
 
-/**
- * The provider companies a workspace may name.
- *
- * This driver refuses to build an adapter for anything else, so a company
- * outside this list is an invalid configuration rather than an option this
- * build declined to offer. It is checked where the configuration is parsed,
- * which is every path that writes one, so creating a workspace and later
- * changing its models cannot disagree about what is acceptable.
- */
-export const supportedModelCompanies = ["anthropic", "openai", "local"] as const;
-
-export const providerAuthModes = ["api-key", "user-session"] as const;
-export type ProviderAuthMode = (typeof providerAuthModes)[number];
-export type ProviderAuthModeConfiguration = Readonly<
-  Record<"anthropic" | "openai", ProviderAuthMode>
->;
-
-export function isProviderAuthMode(value: unknown): value is ProviderAuthMode {
-  return typeof value === "string" && providerAuthModes.includes(value as ProviderAuthMode);
-}
-
-export function resolveProviderAuthMode(value: string | undefined): ProviderAuthMode {
-  if (value === undefined) return "api-key";
-  if (isProviderAuthMode(value)) return value;
-  throw new Error(`Unsupported provider authentication mode: ${value}`);
-}
-
-export function resolveProviderAuthModes(
-  value: string | undefined,
-  anthropicValue?: string,
-  openAIValue?: string,
-): ProviderAuthModeConfiguration {
-  const fallback = resolveProviderAuthMode(value);
-  return {
-    anthropic: anthropicValue === undefined ? fallback : resolveProviderAuthMode(anthropicValue),
-    openai: openAIValue === undefined ? fallback : resolveProviderAuthMode(openAIValue),
-  };
-}
-
-export type SupportedModelCompany = (typeof supportedModelCompanies)[number];
 export interface WorkspaceKnowledgeSelectionEntry {
   readonly storeRoot: string;
   readonly storeId: string;
@@ -1924,24 +1907,6 @@ function parseCritique(value: JsonObject): Critique {
   };
 }
 
-function providerDataPolicy(
-  company: string,
-  allowProviderData: boolean,
-  providerAuthModeConfiguration: ProviderAuthModeConfiguration,
-) {
-  return {
-    allowTransmission: allowProviderData,
-    allowedCompanies: supportedModelCompanies,
-    sensitiveData: true,
-    sensitiveDataAcknowledged: allowProviderData,
-    requestedRetention:
-      (company === "anthropic" || company === "openai") &&
-      providerAuthModeConfiguration[company] === "user-session"
-        ? ("provider-default" as const)
-        : ("ephemeral-request" as const),
-  };
-}
-
 function providerAgents(
   config: WorkspaceConfig,
   context: ContextSnapshot,
@@ -2996,9 +2961,6 @@ export interface LocalApplicationDriverOptions {
   readonly localClaudeCategoryCaptureParent?: string;
 }
 
-const environmentCredentialResolver: ProviderCredentialResolver = async (provider) =>
-  provider === "anthropic" ? process.env.ANTHROPIC_API_KEY : process.env.OPENAI_API_KEY;
-
 export interface ProviderOpportunityExtractionOptions {
   readonly allowProviderData?: boolean;
   readonly providerAuthMode?: ProviderAuthMode;
@@ -3074,11 +3036,15 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
 ): CanonicalCandidateProfileExtractionPort {
   const providerAuthModeConfiguration =
     options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
+  const glmAuthorProfile = isDeepInfraGLMModel(config.authorCompany, config.authorModel)
+    ? createDeepInfraGLMAuthorProfile()
+    : undefined;
   const model: ModelSelection = {
     company: config.authorCompany,
     modelId: config.authorModel,
     role: "author",
     promptTemplateVersion: promptVersion,
+    ...(glmAuthorProfile === undefined ? {} : { profile: glmAuthorProfile }),
   };
   const requestContract = canonicalProfileRequest(model, providerAuthModeConfiguration.anthropic);
   return Object.freeze({

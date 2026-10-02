@@ -184,4 +184,26 @@ describe("run model profile resolution", () => {
       ),
     ).toThrow(RunModelProfileError);
   });
+
+  it("accepts only the exact development GLM profile route", () => {
+    const glm = defaultModelProfileRegistry.resolve("dev-deepinfra-glm-author", 1, "author");
+    expect(
+      resolveRunModelProfiles(references(glm.id, "test-critic"), registryFor(glm), apiKeyRoutes)
+        .author,
+    ).toEqual(glm);
+
+    for (const invalid of [
+      { ...glm, modelId: "another-glm-model" },
+      { ...glm, runtime: { ...glm.runtime, effort: "medium" as const } },
+      { ...glm, runtime: { ...glm.runtime, thinking: { mode: "disabled" as const } } },
+    ]) {
+      expect(() =>
+        resolveRunModelProfiles(
+          references(invalid.id, "test-critic"),
+          registryFor(invalid),
+          apiKeyRoutes,
+        ),
+      ).toThrow(RunModelProfileError);
+    }
+  });
 });

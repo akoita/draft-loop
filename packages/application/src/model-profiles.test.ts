@@ -80,7 +80,7 @@ describe("model profile registry", () => {
 
   it("keeps historical versions and appends the current exact profile versions", () => {
     const profiles = defaultModelProfileRegistry.list();
-    expect(profiles).toHaveLength(9);
+    expect(profiles).toHaveLength(10);
     expect(profiles.slice(2, 7)).toEqual([
       {
         id: "standard-anthropic-author",
@@ -153,7 +153,7 @@ describe("model profile registry", () => {
         knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
       },
     ]);
-    expect(profiles.slice(7)).toEqual([
+    expect(profiles.slice(7, 9)).toEqual([
       {
         id: "economy-anthropic-author",
         version: 1,
@@ -183,6 +183,20 @@ describe("model profile registry", () => {
         knownLimits: { maxOutputTokens: 128000, contextWindowTokens: 1050000 },
       },
     ]);
+    expect(profiles[9]).toEqual({
+      id: "dev-deepinfra-glm-author",
+      version: 1,
+      provider: "zai",
+      modelId: "zai-org/GLM-5.3-Flash",
+      tier: "economy",
+      roles: ["author"],
+      runtime: {
+        effort: "low",
+        maxOutputTokens: 32768,
+        thinking: { mode: "provider-default" },
+      },
+      knownLimits: { maxOutputTokens: 131072, contextWindowTokens: 1048576 },
+    });
     expect(defaultModelProfileRegistry.resolve("legacy-anthropic-author", 1, "author")).toEqual(
       profiles[0],
     );

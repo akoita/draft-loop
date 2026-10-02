@@ -1395,8 +1395,16 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--language <language>", "output language", "en")
     .option("--instructions <text>", "candidate instructions")
     .option("--truthfulness-policy <text>", "truthfulness policy")
-    .option("--author-company <company>", "author provider company", "anthropic")
-    .option("--author-model <model>", "exact author model id", "claude-sonnet-4-5")
+    .option(
+      "--author-company <company>",
+      "author provider company; use 'zai' only for development GLM Flash",
+      "anthropic",
+    )
+    .option(
+      "--author-model <model>",
+      "exact author model id; development GLM Flash is zai-org/GLM-5.3-Flash",
+      "claude-sonnet-4-5",
+    )
     .option("--critic-company <company>", "critic provider company", "openai")
     .option("--critic-model <model>", "exact critic model id", "gpt-5.6-luna")
     .option(
@@ -1426,6 +1434,10 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--max-words <number>", "maximum output words", integerOption)
     .option("--max-characters <number>", "maximum output characters", integerOption)
     .option("--fixture", "use deterministic offline agents")
+    .addHelpText(
+      "after",
+      "\nDevelopment-only Z.ai GLM Flash requires DEEPINFRA_API_KEY; model quality and account availability are unvalidated.\n",
+    )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       await service.initialize({
         root: workspaceRoot(workspace),
@@ -1529,7 +1541,10 @@ export function createCli(dependencies: CliDependencies = {}): Command {
       "--model-preset <id>",
       "exact registered author/critic pair preset; economy and standard are unvalidated",
     )
-    .option("--author-profile <id@version>", "exact registered author profile version")
+    .option(
+      "--author-profile <id@version>",
+      "exact registered author profile version, including dev-deepinfra-glm-author@1",
+    )
     .option("--critic-profile <id@version>", "exact registered critic profile version")
     .option("--opportunity-brief-id <id>", "exact reviewed opportunity brief id")
     .option(
@@ -1551,7 +1566,7 @@ export function createCli(dependencies: CliDependencies = {}): Command {
     .option("--allow-provider-data", "explicitly approve transmission of sensitive material")
     .addHelpText(
       "after",
-      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles does not change workspace defaults.\n",
+      "\nUse one --model-preset or both explicit profile options. Exact profiles are pinned to this run; listing and selecting profiles does not change workspace defaults. Development GLM: pair --author-profile dev-deepinfra-glm-author@1 with --critic-profile economy-openai-critic@1 and set DEEPINFRA_API_KEY; quality and account availability are unvalidated.\n",
     )
     .action(async (workspace: string, options: Record<string, unknown>) => {
       const hasBriefId = options.opportunityBriefId !== undefined;
