@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { ProviderAdapterError } from "@draft-loop/providers";
 import { describe, expect, it, vi } from "vitest";
+import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import type { ProviderClientFactories } from "./local-provider-adapter.js";
 import { listModelProfileCatalog } from "./model-profile-catalog.js";
 import {
@@ -109,6 +110,68 @@ describe("registry-derived model-suggestion preflight", () => {
       }),
     ).rejects.toThrow("Model-suggestion preflight configuration is invalid.");
     expect(openAi.calls).toEqual([]);
+  });
+
+  it("omits only the exact development GLM profile without creating a DeepInfra request", async () => {
+    const catalog = listModelProfileCatalog();
+    const template = catalog[0];
+    if (template === undefined) throw new Error("expected a profile catalog");
+    const developmentEntry = {
+      ...template,
+      profile: createDeepInfraGLMAuthorProfile(),
+    };
+    const planned = buildModelSuggestionPreflightPlan(apiModes, {
+      catalog: [...catalog, developmentEntry],
+    });
+    expect(planned.rows).toHaveLength(4);
+    expect(JSON.stringify(planned.rows)).not.toContain("deepinfra");
+
+    const { factories, calls } = apiFactories();
+    const resolvedProviders: string[] = [];
+    const result = await runModelSuggestionPreflight({
+      authModes: apiModes,
+      providerClientFactories: factories,
+      resolveCredential: async (provider) => {
+        resolvedProviders.push(provider);
+        return "test-only-api-key";
+      },
+      planDependencies: { catalog: [...catalog, developmentEntry] },
+    });
+    expect(result.passed).toBe(true);
+    expect(result.rows).toHaveLength(4);
+    expect(calls).toHaveLength(4);
+    expect(resolvedProviders).toHaveLength(4);
+    expect(resolvedProviders).not.toContain("deepinfra");
+  });
+
+  it("rejects malformed or unknown DeepInfra profiles before any provider calls", async () => {
+    const catalog = listModelProfileCatalog();
+    const template = catalog[0];
+    if (template === undefined) throw new Error("expected a profile catalog");
+    const exactProfile = createDeepInfraGLMAuthorProfile();
+    const invalidEntries = [
+      {
+        ...template,
+        profile: { ...exactProfile, id: "unknown-deepinfra-profile" },
+      },
+      {
+        ...template,
+        profile: { ...exactProfile, runtime: undefined },
+      },
+    ];
+    for (const invalidEntry of invalidEntries) {
+      const { factories, calls } = apiFactories();
+      await expect(
+        runModelSuggestionPreflight({
+          authModes: apiModes,
+          providerClientFactories: factories,
+          planDependencies: {
+            catalog: [...catalog, invalidEntry] as unknown as typeof catalog,
+          },
+        }),
+      ).rejects.toThrow("Model-suggestion preflight configuration is invalid.");
+      expect(calls).toEqual([]);
+    }
   });
 
   it("uses one bounded request per API destination and reports only exact ready output", async () => {

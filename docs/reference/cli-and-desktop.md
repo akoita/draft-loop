@@ -26,6 +26,11 @@ for an explicitly approved local availability check or release preflight. Its re
 availability under that bounded check only, not account guarantees, profile
 controls, or CV quality.
 
+The paid validation cohort remains limited to the required Economy and Standard
+Anthropic/OpenAI destinations and supported optional Anthropic/OpenAI entries.
+The exact opt-in DeepInfra GLM development author profile is omitted from this
+cohort; listing a development preset does not add a provider to release checks.
+
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
