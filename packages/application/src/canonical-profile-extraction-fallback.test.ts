@@ -478,6 +478,27 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(calls).toHaveLength(1);
   });
 
+  it("does not fan out a truncating grounding correction request", async () => {
+    const failure = providerTruncation();
+    const { calls, executor } = executorFor(() => Promise.reject(failure));
+    const recoveryRequest = {
+      ...request([source("source-a", "TypeScript"), source("source-b", "React")]),
+      groundingRecovery: [{ code: "value_not_in_quote", count: 1 }],
+    } as const;
+
+    await expect(
+      executeCanonicalProfileExtractionWithFallback(executor, recoveryRequest, controls),
+    ).rejects.toBe(failure);
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[0].input).toMatchObject({
+      groundingRecovery: [{ code: "value_not_in_quote", count: 1 }],
+    });
+    expect(calls[0]?.[0].input.extractionFocusSourceId).toBeUndefined();
+    expect(calls[0]?.[0].systemPrompt).toContain("complete replacement proposal");
+    expect(calls[0]?.[0].systemPrompt).toContain("does not support the synthesized value");
+  });
+
   it("bounds four-source recovery to five total calls", async () => {
     const sources = ["A", "B", "C", "D"].map((value, index) =>
       material(`source-${index + 1}`, `Skill ${value}`),
@@ -556,6 +577,18 @@ describe("canonical profile extraction output-limit fallback", () => {
       if (firstWindow === undefined) throw new Error("Expected a first source window.");
       const { calls, executor } = executorFor((call) => {
         if (calls.length === 1) throw providerTruncation();
+        if (kind === "grounding" && call.input.groundingRecovery !== undefined) {
+          return proposal([
+            {
+              key: "still-ungrounded",
+              category: "skill",
+              field: "name",
+              value: "React",
+              sourceId: first.id,
+              quote: "not in the original text",
+            },
+          ]);
+        }
         if (call.input.extractionFocusSourceId === first.id) {
           const window = call.input.extractionFocusWindow as
             | { readonly start: number; readonly end: number; readonly text: string }
@@ -609,7 +642,7 @@ describe("canonical profile extraction output-limit fallback", () => {
         input([first, second]),
       );
 
-      expect(calls).toHaveLength(kind === "grounding" ? 7 : 4);
+      expect(calls).toHaveLength(kind === "grounding" ? 8 : 4);
       expect(result.facts).toEqual([]);
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.message).toContain(message);
@@ -783,7 +816,7 @@ describe("canonical profile extraction output-limit fallback", () => {
       input([first, second]),
     );
 
-    expect(calls).toHaveLength(3);
+    expect(calls).toHaveLength(4);
     expect(result.facts).toEqual([]);
     expect(result.issues).toHaveLength(1);
     expect(result.issues[0]?.message).toContain("could not be grounded");

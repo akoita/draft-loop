@@ -147,7 +147,7 @@ describe("canonical candidate profile extraction", () => {
       { operationId: "profile-operation", sources: [source], allowProviderData: true },
     );
 
-    expect(ungroundedDuplicate).toHaveBeenCalledTimes(1);
+    expect(ungroundedDuplicate).toHaveBeenCalledTimes(2);
     expect(rejected.facts).toEqual([]);
     expect(rejected.issues[0]?.message).toContain("could not be grounded");
     expect(rejected.issues[0]?.message).toContain("values absent from evidence quotes: 1");

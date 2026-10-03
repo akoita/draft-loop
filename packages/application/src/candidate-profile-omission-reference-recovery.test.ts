@@ -132,7 +132,7 @@ describe("sourced omission dangling fact reference recovery", () => {
 
     const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
 
-    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(2);
     expect(result.facts).toEqual([]);
     expect(result.issues).toHaveLength(1);
     expect(result.issues[0]).toMatchObject({ code: "omission", severity: "error", status: "open" });
@@ -154,7 +154,7 @@ describe("sourced omission dangling fact reference recovery", () => {
 
     const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
 
-    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(2);
     expect(result.facts).toEqual([]);
     expect(result.issues).toHaveLength(1);
     expect(result.issues[0]).toMatchObject({ code: "omission", severity: "error", status: "open" });
