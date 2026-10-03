@@ -82,7 +82,10 @@ The DeepInfra GLM adapter reads structured output as a stream. It allows 120
 seconds for the initial response, resets a 120-second idle limit as chunks
 arrive, and stops after 10 minutes total. Adapter timeout diagnostics identify the
 initial response, idle stream, or total deadline without including provider
-content.
+content. Documented single-choice chunks may omit model, creation-time, and
+choice-index metadata; supplied model identifiers are still checked against the
+configured GLM model, and provider timestamps are not persisted. Null role or
+tool placeholders are treated as absent; actual tool calls remain rejected.
 
 ## Desktop diagnostics
 

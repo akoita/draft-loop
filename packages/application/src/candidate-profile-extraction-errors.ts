@@ -15,7 +15,45 @@ const stageFailureMessages: Record<Exclude<CandidateProfileExtractionStage, "pro
     "Extracted claims could not be grounded in the selected sources. No facts were saved; review the source material and try again.",
 };
 
+const deepInfraDiagnosticMessages = new Map<string, string>([
+  [
+    "malformed_stream",
+    "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.",
+  ],
+  [
+    "incomplete_stream",
+    "DeepInfra ended the GLM stream before completing the profile. Check provider status or the network connection, or choose another supported model; no facts were saved.",
+  ],
+  [
+    "incomplete_response",
+    "DeepInfra ended the structured response before completing the profile. Check provider status or the network connection, or choose another supported model; no facts were saved.",
+  ],
+  [
+    "invalid_json",
+    "DeepInfra did not return valid structured JSON. Check the selected model's structured-output support or choose another supported model; no facts were saved.",
+  ],
+  [
+    "missing_output",
+    "DeepInfra returned no structured profile output. Check the selected model's structured-output support or choose another supported model; no facts were saved.",
+  ],
+  [
+    "unexpected_response_model",
+    "DeepInfra returned a response for an unexpected GLM model. Verify the configured model and endpoint; no facts were saved.",
+  ],
+]);
+
+function deepInfraFailureMessage(error: ProviderAdapterError): string | undefined {
+  if (error.provider !== "deepinfra" || error.code !== "invalid-response") return undefined;
+  for (const diagnostic of [...error.diagnostics, ...error.diagnosticCounts]) {
+    const message = deepInfraDiagnosticMessages.get(diagnostic.code);
+    if (message !== undefined) return message;
+  }
+  return undefined;
+}
+
 function providerFailureMessage(error: ProviderAdapterError): string {
+  const deepInfraMessage = deepInfraFailureMessage(error);
+  if (deepInfraMessage !== undefined) return deepInfraMessage;
   if (
     error.provider === "anthropic" &&
     error.code === "quota-exhausted" &&

@@ -489,13 +489,14 @@ async function collectStreamCompletion(
     readonly signal: AbortSignal;
     readonly abort: () => void;
     readonly deadlineAt: number;
+    readonly expectedModel: string;
   },
-): Promise<ChatCompletion> {
+): Promise<Pick<ChatCompletion, "id" | "model" | "choices" | "usage">> {
   const iterator = stream[Symbol.asyncIterator]();
   let completed = false;
   let id: string | undefined;
-  let created: number | undefined;
   let model: string | undefined;
+  let created: number | undefined;
   let content = "";
   let contentBytes = 0;
   let refusal: string | null = null;
@@ -524,20 +525,32 @@ async function collectStreamCompletion(
         typeof chunk.id !== "string" ||
         chunk.id.trim() === "" ||
         (id !== undefined && id !== chunk.id) ||
-        typeof chunk.model !== "string" ||
-        chunk.model !== deepInfraGLMModelId ||
-        (model !== undefined && model !== chunk.model) ||
         chunk.object !== "chat.completion.chunk" ||
-        typeof chunk.created !== "number" ||
-        !Number.isSafeInteger(chunk.created) ||
-        (created !== undefined && created !== chunk.created) ||
         !Array.isArray(chunk.choices)
       ) {
         throw malformedStream();
       }
       id = chunk.id;
-      model = chunk.model;
-      created = chunk.created;
+      if (Object.hasOwn(chunk, "model")) {
+        if (
+          typeof chunk.model !== "string" ||
+          chunk.model !== options.expectedModel ||
+          (model !== undefined && model !== chunk.model)
+        ) {
+          throw malformedStream();
+        }
+        model = chunk.model;
+      }
+      if (Object.hasOwn(chunk, "created")) {
+        if (
+          typeof chunk.created !== "number" ||
+          !Number.isSafeInteger(chunk.created) ||
+          (created !== undefined && created !== chunk.created)
+        ) {
+          throw malformedStream();
+        }
+        created = chunk.created;
+      }
 
       if (Object.hasOwn(chunk, "usage") && chunk.usage !== undefined) {
         usage = chunk.usage as ChatCompletion["usage"];
@@ -558,12 +571,23 @@ async function collectStreamCompletion(
       if (finishReason !== undefined || chunk.choices.length !== 1) throw malformedStream();
 
       const choice = chunk.choices[0];
-      if (!isRecord(choice) || choice.index !== 0 || !isRecord(choice.delta)) {
+      if (!isRecord(choice) || !isRecord(choice.delta)) {
+        throw malformedStream();
+      }
+      if (
+        Object.hasOwn(choice, "index") &&
+        (!Number.isSafeInteger(choice.index) || choice.index !== 0)
+      ) {
         throw malformedStream();
       }
       const delta = choice.delta;
-      if (delta.role !== undefined && delta.role !== "assistant") throw malformedStream();
-      if (delta.tool_calls !== undefined || delta.function_call !== undefined) {
+      if (delta.role !== undefined && delta.role !== null && delta.role !== "assistant") {
+        throw malformedStream();
+      }
+      if (
+        (delta.tool_calls !== undefined && delta.tool_calls !== null) ||
+        (delta.function_call !== undefined && delta.function_call !== null)
+      ) {
         throw malformedStream();
       }
       if (delta.content !== undefined && delta.content !== null) {
@@ -596,12 +620,7 @@ async function collectStreamCompletion(
     }
   }
 
-  if (
-    id === undefined ||
-    model === undefined ||
-    created === undefined ||
-    finishReason === undefined
-  ) {
+  if (id === undefined || finishReason === undefined) {
     throw failResponse(
       "DeepInfra ended the stream before completing the response.",
       "incomplete_stream",
@@ -610,9 +629,7 @@ async function collectStreamCompletion(
 
   return {
     id,
-    object: "chat.completion",
-    created,
-    model,
+    model: model ?? options.expectedModel,
     choices: [
       {
         index: 0,
@@ -626,7 +643,7 @@ async function collectStreamCompletion(
       },
     ],
     ...(usage === undefined ? {} : { usage }),
-  } as unknown as ChatCompletion;
+  } as unknown as Pick<ChatCompletion, "id" | "model" | "choices" | "usage">;
 }
 
 export class DeepInfraGLMAdapter<
@@ -709,6 +726,7 @@ export class DeepInfraGLMAdapter<
               signal: abortScope.signal,
               abort: abortScope.abort,
               deadlineAt,
+              expectedModel: parameters.model,
             })
           : initialResponse;
         if (response.model !== deepInfraGLMModelId) {

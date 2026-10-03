@@ -73,6 +73,26 @@ function chunk(
   } as unknown as ChatCompletionChunk;
 }
 
+function documentedChunk(options: {
+  readonly omitId?: boolean;
+  readonly id?: unknown;
+  readonly model?: unknown;
+  readonly created?: unknown;
+  readonly choices: unknown[];
+  readonly usage?: unknown;
+}): ChatCompletionChunk {
+  return {
+    ...(options.omitId
+      ? {}
+      : { id: Object.hasOwn(options, "id") ? options.id : "chatcmpl-documented" }),
+    object: "chat.completion.chunk",
+    choices: options.choices,
+    ...(Object.hasOwn(options, "model") ? { model: options.model } : {}),
+    ...(Object.hasOwn(options, "created") ? { created: options.created } : {}),
+    ...(Object.hasOwn(options, "usage") ? { usage: options.usage } : {}),
+  } as unknown as ChatCompletionChunk;
+}
+
 function iterable(chunks: readonly ChatCompletionChunk[]): AsyncIterable<ChatCompletionChunk> {
   return {
     async *[Symbol.asyncIterator]() {
@@ -95,6 +115,30 @@ function harness(
 afterEach(() => vi.useRealTimers());
 
 describe("DeepInfra GLM streaming response", () => {
+  it("accepts null role and tool placeholders around a structured single-choice response", async () => {
+    const fixture = harness(
+      iterable([
+        chunk({ delta: { role: "assistant", tool_calls: null, function_call: null } }),
+        chunk({ content: '{"answer":', delta: { role: null, tool_calls: null } }),
+        chunk({ content: '"ok"}', delta: { role: null, function_call: null } }),
+        chunk({
+          finish: "stop",
+          delta: { role: null, tool_calls: null, function_call: null },
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+        chunk({
+          choices: [],
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+      ]),
+    );
+
+    const result = await fixture.adapter.execute(request());
+
+    expect(result.output).toEqual({ answer: "ok" });
+    expect(result.usage).toMatchObject({ inputTokens: 12, outputTokens: 3, totalTokens: 15 });
+  });
+
   it("allows progressing output beyond the initial-response timeout", async () => {
     vi.useFakeTimers();
     const stream = {
@@ -235,6 +279,105 @@ describe("DeepInfra GLM streaming response", () => {
     expect(fixture.create).toHaveBeenCalledTimes(1);
   });
 
+  it("accepts documented chunks with omitted metadata and later supplied metadata", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          model: deepInfraGLMModelId,
+          created: 42,
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+      ]),
+    );
+
+    const result = await fixture.adapter.execute(request());
+
+    expect(result.output).toEqual({ answer: "ok" });
+    expect(result.usage).toMatchObject({ inputTokens: 12, outputTokens: 3, totalTokens: 15 });
+  });
+
+  it("uses the explicit request model when every chunk omits model metadata", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          choices: [{ delta: {}, finish_reason: "stop" }],
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+      ]),
+    );
+
+    await expect(fixture.adapter.execute(request())).resolves.toMatchObject({
+      output: { answer: "ok" },
+      modelId: deepInfraGLMModelId,
+      usage: { inputTokens: 12, outputTokens: 3, totalTokens: 15 },
+    });
+  });
+
+  it.each([
+    ["missing identity", { omitId: true }],
+    ["null identity", { id: null }],
+    ["blank identity", { id: "   " }],
+    ["null model", { model: null }],
+    ["wrong model", { model: "other-model" }],
+    ["null timestamp", { created: null }],
+    ["invalid timestamp", { created: "not-a-time" }],
+    ["null index", { choices: [{ index: null, delta: {}, finish_reason: "stop" }] }],
+    ["wrong index", { choices: [{ index: 1, delta: {}, finish_reason: "stop" }] }],
+  ])("rejects malformed supplied metadata: %s", async (_label, metadata) => {
+    const options = {
+      choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: "stop" }],
+      ...metadata,
+    } as Parameters<typeof documentedChunk>[0];
+    const fixture = harness(iterable([documentedChunk(options)]));
+
+    await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream" }],
+    });
+  });
+
+  it("rejects inconsistent supplied creation times", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          created: 41,
+          choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          created: 42,
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        }),
+      ]),
+    );
+
+    await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream" }],
+    });
+  });
+
+  it.each([
+    ["tool-call array", { tool_calls: [{ index: 0 }] }],
+    ["empty tool-call array", { tool_calls: [] }],
+    ["function-call object", { function_call: { name: "lookup" } }],
+    ["non-assistant role", { role: "user" }],
+    ["malformed role", { role: { name: "assistant" } }],
+  ])("rejects %s despite null placeholders otherwise being allowed", async (_label, delta) => {
+    const fixture = harness(iterable([chunk({ delta })]));
+
+    await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream" }],
+    });
+  });
+
   it("requires a terminal finish and rejects length-truncated output", async () => {
     const truncated = harness(iterable([chunk({ content: '{"answer":"ok"}' })]));
     await expect(truncated.adapter.execute(request())).rejects.toMatchObject({
@@ -242,7 +385,15 @@ describe("DeepInfra GLM streaming response", () => {
       diagnostics: [{ code: "incomplete_stream" }],
     });
 
-    const limited = harness(iterable([chunk({ content: "{}", finish: "length" })]));
+    const limited = harness(
+      iterable([
+        chunk({
+          content: "{}",
+          finish: "length",
+          delta: { role: null, tool_calls: null, function_call: null },
+        }),
+      ]),
+    );
     await expect(limited.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
       failureStage: "output-token-budget-exceeded",
@@ -288,16 +439,45 @@ describe("DeepInfra GLM streaming response", () => {
       diagnostics: [{ code: "output_too_large" }],
     });
 
-    const refusal = harness(iterable([chunk({ delta: { refusal: "no" }, finish: "stop" })]));
+    const refusal = harness(
+      iterable([
+        chunk({
+          delta: { role: null, tool_calls: null, function_call: null, refusal: "no" },
+          finish: "stop",
+        }),
+      ]),
+    );
     await expect(refusal.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
       diagnostics: [{ code: "refusal" }],
     });
 
-    const invalidJson = harness(iterable([chunk({ content: '{"answer":1}', finish: "stop" })]));
+    const invalidJson = harness(
+      iterable([
+        chunk({
+          content: '{"answer":1}',
+          finish: "stop",
+          delta: { role: null, tool_calls: null, function_call: null },
+        }),
+      ]),
+    );
     await expect(invalidJson.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
       failureStage: "response-schema-validation",
+    });
+
+    const malformedJson = harness(
+      iterable([
+        chunk({
+          content: '{"answer":',
+          finish: "stop",
+          delta: { role: null, tool_calls: null, function_call: null },
+        }),
+      ]),
+    );
+    await expect(malformedJson.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "invalid_json" }],
     });
   });
 
