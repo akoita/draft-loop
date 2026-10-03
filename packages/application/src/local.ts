@@ -94,7 +94,7 @@ import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
-import { createDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
+import { createGLMExtractionProfile, isDeepInfraGLMModel } from "./glm-extraction-profile.js";
 import type {
   ProviderAuthMode,
   ProviderAuthModeConfiguration,
@@ -3036,15 +3036,15 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
 ): CanonicalCandidateProfileExtractionPort {
   const providerAuthModeConfiguration =
     options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
-  const glmAuthorProfile = isDeepInfraGLMModel(config.authorCompany, config.authorModel)
-    ? createDeepInfraGLMAuthorProfile()
+  const glmExtractionProfile = isDeepInfraGLMModel(config.authorCompany, config.authorModel)
+    ? createGLMExtractionProfile()
     : undefined;
   const model: ModelSelection = {
     company: config.authorCompany,
     modelId: config.authorModel,
     role: "author",
     promptTemplateVersion: promptVersion,
-    ...(glmAuthorProfile === undefined ? {} : { profile: glmAuthorProfile }),
+    ...(glmExtractionProfile === undefined ? {} : { profile: glmExtractionProfile }),
   };
   const requestContract = canonicalProfileRequest(model, providerAuthModeConfiguration.anthropic);
   return Object.freeze({

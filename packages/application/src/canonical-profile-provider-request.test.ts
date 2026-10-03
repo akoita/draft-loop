@@ -2,6 +2,7 @@ import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@d
 import { describe, expect, it } from "vitest";
 import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
 import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
+import { createDeepInfraGLMExtractionProfile } from "./glm-extraction-profile.js";
 
 function model(company: ModelSelection["company"], modelId: string) {
   return { company, modelId };
@@ -29,18 +30,50 @@ describe("canonical candidate profile provider request contract", () => {
     ).toBe(8192);
   });
 
-  it("uses the pinned budget only when the exact development GLM profile is bound", () => {
-    const glmModel = {
-      ...model("zai", "zai-org/GLM-5.3-Flash"),
-      profile: createDeepInfraGLMAuthorProfile(),
-    };
-    expect(canonicalProfileRequest(glmModel, "api-key").maxOutputTokens).toBe(32768);
+  it("uses the pinned budget only for exact development GLM author and extraction profiles", () => {
+    for (const profile of [
+      createDeepInfraGLMAuthorProfile(),
+      createDeepInfraGLMExtractionProfile(),
+    ]) {
+      expect(
+        canonicalProfileRequest({ ...model("zai", "zai-org/GLM-5.3-Flash"), profile }, "api-key")
+          .maxOutputTokens,
+      ).toBe(32768);
+    }
+
+    const extractionProfile = createDeepInfraGLMExtractionProfile();
+    const alteredProfiles: readonly NonNullable<ModelSelection["profile"]>[] = [
+      { ...extractionProfile, id: "tampered-profile" },
+      {
+        ...extractionProfile,
+        runtime: { ...extractionProfile.runtime, effort: "low" },
+      },
+      {
+        ...extractionProfile,
+        runtime: { ...extractionProfile.runtime, thinking: { mode: "provider-default" } },
+      },
+      {
+        ...extractionProfile,
+        runtime: { ...extractionProfile.runtime, maxOutputTokens: 8192 },
+      },
+    ];
+    for (const profile of alteredProfiles) {
+      expect(
+        canonicalProfileRequest({ ...model("zai", "zai-org/GLM-5.3-Flash"), profile }, "api-key")
+          .maxOutputTokens,
+      ).toBe(8192);
+    }
     expect(
       canonicalProfileRequest(model("zai", "zai-org/GLM-5.3-Flash"), "api-key").maxOutputTokens,
     ).toBe(8192);
     expect(
-      canonicalProfileRequest({ ...glmModel, modelId: "other-glm-model" }, "api-key")
-        .maxOutputTokens,
+      canonicalProfileRequest(
+        {
+          ...model("zai", "other-glm-model"),
+          profile: createDeepInfraGLMExtractionProfile(),
+        },
+        "api-key",
+      ).maxOutputTokens,
     ).toBe(8192);
   });
 

@@ -232,17 +232,44 @@ describe("DeepInfra GLM-5.3-Flash adapter", () => {
     },
   );
 
+  it("sends reasoning_effort none for disabled provider-default thinking", async () => {
+    const selectedProfile = profile({
+      effort: "provider-default",
+      thinking: "disabled",
+      maxOutputTokens: 9000,
+    });
+    const model = selection({ profile: selectedProfile });
+    const { adapter, create } = harness({ configuredModel: model });
+
+    await adapter.execute(request(model));
+
+    expect(create.mock.calls[0]?.[0]).toMatchObject({
+      max_tokens: 9000,
+      reasoning_effort: "none",
+      response_format: {
+        type: "json_schema",
+        json_schema: { name: "fixture_output", schema: jsonSchema, strict: true },
+      },
+      stream: true,
+      stream_options: { include_usage: true },
+    });
+  });
+
   it("omits provider-default effort and rejects unsupported profile controls before calling", async () => {
     const providerDefaultModel = selection({ profile: profile({ effort: "provider-default" }) });
     const { adapter, create } = harness({ configuredModel: providerDefaultModel });
     await adapter.execute(request(providerDefaultModel));
     expect(create.mock.calls[0]?.[0]).not.toHaveProperty("reasoning_effort");
 
-    for (const invalidProfile of [
+    const invalidProfiles = [
       profile({ effort: "medium" }),
-      profile({ thinking: "disabled" }),
       profile({ thinking: "budgeted" }),
-    ]) {
+      profile({ thinking: "budgeted", effort: "provider-default" }),
+      ...(["low", "medium", "high", "max"] as const).map((effort) =>
+        profile({ thinking: "disabled", effort }),
+      ),
+    ];
+    for (const invalidProfile of invalidProfiles) {
       const invalidModel = selection({ profile: invalidProfile });
       const fixture = harness({ configuredModel: invalidModel });
       await expect(fixture.adapter.execute(request(invalidModel))).rejects.toMatchObject({
