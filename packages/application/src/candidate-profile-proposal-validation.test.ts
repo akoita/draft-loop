@@ -172,9 +172,12 @@ describe("canonical candidate profile proposal validation", () => {
     );
   });
 
-  it("does not repair duplicate fact keys or unsupported values", () => {
+  it("does not repair referenced duplicate fact keys or unsupported values", () => {
     expectValidationFailure(
-      proposal({ facts: [fact("fact-a"), fact("fact-a")] }),
+      proposal({
+        facts: [fact("fact-a"), fact("fact-a")],
+        issues: [{ code: "omission", factKeys: ["fact-a"], sourceIds: ["source-a"] }],
+      }),
       "profile_duplicate_fact_keys",
     );
     expectValidationFailure(

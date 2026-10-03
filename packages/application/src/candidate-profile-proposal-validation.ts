@@ -2,6 +2,7 @@ import {
   type CanonicalCandidateProfileExtractionProposal,
   canonicalCandidateProfileExtractionProposalSchema,
 } from "@draft-loop/schemas";
+import { recoverUnreferencedDuplicateFactKeys } from "./candidate-profile-fact-key-recovery.js";
 
 export const candidateProfileProposalDiagnosticCodes = {
   invalid_type: "profile_output_invalid_type",
@@ -30,6 +31,7 @@ export interface CandidateProfileProposalDiagnosticCount {
 
 const repairableMessages = new Set([
   "evidence must contain unique sourceId/quote tuples",
+  "fact keys must be unique",
   "factKeys must contain unique fact keys",
   "sourceIds must contain unique source ids",
 ]);
@@ -172,7 +174,7 @@ function validationError(
   );
 }
 
-/** Normalize redundant lists and sourced omission references, then revalidate strictly. */
+/** Normalize safe duplicate keys and references, then revalidate strictly. */
 export function parseCanonicalCandidateProfileExtractionProposal(
   output: unknown,
 ): CanonicalCandidateProfileExtractionProposal {
@@ -196,10 +198,16 @@ export function parseCanonicalCandidateProfileExtractionProposal(
     throw validationError(issues);
   }
 
-  const repaired = proposalWithRepairableReferencesRemoved(
-    output as CanonicalCandidateProfileExtractionProposal,
-    danglingOmissionFactKeys,
-  );
+  let proposal = output as CanonicalCandidateProfileExtractionProposal;
+  if (
+    issues.some((issue) => issue.code === "custom" && issue.message === "fact keys must be unique")
+  ) {
+    const recovered = recoverUnreferencedDuplicateFactKeys(proposal);
+    if (recovered === undefined) throw validationError(issues);
+    proposal = recovered;
+  }
+
+  const repaired = proposalWithRepairableReferencesRemoved(proposal, danglingOmissionFactKeys);
   const revalidated = canonicalCandidateProfileExtractionProposalSchema.safeParse(repaired);
   if (!revalidated.success) throw validationError(revalidated.error.issues);
   return revalidated.data;
