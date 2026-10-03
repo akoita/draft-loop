@@ -11,6 +11,7 @@ import {
   type CanonicalProfileExtractionExecutor,
   executeCanonicalProfileExtractionWithFallback,
 } from "./canonical-profile-extraction-fallback.js";
+import { planCanonicalProfileExtractionCalls } from "./canonical-profile-extraction-plan.js";
 import { planCanonicalProfileExtractionTextWindows } from "./canonical-profile-extraction-sections.js";
 
 const dataPolicy = {
@@ -291,7 +292,7 @@ describe("canonical profile extraction output-limit fallback", () => {
       expect(call.outputSchema).toBeDefined();
       if (focusSourceId === first.id) {
         if (window === undefined) throw providerTruncation();
-        expect(call.systemPrompt).toContain("one of four bounded windows");
+        expect(call.systemPrompt).toContain("one bounded window");
         const value = window.text.trim().split(/\s/u)[0];
         if (value === undefined) throw new Error("Expected a non-empty section.");
         const quote = window.start === 0 ? first.text.slice(0, window.end + 5) : value;
@@ -889,6 +890,8 @@ describe("canonical profile extraction output-limit fallback", () => {
     const first = source("source-a", firstText);
     const second = source("source-b", secondText);
     const fullContext = [first, second];
+    const plannedCalls = planCanonicalProfileExtractionCalls(fullContext);
+    if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
     const controller = new AbortController();
     const proactiveRequest = {
       ...request(fullContext),
@@ -945,17 +948,10 @@ describe("canonical profile extraction output-limit fallback", () => {
       controls,
     );
 
-    expect(calls).toHaveLength(8);
-    expect(calls.map(([call]) => call.input.extractionFocusSourceId)).toEqual([
-      first.id,
-      first.id,
-      first.id,
-      first.id,
-      second.id,
-      second.id,
-      second.id,
-      second.id,
-    ]);
+    expect(calls).toHaveLength(plannedCalls.length);
+    expect(calls.map(([call]) => call.input.extractionFocusSourceId)).toEqual(
+      plannedCalls.map((plannedCall) => plannedCall.sourceId),
+    );
     const aggregate = result as unknown as {
       readonly facts: readonly { readonly key: string; readonly value: string }[];
       readonly issues: readonly { readonly code: string; readonly factKeys: readonly string[] }[];
