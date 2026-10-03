@@ -223,7 +223,9 @@ source content, or paths.
 
 DeepInfra timeout guidance distinguishes the initial response, an idle stream,
 and the total deadline; missing or conflicting phase diagnostics use generic
-timeout guidance. Transient errors name only HTTP 500, 502, 503, or 504; other
+timeout guidance. Idle and total timeout guidance may also state how many answer
+and reasoning characters the stream returned before stopping; the counts never
+include the text itself. Transient errors name only HTTP 500, 502, 503, or 504; other
 statuses use generic provider guidance. Older saved generic failures cannot be
 reconstructed because their timeout phase and status were not retained.
 

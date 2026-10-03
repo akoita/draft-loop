@@ -177,6 +177,7 @@ describe("DeepInfra GLM streaming response", () => {
 
     await vi.advanceTimersByTimeAsync(120_000);
     await rejection;
+    await expect(pending).rejects.toMatchObject({ diagnosticCounts: [] });
     expect(fixture.create).toHaveBeenCalledTimes(1);
     expect(fixture.create.mock.calls[0]?.[1]?.signal?.aborted).toBe(true);
     expect(vi.getTimerCount()).toBe(0);
@@ -227,6 +228,85 @@ describe("DeepInfra GLM streaming response", () => {
     await vi.advanceTimersByTimeAsync(600_000);
     await rejection;
     expect(fixture.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("counts reasoning deltas without storing them in the parsed output", async () => {
+    const fixture = harness(
+      iterable([
+        chunk({ delta: { role: "assistant", reasoning_content: "think" } }),
+        chunk({ content: '{"answer":', delta: { reasoning: "more" } }),
+        chunk({ content: '"ok"}', delta: { reasoning_content: 42, reasoning: null } }),
+        chunk({
+          finish: "stop",
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+      ]),
+    );
+
+    const result = await fixture.adapter.execute(request());
+
+    expect(result.output).toEqual({ answer: "ok" });
+    expect(result.usage).toMatchObject({ inputTokens: 12, outputTokens: 3, totalTokens: 15 });
+    expect(JSON.stringify(result)).not.toContain("think");
+  });
+
+  it("reports answer and reasoning volume when the stream goes idle", async () => {
+    vi.useFakeTimers();
+    let nextCalls = 0;
+    const never = new Promise<IteratorResult<ChatCompletionChunk>>(() => undefined);
+    const chunks = [
+      chunk({ content: '{"ans', delta: { reasoning_content: "abc" } }),
+      chunk({ delta: { reasoning: "de" } }),
+    ];
+    const iterator = {
+      next: vi.fn(() => {
+        const value = chunks[nextCalls++];
+        return value === undefined ? never : Promise.resolve({ done: false as const, value });
+      }),
+      return: vi.fn(() => never),
+    };
+    const fixture = harness({ [Symbol.asyncIterator]: () => iterator });
+    const pending = fixture.adapter.execute(request());
+    const rejection = expect(pending).rejects.toMatchObject({
+      code: "timeout",
+      retryable: true,
+      diagnostics: [{ code: "stream_timeout_idle", path: "response.stream.idle" }],
+      diagnosticCounts: [
+        { code: "stream_answer_characters", count: 5 },
+        { code: "stream_reasoning_characters", count: 5 },
+      ],
+    });
+
+    await vi.advanceTimersByTimeAsync(120_000);
+    await rejection;
+  });
+
+  it("reports answer and reasoning volume when the total deadline is reached", async () => {
+    vi.useFakeTimers();
+    const stream = {
+      async *[Symbol.asyncIterator]() {
+        for (let index = 0; index < 7; index += 1) {
+          await new Promise<void>((resolve) => setTimeout(resolve, 100_000));
+          yield chunk({
+            content: index === 0 ? "{" : "xy",
+            delta: { reasoning_content: "r" },
+          });
+        }
+      },
+    };
+    const fixture = harness(stream);
+    const pending = fixture.adapter.execute(request());
+    const rejection = expect(pending).rejects.toMatchObject({
+      code: "timeout",
+      diagnostics: [{ code: "stream_timeout_total", path: "response.stream.total" }],
+      diagnosticCounts: [
+        { code: "stream_answer_characters", count: 1 + 2 * 4 },
+        { code: "stream_reasoning_characters", count: 5 },
+      ],
+    });
+
+    await vi.advanceTimersByTimeAsync(600_000);
+    await rejection;
   });
 
   it("aborts a pending next call promptly when the request is cancelled", async () => {
