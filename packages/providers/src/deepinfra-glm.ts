@@ -9,6 +9,7 @@ import type {
   ChatCompletionCreateParamsStreaming,
 } from "openai/resources/chat/completions";
 import { z } from "zod";
+import { summarizeDeepInfraOutputIssues } from "./deepinfra-output-diagnostics.js";
 import {
   assertDataExposureAllowed,
   executeWithRetry,
@@ -303,10 +304,16 @@ function parseOutput(text: unknown, schema: ReturnType<typeof z.fromJSONSchema>)
   }
   const result = schema.safeParse(parsed);
   if (!result.success) {
-    throw failResponse(
+    throw new ProviderAdapterError(
+      deepInfraGLMProvider,
+      "invalid-response",
       "DeepInfra output did not match the requested schema.",
-      "output_schema_mismatch",
-      "response-schema-validation",
+      {
+        retryable: false,
+        failureStage: "response-schema-validation",
+        diagnostics: [{ code: "output_schema_mismatch", path: "response" }],
+        diagnosticCounts: summarizeDeepInfraOutputIssues(result.error.issues),
+      },
     );
   }
   return parsed as JsonValue;

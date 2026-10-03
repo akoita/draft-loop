@@ -198,7 +198,7 @@ describe("canonical candidate profile extraction source preparation", () => {
       expect(result.facts).toEqual([]);
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.message).toBe(
-        "Extracted claims could not be grounded in the selected sources. No facts were saved; review the source material and try again.",
+        "Claims could not be grounded. No facts were saved. Evidence failures: unknown cited sources: 1. Check model support before retrying.",
       );
       expect(result.issues[0]?.sourceRefs).toHaveLength(2);
     }

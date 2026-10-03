@@ -6,6 +6,7 @@ import {
   processCanonicalCandidateProfileExtraction,
 } from "./candidate-profile-extraction.js";
 import { candidateProfileExtractionFailureMessage } from "./candidate-profile-extraction-errors.js";
+import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
 
 const billingMessage =
   "Anthropic API credits or the configured spending limit prevented this request. Check billing or the spending limit, then retry after resolving it.";
@@ -111,6 +112,132 @@ describe("candidate profile extraction failure guidance", () => {
       "The provider returned an invalid extraction response. Retry or check the configured model.",
     );
     expect(guidance).not.toContain("private");
+  });
+
+  it("summarizes only bounded allowlisted DeepInfra schema counts", () => {
+    const error = new ProviderAdapterError(
+      "deepinfra",
+      "invalid-response",
+      "private output and provider text",
+      {
+        failureStage: "response-schema-validation",
+        diagnostics: [{ code: "output_schema_mismatch", path: "private/candidate/path" }],
+        diagnosticCounts: [
+          { code: "profile_output_invalid_type", count: 2 },
+          { code: "profile_output_too_big", count: Number.MAX_SAFE_INTEGER },
+          { code: "profile_output_too_small", count: 4 },
+          { code: "profile_output_unrecognized_keys", count: Number.MAX_SAFE_INTEGER },
+          { code: "private_code_with_value", count: 7 },
+          { code: "profile_output_invalid_value", count: -1 },
+          { code: "profile_output_invalid_format", count: Number.NaN },
+        ],
+      },
+    );
+
+    const message = candidateProfileExtractionFailureMessage(error, "provider");
+
+    expect(message).toContain("Renaming will not help");
+    expect(message).toContain("invalid field types: 2");
+    expect(message).toContain("fields over the size limit: 999+");
+    expect(message).toContain("999+ other issues");
+    expect(message.length).toBeLessThanOrEqual(240);
+    expect(message).not.toMatch(/private|candidate|provider text|\/|\\/u);
+  });
+
+  it("shows recognized grounding counts only at the grounding stage", () => {
+    const error = new CandidateProfileGroundingError([
+      { code: "unknown_source", count: Number.MAX_SAFE_INTEGER },
+      { code: "quote_not_in_source", count: 2 },
+      { code: "value_not_in_quote", count: Number.MAX_SAFE_INTEGER },
+    ]);
+    const message = candidateProfileExtractionFailureMessage(error, "grounding");
+
+    expect(message).toContain("could not be grounded");
+    expect(message).toContain("No facts were saved");
+    expect(message).toContain("unknown cited sources: 999+");
+    expect(message).toContain("quotes absent from cited source text: 2");
+    expect(message).toContain("values absent from evidence quotes: 999+");
+    expect(message.length).toBeLessThanOrEqual(240);
+    expect(message).not.toMatch(/\/|\\/u);
+    expect(candidateProfileExtractionFailureMessage(error, "response-schema")).toBe(
+      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    );
+  });
+
+  it("persists schema counts when the extraction port rejects at the provider stage", async () => {
+    const result = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: async () => {
+          throw new ProviderAdapterError("deepinfra", "invalid-response", "private output", {
+            failureStage: "response-schema-validation",
+            diagnostics: [{ code: "output_schema_mismatch", path: "private/path" }],
+            diagnosticCounts: [{ code: "profile_output_invalid_value", count: 2 }],
+          });
+        },
+      },
+      { operationId: "schema-guidance-test", sources: [source()], allowProviderData: true },
+    );
+    expect(result.facts).toEqual([]);
+    expect(result.issues).toHaveLength(1);
+    expect(result.issues[0]?.message).toContain("invalid allowed values: 2");
+    expect(result.issues[0]?.message).toContain("No facts were saved");
+    expect(JSON.stringify(result)).not.toContain("private");
+  });
+
+  it("keeps generic schema guidance when DeepInfra diagnostic metadata is misleading", () => {
+    const error = new ProviderAdapterError("openai", "invalid-response", "private", {
+      diagnostics: [{ code: "output_schema_mismatch", path: "private/path" }],
+      diagnosticCounts: [{ code: "profile_output_invalid_type", count: 3 }],
+    });
+
+    expect(candidateProfileExtractionFailureMessage(error, "response-schema")).toBe(
+      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    );
+    expect(
+      candidateProfileExtractionFailureMessage(
+        new ProviderAdapterError("deepinfra", "invalid-response", "private", {
+          failureStage: "response-schema-validation",
+          diagnostics: [{ code: "not_output_schema_mismatch", path: "private/path" }],
+          diagnosticCounts: [{ code: "profile_output_invalid_type", count: 3 }],
+        }),
+        "response-schema",
+      ),
+    ).toBe(
+      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    );
+    expect(
+      candidateProfileExtractionFailureMessage(
+        new ProviderAdapterError("deepinfra", "invalid-response", "private", {
+          failureStage: "transport-parsing",
+          diagnostics: [{ code: "output_schema_mismatch", path: "private/path" }],
+          diagnosticCounts: [{ code: "profile_output_invalid_type", count: 3 }],
+        }),
+        "response-schema",
+      ),
+    ).toBe(
+      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    );
+    expect(
+      candidateProfileExtractionFailureMessage(
+        new ProviderAdapterError("deepinfra", "invalid-response", "private", {
+          diagnostics: [{ code: "output_schema_mismatch", path: "response" }],
+          diagnosticCounts: [{ code: "unrecognized_private_count", count: 9 }],
+        }),
+        "response-schema",
+      ),
+    ).toBe(
+      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    );
+  });
+
+  it("preserves generic grounding guidance when no recognized counts are available", () => {
+    const message = candidateProfileExtractionFailureMessage(
+      new CandidateProfileGroundingError([]),
+      "grounding",
+    );
+    expect(message).toBe(
+      "Extracted claims could not be grounded in the selected sources. No facts were saved; review the source material and try again.",
+    );
   });
 
   it("does not apply DeepInfra guidance to other providers", () => {

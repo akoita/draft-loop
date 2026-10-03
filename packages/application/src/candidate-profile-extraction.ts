@@ -25,6 +25,7 @@ import {
   candidateProfileExtractionFailureMessage,
 } from "./candidate-profile-extraction-errors.js";
 import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
+import { assertCanonicalProfileEvidenceGrounded } from "./candidate-profile-grounding-diagnostics.js";
 import { repairCanonicalProfileEvidenceQuotes } from "./canonical-profile-evidence-quotes.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
@@ -200,17 +201,6 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
   };
 }
 
-function quoteSupportsValue(quote: string, sourceText: string, value: string): boolean {
-  const normalizedQuote = normalizedSemantic(quote);
-  const normalizedValue = normalizedSemantic(value);
-  return (
-    normalizedQuote.length > 0 &&
-    normalizedValue.length > 0 &&
-    normalizedSemantic(sourceText).includes(normalizedQuote) &&
-    normalizedQuote.includes(normalizedValue)
-  );
-}
-
 function factId(
   proposal: CanonicalCandidateProfileExtractionProposal["facts"][number],
   subjectId: string | undefined,
@@ -371,21 +361,12 @@ function mapProposal(
   >,
   sourceTexts: ReadonlyMap<string, string>,
 ): CanonicalCandidateProfileExtractionResult {
+  assertCanonicalProfileEvidenceGrounded(proposal, referencesByRepresentativeId, sourceTexts);
   const factByKey = new Map<string, CanonicalCandidateProfileFact>();
   const facts = proposal.facts.map((candidate) => {
     const provenance = uniqueSorted(
       candidate.evidence.flatMap((evidence) => {
-        const references = referencesByRepresentativeId.get(evidence.sourceId);
-        const sourceText = sourceTexts.get(evidence.sourceId);
-        if (references === undefined)
-          throw new Error("The extraction proposal cites an unavailable source.");
-        if (
-          sourceText === undefined ||
-          !quoteSupportsValue(evidence.quote, sourceText, candidate.value)
-        ) {
-          throw new Error("The extraction proposal evidence does not support its proposed value.");
-        }
-        return references;
+        return referencesByRepresentativeId.get(evidence.sourceId) ?? [];
       }),
       referenceKey,
     );
@@ -416,10 +397,7 @@ function mapProposal(
       return fact;
     });
     const citedReferences = candidate.sourceIds.flatMap((sourceId) => {
-      const references = referencesByRepresentativeId.get(sourceId);
-      if (references === undefined)
-        throw new Error("The extraction issue cites an unavailable source.");
-      return references;
+      return referencesByRepresentativeId.get(sourceId) ?? [];
     });
     return buildIssue(
       candidate.code,

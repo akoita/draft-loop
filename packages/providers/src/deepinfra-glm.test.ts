@@ -440,6 +440,50 @@ describe("DeepInfra GLM-5.3-Flash adapter", () => {
     });
   });
 
+  it("reports only fixed top-level schema reason counts for invalid output", async () => {
+    const outputSchema = {
+      type: "object",
+      properties: {
+        candidateName: { type: "string" },
+        disposition: { type: "string", enum: ["approved"] },
+      },
+      required: ["candidateName", "disposition"],
+      additionalProperties: false,
+    } as const;
+    const fixture = harness({
+      response: completion({
+        content:
+          '{"candidateName":7,"disposition":"private-enum-value","arbitrary-private-key":"candidate text"}',
+      }),
+    });
+    let caught: unknown;
+    try {
+      await fixture.adapter.execute(
+        request(selection(), { outputSchema: outputSchema as unknown as JsonObject }),
+      );
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toMatchObject({
+      code: "invalid-response",
+      failureStage: "response-schema-validation",
+      diagnostics: [{ code: "output_schema_mismatch", path: "response" }],
+      diagnosticCounts: expect.arrayContaining([
+        { code: "profile_output_invalid_type", count: 1 },
+        { code: "profile_output_invalid_value", count: 1 },
+        { code: "profile_output_unrecognized_keys", count: 1 },
+      ]),
+    });
+    const errorText = JSON.stringify(caught);
+    expect(errorText).not.toContain("private-enum-value");
+    expect(errorText).not.toContain("arbitrary-private-key");
+    expect(errorText).not.toContain("candidate text");
+    expect(errorText).not.toContain("candidateName");
+    expect(errorText).not.toContain("disposition");
+    expect(fixture.create).toHaveBeenCalledTimes(1);
+  });
+
   it("maps cache and reasoning details without double counting and keeps unknown cost unknown", async () => {
     const fixture = harness();
     const result = await fixture.adapter.execute(request());
