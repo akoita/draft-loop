@@ -36,6 +36,7 @@ function renderPicker(
   support: ModelProfileSupportState,
   applied: ModelProfileReferences | null = null,
   disabled = false,
+  withCancel = false,
 ): string {
   return renderToStaticMarkup(
     <ModelProfilePicker
@@ -45,7 +46,7 @@ function renderPicker(
       support={support}
       disabled={disabled}
       onApply={async () => true}
-      onUseWorkspaceModels={() => undefined}
+      {...(withCancel ? { onCancel: () => undefined } : { onUseWorkspaceModels: () => undefined })}
       onRetrySupport={() => undefined}
       isContextCurrent={() => true}
     />,
@@ -99,5 +100,11 @@ describe("desktop model profile picker rendering", () => {
     expect(html).toContain("Profile route support is unavailable");
     expect(html).toContain("Apply for future runs");
     expect(html).toContain('disabled=""');
+  });
+
+  it("offers editor cancellation without a second workspace-model action", () => {
+    const html = renderPicker(supportState(true), null, false, true);
+    expect(html).toContain(">Cancel</button>");
+    expect(html).not.toContain("Use workspace models");
   });
 });
