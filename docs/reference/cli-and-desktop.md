@@ -226,6 +226,9 @@ when it names a fact the model did not return; only those dangling omission
 references are removed, followed by strict validation and evidence grounding.
 Dangling conflict or duplicate references, omissions without source references,
 unknown sources, and unsupported quotes still fail without saving facts.
+Repeated model fact keys are repaired only when no issue refers to that key;
+later facts receive collision-free local identities, with all evidence still
+grounded. Issues that reference an ambiguous duplicate key remain failures.
 
 An explicit Anthropic credit-balance or enforced spending-limit response shows
 billing guidance; the app does not estimate charges from failed attempts.
