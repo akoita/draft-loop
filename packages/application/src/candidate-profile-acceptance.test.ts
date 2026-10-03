@@ -365,7 +365,7 @@ describe("canonical candidate profile representative-career acceptance", () => {
       expect(extractor.requests).toHaveLength(1);
       const request = extractor.requests[0];
       if (request === undefined) throw new Error("deterministic fixture request missing");
-      expect(Object.keys(request)).toEqual(["operationId", "sources"]);
+      expect(Object.keys(request).sort()).toEqual(["groundProposal", "operationId", "sources"]);
       expect(request.sources).toHaveLength(1);
       const providerSource = request.sources[0];
       if (providerSource === undefined)

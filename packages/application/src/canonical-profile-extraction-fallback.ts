@@ -10,11 +10,19 @@ import {
 } from "@draft-loop/schemas";
 
 import type { CanonicalCandidateProfileExtractionRequest } from "./candidate-profile-extraction.js";
+import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
 import {
   CandidateProfileProposalValidationError,
   parseCanonicalCandidateProfileExtractionProposal,
 } from "./candidate-profile-proposal-validation.js";
-import { planCanonicalProfileExtractionCalls } from "./canonical-profile-extraction-plan.js";
+import {
+  buildBoundedCallRequest,
+  groundingCorrectionInstructions,
+} from "./canonical-profile-extraction-bounded-calls.js";
+import {
+  type CanonicalProfileExtractionPlannedCall,
+  planCanonicalProfileExtractionCalls,
+} from "./canonical-profile-extraction-plan.js";
 import {
   type CanonicalProfileExtractionTextWindow,
   canonicalProfileExtractionSectionFocus,
@@ -26,15 +34,6 @@ const maximumFocusedSourceCount = 4;
 const outputName = "canonical_candidate_profile_extraction";
 const focusInstructions =
   "This is a bounded focused extraction call. Extract all supported facts from the source whose ID is input.extractionFocusSourceId. Keep every supplied source available as conflict context; include facts from another source only when they are grounded counterfacts needed for a conflict or duplicate issue that includes a fact from the focused source. Use concise exact contiguous evidence quotes containing the entire fact value and necessary factual context, rather than repeating unrelated surrounding paragraphs. Preserve the same evidence, unique-key, and schema rules. Do not invent counterfacts.";
-const groundingCorrectionInstructions = [
-  "This is one bounded corrective extraction request after local evidence-grounding diagnostics.",
-  "Return a complete replacement proposal using all supplied source records; no prior proposal is included, so do not refer to one.",
-  "Use input.groundingRecovery counts only to check likely error types; the counts contain no failed values, quotes, or source locations.",
-  "Re-extract every source-supported fact and preserve grounded conflicting claims as separate facts and issue relationships; do not drop all affected facts as a shortcut.",
-  "Copy each fact value literally from an exact contiguous evidence quote, preserving Markdown punctuation, hyphens, dashes, and date wording.",
-  "For example, the source phrase 'from Jan 2020 to Jun 2024' does not support the synthesized value '2020–2024'; use literal wording from the source.",
-  "Split combined claims into separate facts with literal values when the source does not contain the combined wording as one literal value.",
-].join(" ");
 
 export interface CanonicalProfileExtractionExecutor {
   readonly execute: (request: ModelRequest<JsonObject>) => Promise<ModelResponse<JsonObject>>;
@@ -215,6 +214,50 @@ function aggregateBatches(
   }
 }
 
+async function executePlannedBatch(
+  executor: CanonicalProfileExtractionExecutor,
+  request: CanonicalCandidateProfileExtractionRequest,
+  controls: CanonicalProfileExtractionControls,
+  plannedCall: CanonicalProfileExtractionPlannedCall,
+  groundingRecovery?: CanonicalCandidateProfileExtractionRequest["groundingRecovery"],
+): Promise<CanonicalCandidateProfileExtractionProposal> {
+  throwIfAborted(request.signal);
+  let response: ModelResponse<JsonObject>;
+  try {
+    response = await executeWithCancellation(
+      executor,
+      buildBoundedCallRequest(request, controls, plannedCall, groundingRecovery),
+      request.signal,
+    );
+  } catch (error) {
+    throwIfAborted(request.signal);
+    if (isOutputLimitFailure(error)) throw outputLimitFailure(controls.model.company);
+    throw error;
+  }
+  throwIfAborted(request.signal);
+  const batch = parseBatch(response.output, controls.model.company);
+  return request.groundProposal === undefined ? batch : request.groundProposal(batch);
+}
+
+/** Run one planned call, with at most one replacement for that same call after a grounding failure. */
+async function executePlannedCall(
+  executor: CanonicalProfileExtractionExecutor,
+  request: CanonicalCandidateProfileExtractionRequest,
+  controls: CanonicalProfileExtractionControls,
+  plannedCall: CanonicalProfileExtractionPlannedCall,
+): Promise<CanonicalCandidateProfileExtractionProposal> {
+  try {
+    return await executePlannedBatch(executor, request, controls, plannedCall);
+  } catch (error) {
+    throwIfAborted(request.signal);
+    if (!(error instanceof CandidateProfileGroundingError)) throw error;
+    const groundingRecovery = Object.freeze(
+      error.diagnosticCounts.map(({ code, count }) => Object.freeze({ code, count })),
+    );
+    return executePlannedBatch(executor, request, controls, plannedCall, groundingRecovery);
+  }
+}
+
 /** Retry only explicit output-token truncation with bounded, source-focused batches. */
 export async function executeCanonicalProfileExtractionWithFallback(
   executor: CanonicalProfileExtractionExecutor,
@@ -236,21 +279,7 @@ export async function executeCanonicalProfileExtractionWithFallback(
   if (plannedCalls !== null) {
     const batches: CanonicalCandidateProfileExtractionProposal[] = [];
     for (const plannedCall of plannedCalls) {
-      throwIfAborted(request.signal);
-      let response: ModelResponse<JsonObject>;
-      try {
-        response = await executeWithCancellation(
-          executor,
-          buildRequest(request, controls, plannedCall.sourceId, plannedCall.window),
-          request.signal,
-        );
-      } catch (error) {
-        throwIfAborted(request.signal);
-        if (isOutputLimitFailure(error)) throw outputLimitFailure(controls.model.company);
-        throw error;
-      }
-      throwIfAborted(request.signal);
-      batches.push(parseBatch(response.output, controls.model.company));
+      batches.push(await executePlannedCall(executor, request, controls, plannedCall));
     }
 
     const aggregate = aggregateBatches(batches, controls.model.company);

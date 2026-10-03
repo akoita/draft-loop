@@ -14,6 +14,7 @@ import {
 } from "./candidate-profile-grounding-diagnostics.js";
 import { parseCanonicalCandidateProfileExtractionProposal } from "./candidate-profile-proposal-validation.js";
 import { repairCanonicalProfileEvidenceQuotes } from "./canonical-profile-evidence-quotes.js";
+import { planCanonicalProfileExtractionCalls } from "./canonical-profile-extraction-plan.js";
 
 function throwIfAborted(signal: AbortSignal | undefined): void {
   if (signal?.aborted === true) signal.throwIfAborted();
@@ -26,10 +27,14 @@ function recoveryRequest(
   const groundingRecovery: readonly CandidateProfileGroundingDiagnosticCount[] = Object.freeze(
     error.diagnosticCounts.map(({ code, count }) => Object.freeze({ code, count })),
   );
-  return Object.freeze({ ...request, groundingRecovery });
+  const { groundProposal: _groundProposal, ...replacement } = request;
+  return Object.freeze({ ...replacement, groundingRecovery });
 }
 
-/** Extract, strictly validate, and make one bounded full replacement after grounding failure. */
+/**
+ * Extract and strictly validate. Planned (large) extractions ground and replace each bounded
+ * call locally and never make a full-corpus replacement; other requests make one full replacement.
+ */
 export async function extractGroundedCanonicalCandidateProfileProposal(
   port: CanonicalCandidateProfileExtractionPort,
   request: CanonicalCandidateProfileExtractionRequest,
@@ -45,7 +50,13 @@ export async function extractGroundedCanonicalCandidateProfileProposal(
   ): Promise<CanonicalCandidateProfileExtractionProposal> => {
     throwIfAborted(attemptRequest.signal);
     setStage("provider");
-    const output = await port.extract(attemptRequest);
+    let output: unknown;
+    try {
+      output = await port.extract(attemptRequest);
+    } catch (error) {
+      if (error instanceof CandidateProfileGroundingError) setStage("grounding");
+      throw error;
+    }
     throwIfAborted(attemptRequest.signal);
     setStage("response-schema");
     const proposal = repairCanonicalProfileEvidenceQuotes(
@@ -55,7 +66,15 @@ export async function extractGroundedCanonicalCandidateProfileProposal(
     return proposal;
   };
 
-  const initialProposal = await extractProposal(request);
+  const groundProposal = (
+    proposal: CanonicalCandidateProfileExtractionProposal,
+  ): CanonicalCandidateProfileExtractionProposal => {
+    const repaired = repairCanonicalProfileEvidenceQuotes(proposal, sourceTexts);
+    assertCanonicalProfileEvidenceGrounded(repaired, referencesByRepresentativeId, sourceTexts);
+    return repaired;
+  };
+  const planned = planCanonicalProfileExtractionCalls(request.sources) !== null;
+  const initialProposal = await extractProposal(Object.freeze({ ...request, groundProposal }));
   setStage("grounding");
   try {
     assertCanonicalProfileEvidenceGrounded(
@@ -66,7 +85,7 @@ export async function extractGroundedCanonicalCandidateProfileProposal(
     return initialProposal;
   } catch (error) {
     throwIfAborted(request.signal);
-    if (!(error instanceof CandidateProfileGroundingError)) throw error;
+    if (!(error instanceof CandidateProfileGroundingError) || planned) throw error;
     const replacementRequest = recoveryRequest(request, error);
     const replacementProposal = await extractProposal(replacementRequest);
     setStage("grounding");
