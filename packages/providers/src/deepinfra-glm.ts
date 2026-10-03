@@ -14,6 +14,7 @@ import {
   type DeepInfraStreamRejectionReasonCode,
   deepInfraStreamRejectionCount,
 } from "./deepinfra-stream-diagnostics.js";
+import { isCompatibleDeepInfraStreamTimestamp } from "./deepinfra-stream-metadata.js";
 import {
   assertDataExposureAllowed,
   executeWithRetry,
@@ -514,7 +515,6 @@ async function collectStreamCompletion(
   let completed = false;
   let id: string | undefined;
   let model: string | undefined;
-  let created: number | undefined;
   let content = "";
   let contentBytes = 0;
   let refusal: string | null = null;
@@ -561,14 +561,9 @@ async function collectStreamCompletion(
         model = chunk.model;
       }
       if (Object.hasOwn(chunk, "created")) {
-        if (
-          typeof chunk.created !== "number" ||
-          !Number.isSafeInteger(chunk.created) ||
-          (created !== undefined && created !== chunk.created)
-        ) {
+        if (!isCompatibleDeepInfraStreamTimestamp(chunk.created)) {
           throw malformedStream("stream_timestamp_metadata");
         }
-        created = chunk.created;
       }
 
       if (Object.hasOwn(chunk, "usage") && chunk.usage !== undefined) {

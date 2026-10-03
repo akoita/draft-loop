@@ -357,6 +357,32 @@ describe("DeepInfra GLM streaming response", () => {
     expect(result.usage).toMatchObject({ inputTokens: 12, outputTokens: 3, totalTokens: 15 });
   });
 
+  it("accepts varying fractional timestamps around a split strict JSON response", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          created: 41.5,
+          choices: [{ delta: { content: '{"answer":' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          model: deepInfraGLMModelId,
+          created: 42.25,
+          choices: [{ index: 0, delta: { content: '"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+          usage: { prompt_tokens: 12, completion_tokens: 3, total_tokens: 15 },
+        }),
+      ]),
+    );
+
+    const result = await fixture.adapter.execute(request());
+
+    expect(result.output).toEqual({ answer: "ok" });
+    expect(result.usage).toMatchObject({ inputTokens: 12, outputTokens: 3, totalTokens: 15 });
+    expect(result).not.toHaveProperty("created");
+  });
+
   it("uses the explicit request model when every chunk omits model metadata", async () => {
     const fixture = harness(
       iterable([
@@ -384,7 +410,14 @@ describe("DeepInfra GLM streaming response", () => {
     ["null model", { model: null }, "stream_model_metadata"],
     ["wrong model", { model: "other-model" }, "stream_model_metadata"],
     ["null timestamp", { created: null }, "stream_timestamp_metadata"],
+    ["undefined timestamp", { created: undefined }, "stream_timestamp_metadata"],
     ["invalid timestamp", { created: "not-a-time" }, "stream_timestamp_metadata"],
+    ["object timestamp", { created: {} }, "stream_timestamp_metadata"],
+    ["array timestamp", { created: [] }, "stream_timestamp_metadata"],
+    ["NaN timestamp", { created: Number.NaN }, "stream_timestamp_metadata"],
+    ["infinite timestamp", { created: Number.POSITIVE_INFINITY }, "stream_timestamp_metadata"],
+    ["negative timestamp", { created: -1 }, "stream_timestamp_metadata"],
+    ["oversized timestamp", { created: Number.MAX_SAFE_INTEGER + 1 }, "stream_timestamp_metadata"],
     [
       "null index",
       { choices: [{ index: null, delta: {}, finish_reason: "stop" }] },
@@ -410,24 +443,65 @@ describe("DeepInfra GLM streaming response", () => {
     expect(fixture.create).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects inconsistent supplied creation times", async () => {
-    const fixture = harness(
+  it("keeps completion identity and model checks with varying valid timestamps", async () => {
+    const inconsistentId = harness(
       iterable([
         documentedChunk({
-          created: 41,
+          id: "completion-a",
+          created: 41.5,
           choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
         }),
         documentedChunk({
-          created: 42,
+          id: "completion-b",
+          created: 42.25,
           choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        }),
+      ]),
+    );
+    await expect(inconsistentId.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream" }],
+      diagnosticCounts: [{ code: "stream_chunk_identity", count: 1 }],
+    });
+
+    const inconsistentModel = harness(
+      iterable([
+        documentedChunk({
+          model: deepInfraGLMModelId,
+          created: 41.5,
+          choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          model: "other-model",
+          created: 42.25,
+          choices: [{ index: 0, delta: {}, finish_reason: "stop" }],
+        }),
+      ]),
+    );
+    await expect(inconsistentModel.adapter.execute(request())).rejects.toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream" }],
+      diagnosticCounts: [{ code: "stream_model_metadata", count: 1 }],
+    });
+  });
+
+  it("still rejects invalid structured JSON with varying valid timestamps", async () => {
+    const fixture = harness(
+      iterable([
+        documentedChunk({
+          created: 41.5,
+          choices: [{ delta: { content: '{"answer":' }, finish_reason: null }],
+        }),
+        documentedChunk({
+          created: 42.25,
+          choices: [{ index: 0, delta: { content: '"unterminated"' }, finish_reason: "stop" }],
         }),
       ]),
     );
 
     await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
-      diagnostics: [{ code: "malformed_stream" }],
-      diagnosticCounts: [{ code: "stream_timestamp_metadata", count: 1 }],
+      diagnostics: [{ code: "invalid_json" }],
     });
     expect(fixture.create).toHaveBeenCalledTimes(1);
   });
