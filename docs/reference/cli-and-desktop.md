@@ -107,6 +107,12 @@ Use **Close workspace** to return to the create/open screen. Saved workspace
 files, run history, and profile versions remain on this device; unsaved setup or
 profile form edits are discarded. Closing does not rewrite persisted run state.
 
+Creating a workspace asks only for its name and maximum review rounds. After a
+real workspace is created, choose **Presets** or **Custom** in the model editor.
+Opening an existing workspace keeps its current model pair; canceling the editor
+does not change that pair. Apply a preset or save custom settings to replace the
+pair used for future runs.
+
 Stop a running review with its existing **Stop review** control before closing.
 The desktop keeps the workspace open while a review action, knowledge update, or
 candidate-profile operation is pending and says when to wait for it to finish.
@@ -304,18 +310,19 @@ derivation approval, immutable version selection, fact-value and issue-status
 editing, review, and exact reviewed-version selection for the next run.
 
 When the native host advertises `workspace.configure-models`, **Change models**
-opens the same discovery and independence checks used during workspace setup.
-Saving replaces the author and critic pair for future runs without changing the
-workspace name, round limit, or existing run records. A changed provider
+opens one editor with **Presets** and **Custom** choices. Custom settings use
+the same discovery and independence checks as before. Saving replaces the
+author and critic pair for future runs without changing the workspace name,
+round limit, or existing run records. A changed provider
 transmission identity requires fresh acknowledgement before a later run starts
 or resumes; saving settings never sends candidate material to a provider.
 
 The native host can report which registered exact profiles the active
 workspace's configured authentication routes support. This is local metadata
-and makes no credential or provider calls. In collecting or stopped workspaces,
-the desktop offers presets and role-specific exact profile choices when both
-model-configuration and route-support capabilities are available. Choices stay
-a draft until **Apply for future runs** saves their provider/model destinations.
+and makes no credential or provider calls. The editor's **Presets** view offers
+presets and role-specific exact profile choices when both model-configuration
+and route-support capabilities are available. Choices stay a draft until
+**Apply for future runs** saves their provider/model destinations.
 The renderer keeps the exact references for new starts; existing run records
 remain unchanged. Unsupported or unavailable routes block profile-backed starts,
 and provider-transmission acknowledgement is still required. OpenAI Codex
@@ -332,9 +339,9 @@ premiums, and unsupported long context. User-session routes show public rates
 only and do not estimate subscription quota or charges. The reusable
 application boundary is `@draft-loop/application/model-profile-budget`.
 
-**Use workspace models** keeps the saved provider/model destinations and uses
-legacy controls for the next start. The next-run profile choice belongs to the
-current window; manual model saves and workspace changes clear it.
+Cancel leaves the saved provider/model destinations and current next-run
+selection unchanged. The next-run profile choice belongs to the current window;
+manual model saves and workspace changes clear it.
 
 When provider model discovery fails or returns no IDs, the setup and **Change
 models** forms offer exact IDs from the active application profile catalog.
