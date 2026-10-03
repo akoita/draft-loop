@@ -289,19 +289,22 @@ or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 
 For more than 65,536 UTF-16 text units across one to four unique prepared
-sources, extraction proactively makes one focused call for each source up to
-16,384 units and four contiguous-window calls for each larger source. This plan
-uses at most 16 calls.
+sources, extraction proactively makes one focused call for sources up to 8,192
+UTF-16 units and divides each larger source into contiguous windows of at most
+8,192 units. The plan uses at most 64 calls and is declined if it would exceed
+that cap. Every focused call retains the full selected source set as context;
+only the focused text window is bounded.
 
 For smaller inputs, an explicit output-token truncation
 can trigger one focused call per source for two to four sources; if a focused
 call also truncates, that source can be retried in four contiguous text windows.
 This fallback uses at most 21 application calls including the original request.
 
-Every focused call retains the full selected source set as context and the same
-per-call token cap. Either route may be followed by one full-context grounding
-replacement request. Results are aggregated after every call succeeds, then
-pass the existing schema and source-grounding checks before any facts are saved.
+Every request keeps the same per-call token cap. The existing grounding
+correction remains one full-corpus replacement request. These bounds make no
+latency or coverage guarantee. Results are aggregated after every call succeeds,
+then pass the existing schema and source-grounding checks before any facts are
+saved.
 
 Proposal validation removes redundant entries only when failures consist solely
 of repeated evidence tuples or issue fact/source references, then reruns the full

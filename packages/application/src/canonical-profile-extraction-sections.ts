@@ -11,7 +11,7 @@ export interface CanonicalProfileExtractionSectionFocus {
 }
 
 export const canonicalProfileExtractionSectionFocusInstructions =
-  "This is one of four bounded windows from input.extractionFocusSourceId. Extract all supported facts whose evidence is in input.extractionFocusWindow.text. Use other supplied sources only as needed for factual context. Include an outside-window counterfact only when it is grounded in a supplied source and needed for a genuine conflict or duplicate that includes at least one fact grounded in the focused window; omit unrelated outside-window facts. Evidence must remain an exact contiguous quote from the unchanged original source, so a quote may extend across a window boundary; never clip evidence to the artificial window. Do not invent facts or counterfacts. Preserve all existing evidence, key, and schema rules.";
+  "This is one bounded window from input.extractionFocusSourceId. Extract all supported facts whose evidence is in input.extractionFocusWindow.text. Use other supplied sources only as needed for factual context. Include an outside-window counterfact only when it is grounded in a supplied source and needed for a genuine conflict or duplicate that includes at least one fact grounded in the focused window; omit unrelated outside-window facts. Evidence must remain an exact contiguous quote from the unchanged original source, so a quote may extend across a window boundary; never clip evidence to the artificial window. Do not invent facts or counterfacts. Preserve all existing evidence, key, and schema rules.";
 
 /**
  * Splits text into four contiguous, non-empty windows. Boundaries use UTF-16
