@@ -42,6 +42,10 @@ import {
   type ReviewAction,
 } from "./model.js";
 import { createNativeStartupUnavailablePort, isElectronRendererRuntime } from "./native-startup.js";
+import {
+  parseRecentWorkspacesListResult,
+  type RecentWorkspaceSummary,
+} from "./recent-workspaces.js";
 
 export type { NativeBridge } from "./bridge.js";
 
@@ -166,6 +170,9 @@ export type DesktopSetupPort = Omit<DesktopReviewPort, "createWorkspace"> &
       provider: "anthropic" | "openai",
       mode: ProviderAuthMode,
     ) => Promise<ProviderAuthModeResult>;
+    readonly listRecentWorkspaces?: () => Promise<readonly RecentWorkspaceSummary[]>;
+    readonly openRecentWorkspace?: (id: string) => Promise<DesktopReviewState>;
+    readonly clearRecentWorkspaces?: () => Promise<void>;
   };
 
 /**
@@ -287,6 +294,29 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
               }),
             );
             return refresh();
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.recent-list")
+      ? {
+          listRecentWorkspaces: async () =>
+            parseRecentWorkspacesListResult(
+              unwrap(await capabilityPort.execute({ type: "workspace.recent-list", input: {} })),
+            ).workspaces,
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.recent-open")
+      ? {
+          openRecentWorkspace: async (id: string) => {
+            unwrap(await capabilityPort.execute({ type: "workspace.recent-open", input: { id } }));
+            return refresh();
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("workspace.recent-clear")
+      ? {
+          clearRecentWorkspaces: async () => {
+            unwrap(await capabilityPort.execute({ type: "workspace.recent-clear", input: {} }));
           },
         }
       : {}),

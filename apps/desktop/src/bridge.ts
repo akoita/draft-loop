@@ -60,6 +60,20 @@ import {
   type ReviewedCanonicalCandidateProfileCatalogInput,
   type ReviewedCanonicalCandidateProfileCatalogResult,
 } from "./profile-catalog.js";
+import type {
+  RecentWorkspaceOpenInput,
+  RecentWorkspacesClearInput,
+  RecentWorkspacesClearResult,
+  RecentWorkspacesListInput,
+  RecentWorkspacesListResult,
+} from "./recent-workspaces.js";
+import {
+  parseRecentWorkspaceOpenInput,
+  parseRecentWorkspacesClearInput,
+  parseRecentWorkspacesClearResult,
+  parseRecentWorkspacesListInput,
+  parseRecentWorkspacesListResult,
+} from "./recent-workspaces.js";
 
 // Re-export the safe policy vocabulary from the bridge so consumers that only
 // depend on renderer contracts do not need to import the model module.
@@ -2537,6 +2551,9 @@ export interface BridgeCommandInputMap {
   "workspace.open": WorkspaceOpenInput;
   "workspace.create": WorkspaceCreateInput;
   "workspace.configure-models": WorkspaceConfigureModelsInput;
+  "workspace.recent-list": RecentWorkspacesListInput;
+  "workspace.recent-open": RecentWorkspaceOpenInput;
+  "workspace.recent-clear": RecentWorkspacesClearInput;
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
@@ -2609,6 +2626,9 @@ export interface BridgeCommandOutputMap {
   "workspace.open": WorkspaceResult;
   "workspace.create": WorkspaceResult;
   "workspace.configure-models": WorkspaceModelsResult;
+  "workspace.recent-list": RecentWorkspacesListResult;
+  "workspace.recent-open": WorkspaceResult;
+  "workspace.recent-clear": RecentWorkspacesClearResult;
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
@@ -4463,6 +4483,21 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "workspace.configure-models",
         input: validateWorkspaceConfigureModelsInput(command.input),
+      };
+    case "workspace.recent-list":
+      return {
+        type: "workspace.recent-list",
+        input: parseRecentWorkspacesListInput(command.input),
+      };
+    case "workspace.recent-open":
+      return {
+        type: "workspace.recent-open",
+        input: parseRecentWorkspaceOpenInput(command.input),
+      };
+    case "workspace.recent-clear":
+      return {
+        type: "workspace.recent-clear",
+        input: parseRecentWorkspacesClearInput(command.input),
       };
     case "knowledge.create":
       return { type: "knowledge.create", input: validateKnowledgeStoreCreateInput(command.input) };
@@ -6669,7 +6704,12 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
   switch (command.type) {
     case "workspace.open":
     case "workspace.create":
+    case "workspace.recent-open":
       return normalizeWorkspaceResult(value);
+    case "workspace.recent-list":
+      return parseRecentWorkspacesListResult(value);
+    case "workspace.recent-clear":
+      return parseRecentWorkspacesClearResult(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
     case "knowledge.create":

@@ -37,6 +37,7 @@ import {
   type WorkspaceModelSelection,
 } from "./native.js";
 import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./profile.js";
+import { RecentWorkspaces } from "./recent-workspaces-ui.js";
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import { ThemeToggle } from "./theme.js";
@@ -1318,8 +1319,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     describeFailure: (reason: unknown) => string = (reason) =>
       messageOf(reason, "The workspace could not be opened."),
     openModelEditor = false,
-  ) => {
-    if (action === undefined) return;
+  ): Promise<boolean> => {
+    if (action === undefined) return false;
     setBusy(true);
     setError(null);
     setImportError(null);
@@ -1348,8 +1349,10 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         setModelEditorFromCreation(false);
         setEditingModels(false);
       }
+      return true;
     } catch (reason: unknown) {
       setError(describeFailure(reason));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -1730,6 +1733,9 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     const openWorkspace = nativeActions.open;
     const createWorkspace = nativeActions.create;
     const createDemoWorkspace = nativeActions.createDemo;
+    const listRecentWorkspaces = activePort.listRecentWorkspaces;
+    const openRecentWorkspace = activePort.openRecentWorkspace;
+    const clearRecentWorkspaces = activePort.clearRecentWorkspaces;
     return (
       <main className="boot-shell">
         <section className="panel boot-panel">
@@ -1769,6 +1775,22 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 ? {}
                 : { onCreateDemo: () => void setup(() => createDemoWorkspace("draft-loop-demo")) })}
               {...(openWorkspace === undefined ? {} : { onOpen: () => void setup(openWorkspace) })}
+            />
+          )}
+          {listRecentWorkspaces === undefined ||
+          openRecentWorkspace === undefined ||
+          clearRecentWorkspaces === undefined ? null : (
+            <RecentWorkspaces
+              busy={busy}
+              listRecentWorkspaces={listRecentWorkspaces}
+              openRecentWorkspace={(id) =>
+                setup(
+                  () => openRecentWorkspace(id),
+                  (reason) =>
+                    messageOf(reason, "This recent workspace could not be opened. Choose another."),
+                )
+              }
+              clearRecentWorkspaces={clearRecentWorkspaces}
             />
           )}
         </section>

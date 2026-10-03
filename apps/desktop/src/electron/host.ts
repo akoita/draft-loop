@@ -159,6 +159,7 @@ import {
   createMemoryProviderAuthModePreferenceStore,
   type ProviderAuthModePreferenceStore,
 } from "./provider-auth-mode.js";
+import { createRecentWorkspaceStore, type RecentWorkspaceStore } from "./recent-workspaces.js";
 import {
   RunModelProfileSelectionError,
   resolveWorkspaceModelProfileSelection,
@@ -305,6 +306,7 @@ export interface NativeHostOptions {
   readonly providerAuthMode?: ProviderAuthMode;
   readonly providerAuthModeConfiguration?: ProviderAuthModeConfiguration;
   readonly providerAuthModePreference?: ProviderAuthModePreferenceStore;
+  readonly recentWorkspaces?: RecentWorkspaceStore;
   readonly providerAuthModeEnvironmentOverrides?: Readonly<
     Record<ProviderAuthModeProvider, boolean>
   >;
@@ -2005,6 +2007,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
   const credentials = options.credentials ?? createMemoryCredentialStore();
   const providerAuthModePreference =
     options.providerAuthModePreference ?? createMemoryProviderAuthModePreferenceStore();
+  const recentWorkspaces = options.recentWorkspaces ?? createRecentWorkspaceStore();
   const providerAuthModeConfiguration =
     options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
   const providerAuthModeEnvironmentOverrides = options.providerAuthModeEnvironmentOverrides ?? {
@@ -2526,6 +2529,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         io(),
       );
       active = { descriptor, root };
+      await recentWorkspaces.remember(workspaceName(root), root).catch(() => undefined);
       return workspaceResult(descriptor);
     } catch (error) {
       return fail(
@@ -2540,6 +2544,28 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     if (root === undefined) return fail("permission-denied", "Workspace opening was cancelled.");
     const descriptor = await service.readWorkspace(resolve(root));
     active = { descriptor, root: resolve(root) };
+    await recentWorkspaces.remember(workspaceName(root), root).catch(() => undefined);
+    return workspaceResult(descriptor);
+  }
+
+  async function openRecentWorkspace(
+    id: string,
+  ): Promise<{ workspace: { id: string; name: string } }> {
+    const root = await recentWorkspaces.resolvePath(id);
+    if (root === undefined) {
+      return fail("not-found", "This recent workspace is unavailable. Choose a folder to open it.");
+    }
+    let descriptor: WorkspaceDescriptor;
+    try {
+      descriptor = await service.readWorkspace(root);
+    } catch {
+      return fail(
+        "not-found",
+        "This recent workspace could not be opened. Choose another workspace.",
+      );
+    }
+    active = { descriptor, root };
+    await recentWorkspaces.remember(workspaceName(root), root).catch(() => undefined);
     return workspaceResult(descriptor);
   }
 
@@ -3406,6 +3432,16 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           const { name, mode, ...models } = command.input;
           return { ok: true, value: await createWorkspace(name, mode ?? "demo", models) };
         }
+        case "workspace.recent-list":
+          return {
+            ok: true,
+            value: { workspaces: await recentWorkspaces.list() },
+          };
+        case "workspace.recent-open":
+          return { ok: true, value: await openRecentWorkspace(command.input.id) };
+        case "workspace.recent-clear":
+          await recentWorkspaces.clear();
+          return { ok: true, value: { cleared: true } };
         case "workspace.configure-models": {
           // The pairing travels as one piece: the application replaces the whole
           // model configuration rather than merging, so a rationale cannot outlive
