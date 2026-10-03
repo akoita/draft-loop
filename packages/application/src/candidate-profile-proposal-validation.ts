@@ -85,8 +85,9 @@ function uniqueByTrimmedIdentity<T>(values: readonly T[], identity: (value: T) =
   });
 }
 
-function proposalWithRedundantListsRemoved(
+function proposalWithRepairableReferencesRemoved(
   proposal: CanonicalCandidateProfileExtractionProposal,
+  danglingOmissionFactKeys: ReadonlyMap<number, ReadonlySet<number>> = new Map(),
 ): CanonicalCandidateProfileExtractionProposal {
   return {
     ...proposal,
@@ -97,12 +98,70 @@ function proposalWithRedundantListsRemoved(
         (evidence) => JSON.stringify([evidence.sourceId.trim(), evidence.quote.trim()]),
       ),
     })),
-    issues: proposal.issues.map((issue) => ({
+    issues: proposal.issues.map((issue, issueIndex) => ({
       ...issue,
-      factKeys: uniqueByTrimmedIdentity(issue.factKeys, (key) => key.trim()),
+      factKeys: uniqueByTrimmedIdentity(
+        issue.factKeys.filter(
+          (_key, factKeyIndex) => !danglingOmissionFactKeys.get(issueIndex)?.has(factKeyIndex),
+        ),
+        (key) => key.trim(),
+      ),
       sourceIds: uniqueByTrimmedIdentity(issue.sourceIds, (sourceId) => sourceId.trim()),
     })),
   };
+}
+
+function omissionFactKeyReferenceToRemove(
+  issue: { readonly code: string; readonly path: readonly PropertyKey[] },
+  output: unknown,
+): { readonly issueIndex: number; readonly factKeyIndex: number } | null {
+  if (
+    issue.code !== "custom" ||
+    !("message" in issue) ||
+    issue.message !== "factKeys must reference proposal facts" ||
+    issue.path.length !== 4
+  ) {
+    return null;
+  }
+
+  const [issuesKey, issueIndex, factKeysKey, factKeyIndex] = issue.path;
+  if (
+    issuesKey !== "issues" ||
+    typeof issueIndex !== "number" ||
+    !Number.isSafeInteger(issueIndex) ||
+    issueIndex < 0 ||
+    factKeysKey !== "factKeys" ||
+    typeof factKeyIndex !== "number" ||
+    !Number.isSafeInteger(factKeyIndex) ||
+    factKeyIndex < 0
+  ) {
+    return null;
+  }
+
+  const proposalIssues =
+    typeof output === "object" && output !== null && !Array.isArray(output)
+      ? (output as { readonly issues?: unknown }).issues
+      : undefined;
+  if (!Array.isArray(proposalIssues)) return null;
+  const candidate = proposalIssues[issueIndex];
+  if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) {
+    return null;
+  }
+  const candidateIssue = candidate as {
+    readonly code?: unknown;
+    readonly sourceIds?: unknown;
+    readonly factKeys?: unknown;
+  };
+  if (
+    candidateIssue.code !== "omission" ||
+    !Array.isArray(candidateIssue.sourceIds) ||
+    candidateIssue.sourceIds.length === 0 ||
+    !Array.isArray(candidateIssue.factKeys) ||
+    factKeyIndex >= candidateIssue.factKeys.length
+  ) {
+    return null;
+  }
+  return { issueIndex, factKeyIndex };
 }
 
 function validationError(
@@ -113,7 +172,7 @@ function validationError(
   );
 }
 
-/** Normalize only provably redundant citation references, then revalidate strictly. */
+/** Normalize redundant lists and sourced omission references, then revalidate strictly. */
 export function parseCanonicalCandidateProfileExtractionProposal(
   output: unknown,
 ): CanonicalCandidateProfileExtractionProposal {
@@ -121,15 +180,25 @@ export function parseCanonicalCandidateProfileExtractionProposal(
   if (parsed.success) return parsed.data;
 
   const issues = parsed.error.issues;
-  if (
-    issues.length === 0 ||
-    issues.some((issue) => issue.code !== "custom" || !repairableMessages.has(issue.message))
-  ) {
+  const danglingOmissionFactKeys = new Map<number, Set<number>>();
+  const canRepair =
+    issues.length > 0 &&
+    issues.every((issue) => {
+      if (issue.code === "custom" && repairableMessages.has(issue.message)) return true;
+      const dangling = omissionFactKeyReferenceToRemove(issue, output);
+      if (dangling === null) return false;
+      const indexes = danglingOmissionFactKeys.get(dangling.issueIndex) ?? new Set<number>();
+      indexes.add(dangling.factKeyIndex);
+      danglingOmissionFactKeys.set(dangling.issueIndex, indexes);
+      return true;
+    });
+  if (!canRepair) {
     throw validationError(issues);
   }
 
-  const repaired = proposalWithRedundantListsRemoved(
+  const repaired = proposalWithRepairableReferencesRemoved(
     output as CanonicalCandidateProfileExtractionProposal,
+    danglingOmissionFactKeys,
   );
   const revalidated = canonicalCandidateProfileExtractionProposalSchema.safeParse(repaired);
   if (!revalidated.success) throw validationError(revalidated.error.issues);

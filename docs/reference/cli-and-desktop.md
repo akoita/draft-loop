@@ -210,9 +210,17 @@ If extraction fails, it saves no facts and returns one omission issue with
 opaque source references. Recognized provider failures provide fixed action
 guidance; unrecognized errors and provider diagnostics are never shown. Input
 preparation, response format, and grounding failures have distinct messages.
+
 DeepInfra malformed-stream guidance may include up to two fixed protocol reason
 counts and a bounded remainder; it never includes chunk data, model identifiers,
 source content, or paths.
+
+An otherwise valid source-backed omission can retain its visible review warning
+when it names a fact the model did not return; only those dangling omission
+references are removed, followed by strict validation and evidence grounding.
+Dangling conflict or duplicate references, omissions without source references,
+unknown sources, and unsupported quotes still fail without saving facts.
+
 An explicit Anthropic credit-balance or enforced spending-limit response shows
 billing guidance; the app does not estimate charges from failed attempts.
 

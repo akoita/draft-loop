@@ -92,6 +92,86 @@ describe("canonical candidate profile proposal validation", () => {
     );
   });
 
+  it("removes only dangling fact references from sourced omissions without mutating input", () => {
+    const input = deepFreeze(
+      proposal({
+        issues: [
+          {
+            code: "omission",
+            factKeys: ["fact-a", "missing-fact", "fact-b"],
+            sourceIds: ["source-a", "source-b"],
+          },
+        ],
+      }),
+    );
+    const before = structuredClone(input);
+
+    const parsed = parseCanonicalCandidateProfileExtractionProposal(input);
+
+    expect(parsed.facts).toEqual(input.facts);
+    expect(parsed.issues).toEqual([
+      {
+        code: "omission",
+        factKeys: ["fact-a", "fact-b"],
+        sourceIds: ["source-a", "source-b"],
+      },
+    ]);
+    expect(input).toEqual(before);
+  });
+
+  it("combines omission recovery with trimmed duplicate references", () => {
+    const input = deepFreeze(
+      proposal({
+        issues: [
+          {
+            code: "omission",
+            factKeys: [" fact-a ", " missing-fact ", " missing-fact ", "fact-b"],
+            sourceIds: ["source-a", " source-a "],
+          },
+        ],
+      }),
+    );
+    const before = structuredClone(input);
+    const parsed = parseCanonicalCandidateProfileExtractionProposal(input);
+    expect(parsed.issues).toEqual([
+      { code: "omission", factKeys: ["fact-a", "fact-b"], sourceIds: ["source-a"] },
+    ]);
+    expect(input).toEqual(before);
+  });
+
+  it("keeps dangling conflict and duplicate references rejected", () => {
+    for (const code of ["conflict-value", "duplicate"]) {
+      expectValidationFailure(
+        proposal({
+          issues: [{ code, factKeys: ["fact-a", "missing-fact"], sourceIds: ["source-a"] }],
+        }),
+        "profile_unknown_issue_facts",
+      );
+    }
+  });
+
+  it("keeps a source-less omission with dangling fact references rejected", () => {
+    expectValidationFailure(
+      proposal({
+        issues: [{ code: "omission", factKeys: ["missing-fact"], sourceIds: [] }],
+      }),
+      "profile_unknown_issue_facts",
+    );
+  });
+
+  it("rejects mixed repairable and ineligible reference errors atomically", () => {
+    expectValidationFailure(
+      proposal({
+        issues: [
+          { code: "omission", factKeys: ["missing-omission-fact"], sourceIds: ["source-a"] },
+          { code: "conflict-value", factKeys: ["missing-conflict-fact"], sourceIds: ["source-a"] },
+        ],
+      }),
+      "profile_unknown_issue_facts",
+      2,
+    );
+  });
+
   it("does not repair duplicate fact keys or unsupported values", () => {
     expectValidationFailure(
       proposal({ facts: [fact("fact-a"), fact("fact-a")] }),
