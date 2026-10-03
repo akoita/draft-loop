@@ -151,7 +151,7 @@ describe("DeepInfra GLM application route", () => {
     expect(factory).not.toHaveBeenCalled();
   });
 
-  it("binds the development profile and exact output budget for canonical extraction", async () => {
+  it("binds the detached extraction profile and exact budget with disabled reasoning", async () => {
     const root = await mkdtemp(join(tmpdir(), "glm-canonical-extraction-"));
     const source = {
       id: "source-one",
@@ -206,7 +206,7 @@ describe("DeepInfra GLM application route", () => {
       expect(create.mock.calls[0]?.[0]).toMatchObject({
         model: deepInfraGLMModelId,
         max_tokens: 32768,
-        reasoning_effort: "low",
+        reasoning_effort: "none",
       });
       expect(create.mock.calls[0]?.[0].messages[1]?.content).toBe(
         JSON.stringify({ sources: [source] }),

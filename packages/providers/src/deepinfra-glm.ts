@@ -125,7 +125,7 @@ function resolveSelectionControls(
   configured: ModelSelection,
   requested: ModelSelection,
   requestedMaxTokens: number | undefined,
-): { readonly outputTokens: number; readonly effort?: "low" | "high" | "max" } {
+): { readonly outputTokens: number; readonly effort?: "none" | "low" | "high" | "max" } {
   const configuredData = validSelection(configured);
   const requestedData = validSelection(requested);
   if (
@@ -149,7 +149,7 @@ function resolveSelectionControls(
 
   const profile = requestedData.profile;
   let outputTokens = requestedMaxTokens ?? defaultMaxOutputTokens;
-  let effort: "low" | "high" | "max" | undefined;
+  let effort: "none" | "low" | "high" | "max" | undefined;
   if (profile !== undefined) {
     if (profile.provider !== deepInfraGLMCompany || profile.modelId !== deepInfraGLMModelId) {
       throw invalidRequest(
@@ -157,13 +157,20 @@ function resolveSelectionControls(
         "profile_mismatch",
       );
     }
-    if (profile.runtime.thinking.mode !== "provider-default") {
+    const thinkingMode = profile.runtime.thinking.mode;
+    const selectedEffort = profile.runtime.effort;
+    if (thinkingMode !== "provider-default" && thinkingMode !== "disabled") {
       throw invalidRequest(
         "This DeepInfra model does not support the selected thinking control.",
         "unsupported_thinking",
       );
     }
-    const selectedEffort = profile.runtime.effort;
+    if (thinkingMode === "disabled" && selectedEffort !== "provider-default") {
+      throw invalidRequest(
+        "Disabled DeepInfra reasoning requires provider-default effort.",
+        "unsupported_thinking",
+      );
+    }
     if (
       selectedEffort !== "provider-default" &&
       selectedEffort !== "low" &&
@@ -185,7 +192,12 @@ function resolveSelectionControls(
       );
     }
     outputTokens = profile.runtime.maxOutputTokens;
-    effort = selectedEffort === "provider-default" ? undefined : selectedEffort;
+    effort =
+      thinkingMode === "disabled"
+        ? "none"
+        : selectedEffort === "provider-default"
+          ? undefined
+          : selectedEffort;
   }
 
   if (!Number.isSafeInteger(outputTokens) || outputTokens < 1 || outputTokens > maxOutputTokens) {

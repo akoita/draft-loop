@@ -1,5 +1,6 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
 import { isDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
+import { isDeepInfraGLMExtractionProfile } from "./glm-extraction-profile.js";
 
 export type CanonicalProfileAnthropicAuthMode = "api-key" | "user-session";
 export const promptVersion = "canonical-candidate-profile-extraction-v6" as const;
@@ -40,7 +41,7 @@ export function canonicalProfileRequest(
   const deepInfraGLMProfile =
     isDeepInfraGLMModel(model.company, model.modelId) &&
     model.profile !== undefined &&
-    isDeepInfraGLMAuthorProfile(model.profile)
+    (isDeepInfraGLMAuthorProfile(model.profile) || isDeepInfraGLMExtractionProfile(model.profile))
       ? model.profile
       : undefined;
   const isCuratedAnthropicApiModel =

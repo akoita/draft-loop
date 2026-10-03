@@ -279,9 +279,14 @@ rewritten.
 
 Coverage instructions direct the extractor to scan every supplied source
 rather than return only highlights; they do not guarantee that every supported
-fact will be found. The 32,768-token extraction ceiling applies to API-key
-requests for Claude Sonnet 5.5 and Opus 5.5 and to the configured GLM development
-profile; user-session, local, and other model routes keep 8,192 tokens.
+fact will be found. The 32,768-token ceiling applies to API-key requests for
+Claude Sonnet 5.5 and Opus 5.5 and the configured DeepInfra GLM author route.
+Canonical profile extraction uses a detached GLM profile at the same ceiling
+and requests `reasoning_effort: "none"` to disable reasoning, following
+[DeepInfra's reasoning control](https://docs.deepinfra.com/chat/reasoning). The
+normal GLM author profile keeps `low` reasoning. These settings make no speed
+or quality guarantee; user-session, local, and other model routes keep 8,192
+tokens.
 
 For more than 65,536 UTF-16 text units across one to four unique prepared
 sources, extraction proactively makes one focused call for each source up to
