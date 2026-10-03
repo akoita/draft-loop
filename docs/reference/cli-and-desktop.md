@@ -215,6 +215,12 @@ DeepInfra malformed-stream guidance may include up to two fixed protocol reason
 counts and a bounded remainder; it never includes chunk data, model identifiers,
 source content, or paths.
 
+DeepInfra timeout guidance distinguishes the initial response, an idle stream,
+and the total deadline; missing or conflicting phase diagnostics use generic
+timeout guidance. Transient errors name only HTTP 500, 502, 503, or 504; other
+statuses use generic provider guidance. Older saved generic failures cannot be
+reconstructed because their timeout phase and status were not retained.
+
 An otherwise valid source-backed omission can retain its visible review warning
 when it names a fact the model did not return; only those dangling omission
 references are removed, followed by strict validation and evidence grounding.
