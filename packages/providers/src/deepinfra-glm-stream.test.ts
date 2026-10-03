@@ -254,9 +254,13 @@ describe("DeepInfra GLM streaming response", () => {
   });
 
   it.each([
-    ["wrong model", [chunk(), chunk({ model: "other-model" })]],
-    ["mixed id", [chunk(), chunk({ id: "other-request" })]],
-    ["wrong choice index", [chunk({ choices: [{ index: 1, delta: {}, finish_reason: null }] })]],
+    ["wrong model", [chunk(), chunk({ model: "other-model" })], "stream_model_metadata"],
+    ["mixed id", [chunk(), chunk({ id: "other-request" })], "stream_chunk_identity"],
+    [
+      "wrong choice index",
+      [chunk({ choices: [{ index: 1, delta: {}, finish_reason: null }] })],
+      "stream_choice_index",
+    ],
     [
       "multiple choices",
       [
@@ -267,15 +271,68 @@ describe("DeepInfra GLM streaming response", () => {
           ],
         }),
       ],
+      "stream_choice_count",
     ],
-    ["post-terminal content", [chunk({ finish: "stop" }), chunk({ content: "late" })]],
-    ["usage-only before terminal", [chunk({ choices: [], usage: { prompt_tokens: 1 } })]],
-  ])("rejects %s chunks instead of combining them", async (_label, chunks) => {
+    [
+      "post-terminal content",
+      [chunk({ finish: "stop" }), chunk({ content: "late" })],
+      "stream_post_terminal_data",
+    ],
+    [
+      "usage-only before terminal",
+      [chunk({ choices: [], usage: { prompt_tokens: 1 } })],
+      "stream_usage_sequence",
+    ],
+  ])("rejects %s chunks instead of combining them", async (_label, chunks, reason) => {
     const fixture = harness(iterable(chunks as ChatCompletionChunk[]));
     await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
       retryable: false,
+      diagnostics: [{ code: "malformed_stream" }],
+      diagnosticCounts: [{ code: reason, count: 1 }],
     });
+    expect(fixture.create).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains only the fixed reason count from a malformed private chunk", async () => {
+    const privateStreamId = "private-stream-id";
+    const privateModelName = "private-model-name";
+    const privateCandidateContent = "private-candidate-content";
+    const privateReasoningContent = "private-reasoning-content";
+    const privateSourcePath = "private-source-path";
+    const markers = [
+      privateStreamId,
+      privateModelName,
+      privateCandidateContent,
+      privateReasoningContent,
+      privateSourcePath,
+    ];
+    const malformed = {
+      ...chunk({
+        id: privateStreamId,
+        model: privateModelName,
+        delta: {
+          role: "user",
+          content: privateCandidateContent,
+          reasoning_content: privateReasoningContent,
+        },
+      }),
+      sourcePath: privateSourcePath,
+    } as unknown as ChatCompletionChunk;
+    const fixture = harness(iterable([malformed]));
+
+    let failure: unknown;
+    try {
+      await fixture.adapter.execute(request());
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toMatchObject({
+      code: "invalid-response",
+      diagnostics: [{ code: "malformed_stream", path: "response" }],
+      diagnosticCounts: [{ code: "stream_model_metadata", count: 1 }],
+    });
+    for (const marker of markers) expect(JSON.stringify(failure)).not.toContain(marker);
     expect(fixture.create).toHaveBeenCalledTimes(1);
   });
 
@@ -321,16 +378,24 @@ describe("DeepInfra GLM streaming response", () => {
   });
 
   it.each([
-    ["missing identity", { omitId: true }],
-    ["null identity", { id: null }],
-    ["blank identity", { id: "   " }],
-    ["null model", { model: null }],
-    ["wrong model", { model: "other-model" }],
-    ["null timestamp", { created: null }],
-    ["invalid timestamp", { created: "not-a-time" }],
-    ["null index", { choices: [{ index: null, delta: {}, finish_reason: "stop" }] }],
-    ["wrong index", { choices: [{ index: 1, delta: {}, finish_reason: "stop" }] }],
-  ])("rejects malformed supplied metadata: %s", async (_label, metadata) => {
+    ["missing identity", { omitId: true }, "stream_chunk_identity"],
+    ["null identity", { id: null }, "stream_chunk_identity"],
+    ["blank identity", { id: "   " }, "stream_chunk_identity"],
+    ["null model", { model: null }, "stream_model_metadata"],
+    ["wrong model", { model: "other-model" }, "stream_model_metadata"],
+    ["null timestamp", { created: null }, "stream_timestamp_metadata"],
+    ["invalid timestamp", { created: "not-a-time" }, "stream_timestamp_metadata"],
+    [
+      "null index",
+      { choices: [{ index: null, delta: {}, finish_reason: "stop" }] },
+      "stream_choice_index",
+    ],
+    [
+      "wrong index",
+      { choices: [{ index: 1, delta: {}, finish_reason: "stop" }] },
+      "stream_choice_index",
+    ],
+  ])("rejects malformed supplied metadata: %s", async (_label, metadata, reason) => {
     const options = {
       choices: [{ delta: { content: '{"answer":"ok"}' }, finish_reason: "stop" }],
       ...metadata,
@@ -340,7 +405,9 @@ describe("DeepInfra GLM streaming response", () => {
     await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
       diagnostics: [{ code: "malformed_stream" }],
+      diagnosticCounts: [{ code: reason, count: 1 }],
     });
+    expect(fixture.create).toHaveBeenCalledTimes(1);
   });
 
   it("rejects inconsistent supplied creation times", async () => {
@@ -360,22 +427,52 @@ describe("DeepInfra GLM streaming response", () => {
     await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
       diagnostics: [{ code: "malformed_stream" }],
+      diagnosticCounts: [{ code: "stream_timestamp_metadata", count: 1 }],
     });
+    expect(fixture.create).toHaveBeenCalledTimes(1);
   });
 
   it.each([
-    ["tool-call array", { tool_calls: [{ index: 0 }] }],
-    ["empty tool-call array", { tool_calls: [] }],
-    ["function-call object", { function_call: { name: "lookup" } }],
-    ["non-assistant role", { role: "user" }],
-    ["malformed role", { role: { name: "assistant" } }],
-  ])("rejects %s despite null placeholders otherwise being allowed", async (_label, delta) => {
-    const fixture = harness(iterable([chunk({ delta })]));
+    ["tool-call array", { tool_calls: [{ index: 0 }] }, "stream_tool_data"],
+    ["empty tool-call array", { tool_calls: [] }, "stream_tool_data"],
+    ["function-call object", { function_call: { name: "lookup" } }, "stream_tool_data"],
+    ["non-assistant role", { role: "user" }, "stream_role"],
+    ["malformed role", { role: { name: "assistant" } }, "stream_role"],
+    ["invalid content type", { content: 42 }, "stream_content_type"],
+    ["invalid refusal type", { refusal: 42 }, "stream_refusal_type"],
+  ])(
+    "rejects %s despite null placeholders otherwise being allowed",
+    async (_label, delta, reason) => {
+      const fixture = harness(iterable([chunk({ delta })]));
 
+      await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
+        code: "invalid-response",
+        diagnostics: [{ code: "malformed_stream" }],
+        diagnosticCounts: [{ code: reason, count: 1 }],
+      });
+      expect(fixture.create).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    ["non-object chunk", null, "stream_chunk_envelope"],
+    ["invalid object marker", { ...chunk(), object: "wrong" }, "stream_chunk_envelope"],
+    ["invalid choices field", { ...chunk(), choices: null }, "stream_chunk_envelope"],
+    ["invalid choice shape", chunk({ choices: [null] }), "stream_choice_shape"],
+    ["invalid delta type", chunk({ choices: [{ index: 0, delta: null }] }), "stream_delta_type"],
+    [
+      "invalid finish marker",
+      chunk({ choices: [{ index: 0, delta: {}, finish_reason: 42 }] }),
+      "stream_finish_marker",
+    ],
+  ])("counts the fixed reason for %s", async (_label, value, reason) => {
+    const fixture = harness(iterable([value as ChatCompletionChunk]));
     await expect(fixture.adapter.execute(request())).rejects.toMatchObject({
       code: "invalid-response",
       diagnostics: [{ code: "malformed_stream" }],
+      diagnosticCounts: [{ code: reason, count: 1 }],
     });
+    expect(fixture.create).toHaveBeenCalledTimes(1);
   });
 
   it("requires a terminal finish and rejects length-truncated output", async () => {

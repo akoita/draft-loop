@@ -11,6 +11,10 @@ import type {
 import { z } from "zod";
 import { summarizeDeepInfraOutputIssues } from "./deepinfra-output-diagnostics.js";
 import {
+  type DeepInfraStreamRejectionReasonCode,
+  deepInfraStreamRejectionCount,
+} from "./deepinfra-stream-diagnostics.js";
+import {
   assertDataExposureAllowed,
   executeWithRetry,
   type JsonObject,
@@ -284,11 +288,13 @@ function failResponse(
     | "transport-parsing"
     | "response-schema-validation"
     | "output-token-budget-exceeded" = "transport-parsing",
+  diagnosticCounts?: readonly { readonly code: string; readonly count: number }[],
 ): ProviderAdapterError {
   return new ProviderAdapterError(deepInfraGLMProvider, "invalid-response", message, {
     retryable: false,
     failureStage,
     diagnostics: [{ code, path: "response" }],
+    ...(diagnosticCounts === undefined ? {} : { diagnosticCounts }),
   });
 }
 
@@ -486,8 +492,13 @@ function isAsyncIterable(value: unknown): value is AsyncIterable<ChatCompletionC
   );
 }
 
-function malformedStream(): ProviderAdapterError {
-  return failResponse("DeepInfra returned a malformed streamed response.", "malformed_stream");
+function malformedStream(reason: DeepInfraStreamRejectionReasonCode): ProviderAdapterError {
+  return failResponse(
+    "DeepInfra returned a malformed streamed response.",
+    "malformed_stream",
+    "transport-parsing",
+    [deepInfraStreamRejectionCount(reason)],
+  );
 }
 
 async function collectStreamCompletion(
@@ -527,15 +538,16 @@ async function collectStreamCompletion(
       }
       if (Date.now() >= options.deadlineAt) throw streamTimeoutError("total");
       const chunk: unknown = next.value;
-      if (!isRecord(chunk)) throw malformedStream();
+      if (!isRecord(chunk)) throw malformedStream("stream_chunk_envelope");
       if (
         typeof chunk.id !== "string" ||
         chunk.id.trim() === "" ||
-        (id !== undefined && id !== chunk.id) ||
-        chunk.object !== "chat.completion.chunk" ||
-        !Array.isArray(chunk.choices)
+        (id !== undefined && id !== chunk.id)
       ) {
-        throw malformedStream();
+        throw malformedStream("stream_chunk_identity");
+      }
+      if (chunk.object !== "chat.completion.chunk" || !Array.isArray(chunk.choices)) {
+        throw malformedStream("stream_chunk_envelope");
       }
       id = chunk.id;
       if (Object.hasOwn(chunk, "model")) {
@@ -544,7 +556,7 @@ async function collectStreamCompletion(
           chunk.model !== options.expectedModel ||
           (model !== undefined && model !== chunk.model)
         ) {
-          throw malformedStream();
+          throw malformedStream("stream_model_metadata");
         }
         model = chunk.model;
       }
@@ -554,7 +566,7 @@ async function collectStreamCompletion(
           !Number.isSafeInteger(chunk.created) ||
           (created !== undefined && created !== chunk.created)
         ) {
-          throw malformedStream();
+          throw malformedStream("stream_timestamp_metadata");
         }
         created = chunk.created;
       }
@@ -570,35 +582,35 @@ async function collectStreamCompletion(
           chunk.usage === null ||
           usageOnlyChunkSeen
         ) {
-          throw malformedStream();
+          throw malformedStream("stream_usage_sequence");
         }
         usageOnlyChunkSeen = true;
         continue;
       }
-      if (finishReason !== undefined || chunk.choices.length !== 1) throw malformedStream();
+      if (finishReason !== undefined) throw malformedStream("stream_post_terminal_data");
+      if (chunk.choices.length !== 1) throw malformedStream("stream_choice_count");
 
       const choice = chunk.choices[0];
-      if (!isRecord(choice) || !isRecord(choice.delta)) {
-        throw malformedStream();
-      }
+      if (!isRecord(choice)) throw malformedStream("stream_choice_shape");
+      if (!isRecord(choice.delta)) throw malformedStream("stream_delta_type");
       if (
         Object.hasOwn(choice, "index") &&
         (!Number.isSafeInteger(choice.index) || choice.index !== 0)
       ) {
-        throw malformedStream();
+        throw malformedStream("stream_choice_index");
       }
       const delta = choice.delta;
       if (delta.role !== undefined && delta.role !== null && delta.role !== "assistant") {
-        throw malformedStream();
+        throw malformedStream("stream_role");
       }
       if (
         (delta.tool_calls !== undefined && delta.tool_calls !== null) ||
         (delta.function_call !== undefined && delta.function_call !== null)
       ) {
-        throw malformedStream();
+        throw malformedStream("stream_tool_data");
       }
       if (delta.content !== undefined && delta.content !== null) {
-        if (typeof delta.content !== "string") throw malformedStream();
+        if (typeof delta.content !== "string") throw malformedStream("stream_content_type");
         contentBytes += Buffer.byteLength(delta.content, "utf8");
         if (contentBytes > maximumStreamOutputBytes) {
           throw failResponse(
@@ -609,11 +621,13 @@ async function collectStreamCompletion(
         content += delta.content;
       }
       if (delta.refusal !== undefined && delta.refusal !== null) {
-        if (typeof delta.refusal !== "string") throw malformedStream();
+        if (typeof delta.refusal !== "string") throw malformedStream("stream_refusal_type");
         if (delta.refusal !== "") refusal = "DeepInfra refused the structured response.";
       }
       if (choice.finish_reason !== undefined && choice.finish_reason !== null) {
-        if (typeof choice.finish_reason !== "string") throw malformedStream();
+        if (typeof choice.finish_reason !== "string") {
+          throw malformedStream("stream_finish_marker");
+        }
         finishReason = choice.finish_reason as ChatCompletion.Choice["finish_reason"];
       }
     }

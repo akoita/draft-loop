@@ -19,10 +19,6 @@ const stageFailureMessages: Record<Exclude<CandidateProfileExtractionStage, "pro
 
 const deepInfraDiagnosticMessages = new Map<string, string>([
   [
-    "malformed_stream",
-    "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.",
-  ],
-  [
     "incomplete_stream",
     "DeepInfra ended the GLM stream before completing the profile. Check provider status or the network connection, or choose another supported model; no facts were saved.",
   ],
@@ -68,6 +64,23 @@ const groundingDiagnosticLabels = [
   ["unknown_source", "unknown cited sources"],
   ["quote_not_in_source", "quotes absent from cited source text"],
   ["value_not_in_quote", "values absent from evidence quotes"],
+] as const;
+const deepInfraStreamDiagnosticLabels = [
+  ["stream_chunk_envelope", "invalid chunk envelope"],
+  ["stream_chunk_identity", "inconsistent chunk identity"],
+  ["stream_model_metadata", "invalid model metadata"],
+  ["stream_timestamp_metadata", "invalid timestamp metadata"],
+  ["stream_usage_sequence", "invalid usage sequence"],
+  ["stream_post_terminal_data", "data after terminal marker"],
+  ["stream_choice_count", "invalid choice count"],
+  ["stream_choice_shape", "invalid choice shape"],
+  ["stream_delta_type", "invalid delta type"],
+  ["stream_choice_index", "invalid choice index"],
+  ["stream_role", "invalid message role"],
+  ["stream_tool_data", "unsupported tool data"],
+  ["stream_content_type", "invalid content type"],
+  ["stream_refusal_type", "invalid refusal type"],
+  ["stream_finish_marker", "invalid finish marker"],
 ] as const;
 
 function addBoundedCount(current: number, increment: number): number {
@@ -148,6 +161,15 @@ function groundingFailureMessage(error: CandidateProfileGroundingError): string 
 
 function deepInfraFailureMessage(error: ProviderAdapterError): string | undefined {
   if (error.provider !== "deepinfra" || error.code !== "invalid-response") return undefined;
+  if (
+    error.failureStage === "transport-parsing" &&
+    error.diagnostics.some((diagnostic) => diagnostic.code === "malformed_stream")
+  ) {
+    const summary = summarizeCounts(error.diagnosticCounts, deepInfraStreamDiagnosticLabels);
+    const base =
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.";
+    return summary === undefined ? base : `${base} Reasons: ${summary}.`;
+  }
   for (const diagnostic of [...error.diagnostics, ...error.diagnosticCounts]) {
     const message = deepInfraDiagnosticMessages.get(diagnostic.code);
     if (message !== undefined) return message;
