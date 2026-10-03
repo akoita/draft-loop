@@ -14,6 +14,7 @@ import {
   CandidateProfileProposalValidationError,
   parseCanonicalCandidateProfileExtractionProposal,
 } from "./candidate-profile-proposal-validation.js";
+import { planCanonicalProfileExtractionCalls } from "./canonical-profile-extraction-plan.js";
 import {
   type CanonicalProfileExtractionTextWindow,
   canonicalProfileExtractionSectionFocus,
@@ -230,6 +231,33 @@ export async function executeCanonicalProfileExtractionWithFallback(
     throwIfAborted(request.signal);
     return response.output;
   }
+
+  const plannedCalls = planCanonicalProfileExtractionCalls(request.sources);
+  if (plannedCalls !== null) {
+    const batches: CanonicalCandidateProfileExtractionProposal[] = [];
+    for (const plannedCall of plannedCalls) {
+      throwIfAborted(request.signal);
+      let response: ModelResponse<JsonObject>;
+      try {
+        response = await executeWithCancellation(
+          executor,
+          buildRequest(request, controls, plannedCall.sourceId, plannedCall.window),
+          request.signal,
+        );
+      } catch (error) {
+        throwIfAborted(request.signal);
+        if (isOutputLimitFailure(error)) throw outputLimitFailure(controls.model.company);
+        throw error;
+      }
+      throwIfAborted(request.signal);
+      batches.push(parseBatch(response.output, controls.model.company));
+    }
+
+    const aggregate = aggregateBatches(batches, controls.model.company);
+    throwIfAborted(request.signal);
+    return aggregate as unknown as JsonObject;
+  }
+
   const initialRequest = buildRequest(request, controls);
 
   let initialResponse: ModelResponse<JsonObject>;

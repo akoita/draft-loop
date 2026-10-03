@@ -249,12 +249,13 @@ Before retrying, follow the recorded cause and recovery guidance. Renaming the
 profile does not fix the underlying failure. Retrying sends selected material
 again and may consume provider credits.
 
-A grounding failure may trigger one additional request with the same approved sources and fixed diagnostic counts;
-it returns a full replacement proposal, which must pass schema and grounding
-checks before any facts are saved. Failed values and quotes are not sent as
-feedback, and a failed replacement saves no facts. This bounded recovery has no
-live-provider reliability claim. Separate output-limit recovery can also make
-source-focused requests; the grounding correction itself does not fan out.
+A grounding failure may trigger one additional full-context request with the
+same approved sources and fixed diagnostic counts. It returns a full replacement
+proposal, which must pass schema and grounding checks before any facts are saved.
+Failed values and quotes are not sent as feedback, and a failed replacement
+saves no facts. This bounded recovery has no live-provider reliability claim.
+Separate output-limit recovery can also make source-focused requests; the
+grounding correction itself does not fan out.
 
 Empty profiles and drafts with open issues cannot be marked reviewed; warnings
 also block until acknowledged or resolved and saved. A reviewed profile is a
@@ -278,16 +279,24 @@ rewritten.
 
 Coverage instructions direct the extractor to scan every supplied source
 rather than return only highlights; they do not guarantee that every supported
-fact will be found. The 32,768-token extraction ceiling applies only to API-key
-requests for Claude Sonnet 5.5 and Opus 5.5; user-session, local, and all other
-model routes keep 8,192 tokens.
+fact will be found. The 32,768-token extraction ceiling applies to API-key
+requests for Claude Sonnet 5.5 and Opus 5.5 and to the configured GLM development
+profile; user-session, local, and other model routes keep 8,192 tokens.
 
-If the provider explicitly reports output-token truncation for two to four
-prepared sources, extraction can make one focused call per source. If one source
-call also truncates, it can be retried in four contiguous text windows. The
-bounded path makes at most 21 application calls including the original request;
-each keeps the full selected source set as context and the same per-call token
-cap. Every result must validate and ground successfully, or no facts are saved.
+For more than 65,536 UTF-16 text units across one to four unique prepared
+sources, extraction proactively makes one focused call for each source up to
+16,384 units and four contiguous-window calls for each larger source. This plan
+uses at most 16 calls.
+
+For smaller inputs, an explicit output-token truncation
+can trigger one focused call per source for two to four sources; if a focused
+call also truncates, that source can be retried in four contiguous text windows.
+This fallback uses at most 21 application calls including the original request.
+
+Every focused call retains the full selected source set as context and the same
+per-call token cap. Either route may be followed by one full-context grounding
+replacement request. Results are aggregated after every call succeeds, then
+pass the existing schema and source-grounding checks before any facts are saved.
 
 Proposal validation removes redundant entries only when failures consist solely
 of repeated evidence tuples or issue fact/source references, then reruns the full
