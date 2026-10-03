@@ -107,6 +107,10 @@ Use **Close workspace** to return to the create/open screen. Saved workspace
 files, run history, and profile versions remain on this device; unsaved setup or
 profile form edits are discarded. Closing does not rewrite persisted run state.
 
+The start page lists the ten most recently opened local workspaces. Select an
+entry to reopen it, or clear the recent list; clearing history leaves workspace
+files untouched. The native **Open workspace** picker remains available.
+
 Creating a workspace asks only for its name and maximum review rounds. After a
 real workspace is created, choose **Presets** or **Custom** in the model editor.
 Opening an existing workspace keeps its current model pair; canceling the editor

@@ -35,6 +35,7 @@ import {
 } from "./host.js";
 import { hasLiveE2EArtifactSection } from "./live-e2e.js";
 import { createMemoryProviderAuthModePreferenceStore } from "./provider-auth-mode.js";
+import { createRecentWorkspaceStore, type RecentWorkspaceStore } from "./recent-workspaces.js";
 
 function descriptor(root: string): WorkspaceDescriptor {
   return {
@@ -426,8 +427,8 @@ function service(
   } as never;
   return {
     service: {
-      initialize: vi.fn(async () => workspace),
-      readWorkspace: vi.fn(async () => workspace),
+      initialize: vi.fn<ApplicationService["initialize"]>(async () => workspace),
+      readWorkspace: vi.fn<ApplicationService["readWorkspace"]>(async () => workspace),
       reconfigureModels: vi.fn<ApplicationService["reconfigureModels"]>(async () => workspace),
       configureWritingPolicy: vi.fn<ApplicationService["configureWritingPolicy"]>(
         async () => workspace,
@@ -448,7 +449,7 @@ function service(
       start: vi.fn<ApplicationService["start"]>(async () => snapshot),
       resume: vi.fn<ApplicationService["resume"]>(async () => snapshot),
       lifecycle: vi.fn(async () => snapshot),
-      status: vi.fn(async () => snapshot),
+      status: vi.fn<ApplicationService["status"]>(async () => snapshot),
       createOpportunity: vi.fn<ApplicationService["createOpportunity"]>(async () => {
         throw new Error("opportunity fixture method was not configured");
       }),
@@ -506,6 +507,123 @@ function service(
 }
 
 describe("native host", () => {
+  it("records created workspaces, reopens them by opaque id, and clears history only", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-recent-host-"));
+    const expectedRoot = join(parent, "Saved workspace");
+    const fixture = service(expectedRoot);
+    fixture.service.initialize.mockImplementation(async () => descriptor(expectedRoot));
+    fixture.service.readWorkspace = vi.fn<ApplicationService["readWorkspace"]>(async (root) =>
+      descriptor(root),
+    );
+    const recentWorkspaces = createRecentWorkspaceStore();
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      recentWorkspaces,
+      dialogs: { chooseDirectory: async () => parent, chooseFiles: async () => [] },
+    });
+    try {
+      const created = await host.invoke({
+        type: "workspace.create",
+        input: { name: "Saved workspace", mode: "real" },
+      });
+      expect(created).toMatchObject({
+        ok: true,
+        value: { workspace: { name: "Saved workspace" } },
+      });
+
+      const listed = await host.invoke({ type: "workspace.recent-list", input: {} });
+      expect(listed).toMatchObject({
+        ok: true,
+        value: {
+          workspaces: [{ name: "Saved workspace" }],
+        },
+      });
+      expect(JSON.stringify(listed)).not.toContain(expectedRoot);
+      if (!listed.ok) throw new Error("Expected recent workspaces to load.");
+      const [entry] = (listed.value as { readonly workspaces: readonly { readonly id: string }[] })
+        .workspaces;
+      if (entry === undefined) throw new Error("Expected the created workspace in recents.");
+
+      const opened = await host.invoke({
+        type: "workspace.recent-open",
+        input: { id: entry.id },
+      });
+      expect(opened).toMatchObject({ ok: true, value: { workspace: { name: "Saved workspace" } } });
+      expect(fixture.service.readWorkspace).toHaveBeenCalledWith(expectedRoot);
+      expect(fixture.service.start).not.toHaveBeenCalled();
+      expect(fixture.service.begin).not.toHaveBeenCalled();
+
+      const cleared = await host.invoke({ type: "workspace.recent-clear", input: {} });
+      expect(cleared).toEqual({ ok: true, value: { cleared: true } });
+      expect(await recentWorkspaces.list()).toEqual([]);
+      expect(await readFile(join(expectedRoot, "job.md"), "utf8")).toBe("");
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects stale recent entries without replacing the active workspace or leaking paths", async () => {
+    const activeRoot = "/local/recent-active";
+    const staleRoot = "/private/deleted-workspace";
+    const fixture = service(activeRoot);
+    fixture.service.readWorkspace = vi.fn<ApplicationService["readWorkspace"]>(async (root) => {
+      if (root === staleRoot) throw new Error(`${staleRoot} is gone`);
+      return descriptor(root);
+    });
+    const statusCalls: unknown[] = [];
+    fixture.service.status = vi.fn<ApplicationService["status"]>(async (input) => {
+      statusCalls.push(input);
+      return fixture.snapshot;
+    });
+    const recentWorkspaces = createRecentWorkspaceStore();
+    const stale = await recentWorkspaces.remember("Deleted", staleRoot, "2026-10-03T10:00:00.000Z");
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      recentWorkspaces,
+      dialogs: { chooseDirectory: async () => activeRoot, chooseFiles: async () => [] },
+    });
+    await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+
+    const result = await host.invoke({ type: "workspace.recent-open", input: { id: stale.id } });
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: "not-found",
+        message: "This recent workspace could not be opened. Choose another workspace.",
+        capability: "workspace.recent-open",
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain(staleRoot);
+    await host.invoke({ type: "review.load", input: {} });
+    expect(statusCalls.at(-1)).toMatchObject({ root: activeRoot });
+    expect(fixture.service.start).not.toHaveBeenCalled();
+    expect(fixture.service.begin).not.toHaveBeenCalled();
+  });
+
+  it("keeps workspace opening successful when recent-history persistence fails", async () => {
+    const root = "/local/recent-write-failure";
+    const fixture = service(root);
+    const recentWorkspaces: RecentWorkspaceStore = {
+      list: async () => [],
+      resolvePath: async () => undefined,
+      remember: async () => {
+        throw new Error("private path write failure");
+      },
+      clear: async () => undefined,
+    };
+    const host = createNativeHost({
+      applicationService: fixture.service,
+      recentWorkspaces,
+      dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+    });
+    const opened = await host.invoke({
+      type: "workspace.open",
+      input: { selection: "native-dialog" },
+    });
+    expect(opened).toMatchObject({ ok: true, value: { workspace: { id: "workspace-native" } } });
+    expect(fixture.service.readWorkspace).toHaveBeenCalledWith(root);
+  });
+
   it("preserves semantic section identity for live-E2E required-section checks", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-semantic-section-"));
     const baseArtifact = artifact();

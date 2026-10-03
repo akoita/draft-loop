@@ -23,6 +23,7 @@ import {
   providerAuthModePreferenceFilename,
   resolveProviderAuthModeStartup,
 } from "./provider-auth-mode.js";
+import { createRecentWorkspaceStore } from "./recent-workspaces.js";
 import { type PackagedSmokePhase, runPackagedSmoke } from "./smoke.js";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -282,6 +283,9 @@ app.whenReady().then(async () => {
     providerAuthModeConfiguration,
     providerAuthModeEnvironmentOverrides: environmentOverrides,
     providerAuthModePreference,
+    recentWorkspaces: createRecentWorkspaceStore({
+      filename: join(app.getPath("userData"), "recent-workspaces.json"),
+    }),
     dialogs:
       acceptanceEnabled && acceptanceWorkspace !== undefined && acceptanceCandidate !== undefined
         ? {

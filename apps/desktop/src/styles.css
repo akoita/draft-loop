@@ -4024,6 +4024,55 @@ input[type="checkbox"] {
   flex: 0 0 auto;
 }
 
+.recent-workspaces {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-2);
+}
+
+.recent-workspaces h2,
+.recent-workspaces p {
+  margin: 0;
+}
+
+.recent-workspaces h2 {
+  color: var(--text-1);
+  font-size: var(--text-base);
+}
+
+.recent-workspaces > p {
+  color: var(--text-3);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.recent-workspace-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recent-workspace-open {
+  display: grid;
+  justify-items: start;
+  min-width: 0;
+  width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.recent-workspace-open time {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+}
+
 .setup-side {
   display: grid;
   gap: var(--space-3);

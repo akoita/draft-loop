@@ -372,6 +372,32 @@ describe("workspace model reconfiguration", () => {
   });
 });
 
+describe("recent workspace bridge contracts", () => {
+  it("validates opaque open identifiers and rejects renderer-supplied paths", () => {
+    expect(
+      validateBridgeCommand({
+        type: "workspace.recent-open",
+        input: { id: "123e4567-e89b-12d3-a456-426614174000" },
+      }),
+    ).toEqual({
+      type: "workspace.recent-open",
+      input: { id: "123e4567-e89b-12d3-a456-426614174000" },
+    });
+    expect(() =>
+      validateBridgeCommand({
+        type: "workspace.recent-open",
+        input: { id: "123e4567-e89b-12d3-a456-426614174000", path: "/private" },
+      }),
+    ).toThrow();
+    expect(() =>
+      validateBridgeCommand({ type: "workspace.recent-list", input: { path: "/private" } }),
+    ).toThrow();
+    expect(() =>
+      validateBridgeCommand({ type: "workspace.recent-clear", input: { path: "/private" } }),
+    ).toThrow();
+  });
+});
+
 describe("desktop capability bridge", () => {
   it("accepts allowlisted commands and rejects unknown or extra fields", () => {
     expect(

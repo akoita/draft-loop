@@ -445,6 +445,68 @@ describe("desktop native profile capabilities", () => {
   });
 });
 
+describe("desktop recent workspace capabilities", () => {
+  it("lists, opens, and clears only path-free recent workspace commands", async () => {
+    const state = createFixtureReviewState();
+    const id = "123e4567-e89b-12d3-a456-426614174000";
+    const commands: string[] = [];
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: [
+          "review.load",
+          "workspace.recent-list",
+          "workspace.recent-open",
+          "workspace.recent-clear",
+        ],
+        invoke: async (command) => {
+          commands.push(command.type);
+          if (command.type === "workspace.recent-list") {
+            return {
+              ok: true,
+              value: {
+                workspaces: [{ id, name: "Recent", lastOpenedAt: "2026-10-03T10:00:00.000Z" }],
+              },
+            };
+          }
+          if (command.type === "workspace.recent-open") {
+            expect(command.input).toEqual({ id });
+            return { ok: true, value: { workspace: { id: state.workspaceId, name: "Recent" } } };
+          }
+          if (command.type === "review.load") return { ok: true, value: state };
+          if (command.type === "workspace.recent-clear")
+            return { ok: true, value: { cleared: true } };
+          throw new Error("Unexpected command");
+        },
+      }),
+    );
+
+    await expect(port.listRecentWorkspaces?.()).resolves.toEqual([
+      { id, name: "Recent", lastOpenedAt: "2026-10-03T10:00:00.000Z" },
+    ]);
+    await expect(port.openRecentWorkspace?.(id)).resolves.toEqual(state);
+    await expect(port.clearRecentWorkspaces?.()).resolves.toBeUndefined();
+    expect(commands).toEqual([
+      "workspace.recent-list",
+      "workspace.recent-open",
+      "review.load",
+      "workspace.recent-clear",
+    ]);
+    expect(port.listRecentWorkspaces).toBeDefined();
+  });
+
+  it("does not expose recent workspace actions when the host does not advertise them", () => {
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load"],
+        invoke: async () => ({ ok: true, value: {} }),
+      }),
+    );
+    expect(port.listRecentWorkspaces).toBeUndefined();
+    expect(port.openRecentWorkspace).toBeUndefined();
+    expect(port.clearRecentWorkspaces).toBeUndefined();
+  });
+});
+
 describe("desktop workspace model settings capability", () => {
   it("configures the exact full pair and reloads the refreshed preflight", async () => {
     const state = createFixtureReviewState();
