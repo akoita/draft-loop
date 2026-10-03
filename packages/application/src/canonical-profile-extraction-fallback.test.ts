@@ -226,6 +226,45 @@ describe("canonical profile extraction output-limit fallback", () => {
     ]);
   });
 
+  it("normalizes redundant focused evidence without extra requests or fact loss", async () => {
+    const first = material("source-a", "TypeScript");
+    const second = material("source-b", "React");
+    const { calls, executor } = executorFor((call) => {
+      if (calls.length === 1) throw providerTruncation();
+      const selected = call.input.extractionFocusSourceId === first.id ? first : second;
+      const value = selected === first ? "TypeScript" : "React";
+      return {
+        schemaVersion: 1,
+        facts: [
+          {
+            key: `skill-${selected.id}`,
+            category: "skill",
+            field: "name",
+            value,
+            evidence: [
+              { sourceId: selected.id, quote: value },
+              { sourceId: selected.id, quote: value },
+            ],
+          },
+        ],
+        issues: [],
+      };
+    });
+
+    const result = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: (preparedRequest) =>
+          executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+      },
+      input([first, second]),
+    );
+
+    expect(calls).toHaveLength(3);
+    expect(result.facts.map((fact) => fact.value)).toEqual(["TypeScript", "React"]);
+    expect(result.facts[0]?.provenance).toEqual([first.reference]);
+    expect(result.facts[1]?.provenance).toEqual([second.reference]);
+  });
+
   it("recovers a truncating focused source in four windows and retains full-source grounding", async () => {
     const first = material("source-a", "TypeScript\nReact\nPython\nPostgreSQL\n");
     const second = material("source-b", "Acme Labs");
@@ -506,7 +545,7 @@ describe("canonical profile extraction output-limit fallback", () => {
 
   it.each([
     ["truncation", "output limit"],
-    ["schema", "required candidate profile format"],
+    ["schema", "Profile output failed local validation"],
     ["grounding", "could not be grounded"],
   ] as const)(
     "saves no partial facts when a later section has %s failure",
@@ -673,9 +712,39 @@ describe("canonical profile extraction output-limit fallback", () => {
 
     expect(calls).toHaveLength(2);
     expect(result.facts).toEqual([]);
-    expect(result.issues[0]?.message).toBe(
-      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
-    );
+    expect(result.issues[0]?.message).toContain("Profile output failed local validation");
+    expect(result.issues[0]?.message).toContain("invalid field types:");
+  });
+
+  it("preserves focused-batch issue-reference diagnostics without another request", async () => {
+    const first = material("source-a", "TypeScript");
+    const second = material("source-b", "React");
+    const { calls, executor } = executorFor(() => {
+      if (calls.length === 1) throw providerTruncation();
+      return proposal(
+        [
+          {
+            key: "skill",
+            category: "skill",
+            field: "name",
+            value: "TypeScript",
+            sourceId: first.id,
+            quote: "TypeScript",
+          },
+        ],
+        [{ code: "omission", factKeys: ["missing-fact"], sourceIds: [] }],
+      );
+    });
+
+    await expect(
+      executeCanonicalProfileExtractionWithFallback(executor, request([first, second]), controls),
+    ).rejects.toMatchObject({
+      code: "invalid-response",
+      failureStage: "response-schema-validation",
+      diagnostics: [{ code: "invalid_profile_extraction_batch", path: "output" }],
+      diagnosticCounts: [{ code: "profile_unknown_issue_facts", count: 1 }],
+    });
+    expect(calls).toHaveLength(2);
   });
 
   it("saves no partial facts when completed batches fail source grounding", async () => {
@@ -776,6 +845,7 @@ describe("canonical profile extraction output-limit fallback", () => {
       code: "invalid-response",
       failureStage: "response-schema-validation",
       diagnostics: [{ code: "invalid_profile_extraction_batch", path: "output" }],
+      diagnosticCounts: [{ code: "profile_output_too_big", count: 1 }],
     });
     expect(calls).toHaveLength(3);
   });

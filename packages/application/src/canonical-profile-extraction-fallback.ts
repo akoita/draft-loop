@@ -7,10 +7,13 @@ import {
 import {
   type CanonicalCandidateProfileExtractionProposal,
   canonicalCandidateProfileExtractionProposalJsonSchema,
-  canonicalCandidateProfileExtractionProposalSchema,
 } from "@draft-loop/schemas";
 
 import type { CanonicalCandidateProfileExtractionRequest } from "./candidate-profile-extraction.js";
+import {
+  CandidateProfileProposalValidationError,
+  parseCanonicalCandidateProfileExtractionProposal,
+} from "./candidate-profile-proposal-validation.js";
 import {
   type CanonicalProfileExtractionTextWindow,
   canonicalProfileExtractionSectionFocus,
@@ -61,6 +64,7 @@ function isOutputLimitFailure(error: unknown): error is ProviderAdapterError {
 
 function invalidBatchFailure(
   provider: ModelRequest<JsonObject>["model"]["company"],
+  diagnosticCounts: readonly { readonly code: string; readonly count: number }[] = [],
 ): ProviderAdapterError {
   return new ProviderAdapterError(
     provider,
@@ -70,6 +74,7 @@ function invalidBatchFailure(
       retryable: false,
       failureStage: "response-schema-validation",
       diagnostics: [{ code: "invalid_profile_extraction_batch", path: "output" }],
+      diagnosticCounts,
     },
   );
 }
@@ -141,9 +146,14 @@ function parseBatch(
   output: JsonObject,
   provider: ModelRequest<JsonObject>["model"]["company"],
 ): CanonicalCandidateProfileExtractionProposal {
-  const parsed = canonicalCandidateProfileExtractionProposalSchema.safeParse(output);
-  if (!parsed.success) throw invalidBatchFailure(provider);
-  return parsed.data;
+  try {
+    return parseCanonicalCandidateProfileExtractionProposal(output);
+  } catch (error) {
+    if (error instanceof CandidateProfileProposalValidationError) {
+      throw invalidBatchFailure(provider, error.diagnosticCounts);
+    }
+    throw error;
+  }
 }
 
 function aggregateBatches(
@@ -164,7 +174,9 @@ function aggregateBatches(
       ...issue,
       factKeys: issue.factKeys.map((key) => {
         const namespacedKey = keyMap.get(key);
-        if (namespacedKey === undefined) throw invalidBatchFailure(provider);
+        if (namespacedKey === undefined) {
+          throw invalidBatchFailure(provider, [{ code: "profile_unknown_issue_facts", count: 1 }]);
+        }
         return namespacedKey;
       }),
     }));
@@ -172,13 +184,14 @@ function aggregateBatches(
     issues.push(...namespacedIssues);
   }
 
-  const aggregate = canonicalCandidateProfileExtractionProposalSchema.safeParse({
-    schemaVersion: 1,
-    facts,
-    issues,
-  });
-  if (!aggregate.success) throw invalidBatchFailure(provider);
-  return aggregate.data;
+  try {
+    return parseCanonicalCandidateProfileExtractionProposal({ schemaVersion: 1, facts, issues });
+  } catch (error) {
+    if (error instanceof CandidateProfileProposalValidationError) {
+      throw invalidBatchFailure(provider, error.diagnosticCounts);
+    }
+    throw error;
+  }
 }
 
 /** Retry only explicit output-token truncation with bounded, source-focused batches. */

@@ -94,6 +94,65 @@ describe("canonical candidate profile extraction", () => {
     expect(JSON.stringify(extract.mock.calls)).not.toContain("version-1");
   });
 
+  it("recovers exact duplicate evidence without weakening grounding or provenance", async () => {
+    const source = material();
+    const duplicatedEvidence = vi.fn(async () => ({
+      schemaVersion: 1,
+      facts: [
+        {
+          key: "skill-typescript",
+          category: "skill",
+          field: "name",
+          value: "TypeScript",
+          evidence: [
+            { sourceId: source.id, quote: "TypeScript" },
+            { sourceId: source.id, quote: "TypeScript" },
+          ],
+        },
+      ],
+      issues: [],
+    }));
+    const recovered = await processCanonicalCandidateProfileExtraction(
+      { extract: duplicatedEvidence },
+      { operationId: "profile-operation", sources: [source], allowProviderData: true },
+    );
+
+    expect(duplicatedEvidence).toHaveBeenCalledTimes(1);
+    expect(recovered.facts).toHaveLength(1);
+    expect(recovered.facts[0]).toMatchObject({
+      category: "skill",
+      field: "name",
+      value: "TypeScript",
+      provenance: [source.reference],
+    });
+
+    const ungroundedDuplicate = vi.fn(async () => ({
+      schemaVersion: 1,
+      facts: [
+        {
+          key: "invented-skill",
+          category: "skill",
+          field: "name",
+          value: "React",
+          evidence: [
+            { sourceId: source.id, quote: "TypeScript" },
+            { sourceId: source.id, quote: "TypeScript" },
+          ],
+        },
+      ],
+      issues: [],
+    }));
+    const rejected = await processCanonicalCandidateProfileExtraction(
+      { extract: ungroundedDuplicate },
+      { operationId: "profile-operation", sources: [source], allowProviderData: true },
+    );
+
+    expect(ungroundedDuplicate).toHaveBeenCalledTimes(1);
+    expect(rejected.facts).toEqual([]);
+    expect(rejected.issues[0]?.message).toContain("could not be grounded");
+    expect(rejected.issues[0]?.message).toContain("values absent from evidence quotes: 1");
+  });
+
   it("keeps conflicting and duplicate facts while adding visible omissions", async () => {
     const result = await processCanonicalCandidateProfileExtraction(
       {
@@ -399,8 +458,8 @@ describe("canonical candidate profile extraction", () => {
 
     expect(malformedSchema.facts).toEqual([]);
     expect(malformedSchema.issues).toHaveLength(1);
-    expect(malformedSchema.issues[0]?.message).toBe(
-      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    expect(malformedSchema.issues[0]?.message).toContain(
+      "Profile output failed local validation. No facts were saved.",
     );
     expect(unknownProviderFailure.facts).toEqual([]);
     expect(unknownProviderFailure.issues).toHaveLength(1);

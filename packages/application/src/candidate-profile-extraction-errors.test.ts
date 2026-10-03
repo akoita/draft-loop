@@ -7,6 +7,7 @@ import {
 } from "./candidate-profile-extraction.js";
 import { candidateProfileExtractionFailureMessage } from "./candidate-profile-extraction-errors.js";
 import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
+import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 
 const billingMessage =
   "Anthropic API credits or the configured spending limit prevented this request. Check billing or the spending limit, then retry after resolving it.";
@@ -238,6 +239,38 @@ describe("candidate profile extraction failure guidance", () => {
     expect(message).toBe(
       "Extracted claims could not be grounded in the selected sources. No facts were saved; review the source material and try again.",
     );
+  });
+
+  it("renders bounded local proposal validation reasons without exposing metadata", () => {
+    const error = new CandidateProfileProposalValidationError([
+      { code: "profile_duplicate_evidence", count: Number.MAX_SAFE_INTEGER },
+      { code: "profile_unknown_issue_facts", count: 2 },
+      { code: "profile_unpaired_conflicts", count: Number.MAX_SAFE_INTEGER },
+      { code: "profile_private_key" as never, count: 900 },
+    ]);
+    const message = candidateProfileExtractionFailureMessage(error, "response-schema");
+
+    expect(message).toContain("No facts were saved");
+    expect(message).toContain("Renaming will not help");
+    expect(message).toContain("duplicate evidence citations: 999+");
+    expect(message).toContain("unknown issue fact references: 2");
+    expect(message).toContain("999+ other issues");
+    expect(message.length).toBeLessThanOrEqual(240);
+    expect(message).not.toMatch(/profile_private_key|\/|\\/u);
+  });
+
+  it("renders application-owned fallback validation counts for any provider", () => {
+    const error = new ProviderAdapterError("anthropic", "invalid-response", "private", {
+      failureStage: "response-schema-validation",
+      diagnostics: [{ code: "invalid_profile_extraction_batch", path: "private/path" }],
+      diagnosticCounts: [{ code: "profile_unknown_issue_facts", count: 1 }],
+    });
+
+    const message = candidateProfileExtractionFailureMessage(error, "provider");
+
+    expect(message).toContain("unknown issue fact references: 1");
+    expect(message).not.toContain("private");
+    expect(message.length).toBeLessThanOrEqual(240);
   });
 
   it("does not apply DeepInfra guidance to other providers", () => {
