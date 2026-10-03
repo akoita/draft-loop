@@ -1,6 +1,7 @@
 import { anthropicBillingLimitDiagnosticCode, ProviderAdapterError } from "@draft-loop/providers";
 import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
 import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
+import { deepInfraProfileTransportFailureMessage } from "./candidate-profile-transport-guidance.js";
 
 export type CandidateProfileExtractionStage =
   | "input-preparation"
@@ -178,6 +179,8 @@ function deepInfraFailureMessage(error: ProviderAdapterError): string | undefine
 }
 
 function providerFailureMessage(error: ProviderAdapterError): string {
+  const transportMessage = deepInfraProfileTransportFailureMessage(error);
+  if (transportMessage !== undefined) return transportMessage;
   const schemaMessage = deepInfraOutputSchemaFailureMessage(error);
   if (schemaMessage !== undefined) return schemaMessage;
   const deepInfraMessage = deepInfraFailureMessage(error);
