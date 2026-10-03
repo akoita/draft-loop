@@ -514,6 +514,23 @@ function malformedStream(reason: DeepInfraStreamRejectionReasonCode): ProviderAd
   );
 }
 
+/** Rebuild a stream timeout so it also carries content-free answer and reasoning volume. */
+function withStreamVolumeCounts(
+  error: unknown,
+  answerCharacters: number,
+  reasoningCharacters: number,
+): unknown {
+  if (!(error instanceof ProviderAdapterError) || error.code !== "timeout") return error;
+  return new ProviderAdapterError(error.provider, error.code, error.message, {
+    retryable: error.retryable,
+    diagnostics: error.diagnostics,
+    diagnosticCounts: [
+      { code: "stream_answer_characters", count: answerCharacters },
+      { code: "stream_reasoning_characters", count: reasoningCharacters },
+    ],
+  });
+}
+
 async function collectStreamCompletion(
   stream: AsyncIterable<ChatCompletionChunk>,
   options: {
@@ -529,6 +546,8 @@ async function collectStreamCompletion(
   let model: string | undefined;
   let content = "";
   let contentBytes = 0;
+  let answerCharacters = 0;
+  let reasoningCharacters = 0;
   let refusal: string | null = null;
   let finishReason: ChatCompletion.Choice["finish_reason"] | undefined;
   let usage: ChatCompletion["usage"] | undefined;
@@ -626,6 +645,11 @@ async function collectStreamCompletion(
           );
         }
         content += delta.content;
+        answerCharacters += delta.content.length;
+      }
+      // Reasoning text is only measured; it is never stored or mixed into the answer.
+      for (const reasoning of [delta.reasoning_content, delta.reasoning]) {
+        if (typeof reasoning === "string") reasoningCharacters += reasoning.length;
       }
       if (delta.refusal !== undefined && delta.refusal !== null) {
         if (typeof delta.refusal !== "string") throw malformedStream("stream_refusal_type");
@@ -638,6 +662,8 @@ async function collectStreamCompletion(
         finishReason = choice.finish_reason as ChatCompletion.Choice["finish_reason"];
       }
     }
+  } catch (error) {
+    throw withStreamVolumeCounts(error, answerCharacters, reasoningCharacters);
   } finally {
     if (!completed && typeof iterator.return === "function") {
       try {
