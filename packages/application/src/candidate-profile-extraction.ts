@@ -24,9 +24,8 @@ import {
   candidateProfileExtractionFailureMessage,
 } from "./candidate-profile-extraction-errors.js";
 import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
-import { assertCanonicalProfileEvidenceGrounded } from "./candidate-profile-grounding-diagnostics.js";
-import { parseCanonicalCandidateProfileExtractionProposal } from "./candidate-profile-proposal-validation.js";
-import { repairCanonicalProfileEvidenceQuotes } from "./canonical-profile-evidence-quotes.js";
+import type { CandidateProfileGroundingDiagnosticCount } from "./candidate-profile-grounding-diagnostics.js";
+import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-profile-grounding-recovery.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
 export const maximumCanonicalCandidateProfileExtractionSources = 64;
@@ -58,6 +57,7 @@ export interface CanonicalCandidateProfileExtractionRequest {
   readonly operationId: string;
   readonly sources: readonly CanonicalCandidateProfileExtractionSource[];
   readonly signal?: AbortSignal;
+  readonly groundingRecovery?: readonly CandidateProfileGroundingDiagnosticCount[];
 }
 
 /** Provider seam for structured extraction from explicitly approved CKB text. */
@@ -359,9 +359,7 @@ function mapProposal(
     string,
     readonly CanonicalCandidateProfileProvenanceReference[]
   >,
-  sourceTexts: ReadonlyMap<string, string>,
 ): CanonicalCandidateProfileExtractionResult {
-  assertCanonicalProfileEvidenceGrounded(proposal, referencesByRepresentativeId, sourceTexts);
   const factByKey = new Map<string, CanonicalCandidateProfileFact>();
   const facts = proposal.facts.map((candidate) => {
     const provenance = uniqueSorted(
@@ -451,21 +449,16 @@ export async function processCanonicalCandidateProfileExtraction(
       validated.request.sources,
       validated.references,
     );
-    stage = "provider";
-    const output = await port.extract(
+    const proposal = await extractGroundedCanonicalCandidateProfileProposal(
+      port,
       Object.freeze({ ...validated.request, sources: preparedSources.sources }),
-    );
-    stage = "response-schema";
-    const proposal = repairCanonicalProfileEvidenceQuotes(
-      parseCanonicalCandidateProfileExtractionProposal(output),
-      preparedSources.sourceTextsByRepresentativeId,
-    );
-    stage = "grounding";
-    return mapProposal(
-      proposal,
       preparedSources.referencesByRepresentativeId,
       preparedSources.sourceTextsByRepresentativeId,
+      (nextStage) => {
+        stage = nextStage;
+      },
     );
+    return mapProposal(proposal, preparedSources.referencesByRepresentativeId);
   } catch (error) {
     if (input.signal?.aborted === true || (error instanceof Error && error.name === "AbortError")) {
       throw error;

@@ -316,12 +316,12 @@ describe("unreferenced duplicate candidate fact keys", () => {
         ],
       },
     ],
-  ])("still saves no facts for an unsafe %s", async (_name, output) => {
+  ])("still saves no facts for an unsafe %s", async (name, output) => {
     const { execute, port } = extractionPort(output as JsonObject);
 
     const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
 
-    expect(execute).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(name === "unknown conflict reference" ? 1 : 2);
     expect(result.facts).toEqual([]);
     expect(result.issues).toHaveLength(1);
     expect(result.issues[0]).toMatchObject({ code: "omission", severity: "error", status: "open" });

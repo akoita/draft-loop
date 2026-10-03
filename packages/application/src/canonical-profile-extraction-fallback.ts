@@ -25,6 +25,15 @@ const maximumFocusedSourceCount = 4;
 const outputName = "canonical_candidate_profile_extraction";
 const focusInstructions =
   "This is a bounded focused extraction call. Extract all supported facts from the source whose ID is input.extractionFocusSourceId. Keep every supplied source available as conflict context; include facts from another source only when they are grounded counterfacts needed for a conflict or duplicate issue that includes a fact from the focused source. Use concise exact contiguous evidence quotes containing the entire fact value and necessary factual context, rather than repeating unrelated surrounding paragraphs. Preserve the same evidence, unique-key, and schema rules. Do not invent counterfacts.";
+const groundingCorrectionInstructions = [
+  "This is one bounded corrective extraction request after local evidence-grounding diagnostics.",
+  "Return a complete replacement proposal using all supplied source records; no prior proposal is included, so do not refer to one.",
+  "Use input.groundingRecovery counts only to check likely error types; the counts contain no failed values, quotes, or source locations.",
+  "Re-extract every source-supported fact and preserve grounded conflicting claims as separate facts and issue relationships; do not drop all affected facts as a shortcut.",
+  "Copy each fact value literally from an exact contiguous evidence quote, preserving Markdown punctuation, hyphens, dashes, and date wording.",
+  "For example, the source phrase 'from Jan 2020 to Jun 2024' does not support the synthesized value '2020–2024'; use literal wording from the source.",
+  "Split combined claims into separate facts with literal values when the source does not contain the combined wording as one literal value.",
+].join(" ");
 
 export interface CanonicalProfileExtractionExecutor {
   readonly execute: (request: ModelRequest<JsonObject>) => Promise<ModelResponse<JsonObject>>;
@@ -119,6 +128,9 @@ function buildRequest(
   const input = JSON.parse(
     JSON.stringify({
       sources: request.sources,
+      ...(request.groundingRecovery === undefined
+        ? {}
+        : { groundingRecovery: request.groundingRecovery }),
       ...(focusSourceId === undefined
         ? {}
         : sectionFocus === undefined
@@ -129,10 +141,18 @@ function buildRequest(
   return {
     contextSnapshotId: request.operationId,
     model: controls.model,
-    systemPrompt:
-      focusSourceId === undefined
-        ? controls.systemPrompt
-        : `${controls.systemPrompt} ${focusInstructions}${focusWindow === undefined ? "" : ` ${canonicalProfileExtractionSectionFocusInstructions}`}`,
+    systemPrompt: [
+      controls.systemPrompt,
+      ...(focusSourceId === undefined
+        ? []
+        : [
+            focusInstructions,
+            ...(focusWindow === undefined
+              ? []
+              : [canonicalProfileExtractionSectionFocusInstructions]),
+          ]),
+      ...(request.groundingRecovery === undefined ? [] : [groundingCorrectionInstructions]),
+    ].join(" "),
     input,
     outputSchema: canonicalCandidateProfileExtractionProposalJsonSchema as JsonObject,
     outputName,
@@ -201,6 +221,15 @@ export async function executeCanonicalProfileExtractionWithFallback(
   controls: CanonicalProfileExtractionControls,
 ): Promise<JsonObject> {
   throwIfAborted(request.signal);
+  if (request.groundingRecovery !== undefined) {
+    const response = await executeWithCancellation(
+      executor,
+      buildRequest(request, controls),
+      request.signal,
+    );
+    throwIfAborted(request.signal);
+    return response.output;
+  }
   const initialRequest = buildRequest(request, controls);
 
   let initialResponse: ModelResponse<JsonObject>;
