@@ -255,6 +255,11 @@ bounded path makes at most 21 application calls including the original request;
 each keeps the full selected source set as context and the same per-call token
 cap. Every result must validate and ground successfully, or no facts are saved.
 
+Schema and evidence failures can include bounded counts of the failed checks.
+These summaries omit returned values, field names, source text, and paths. Any
+schema or grounding failure still rejects the full proposal, so no facts are
+saved.
+
 Skills are treated as collection values, so distinct skill facts do not become
 automatic conflicts even when they share a subject. Equal values can still
 raise duplicate warnings. Unscoped certifications are also collections, while

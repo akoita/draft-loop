@@ -242,9 +242,38 @@ describe("canonical candidate profile extraction", () => {
     expect(ungrounded.facts).toEqual([]);
     expect(ungrounded.issues).toHaveLength(1);
     expect(ungrounded.issues[0]?.message).toBe(
-      "Extracted claims could not be grounded in the selected sources. No facts were saved; review the source material and try again.",
+      "Claims could not be grounded. No facts were saved. Evidence failures: values absent from evidence quotes: 1. Check model support before retrying.",
     );
     expect(JSON.stringify(ungrounded)).not.toContain("Invented role");
+
+    const mixed = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: async () => ({
+          schemaVersion: 1,
+          facts: [
+            {
+              key: "grounded",
+              category: "role",
+              field: "title",
+              value: "Engineer",
+              evidence: [{ sourceId: "source-a", quote: "Engineer" }],
+            },
+            {
+              key: "ungrounded",
+              category: "skill",
+              field: "name",
+              value: "Invented skill",
+              evidence: [{ sourceId: "source-a", quote: "TypeScript" }],
+            },
+          ],
+          issues: [],
+        }),
+      },
+      { operationId: "profile-operation", sources: [material()], allowProviderData: true },
+    );
+    expect(mixed.facts).toEqual([]);
+    expect(mixed.issues[0]?.message).toContain("values absent from evidence quotes: 1");
+    expect(JSON.stringify(mixed)).not.toContain("Invented skill");
 
     const thrown = await processCanonicalCandidateProfileExtraction(
       { extract: async () => ({ schemaVersion: 1, facts: [], issues: [] }) },

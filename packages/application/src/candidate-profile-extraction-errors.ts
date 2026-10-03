@@ -1,4 +1,5 @@
 import { anthropicBillingLimitDiagnosticCode, ProviderAdapterError } from "@draft-loop/providers";
+import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
 
 export type CandidateProfileExtractionStage =
   | "input-preparation"
@@ -42,6 +43,81 @@ const deepInfraDiagnosticMessages = new Map<string, string>([
   ],
 ]);
 
+const maximumDisplayedDiagnosticCount = 1_000;
+const schemaDiagnosticLabels = [
+  ["profile_output_invalid_type", "invalid field types"],
+  ["profile_output_too_big", "fields over the size limit"],
+  ["profile_output_too_small", "missing or undersized fields"],
+  ["profile_output_invalid_value", "invalid allowed values"],
+  ["profile_output_unrecognized_keys", "unexpected fields"],
+  ["profile_output_invalid_format", "invalid formats"],
+  ["profile_output_invalid_union", "invalid alternatives"],
+  ["profile_output_constraint", "other constraints"],
+] as const;
+const groundingDiagnosticLabels = [
+  ["unknown_source", "unknown cited sources"],
+  ["quote_not_in_source", "quotes absent from cited source text"],
+  ["value_not_in_quote", "values absent from evidence quotes"],
+] as const;
+
+function addBoundedCount(current: number, increment: number): number {
+  return increment >= maximumDisplayedDiagnosticCount - current
+    ? maximumDisplayedDiagnosticCount
+    : current + increment;
+}
+
+function formatCount(count: number): string {
+  return count >= maximumDisplayedDiagnosticCount ? "999+" : String(count);
+}
+
+function summarizeCounts(
+  entries: readonly { readonly code: string; readonly count: number }[],
+  labels: readonly (readonly [string, string])[],
+  visibleReasonLimit = 2,
+): string | undefined {
+  const recognized = new Map<string, number>();
+  for (const entry of entries) {
+    if (!Number.isSafeInteger(entry.count) || entry.count <= 0) continue;
+    if (!labels.some(([code]) => code === entry.code)) continue;
+    recognized.set(entry.code, addBoundedCount(recognized.get(entry.code) ?? 0, entry.count));
+  }
+  const present = labels.flatMap(([code, label]) => {
+    const count = recognized.get(code);
+    return count === undefined ? [] : [{ label, count }];
+  });
+  if (present.length === 0) return undefined;
+
+  const shown = present
+    .slice(0, visibleReasonLimit)
+    .map(({ label, count }) => `${label}: ${formatCount(count)}`);
+  const remaining = present
+    .slice(visibleReasonLimit)
+    .reduce((sum, entry) => addBoundedCount(sum, entry.count), 0);
+  if (remaining > 0) shown.push(`${formatCount(remaining)} other issues`);
+  return shown.join("; ");
+}
+
+function deepInfraOutputSchemaFailureMessage(error: unknown): string | undefined {
+  if (
+    !(error instanceof ProviderAdapterError) ||
+    error.provider !== "deepinfra" ||
+    error.code !== "invalid-response" ||
+    error.failureStage !== "response-schema-validation" ||
+    !error.diagnostics.some((diagnostic) => diagnostic.code === "output_schema_mismatch")
+  ) {
+    return undefined;
+  }
+  const summary = summarizeCounts(error.diagnosticCounts, schemaDiagnosticLabels);
+  if (summary === undefined) return undefined;
+  return `DeepInfra profile format is invalid. No facts were saved. Renaming will not help; check model support before retrying. Reasons: ${summary}.`;
+}
+
+function groundingFailureMessage(error: CandidateProfileGroundingError): string | undefined {
+  const summary = summarizeCounts(error.diagnosticCounts, groundingDiagnosticLabels, 3);
+  if (summary === undefined) return undefined;
+  return `Claims could not be grounded. No facts were saved. Evidence failures: ${summary}. Check model support before retrying.`;
+}
+
 function deepInfraFailureMessage(error: ProviderAdapterError): string | undefined {
   if (error.provider !== "deepinfra" || error.code !== "invalid-response") return undefined;
   for (const diagnostic of [...error.diagnostics, ...error.diagnosticCounts]) {
@@ -52,6 +128,8 @@ function deepInfraFailureMessage(error: ProviderAdapterError): string | undefine
 }
 
 function providerFailureMessage(error: ProviderAdapterError): string {
+  const schemaMessage = deepInfraOutputSchemaFailureMessage(error);
+  if (schemaMessage !== undefined) return schemaMessage;
   const deepInfraMessage = deepInfraFailureMessage(error);
   if (deepInfraMessage !== undefined) return deepInfraMessage;
   if (
@@ -107,6 +185,12 @@ export function candidateProfileExtractionFailureMessage(
   }
   if (stage === "provider") {
     return "The provider failed during candidate profile extraction for an unknown reason. Check the configured provider and retry.";
+  }
+  if (stage === "response-schema") {
+    return deepInfraOutputSchemaFailureMessage(error) ?? stageFailureMessages[stage];
+  }
+  if (stage === "grounding" && error instanceof CandidateProfileGroundingError) {
+    return groundingFailureMessage(error) ?? stageFailureMessages[stage];
   }
   return stageFailureMessages[stage];
 }
