@@ -16,7 +16,6 @@ import {
   type CanonicalCandidateProfileFact,
   type CanonicalCandidateProfileIssue,
   type CanonicalCandidateProfileProvenanceReference,
-  canonicalCandidateProfileExtractionProposalSchema,
   canonicalCandidateProfileProvenanceReferenceSchema,
 } from "@draft-loop/schemas";
 import { isCandidateProfileCollectionFact } from "./candidate-profile-collection-conflicts.js";
@@ -26,6 +25,7 @@ import {
 } from "./candidate-profile-extraction-errors.js";
 import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
 import { assertCanonicalProfileEvidenceGrounded } from "./candidate-profile-grounding-diagnostics.js";
+import { parseCanonicalCandidateProfileExtractionProposal } from "./candidate-profile-proposal-validation.js";
 import { repairCanonicalProfileEvidenceQuotes } from "./canonical-profile-evidence-quotes.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
@@ -457,7 +457,7 @@ export async function processCanonicalCandidateProfileExtraction(
     );
     stage = "response-schema";
     const proposal = repairCanonicalProfileEvidenceQuotes(
-      canonicalCandidateProfileExtractionProposalSchema.parse(output),
+      parseCanonicalCandidateProfileExtractionProposal(output),
       preparedSources.sourceTextsByRepresentativeId,
     );
     stage = "grounding";

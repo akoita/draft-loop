@@ -1,5 +1,6 @@
 import { anthropicBillingLimitDiagnosticCode, ProviderAdapterError } from "@draft-loop/providers";
 import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
+import { CandidateProfileProposalValidationError } from "./candidate-profile-proposal-validation.js";
 
 export type CandidateProfileExtractionStage =
   | "input-preparation"
@@ -53,6 +54,15 @@ const schemaDiagnosticLabels = [
   ["profile_output_invalid_format", "invalid formats"],
   ["profile_output_invalid_union", "invalid alternatives"],
   ["profile_output_constraint", "other constraints"],
+] as const;
+const localProposalDiagnosticLabels = [
+  ["profile_duplicate_evidence", "duplicate evidence citations"],
+  ["profile_duplicate_fact_keys", "duplicate fact keys"],
+  ["profile_duplicate_issue_facts", "duplicate issue references"],
+  ["profile_unknown_issue_facts", "unknown issue fact references"],
+  ["profile_duplicate_issue_sources", "duplicate issue source references"],
+  ["profile_unpaired_conflicts", "conflicts without two distinct facts"],
+  ...schemaDiagnosticLabels,
 ] as const;
 const groundingDiagnosticLabels = [
   ["unknown_source", "unknown cited sources"],
@@ -110,6 +120,24 @@ function deepInfraOutputSchemaFailureMessage(error: unknown): string | undefined
   const summary = summarizeCounts(error.diagnosticCounts, schemaDiagnosticLabels);
   if (summary === undefined) return undefined;
   return `DeepInfra profile format is invalid. No facts were saved. Renaming will not help; check model support before retrying. Reasons: ${summary}.`;
+}
+
+function localProposalFailureMessage(
+  error: CandidateProfileProposalValidationError | ProviderAdapterError,
+): string | undefined {
+  if (
+    error instanceof ProviderAdapterError &&
+    (error.code !== "invalid-response" ||
+      error.failureStage !== "response-schema-validation" ||
+      !error.diagnostics.some(
+        (diagnostic) => diagnostic.code === "invalid_profile_extraction_batch",
+      ))
+  ) {
+    return undefined;
+  }
+  const summary = summarizeCounts(error.diagnosticCounts, localProposalDiagnosticLabels);
+  if (summary === undefined) return undefined;
+  return `Profile output failed local validation. No facts were saved. Renaming will not help; check model support. Reasons: ${summary}.`;
 }
 
 function groundingFailureMessage(error: CandidateProfileGroundingError): string | undefined {
@@ -180,6 +208,18 @@ export function candidateProfileExtractionFailureMessage(
   error: unknown,
   stage: CandidateProfileExtractionStage,
 ): string {
+  if (stage === "provider" || stage === "response-schema") {
+    if (
+      error instanceof CandidateProfileProposalValidationError ||
+      (error instanceof ProviderAdapterError &&
+        error.diagnostics.some(
+          (diagnostic) => diagnostic.code === "invalid_profile_extraction_batch",
+        ))
+    ) {
+      const localMessage = localProposalFailureMessage(error);
+      if (localMessage !== undefined) return localMessage;
+    }
+  }
   if (stage === "provider" && error instanceof ProviderAdapterError) {
     return providerFailureMessage(error);
   }
