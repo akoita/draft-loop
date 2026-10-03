@@ -249,13 +249,13 @@ Before retrying, follow the recorded cause and recovery guidance. Renaming the
 profile does not fix the underlying failure. Retrying sends selected material
 again and may consume provider credits.
 
-A grounding failure may trigger one additional full-context request with the
-same approved sources and fixed diagnostic counts. It returns a full replacement
-proposal, which must pass schema and grounding checks before any facts are saved.
-Failed values and quotes are not sent as feedback, and a failed replacement
-saves no facts. This bounded recovery has no live-provider reliability claim.
-Separate output-limit recovery can also make source-focused requests; the
-grounding correction itself does not fan out.
+A grounding failure on a smaller input may trigger one additional full-context
+request with the same approved sources and fixed diagnostic counts. It returns a
+full replacement proposal, which must pass schema and grounding checks before any
+facts are saved. Large inputs use per-call recovery instead (see the proactive
+plan below). Failed values and quotes are not sent as feedback, and a failed
+replacement saves no facts. This bounded recovery has no live-provider
+reliability claim.
 
 Empty profiles and drafts with open issues cannot be marked reviewed; warnings
 also block until acknowledged or resolved and saved. A reviewed profile is a
@@ -289,22 +289,31 @@ or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 
 For more than 65,536 UTF-16 text units across one to four unique prepared
-sources, extraction proactively makes one focused call for sources up to 8,192
-UTF-16 units and divides each larger source into contiguous windows of at most
-8,192 units. The plan uses at most 64 calls and is declined if it would exceed
-that cap. Every focused call retains the full selected source set as context;
-only the focused text window is bounded.
+sources, extraction proactively makes one call per source up to 8,192 UTF-16
+units and divides each larger source into contiguous windows of at most 8,192
+units. The plan uses at most 64 calls and is declined if it would exceed that
+cap.
+
+Each planned call sends only its own source, or only its window text with the
+source ID, media type, and the window's UTF-16 offsets and source length. Other
+sources and windows are never included. Each result is grounded as it arrives. A
+call that fails grounding gets at most one replacement for that same call with
+fixed diagnostic counts, so a plan makes at most 128 calls. A second failure
+saves nothing, and planned extractions never make the full-corpus replacement.
+
+Cross-source conflicts and duplicates for planned extractions come from local
+detection over the aggregated facts, which depends on consistent subject naming
+across calls.
 
 For smaller inputs, an explicit output-token truncation
 can trigger one focused call per source for two to four sources; if a focused
 call also truncates, that source can be retried in four contiguous text windows.
 This fallback uses at most 21 application calls including the original request.
+Those focused calls keep the full selected source set as context.
 
-Every request keeps the same per-call token cap. The existing grounding
-correction remains one full-corpus replacement request. These bounds make no
-latency or coverage guarantee. Results are aggregated after every call succeeds,
-then pass the existing schema and source-grounding checks before any facts are
-saved.
+Every request keeps the same per-call token cap. These bounds make no latency or
+coverage guarantee. Results are aggregated after every call succeeds, then pass
+the existing schema and source-grounding checks before any facts are saved.
 
 Proposal validation removes redundant entries only when failures consist solely
 of repeated evidence tuples or issue fact/source references, then reruns the full

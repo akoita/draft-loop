@@ -139,6 +139,7 @@ describe("canonical profile grounding recovery", () => {
     expect(requests[1]?.operationId).toBe(requests[0]?.operationId);
     expect(requests[1]?.sources).toBe(requests[0]?.sources);
     expect(requests[1]?.signal).toBe(controller.signal);
+    expect(requests[1]?.groundProposal).toBeUndefined();
     expect(requests[1]?.groundingRecovery).toEqual([{ code: "value_not_in_quote", count: 2 }]);
     expect(Object.isFrozen(requests[1])).toBe(true);
     expect(Object.isFrozen(requests[1]?.groundingRecovery)).toBe(true);
@@ -241,18 +242,71 @@ describe("canonical profile grounding recovery", () => {
     expect(inputFailure.facts).toEqual([]);
   });
 
-  it("does not treat an error thrown by the provider seam as a completed grounding failure", async () => {
-    const providerGroundingError = new CandidateProfileGroundingError([
+  it("reports a grounding failure thrown by the extraction port with grounding guidance", async () => {
+    const portGroundingError = new CandidateProfileGroundingError([
       { code: "value_not_in_quote", count: 1 },
     ]);
-    const extract = vi.fn(async () => Promise.reject(providerGroundingError));
+    const extract = vi.fn(async () => Promise.reject(portGroundingError));
 
     const result = await processCanonicalCandidateProfileExtraction({ extract }, input());
 
     expect(extract).toHaveBeenCalledTimes(1);
     expect(result.facts).toEqual([]);
-    expect(result.issues[0]?.message).toContain("unknown reason");
-    expect(result.issues[0]?.message).not.toContain("could not be grounded");
+    expect(result.issues[0]?.message).toContain("could not be grounded");
+    expect(result.issues[0]?.message).toContain("values absent from evidence quotes: 1");
+  });
+
+  it("supplies a local grounding validator that repairs quotes or rejects ungrounded proposals", async () => {
+    let validator: CanonicalCandidateProfileExtractionRequest["groundProposal"];
+    const extract = vi.fn(async (request: CanonicalCandidateProfileExtractionRequest) => {
+      validator = request.groundProposal;
+      return proposal([]);
+    });
+    await processCanonicalCandidateProfileExtraction({ extract }, input());
+
+    const parse = (value: unknown) => value as Parameters<NonNullable<typeof validator>>[0];
+    const repaired = validator?.(
+      parse(
+        proposal([
+          {
+            key: "analytics",
+            category: "skill",
+            field: "name",
+            value: "analytics",
+            quote: "**analytics reporting**",
+          },
+        ]),
+      ),
+    );
+    expect(repaired?.facts[0]?.evidence[0]?.quote).toBe("analytics reporting");
+    expect(validator?.(repaired as Parameters<NonNullable<typeof validator>>[0])).toEqual(repaired);
+    expect(() =>
+      validator?.(
+        parse(
+          proposal([
+            { key: "bad", category: "skill", field: "name", value: "Rust", quote: "payment" },
+          ]),
+        ),
+      ),
+    ).toThrow(CandidateProfileGroundingError);
+  });
+
+  it("does not make a full-corpus replacement when a planned aggregate fails grounding", async () => {
+    const sources = [
+      material({ id: "source-a", text: "TypeScript\n".repeat(4_000) }),
+      material({ id: "source-b", text: "React\n".repeat(4_000) }),
+    ];
+    const extract = vi.fn(async () =>
+      proposal([
+        { key: "bad", category: "skill", field: "name", value: "Rust", quote: "TypeScript" },
+      ]),
+    );
+
+    const result = await processCanonicalCandidateProfileExtraction({ extract }, input(sources));
+
+    expect(extract).toHaveBeenCalledTimes(1);
+    expect(result.facts).toEqual([]);
+    expect(result.issues[0]?.message).toContain("could not be grounded");
   });
 
   it("keeps provider and schema errors from the replacement request in their own stages", async () => {

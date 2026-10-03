@@ -89,6 +89,7 @@ describe("canonical candidate profile extraction", () => {
           text: candidateText,
         },
       ],
+      groundProposal: expect.any(Function),
     });
     expect(JSON.stringify(extract.mock.calls)).not.toContain("knowledge-1");
     expect(JSON.stringify(extract.mock.calls)).not.toContain("version-1");

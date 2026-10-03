@@ -58,6 +58,13 @@ export interface CanonicalCandidateProfileExtractionRequest {
   readonly sources: readonly CanonicalCandidateProfileExtractionSource[];
   readonly signal?: AbortSignal;
   readonly groundingRecovery?: readonly CandidateProfileGroundingDiagnosticCount[];
+  /**
+   * Local validator applied to each bounded batch of a planned extraction. It returns the
+   * quote-repaired proposal or throws CandidateProfileGroundingError, and is never sent to a provider.
+   */
+  readonly groundProposal?: (
+    proposal: CanonicalCandidateProfileExtractionProposal,
+  ) => CanonicalCandidateProfileExtractionProposal;
 }
 
 /** Provider seam for structured extraction from explicitly approved CKB text. */
