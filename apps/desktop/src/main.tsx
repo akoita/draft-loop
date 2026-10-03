@@ -40,6 +40,8 @@ import { hasCanonicalCandidateProfileCapabilities, ProfileWorkspace } from "./pr
 import { BrandMark, ReviewWorkspace } from "./review.js";
 import { createReviewActionDispatcher, type PendingReviewAction } from "./review-dispatch.js";
 import { ThemeToggle } from "./theme.js";
+import { WorkspaceCreationForm, workspaceCreationSubmission } from "./workspace-creation.js";
+import { workspaceModelEditorDraftFromState } from "./workspace-model-editor.js";
 import {
   workspaceModelSettingsBlocker,
   workspaceModelSettingsDraft,
@@ -628,7 +630,7 @@ interface WorkspaceSetupFormProps {
 }
 
 /**
- * Choosing the two models a workspace will run, before it exists.
+ * Custom model editing for an existing workspace.
  *
  * Presentational on purpose: every asynchronous answer it shows — the model
  * lists, the independence verdict — arrives as a prop from a host command, so
@@ -901,6 +903,8 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   );
   const [draft, setDraft] = useState<WorkspaceSetupDraft>(initialWorkspaceSetupDraft);
   const [editingModels, setEditingModels] = useState(false);
+  const [modelEditorFromCreation, setModelEditorFromCreation] = useState(false);
+  const [modelEditorMode, setModelEditorMode] = useState<"profiles" | "custom">("profiles");
   const [modelSettingsError, setModelSettingsError] = useState<string | null>(null);
   const [typingOwnModel, setTypingOwnModel] = useState<Readonly<Record<ModelSide, boolean>>>({
     author: false,
@@ -1313,6 +1317,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     action: (() => Promise<DesktopReviewState>) | undefined,
     describeFailure: (reason: unknown) => string = (reason) =>
       messageOf(reason, "The workspace could not be opened."),
+    openModelEditor = false,
   ) => {
     if (action === undefined) return;
     setBusy(true);
@@ -1329,6 +1334,20 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       profilePendingScopeRef.current = null;
       setProfilePendingScope(null);
       setState(loaded);
+      if (openModelEditor && activePort.configureModels !== undefined) {
+        try {
+          prepareModelEditorDraft(loaded);
+          setModelEditorFromCreation(true);
+          setEditingModels(true);
+        } catch {
+          setImportError("The current model settings are unavailable.");
+          setModelEditorFromCreation(false);
+          setEditingModels(false);
+        }
+      } else {
+        setModelEditorFromCreation(false);
+        setEditingModels(false);
+      }
     } catch (reason: unknown) {
       setError(describeFailure(reason));
     } finally {
@@ -1361,8 +1380,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     }
   };
 
-  const setupFormVisible =
-    (error !== null && !workspaceRecoveryRequired) || workspaceSetupVisible || editingModels;
+  const setupFormVisible = editingModels;
   const listModels = activePort.listModels;
   const previewIndependence = activePort.previewIndependence;
   const localEndpointNamed = draft.localEndpoint.trim() !== "";
@@ -1440,29 +1458,37 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       });
       setPreview({ status: "idle" });
       setEditingModels(false);
+      setModelEditorFromCreation(false);
+      setModelEditorMode("profiles");
       setModelSettingsError(null);
     });
+  };
+
+  const prepareModelEditorDraft = (workspace: DesktopReviewState) => {
+    const settings = workspaceModelSettingsDraft(workspace);
+    setDraft((current) => workspaceModelEditorDraftFromState(current, workspace));
+    setModelFilters({
+      author: { company: settings.authorCompany, text: "" },
+      critic: { company: settings.criticCompany, text: "" },
+    });
+    setTypingOwnModel({ author: false, critic: false });
+    requestedCompanies.current.clear();
+    setDiscovery({
+      anthropic: { status: "idle" },
+      openai: { status: "idle" },
+      zai: { status: "idle" },
+      local: { status: "idle" },
+    });
+    setPreview({ status: "idle" });
+    setModelEditorMode("profiles");
+    setModelSettingsError(null);
   };
 
   const openModelSettings = () => {
     if (state === null || activePort.configureModels === undefined || modelSettingsDisabled) return;
     try {
-      const settings = workspaceModelSettingsDraft(state);
-      setDraft((current) => ({ ...current, ...settings }));
-      setModelFilters({
-        author: { company: settings.authorCompany, text: "" },
-        critic: { company: settings.criticCompany, text: "" },
-      });
-      setTypingOwnModel({ author: false, critic: false });
-      requestedCompanies.current.clear();
-      setDiscovery({
-        anthropic: { status: "idle" },
-        openai: { status: "idle" },
-        zai: { status: "idle" },
-        local: { status: "idle" },
-      });
-      setPreview({ status: "idle" });
-      setModelSettingsError(null);
+      prepareModelEditorDraft(state);
+      setModelEditorFromCreation(false);
       setEditingModels(true);
     } catch {
       setModelSettingsError("The current model settings are unavailable.");
@@ -1504,6 +1530,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       }
       setState(loaded);
       setAppliedModelProfiles(null);
+      setModelEditorFromCreation(false);
       setEditingModels(false);
     } catch {
       if (isCurrentWorkspaceContext(workspaceId, generation)) {
@@ -1581,7 +1608,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
   };
 
   /**
-   * Ask each selected company for its models, once, and never block on it.
+   * Discover model ids only while the unified model editor is open.
    *
    * Discovery is a convenience: a company whose list cannot be fetched falls
    * back to a typed model id and says why, and nothing here can stop a
@@ -1652,7 +1679,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     if (previewIndependence === undefined) {
       setPreview({
         status: "unavailable",
-        reason: "This host cannot check a pairing before the workspace exists.",
+        reason: "This host cannot check the current model pairing.",
       });
       return;
     }
@@ -1721,30 +1748,21 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
           {openWorkspace === undefined &&
           createWorkspace === undefined &&
           createDemoWorkspace === undefined ? null : (
-            <WorkspaceSetupForm
+            <WorkspaceCreationForm
               draft={draft}
-              discovery={discovery}
-              preview={preview}
-              typingOwnModel={typingOwnModel}
-              modelFilters={modelFilters}
               busy={busy}
-              onDraftChange={setDraft}
-              onModelFilterChange={(side, filter) =>
-                setModelFilters((current) => ({
-                  ...current,
-                  [side]: filter,
-                }))
-              }
-              onTypeOwnModel={(side) =>
-                setTypingOwnModel((current) => ({ ...current, [side]: true }))
-              }
+              onDraftChange={(next) => setDraft((current) => ({ ...current, ...next }))}
               {...(createWorkspace === undefined
                 ? {}
                 : {
-                    onCreate: () =>
+                    onCreate: (name: string, maxRounds: number) =>
                       void setup(
-                        () => createWorkspace(draft.name.trim(), workspaceModelSelection(draft)),
-                        (reason) => workspaceSetupFailureMessage(reason, draft),
+                        () => {
+                          const submission = workspaceCreationSubmission(name, maxRounds);
+                          return createWorkspace(submission.name, submission.selection);
+                        },
+                        (reason) => messageOf(reason, "The workspace could not be created."),
+                        true,
                       ),
                   })}
               {...(createDemoWorkspace === undefined
@@ -1784,30 +1802,105 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
             <ThemeToggle />
           </div>
           <p className="eyebrow">Workspace settings</p>
-          <h1>Change models for new runs</h1>
-          <p>Existing run records stay unchanged. New runs will use the saved model pair.</p>
-          <WorkspaceSetupForm
-            draft={draft}
-            discovery={discovery}
-            preview={preview}
-            typingOwnModel={typingOwnModel}
-            modelFilters={modelFilters}
-            busy={modelSettingsDisabled}
-            editMode
-            errorMessage={modelSettingsError}
-            onDraftChange={setDraft}
-            onModelFilterChange={(side, filter) =>
-              setModelFilters((current) => ({ ...current, [side]: filter }))
-            }
-            onTypeOwnModel={(side) =>
-              setTypingOwnModel((current) => ({ ...current, [side]: true }))
-            }
-            onSave={() => void saveModelSettings()}
-            onCancel={() => {
-              setEditingModels(false);
-              setModelSettingsError(null);
-            }}
-          />
+          <h1>
+            {modelEditorFromCreation ? "Choose models for new runs" : "Change models for new runs"}
+          </h1>
+          <p>
+            {modelEditorFromCreation
+              ? "Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged."
+              : "Existing run records stay unchanged. New runs will use the saved model pair."}
+          </p>
+          <section className="workspace-model-summary" aria-label="Current configured model pair">
+            <h2>Current configured model pair</h2>
+            <p>
+              Author: {state.providerTransmissionPreflight.author.company}/
+              {state.providerTransmissionPreflight.author.model}
+            </p>
+            <p>
+              Critic: {state.providerTransmissionPreflight.critic.company}/
+              {state.providerTransmissionPreflight.critic.model}
+            </p>
+          </section>
+          <fieldset className="model-editor-mode">
+            <legend>Model selection method</legend>
+            <button
+              className={`button ${modelEditorMode === "profiles" ? "button-primary" : "button-quiet"}`}
+              type="button"
+              aria-pressed={modelEditorMode === "profiles"}
+              disabled={modelSettingsDisabled}
+              onClick={() => setModelEditorMode("profiles")}
+            >
+              Presets
+            </button>
+            <button
+              className={`button ${modelEditorMode === "custom" ? "button-primary" : "button-quiet"}`}
+              type="button"
+              aria-pressed={modelEditorMode === "custom"}
+              disabled={modelSettingsDisabled}
+              onClick={() => setModelEditorMode("custom")}
+            >
+              Custom
+            </button>
+          </fieldset>
+          {modelEditorMode === "profiles" &&
+          activePort.configureModels !== undefined &&
+          activePort.getModelProfileSupport !== undefined ? (
+            <ModelProfilePicker
+              key={`${state.workspaceId}:${workspaceGeneration}`}
+              workspaceId={state.workspaceId}
+              generation={workspaceGeneration}
+              applied={selectedModelProfiles?.refs ?? null}
+              {...(modelEditorFromCreation
+                ? {
+                    pendingSelectionMessage: "No profile has been selected for this workspace yet.",
+                  }
+                : {})}
+              support={modelProfileSupport}
+              disabled={modelSettingsDisabled}
+              onApply={async (references) => {
+                const applied = await applyModelProfiles(references);
+                if (applied) {
+                  setModelEditorFromCreation(false);
+                  setEditingModels(false);
+                }
+                return applied;
+              }}
+              onCancel={() => {
+                setModelEditorFromCreation(false);
+                setEditingModels(false);
+              }}
+              onRetrySupport={() => setModelProfileSupportEpoch((current) => current + 1)}
+              isContextCurrent={isCurrentWorkspaceContext}
+            />
+          ) : modelEditorMode === "custom" ? (
+            <WorkspaceSetupForm
+              draft={draft}
+              discovery={discovery}
+              preview={preview}
+              typingOwnModel={typingOwnModel}
+              modelFilters={modelFilters}
+              busy={modelSettingsDisabled}
+              editMode
+              errorMessage={modelSettingsError}
+              onDraftChange={setDraft}
+              onModelFilterChange={(side, filter) =>
+                setModelFilters((current) => ({ ...current, [side]: filter }))
+              }
+              onTypeOwnModel={(side) =>
+                setTypingOwnModel((current) => ({ ...current, [side]: true }))
+              }
+              onSave={() => void saveModelSettings()}
+              onCancel={() => {
+                setModelEditorFromCreation(false);
+                setEditingModels(false);
+                setModelSettingsError(null);
+              }}
+            />
+          ) : (
+            <p className="setup-blocker" role="alert">
+              Preset selection is unavailable. Choose Custom to edit the current destinations.
+            </p>
+          )}
         </section>
       </main>
     );
@@ -1865,21 +1958,24 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
               }
             />
-            {activePort.configureModels === undefined ||
-            activePort.getModelProfileSupport === undefined ? null : (
-              <ModelProfilePicker
-                key={`${state.workspaceId}:${workspaceGeneration}`}
-                workspaceId={state.workspaceId}
-                generation={workspaceGeneration}
-                applied={selectedModelProfiles?.refs ?? null}
-                support={modelProfileSupport}
-                disabled={modelSettingsDisabled}
-                onApply={applyModelProfiles}
-                onUseWorkspaceModels={() => setAppliedModelProfiles(null)}
-                onRetrySupport={() => setModelProfileSupportEpoch((current) => current + 1)}
-                isContextCurrent={isCurrentWorkspaceContext}
-              />
-            )}
+            <section className="workspace-model-summary" aria-label="Configured model pair">
+              <h2>Configured model pair</h2>
+              <p>
+                Author: {state.providerTransmissionPreflight.author.company}/
+                {state.providerTransmissionPreflight.author.model}
+              </p>
+              <p>
+                Critic: {state.providerTransmissionPreflight.critic.company}/
+                {state.providerTransmissionPreflight.critic.model}
+              </p>
+              {selectedModelProfiles === null ? null : (
+                <p>
+                  Applied profiles: {selectedModelProfiles.refs.author.id}@
+                  {selectedModelProfiles.refs.author.version} and{" "}
+                  {selectedModelProfiles.refs.critic.id}@{selectedModelProfiles.refs.critic.version}
+                </p>
+              )}
+            </section>
             {profileCapabilities === null ? null : (
               <fieldset
                 disabled={
