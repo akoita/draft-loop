@@ -7,6 +7,10 @@ import type {
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
 const genericProfileOperationFailure =
   "The canonical candidate profile operation could not be completed.";
+const historicalMalformedStreamFailure =
+  "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.";
+const safeMalformedStreamFailure =
+  "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.";
 
 export type CanonicalCandidateProfileOutcomeKind =
   | "unloaded"
@@ -40,12 +44,14 @@ const unloadedOutcome: CanonicalCandidateProfileOutcome = {
 
 /** Keep provider and saved issue text path-free and bounded before showing it in the renderer. */
 export function safeCanonicalCandidateProfileFeedback(reason: unknown): string {
-  const message =
+  const rawMessage =
     typeof reason === "string"
       ? reason.trim()
       : reason instanceof Error
         ? reason.message.trim()
         : "";
+  const message =
+    rawMessage === historicalMalformedStreamFailure ? safeMalformedStreamFailure : rawMessage;
   if (
     message === "" ||
     message.length > 240 ||

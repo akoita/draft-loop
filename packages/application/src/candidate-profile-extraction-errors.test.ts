@@ -62,7 +62,7 @@ describe("candidate profile extraction failure guidance", () => {
   it.each([
     [
       "malformed_stream",
-      "DeepInfra returned a malformed GLM stream. Check provider/model compatibility and update DraftLoop to the latest supported version; no facts were saved.",
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.",
     ],
     [
       "incomplete_stream",
@@ -90,6 +90,7 @@ describe("candidate profile extraction failure guidance", () => {
       "invalid-response",
       "raw response includes private source text and key=secret",
       {
+        ...(code === "malformed_stream" ? { failureStage: "transport-parsing" as const } : {}),
         diagnostics: [{ code, path: "candidate.secret/path" }],
       },
     );
@@ -99,6 +100,67 @@ describe("candidate profile extraction failure guidance", () => {
     expect(guidance).toBe(message);
     expect(guidance).not.toContain("private source text");
     expect(guidance).not.toContain("secret");
+  });
+
+  it("summarizes only bounded DeepInfra malformed-stream reason counts", () => {
+    const message = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("deepinfra", "invalid-response", "private source /secret", {
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "malformed_stream", path: "private/source/path" }],
+        diagnosticCounts: [
+          { code: "stream_chunk_envelope", count: 2 },
+          { code: "stream_model_metadata", count: Number.MAX_SAFE_INTEGER },
+          { code: "stream_role", count: 3 },
+          { code: "private_reason/path", count: 10 },
+          { code: "stream_tool_data", count: 0 },
+        ],
+      }),
+      "provider",
+    );
+
+    expect(message).toContain("invalid chunk envelope: 2");
+    expect(message).toContain("invalid model metadata: 999+");
+    expect(message).toContain("3 other issues");
+    expect(message).not.toContain("private");
+    expect(message).not.toContain("/");
+    expect(message.length).toBeLessThanOrEqual(240);
+  });
+
+  it("uses legacy stream guidance only for the exact DeepInfra transport diagnostic", () => {
+    const legacy = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("deepinfra", "invalid-response", "private", {
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "malformed_stream", path: "private/path" }],
+      }),
+      "provider",
+    );
+    const wrongStage = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("deepinfra", "invalid-response", "private", {
+        failureStage: "response-schema-validation",
+        diagnostics: [{ code: "malformed_stream", path: "private/path" }],
+        diagnosticCounts: [{ code: "stream_role", count: 1 }],
+      }),
+      "provider",
+    );
+    const wrongProvider = candidateProfileExtractionFailureMessage(
+      new ProviderAdapterError("openai", "invalid-response", "private", {
+        failureStage: "transport-parsing",
+        diagnostics: [{ code: "malformed_stream", path: "private/path" }],
+        diagnosticCounts: [{ code: "stream_role", count: 1 }],
+      }),
+      "provider",
+    );
+
+    expect(legacy).toBe(
+      "DeepInfra returned a malformed GLM stream. Check provider or model compatibility and update DraftLoop; no facts were saved.",
+    );
+    expect(legacy).not.toContain("/");
+    expect(wrongStage).toBe(
+      "The provider response did not match the required candidate profile format. Retry or check the configured model.",
+    );
+    expect(wrongProvider).toBe(
+      "The provider returned an invalid extraction response. Retry or check the configured model.",
+    );
   });
 
   it("uses sanitized fallback guidance for unrecognized DeepInfra diagnostics", () => {
