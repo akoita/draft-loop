@@ -1010,7 +1010,11 @@ export function ProfileWorkspace({
           showMessage={statusMessage !== currentOutcome.message}
         />
       )}
-      <div className="profile-status" role="status" aria-live="polite">
+      <div
+        className={busy ? "profile-status boot-loading" : "profile-status"}
+        role="status"
+        aria-live="polite"
+      >
         {statusMessage}
       </div>
       {errorMessage === null ? null : (
