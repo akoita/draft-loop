@@ -882,4 +882,187 @@ describe("canonical profile extraction output-limit fallback", () => {
     });
     expect(calls).toHaveLength(3);
   });
+
+  it("proactively windows large unique sources with full context and aggregates conflicts", async () => {
+    const firstText = "Project Atlas launched in 2021.\n".repeat(1_200);
+    const secondText = "Project Atlas launched in 2023.\n".repeat(1_200);
+    const first = source("source-a", firstText);
+    const second = source("source-b", secondText);
+    const fullContext = [first, second];
+    const controller = new AbortController();
+    const proactiveRequest = {
+      ...request(fullContext),
+      signal: controller.signal,
+    } satisfies CanonicalCandidateProfileExtractionRequest;
+    const { calls, executor } = executorFor((call) => {
+      expect(call.input.sources).toEqual(fullContext);
+      expect(call.contextSnapshotId).toBe("fallback-operation");
+      expect(call.model).toEqual(model);
+      expect(call.maxOutputTokens).toBe(controls.maxOutputTokens);
+      expect(call.dataPolicy).toEqual(dataPolicy);
+      expect(call.signal).toBe(controller.signal);
+      expect(call.input.extractionFocusSourceId).toBeDefined();
+      expect(call.input.extractionFocusWindow).toMatchObject({
+        start: expect.any(Number),
+        end: expect.any(Number),
+        text: expect.any(String),
+      });
+      if (calls.length !== 1) return proposal([]);
+      return proposal(
+        [
+          {
+            key: "launch-2021",
+            category: "date",
+            field: "launch-year",
+            value: "2021",
+            subjectKey: "project-atlas",
+            sourceId: first.id,
+            quote: "Project Atlas launched in 2021",
+          },
+          {
+            key: "launch-2023",
+            category: "date",
+            field: "launch-year",
+            value: "2023",
+            subjectKey: "project-atlas",
+            sourceId: second.id,
+            quote: "Project Atlas launched in 2023",
+          },
+        ],
+        [
+          {
+            code: "conflict-date",
+            factKeys: ["launch-2021", "launch-2023"],
+            sourceIds: [first.id, second.id],
+          },
+        ],
+      );
+    });
+
+    const result = await executeCanonicalProfileExtractionWithFallback(
+      executor,
+      proactiveRequest,
+      controls,
+    );
+
+    expect(calls).toHaveLength(8);
+    expect(calls.map(([call]) => call.input.extractionFocusSourceId)).toEqual([
+      first.id,
+      first.id,
+      first.id,
+      first.id,
+      second.id,
+      second.id,
+      second.id,
+      second.id,
+    ]);
+    const aggregate = result as unknown as {
+      readonly facts: readonly { readonly key: string; readonly value: string }[];
+      readonly issues: readonly { readonly code: string; readonly factKeys: readonly string[] }[];
+    };
+    expect(aggregate.facts.map(({ key, value }) => [key, value])).toEqual([
+      ["batch-1-fact-1", "2021"],
+      ["batch-1-fact-2", "2023"],
+    ]);
+    expect(aggregate.issues).toEqual([
+      {
+        code: "conflict-date",
+        factKeys: ["batch-1-fact-1", "batch-1-fact-2"],
+        sourceIds: [first.id, second.id],
+      },
+    ]);
+  });
+
+  it.each(["malformed", "truncation", "timeout"] as const)(
+    "discards earlier proactive batches after a later %s failure",
+    async (failureKind) => {
+      const first = material("source-a", "TypeScript\n".repeat(5_000));
+      const second = material("source-b", "React\n".repeat(5_000));
+      const { calls, executor } = executorFor(() => {
+        if (calls.length === 1) {
+          return proposal([
+            {
+              key: "first-window-fact",
+              category: "skill",
+              field: "name",
+              value: "TypeScript",
+              sourceId: first.id,
+              quote: "TypeScript",
+            },
+          ]);
+        }
+        if (failureKind === "malformed") {
+          return { schemaVersion: 1, facts: [{ key: "malformed" }], issues: [] };
+        }
+        if (failureKind === "truncation") throw providerTruncation();
+        throw new ProviderAdapterError("anthropic", "timeout", "private timeout detail");
+      });
+      const result = await processCanonicalCandidateProfileExtraction(
+        {
+          extract: (preparedRequest) =>
+            executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+        },
+        input([first, second]),
+      );
+
+      expect(calls).toHaveLength(2);
+      expect(result.facts).toEqual([]);
+      expect(result.issues).toHaveLength(1);
+      expect(JSON.stringify(result)).not.toContain("private timeout detail");
+    },
+  );
+
+  it("stops a proactive plan on cancellation without returning a partial aggregate", async () => {
+    const first = source("source-a", "TypeScript\n".repeat(5_000));
+    const second = source("source-b", "React\n".repeat(5_000));
+    const controller = new AbortController();
+    const { calls, executor } = executorFor(() => {
+      if (calls.length === 1) {
+        return proposal([
+          {
+            key: "first-window-fact",
+            category: "skill",
+            field: "name",
+            value: "TypeScript",
+            sourceId: first.id,
+            quote: "TypeScript",
+          },
+        ]);
+      }
+      controller.abort();
+      return proposal([]);
+    });
+
+    await expect(
+      executeCanonicalProfileExtractionWithFallback(
+        executor,
+        { ...request([first, second]), signal: controller.signal },
+        controls,
+      ),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(2);
+  });
+
+  it("keeps large grounding-recovery requests to one full-context call", async () => {
+    const first = source("source-a", "TypeScript\n".repeat(5_000));
+    const second = source("source-b", "React\n".repeat(5_000));
+    const { calls, executor } = executorFor((call) => {
+      expect(call.input.sources).toEqual([first, second]);
+      expect(call.input.extractionFocusSourceId).toBeUndefined();
+      expect(call.input.extractionFocusWindow).toBeUndefined();
+      expect(call.input.groundingRecovery).toEqual([{ code: "value_not_in_quote", count: 1 }]);
+      return proposal([]);
+    });
+
+    await executeCanonicalProfileExtractionWithFallback(
+      executor,
+      {
+        ...request([first, second]),
+        groundingRecovery: [{ code: "value_not_in_quote", count: 1 }],
+      },
+      controls,
+    );
+
+    expect(calls).toHaveLength(1);
+  });
 });
