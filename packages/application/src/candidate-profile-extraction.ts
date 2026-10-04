@@ -25,6 +25,7 @@ import {
 } from "./candidate-profile-extraction-errors.js";
 import { prepareCanonicalCandidateProfileExtractionSources } from "./candidate-profile-extraction-sources.js";
 import type { CandidateProfileGroundingDiagnosticCount } from "./candidate-profile-grounding-diagnostics.js";
+import type { CanonicalProfileExtractionProgressListener } from "./canonical-profile-extraction-progress.js";
 import { extractGroundedCanonicalCandidateProfileProposal } from "./canonical-profile-grounding-recovery.js";
 
 /** Maximum exact CKB source versions sent through one extraction operation. */
@@ -57,7 +58,23 @@ export interface CanonicalCandidateProfileExtractionRequest {
   readonly operationId: string;
   readonly sources: readonly CanonicalCandidateProfileExtractionSource[];
   readonly signal?: AbortSignal;
+  /** Local advisory progress observer for planned extractions; never sent to a provider. */
+  readonly onProgress?: CanonicalProfileExtractionProgressListener;
   readonly groundingRecovery?: readonly CandidateProfileGroundingDiagnosticCount[];
+  /**
+   * Local validator applied to each bounded batch of a planned extraction. It returns the
+   * quote-repaired proposal or throws CandidateProfileGroundingError, and is never sent to a provider.
+   */
+  readonly groundProposal?: (
+    proposal: CanonicalCandidateProfileExtractionProposal,
+  ) => CanonicalCandidateProfileExtractionProposal;
+  /**
+   * Local filter for a replacement batch that still fails grounding. It returns the quote-repaired
+   * proposal without its ungrounded facts, and is never sent to a provider.
+   */
+  readonly filterGroundedProposal?: (
+    proposal: CanonicalCandidateProfileExtractionProposal,
+  ) => CanonicalCandidateProfileExtractionProposal;
 }
 
 /** Provider seam for structured extraction from explicitly approved CKB text. */
@@ -72,6 +89,7 @@ export interface CanonicalCandidateProfileExtractionInput {
   readonly sources: readonly CanonicalCandidateProfileExtractionMaterial[];
   readonly allowProviderData: boolean;
   readonly signal?: AbortSignal;
+  readonly onProgress?: CanonicalProfileExtractionProgressListener;
 }
 
 export interface CanonicalCandidateProfileExtractionResult {
@@ -196,6 +214,7 @@ function validateInput(input: CanonicalCandidateProfileExtractionInput): {
       operationId: input.operationId,
       sources: Object.freeze(sources),
       ...(input.signal === undefined ? {} : { signal: input.signal }),
+      ...(typeof input.onProgress === "function" ? { onProgress: input.onProgress } : {}),
     }),
     references,
   };
@@ -359,6 +378,8 @@ function mapProposal(
     string,
     readonly CanonicalCandidateProfileProvenanceReference[]
   >,
+  droppedFacts: number,
+  sources: readonly CanonicalCandidateProfileExtractionMaterial[],
 ): CanonicalCandidateProfileExtractionResult {
   const factByKey = new Map<string, CanonicalCandidateProfileFact>();
   const facts = proposal.facts.map((candidate) => {
@@ -404,18 +425,37 @@ function mapProposal(
     );
   });
 
-  const issues = uniqueSorted([...proposedIssues, ...detectedIssues(facts)], (issue) => issue.id);
+  const droppedFactsIssues =
+    droppedFacts > 0
+      ? [
+          buildIssue(
+            "omission",
+            [],
+            candidateSourceReferences(sources),
+            undefined,
+            "warning",
+            droppedFactsMessage(droppedFacts),
+          ),
+        ]
+      : [];
+  const issues = uniqueSorted(
+    [...proposedIssues, ...detectedIssues(facts), ...droppedFactsIssues],
+    (issue) => issue.id,
+  );
   if (issues.length > maximumCanonicalCandidateProfileIssueCount) {
     throw new Error("The extraction proposal produces too many review issues.");
   }
   return cloneAndFreeze({ facts, issues });
 }
 
-function extractionFailure(
+function droppedFactsMessage(count: number): string {
+  return `${count} extracted fact${count === 1 ? " was" : "s were"} dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.`;
+}
+
+function candidateSourceReferences(
   sources: readonly CanonicalCandidateProfileExtractionMaterial[],
-  message: string,
-): CanonicalCandidateProfileExtractionResult {
-  const references = uniqueSorted(
+): readonly CanonicalCandidateProfileProvenanceReference[] {
+  return uniqueSorted(
     sources.flatMap((source) => {
       try {
         const reference = canonicalCandidateProfileProvenanceReferenceSchema.parse(
@@ -428,6 +468,13 @@ function extractionFailure(
     }),
     referenceKey,
   );
+}
+
+function extractionFailure(
+  sources: readonly CanonicalCandidateProfileExtractionMaterial[],
+  message: string,
+): CanonicalCandidateProfileExtractionResult {
+  const references = candidateSourceReferences(sources);
   return cloneAndFreeze({
     facts: [],
     issues: [buildIssue("omission", [], references, undefined, "error", message)],
@@ -449,7 +496,7 @@ export async function processCanonicalCandidateProfileExtraction(
       validated.request.sources,
       validated.references,
     );
-    const proposal = await extractGroundedCanonicalCandidateProfileProposal(
+    const { proposal, droppedFacts } = await extractGroundedCanonicalCandidateProfileProposal(
       port,
       Object.freeze({ ...validated.request, sources: preparedSources.sources }),
       preparedSources.referencesByRepresentativeId,
@@ -458,7 +505,12 @@ export async function processCanonicalCandidateProfileExtraction(
         stage = nextStage;
       },
     );
-    return mapProposal(proposal, preparedSources.referencesByRepresentativeId);
+    return mapProposal(
+      proposal,
+      preparedSources.referencesByRepresentativeId,
+      droppedFacts,
+      input.sources,
+    );
   } catch (error) {
     if (input.signal?.aborted === true || (error instanceof Error && error.name === "AbortError")) {
       throw error;

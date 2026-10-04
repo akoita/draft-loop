@@ -191,6 +191,55 @@ describe("desktop native profile capabilities", () => {
     ]);
   });
 
+  it("binds profile progress and cancel to the active workspace and gates them by capability", async () => {
+    const state = createFixtureReviewState();
+    const invoke = vi.fn<NativeBridge["invoke"]>(async (command) => {
+      if (command.type === "review.load") return { ok: true, value: state };
+      if (command.type === "profile.progress") {
+        return { ok: true, value: { active: true, completedCalls: 1, plannedCalls: 2 } };
+      }
+      return { ok: true, value: { cancelled: true } };
+    });
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load", "profile.progress", "profile.cancel"],
+        invoke,
+      }),
+    );
+
+    await expect(port.getCanonicalCandidateProfileProgress?.("profile-1")).resolves.toEqual({
+      active: true,
+      completedCalls: 1,
+      plannedCalls: 2,
+    });
+    await expect(port.cancelCanonicalCandidateProfileGeneration?.("profile-1")).resolves.toEqual({
+      cancelled: true,
+    });
+    expect(
+      invoke.mock.calls
+        .map(([command]) => command)
+        .filter((command) => command.type.startsWith("profile.")),
+    ).toEqual([
+      {
+        type: "profile.progress",
+        input: { workspaceId: state.workspaceId, profileId: "profile-1" },
+      },
+      {
+        type: "profile.cancel",
+        input: { workspaceId: state.workspaceId, profileId: "profile-1" },
+      },
+    ]);
+
+    const bare = createBridgeReviewPort(
+      createNativeCapabilityPort({
+        capabilities: ["review.load"],
+        invoke: async () => ({ ok: true, value: state }),
+      }),
+    );
+    expect(bare.getCanonicalCandidateProfileProgress).toBeUndefined();
+    expect(bare.cancelCanonicalCandidateProfileGeneration).toBeUndefined();
+  });
+
   it("keeps profile methods capability-gated", async () => {
     const state = createFixtureReviewState();
     const port = createBridgeReviewPort(
@@ -211,6 +260,32 @@ describe("desktop native profile capabilities", () => {
     expect(port.editCanonicalCandidateProfile).toBeUndefined();
     expect(port.reviewCanonicalCandidateProfile).toBeUndefined();
     expect(port.listReviewedCanonicalCandidateProfiles).toBeUndefined();
+    expect(port.listCanonicalCandidateProfileSummaries).toBeUndefined();
+  });
+
+  it("lists saved profile summaries through the catalog command with drafts included", async () => {
+    const state = createFixtureReviewState();
+    const summary = {
+      profileId: "profile-1",
+      latestVersion: 2,
+      status: "draft",
+      updatedAt: "2026-09-30T12:00:00Z",
+      reviewedVersion: 1,
+    };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: { workspaceId: state.workspaceId, profiles: [], summaries: [summary] },
+    }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["review.load", "profile.catalog"], invoke }),
+    );
+    await expect(port.listCanonicalCandidateProfileSummaries?.(state.workspaceId)).resolves.toEqual(
+      [summary],
+    );
+    expect(invoke).toHaveBeenCalledWith({
+      type: "profile.catalog",
+      input: { workspaceId: state.workspaceId, includeDrafts: true },
+    });
   });
 
   it("binds candidate knowledge operations to native dialogs and one explicit workspace selection", async () => {
@@ -272,6 +347,23 @@ describe("desktop native profile capabilities", () => {
         },
       },
     ]);
+  });
+
+  it("reads the workspace's saved knowledge store through knowledge.current", async () => {
+    const value = { store: null, selectedKnowledgeBaseIds: [] };
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({ ok: true, value }));
+    const port = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["knowledge.current"], invoke }),
+    );
+    await expect(port.getCurrentCandidateKnowledge?.("workspace-1")).resolves.toEqual(value);
+    expect(invoke.mock.calls.map(([command]) => command)).toEqual([
+      { type: "knowledge.current", input: { workspaceId: "workspace-1" } },
+    ]);
+
+    const without = createBridgeReviewPort(
+      createNativeCapabilityPort({ capabilities: ["knowledge.open"], invoke }),
+    );
+    expect(without.getCurrentCandidateKnowledge).toBeUndefined();
   });
 
   it("gates each candidate knowledge method on its own host capability", () => {

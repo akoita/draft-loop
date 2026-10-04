@@ -81,6 +81,7 @@ import {
 import {
   canonicalCandidateProfileDerivationApprovalErrorMessage,
   canonicalCandidateProfileDerivationErrorMessage,
+  canonicalProfileDerivationOptions,
   createCanonicalCandidateProfileDerivationService,
 } from "./candidate-profile-derivation.js";
 import type {
@@ -88,13 +89,13 @@ import type {
   CanonicalCandidateProfileExtractionRequest,
 } from "./candidate-profile-extraction.js";
 import { createCanonicalCandidateProfilePersistenceService } from "./candidate-profile-persistence.js";
+import { canonicalExtractionProfileFor } from "./canonical-extraction-profile.js";
 import { executeCanonicalProfileExtractionWithFallback } from "./canonical-profile-extraction-fallback.js";
 import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
-import { createGLMExtractionProfile, isDeepInfraGLMModel } from "./glm-extraction-profile.js";
 import type {
   ProviderAuthMode,
   ProviderAuthModeConfiguration,
@@ -128,6 +129,7 @@ import {
   createKnowledgeSelectionSnapshot,
   type KnowledgeSelectionSnapshot,
 } from "./knowledge-base.js";
+import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 import type {
@@ -698,16 +700,6 @@ async function validateConfiguredKnowledgeSelection(
 function selectionDriftFailure(): CliUserError {
   return new CliUserError(
     "The candidate knowledge selection changed; review is required before provider execution.",
-  );
-}
-
-function selectionSnapshotsMatch(
-  historical: KnowledgeSelectionSnapshot,
-  current: KnowledgeSelectionSnapshot,
-): boolean {
-  return (
-    historical.schemaVersion === current.schemaVersion &&
-    JSON.stringify(historical.entries) === JSON.stringify(current.entries)
   );
 }
 
@@ -3036,15 +3028,13 @@ export function createProviderCanonicalCandidateProfileExtractionPort(
 ): CanonicalCandidateProfileExtractionPort {
   const providerAuthModeConfiguration =
     options.providerAuthModeConfiguration ?? resolveProviderAuthModes(options.providerAuthMode);
-  const glmExtractionProfile = isDeepInfraGLMModel(config.authorCompany, config.authorModel)
-    ? createGLMExtractionProfile()
-    : undefined;
+  const extractionProfile = canonicalExtractionProfileFor(config.authorCompany, config.authorModel);
   const model: ModelSelection = {
     company: config.authorCompany,
     modelId: config.authorModel,
     role: "author",
     promptTemplateVersion: promptVersion,
-    ...(glmExtractionProfile === undefined ? {} : { profile: glmExtractionProfile }),
+    ...(extractionProfile === undefined ? {} : { profile: extractionProfile }),
   };
   const requestContract = canonicalProfileRequest(model, providerAuthModeConfiguration.anthropic);
   return Object.freeze({
@@ -3273,11 +3263,8 @@ export function createLocalApplicationDriver(
             storeRoot,
             knowledgeBaseId,
           })),
-          ...(binding.combinationApproved === undefined
-            ? {}
-            : { combinationApproved: binding.combinationApproved }),
           allowProviderData: true,
-          ...(command.createdAt === undefined ? {} : { createdAt: command.createdAt }),
+          ...canonicalProfileDerivationOptions(binding, command),
         });
       } finally {
         await storage.close();

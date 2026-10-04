@@ -32,6 +32,7 @@ function launch(executable, phase, userData, evidencePath, secrets) {
           ANTHROPIC_API_KEY: secrets.anthropicEnvironment,
           OPENAI_API_KEY: secrets.openaiEnvironment,
           DEEPINFRA_API_KEY: secrets.deepinfraEnvironment,
+          GEMINI_API_KEY: secrets.googleEnvironment,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE: "1",
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_PHASE: phase,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_EVIDENCE: evidencePath,
@@ -45,6 +46,9 @@ function launch(executable, phase, userData, evidencePath, secrets) {
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_DEEPINFRA_INITIAL: secrets.deepinfraInitial,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_DEEPINFRA_REPLACEMENT: secrets.deepinfraReplacement,
           DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_DEEPINFRA_ENVIRONMENT: secrets.deepinfraEnvironment,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_INITIAL: secrets.googleInitial,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_REPLACEMENT: secrets.googleReplacement,
+          DRAFT_LOOP_CREDENTIAL_ACCEPTANCE_GOOGLE_ENVIRONMENT: secrets.googleEnvironment,
         },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -102,6 +106,9 @@ export async function runCredentialAcceptance(executableInput, evidenceInput) {
     deepinfraInitial: canary("deepinfra-initial"),
     deepinfraReplacement: canary("deepinfra-replacement"),
     deepinfraEnvironment: canary("deepinfra-environment"),
+    googleInitial: canary("google-initial"),
+    googleReplacement: canary("google-replacement"),
+    googleEnvironment: canary("google-environment"),
   };
 
   try {

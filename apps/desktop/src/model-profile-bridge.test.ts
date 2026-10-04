@@ -70,7 +70,7 @@ describe("desktop model profile bridge projections", () => {
     if (first === undefined) throw new Error("Expected a registered profile.");
     first.supported = false;
     mutable.profiles.pop();
-    expect(projectModelProfileSupport("workspace-1", apiKeyModes).profiles).toHaveLength(10);
+    expect(projectModelProfileSupport("workspace-1", apiKeyModes).profiles).toHaveLength(12);
   });
 
   it("rejects malformed support results and bounded-list violations", () => {

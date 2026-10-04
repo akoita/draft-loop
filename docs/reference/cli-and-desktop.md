@@ -28,14 +28,16 @@ controls, or CV quality.
 
 The paid validation cohort remains limited to the required Economy and Standard
 Anthropic/OpenAI destinations and supported optional Anthropic/OpenAI entries.
-The exact opt-in DeepInfra GLM development author profile is omitted from this
-cohort; listing a development preset does not add a provider to release checks.
+The exact opt-in DeepInfra GLM and Google Gemini development author profiles are
+omitted from this cohort; listing a development preset does not add a provider
+to release checks.
 
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-glm
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-gemini
 pnpm --filter @draft-loop/cli start start ./workspace \
   --author-profile standard-anthropic-author@1 \
   --critic-profile standard-openai-critic@2
@@ -46,13 +48,27 @@ pnpm --filter @draft-loop/cli start start ./workspace \
 must support its selected role. Economy and standard are unvalidated opt-in
 pairs. The separate `development-glm` opt-in pair uses the Z.ai
 `zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
-requires `DEEPINFRA_API_KEY`. The active catalog contains five unique exact
+requires `DEEPINFRA_API_KEY`. The separate `development-gemini` opt-in pair uses
+the Gemini 3.8 Flash author and the GPT-6 Luna critic; it requires
+`GEMINI_API_KEY`. The active catalog contains six unique exact
 profile versions; older profile
 versions remain available for historical references but are not current
 choices. A CLI-selected pair is recorded on that run only. It does not change
 workspace model settings, transmission approval, or credentials. Resume uses
 the pair already recorded in run history. Omitting profile options preserves
 the existing workspace-configured behavior.
+
+The opt-in Gemini 3.8 Flash development author is also selectable with
+`--author-profile dev-google-gemini-author@2` and an exact critic profile, or
+with `--author-company google --author-model gemini-3.8-flash`. Profile `@1`
+(Gemini 3.7 Flash) stays registered and accepted so existing runs resume, but it
+is no longer a preset or catalog entry. The 3.8 author requires
+`GEMINI_API_KEY` from a paid-tier Gemini API project: free-tier terms let Google
+use submitted content. The desktop offers the same `development-gemini` preset
+in its model picker and stores the key in its own settings row; see
+[Provider credentials](#provider-credentials). Desktop readiness for a Gemini
+author requires the Google key, and Gemini model discovery is manual: enter the
+exact model ID `gemini-3.8-flash`.
 
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
@@ -75,6 +91,13 @@ Z.ai models served by DeepInfra. It uses the same local credential store as the 
 and OpenAI keys, and saved app keys take precedence over environment variables.
 The host reads `DEEPINFRA_API_KEY` when no app key is saved. DeepInfra remains API-key-only:
 provider-managed session preferences are still limited to Anthropic and OpenAI.
+
+A separate Google Gemini API key row works the same way for the development
+Gemini author. The host reads `GEMINI_API_KEY` when no app key is saved. The row
+states that the key sends submitted content to Google and that Gemini API
+free-tier terms let Google use it, so candidate material needs a paid-tier key.
+Google keys are API-key-only and are never shared with another provider.
+
 The renderer receives only whether a key is configured and its storage source
 and protection, never the stored key.
 
@@ -88,6 +111,10 @@ configured GLM model. Supplied creation timestamps must be finite, nonnegative
 numbers within the safe-integer magnitude; fractional or changing timestamps
 are accepted and are not persisted or used as response identity. Null role or
 tool placeholders are treated as absent; actual tool calls remain rejected.
+
+The DeepInfra GLM and Google Gemini development routes retry temporary overload and
+rate-limit responses up to twice with a short backoff (about 2.5 s, then 5 s) before the
+request fails. Quota, billing, authentication, and invalid-request failures are never retried.
 
 ## Desktop diagnostics
 
@@ -205,6 +232,12 @@ reviewed version locally; it does not derive or transmit candidate material.
 Source compatibility is checked again before starting a review. Older hosts
 without the catalog capability retain the profile-name and history controls.
 
+When a workspace opens, the desktop lists its saved profiles, drafts included,
+in a **Saved profiles** picker (newest first, showing version and status) and
+loads the most recent one locally if no profile name is entered. Dismissing the
+native folder dialog for **Open knowledge store** is not an error and shows no
+message.
+
 Before approval, the desktop can show blockers from the readiness decision
 persisted for the exact artifact. A rubric blocker includes its recorded score
 and required threshold. The score is a check result, not a confirmed candidate
@@ -223,15 +256,17 @@ source content, or paths.
 
 DeepInfra timeout guidance distinguishes the initial response, an idle stream,
 and the total deadline; missing or conflicting phase diagnostics use generic
-timeout guidance. Transient errors name only HTTP 500, 502, 503, or 504; other
+timeout guidance. Idle and total timeout guidance may also state how many answer
+and reasoning characters the stream returned before stopping; the counts never
+include the text itself. Transient errors name only HTTP 500, 502, 503, or 504; other
 statuses use generic provider guidance. Older saved generic failures cannot be
 reconstructed because their timeout phase and status were not retained.
 
 An otherwise valid source-backed omission can retain its visible review warning
 when it names a fact the model did not return; only those dangling omission
 references are removed, followed by strict validation and evidence grounding.
-Dangling conflict or duplicate references, omissions without source references,
-unknown sources, and unsupported quotes still fail without saving facts.
+Dangling conflict or duplicate references and omissions without source
+references still fail without saving facts.
 Repeated model fact keys are repaired only when no issue refers to that key;
 later facts receive collision-free local identities, with all evidence still
 grounded. Issues that reference an ambiguous duplicate key remain failures.
@@ -241,21 +276,37 @@ billing guidance; the app does not estimate charges from failed attempts.
 
 The desktop distinguishes a saved extraction failure, an empty profile, a draft
 that still needs human review, open issue blockers, and a reviewed version. An
-empty failed version shows up to three deduplicated, sanitized issue reasons.
-The action is labeled **Retry profile generation**; the existing provider-data
-approval must be granted again before selected material is sent.
+empty failed version shows one callout with up to three deduplicated, sanitized
+issue reasons; the version details only note that the failure is recorded rather
+than repeating the cause. The action is labeled **Retry profile generation**;
+the existing provider-data approval must be granted again before selected
+material is sent, and a hint says so while the approval box is unticked.
+
+While a profile is generating, the desktop shows a spinner, an elapsed timer,
+and, once the plan is known, which part is running (for example **Part 2 of 4**,
+then **Finishing…**); it does not estimate completion time. The button reads
+**Generating…**. Large knowledge bases are processed in parts and can take
+several minutes, so keep DraftLoop open. **Cancel generation** stops further
+provider calls and saves nothing.
 
 Before retrying, follow the recorded cause and recovery guidance. Renaming the
 profile does not fix the underlying failure. Retrying sends selected material
 again and may consume provider credits.
 
-A grounding failure may trigger one additional full-context request with the
-same approved sources and fixed diagnostic counts. It returns a full replacement
-proposal, which must pass schema and grounding checks before any facts are saved.
-Failed values and quotes are not sent as feedback, and a failed replacement
-saves no facts. This bounded recovery has no live-provider reliability claim.
-Separate output-limit recovery can also make source-focused requests; the
-grounding correction itself does not fan out.
+A grounding failure on a smaller input may trigger one additional full-context
+request with the same approved sources and fixed diagnostic counts. It returns a
+full replacement proposal, which must pass schema and grounding checks before any
+facts are saved. Large inputs use per-call recovery instead (see the proactive
+plan below). Failed values and quotes are not sent as feedback. This bounded
+recovery has no live-provider reliability claim.
+
+If the replacement still fails grounding, DraftLoop keeps the grounded facts and
+drops only the ungrounded ones, including any proposed issue that cites a
+dropped fact or an unknown source. It adds one open warning, with no quoted
+content, that states how many facts were dropped; acknowledge it after checking
+the profile for missing facts. An ungrounded fact is never saved. If nothing
+grounded remains, no facts are saved and the profile shows as empty rather than
+as a failed extraction.
 
 Empty profiles and drafts with open issues cannot be marked reviewed; warnings
 also block until acknowledged or resolved and saved. In the desktop app, a
@@ -286,32 +337,43 @@ Claude Sonnet 5.5 and Opus 5.5 and the configured DeepInfra GLM author route.
 Canonical profile extraction uses a detached GLM profile at the same ceiling
 and requests `reasoning_effort: "none"` to disable reasoning, following
 [DeepInfra's reasoning control](https://docs.deepinfra.com/chat/reasoning). The
-normal GLM author profile keeps `low` reasoning. These settings make no speed
+normal GLM author profile keeps `low` reasoning. The Gemini author route uses the same ceiling, with a
+detached extraction profile that sets `thinkingBudget: 0`. These settings make no speed
 or quality guarantee; user-session, local, and other model routes keep 8,192
 tokens.
 
 For more than 65,536 UTF-16 text units across one to four unique prepared
-sources, extraction proactively makes one focused call for sources up to 8,192
-UTF-16 units and divides each larger source into contiguous windows of at most
-8,192 units. The plan uses at most 64 calls and is declined if it would exceed
-that cap. Every focused call retains the full selected source set as context;
-only the focused text window is bounded.
+sources, extraction proactively makes one call per source up to 8,192 UTF-16
+units and divides each larger source into contiguous windows of at most 8,192
+units. The plan uses at most 64 calls and is declined if it would exceed that
+cap.
+
+Each planned call sends only its own source, or only its window text with the
+source ID, media type, and the window's UTF-16 offsets and source length. Other
+sources and windows are never included. Each result is grounded as it arrives. A
+call that fails grounding gets at most one replacement for that same call with
+fixed diagnostic counts, so a plan makes at most 128 calls. After a second
+failure, only that call's ungrounded facts are dropped and counted toward the
+single warning above; planned extractions never make the full-corpus replacement.
+
+Cross-source conflicts and duplicates for planned extractions come from local
+detection over the aggregated facts, which depends on consistent subject naming
+across calls.
 
 For smaller inputs, an explicit output-token truncation
 can trigger one focused call per source for two to four sources; if a focused
 call also truncates, that source can be retried in four contiguous text windows.
 This fallback uses at most 21 application calls including the original request.
+Those focused calls keep the full selected source set as context.
 
-Every request keeps the same per-call token cap. The existing grounding
-correction remains one full-corpus replacement request. These bounds make no
-latency or coverage guarantee. Results are aggregated after every call succeeds,
-then pass the existing schema and source-grounding checks before any facts are
-saved.
+Every request keeps the same per-call token cap. These bounds make no latency or
+coverage guarantee. Results are aggregated after every call succeeds, then pass
+the existing schema and source-grounding checks before any facts are saved.
 
 Proposal validation removes redundant entries only when failures consist solely
 of repeated evidence tuples or issue fact/source references, then reruns the full
-schema. Other schema and grounding failures reject the full proposal, so no facts
-are saved. Guidance may show bounded reason counts but omits values, field names,
+schema. Other schema failures reject the full proposal, so no facts are saved.
+Guidance may show bounded reason counts but omits values, field names,
 source text, and paths.
 
 Skills are treated as collection values, so distinct skill facts do not become
@@ -354,8 +416,14 @@ The native host can report which registered exact profiles the active
 workspace's configured authentication routes support. This is local metadata
 and makes no credential or provider calls. The editor's **Presets** view offers
 presets and role-specific exact profile choices when both model-configuration
-and route-support capabilities are available. Choices stay a draft until
-**Apply for future runs** saves their provider/model destinations.
+and route-support capabilities are available. Each preset is a card that names
+the writing and reviewing models in plain language, shows the providers and
+public per-million-token prices, and carries **Unvalidated**, **Development**,
+and **Not available with your current sign-in** badges where they apply. A
+**Custom pair** card reveals the exact author and critic profile selects, and
+exact IDs and runtime controls sit in a collapsed **Details** disclosure.
+Choices stay a draft until **Apply for future runs** saves their provider/model
+destinations.
 The renderer keeps the exact references for new starts; existing run records
 remain unchanged. Unsupported or unavailable routes block profile-backed starts,
 and provider-transmission acknowledgement is still required. OpenAI Codex
@@ -385,11 +453,12 @@ You can still enter any exact model ID, and successful live discovery remains
 the displayed source. Each catalog entry shows its metadata review date;
 CLI-specific live availability for these suggestions has not been reverified. Economy and
 standard remain the curated pair presets, with a separate development GLM
-preset. The active catalog lists Claude Sonnet 5.5, Claude Opus 5.5, GPT-6
-Luna, GPT-6.1 Sol, and GLM-5.3-Flash through DeepInfra. Its standard uncached
-API rates are $0.15 per million input tokens and $0.50 per million output
-tokens, reviewed 2026-10-02; quality is unvalidated and account availability
-unchecked. Historical profile versions, including premium-tier entries, remain
+preset and a separate development Gemini preset. The active catalog lists
+Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Sol, GLM-5.3-Flash
+through DeepInfra, and Gemini 3.8 Flash. GLM's standard uncached API rates are
+$0.15 per million input tokens and $0.50 per million output tokens, reviewed
+2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04. Quality is
+unvalidated and account availability unchecked. Historical profile versions, including premium-tier entries, remain
 resolvable but are not offered as current suggestions or presets. All catalog
 quality entries are unvalidated and availability has not been checked; the
 review date documents metadata review, not a live provider probe. Local
@@ -399,7 +468,8 @@ Catalog price metadata covers the standard, uncached text API at up to 200,000
 input tokens. It excludes cache, tool, batch, regional, and subscription
 pricing. Sources are the official [Anthropic model overview] and [Sonnet 5.5
 overview], official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna], and the
-DeepInfra [GLM-5.3-Flash API page] and [model announcement].
+DeepInfra [GLM-5.3-Flash API page] and [model announcement], and Google's
+[Gemini API pricing] and [Gemini models] pages.
 
 OpenAI adapter responses retain valid cached-input, cache-write, and reasoning
 token details alongside input/output totals. A rate estimate accounts for
@@ -414,6 +484,8 @@ not persisted run totals or invoice amounts.
 [GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
 [GLM-5.3-Flash API page]: https://deepinfra.com/zai-org/GLM-5.3-Flash/api
 [model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
+[Gemini API pricing]: https://ai.google.dev/gemini-api/docs/pricing
+[Gemini models]: https://ai.google.dev/gemini-api/docs/models
 
 ## Writing policies
 
@@ -530,11 +602,17 @@ The desktop exposes the same CKB operations through a native boundary. Renderer
 messages never accept or return filesystem paths; the host owns native pickers
 and keeps paths local.
 
-- **Store access and inspection.** Desktop selection accepts only stores opened
-  in the current session. Combining CKBs requires visible approval. Both the CLI
+- **Store access and inspection.** Desktop selection accepts only stores the host
+  has opened, either in this session or by restoring the workspace's saved
+  store on reopen. Combining CKBs requires visible approval. Both the CLI
   and desktop can create, rename, and archive additional CKBs, while bounded
   diagnostics omit roots, labels, filenames, URLs, checksums, and content.
   Archival requires confirmation and cannot target the default CKB.
+
+- **Saved store on reopen.** When a workspace opens, the knowledge panel
+  reopens the store saved with its selection, marks the selected CKB "In use",
+  and shows no path. If the saved location is no longer readable, the panel asks
+  you to open the store again. Only the first saved entry's store is restored.
 
 - **File and URL intake.** Single-file intake uses a dedicated native picker and
   returns only opaque source and version identities. URL intake requires

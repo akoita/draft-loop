@@ -1,5 +1,6 @@
 import { maximumCanonicalCandidateProfileFactCount } from "@draft-loop/domain";
 import { type JsonObject, type ModelRequest, ProviderAdapterError } from "@draft-loop/providers";
+import type { CanonicalCandidateProfileExtractionProposal } from "@draft-loop/schemas";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -7,6 +8,8 @@ import {
   type CanonicalCandidateProfileExtractionRequest,
   processCanonicalCandidateProfileExtraction,
 } from "./candidate-profile-extraction.js";
+import { CandidateProfileGroundingError } from "./candidate-profile-grounding-diagnostics.js";
+import { canonicalProfileBoundedCallInstructions } from "./canonical-profile-extraction-bounded-calls.js";
 import {
   type CanonicalProfileExtractionExecutor,
   executeCanonicalProfileExtractionWithFallback,
@@ -110,6 +113,16 @@ function executorFor(
       execute: executeMock as unknown as CanonicalProfileExtractionExecutor["execute"],
     } satisfies CanonicalProfileExtractionExecutor,
   };
+}
+
+function rejectBadValues(
+  candidate: CanonicalCandidateProfileExtractionProposal,
+): CanonicalCandidateProfileExtractionProposal {
+  const invalid = candidate.facts.filter((fact) => ["BAD", "Rust"].includes(fact.value)).length;
+  if (invalid > 0) {
+    throw new CandidateProfileGroundingError([{ code: "value_not_in_quote", count: invalid }]);
+  }
+  return candidate;
 }
 
 function requestSources(call: ModelRequest<JsonObject>) {
@@ -568,7 +581,6 @@ describe("canonical profile extraction output-limit fallback", () => {
   it.each([
     ["truncation", "output limit"],
     ["schema", "Profile output failed local validation"],
-    ["grounding", "could not be grounded"],
   ] as const)(
     "saves no partial facts when a later section has %s failure",
     async (kind, message) => {
@@ -578,18 +590,6 @@ describe("canonical profile extraction output-limit fallback", () => {
       if (firstWindow === undefined) throw new Error("Expected a first source window.");
       const { calls, executor } = executorFor((call) => {
         if (calls.length === 1) throw providerTruncation();
-        if (kind === "grounding" && call.input.groundingRecovery !== undefined) {
-          return proposal([
-            {
-              key: "still-ungrounded",
-              category: "skill",
-              field: "name",
-              value: "React",
-              sourceId: first.id,
-              quote: "not in the original text",
-            },
-          ]);
-        }
         if (call.input.extractionFocusSourceId === first.id) {
           const window = call.input.extractionFocusWindow as
             | { readonly start: number; readonly end: number; readonly text: string }
@@ -608,18 +608,7 @@ describe("canonical profile extraction output-limit fallback", () => {
             ]);
           }
           if (kind === "truncation") throw providerTruncation();
-          if (kind === "schema")
-            return { schemaVersion: 1, facts: [{ key: "malformed" }], issues: [] };
-          return proposal([
-            {
-              key: "ungrounded-later-fact",
-              category: "skill",
-              field: "name",
-              value: "React",
-              sourceId: first.id,
-              quote: "not in the original text",
-            },
-          ]);
+          return { schemaVersion: 1, facts: [{ key: "malformed" }], issues: [] };
         }
         if (call.input.extractionFocusSourceId === second.id) {
           return proposal([
@@ -643,7 +632,7 @@ describe("canonical profile extraction output-limit fallback", () => {
         input([first, second]),
       );
 
-      expect(calls).toHaveLength(kind === "grounding" ? 8 : 4);
+      expect(calls).toHaveLength(4);
       expect(result.facts).toEqual([]);
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.message).toContain(message);
@@ -781,7 +770,7 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it("saves no partial facts when completed batches fail source grounding", async () => {
+  it("keeps grounded facts and drops ungrounded ones when the full replacement still fails grounding", async () => {
     const first = material("source-a", "TypeScript");
     const second = material("source-b", "React");
     const { calls, executor } = executorFor((call) => {
@@ -799,6 +788,14 @@ describe("canonical profile extraction output-limit fallback", () => {
         ]);
       }
       return proposal([
+        {
+          key: "grounded-fact",
+          category: "skill",
+          field: "name",
+          value: "TypeScript",
+          sourceId: first.id,
+          quote: "TypeScript",
+        },
         {
           key: "ungrounded-fact",
           category: "skill",
@@ -818,9 +815,11 @@ describe("canonical profile extraction output-limit fallback", () => {
     );
 
     expect(calls).toHaveLength(4);
-    expect(result.facts).toEqual([]);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]?.message).toContain("could not be grounded");
+    expect(result.facts.map((fact) => fact.value)).toEqual(["TypeScript"]);
+    const dropped = result.issues.find((issue) => issue.message.includes("was dropped"));
+    expect(dropped).toMatchObject({ code: "omission", severity: "warning", status: "open" });
+    expect(dropped?.factIds).toEqual([]);
+    expect(dropped?.sourceRefs).toEqual([first.reference, second.reference]);
   });
 
   it("stops before the next batch when the request is cancelled", async () => {
@@ -884,7 +883,7 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(calls).toHaveLength(3);
   });
 
-  it("proactively windows large unique sources with full context and aggregates conflicts", async () => {
+  it("sends each planned call only its own source or window and aggregates conflicts", async () => {
     const firstText = "Project Atlas launched in 2021.\n".repeat(1_200);
     const secondText = "Project Atlas launched in 2023.\n".repeat(1_200);
     const first = source("source-a", firstText);
@@ -896,20 +895,21 @@ describe("canonical profile extraction output-limit fallback", () => {
     const proactiveRequest = {
       ...request(fullContext),
       signal: controller.signal,
+      groundProposal: (candidate) => candidate,
     } satisfies CanonicalCandidateProfileExtractionRequest;
     const { calls, executor } = executorFor((call) => {
-      expect(call.input.sources).toEqual(fullContext);
       expect(call.contextSnapshotId).toBe("fallback-operation");
       expect(call.model).toEqual(model);
       expect(call.maxOutputTokens).toBe(controls.maxOutputTokens);
       expect(call.dataPolicy).toEqual(dataPolicy);
       expect(call.signal).toBe(controller.signal);
-      expect(call.input.extractionFocusSourceId).toBeDefined();
-      expect(call.input.extractionFocusWindow).toMatchObject({
-        start: expect.any(Number),
-        end: expect.any(Number),
-        text: expect.any(String),
-      });
+      expect(call.systemPrompt).toBe(
+        `${controls.systemPrompt} ${canonicalProfileBoundedCallInstructions}`,
+      );
+      expect(call.input.extractionFocusSourceId).toBeUndefined();
+      expect(call.input.extractionFocusWindow).toBeUndefined();
+      expect(Object.keys(call.input).sort()).toEqual(["extractionWindow", "sources"]);
+      expect(JSON.stringify(call.input)).not.toContain("groundProposal");
       if (calls.length !== 1) return proposal([]);
       return proposal(
         [
@@ -949,9 +949,29 @@ describe("canonical profile extraction output-limit fallback", () => {
     );
 
     expect(calls).toHaveLength(plannedCalls.length);
-    expect(calls.map(([call]) => call.input.extractionFocusSourceId)).toEqual(
-      plannedCalls.map((plannedCall) => plannedCall.sourceId),
-    );
+    for (const [index, plannedCall] of plannedCalls.entries()) {
+      const call = calls[index]?.[0];
+      const fullSource = fullContext.find((candidate) => candidate.id === plannedCall.sourceId);
+      if (call === undefined || fullSource === undefined || plannedCall.window === undefined) {
+        throw new Error("Expected a windowed planned call.");
+      }
+      expect(call.input.sources).toEqual([
+        { id: fullSource.id, mediaType: fullSource.mediaType, text: plannedCall.window.text },
+      ]);
+      expect(call.input.extractionWindow).toEqual({
+        sourceId: fullSource.id,
+        start: plannedCall.window.start,
+        end: plannedCall.window.end,
+        sourceLength: fullSource.text.length,
+      });
+      expect(fullSource.text.slice(plannedCall.window.start, plannedCall.window.end)).toBe(
+        plannedCall.window.text,
+      );
+      expect(JSON.stringify(call.input)).not.toContain(fullSource.checksum);
+      const otherSource = fullContext.find((candidate) => candidate.id !== fullSource.id);
+      expect(JSON.stringify(call.input)).not.toContain("2023.\nProject Atlas launched in 2023.");
+      expect(otherSource).toBeDefined();
+    }
     const aggregate = result as unknown as {
       readonly facts: readonly { readonly key: string; readonly value: string }[];
       readonly issues: readonly { readonly code: string; readonly factKeys: readonly string[] }[];
@@ -967,6 +987,280 @@ describe("canonical profile extraction output-limit fallback", () => {
         sourceIds: [first.id, second.id],
       },
     ]);
+  });
+
+  it("sends a small planned source whole and never another source's text", async () => {
+    const large = source("source-large", "Large filler line.\n".repeat(4_000));
+    const small = source("source-small", "Small source with a Rust skill.");
+    const plannedCalls = planCanonicalProfileExtractionCalls([large, small]);
+    if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+    const { calls, executor } = executorFor(() => proposal([]));
+
+    await executeCanonicalProfileExtractionWithFallback(
+      executor,
+      request([large, small]),
+      controls,
+    );
+
+    expect(calls).toHaveLength(plannedCalls.length);
+    const smallCalls = calls.filter(([call]) => requestSources(call)[0]?.id === small.id);
+    expect(smallCalls).toHaveLength(1);
+    expect(smallCalls[0]?.[0].input).toEqual({ sources: [small] });
+    for (const [call] of calls) {
+      expect(requestSources(call)).toHaveLength(1);
+      if (requestSources(call)[0]?.id === large.id) {
+        expect(JSON.stringify(call.input)).not.toContain("Rust skill");
+      } else {
+        expect(JSON.stringify(call.input)).not.toContain("Large filler");
+      }
+    }
+  });
+
+  it("retries only the failing planned call once with counts and the same bounded input", async () => {
+    const first = source("source-a", "TypeScript\n".repeat(5_000));
+    const second = source("source-b", "React\n".repeat(5_000));
+    const plannedCalls = planCanonicalProfileExtractionCalls([first, second]);
+    if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+    const { calls, executor } = executorFor(() => {
+      if (calls.length === 2) {
+        return proposal([
+          {
+            key: "bad",
+            category: "skill",
+            field: "name",
+            value: "BAD",
+            sourceId: first.id,
+            quote: "TypeScript",
+          },
+        ]);
+      }
+      return proposal([]);
+    });
+
+    const result = await executeCanonicalProfileExtractionWithFallback(
+      executor,
+      { ...request([first, second]), groundProposal: rejectBadValues },
+      controls,
+    );
+
+    expect(calls).toHaveLength(plannedCalls.length + 1);
+    const failed = calls[1]?.[0];
+    const replacement = calls[2]?.[0];
+    if (failed === undefined || replacement === undefined) throw new Error("Expected calls.");
+    expect(failed.input.groundingRecovery).toBeUndefined();
+    expect(replacement.input.groundingRecovery).toEqual([{ code: "value_not_in_quote", count: 1 }]);
+    expect({ ...replacement.input, groundingRecovery: undefined }).toEqual({
+      ...failed.input,
+      groundingRecovery: undefined,
+    });
+    expect(replacement.systemPrompt).toContain(canonicalProfileBoundedCallInstructions);
+    expect(replacement.systemPrompt).toContain("corrective extraction request");
+    expect(failed.systemPrompt).not.toContain("corrective extraction request");
+    const texts = calls.map(([call]) => JSON.stringify(call.input.extractionWindow));
+    expect(new Set(texts).size).toBe(texts.length - 1);
+    for (const [call] of calls) expect(requestSources(call)).toHaveLength(1);
+    expect((result as unknown as { readonly facts: readonly unknown[] }).facts).toEqual([]);
+  });
+
+  it("stops after one failed replacement for a planned call and returns nothing", async () => {
+    const first = source("source-a", "TypeScript\n".repeat(5_000));
+    const second = source("source-b", "React\n".repeat(5_000));
+    const { calls, executor } = executorFor(() =>
+      proposal([
+        {
+          key: "bad",
+          category: "skill",
+          field: "name",
+          value: "BAD",
+          sourceId: first.id,
+          quote: "TypeScript",
+        },
+      ]),
+    );
+
+    await expect(
+      executeCanonicalProfileExtractionWithFallback(
+        executor,
+        { ...request([first, second]), groundProposal: rejectBadValues },
+        controls,
+      ),
+    ).rejects.toBeInstanceOf(CandidateProfileGroundingError);
+    expect(calls).toHaveLength(2);
+  });
+
+  it("keeps grounded facts, drops ungrounded ones across planned calls, and never makes a full-corpus request", async () => {
+    const first = material("source-a", "TypeScript\n".repeat(5_000));
+    const second = material("source-b", "React\n".repeat(5_000));
+    const plannedCalls = planCanonicalProfileExtractionCalls([first, second]);
+    if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+    const { calls, executor } = executorFor((call) => {
+      const window = call.input.extractionWindow as { readonly start: number } | undefined;
+      if (window?.start !== 0) return proposal([]);
+      const [{ id, text }] = requestSources(call) as [{ id: string; text: string }];
+      return proposal([
+        {
+          key: "good",
+          category: "skill",
+          field: "name",
+          value: text.startsWith("TypeScript") ? "TypeScript" : "React",
+          sourceId: id,
+          quote: text.startsWith("TypeScript") ? "TypeScript" : "React",
+        },
+        {
+          key: "bad",
+          category: "skill",
+          field: "name",
+          value: "Rust",
+          sourceId: id,
+          quote: text.startsWith("TypeScript") ? "TypeScript" : "React",
+        },
+      ]);
+    });
+
+    const result = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: (preparedRequest) =>
+          executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+      },
+      input([first, second]),
+    );
+
+    expect(calls).toHaveLength(plannedCalls.length + 2);
+    for (const [call] of calls) expect(requestSources(call)).toHaveLength(1);
+    expect(result.facts.map((fact) => fact.value).sort()).toEqual(["React", "TypeScript"]);
+    const dropped = result.issues.filter((issue) => issue.message.includes("were dropped"));
+    expect(dropped).toHaveLength(1);
+    expect(dropped[0]?.message).toContain("2 extracted facts were dropped");
+    expect(dropped[0]?.sourceRefs).toEqual([first.reference, second.reference]);
+    expect(JSON.stringify(result)).not.toContain("Rust");
+  });
+
+  it("saves no ungrounded fact and no fake fact when every planned fact is dropped", async () => {
+    const first = material("source-a", "TypeScript\n".repeat(5_000));
+    const second = material("source-b", "React\n".repeat(5_000));
+    const { executor } = executorFor(() =>
+      proposal([
+        {
+          key: "bad",
+          category: "skill",
+          field: "name",
+          value: "Rust",
+          sourceId: first.id,
+          quote: "TypeScript",
+        },
+      ]),
+    );
+
+    const result = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: (preparedRequest) =>
+          executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+      },
+      input([first, second]),
+    );
+
+    expect(result.facts).toEqual([]);
+    expect(result.issues.some((issue) => issue.message.includes("were dropped"))).toBe(true);
+    expect(result.issues.every((issue) => issue.severity !== "error")).toBe(true);
+  });
+
+  it("grounds a planned call on arrival and recovers it with one bounded replacement", async () => {
+    const first = material("source-a", "TypeScript\n".repeat(5_000));
+    const second = material("source-b", "React\n".repeat(5_000));
+    const plannedCalls = planCanonicalProfileExtractionCalls([first, second]);
+    if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+    const { calls, executor } = executorFor((call) => {
+      if (calls.length === 1) {
+        return proposal([
+          {
+            key: "bad",
+            category: "skill",
+            field: "name",
+            value: "Rust",
+            sourceId: first.id,
+            quote: "TypeScript",
+          },
+        ]);
+      }
+      if (call.input.groundingRecovery !== undefined) {
+        return proposal([
+          {
+            key: "ts",
+            category: "skill",
+            field: "name",
+            value: "TypeScript",
+            sourceId: first.id,
+            quote: "TypeScript",
+          },
+        ]);
+      }
+      return proposal([]);
+    });
+
+    const result = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: (preparedRequest) =>
+          executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+      },
+      input([first, second]),
+    );
+
+    expect(calls).toHaveLength(plannedCalls.length + 1);
+    expect(result.facts.map((fact) => fact.value)).toEqual(["TypeScript"]);
+  });
+
+  it("does not apply the local grounding validator to unplanned requests", async () => {
+    const groundProposal = vi.fn(rejectBadValues);
+    const { calls, executor } = executorFor(() =>
+      proposal([
+        {
+          key: "bad",
+          category: "skill",
+          field: "name",
+          value: "BAD",
+          sourceId: "source-a",
+          quote: "TypeScript",
+        },
+      ]),
+    );
+
+    await executeCanonicalProfileExtractionWithFallback(
+      executor,
+      { ...request([source("source-a", "TypeScript")]), groundProposal },
+      controls,
+    );
+
+    expect(calls).toHaveLength(1);
+    expect(groundProposal).not.toHaveBeenCalled();
+    expect(JSON.stringify(calls[0]?.[0].input)).not.toContain("groundProposal");
+  });
+
+  it("stops during a planned replacement when the request is cancelled", async () => {
+    const first = source("source-a", "TypeScript\n".repeat(5_000));
+    const second = source("source-b", "React\n".repeat(5_000));
+    const controller = new AbortController();
+    const { calls, executor } = executorFor((call) => {
+      if (call.input.groundingRecovery !== undefined) controller.abort();
+      return proposal([
+        {
+          key: "bad",
+          category: "skill",
+          field: "name",
+          value: "BAD",
+          sourceId: first.id,
+          quote: "TypeScript",
+        },
+      ]);
+    });
+
+    await expect(
+      executeCanonicalProfileExtractionWithFallback(
+        executor,
+        { ...request([first, second]), signal: controller.signal, groundProposal: rejectBadValues },
+        controls,
+      ),
+    ).rejects.toThrow();
+    expect(calls).toHaveLength(2);
   });
 
   it.each(["malformed", "truncation", "timeout"] as const)(
@@ -1060,5 +1354,143 @@ describe("canonical profile extraction output-limit fallback", () => {
     );
 
     expect(calls).toHaveLength(1);
+  });
+
+  describe("bounded progress", () => {
+    const portFor = (executor: CanonicalProfileExtractionExecutor) => ({
+      extract: (preparedRequest: CanonicalCandidateProfileExtractionRequest) =>
+        executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+    });
+    const largeSources = () => [
+      material("source-a", "TypeScript\n".repeat(5_000)),
+      material("source-b", "React\n".repeat(5_000)),
+    ];
+
+    it("reports zero then one completed call per planned call", async () => {
+      const sources = largeSources();
+      const plannedCalls = planCanonicalProfileExtractionCalls(sources);
+      if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+      const progress: unknown[] = [];
+      const { calls, executor } = executorFor(() => proposal([]));
+
+      await processCanonicalCandidateProfileExtraction(portFor(executor), {
+        ...input(sources),
+        onProgress: (value) => progress.push(value),
+      });
+
+      expect(progress).toEqual(
+        Array.from({ length: plannedCalls.length + 1 }, (_, completedCalls) => ({
+          completedCalls,
+          plannedCalls: plannedCalls.length,
+        })),
+      );
+      expect(calls).toHaveLength(plannedCalls.length);
+      for (const call of calls) {
+        expect(JSON.stringify(call[0])).not.toContain("onProgress");
+        expect(Object.keys(call[0].input)).not.toContain("onProgress");
+      }
+    });
+
+    it("keeps the sequence unchanged when one planned call needs a grounding replacement", async () => {
+      const sources = largeSources();
+      const plannedCalls = planCanonicalProfileExtractionCalls(sources);
+      if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+      const progress: { completedCalls: number; plannedCalls: number }[] = [];
+      const { calls, executor } = executorFor((call) => {
+        if (calls.length === 1) {
+          return proposal([
+            {
+              key: "bad",
+              category: "skill",
+              field: "name",
+              value: "Rust",
+              sourceId: sources[0]?.id ?? "",
+              quote: "TypeScript",
+            },
+          ]);
+        }
+        expect(Object.keys(call.input)).not.toContain("onProgress");
+        return proposal([]);
+      });
+
+      await processCanonicalCandidateProfileExtraction(portFor(executor), {
+        ...input(sources),
+        onProgress: (value) => progress.push({ ...value }),
+      });
+
+      expect(calls).toHaveLength(plannedCalls.length + 1);
+      expect(progress.map((value) => value.completedCalls)).toEqual(
+        Array.from({ length: plannedCalls.length + 1 }, (_, index) => index),
+      );
+      expect(progress.every((value) => value.plannedCalls === plannedCalls.length)).toBe(true);
+    });
+
+    it("reports nothing for unplanned requests, including a full grounding replacement", async () => {
+      const progress: unknown[] = [];
+      const onProgress = (value: unknown) => progress.push(value);
+      const small = material("source-a", "TypeScript");
+      const { calls, executor } = executorFor((call) => {
+        expect(Object.keys(call.input)).not.toContain("onProgress");
+        if (calls.length === 1) {
+          return proposal([
+            {
+              key: "bad",
+              category: "skill",
+              field: "name",
+              value: "Rust",
+              sourceId: small.id,
+              quote: "TypeScript",
+            },
+          ]);
+        }
+        return proposal([]);
+      });
+
+      await processCanonicalCandidateProfileExtraction(portFor(executor), {
+        ...input([small]),
+        onProgress,
+      });
+
+      expect(calls).toHaveLength(2);
+      expect(progress).toEqual([]);
+    });
+
+    it("ignores a throwing progress callback", async () => {
+      const sources = largeSources();
+      const plannedCalls = planCanonicalProfileExtractionCalls(sources);
+      if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+      const onProgress = vi.fn(() => {
+        throw new Error("observer failure");
+      });
+      const { calls, executor } = executorFor(() => proposal([]));
+
+      await expect(
+        processCanonicalCandidateProfileExtraction(portFor(executor), {
+          ...input(sources),
+          onProgress,
+        }),
+      ).resolves.toMatchObject({ facts: [] });
+      expect(calls).toHaveLength(plannedCalls.length);
+      expect(onProgress).toHaveBeenCalledTimes(plannedCalls.length + 1);
+    });
+
+    it("stops reporting when the request is cancelled mid-plan", async () => {
+      const sources = largeSources();
+      const controller = new AbortController();
+      const progress: number[] = [];
+      const { calls, executor } = executorFor(() => {
+        if (calls.length === 2) controller.abort();
+        return proposal([]);
+      });
+
+      await expect(
+        processCanonicalCandidateProfileExtraction(portFor(executor), {
+          ...input(sources, controller.signal),
+          onProgress: (value) => progress.push(value.completedCalls),
+        }),
+      ).rejects.toThrow();
+      expect(calls).toHaveLength(2);
+      expect(progress).toEqual([0, 1]);
+    });
   });
 });

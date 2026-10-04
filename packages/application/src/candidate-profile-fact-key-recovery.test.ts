@@ -283,45 +283,57 @@ describe("unreferenced duplicate candidate fact keys", () => {
     expect(output).toEqual(before);
   });
 
-  it.each([
-    [
-      "unknown source",
-      {
-        schemaVersion: 1,
-        facts: [fact("shared"), fact("shared", "React", "React")],
-        issues: [{ code: "omission", factKeys: [], sourceIds: ["unknown-source"] }],
-      },
-    ],
-    [
-      "unsupported quote",
-      {
-        schemaVersion: 1,
-        facts: [
-          fact("shared", "TypeScript"),
-          {
-            ...fact("shared", "React", "React at Northwind"),
-            evidence: [{ sourceId: "source-a", quote: "React at Northwind" }],
-          },
-        ],
-        issues: [],
-      },
-    ],
-    [
-      "unknown conflict reference",
-      {
-        schemaVersion: 1,
-        facts: [fact("shared"), fact("shared", "React", "React")],
-        issues: [
-          { code: "conflict-value", factKeys: ["shared", "missing"], sourceIds: ["source-a"] },
-        ],
-      },
-    ],
-  ])("still saves no facts for an unsafe %s", async (name, output) => {
-    const { execute, port } = extractionPort(output as JsonObject);
+  it("keeps grounded facts and drops only the issue citing an unknown source", async () => {
+    const { execute, port } = extractionPort({
+      schemaVersion: 1,
+      facts: [fact("shared"), fact("shared", "React", "React")],
+      issues: [{ code: "omission", factKeys: [], sourceIds: ["unknown-source"] }],
+    } as JsonObject);
 
     const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
 
-    expect(execute).toHaveBeenCalledTimes(name === "unknown conflict reference" ? 1 : 2);
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(result.facts.map(({ value }) => value)).toEqual(["TypeScript", "React"]);
+    expect(result.issues.some((issue) => issue.message.includes("dropped"))).toBe(false);
+    expect(result.issues.some((issue) => issue.severity === "error")).toBe(false);
+  });
+
+  it("keeps grounded facts and drops a fact with an unsupported quote with a warning", async () => {
+    const { execute, port } = extractionPort({
+      schemaVersion: 1,
+      facts: [
+        fact("shared", "TypeScript"),
+        {
+          ...fact("shared", "React", "React at Northwind"),
+          evidence: [{ sourceId: "source-a", quote: "React at Northwind" }],
+        },
+      ],
+      issues: [],
+    } as JsonObject);
+
+    const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
+
+    expect(execute).toHaveBeenCalledTimes(2);
+    expect(result.facts.map(({ value }) => value)).toEqual(["TypeScript"]);
+    expect(result.issues.find((issue) => issue.message.includes("dropped"))).toMatchObject({
+      code: "omission",
+      severity: "warning",
+      status: "open",
+    });
+  });
+
+  it("still saves no facts for an unsafe unknown conflict reference", async () => {
+    const { execute, port } = extractionPort({
+      schemaVersion: 1,
+      facts: [fact("shared"), fact("shared", "React", "React")],
+      issues: [
+        { code: "conflict-value", factKeys: ["shared", "missing"], sourceIds: ["source-a"] },
+      ],
+    } as JsonObject);
+
+    const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
+
+    expect(execute).toHaveBeenCalledTimes(1);
     expect(result.facts).toEqual([]);
     expect(result.issues).toHaveLength(1);
     expect(result.issues[0]).toMatchObject({ code: "omission", severity: "error", status: "open" });

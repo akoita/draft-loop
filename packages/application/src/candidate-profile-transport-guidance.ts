@@ -39,6 +39,17 @@ const transientStatusMessages = new Map<number, string>([
   ],
 ]);
 
+function diagnosticCount(error: ProviderAdapterError, code: string): number | undefined {
+  const entry = error.diagnosticCounts.find((candidate) => candidate.code === code);
+  return entry !== undefined && Number.isSafeInteger(entry.count) && entry.count >= 0
+    ? entry.count
+    : undefined;
+}
+
+function formatCount(count: number): string {
+  return count.toLocaleString("en-US");
+}
+
 /** Return fixed transport guidance only for recognized DeepInfra GLM failure classes. */
 export function deepInfraProfileTransportFailureMessage(
   error: ProviderAdapterError,
@@ -52,7 +63,11 @@ export function deepInfraProfileTransportFailureMessage(
       ),
     );
     if (phases.size !== 1) return genericTimeoutMessage;
-    return timeoutPhaseMessages.get([...phases][0] ?? "") ?? genericTimeoutMessage;
+    const phaseMessage = timeoutPhaseMessages.get([...phases][0] ?? "") ?? genericTimeoutMessage;
+    const answer = diagnosticCount(error, "stream_answer_characters");
+    const reasoning = diagnosticCount(error, "stream_reasoning_characters");
+    if (answer === undefined || reasoning === undefined) return phaseMessage;
+    return `${phaseMessage} Before stopping, the stream returned ${formatCount(answer)} answer characters and ${formatCount(reasoning)} reasoning characters.`;
   }
 
   if (error.code === "transient") {

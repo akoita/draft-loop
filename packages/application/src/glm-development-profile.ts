@@ -1,5 +1,5 @@
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
-import { deepInfraGLMCompany, deepInfraGLMModelId } from "@draft-loop/providers";
+import { deepInfraGLMCompany, deepInfraGLMModelId } from "@draft-loop/providers/model-identities";
 
 export const deepInfraGLMAuthorProfileId = "dev-deepinfra-glm-author" as const;
 

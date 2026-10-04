@@ -1,4 +1,6 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
+import { isGoogleGeminiAuthorProfile, isGoogleGeminiModel } from "./gemini-development-profile.js";
+import { isGoogleGeminiExtractionProfile } from "./gemini-extraction-profile.js";
 import { isDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
 import { isDeepInfraGLMExtractionProfile } from "./glm-extraction-profile.js";
 
@@ -44,6 +46,13 @@ export function canonicalProfileRequest(
     (isDeepInfraGLMAuthorProfile(model.profile) || isDeepInfraGLMExtractionProfile(model.profile))
       ? model.profile
       : undefined;
+  const googleGeminiProfile =
+    isGoogleGeminiModel(model.company, model.modelId) &&
+    model.profile !== undefined &&
+    model.profile.modelId === model.modelId &&
+    (isGoogleGeminiAuthorProfile(model.profile) || isGoogleGeminiExtractionProfile(model.profile))
+      ? model.profile
+      : undefined;
   const isCuratedAnthropicApiModel =
     model.company === "anthropic" &&
     anthropicAuthMode === "api-key" &&
@@ -53,6 +62,7 @@ export function canonicalProfileRequest(
     systemPrompt: canonicalCandidateProfileExtractionSystemPrompt,
     maxOutputTokens:
       deepInfraGLMProfile?.runtime.maxOutputTokens ??
+      googleGeminiProfile?.runtime.maxOutputTokens ??
       (isCuratedAnthropicApiModel ? 32768 : defaultCanonicalProfileOutputTokens),
   });
 }

@@ -1,6 +1,6 @@
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 
-import { deepInfraGLMCompany, deepInfraGLMModelId } from "@draft-loop/providers";
+import { deepInfraGLMCompany, deepInfraGLMModelId } from "@draft-loop/providers/model-identities";
 import { createDeepInfraGLMAuthorProfile, isDeepInfraGLMModel } from "./glm-development-profile.js";
 
 export { isDeepInfraGLMModel };

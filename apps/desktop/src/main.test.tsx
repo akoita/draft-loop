@@ -1131,6 +1131,7 @@ describe("desktop workspace setup", () => {
     anthropic: { status: "idle" },
     openai: { status: "idle" },
     zai: { status: "idle" },
+    google: { status: "idle" },
     local: { status: "idle" },
   };
 
@@ -1466,7 +1467,7 @@ describe("desktop workspace setup", () => {
         "Catalog entries show their review dates; CLI-specific live availability has not been reverified",
       );
       expect(html).toContain("account or plan availability or CV quality");
-      expect(html).toContain("DeepInfra");
+      expect(html).toContain("DeepInfra, and Google.");
     }
     expect(edit).not.toContain("Workspace name");
     expect(wrongRole).toContain(
@@ -1500,6 +1501,14 @@ describe("desktop workspace setup", () => {
         zai: { status: "unavailable", reason: "Manual exact id required." },
       },
     );
+    const gemini = renderForm(
+      { ...named, authorCompany: "google", authorModel: "gemini-3.8-flash" },
+      { status: "idle" },
+      {
+        ...idleDiscovery,
+        google: { status: "unavailable", reason: "Manual exact id required." },
+      },
+    );
     const glmLive = renderForm(
       { ...named, authorCompany: "zai", authorModel: "glm-from-live" },
       { status: "idle" },
@@ -1522,6 +1531,9 @@ describe("desktop workspace setup", () => {
     expect(glm).toContain("Z.ai (DeepInfra)");
     expect(glm).toContain('value="zai-org/GLM-5.3-Flash"');
     expect(glm).toContain("registered for Author");
+    expect(gemini).toContain("Google (Gemini)");
+    expect(gemini).toContain('value="gemini-3.8-flash"');
+    expect(gemini).toContain("registered for Author");
     expect(glmLive).toContain('value="glm-from-live"');
     expect(local).not.toContain("setup-model-suggestions");
     expect(local).toContain('aria-label="Local model server address"');

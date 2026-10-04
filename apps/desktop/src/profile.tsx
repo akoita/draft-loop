@@ -14,29 +14,66 @@ import type {
 import type { CandidateProfileSelection } from "./model.js";
 import type { DesktopProfileCapabilities } from "./native.js";
 import {
+  defaultProfileToAutoload,
   findReviewedCanonicalCandidateProfileChoice,
   parseReviewedCanonicalCandidateProfileCatalogResult,
   type ReviewedCanonicalCandidateProfileSummary,
   reviewedCanonicalCandidateProfileChoice,
+  type SavedCanonicalCandidateProfileSummary,
+  savedCanonicalCandidateProfileLabel,
 } from "./profile-catalog.js";
+import {
+  type ProfileGenerationCallProgress,
+  ProfileGenerationCancel,
+  ProfileGenerationProgress,
+} from "./profile-generation-progress.js";
 import { ProfileIssueBulkStatus } from "./profile-issue-bulk-status.js";
 import {
   type CanonicalCandidateProfileOutcome,
   canReviewCanonicalCandidateProfile,
   canSelectReviewedCanonicalCandidateProfile,
+  isCanonicalCandidateProfileGenerationCancelled,
   projectCanonicalCandidateProfileOperationResult,
   projectCanonicalCandidateProfileOutcome,
   safeCanonicalCandidateProfileFeedback,
 } from "./profile-outcome.js";
+import {
+  humanizeProfileCategory,
+  humanizeProfileFieldLabel,
+  profileIssueCodeLabel,
+  sourceCountLabel,
+  truncateProfileText,
+} from "./profile-presentation.js";
+import {
+  factCountLabel,
+  issueCountLabel,
+  profileFactCategoriesStartOpen,
+  profileIssueGroupStartsOpen,
+  profileReviewBlockedReason,
+  projectProfileFactCategories,
+} from "./profile-review-navigation.js";
 
 const profileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/giu;
+const generationProgressPollMs = 1000;
 const maximumProfileIdLength = maximumCanonicalCandidateProfileIdLength;
 
 export type CanonicalCandidateProfileCapabilities = Required<
-  Omit<DesktopProfileCapabilities, "listReviewedCanonicalCandidateProfiles">
+  Omit<
+    DesktopProfileCapabilities,
+    | "listReviewedCanonicalCandidateProfiles"
+    | "listCanonicalCandidateProfileSummaries"
+    | "getCanonicalCandidateProfileProgress"
+    | "cancelCanonicalCandidateProfileGeneration"
+  >
 > &
-  Pick<DesktopProfileCapabilities, "listReviewedCanonicalCandidateProfiles">;
+  Pick<
+    DesktopProfileCapabilities,
+    | "listReviewedCanonicalCandidateProfiles"
+    | "listCanonicalCandidateProfileSummaries"
+    | "getCanonicalCandidateProfileProgress"
+    | "cancelCanonicalCandidateProfileGeneration"
+  >;
 
 export interface ProfileWorkspaceProps {
   readonly workspaceId: string;
@@ -140,6 +177,43 @@ function shortChecksum(checksum: string): string {
   return `${checksum.slice(0, 12)}…`;
 }
 
+/** True when the outcome is shown as a single failure or empty callout instead of status text. */
+export function isProfileOutcomeCallout(outcome: CanonicalCandidateProfileOutcome): boolean {
+  return outcome.kind === "extraction-failure" || (outcome.kind === "empty" && outcome.retry);
+}
+
+function ProfileOutcomeCallout({
+  outcome,
+}: {
+  readonly outcome: CanonicalCandidateProfileOutcome;
+}) {
+  const failed = outcome.kind === "extraction-failure";
+  return (
+    <section
+      className={`profile-outcome ${failed ? "profile-outcome-failure" : "profile-outcome-empty"}`}
+      aria-label="Canonical profile status"
+    >
+      <strong className="profile-outcome-title">
+        {failed
+          ? "Profile generation failed. No facts were saved."
+          : "This profile version has no facts."}
+      </strong>
+      {outcome.failureReasons.length === 0 ? null : (
+        <ul aria-label="Recorded cause">
+          {outcome.failureReasons.map((reason) => (
+            <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
+          ))}
+        </ul>
+      )}
+      <p>
+        {failed
+          ? "Fix the cause above, then retry. Retrying sends your selected material again and may use provider credits. Renaming the profile does not help."
+          : "Check that the selected source material includes the facts you need, then retry. Retrying sends your selected material again and may use provider credits."}
+      </p>
+    </section>
+  );
+}
+
 export function ProfileOutcomeFeedback({
   outcome,
   showMessage = true,
@@ -147,36 +221,17 @@ export function ProfileOutcomeFeedback({
   readonly outcome: CanonicalCandidateProfileOutcome;
   readonly showMessage?: boolean;
 }) {
+  if (isProfileOutcomeCallout(outcome)) return <ProfileOutcomeCallout outcome={outcome} />;
   return (
     <section className="profile-outcome" aria-label="Canonical profile status">
       {showMessage ? <p>{outcome.message}</p> : null}
       {outcome.failureReasons.length === 0 ? null : (
-        <>
-          <p>Saved issue guidance</p>
-          <ul aria-label="Saved profile issue guidance">
-            {outcome.failureReasons.map((reason) => (
-              <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
-            ))}
-          </ul>
-        </>
+        <ul aria-label="Saved profile issue guidance">
+          {outcome.failureReasons.map((reason) => (
+            <li key={reason}>{safeCanonicalCandidateProfileFeedback(reason)}</li>
+          ))}
+        </ul>
       )}
-      {outcome.kind === "extraction-failure" ? (
-        <p>
-          Follow the displayed cause and recovery steps first; changing the profile name alone will
-          not fix the underlying input or provider failure.
-        </p>
-      ) : outcome.kind === "empty" && outcome.retry ? (
-        <p>
-          Check that the selected source material includes the facts you need; renaming adds no
-          evidence.
-        </p>
-      ) : null}
-      {outcome.retry ? (
-        <p>
-          Retrying sends the selected material again, can consume provider credits, and bounded
-          recovery may make multiple requests.
-        </p>
-      ) : null}
     </section>
   );
 }
@@ -186,6 +241,7 @@ export function ProfileGenerationAction({
   profileIdValid,
   providerTransmissionApproved,
   busy,
+  generating = false,
   onApprovalChange,
   onDerive,
 }: {
@@ -193,6 +249,7 @@ export function ProfileGenerationAction({
   readonly profileIdValid: boolean;
   readonly providerTransmissionApproved: boolean;
   readonly busy: boolean;
+  readonly generating?: boolean;
   readonly onApprovalChange: (approved: boolean) => void;
   readonly onDerive: () => void;
 }) {
@@ -213,8 +270,21 @@ export function ProfileGenerationAction({
         disabled={busy || !profileIdValid || !providerTransmissionApproved}
         onClick={onDerive}
       >
-        {busy ? "Working…" : outcome.retry ? "Retry profile generation" : "Derive profile"}
+        {busy
+          ? generating
+            ? "Generating…"
+            : "Working…"
+          : outcome.retry
+            ? "Retry profile generation"
+            : "Derive profile"}
       </button>
+      {!busy && profileIdValid && !providerTransmissionApproved ? (
+        <p className="profile-approval-hint">
+          {outcome.retry
+            ? "Tick the approval box to enable Retry."
+            : "Tick the approval box to generate."}
+        </p>
+      ) : null}
     </>
   );
 }
@@ -224,6 +294,43 @@ function latestVersionOf(
   record: CanonicalCandidateProfileRecordResult | null,
 ): number | null {
   return history.at(-1)?.version ?? record?.version ?? null;
+}
+
+function ProvenanceList({
+  label,
+  references,
+}: {
+  readonly label: string;
+  readonly references: CanonicalCandidateProfileFactResult["provenance"];
+}) {
+  return (
+    <fieldset className="profile-provenance" aria-label={label}>
+      {references.map((reference) => (
+        <dl className="profile-provenance-entry" key={JSON.stringify(reference)}>
+          <div>
+            <dt>Store</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.storeId)}</dd>
+          </div>
+          <div>
+            <dt>CKB</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.knowledgeBaseId)}</dd>
+          </div>
+          <div>
+            <dt>Source</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.sourceId)}</dd>
+          </div>
+          <div>
+            <dt>Version</dt>
+            <dd>{safeCanonicalCandidateProfileText(reference.versionId)}</dd>
+          </div>
+          <div>
+            <dt>Kind</dt>
+            <dd>{reference.kind}</dd>
+          </div>
+        </dl>
+      ))}
+    </fieldset>
+  );
 }
 
 function ProfileFact({
@@ -238,76 +345,80 @@ function ProfileFact({
   readonly onRemove: () => void;
 }) {
   const allowUrl = fact.category === "approved-link";
+  const inputId = `profile-fact-value-${fact.id.replace(/[^A-Za-z0-9_-]/gu, "-")}`;
   return (
     <li className="profile-fact">
-      <div className="profile-fact-heading">
-        <strong>{safeCanonicalCandidateProfileText(fact.field)}</strong>
-        {fact.subjectId === undefined ? null : (
-          <span className="profile-opaque-id">
-            subject {safeCanonicalCandidateProfileText(fact.subjectId)}
-          </span>
-        )}
+      <div className="profile-fact-row">
+        <label className="profile-fact-label" htmlFor={inputId}>
+          {safeCanonicalCandidateProfileText(humanizeProfileFieldLabel(fact.field))}
+        </label>
+        <input
+          id={inputId}
+          className="profile-fact-value"
+          type="text"
+          aria-label={`Value for fact ${fact.id}`}
+          value={safeCanonicalCandidateProfileText(fact.value, allowUrl)}
+          disabled={!editable}
+          onChange={(event) =>
+            onValueChange(
+              allowUrl ? event.target.value : safeCanonicalCandidateProfileText(event.target.value),
+            )
+          }
+        />
+        <span className="profile-fact-sources meta-chip">
+          {sourceCountLabel(fact.provenance.length)}
+        </span>
+        {editable ? (
+          <button
+            className="button button-quiet profile-remove"
+            type="button"
+            aria-label="Remove fact"
+            onClick={onRemove}
+          >
+            Remove
+          </button>
+        ) : null}
       </div>
-      <input
-        className="profile-fact-value"
-        type="text"
-        aria-label={`Value for fact ${fact.id}`}
-        value={safeCanonicalCandidateProfileText(fact.value, allowUrl)}
-        disabled={!editable}
-        onChange={(event) =>
-          onValueChange(
-            allowUrl ? event.target.value : safeCanonicalCandidateProfileText(event.target.value),
-          )
-        }
-      />
-      <fieldset className="profile-provenance" aria-label={`Provenance for fact ${fact.id}`}>
-        {fact.provenance.map((reference) => (
-          <dl className="profile-provenance-entry" key={JSON.stringify(reference)}>
-            <div>
-              <dt>Store</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.storeId)}</dd>
-            </div>
-            <div>
-              <dt>CKB</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.knowledgeBaseId)}</dd>
-            </div>
-            <div>
-              <dt>Source</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.sourceId)}</dd>
-            </div>
-            <div>
-              <dt>Version</dt>
-              <dd>{safeCanonicalCandidateProfileText(reference.versionId)}</dd>
-            </div>
-            <div>
-              <dt>Kind</dt>
-              <dd>{reference.kind}</dd>
-            </div>
-          </dl>
-        ))}
-      </fieldset>
-      {editable ? (
-        <button className="button button-quiet profile-remove" type="button" onClick={onRemove}>
-          Remove fact
-        </button>
-      ) : null}
+      <details className="profile-fact-details">
+        <summary>Details</summary>
+        <div className="profile-fact-details-body">
+          <span className="profile-opaque-id">
+            Field {safeCanonicalCandidateProfileText(fact.field)}
+          </span>
+          {fact.subjectId === undefined ? null : (
+            <span className="profile-opaque-id">
+              subject {safeCanonicalCandidateProfileText(fact.subjectId)}
+            </span>
+          )}
+          <ProvenanceList label={`Provenance for fact ${fact.id}`} references={fact.provenance} />
+        </div>
+      </details>
     </li>
   );
 }
 
+function describeReferencedFact(fact: CanonicalCandidateProfileFactResult | undefined): string {
+  if (fact === undefined) return "unavailable fact";
+  const label = safeCanonicalCandidateProfileText(humanizeProfileFieldLabel(fact.field));
+  const value = safeCanonicalCandidateProfileText(fact.value);
+  return `${truncateProfileText(label)}: ${truncateProfileText(value)}`;
+}
+
 function ProfileIssue({
   issue,
+  factsById,
   editable,
   onStatusChange,
 }: {
   readonly issue: CanonicalCandidateProfileIssueResult;
+  readonly factsById: ReadonlyMap<string, CanonicalCandidateProfileFactResult>;
   readonly editable: boolean;
   readonly onStatusChange: (status: CanonicalCandidateProfileIssueStatus) => void;
 }) {
   return (
     <li className="profile-issue">
       <div className="profile-issue-heading">
-        <strong>{issue.code}</strong>
+        <strong>{profileIssueCodeLabel(issue.code)}</strong>
         <span className={`profile-issue-severity profile-issue-${issue.severity}`}>
           {issue.severity}
         </span>
@@ -329,38 +440,21 @@ function ProfileIssue({
         </select>
       </label>
       {issue.factIds.length === 0 ? null : (
-        <span className="profile-opaque-id">
+        <span className="profile-issue-facts">
           Facts:{" "}
-          {issue.factIds.map((factId) => safeCanonicalCandidateProfileText(factId)).join(", ")}
+          {issue.factIds.map((factId) => describeReferencedFact(factsById.get(factId))).join("; ")}
         </span>
       )}
       {issue.sourceRefs.length === 0 ? null : (
-        <fieldset className="profile-provenance" aria-label={`Provenance for issue ${issue.id}`}>
-          {issue.sourceRefs.map((reference) => (
-            <dl className="profile-provenance-entry" key={JSON.stringify(reference)}>
-              <div>
-                <dt>Store</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.storeId)}</dd>
-              </div>
-              <div>
-                <dt>CKB</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.knowledgeBaseId)}</dd>
-              </div>
-              <div>
-                <dt>Source</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.sourceId)}</dd>
-              </div>
-              <div>
-                <dt>Version</dt>
-                <dd>{safeCanonicalCandidateProfileText(reference.versionId)}</dd>
-              </div>
-              <div>
-                <dt>Kind</dt>
-                <dd>{reference.kind}</dd>
-              </div>
-            </dl>
-          ))}
-        </fieldset>
+        <details className="profile-fact-details">
+          <summary>Details</summary>
+          <div className="profile-fact-details-body">
+            <ProvenanceList
+              label={`Provenance for issue ${issue.id}`}
+              references={issue.sourceRefs}
+            />
+          </div>
+        </details>
       )}
     </li>
   );
@@ -373,6 +467,7 @@ export function ProfileDetails({
   draftIssues,
   editable,
   busy,
+  failureRecorded = false,
   onFactValueChange,
   onRemoveFact,
   onIssueStatusChange,
@@ -385,6 +480,8 @@ export function ProfileDetails({
   readonly draftIssues: readonly CanonicalCandidateProfileIssueResult[];
   readonly editable: boolean;
   readonly busy: boolean;
+  /** The version records a failed generation whose cause is shown in the outcome callout. */
+  readonly failureRecorded?: boolean;
   readonly onFactValueChange: (factId: string, value: string) => void;
   readonly onRemoveFact: (factId: string) => void;
   readonly onIssueStatusChange: (
@@ -399,8 +496,30 @@ export function ProfileDetails({
     () => groupCanonicalCandidateProfileIssues(draftIssues),
     [draftIssues],
   );
+  const factsById = useMemo(() => new Map(draftFacts.map((fact) => [fact.id, fact])), [draftFacts]);
   const historical = history.length > 0 && record.version !== history.at(-1)?.version;
   const reviewAllowed = canReviewCanonicalCandidateProfile(record, draftFacts, draftIssues);
+  const reviewHint = profileReviewBlockedReason({
+    record,
+    draftFacts,
+    draftIssues,
+    editable,
+    busy,
+  });
+  const [filter, setFilter] = useState("");
+  const [factsBaseOpen] = useState(() => profileFactCategoriesStartOpen(draftFacts.length));
+  const [factOverrides, setFactOverrides] = useState<
+    ReadonlyMap<CanonicalCandidateProfileFactCategory, boolean>
+  >(() => new Map());
+  const [issueOverrides, setIssueOverrides] = useState<ReadonlyMap<string, boolean>>(
+    () => new Map(),
+  );
+  const factProjection = useMemo(
+    () => projectProfileFactCategories(factGroups, filter, factsBaseOpen, factOverrides),
+    [factGroups, filter, factsBaseOpen, factOverrides],
+  );
+  const setAllCategories = (open: boolean) =>
+    setFactOverrides(new Map(factGroups.map(([category]) => [category, open])));
 
   return (
     <>
@@ -441,107 +560,243 @@ export function ProfileDetails({
         <p className="profile-note">Reviewed versions are immutable.</p>
       ) : null}
 
-      <section className="profile-subsection" aria-labelledby="profile-facts-title">
-        <div className="section-heading compact">
-          <div>
-            <p className="eyebrow">Canonical facts</p>
-            <h3 id="profile-facts-title">Facts by category</h3>
-          </div>
-          <span className="meta-chip">{draftFacts.length}</span>
-        </div>
-        {factGroups.length === 0 ? (
-          <p className="profile-empty">No facts are recorded in this version.</p>
-        ) : (
-          <div className="profile-groups">
-            {factGroups.map(([category, facts]) => (
-              <section
-                className="profile-group"
-                key={category}
-                aria-labelledby={`profile-facts-${category}`}
-              >
-                <h4 id={`profile-facts-${category}`}>{category}</h4>
-                <ul className="profile-fact-list">
-                  {facts.map((fact) => (
-                    <ProfileFact
-                      key={fact.id}
-                      fact={fact}
-                      editable={editable}
-                      onValueChange={(value) => onFactValueChange(fact.id, value)}
-                      onRemove={() => onRemoveFact(fact.id)}
-                    />
+      {failureRecorded ? (
+        <p className="profile-failure-note">
+          This version records a failed generation; its cause is shown above.
+        </p>
+      ) : (
+        <>
+          <section className="profile-subsection" aria-labelledby="profile-facts-title">
+            <div className="section-heading compact">
+              <div>
+                <p className="eyebrow">Canonical facts</p>
+                <h3 id="profile-facts-title">Facts by category</h3>
+              </div>
+              <span className="meta-chip">{draftFacts.length}</span>
+            </div>
+            {factGroups.length === 0 ? (
+              <p className="profile-empty">No facts are recorded in this version.</p>
+            ) : (
+              <>
+                <div className="profile-facts-toolbar">
+                  <input
+                    className="profile-facts-filter"
+                    type="search"
+                    aria-label="Filter facts"
+                    placeholder="Filter by label or value"
+                    value={filter}
+                    onChange={(event) => {
+                      setFilter(event.target.value);
+                      setFactOverrides(new Map());
+                    }}
+                  />
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    onClick={() => setAllCategories(true)}
+                  >
+                    Expand all
+                  </button>
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    onClick={() => setAllCategories(false)}
+                  >
+                    Collapse all
+                  </button>
+                  {factProjection.filtering ? (
+                    <span className="profile-filter-count" role="status" aria-live="polite">
+                      {factProjection.matchCount} of {factProjection.totalCount} facts
+                    </span>
+                  ) : null}
+                </div>
+                {factProjection.filtering && factProjection.matchCount === 0 ? (
+                  <p className="profile-empty">No facts match this filter.</p>
+                ) : null}
+                <div className="profile-groups">
+                  {factProjection.categories.map((view) => (
+                    <details
+                      className="profile-group profile-category"
+                      key={view.category}
+                      open={view.open}
+                      onToggle={(event) => {
+                        const open = event.currentTarget.open;
+                        setFactOverrides((current) =>
+                          current.get(view.category) === open
+                            ? current
+                            : new Map(current).set(view.category, open),
+                        );
+                      }}
+                    >
+                      <summary className="profile-group-summary">
+                        <span id={`profile-facts-${view.category}`}>
+                          {humanizeProfileCategory(view.category)}
+                        </span>
+                        <span className="profile-group-count">
+                          {" · "}
+                          {factProjection.filtering
+                            ? `${view.facts.length} of ${factCountLabel(view.totalCount)}`
+                            : factCountLabel(view.totalCount)}
+                        </span>
+                      </summary>
+                      <ul className="profile-fact-list">
+                        {view.facts.map((fact) => (
+                          <ProfileFact
+                            key={fact.id}
+                            fact={fact}
+                            editable={editable}
+                            onValueChange={(value) => onFactValueChange(fact.id, value)}
+                            onRemove={() => onRemoveFact(fact.id)}
+                          />
+                        ))}
+                      </ul>
+                    </details>
                   ))}
-                </ul>
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
+                </div>
+              </>
+            )}
+          </section>
 
-      <section className="profile-subsection" aria-labelledby="profile-issues-title">
-        <div className="section-heading compact">
-          <div>
-            <p className="eyebrow">Review blockers</p>
-            <h3 id="profile-issues-title">Issues by severity and status</h3>
-          </div>
-          <span className="meta-chip">{draftIssues.length}</span>
-        </div>
-        {draftIssues.length === 0 ? (
-          <p className="profile-empty">No issues are recorded in this version.</p>
-        ) : (
-          <div className="profile-groups">
-            {[...issueGroups.entries()].map(([severity, byStatus]) => (
-              <section
-                className="profile-group"
-                key={severity}
-                aria-labelledby={`profile-issues-${severity}`}
-              >
-                <h4 id={`profile-issues-${severity}`}>{severity}</h4>
-                <ProfileIssueBulkStatus
-                  severity={severity}
-                  issues={[...byStatus.values()].flat()}
-                  editable={editable}
-                  onIssueStatusChange={onIssueStatusChange}
-                />
-                {[...byStatus.entries()].map(([status, issues]) => (
-                  <div className="profile-issue-group" key={status}>
-                    <h5>{status}</h5>
-                    <ul className="profile-issue-list">
-                      {issues.map((issue) => (
-                        <ProfileIssue
-                          key={issue.id}
-                          issue={issue}
-                          editable={editable}
-                          onStatusChange={(nextStatus) => onIssueStatusChange(issue.id, nextStatus)}
-                        />
-                      ))}
-                    </ul>
-                  </div>
+          <section className="profile-subsection" aria-labelledby="profile-issues-title">
+            <div className="section-heading compact">
+              <div>
+                <p className="eyebrow">Review blockers</p>
+                <h3 id="profile-issues-title">Issues by severity and status</h3>
+              </div>
+              <span className="meta-chip">{draftIssues.length}</span>
+            </div>
+            {draftIssues.length === 0 ? (
+              <p className="profile-empty">No issues are recorded in this version.</p>
+            ) : (
+              <div className="profile-groups">
+                {[...issueGroups.entries()].map(([severity, byStatus]) => (
+                  <section
+                    className="profile-group"
+                    key={severity}
+                    aria-labelledby={`profile-issues-${severity}`}
+                  >
+                    <h4 id={`profile-issues-${severity}`}>{severity}</h4>
+                    <ProfileIssueBulkStatus
+                      severity={severity}
+                      issues={[...byStatus.values()].flat()}
+                      editable={editable}
+                      onIssueStatusChange={onIssueStatusChange}
+                    />
+                    {[...byStatus.entries()].map(([status, issues]) => {
+                      const groupKey = `${severity}:${status}`;
+                      return (
+                        <details
+                          className="profile-issue-group"
+                          key={status}
+                          open={issueOverrides.get(groupKey) ?? profileIssueGroupStartsOpen(status)}
+                          onToggle={(event) => {
+                            const open = event.currentTarget.open;
+                            setIssueOverrides((current) =>
+                              current.get(groupKey) === open
+                                ? current
+                                : new Map(current).set(groupKey, open),
+                            );
+                          }}
+                        >
+                          <summary className="profile-group-summary">
+                            <span>
+                              {status.charAt(0).toUpperCase()}
+                              {status.slice(1)}
+                            </span>
+                            <span className="profile-group-count">
+                              {" · "}
+                              {issueCountLabel(issues.length)}
+                            </span>
+                          </summary>
+                          <ul className="profile-issue-list">
+                            {issues.map((issue) => (
+                              <ProfileIssue
+                                key={issue.id}
+                                issue={issue}
+                                factsById={factsById}
+                                editable={editable}
+                                onStatusChange={(nextStatus) =>
+                                  onIssueStatusChange(issue.id, nextStatus)
+                                }
+                              />
+                            ))}
+                          </ul>
+                        </details>
+                      );
+                    })}
+                  </section>
                 ))}
-              </section>
-            ))}
-          </div>
-        )}
-      </section>
+              </div>
+            )}
+          </section>
+        </>
+      )}
 
-      <div className="profile-actions">
-        <button
-          className="button button-outline"
-          type="button"
-          disabled={!editable || busy}
-          onClick={onSave}
-        >
-          {busy ? "Saving profile…" : "Save draft edits"}
-        </button>
-        <button
-          className="button button-primary"
-          type="button"
-          disabled={!editable || busy || !reviewAllowed}
-          onClick={onReview}
-        >
-          Mark latest draft reviewed
-        </button>
-      </div>
+      {/* A failed generation has nothing to save or review. */}
+      {failureRecorded ? null : (
+        <div className="profile-actions">
+          <button
+            className="button button-outline"
+            type="button"
+            disabled={!editable || busy}
+            onClick={onSave}
+          >
+            {busy ? "Saving profile…" : "Save draft edits"}
+          </button>
+          <button
+            className="button button-primary"
+            type="button"
+            disabled={!editable || busy || !reviewAllowed}
+            aria-describedby={reviewHint === null ? undefined : "profile-review-hint"}
+            onClick={onReview}
+          >
+            Mark latest draft reviewed
+          </button>
+          {reviewHint === null ? null : (
+            <p className="profile-review-hint" id="profile-review-hint">
+              {reviewHint}
+            </p>
+          )}
+        </div>
+      )}
     </>
+  );
+}
+
+/** Lists every saved profile (draft or reviewed), newest first; renders nothing when empty. */
+export function SavedProfilePicker({
+  summaries,
+  currentName,
+  disabled,
+  onChoose,
+}: {
+  readonly summaries: readonly SavedCanonicalCandidateProfileSummary[];
+  readonly currentName: string;
+  readonly disabled: boolean;
+  readonly onChoose: (summary: SavedCanonicalCandidateProfileSummary) => void;
+}) {
+  if (summaries.length === 0) return null;
+  return (
+    <div className="profile-catalog-picker">
+      <label htmlFor="saved-profiles">Saved profiles</label>
+      <select
+        id="saved-profiles"
+        aria-label="Saved profiles"
+        value={summaries.some((summary) => summary.profileId === currentName) ? currentName : ""}
+        disabled={disabled}
+        onChange={(event) => {
+          const chosen = summaries.find((summary) => summary.profileId === event.target.value);
+          if (chosen !== undefined) onChoose(chosen);
+        }}
+      >
+        <option value="">Choose a saved profile…</option>
+        {summaries.map((summary) => (
+          <option key={summary.profileId} value={summary.profileId}>
+            {savedCanonicalCandidateProfileLabel(summary)}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }
 
@@ -563,6 +818,12 @@ export function ProfileWorkspace({
   const [providerTransmissionApproved, setProviderTransmissionApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
+  const [generationProgress, setGenerationProgress] = useState<
+    ProfileGenerationCallProgress | undefined
+  >(undefined);
+  const [cancelRequested, setCancelRequested] = useState(false);
+  const generatingProfileIdRef = useRef("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [catalogProfiles, setCatalogProfiles] = useState<
     readonly ReviewedCanonicalCandidateProfileSummary[]
@@ -574,6 +835,15 @@ export function ProfileWorkspace({
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogChoice, setCatalogChoice] = useState("");
   const [catalogEpoch, setCatalogEpoch] = useState(0);
+  const [savedSummaries, setSavedSummaries] = useState<
+    readonly SavedCanonicalCandidateProfileSummary[]
+  >([]);
+  const [savedSummariesWorkspaceId, setSavedSummariesWorkspaceId] = useState<string | null>(null);
+  const autoloadedWorkspaceRef = useRef<string | null>(null);
+  const summariesRequestRef = useRef(0);
+  const loadSavedProfileRef = useRef<
+    ((summary: SavedCanonicalCandidateProfileSummary) => void) | null
+  >(null);
   const workspaceIdRef = useRef(workspaceId);
   const catalogRequestRef = useRef(0);
   const selectionRequestRef = useRef(0);
@@ -597,6 +867,20 @@ export function ProfileWorkspace({
     draftFacts,
     draftIssues,
   );
+  const outcomeFeedbackShown =
+    record !== null &&
+    !busy &&
+    errorMessage === null &&
+    (currentOutcome.retry ||
+      currentOutcome.failureReasons.length > 0 ||
+      statusMessage !== currentOutcome.message);
+  // The failure or empty callout already says this; do not repeat it in the status region.
+  const statusText =
+    outcomeFeedbackShown &&
+    isProfileOutcomeCallout(currentOutcome) &&
+    statusMessage === currentOutcome.message
+      ? ""
+      : statusMessage;
   const selectedThisRecord =
     selectedProfile !== null &&
     record !== null &&
@@ -608,6 +892,30 @@ export function ProfileWorkspace({
     onPendingChange?.(workspaceId, busy);
   }, [busy, onPendingChange, workspaceId]);
 
+  const getProgress = capabilities.getCanonicalCandidateProfileProgress;
+  useEffect(() => {
+    if (generationStartedAt === null || getProgress === undefined) return;
+    let active = true;
+    const timer = setInterval(() => {
+      void getProgress(generatingProfileIdRef.current)
+        .then((progress) => {
+          if (!active || !progress.active) return;
+          if (progress.completedCalls === undefined || progress.plannedCalls === undefined) return;
+          setGenerationProgress({
+            completedCalls: progress.completedCalls,
+            plannedCalls: progress.plannedCalls,
+          });
+        })
+        .catch(() => {
+          // Progress is advisory; a missed poll never fails the generation itself.
+        });
+    }, generationProgressPollMs);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [generationStartedAt, getProgress]);
+
   useEffect(() => {
     if (workspaceId.trim() === "") return;
     selectionRequestRef.current += 1;
@@ -615,6 +923,9 @@ export function ProfileWorkspace({
     setCatalogChoice("");
     setCatalogProfiles([]);
     setCatalogWorkspaceId(null);
+    setSavedSummaries([]);
+    setSavedSummariesWorkspaceId(null);
+    autoloadedWorkspaceRef.current = null;
     setProfileId("");
     setLoadedProfileId(null);
     setHistory([]);
@@ -678,6 +989,36 @@ export function ProfileWorkspace({
     };
   }, [available, workspaceId, capabilities.listReviewedCanonicalCandidateProfiles, catalogEpoch]);
 
+  const listSummaries = capabilities.listCanonicalCandidateProfileSummaries;
+  useEffect(() => {
+    if (!available || listSummaries === undefined || workspaceId.trim() === "") return;
+    const request = ++summariesRequestRef.current;
+    const epoch = catalogEpoch;
+    let active = true;
+    void listSummaries(workspaceId)
+      .then((summaries) => {
+        if (!active || request !== summariesRequestRef.current || epoch !== catalogEpochRef.current)
+          return;
+        setSavedSummaries(Array.isArray(summaries) ? summaries : []);
+        setSavedSummariesWorkspaceId(workspaceId);
+      })
+      .catch(() => {
+        // Saved profiles are a convenience; loading by name still works.
+      });
+    return () => {
+      active = false;
+    };
+  }, [available, workspaceId, listSummaries, catalogEpoch]);
+
+  useEffect(() => {
+    if (savedSummariesWorkspaceId !== workspaceId || autoloadedWorkspaceRef.current === workspaceId)
+      return;
+    if (busy) return;
+    autoloadedWorkspaceRef.current = workspaceId;
+    const candidate = defaultProfileToAutoload(savedSummaries, profileId, loadedProfileId);
+    if (candidate !== undefined) loadSavedProfileRef.current?.(candidate);
+  }, [savedSummaries, savedSummariesWorkspaceId, workspaceId, busy, profileId, loadedProfileId]);
+
   if (!available) return null;
 
   const applyRecord = (nextRecord: CanonicalCandidateProfileRecordResult): void => {
@@ -689,16 +1030,21 @@ export function ProfileWorkspace({
 
   const withBusy = async (
     operation: () => Promise<CanonicalCandidateProfileRecordResult | null>,
+    pendingMessage = "Working with the canonical candidate profile…",
   ): Promise<void> => {
     setBusy(true);
     setErrorMessage(null);
-    setStatusMessage("Working with the canonical candidate profile…");
+    setStatusMessage(pendingMessage);
     try {
       const result = await operation();
       setStatusMessage(projectCanonicalCandidateProfileOperationResult(result).message);
     } catch (reason: unknown) {
-      setErrorMessage(safeCanonicalCandidateProfileFeedback(reason));
-      setStatusMessage("The operation did not complete. No new profile version was confirmed.");
+      if (isCanonicalCandidateProfileGenerationCancelled(reason)) {
+        setStatusMessage(safeCanonicalCandidateProfileFeedback(reason));
+      } else {
+        setErrorMessage(safeCanonicalCandidateProfileFeedback(reason));
+        setStatusMessage("The operation did not complete. No new profile version was confirmed.");
+      }
     } finally {
       setBusy(false);
     }
@@ -800,6 +1146,67 @@ export function ProfileWorkspace({
     }
   };
 
+  const loadSavedProfile = (summary: SavedCanonicalCandidateProfileSummary): void => {
+    const request = ++selectionRequestRef.current;
+    const selectedWorkspaceId = workspaceId;
+    const current = (): boolean =>
+      request === selectionRequestRef.current && workspaceIdRef.current === selectedWorkspaceId;
+    const id = summary.profileId;
+    catalogChoiceRef.current = null;
+    setCatalogChoice("");
+    setProfileId(id);
+    setProviderTransmissionApproved(false);
+    setStatusMessage("Loading the saved profile locally…");
+    setErrorMessage(null);
+    setLoadedProfileId(null);
+    setHistory([]);
+    setRecord(null);
+    setDraftFacts([]);
+    setDraftIssues([]);
+    onSelectionChange(null);
+    setBusy(true);
+    void (async () => {
+      try {
+        const listing = await capabilities.listCanonicalCandidateProfileVersions(id);
+        if (!current()) return;
+        const targetVersion = listing.versions.at(-1)?.version;
+        if (
+          listing.workspaceId !== selectedWorkspaceId ||
+          listing.profileId !== id ||
+          targetVersion === undefined
+        ) {
+          throw new Error("saved profile mismatch");
+        }
+        const loaded = await capabilities.getCanonicalCandidateProfile(id, targetVersion);
+        if (!current()) return;
+        if (
+          loaded.workspaceId !== selectedWorkspaceId ||
+          loaded.profileId !== id ||
+          loaded.version !== targetVersion
+        ) {
+          throw new Error("saved profile mismatch");
+        }
+        setHistory(listing.versions);
+        setLoadedProfileId(id);
+        applyRecord(loaded);
+        setStatusMessage(`Loaded saved profile ${id} version ${loaded.version} locally.`);
+      } catch {
+        if (!current()) return;
+        setLoadedProfileId(null);
+        setHistory([]);
+        setRecord(null);
+        setDraftFacts([]);
+        setDraftIssues([]);
+        onSelectionChange(null);
+        setStatusMessage("");
+        setErrorMessage("Could not load that saved profile. Choose it again or load by name.");
+      } finally {
+        if (current()) setBusy(false);
+      }
+    })();
+  };
+  loadSavedProfileRef.current = loadSavedProfile;
+
   const loadLatest = (): void => {
     if (!isCanonicalCandidateProfileId(normalizedProfileId)) {
       setErrorMessage("Enter a valid opaque profile ID.");
@@ -826,14 +1233,34 @@ export function ProfileWorkspace({
     if (!isCanonicalCandidateProfileId(normalizedProfileId) || !providerTransmissionApproved)
       return;
     setProviderTransmissionApproved(false);
+    generatingProfileIdRef.current = normalizedProfileId;
+    setGenerationProgress(undefined);
+    setCancelRequested(false);
+    setGenerationStartedAt(Date.now());
     void withBusy(async () => {
-      const derived = await capabilities.deriveCanonicalCandidateProfile({
-        profileId: normalizedProfileId,
-        providerTransmissionApproved: true,
-      });
-      const refreshed = await refresh(normalizedProfileId, derived.version);
-      refreshCatalog();
-      return refreshed;
+      try {
+        const derived = await capabilities.deriveCanonicalCandidateProfile({
+          profileId: normalizedProfileId,
+          providerTransmissionApproved: true,
+        });
+        const refreshed = await refresh(normalizedProfileId, derived.version);
+        refreshCatalog();
+        return refreshed;
+      } finally {
+        setGenerationStartedAt(null);
+        setGenerationProgress(undefined);
+        setCancelRequested(false);
+      }
+    }, "Generating profile…");
+  };
+
+  const cancelGeneration = (): void => {
+    const cancel = capabilities.cancelCanonicalCandidateProfileGeneration;
+    if (cancel === undefined || cancelRequested) return;
+    setCancelRequested(true);
+    void cancel(generatingProfileIdRef.current).catch(() => {
+      // The generation keeps running; let the candidate try again.
+      setCancelRequested(false);
     });
   };
 
@@ -945,6 +1372,14 @@ export function ProfileWorkspace({
           ) : null}
         </div>
       )}
+      {savedSummariesWorkspaceId !== workspaceId ? null : (
+        <SavedProfilePicker
+          summaries={savedSummaries}
+          currentName={normalizedProfileId}
+          disabled={busy}
+          onChoose={loadSavedProfile}
+        />
+      )}
       <div className="profile-controls">
         <label className="profile-id-label">
           <span>Profile name</span>
@@ -997,33 +1432,42 @@ export function ProfileWorkspace({
           Choose a name for this profile: letters, digits, dots, dashes, or underscores. Approval
           applies to this name only.
         </p>
+        {outcomeFeedbackShown ? (
+          <ProfileOutcomeFeedback
+            outcome={currentOutcome}
+            showMessage={statusMessage !== currentOutcome.message}
+          />
+        ) : null}
         <ProfileGenerationAction
           outcome={currentOutcome}
           profileIdValid={isCanonicalCandidateProfileId(normalizedProfileId)}
           providerTransmissionApproved={providerTransmissionApproved}
           busy={busy}
+          generating={generationStartedAt !== null}
           onApprovalChange={setProviderTransmissionApproved}
           onDerive={derive}
         />
       </div>
-      {record === null ||
-      busy ||
-      errorMessage !== null ||
-      (!currentOutcome.retry &&
-        currentOutcome.failureReasons.length === 0 &&
-        statusMessage === currentOutcome.message) ? null : (
-        <ProfileOutcomeFeedback
-          outcome={currentOutcome}
-          showMessage={statusMessage !== currentOutcome.message}
-        />
-      )}
       <div
-        className={busy ? "profile-status boot-loading" : "profile-status"}
+        className={
+          busy && generationStartedAt === null ? "profile-status boot-loading" : "profile-status"
+        }
         role="status"
         aria-live="polite"
       >
-        {statusMessage}
+        {generationStartedAt === null ? (
+          statusText
+        ) : (
+          <ProfileGenerationProgress
+            startedAt={generationStartedAt}
+            {...(generationProgress === undefined ? {} : { progress: generationProgress })}
+          />
+        )}
       </div>
+      {generationStartedAt === null ||
+      capabilities.cancelCanonicalCandidateProfileGeneration === undefined ? null : (
+        <ProfileGenerationCancel cancelling={cancelRequested} onCancel={cancelGeneration} />
+      )}
       {errorMessage === null ? null : (
         <div className="error-banner profile-error" role="alert">
           <p>{errorMessage}</p>
@@ -1054,12 +1498,14 @@ export function ProfileWorkspace({
         </p>
       ) : (
         <ProfileDetails
+          key={`${record.profileId}@${record.version}`}
           record={record}
           history={history}
           draftFacts={draftFacts}
           draftIssues={draftIssues}
           editable={editable}
           busy={busy}
+          failureRecorded={currentOutcome.kind === "extraction-failure"}
           onFactValueChange={(factId, value) =>
             setDraftFacts((facts) =>
               facts.map((fact) => (fact.id === factId ? { ...fact, value } : fact)),

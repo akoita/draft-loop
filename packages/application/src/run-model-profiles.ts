@@ -8,6 +8,7 @@ import {
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import type { RunBudget } from "@draft-loop/orchestrator";
 import { modelProfileSchema } from "@draft-loop/schemas/model-profile";
+import { isGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import type {
   CandidateProfileSelection,
@@ -130,6 +131,10 @@ export function validateProfileRoute(
   }
   if (profile.provider === "zai") {
     if (!isDeepInfraGLMAuthorProfile(profile)) throw new RunModelProfileError();
+    return;
+  }
+  if (profile.provider === "google") {
+    if (!isGoogleGeminiAuthorProfile(profile)) throw new RunModelProfileError();
     return;
   }
   if (profile.provider !== "anthropic" && profile.provider !== "openai") {

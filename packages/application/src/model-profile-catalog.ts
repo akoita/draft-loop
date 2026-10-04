@@ -17,7 +17,11 @@ export interface ModelProfileCatalogEntry {
   readonly apiPricing: ModelProfileCatalogPricing;
 }
 
-export type ModelProfilePresetId = "economy" | "standard" | "development-glm";
+export type ModelProfilePresetId =
+  | "economy"
+  | "standard"
+  | "development-glm"
+  | "development-gemini";
 
 export interface ModelProfilePreset {
   readonly id: ModelProfilePresetId;
@@ -51,6 +55,9 @@ const anthropicSonnet55Overview = "https://platform.claude.com/docs/en/models/so
 const deepInfraGlmModelApi = "https://deepinfra.com/zai-org/GLM-5.3-Flash/api";
 const deepInfraGlmOverview = "https://deepinfra.com/blog/glm-5-3-flash-deepinfra";
 
+const googleGeminiPricing = "https://ai.google.dev/gemini-api/docs/pricing";
+const googleGeminiModels = "https://ai.google.dev/gemini-api/docs/models";
+
 function openAIModelPage(modelId: string): string {
   return `https://developers.openai.com/api/docs/models/${modelId}`;
 }
@@ -77,6 +84,11 @@ const catalogMetadata: Readonly<Record<string, CatalogMetadata>> = {
     sources: [deepInfraGlmModelApi, deepInfraGlmOverview],
     apiPricing: { inputUsdPerMillion: 0.15, outputUsdPerMillion: 0.5 },
     reviewedAt: "2026-10-02",
+  },
+  "dev-google-gemini-author@2": {
+    sources: [googleGeminiPricing, googleGeminiModels],
+    apiPricing: { inputUsdPerMillion: 0.75, outputUsdPerMillion: 3.75 },
+    reviewedAt: "2026-10-04",
   },
 };
 
@@ -105,6 +117,13 @@ const presetDefinitions: readonly ModelProfilePreset[] = [
     label: "Development — GLM Flash — unvalidated",
     tier: "economy",
     author: { id: "dev-deepinfra-glm-author", version: 1 },
+    critic: { id: "economy-openai-critic", version: 1 },
+  },
+  {
+    id: "development-gemini",
+    label: "Development — Gemini Flash — unvalidated",
+    tier: "economy",
+    author: { id: "dev-google-gemini-author", version: 2 },
     critic: { id: "economy-openai-critic", version: 1 },
   },
 ];

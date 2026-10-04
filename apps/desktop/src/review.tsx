@@ -608,7 +608,11 @@ const credentialProviderLabels: Readonly<Record<CredentialProvider, string>> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
   deepinfra: "DeepInfra",
+  google: "Google Gemini",
 };
+
+export const googleCredentialNote =
+  "This key sends submitted content to Google; Gemini API free-tier terms let Google use it, so candidate material needs a paid-tier key.";
 
 const credentialSourceLabels: Readonly<Record<CredentialStatus["source"], string>> = {
   app: "Configured in app",
@@ -637,6 +641,8 @@ interface CredentialRowProps {
   readonly onChange: (next: string) => void;
   readonly onSave: () => void;
   readonly onRemove: () => void;
+  /** Optional one-sentence destination or terms notice shown under the header. */
+  readonly note?: string;
 }
 
 export function CredentialRow({
@@ -649,6 +655,7 @@ export function CredentialRow({
   onChange,
   onSave,
   onRemove,
+  note,
 }: CredentialRowProps) {
   return (
     <section className="credential-row" aria-label={title}>
@@ -661,6 +668,7 @@ export function CredentialRow({
           {credentialProtectionLabels[status.protection]}
         </span>
       </div>
+      {note === undefined ? null : <p className="credential-note">{note}</p>}
       <div className="credential-input-group">
         <input
           className="url-input"
@@ -1379,6 +1387,9 @@ export function ReviewWorkspace({
   const [deepinfraStatus, setDeepinfraStatus] = useState<CredentialStatus>(() =>
     emptyCredentialStatus("deepinfra"),
   );
+  const [googleStatus, setGoogleStatus] = useState<CredentialStatus>(() =>
+    emptyCredentialStatus("google"),
+  );
   const [anthropicAuthModeStatus, setAnthropicAuthModeStatus] = useState<ProviderAuthModeStatus>(
     () => ({
       provider: "anthropic",
@@ -1401,6 +1412,8 @@ export function ReviewWorkspace({
   const [showAnthropicKey, setShowAnthropicKey] = useState(false);
   const [showOpenaiKey, setShowOpenaiKey] = useState(false);
   const [showDeepinfraKey, setShowDeepinfraKey] = useState(false);
+  const [googleKeyInput, setGoogleKeyInput] = useState("");
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
   const [credentialFeedback, setCredentialFeedback] = useState<string | null>(null);
   const hasPreviousArtifact = state.previousArtifact !== null;
   // Nothing to compare against on a first version, so the redline is unavailable, not empty.
@@ -1646,6 +1659,9 @@ export function ReviewWorkspace({
     void getCredentialStatus("deepinfra")
       .then(setDeepinfraStatus)
       .catch(() => undefined);
+    void getCredentialStatus("google")
+      .then(setGoogleStatus)
+      .catch(() => undefined);
   }, [getCredentialStatus]);
 
   useEffect(() => {
@@ -1676,7 +1692,8 @@ export function ReviewWorkspace({
       );
       if (provider === "anthropic") setAnthropicKeyInput("");
       else if (provider === "openai") setOpenaiKeyInput("");
-      else setDeepinfraKeyInput("");
+      else if (provider === "deepinfra") setDeepinfraKeyInput("");
+      else setGoogleKeyInput("");
       refreshCredentials();
     } catch (error: unknown) {
       setCredentialFeedback(error instanceof Error ? error.message : "Failed to save API key.");
@@ -2339,8 +2356,9 @@ export function ReviewWorkspace({
             </button>
           </div>
           <p className="modal-copy" id="settings-dialog-copy">
-            Manage API keys for Anthropic, OpenAI, and DeepInfra. Anthropic and OpenAI also support
-            provider-managed sessions; app keys override their API-key environment variables.
+            Manage API keys for Anthropic, OpenAI, DeepInfra, and Google Gemini. Anthropic and
+            OpenAI also support provider-managed sessions; app keys override their API-key
+            environment variables.
           </p>
           {credentialFeedback ? (
             <div className="feedback-banner" role="status">
@@ -2391,6 +2409,18 @@ export function ReviewWorkspace({
               onChange={setDeepinfraKeyInput}
               onSave={() => void handleSaveCredential("deepinfra", deepinfraKeyInput)}
               onRemove={() => void handleRemoveCredential("deepinfra")}
+            />
+            <CredentialRow
+              title="Google Gemini API key"
+              placeholder="Gemini API key"
+              note={googleCredentialNote}
+              status={googleStatus}
+              value={googleKeyInput}
+              revealed={showGoogleKey}
+              onReveal={setShowGoogleKey}
+              onChange={setGoogleKeyInput}
+              onSave={() => void handleSaveCredential("google", googleKeyInput)}
+              onRemove={() => void handleRemoveCredential("google")}
             />
           </div>
         </div>
@@ -2601,6 +2631,7 @@ export function ReviewWorkspace({
       anthropicConfigured: anthropicStatus.configured,
       openaiConfigured: openaiStatus.configured,
       deepinfraConfigured: deepinfraStatus.configured,
+      googleConfigured: googleStatus.configured,
       anthropicMode: anthropicAuthModeStatus.activeMode,
       openaiMode: openaiAuthModeStatus.activeMode,
       authorCompany: state.providerTransmissionPreflight.author.company as ModelCompany,

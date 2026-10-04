@@ -50,6 +50,7 @@ import {
   workspaceModelSettingsInput,
   workspaceModelSettingsNeedsFreshAcknowledgement,
 } from "./workspace-model-settings.js";
+import { WorkspaceModelSummary } from "./workspace-model-summary.js";
 import {
   runWorkspaceCloseIfAllowed,
   WorkspaceNavigation,
@@ -144,6 +145,7 @@ const modelCompanyLabels: Readonly<Record<ModelCompany, string>> = {
   anthropic: "Anthropic",
   openai: "OpenAI",
   zai: "Z.ai (DeepInfra)",
+  google: "Google (Gemini)",
   local: "Local model server",
 };
 
@@ -729,7 +731,7 @@ export function WorkspaceSetupForm({
           account or plan availability or CV quality. IDs are not guaranteed to work with your
           account, plan, or CLI version. You may type any exact model id. Catalog entries show their
           review dates; CLI-specific live availability has not been reverified. Provider
-          documentation: Anthropic, OpenAI, and DeepInfra.
+          documentation: Anthropic, OpenAI, DeepInfra, and Google.
         </p>
       ) : null}
       <div className="setup-sides">
@@ -919,6 +921,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
     anthropic: { status: "idle" },
     openai: { status: "idle" },
     zai: { status: "idle" },
+    google: { status: "idle" },
     local: { status: "idle" },
   });
   const [preview, setPreview] = useState<IndependencePreviewState>({ status: "idle" });
@@ -1457,6 +1460,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
         anthropic: { status: "idle" },
         openai: { status: "idle" },
         zai: { status: "idle" },
+        google: { status: "idle" },
         local: { status: "idle" },
       });
       setPreview({ status: "idle" });
@@ -1480,6 +1484,7 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
       anthropic: { status: "idle" },
       openai: { status: "idle" },
       zai: { status: "idle" },
+      google: { status: "idle" },
       local: { status: "idle" },
     });
     setPreview({ status: "idle" });
@@ -1832,37 +1837,33 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
               ? "Apply a preset or save custom destinations. Cancel leaves the workspace's configured pair unchanged."
               : "Existing run records stay unchanged. New runs will use the saved model pair."}
           </p>
-          <section className="workspace-model-summary" aria-label="Current configured model pair">
-            <h2>Current configured model pair</h2>
-            <p>
-              Author: {state.providerTransmissionPreflight.author.company}/
-              {state.providerTransmissionPreflight.author.model}
-            </p>
-            <p>
-              Critic: {state.providerTransmissionPreflight.critic.company}/
-              {state.providerTransmissionPreflight.critic.model}
-            </p>
-          </section>
+          <WorkspaceModelSummary
+            title="Current configured model pair"
+            author={state.providerTransmissionPreflight.author}
+            critic={state.providerTransmissionPreflight.critic}
+          />
           <fieldset className="model-editor-mode">
-            <legend>Model selection method</legend>
-            <button
-              className={`button ${modelEditorMode === "profiles" ? "button-primary" : "button-quiet"}`}
-              type="button"
-              aria-pressed={modelEditorMode === "profiles"}
-              disabled={modelSettingsDisabled}
-              onClick={() => setModelEditorMode("profiles")}
-            >
-              Presets
-            </button>
-            <button
-              className={`button ${modelEditorMode === "custom" ? "button-primary" : "button-quiet"}`}
-              type="button"
-              aria-pressed={modelEditorMode === "custom"}
-              disabled={modelSettingsDisabled}
-              onClick={() => setModelEditorMode("custom")}
-            >
-              Custom
-            </button>
+            <legend>How to choose models</legend>
+            <div className="view-toggle">
+              <button
+                className="view-toggle-option"
+                type="button"
+                aria-pressed={modelEditorMode === "profiles"}
+                disabled={modelSettingsDisabled}
+                onClick={() => setModelEditorMode("profiles")}
+              >
+                Presets
+              </button>
+              <button
+                className="view-toggle-option"
+                type="button"
+                aria-pressed={modelEditorMode === "custom"}
+                disabled={modelSettingsDisabled}
+                onClick={() => setModelEditorMode("custom")}
+              >
+                Custom
+              </button>
+            </div>
           </fieldset>
           {modelEditorMode === "profiles" &&
           activePort.configureModels !== undefined &&
@@ -1980,24 +1981,12 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                 onKnowledgeSelectionSaved(workspaceId, workspaceGeneration)
               }
             />
-            <section className="workspace-model-summary" aria-label="Configured model pair">
-              <h2>Configured model pair</h2>
-              <p>
-                Author: {state.providerTransmissionPreflight.author.company}/
-                {state.providerTransmissionPreflight.author.model}
-              </p>
-              <p>
-                Critic: {state.providerTransmissionPreflight.critic.company}/
-                {state.providerTransmissionPreflight.critic.model}
-              </p>
-              {selectedModelProfiles === null ? null : (
-                <p>
-                  Applied profiles: {selectedModelProfiles.refs.author.id}@
-                  {selectedModelProfiles.refs.author.version} and{" "}
-                  {selectedModelProfiles.refs.critic.id}@{selectedModelProfiles.refs.critic.version}
-                </p>
-              )}
-            </section>
+            <WorkspaceModelSummary
+              title="Configured model pair"
+              author={state.providerTransmissionPreflight.author}
+              critic={state.providerTransmissionPreflight.critic}
+              appliedProfiles={selectedModelProfiles?.refs ?? null}
+            />
             {profileCapabilities === null ? null : (
               <fieldset
                 disabled={
@@ -2007,7 +1996,6 @@ export function App({ port }: { readonly port?: DesktopSetupPort }) {
                   state.execution.status === "running"
                 }
                 className="profile-knowledge-lock"
-                style={{ border: 0, margin: 0, minWidth: 0, padding: 0 }}
               >
                 <ProfileWorkspace
                   key={`${state.workspaceId}:${profileResetEpoch}`}

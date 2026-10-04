@@ -8,7 +8,6 @@ import type {
   ChatCompletionCreateParamsNonStreaming,
   ChatCompletionCreateParamsStreaming,
 } from "openai/resources/chat/completions";
-import { z } from "zod";
 import { summarizeDeepInfraOutputIssues } from "./deepinfra-output-diagnostics.js";
 import {
   type DeepInfraStreamRejectionReasonCode,
@@ -18,7 +17,6 @@ import { isCompatibleDeepInfraStreamTimestamp } from "./deepinfra-stream-metadat
 import {
   assertDataExposureAllowed,
   executeWithRetry,
-  type JsonObject,
   type JsonSchema,
   type JsonValue,
   type ModelPricing,
@@ -28,11 +26,18 @@ import {
   ProviderAdapterError,
   type RetryOptions,
 } from "./index.js";
+import {
+  deepInfraGLMCompany,
+  deepInfraGLMModelId,
+  deepInfraGLMProvider,
+} from "./model-identities.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
+import {
+  type CompiledOutputSchema,
+  compileStructuredOutputSchema,
+} from "./structured-output-schema.js";
 
-export const deepInfraGLMProvider = "deepinfra" as const;
-export const deepInfraGLMCompany = "zai" as const;
-export const deepInfraGLMModelId = "zai-org/GLM-5.3-Flash" as const;
+export { deepInfraGLMCompany, deepInfraGLMModelId, deepInfraGLMProvider };
 export const deepInfraGLMBaseUrl = "https://api.deepinfra.com/v1/openai";
 
 const defaultTimeoutMs = 120_000;
@@ -206,82 +211,9 @@ function resolveSelectionControls(
   return { outputTokens, ...(effort === undefined ? {} : { effort }) };
 }
 
-const singleSchemaKeywords = new Set([
-  "additionalItems",
-  "additionalProperties",
-  "contains",
-  "contentSchema",
-  "else",
-  "if",
-  "items",
-  "not",
-  "propertyNames",
-  "then",
-  "unevaluatedItems",
-  "unevaluatedProperties",
-]);
-const schemaArrayKeywords = new Set(["allOf", "anyOf", "oneOf", "prefixItems"]);
-const schemaMapKeywords = new Set([
-  "$defs",
-  "definitions",
-  "dependentSchemas",
-  "patternProperties",
-  "properties",
-]);
-
-function withoutSchemaDefaults(value: JsonValue): JsonValue {
-  if (Array.isArray(value)) return value.map((item) => withoutSchemaDefaults(item));
-  if (!isRecord(value)) return value as JsonValue;
-
-  const entries = Object.entries(value).flatMap(([key, child]): [string, JsonValue][] => {
-    if (key === "default") return [];
-    if (singleSchemaKeywords.has(key)) {
-      return [[key, withoutSchemaDefaults(child as JsonValue)]];
-    }
-    if (schemaArrayKeywords.has(key) && Array.isArray(child)) {
-      return [[key, child.map((schema) => withoutSchemaDefaults(schema as JsonValue))]];
-    }
-    if (schemaMapKeywords.has(key) && isRecord(child)) {
-      return [
-        [
-          key,
-          Object.fromEntries(
-            Object.entries(child).map(([name, schema]) => [
-              name,
-              withoutSchemaDefaults(schema as JsonValue),
-            ]),
-          ),
-        ],
-      ];
-    }
-    if (key === "dependencies" && isRecord(child)) {
-      return [
-        [
-          key,
-          Object.fromEntries(
-            Object.entries(child).map(([name, dependency]) => [
-              name,
-              Array.isArray(dependency)
-                ? dependency
-                : withoutSchemaDefaults(dependency as JsonValue),
-            ]),
-          ),
-        ],
-      ];
-    }
-    return [[key, child as JsonValue]];
-  });
-  return Object.fromEntries(entries) as JsonObject;
-}
-
-function compileOutputSchema(schema: JsonSchema): ReturnType<typeof z.fromJSONSchema> {
+function compileOutputSchema(schema: JsonSchema): CompiledOutputSchema {
   try {
-    // Defaults are annotations for generation, not permission to repair provider output.
-    // Compile a detached schema copy so required fields remain required while the original
-    // schema sent over the wire and the returned JSON stay untouched.
-    return z.fromJSONSchema(
-      withoutSchemaDefaults(schema) as Parameters<typeof z.fromJSONSchema>[0],
-    );
+    return compileStructuredOutputSchema(schema);
   } catch {
     throw invalidRequest(
       "The requested output schema cannot be validated safely.",
@@ -311,7 +243,7 @@ function failResponse(
   });
 }
 
-function parseOutput(text: unknown, schema: ReturnType<typeof z.fromJSONSchema>): JsonValue {
+function parseOutput(text: unknown, schema: CompiledOutputSchema): JsonValue {
   if (typeof text !== "string" || text.trim() === "") {
     throw failResponse("DeepInfra returned no structured output.", "missing_output");
   }
@@ -514,6 +446,23 @@ function malformedStream(reason: DeepInfraStreamRejectionReasonCode): ProviderAd
   );
 }
 
+/** Rebuild a stream timeout so it also carries content-free answer and reasoning volume. */
+function withStreamVolumeCounts(
+  error: unknown,
+  answerCharacters: number,
+  reasoningCharacters: number,
+): unknown {
+  if (!(error instanceof ProviderAdapterError) || error.code !== "timeout") return error;
+  return new ProviderAdapterError(error.provider, error.code, error.message, {
+    retryable: error.retryable,
+    diagnostics: error.diagnostics,
+    diagnosticCounts: [
+      { code: "stream_answer_characters", count: answerCharacters },
+      { code: "stream_reasoning_characters", count: reasoningCharacters },
+    ],
+  });
+}
+
 async function collectStreamCompletion(
   stream: AsyncIterable<ChatCompletionChunk>,
   options: {
@@ -529,6 +478,8 @@ async function collectStreamCompletion(
   let model: string | undefined;
   let content = "";
   let contentBytes = 0;
+  let answerCharacters = 0;
+  let reasoningCharacters = 0;
   let refusal: string | null = null;
   let finishReason: ChatCompletion.Choice["finish_reason"] | undefined;
   let usage: ChatCompletion["usage"] | undefined;
@@ -626,6 +577,11 @@ async function collectStreamCompletion(
           );
         }
         content += delta.content;
+        answerCharacters += delta.content.length;
+      }
+      // Reasoning text is only measured; it is never stored or mixed into the answer.
+      for (const reasoning of [delta.reasoning_content, delta.reasoning]) {
+        if (typeof reasoning === "string") reasoningCharacters += reasoning.length;
       }
       if (delta.refusal !== undefined && delta.refusal !== null) {
         if (typeof delta.refusal !== "string") throw malformedStream("stream_refusal_type");
@@ -638,6 +594,8 @@ async function collectStreamCompletion(
         finishReason = choice.finish_reason as ChatCompletion.Choice["finish_reason"];
       }
     }
+  } catch (error) {
+    throw withStreamVolumeCounts(error, answerCharacters, reasoningCharacters);
   } finally {
     if (!completed && typeof iterator.return === "function") {
       try {

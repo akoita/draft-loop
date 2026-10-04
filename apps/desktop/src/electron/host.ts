@@ -21,6 +21,7 @@ import {
   type ProviderAuthMode,
   type ProviderAuthModeConfiguration,
   type ProviderUserSessionRunners,
+  readWorkspace as readWorkspaceConfig,
   resolveProviderAuthModes,
   SourceIngestionUserError,
   type WorkspaceDescriptor,
@@ -69,20 +70,24 @@ import {
   type BridgeCommand,
   type BridgeResult,
   bridgeCapabilities,
+  type CanonicalCandidateProfileCancelResult,
   type CanonicalCandidateProfileFactResult,
   type CanonicalCandidateProfileIssueResult,
   type CanonicalCandidateProfileListResult,
+  type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileProvenanceReferenceResult,
   type CanonicalCandidateProfileRecordResult,
   type CredentialProtection,
   type CredentialProvider,
   type CredentialSource,
+  canonicalCandidateProfileGenerationCancelledMessage,
   credentialProviders,
   type ExportFormat,
   type FileSelectInput,
   type FileSelectResult,
   type KnowledgeBaseDeletionPlanResult,
   type KnowledgeBaseDeletionResult,
+  type KnowledgeCurrentResult,
   type KnowledgeDirectoryAddMembersResult,
   type KnowledgeDirectoryMemberMoveResult,
   type KnowledgeDirectoryMovedCandidatesResult,
@@ -362,7 +367,7 @@ const modelCatalogueCacheTtlMs = 5 * 60_000;
 
 /** Which catalogue to read, with the address already checked for `local`. */
 type ModelDiscoveryTarget =
-  | { readonly provider: "anthropic" | "openai" | "zai" }
+  | { readonly provider: "anthropic" | "openai" | "zai" | "google" }
   | { readonly provider: "local"; readonly endpoint: string };
 
 interface CachedModelCatalogue {
@@ -435,6 +440,8 @@ function providerEndpoint(
         : "https://api.openai.com/v1/responses";
     case "zai":
       return "https://api.deepinfra.com/v1/openai/chat/completions";
+    case "google":
+      return "https://generativelanguage.googleapis.com/";
     case "local":
       return localEndpoint ?? defaultLocalModelEndpoint;
     default:
@@ -2020,7 +2027,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     createApplicationService(
       createLocalApplicationDriver({
         providerAuthModeConfiguration,
-        resolveCredential: async (provider) => resolveCredential(credentials, provider),
+        resolveCredential: (provider) => resolveCredential(credentials, provider),
         ...(options.userSessionRunners === undefined
           ? {}
           : { userSessionRunners: options.userSessionRunners }),
@@ -2134,6 +2141,12 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         return fail(
           "capability-unavailable",
           "DeepInfra model discovery is unavailable. Enter the exact model id zai-org/GLM-5.3-Flash.",
+        );
+      }
+      if (target.provider === "google") {
+        return fail(
+          "capability-unavailable",
+          "Google model discovery is unavailable. Enter the exact model id gemini-3.8-flash.",
         );
       }
       const provider = target.provider;
@@ -2348,6 +2361,45 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
       return fail("operation-failed", "The open candidate knowledge store changed unexpectedly.");
     }
     return knowledgeStoreResult(view);
+  }
+
+  /**
+   * Reopens the knowledge store the active workspace saved, without a dialog.
+   *
+   * The saved store root stays inside the host: it re-registers the store so
+   * later store-scoped commands work, and is never returned or put in an error.
+   * A workspace can save entries from several stores; only the first entry's
+   * store is restored, with the selected bases that belong to that store.
+   */
+  async function currentKnowledgeResult(workspaceId: string): Promise<KnowledgeCurrentResult> {
+    const workspace = workspaceFor(workspaceId);
+    const unavailable: KnowledgeCurrentResult = {
+      store: null,
+      selectedKnowledgeBaseIds: [],
+      unavailable: true,
+    };
+    let entries: readonly { storeRoot: string; storeId: string; knowledgeBaseId: string }[];
+    try {
+      const config = await readWorkspaceConfig(workspace.root);
+      entries = config.candidateKnowledgeSelection?.entries ?? [];
+    } catch {
+      return unavailable;
+    }
+    const first = entries[0];
+    if (first === undefined) return { store: null, selectedKnowledgeBaseIds: [] };
+    try {
+      const view = await knowledgeService.openStore({ storeRoot: first.storeRoot });
+      if (view.store.id !== first.storeId) return unavailable;
+      knowledgeStoreRoots.set(first.storeId, first.storeRoot);
+      const store = knowledgeStoreResult(view);
+      const baseIds = new Set(store.knowledgeBases.map((base) => base.id));
+      const selectedKnowledgeBaseIds = entries
+        .filter((entry) => entry.storeId === first.storeId && baseIds.has(entry.knowledgeBaseId))
+        .map((entry) => entry.knowledgeBaseId);
+      return { store, selectedKnowledgeBaseIds };
+    } catch {
+      return unavailable;
+    }
   }
 
   async function verifiedKnowledgeStoreRoot(storeId: string): Promise<{
@@ -2728,16 +2780,80 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     return projectOpportunityRecord(workspace.descriptor.id, record);
   }
 
+  const activeProfileGenerations = new Map<
+    string,
+    { controller: AbortController; completedCalls?: number; plannedCalls?: number }
+  >();
+
+  function profileGenerationKey(workspaceId: string, profileId: string): string {
+    return `${workspaceId}\u0000${profileId}`;
+  }
+
   async function deriveCanonicalCandidateProfile(
     input: Extract<BridgeCommand, { type: "profile.derive" }>["input"],
   ): Promise<CanonicalCandidateProfileRecordResult> {
     const workspace = workspaceFor(input.workspaceId);
-    const record = await service.deriveCanonicalCandidateProfile({
-      root: workspace.root,
-      profileId: input.profileId,
-      allowProviderData: input.providerTransmissionApproved === true,
-    });
-    return projectCanonicalCandidateProfileRecord(workspace.descriptor.id, record, input.profileId);
+    const key = profileGenerationKey(workspace.descriptor.id, input.profileId);
+    if (activeProfileGenerations.has(key)) {
+      return fail("operation-failed", "Profile generation is already running for this profile.");
+    }
+    const entry: { controller: AbortController; completedCalls?: number; plannedCalls?: number } = {
+      controller: new AbortController(),
+    };
+    activeProfileGenerations.set(key, entry);
+    try {
+      const record = await service.deriveCanonicalCandidateProfile({
+        root: workspace.root,
+        profileId: input.profileId,
+        allowProviderData: input.providerTransmissionApproved === true,
+        signal: entry.controller.signal,
+        onProgress: (progress) => {
+          entry.completedCalls = progress.completedCalls;
+          entry.plannedCalls = progress.plannedCalls;
+        },
+      });
+      return projectCanonicalCandidateProfileRecord(
+        workspace.descriptor.id,
+        record,
+        input.profileId,
+      );
+    } catch (error) {
+      // A cancelled run saves nothing, whatever shape the abort took on its way up.
+      if (entry.controller.signal.aborted) {
+        return fail("operation-failed", canonicalCandidateProfileGenerationCancelledMessage);
+      }
+      throw error;
+    } finally {
+      activeProfileGenerations.delete(key);
+    }
+  }
+
+  function canonicalCandidateProfileProgress(
+    input: Extract<BridgeCommand, { type: "profile.progress" }>["input"],
+  ): CanonicalCandidateProfileProgressResult {
+    const workspace = workspaceFor(input.workspaceId);
+    const entry = activeProfileGenerations.get(
+      profileGenerationKey(workspace.descriptor.id, input.profileId),
+    );
+    if (entry === undefined) return { active: false };
+    return {
+      active: true,
+      ...(entry.completedCalls === undefined || entry.plannedCalls === undefined
+        ? {}
+        : { completedCalls: entry.completedCalls, plannedCalls: entry.plannedCalls }),
+    };
+  }
+
+  function cancelCanonicalCandidateProfileGeneration(
+    input: Extract<BridgeCommand, { type: "profile.cancel" }>["input"],
+  ): CanonicalCandidateProfileCancelResult {
+    const workspace = workspaceFor(input.workspaceId);
+    const entry = activeProfileGenerations.get(
+      profileGenerationKey(workspace.descriptor.id, input.profileId),
+    );
+    if (entry === undefined || entry.controller.signal.aborted) return { cancelled: false };
+    entry.controller.abort();
+    return { cancelled: true };
   }
 
   async function getCanonicalCandidateProfile(
@@ -2805,6 +2921,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         workspace.descriptor.id,
         records,
         (record) => projectCanonicalCandidateProfileRecord(workspace.descriptor.id, record),
+        { includeDrafts: input.includeDrafts === true },
       );
     } catch {
       return fail(
@@ -3485,6 +3602,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
             value: verifiedKnowledgeStoreResult(command.input.storeId, view),
           };
         }
+        case "knowledge.current":
+          return { ok: true, value: await currentKnowledgeResult(command.input.workspaceId) };
         case "knowledge.readiness": {
           const root = knowledgeStoreRoot(command.input.storeId);
           const view = await knowledgeService.listKnowledgeBases({ storeRoot: root });
@@ -4704,6 +4823,10 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
           return { ok: true, value: await reviewOpportunity(command.input) };
         case "profile.derive":
           return { ok: true, value: await deriveCanonicalCandidateProfile(command.input) };
+        case "profile.progress":
+          return { ok: true, value: canonicalCandidateProfileProgress(command.input) };
+        case "profile.cancel":
+          return { ok: true, value: cancelCanonicalCandidateProfileGeneration(command.input) };
         case "profile.get":
           return { ok: true, value: await getCanonicalCandidateProfile(command.input) };
         case "profile.list":

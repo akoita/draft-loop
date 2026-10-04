@@ -184,6 +184,14 @@ approving or exporting.
   standard $0.15/$0.50 per million input/output rates reviewed on 2026-10-02.
   CV quality is unvalidated and account availability is unchecked. This choice
   does not change defaults or existing workspaces.
+- The opt-in `development-gemini` preset adds the Gemini 3.8 Flash author
+  (`dev-google-gemini-author@2`; `@1`, Gemini 3.7 Flash, still resumes) and keeps the GPT-6 Luna critic. It requires the
+  dedicated `GEMINI_API_KEY` from a paid-tier Gemini API project, because
+  free-tier terms let Google use submitted content. Pricing metadata uses
+  standard $0.75/$3.75 per million input/output rates reviewed on 2026-10-04.
+  CV quality and account availability are unvalidated. The author is also
+  selectable with `--author-company google` in the CLI and in desktop settings.
+  This choice does not change defaults or existing workspaces.
 - DraftLoop prepares local artifacts. It does not submit applications, publish
   documents, send messages, or perform uncontrolled web research on a user's
   behalf.

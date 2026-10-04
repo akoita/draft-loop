@@ -97,6 +97,7 @@ export type {
 export type {
   ReviewedCanonicalCandidateProfileCatalogInput,
   ReviewedCanonicalCandidateProfileCatalogResult,
+  SavedCanonicalCandidateProfileSummary,
 } from "./profile-catalog.js";
 
 export const supportedFileExtensions = [
@@ -125,7 +126,7 @@ export type SupportedMediaType = (typeof supportedMediaTypes)[number];
 export const exportFormats = ["docx", "markdown", "pdf"] as const;
 export type ExportFormat = (typeof exportFormats)[number];
 
-export const credentialProviders = ["anthropic", "openai", "deepinfra"] as const;
+export const credentialProviders = ["anthropic", "openai", "deepinfra", "google"] as const;
 export type CredentialProvider = (typeof credentialProviders)[number];
 
 export const providerAuthModeProviders = ["anthropic", "openai"] as const;
@@ -141,15 +142,16 @@ export type ProviderAuthMode = (typeof providerAuthModes)[number];
  * refuses to build an adapter for any other company, so a company outside this
  * list is invalid input rather than an option this host declined to offer.
  */
-export const modelCompanies = ["anthropic", "openai", "zai", "local"] as const;
+export const modelCompanies = ["anthropic", "openai", "zai", "google", "local"] as const;
 export type ModelCompany = (typeof modelCompanies)[number];
 
 /**
  * The companies whose catalogue can be listed.
  *
  * Model discovery follows workspace companies rather than credential hosts:
- * `local` has no credential, and Z.ai uses DeepInfra as its credential host.
- * The list is exactly the set of companies accepted for workspace choices.
+ * `local` has no credential, Z.ai uses DeepInfra as its credential host, and
+ * Google uses the Gemini API key. The list is exactly the set of companies
+ * accepted for workspace choices.
  */
 export const modelDiscoveryProviders = modelCompanies;
 export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
@@ -245,6 +247,12 @@ export interface KnowledgeStoreListInput {
 }
 
 const knowledgeStoreListKeys = inputKeys<KnowledgeStoreListInput>()(["storeId"]);
+
+export interface KnowledgeCurrentInput {
+  readonly workspaceId: string;
+}
+
+const knowledgeCurrentKeys = inputKeys<KnowledgeCurrentInput>()(["workspaceId"]);
 
 export interface KnowledgeReadinessInput extends KnowledgeStoreListInput {
   readonly knowledgeBaseId: string;
@@ -897,6 +905,19 @@ export interface KnowledgeStoreResult {
   readonly knowledgeBases: readonly KnowledgeBaseSummary[];
 }
 
+/**
+ * The knowledge store a workspace has saved, reopened without a file dialog.
+ *
+ * `store` is null when nothing is saved or the saved store could not be opened;
+ * `unavailable` marks the second case so the renderer can tell the user to open
+ * the store again. No filesystem path ever appears here.
+ */
+export interface KnowledgeCurrentResult {
+  readonly store: KnowledgeStoreResult | null;
+  readonly selectedKnowledgeBaseIds: readonly string[];
+  readonly unavailable?: true;
+}
+
 export interface KnowledgeReadinessResult {
   readonly storeId: string;
   readonly knowledgeBaseId: string;
@@ -1331,6 +1352,11 @@ const knowledgeBaseSummaryKeys = resultKeys<KnowledgeBaseSummary>()([
   "isDefault",
 ]);
 const knowledgeStoreResultKeys = resultKeys<KnowledgeStoreResult>()(["storeId", "knowledgeBases"]);
+const knowledgeCurrentResultKeys = resultKeys<KnowledgeCurrentResult>()([
+  "store",
+  "selectedKnowledgeBaseIds",
+  "unavailable",
+]);
 const knowledgeReadinessResultKeys = resultKeys<KnowledgeReadinessResult>()([
   "storeId",
   "knowledgeBaseId",
@@ -2236,6 +2262,31 @@ export interface CanonicalCandidateProfileDeriveInput {
   readonly providerTransmissionApproved?: boolean;
 }
 
+export interface CanonicalCandidateProfileProgressInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+}
+
+export interface CanonicalCandidateProfileCancelInput {
+  readonly workspaceId: string;
+  readonly profileId: string;
+}
+
+/** The fixed message a cancelled generation reports; the renderer shows it as a status, not a failure. */
+export const canonicalCandidateProfileGenerationCancelledMessage =
+  "Profile generation was cancelled. No facts were saved.";
+
+/** Counts are present only once the running generation has reported them. */
+export interface CanonicalCandidateProfileProgressResult {
+  readonly active: boolean;
+  readonly completedCalls?: number;
+  readonly plannedCalls?: number;
+}
+
+export interface CanonicalCandidateProfileCancelResult {
+  readonly cancelled: boolean;
+}
+
 export interface CanonicalCandidateProfileGetInput {
   readonly workspaceId: string;
   readonly profileId: string;
@@ -2300,6 +2351,22 @@ const canonicalCandidateProfileDeriveKeys = inputKeys<CanonicalCandidateProfileD
   "profileId",
   "providerTransmissionApproved",
 ]);
+const canonicalCandidateProfileProgressKeys = inputKeys<CanonicalCandidateProfileProgressInput>()([
+  "workspaceId",
+  "profileId",
+]);
+const canonicalCandidateProfileCancelKeys = inputKeys<CanonicalCandidateProfileCancelInput>()([
+  "workspaceId",
+  "profileId",
+]);
+const canonicalCandidateProfileProgressResultKeys =
+  resultKeys<CanonicalCandidateProfileProgressResult>()([
+    "active",
+    "completedCalls",
+    "plannedCalls",
+  ]);
+const canonicalCandidateProfileCancelResultKeys =
+  resultKeys<CanonicalCandidateProfileCancelResult>()(["cancelled"]);
 const canonicalCandidateProfileGetKeys = inputKeys<CanonicalCandidateProfileGetInput>()([
   "workspaceId",
   "profileId",
@@ -2557,6 +2624,7 @@ export interface BridgeCommandInputMap {
   "knowledge.create": KnowledgeStoreCreateInput;
   "knowledge.open": KnowledgeStoreOpenInput;
   "knowledge.list": KnowledgeStoreListInput;
+  "knowledge.current": KnowledgeCurrentInput;
   "knowledge.readiness": KnowledgeReadinessInput;
   "knowledge.sources": KnowledgeSourcesInput;
   "knowledge.duplicates": KnowledgeDuplicatesInput;
@@ -2597,6 +2665,8 @@ export interface BridgeCommandInputMap {
   "opportunity.edit": OpportunityEditInput;
   "opportunity.review": OpportunityReviewInput;
   "profile.derive": CanonicalCandidateProfileDeriveInput;
+  "profile.progress": CanonicalCandidateProfileProgressInput;
+  "profile.cancel": CanonicalCandidateProfileCancelInput;
   "profile.get": CanonicalCandidateProfileGetInput;
   "profile.list": CanonicalCandidateProfileListInput;
   "profile.edit": CanonicalCandidateProfileEditInput;
@@ -2632,6 +2702,7 @@ export interface BridgeCommandOutputMap {
   "knowledge.create": KnowledgeStoreResult;
   "knowledge.open": KnowledgeStoreResult;
   "knowledge.list": KnowledgeStoreResult;
+  "knowledge.current": KnowledgeCurrentResult;
   "knowledge.readiness": KnowledgeReadinessResult;
   "knowledge.sources": KnowledgeSourcesResult;
   "knowledge.duplicates": KnowledgeDuplicatesResult;
@@ -2672,6 +2743,8 @@ export interface BridgeCommandOutputMap {
   "opportunity.edit": OpportunityRecordResult;
   "opportunity.review": OpportunityRecordResult;
   "profile.derive": CanonicalCandidateProfileRecordResult;
+  "profile.progress": CanonicalCandidateProfileProgressResult;
+  "profile.cancel": CanonicalCandidateProfileCancelResult;
   "profile.get": CanonicalCandidateProfileRecordResult;
   "profile.list": CanonicalCandidateProfileListResult;
   "profile.edit": CanonicalCandidateProfileRecordResult;
@@ -3137,6 +3210,12 @@ function validateKnowledgeStoreListInput(value: unknown): KnowledgeStoreListInpu
   const input = requireRecord(value);
   if (!hasOnlyKeys(input, knowledgeStoreListKeys)) return invalidInput();
   return { storeId: identifier(input.storeId) };
+}
+
+function validateKnowledgeCurrentInput(value: unknown): KnowledgeCurrentInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, knowledgeCurrentKeys)) return invalidInput();
+  return { workspaceId: identifier(input.workspaceId) };
 }
 
 function validateKnowledgeBackupExportInput(value: unknown): KnowledgeBackupExportInput {
@@ -4310,6 +4389,28 @@ function validateCanonicalCandidateProfileDeriveInput(
   };
 }
 
+function validateCanonicalCandidateProfileProgressInput(
+  value: unknown,
+): CanonicalCandidateProfileProgressInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileProgressKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+  };
+}
+
+function validateCanonicalCandidateProfileCancelInput(
+  value: unknown,
+): CanonicalCandidateProfileCancelInput {
+  const input = requireRecord(value);
+  if (!hasOnlyKeys(input, canonicalCandidateProfileCancelKeys)) return invalidInput();
+  return {
+    workspaceId: identifier(input.workspaceId),
+    profileId: canonicalCandidateProfileIdentifier(input.profileId),
+  };
+}
+
 function validateCanonicalCandidateProfileGetInput(
   value: unknown,
 ): CanonicalCandidateProfileGetInput {
@@ -4505,6 +4606,8 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return { type: "knowledge.open", input: validateKnowledgeStoreOpenInput(command.input) };
     case "knowledge.list":
       return { type: "knowledge.list", input: validateKnowledgeStoreListInput(command.input) };
+    case "knowledge.current":
+      return { type: "knowledge.current", input: validateKnowledgeCurrentInput(command.input) };
     case "knowledge.readiness":
       return { type: "knowledge.readiness", input: validateKnowledgeReadinessInput(command.input) };
     case "knowledge.sources":
@@ -4686,6 +4789,16 @@ export function validateBridgeCommand(value: unknown): BridgeCommand {
       return {
         type: "profile.derive",
         input: validateCanonicalCandidateProfileDeriveInput(command.input),
+      };
+    case "profile.progress":
+      return {
+        type: "profile.progress",
+        input: validateCanonicalCandidateProfileProgressInput(command.input),
+      };
+    case "profile.cancel":
+      return {
+        type: "profile.cancel",
+        input: validateCanonicalCandidateProfileCancelInput(command.input),
       };
     case "profile.get":
       return {
@@ -4915,6 +5028,33 @@ function normalizeKnowledgeStoreResult(value: unknown): KnowledgeStoreResult {
     return invalidInput();
   }
   return { storeId: identifier(result.storeId), knowledgeBases };
+}
+
+function normalizeKnowledgeCurrentResult(value: unknown): KnowledgeCurrentResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, knowledgeCurrentResultKeys)) return invalidInput();
+  if (
+    !Array.isArray(result.selectedKnowledgeBaseIds) ||
+    result.selectedKnowledgeBaseIds.length > maximumKnowledgeSelections
+  ) {
+    return invalidInput();
+  }
+  const selectedKnowledgeBaseIds = result.selectedKnowledgeBaseIds.map(identifier);
+  if (new Set(selectedKnowledgeBaseIds).size !== selectedKnowledgeBaseIds.length) {
+    return invalidInput();
+  }
+  if (result.unavailable !== undefined && result.unavailable !== true) return invalidInput();
+  if (result.store === null) {
+    if (selectedKnowledgeBaseIds.length > 0) return invalidInput();
+    return result.unavailable === true
+      ? { store: null, selectedKnowledgeBaseIds, unavailable: true }
+      : { store: null, selectedKnowledgeBaseIds };
+  }
+  if (result.unavailable !== undefined) return invalidInput();
+  const store = normalizeKnowledgeStoreResult(result.store);
+  const baseIds = new Set(store.knowledgeBases.map((base) => base.id));
+  if (!selectedKnowledgeBaseIds.every((id) => baseIds.has(id))) return invalidInput();
+  return { store, selectedKnowledgeBaseIds };
 }
 
 function normalizeKnowledgeReadinessResult(value: unknown): KnowledgeReadinessResult {
@@ -6504,6 +6644,40 @@ function normalizeCanonicalCandidateProfileIssueResult(
   };
 }
 
+const maximumCanonicalCandidateProfileProgressCalls = 10_000;
+
+function normalizeCanonicalCandidateProfileProgressResult(
+  value: unknown,
+): CanonicalCandidateProfileProgressResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileProgressResultKeys)) return invalidInput();
+  const active = booleanValue(result.active);
+  if (result.completedCalls === undefined && result.plannedCalls === undefined) {
+    return { active };
+  }
+  if (!active || result.completedCalls === undefined || result.plannedCalls === undefined) {
+    return invalidInput();
+  }
+  const completedCalls = finiteInteger(
+    result.completedCalls,
+    maximumCanonicalCandidateProfileProgressCalls,
+  );
+  const plannedCalls = finiteInteger(
+    result.plannedCalls,
+    maximumCanonicalCandidateProfileProgressCalls,
+  );
+  if (plannedCalls < 1 || completedCalls > plannedCalls) return invalidInput();
+  return { active, completedCalls, plannedCalls };
+}
+
+function normalizeCanonicalCandidateProfileCancelResult(
+  value: unknown,
+): CanonicalCandidateProfileCancelResult {
+  const result = requireRecord(value);
+  if (!hasOnlyKeys(result, canonicalCandidateProfileCancelResultKeys)) return invalidInput();
+  return { cancelled: booleanValue(result.cancelled) };
+}
+
 function normalizeCanonicalCandidateProfileRecordResult(
   value: unknown,
   expectedWorkspaceId?: string,
@@ -6712,6 +6886,8 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
       return parseRecentWorkspacesClearResult(value);
     case "workspace.configure-models":
       return normalizeWorkspaceModelsResult(value);
+    case "knowledge.current":
+      return normalizeKnowledgeCurrentResult(value);
     case "knowledge.create":
     case "knowledge.open":
     case "knowledge.list":
@@ -6739,6 +6915,10 @@ function normalizeSuccess(command: BridgeCommand, value: unknown): unknown {
         command.input.workspaceId,
         command.input.profileId,
       );
+    case "profile.progress":
+      return normalizeCanonicalCandidateProfileProgressResult(value);
+    case "profile.cancel":
+      return normalizeCanonicalCandidateProfileCancelResult(value);
     case "profile.list":
       return normalizeCanonicalCandidateProfileListResult(value);
     case "profile.catalog":

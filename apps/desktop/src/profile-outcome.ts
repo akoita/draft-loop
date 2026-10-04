@@ -1,7 +1,8 @@
-import type {
-  CanonicalCandidateProfileFactResult,
-  CanonicalCandidateProfileIssueResult,
-  CanonicalCandidateProfileRecordResult,
+import {
+  type CanonicalCandidateProfileFactResult,
+  type CanonicalCandidateProfileIssueResult,
+  type CanonicalCandidateProfileRecordResult,
+  canonicalCandidateProfileGenerationCancelledMessage,
 } from "./bridge.js";
 
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/iu;
@@ -41,6 +42,14 @@ const unloadedOutcome: CanonicalCandidateProfileOutcome = {
   failureReasons: [],
   retry: false,
 };
+
+/** A cancelled generation is a user decision, not a failure, so it keeps its own message. */
+export function isCanonicalCandidateProfileGenerationCancelled(reason: unknown): boolean {
+  return (
+    reason instanceof Error &&
+    reason.message.trim() === canonicalCandidateProfileGenerationCancelledMessage
+  );
+}
 
 /** Keep provider and saved issue text path-free and bounded before showing it in the renderer. */
 export function safeCanonicalCandidateProfileFeedback(reason: unknown): string {

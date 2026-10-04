@@ -1,3 +1,4 @@
+import { maximumCanonicalCandidateProfileIssueMessageLength } from "@draft-loop/domain";
 import { ProviderAdapterError } from "@draft-loop/providers";
 import { describe, expect, it } from "vitest";
 import { processCanonicalCandidateProfileExtraction } from "./candidate-profile-extraction.js";
@@ -91,6 +92,52 @@ describe("DeepInfra GLM transport failure guidance", () => {
         "provider",
       ),
     ).toContain("did not begin the GLM response");
+  });
+
+  it("appends answer and reasoning character counts when both are present", () => {
+    const counts = [
+      { code: "stream_answer_characters", count: 1234567 },
+      { code: "stream_reasoning_characters", count: 0 },
+    ];
+    expect(
+      candidateProfileExtractionFailureMessage(
+        timeoutError([{ code: "stream_timeout_idle", path: "idle" }], counts),
+        "provider",
+      ),
+    ).toBe(
+      "The DeepInfra GLM stream stopped producing chunks. Check provider status or the network connection; no facts were saved. Before stopping, the stream returned 1,234,567 answer characters and 0 reasoning characters.",
+    );
+  });
+
+  it("leaves guidance unchanged when counts are absent or incomplete", () => {
+    const diagnostics = [{ code: "stream_timeout_total", path: "total" }];
+    const unchanged =
+      "The DeepInfra GLM stream exceeded its total time limit. Check provider status or the network connection; no facts were saved.";
+    expect(candidateProfileExtractionFailureMessage(timeoutError(diagnostics), "provider")).toBe(
+      unchanged,
+    );
+    expect(
+      candidateProfileExtractionFailureMessage(
+        timeoutError(diagnostics, [{ code: "stream_answer_characters", count: 5 }]),
+        "provider",
+      ),
+    ).toBe(unchanged);
+  });
+
+  it("keeps the longest count-bearing guidance within the profile issue message limit", () => {
+    const counts = [
+      { code: "stream_answer_characters", count: Number.MAX_SAFE_INTEGER },
+      { code: "stream_reasoning_characters", count: Number.MAX_SAFE_INTEGER },
+    ];
+    for (const code of ["stream_timeout_initial", "stream_timeout_idle", "stream_timeout_total"]) {
+      const guidance = candidateProfileExtractionFailureMessage(
+        timeoutError([{ code, path: "p" }], counts),
+        "provider",
+      );
+      expect(guidance.length).toBeLessThanOrEqual(
+        maximumCanonicalCandidateProfileIssueMessageLength,
+      );
+    }
   });
 
   it("deduplicates repeated phase diagnostics", () => {

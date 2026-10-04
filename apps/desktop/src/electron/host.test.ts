@@ -1925,6 +1925,46 @@ describe("native host", () => {
     }
   });
 
+  it("records the Google Gemini destination for the Google company", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-google-endpoint-"));
+    const fixture = service(root);
+    const geminiWorkspace = {
+      ...descriptor(root),
+      fixtureMode: false,
+      author: { company: "google", model: "gemini-3.7-flash" },
+    };
+    fixture.service.readWorkspace.mockResolvedValue(geminiWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: geminiWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          providerTransmissionPreflight: {
+            author: {
+              company: "google",
+              model: "gemini-3.7-flash",
+              endpoint: "https://generativelanguage.googleapis.com/",
+            },
+          },
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("falls back to the adapter default endpoint when a local workspace configures none", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-local-default-"));
     const fixture = service(root);
@@ -3421,6 +3461,102 @@ describe("native host", () => {
       }
     });
 
+    it("isolates the Google Gemini key from other providers across save, replace, remove, and resolve", async () => {
+      const parent = await mkdtemp(join(tmpdir(), "draft-loop-google-credentials-"));
+      const filename = join(parent, "credentials.json");
+      const names = {
+        anthropic: "ANTHROPIC_API_KEY",
+        openai: "OPENAI_API_KEY",
+        deepinfra: "DEEPINFRA_API_KEY",
+        google: "GEMINI_API_KEY",
+      } as const;
+      const previous = Object.fromEntries(
+        Object.values(names).map((name) => [name, process.env[name]]),
+      );
+      const environment = {
+        anthropic: `synthetic-anthropic-${crypto.randomUUID()}`,
+        openai: `synthetic-openai-${crypto.randomUUID()}`,
+        deepinfra: `synthetic-deepinfra-${crypto.randomUUID()}`,
+        google: `synthetic-google-env-${crypto.randomUUID()}`,
+      };
+      const appKey = `synthetic-google-app-${crypto.randomUUID()}`;
+      const replacement = `synthetic-google-replacement-${crypto.randomUUID()}`;
+      const safeStorage: SafeStorageAdapter = {
+        isEncryptionAvailable: () => true,
+        encryptString: (plain) => Buffer.from(`mock:${plain}`),
+        decryptString: (encrypted) => encrypted.toString("utf8").replace(/^mock:/u, ""),
+      };
+      for (const provider of Object.keys(names) as (keyof typeof names)[]) {
+        process.env[names[provider]] = environment[provider];
+      }
+      try {
+        const store = createSafeStorageCredentialStore({ safeStorage, filename });
+        const host = createNativeHost({
+          dialogs: { chooseDirectory: async () => undefined, chooseFiles: async () => [] },
+          credentials: store,
+        });
+        const envStatus = await host.invoke({
+          type: "credential.status",
+          input: { provider: "google" },
+        });
+        expect(envStatus).toMatchObject({
+          ok: true,
+          value: { provider: "google", configured: true, source: "env", protection: "environment" },
+        });
+        expect(JSON.stringify(envStatus)).not.toContain(environment.google);
+        expect(await resolveCredential(store, "google")).toBe(environment.google);
+
+        const saved = await host.invoke({
+          type: "credential.set",
+          input: { provider: "google", apiKey: appKey },
+        });
+        expect(saved).toMatchObject({
+          ok: true,
+          value: { provider: "google", configured: true, source: "app", protection: "os-backed" },
+        });
+        expect(JSON.stringify(saved)).not.toContain(appKey);
+        expect(await resolveCredential(store, "google")).toBe(appKey);
+        expect(await readFile(filename, "utf8")).not.toContain(appKey);
+        // Other providers never see the Google key, and keep their own.
+        expect(await resolveCredential(store, "anthropic")).toBe(environment.anthropic);
+        expect(await resolveCredential(store, "openai")).toBe(environment.openai);
+        expect(await resolveCredential(store, "deepinfra")).toBe(environment.deepinfra);
+        expect(await store.status("deepinfra")).toMatchObject({ source: "env" });
+
+        // Saving another provider's key leaves the Google key untouched.
+        expect(await store.set("deepinfra", "synthetic-other-deepinfra-key")).toBe(true);
+        expect(await resolveCredential(store, "google")).toBe(appKey);
+        expect(await resolveCredential(store, "deepinfra")).toBe("synthetic-other-deepinfra-key");
+
+        expect(await store.set("google", replacement)).toBe(true);
+        const reopened = createSafeStorageCredentialStore({ safeStorage, filename });
+        expect(await resolveCredential(reopened, "google")).toBe(replacement);
+        expect(await reopened.status("google")).toMatchObject({ source: "app" });
+
+        const removed = await host.invoke({
+          type: "credential.remove",
+          input: { provider: "google" },
+        });
+        expect(removed).toMatchObject({
+          ok: true,
+          value: { provider: "google", configured: true, source: "env" },
+        });
+        expect(await resolveCredential(store, "google")).toBe(environment.google);
+        expect(await resolveCredential(store, "deepinfra")).toBe("synthetic-other-deepinfra-key");
+        expect(await readFile(filename, "utf8")).not.toContain(replacement);
+
+        delete process.env.GEMINI_API_KEY;
+        expect(await store.status("google")).toMatchObject({ configured: false, source: "none" });
+        expect(await resolveCredential(store, "google")).toBeUndefined();
+      } finally {
+        for (const [name, value] of Object.entries(previous)) {
+          if (value === undefined) delete process.env[name];
+          else process.env[name] = value;
+        }
+        await rm(parent, { recursive: true, force: true });
+      }
+    });
+
     it("discloses Electron basic_text as weak Linux protection", async () => {
       const parent = await mkdtemp(join(tmpdir(), "draft-loop-creds-basic-text-"));
       const store = createSafeStorageCredentialStore({
@@ -3861,6 +3997,26 @@ describe("native host", () => {
           capability: "models.list",
           message:
             "DeepInfra model discovery is unavailable. Enter the exact model id zai-org/GLM-5.3-Flash.",
+        },
+      });
+      expect(discoveryFetch).not.toHaveBeenCalled();
+    });
+
+    it("keeps Gemini discovery manual and never falls through to OpenAI discovery", async () => {
+      const discoveryFetch = catalogueFetch({ data: [{ id: "must-not-be-returned" }] });
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("openai", "synthetic-openai-key");
+      const host = hostWith(discoveryFetch, { credentials });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "google" } });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: "capability-unavailable",
+          capability: "models.list",
+          message:
+            "Google model discovery is unavailable. Enter the exact model id gemini-3.8-flash.",
         },
       });
       expect(discoveryFetch).not.toHaveBeenCalled();
@@ -4571,6 +4727,129 @@ describe("candidate knowledge native controls", () => {
           input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
         }),
       ).resolves.toMatchObject({ ok: true, value: { workspaceId } });
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("restores the saved knowledge store after a restart without returning paths", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-current-"));
+    const workspaceRoot = join(parent, "workspace");
+    const storeRoot = join(parent, "candidate-knowledge");
+    try {
+      const sourcePath = join(parent, "resume.md");
+      await writeFile(sourcePath, "Local candidate evidence.\n", "utf8");
+      const firstHost = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceFile: async () => sourcePath,
+        },
+      });
+      const workspace = await firstHost.invoke({
+        type: "workspace.create",
+        input: { name: "workspace", mode: "real" },
+      });
+      if (!workspace.ok) throw new Error("Expected workspace creation to succeed.");
+      const workspaceId = (workspace.value as { workspace: { id: string } }).workspace.id;
+      await expect(
+        firstHost.invoke({ type: "knowledge.current", input: { workspaceId } }),
+      ).resolves.toEqual({ ok: true, value: { store: null, selectedKnowledgeBaseIds: [] } });
+
+      const created = await firstHost.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      await firstHost.invoke({
+        type: "knowledge.import-file",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      const selected = await firstHost.invoke({
+        type: "knowledge.select",
+        input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
+      });
+      expect(selected).toMatchObject({ ok: true });
+
+      const restart = async () => {
+        const roots = [workspaceRoot];
+        const host = createNativeHost({
+          dialogs: {
+            chooseDirectory: async () => roots.shift(),
+            chooseFiles: async () => [],
+          },
+        });
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+        return host;
+      };
+
+      const restarted = await restart();
+      await expect(
+        restarted.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      const current = await restarted.invoke({
+        type: "knowledge.current",
+        input: { workspaceId },
+      });
+      expect(current).toMatchObject({
+        ok: true,
+        value: {
+          store: { storeId, knowledgeBases: [{ id: knowledgeBaseId, displayName: "My evidence" }] },
+          selectedKnowledgeBaseIds: [knowledgeBaseId],
+        },
+      });
+      expect(JSON.stringify(current)).not.toContain(parent);
+      await expect(
+        restarted.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId } });
+      await expect(
+        restarted.invoke({ type: "knowledge.current", input: { workspaceId: "other-workspace" } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+
+      // A store that now reports a different identity is not trusted.
+      const swappedService = createCandidateKnowledgeStoreService();
+      const swappedHost = createNativeHost({
+        knowledgeService: {
+          ...swappedService,
+          openStore: async (input: { storeRoot: string }) => {
+            const view = await swappedService.openStore(input);
+            return { ...view, store: { ...view.store, id: "some-other-store" } };
+          },
+        } as never,
+        dialogs: {
+          chooseDirectory: async () => workspaceRoot,
+          chooseFiles: async () => [],
+        },
+      });
+      await swappedHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const mismatched = await swappedHost.invoke({
+        type: "knowledge.current",
+        input: { workspaceId },
+      });
+      expect(mismatched).toEqual({
+        ok: true,
+        value: { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+      });
+      await expect(
+        swappedHost.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+
+      // A store that moved or was deleted is reported as unavailable, not as an error.
+      await rm(storeRoot, { recursive: true, force: true });
+      const missingHost = await restart();
+      const missing = await missingHost.invoke({
+        type: "knowledge.current",
+        input: { workspaceId },
+      });
+      expect(missing).toEqual({
+        ok: true,
+        value: { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+      });
+      expect(JSON.stringify(missing)).not.toContain(parent);
     } finally {
       await rm(parent, { recursive: true, force: true });
     }
@@ -6260,6 +6539,157 @@ describe("candidate knowledge native controls", () => {
     expect(JSON.stringify(stale)).not.toContain("private stale");
   });
 
+  describe("profile generation progress and cancellation", () => {
+    const root = "/local/profile-generation-workspace";
+    const deriveCommand = {
+      type: "profile.derive",
+      input: {
+        workspaceId: "workspace-native",
+        profileId: "profile-native",
+        providerTransmissionApproved: true,
+      },
+    } as const;
+    const keyInput = { workspaceId: "workspace-native", profileId: "profile-native" };
+
+    async function openHost() {
+      const fixture = service(root);
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: { chooseDirectory: async () => root, chooseFiles: async () => [] },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      return { fixture, host };
+    }
+
+    it("mirrors reported counts while a derive is pending and clears them afterwards", async () => {
+      const { fixture, host } = await openHost();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      fixture.service.deriveCanonicalCandidateProfile.mockImplementation((async (request: {
+        onProgress?: (progress: { completedCalls: number; plannedCalls: number }) => void;
+      }) => {
+        request.onProgress?.({ completedCalls: 0, plannedCalls: 3 });
+        await gate;
+        return canonicalCandidateProfileRecord();
+      }) as never);
+
+      const progress = { type: "profile.progress", input: keyInput } as const;
+      await expect(host.invoke(progress)).resolves.toEqual({ ok: true, value: { active: false } });
+
+      const pending = host.invoke(deriveCommand);
+      await expect(host.invoke(progress)).resolves.toEqual({
+        ok: true,
+        value: { active: true, completedCalls: 0, plannedCalls: 3 },
+      });
+      const request = fixture.service.deriveCanonicalCandidateProfile.mock.calls[0]?.[0];
+      request?.onProgress?.({ completedCalls: 2, plannedCalls: 3 });
+      await expect(host.invoke(progress)).resolves.toEqual({
+        ok: true,
+        value: { active: true, completedCalls: 2, plannedCalls: 3 },
+      });
+      await expect(
+        host.invoke({
+          type: "profile.progress",
+          input: { workspaceId: "workspace-native", profileId: "other-profile" },
+        }),
+      ).resolves.toEqual({ ok: true, value: { active: false } });
+
+      release();
+      await expect(pending).resolves.toMatchObject({ ok: true });
+      await expect(host.invoke(progress)).resolves.toEqual({ ok: true, value: { active: false } });
+    });
+
+    it("reports active without counts before the first report", async () => {
+      const { fixture, host } = await openHost();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      fixture.service.deriveCanonicalCandidateProfile.mockImplementation((async () => {
+        await gate;
+        return canonicalCandidateProfileRecord();
+      }) as never);
+      const pending = host.invoke(deriveCommand);
+      await expect(host.invoke({ type: "profile.progress", input: keyInput })).resolves.toEqual({
+        ok: true,
+        value: { active: true },
+      });
+      release();
+      await pending;
+    });
+
+    it("aborts a pending derive on cancel and reports the fixed cancellation message", async () => {
+      const { fixture, host } = await openHost();
+      let observed: AbortSignal | undefined;
+      fixture.service.deriveCanonicalCandidateProfile.mockImplementation(((request: {
+        signal?: AbortSignal;
+      }) => {
+        observed = request.signal;
+        return new Promise((_resolve, reject) => {
+          request.signal?.addEventListener("abort", () => reject(new Error("aborted at /private")));
+        });
+      }) as never);
+      const cancel = { type: "profile.cancel", input: keyInput } as const;
+      await expect(host.invoke(cancel)).resolves.toEqual({
+        ok: true,
+        value: { cancelled: false },
+      });
+
+      const pending = host.invoke(deriveCommand);
+      await expect(host.invoke(cancel)).resolves.toEqual({ ok: true, value: { cancelled: true } });
+      expect(observed?.aborted).toBe(true);
+      await expect(host.invoke(cancel)).resolves.toEqual({
+        ok: true,
+        value: { cancelled: false },
+      });
+
+      const result = await pending;
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: "operation-failed",
+          capability: "profile.derive",
+          message: "Profile generation was cancelled. No facts were saved.",
+        },
+      });
+      expect(JSON.stringify(result)).not.toContain("/private");
+      await expect(host.invoke({ type: "profile.progress", input: keyInput })).resolves.toEqual({
+        ok: true,
+        value: { active: false },
+      });
+    });
+
+    it("clears the record after a failed derive and refuses a concurrent duplicate", async () => {
+      const { fixture, host } = await openHost();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      fixture.service.deriveCanonicalCandidateProfile
+        .mockImplementationOnce((async () => {
+          await gate;
+          throw new Error("provider exploded");
+        }) as never)
+        .mockResolvedValueOnce(canonicalCandidateProfileRecord() as never);
+
+      const first = host.invoke(deriveCommand);
+      await expect(host.invoke(deriveCommand)).resolves.toMatchObject({
+        ok: false,
+        error: { message: "Profile generation is already running for this profile." },
+      });
+      expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenCalledTimes(1);
+      release();
+      await expect(first).resolves.toMatchObject({ ok: false });
+      await expect(host.invoke({ type: "profile.progress", input: keyInput })).resolves.toEqual({
+        ok: true,
+        value: { active: false },
+      });
+      await expect(host.invoke(deriveCommand)).resolves.toMatchObject({ ok: true });
+    });
+  });
+
   it("exposes canonical profile controls through a dialog-free, minimal projection", async () => {
     const root = "/local/profile-workspace";
     const fixture = service(root);
@@ -6356,15 +6786,32 @@ describe("candidate knowledge native controls", () => {
       },
     });
 
+    await expect(
+      host.invoke({
+        type: "profile.catalog",
+        input: { workspaceId: "workspace-native", includeDrafts: true },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        summaries: [{ profileId: "profile-native", latestVersion: 1, status: "reviewed" }],
+      },
+    });
+
     expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenNthCalledWith(1, {
       root,
       profileId: "profile-native",
       allowProviderData: false,
+      signal: expect.any(AbortSignal),
+      onProgress: expect.any(Function),
     });
     expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenNthCalledWith(2, {
       root,
       profileId: "profile-native",
       allowProviderData: true,
+      signal: expect.any(AbortSignal),
+      onProgress: expect.any(Function),
     });
     expect(fixture.service.getCanonicalCandidateProfile).toHaveBeenCalledWith({
       root,

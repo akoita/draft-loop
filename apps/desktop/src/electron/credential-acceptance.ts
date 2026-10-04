@@ -39,6 +39,7 @@ export async function runCredentialAcceptance(options: CredentialAcceptanceOptio
   process.env.ANTHROPIC_API_KEY = options.credentials.anthropic.environment;
   process.env.OPENAI_API_KEY = options.credentials.openai.environment;
   process.env.DEEPINFRA_API_KEY = options.credentials.deepinfra.environment;
+  process.env.GEMINI_API_KEY = options.credentials.google.environment;
 
   if (options.phase === "prepare") {
     for (const provider of credentialProviders) {

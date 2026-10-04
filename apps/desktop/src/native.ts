@@ -3,12 +3,15 @@ import {
   type BridgeResult,
   bridgeCapabilities,
   bridgeError,
+  type CanonicalCandidateProfileCancelResult,
   type CanonicalCandidateProfileDeriveInput,
   type CanonicalCandidateProfileEditInput,
   type CanonicalCandidateProfileListResult,
+  type CanonicalCandidateProfileProgressResult,
   type CanonicalCandidateProfileRecordResult,
   type CapabilityPort,
   createCapabilityPort,
+  type KnowledgeCurrentResult,
   type KnowledgeDirectoryImportResult,
   type KnowledgeFileImportResult,
   type KnowledgeReadinessResult,
@@ -32,6 +35,7 @@ import {
   type ProviderAuthModeResult,
   type ProviderAuthModeStatus,
   type ReviewedCanonicalCandidateProfileCatalogResult,
+  type SavedCanonicalCandidateProfileSummary,
   type WorkspaceConfigureModelsInput,
   type WorkspaceCreateInput,
 } from "./bridge.js";
@@ -113,6 +117,14 @@ export interface DesktopProfileCapabilities {
   readonly deriveCanonicalCandidateProfile?: (
     input: Omit<CanonicalCandidateProfileDeriveInput, "workspaceId">,
   ) => Promise<CanonicalCandidateProfileRecordResult>;
+  /** Reports a pending generation's bounded call progress; answerable while it runs. */
+  readonly getCanonicalCandidateProfileProgress?: (
+    profileId: string,
+  ) => Promise<CanonicalCandidateProfileProgressResult>;
+  /** Stops a pending generation before any further provider call; nothing is saved. */
+  readonly cancelCanonicalCandidateProfileGeneration?: (
+    profileId: string,
+  ) => Promise<CanonicalCandidateProfileCancelResult>;
   readonly getCanonicalCandidateProfile?: (
     profileId: string,
     version?: number,
@@ -130,6 +142,10 @@ export interface DesktopProfileCapabilities {
   readonly listReviewedCanonicalCandidateProfiles?: (
     workspaceId: string,
   ) => Promise<ReviewedCanonicalCandidateProfileCatalogResult>;
+  /** Every saved profile (draft or reviewed), newest first. */
+  readonly listCanonicalCandidateProfileSummaries?: (
+    workspaceId: string,
+  ) => Promise<readonly SavedCanonicalCandidateProfileSummary[]>;
 }
 
 export interface DesktopKnowledgeCapabilities {
@@ -137,6 +153,7 @@ export interface DesktopKnowledgeCapabilities {
     input: Omit<KnowledgeStoreCreateInput, "selection">,
   ) => Promise<KnowledgeStoreResult>;
   readonly openCandidateKnowledgeStore?: () => Promise<KnowledgeStoreResult>;
+  readonly getCurrentCandidateKnowledge?: (workspaceId: string) => Promise<KnowledgeCurrentResult>;
   readonly selectCandidateKnowledgeBase?: (
     workspaceId: string,
     entry: KnowledgeSelectionEntry,
@@ -459,6 +476,17 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
             ),
         }
       : {}),
+    ...(capabilityPort.hasCapability("knowledge.current")
+      ? {
+          getCurrentCandidateKnowledge: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "knowledge.current",
+                input: { workspaceId },
+              }),
+            ),
+        }
+      : {}),
     ...(capabilityPort.hasCapability("knowledge.select")
       ? {
           selectCandidateKnowledgeBase: async (
@@ -601,6 +629,32 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
           },
         }
       : {}),
+    ...(capabilityPort.hasCapability("profile.progress")
+      ? {
+          getCanonicalCandidateProfileProgress: async (profileId: string) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.progress",
+                input: { workspaceId: state.workspaceId, profileId },
+              }),
+            );
+          },
+        }
+      : {}),
+    ...(capabilityPort.hasCapability("profile.cancel")
+      ? {
+          cancelCanonicalCandidateProfileGeneration: async (profileId: string) => {
+            const state = await load();
+            return unwrap(
+              await capabilityPort.execute({
+                type: "profile.cancel",
+                input: { workspaceId: state.workspaceId, profileId },
+              }),
+            );
+          },
+        }
+      : {}),
     ...(capabilityPort.hasCapability("profile.get")
       ? {
           getCanonicalCandidateProfile: async (profileId: string, version?: number) => {
@@ -640,6 +694,13 @@ export function createBridgeReviewPort(capabilityPort: CapabilityPort): DesktopS
                 input: { workspaceId },
               }),
             ),
+          listCanonicalCandidateProfileSummaries: async (workspaceId: string) =>
+            unwrap(
+              await capabilityPort.execute({
+                type: "profile.catalog",
+                input: { workspaceId, includeDrafts: true },
+              }),
+            ).summaries ?? [],
         }
       : {}),
     ...(capabilityPort.hasCapability("profile.edit")

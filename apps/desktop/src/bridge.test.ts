@@ -1176,6 +1176,60 @@ describe("desktop capability bridge", () => {
     ).toThrow("invalid");
   });
 
+  it("accepts Google credential operations in the runtime validator and rejects unknown providers", async () => {
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: { provider: "google", configured: true, source: "app", protection: "os-backed" },
+    }));
+    const port = createCapabilityPort(
+      bridge(invoke, ["credential.set", "credential.status", "credential.remove"]),
+    );
+
+    for (const command of [
+      { type: "credential.set", input: { provider: "google", apiKey: "synthetic-google-key" } },
+      { type: "credential.status", input: { provider: "google" } },
+      { type: "credential.remove", input: { provider: "google" } },
+    ] as const) {
+      expect(() => validateBridgeCommand(command)).not.toThrow();
+      await expect(port.execute(command)).resolves.toMatchObject({
+        ok: true,
+        value: { provider: "google", configured: true, source: "app" },
+      });
+    }
+    expect(invoke).toHaveBeenCalledTimes(3);
+    expect(() =>
+      validateBridgeCommand({ type: "credential.status", input: { provider: "gemini" } }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "credential.set",
+        input: { provider: "mistral", apiKey: "synthetic-key" },
+      }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({ type: "provider-auth.status", input: { provider: "google" } }),
+    ).toThrow("invalid");
+    expect(() =>
+      validateBridgeCommand({
+        type: "provider-auth.set",
+        input: { provider: "google", mode: "user-session" },
+      }),
+    ).toThrow("invalid");
+
+    const unknownResult = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: { provider: "gemini", configured: true, source: "app", protection: "os-backed" },
+        }),
+        ["credential.status"],
+      ),
+    );
+    await expect(
+      unknownResult.execute({ type: "credential.status", input: { provider: "google" } }),
+    ).resolves.toMatchObject({ ok: false });
+  });
+
   it("strictly validates provider-managed user-session credential status", async () => {
     const accepted = createCapabilityPort(
       bridge(
@@ -1690,6 +1744,41 @@ describe("desktop capability bridge", () => {
       ok: true,
       value: { workspaceId: "workspace-1", profiles: [{ profileId: "profile-1", version: 2 }] },
     });
+    const withDrafts = createCapabilityPort(
+      bridge(
+        async () => ({
+          ok: true,
+          value: {
+            workspaceId: "workspace-1",
+            profiles: [],
+            summaries: [
+              {
+                profileId: "profile-1",
+                latestVersion: 1,
+                status: "draft",
+                updatedAt: "2026-09-30T12:00:00Z",
+              },
+            ],
+          },
+        }),
+        ["profile.catalog"],
+      ),
+    );
+    await expect(
+      withDrafts.execute({
+        type: "profile.catalog",
+        input: { workspaceId: "workspace-1", includeDrafts: true },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: { summaries: [{ profileId: "profile-1", latestVersion: 1, status: "draft" }] },
+    });
+    await expect(
+      withDrafts.execute({
+        type: "profile.catalog",
+        input: { workspaceId: "workspace-1", includeDrafts: false } as never,
+      }),
+    ).resolves.toMatchObject({ ok: false });
     const foreignCatalog = createCapabilityPort(
       bridge(
         async () => ({ ok: true, value: { workspaceId: "workspace-other", profiles: [] } }),
@@ -1729,6 +1818,74 @@ describe("desktop capability bridge", () => {
     ]) {
       const type = "expectedVersion" in input ? "profile.edit" : "profile.derive";
       expect(() => validateBridgeCommand({ type, input })).toThrow("invalid");
+    }
+  });
+
+  it("validates and normalizes profile progress and cancel commands at runtime", async () => {
+    const progress = {
+      type: "profile.progress" as const,
+      input: { workspaceId: "workspace-1", profileId: "profile-1" },
+    };
+    const cancel = {
+      type: "profile.cancel" as const,
+      input: { workspaceId: "workspace-1", profileId: "profile-1" },
+    };
+    expect(validateBridgeCommand(progress)).toEqual(progress);
+    expect(validateBridgeCommand(cancel)).toEqual(cancel);
+    expect(bridgeCapabilities).toEqual(
+      expect.arrayContaining(["profile.progress", "profile.cancel"]),
+    );
+    for (const type of ["profile.progress", "profile.cancel"] as const) {
+      for (const input of [
+        { workspaceId: "workspace-1" },
+        { workspaceId: "workspace-1", profileId: "profile:unsafe" },
+        { workspaceId: "workspace-1", profileId: "profile-1", root: "/private" },
+        { workspaceId: "workspace-1", profileId: "profile-1", providerTransmissionApproved: true },
+        "profile-1",
+      ]) {
+        expect(() => validateBridgeCommand({ type, input })).toThrow("invalid");
+      }
+    }
+
+    const respond = (value: unknown, type: "profile.progress" | "profile.cancel") =>
+      createCapabilityPort(bridge(async () => ({ ok: true, value }), [type])).execute(
+        type === "profile.progress" ? progress : cancel,
+      );
+    await expect(respond({ active: false }, "profile.progress")).resolves.toEqual({
+      ok: true,
+      value: { active: false },
+    });
+    await expect(respond({ active: true }, "profile.progress")).resolves.toEqual({
+      ok: true,
+      value: { active: true },
+    });
+    await expect(
+      respond({ active: true, completedCalls: 1, plannedCalls: 3 }, "profile.progress"),
+    ).resolves.toEqual({ ok: true, value: { active: true, completedCalls: 1, plannedCalls: 3 } });
+    for (const malformed of [
+      { active: "yes" },
+      { active: true, completedCalls: 1 },
+      { active: false, completedCalls: 1, plannedCalls: 3 },
+      { active: true, completedCalls: 4, plannedCalls: 3 },
+      { active: true, completedCalls: -1, plannedCalls: 3 },
+      { active: true, completedCalls: 0, plannedCalls: 0 },
+      { active: true, completedCalls: 0.5, plannedCalls: 3 },
+      { active: true, completedCalls: 1, plannedCalls: 3, path: "/private" },
+    ]) {
+      await expect(respond(malformed, "profile.progress")).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
+    }
+    await expect(respond({ cancelled: true }, "profile.cancel")).resolves.toEqual({
+      ok: true,
+      value: { cancelled: true },
+    });
+    for (const malformed of [{}, { cancelled: "true" }, { cancelled: true, path: "/private" }]) {
+      await expect(respond(malformed, "profile.cancel")).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
     }
   });
 
@@ -2256,6 +2413,62 @@ describe("desktop capability bridge", () => {
     expect(() =>
       validateBridgeCommand({ type: "provider-auth.status", input: { provider: "zai" } }),
     ).toThrow("invalid");
+  });
+
+  it("accepts Google and the exact Gemini author through the runtime validators", async () => {
+    expect(validateBridgeCommand({ type: "models.list", input: { provider: "google" } })).toEqual({
+      type: "models.list",
+      input: { provider: "google" },
+    });
+    const pair = {
+      authorCompany: "google",
+      authorModel: "gemini-3.7-flash",
+      criticCompany: "openai",
+      criticModel: "gpt-6-luna",
+    };
+    expect(
+      validateBridgeCommand({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair },
+      }),
+    ).toEqual({
+      type: "workspace.configure-models",
+      input: { workspaceId: "ws-1", ...pair },
+    });
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "gemini-development", mode: "real", ...pair },
+      }),
+    ).toMatchObject({ type: "workspace.create", input: pair });
+    expect(() =>
+      validateBridgeCommand({ type: "provider-auth.status", input: { provider: "google" } }),
+    ).toThrow("invalid");
+
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: { workspaceId: "ws-1", ...pair, localEndpoint: null },
+    }));
+    const port = createCapabilityPort(bridge(invoke, ["workspace.configure-models"]));
+    await expect(
+      port.execute({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair },
+      } as never),
+    ).resolves.toEqual({
+      ok: true,
+      value: { workspaceId: "ws-1", ...pair, localEndpoint: null },
+    });
+    invoke.mockResolvedValueOnce({
+      ok: true,
+      value: { workspaceId: "ws-1", ...pair, authorCompany: "bedrock", localEndpoint: null },
+    });
+    await expect(
+      port.execute({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair },
+      } as never),
+    ).resolves.toMatchObject({ ok: false });
   });
 
   it("keeps candidate-knowledge paths behind the native bridge", async () => {
@@ -3581,6 +3794,68 @@ describe("desktop capability bridge", () => {
       expect(() =>
         validateBridgeCommand({ type: "knowledge.select", input: invalidInput }),
       ).toThrow("invalid");
+    }
+  });
+
+  it("restores the saved knowledge store through a strict path-free command", async () => {
+    const input = { workspaceId: "workspace-1" };
+    expect(validateBridgeCommand({ type: "knowledge.current", input })).toEqual({
+      type: "knowledge.current",
+      input,
+    });
+    expect(bridgeCapabilities).toContain("knowledge.current");
+    for (const invalidInput of [
+      {},
+      { workspaceId: "workspace-1", storeRoot: "/private/candidate-data" },
+      "workspace-1",
+    ]) {
+      expect(() =>
+        validateBridgeCommand({ type: "knowledge.current", input: invalidInput }),
+      ).toThrow("invalid");
+    }
+
+    const store = {
+      storeId: "store-1",
+      knowledgeBases: [
+        {
+          id: "kb-1",
+          displayName: "Engineering",
+          description: "",
+          state: "active",
+          isDefault: true,
+        },
+      ],
+    };
+    const respond = async (value: unknown) =>
+      createCapabilityPort(
+        bridge(async () => ({ ok: true, value }), ["knowledge.current"]),
+      ).execute({ type: "knowledge.current", input });
+    const accepted = [
+      { store, selectedKnowledgeBaseIds: ["kb-1"] },
+      { store, selectedKnowledgeBaseIds: [] },
+      { store: null, selectedKnowledgeBaseIds: [] },
+      { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+    ];
+    for (const value of accepted) {
+      await expect(respond(value)).resolves.toEqual({ ok: true, value });
+    }
+    const rejected = [
+      { store, selectedKnowledgeBaseIds: ["kb-unknown"] },
+      { store, selectedKnowledgeBaseIds: ["kb-1", "kb-1"] },
+      { store, selectedKnowledgeBaseIds: [], unavailable: true },
+      { store, selectedKnowledgeBaseIds: [], unavailable: false },
+      { store: null, selectedKnowledgeBaseIds: ["kb-1"] },
+      { store: null, selectedKnowledgeBaseIds: [], unavailable: false },
+      { store: null },
+      { selectedKnowledgeBaseIds: [] },
+      { store: { ...store, storeRoot: "/private/candidate-data" }, selectedKnowledgeBaseIds: [] },
+      { store: null, selectedKnowledgeBaseIds: [], storeRoot: "/private/candidate-data" },
+    ];
+    for (const value of rejected) {
+      await expect(respond(value)).resolves.toMatchObject({
+        ok: false,
+        error: { code: "operation-failed" },
+      });
     }
   });
 
