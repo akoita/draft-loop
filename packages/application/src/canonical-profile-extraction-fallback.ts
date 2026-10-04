@@ -237,10 +237,26 @@ async function executePlannedBatch(
   }
   throwIfAborted(request.signal);
   const batch = parseBatch(response.output, controls.model.company);
-  return request.groundProposal === undefined ? batch : request.groundProposal(batch);
+  if (request.groundProposal === undefined) return batch;
+  try {
+    return request.groundProposal(batch);
+  } catch (error) {
+    // A replacement batch that still fails grounding keeps its grounded facts when a filter exists.
+    if (
+      groundingRecovery === undefined ||
+      request.filterGroundedProposal === undefined ||
+      !(error instanceof CandidateProfileGroundingError)
+    ) {
+      throw error;
+    }
+    return request.filterGroundedProposal(batch);
+  }
 }
 
-/** Run one planned call, with at most one replacement for that same call after a grounding failure. */
+/**
+ * Run one planned call, with at most one replacement for that same call after a grounding failure.
+ * A second failure drops only the ungrounded facts when the request supplies a filter.
+ */
 async function executePlannedCall(
   executor: CanonicalProfileExtractionExecutor,
   request: CanonicalCandidateProfileExtractionRequest,

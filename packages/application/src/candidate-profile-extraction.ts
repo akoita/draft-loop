@@ -68,6 +68,13 @@ export interface CanonicalCandidateProfileExtractionRequest {
   readonly groundProposal?: (
     proposal: CanonicalCandidateProfileExtractionProposal,
   ) => CanonicalCandidateProfileExtractionProposal;
+  /**
+   * Local filter for a replacement batch that still fails grounding. It returns the quote-repaired
+   * proposal without its ungrounded facts, and is never sent to a provider.
+   */
+  readonly filterGroundedProposal?: (
+    proposal: CanonicalCandidateProfileExtractionProposal,
+  ) => CanonicalCandidateProfileExtractionProposal;
 }
 
 /** Provider seam for structured extraction from explicitly approved CKB text. */
@@ -371,6 +378,8 @@ function mapProposal(
     string,
     readonly CanonicalCandidateProfileProvenanceReference[]
   >,
+  droppedFacts: number,
+  sources: readonly CanonicalCandidateProfileExtractionMaterial[],
 ): CanonicalCandidateProfileExtractionResult {
   const factByKey = new Map<string, CanonicalCandidateProfileFact>();
   const facts = proposal.facts.map((candidate) => {
@@ -416,18 +425,37 @@ function mapProposal(
     );
   });
 
-  const issues = uniqueSorted([...proposedIssues, ...detectedIssues(facts)], (issue) => issue.id);
+  const droppedFactsIssues =
+    droppedFacts > 0
+      ? [
+          buildIssue(
+            "omission",
+            [],
+            candidateSourceReferences(sources),
+            undefined,
+            "warning",
+            droppedFactsMessage(droppedFacts),
+          ),
+        ]
+      : [];
+  const issues = uniqueSorted(
+    [...proposedIssues, ...detectedIssues(facts), ...droppedFactsIssues],
+    (issue) => issue.id,
+  );
   if (issues.length > maximumCanonicalCandidateProfileIssueCount) {
     throw new Error("The extraction proposal produces too many review issues.");
   }
   return cloneAndFreeze({ facts, issues });
 }
 
-function extractionFailure(
+function droppedFactsMessage(count: number): string {
+  return `${count} extracted fact${count === 1 ? " was" : "s were"} dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.`;
+}
+
+function candidateSourceReferences(
   sources: readonly CanonicalCandidateProfileExtractionMaterial[],
-  message: string,
-): CanonicalCandidateProfileExtractionResult {
-  const references = uniqueSorted(
+): readonly CanonicalCandidateProfileProvenanceReference[] {
+  return uniqueSorted(
     sources.flatMap((source) => {
       try {
         const reference = canonicalCandidateProfileProvenanceReferenceSchema.parse(
@@ -440,6 +468,13 @@ function extractionFailure(
     }),
     referenceKey,
   );
+}
+
+function extractionFailure(
+  sources: readonly CanonicalCandidateProfileExtractionMaterial[],
+  message: string,
+): CanonicalCandidateProfileExtractionResult {
+  const references = candidateSourceReferences(sources);
   return cloneAndFreeze({
     facts: [],
     issues: [buildIssue("omission", [], references, undefined, "error", message)],
@@ -461,7 +496,7 @@ export async function processCanonicalCandidateProfileExtraction(
       validated.request.sources,
       validated.references,
     );
-    const proposal = await extractGroundedCanonicalCandidateProfileProposal(
+    const { proposal, droppedFacts } = await extractGroundedCanonicalCandidateProfileProposal(
       port,
       Object.freeze({ ...validated.request, sources: preparedSources.sources }),
       preparedSources.referencesByRepresentativeId,
@@ -470,7 +505,12 @@ export async function processCanonicalCandidateProfileExtraction(
         stage = nextStage;
       },
     );
-    return mapProposal(proposal, preparedSources.referencesByRepresentativeId);
+    return mapProposal(
+      proposal,
+      preparedSources.referencesByRepresentativeId,
+      droppedFacts,
+      input.sources,
+    );
   } catch (error) {
     if (input.signal?.aborted === true || (error instanceof Error && error.name === "AbortError")) {
       throw error;

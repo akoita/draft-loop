@@ -117,7 +117,7 @@ describe("sourced omission dangling fact reference recovery", () => {
     });
   });
 
-  it("still saves no facts when the recovered omission cites an unknown source", async () => {
+  it("keeps grounded facts but drops the recovered omission when it cites an unknown source", async () => {
     const { execute, port } = extractionPort(
       proposal({
         issues: [
@@ -133,12 +133,12 @@ describe("sourced omission dangling fact reference recovery", () => {
     const result = await processCanonicalCandidateProfileExtraction(port, extractionInput());
 
     expect(execute).toHaveBeenCalledTimes(2);
-    expect(result.facts).toEqual([]);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]).toMatchObject({ code: "omission", severity: "error", status: "open" });
+    expect(result.facts.map(({ value }) => value)).toEqual(["TypeScript"]);
+    expect(result.issues.some((issue) => issue.sourceRefs.length > 0)).toBe(false);
+    expect(result.issues.some((issue) => issue.severity === "error")).toBe(false);
   });
 
-  it("still saves no facts when evidence is not supported by the selected source", async () => {
+  it("saves no ungrounded fact when evidence is not supported by the selected source", async () => {
     const output = proposal({
       facts: [
         {
@@ -156,7 +156,12 @@ describe("sourced omission dangling fact reference recovery", () => {
 
     expect(execute).toHaveBeenCalledTimes(2);
     expect(result.facts).toEqual([]);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]).toMatchObject({ code: "omission", severity: "error", status: "open" });
+    expect(result.issues.some((issue) => issue.severity === "error")).toBe(false);
+    expect(result.issues.find((issue) => issue.message.includes("dropped"))).toMatchObject({
+      code: "omission",
+      severity: "warning",
+      status: "open",
+      sourceRefs: [material().reference],
+    });
   });
 });

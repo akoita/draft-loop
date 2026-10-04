@@ -259,8 +259,8 @@ reconstructed because their timeout phase and status were not retained.
 An otherwise valid source-backed omission can retain its visible review warning
 when it names a fact the model did not return; only those dangling omission
 references are removed, followed by strict validation and evidence grounding.
-Dangling conflict or duplicate references, omissions without source references,
-unknown sources, and unsupported quotes still fail without saving facts.
+Dangling conflict or duplicate references and omissions without source
+references still fail without saving facts.
 Repeated model fact keys are repaired only when no issue refers to that key;
 later facts receive collision-free local identities, with all evidence still
 grounded. Issues that reference an ambiguous duplicate key remain failures.
@@ -291,9 +291,16 @@ A grounding failure on a smaller input may trigger one additional full-context
 request with the same approved sources and fixed diagnostic counts. It returns a
 full replacement proposal, which must pass schema and grounding checks before any
 facts are saved. Large inputs use per-call recovery instead (see the proactive
-plan below). Failed values and quotes are not sent as feedback, and a failed
-replacement saves no facts. This bounded recovery has no live-provider
-reliability claim.
+plan below). Failed values and quotes are not sent as feedback. This bounded
+recovery has no live-provider reliability claim.
+
+If the replacement still fails grounding, DraftLoop keeps the grounded facts and
+drops only the ungrounded ones, including any proposed issue that cites a
+dropped fact or an unknown source. It adds one open warning, with no quoted
+content, that states how many facts were dropped; acknowledge it after checking
+the profile for missing facts. An ungrounded fact is never saved. If nothing
+grounded remains, no facts are saved and the profile shows as empty rather than
+as a failed extraction.
 
 Empty profiles and drafts with open issues cannot be marked reviewed; warnings
 also block until acknowledged or resolved and saved. A reviewed profile is a
@@ -337,8 +344,9 @@ Each planned call sends only its own source, or only its window text with the
 source ID, media type, and the window's UTF-16 offsets and source length. Other
 sources and windows are never included. Each result is grounded as it arrives. A
 call that fails grounding gets at most one replacement for that same call with
-fixed diagnostic counts, so a plan makes at most 128 calls. A second failure
-saves nothing, and planned extractions never make the full-corpus replacement.
+fixed diagnostic counts, so a plan makes at most 128 calls. After a second
+failure, only that call's ungrounded facts are dropped and counted toward the
+single warning above; planned extractions never make the full-corpus replacement.
 
 Cross-source conflicts and duplicates for planned extractions come from local
 detection over the aggregated facts, which depends on consistent subject naming
@@ -356,8 +364,8 @@ the existing schema and source-grounding checks before any facts are saved.
 
 Proposal validation removes redundant entries only when failures consist solely
 of repeated evidence tuples or issue fact/source references, then reruns the full
-schema. Other schema and grounding failures reject the full proposal, so no facts
-are saved. Guidance may show bounded reason counts but omits values, field names,
+schema. Other schema failures reject the full proposal, so no facts are saved.
+Guidance may show bounded reason counts but omits values, field names,
 source text, and paths.
 
 Skills are treated as collection values, so distinct skill facts do not become

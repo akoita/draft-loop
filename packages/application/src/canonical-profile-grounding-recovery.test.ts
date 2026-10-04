@@ -140,6 +140,7 @@ describe("canonical profile grounding recovery", () => {
     expect(requests[1]?.sources).toBe(requests[0]?.sources);
     expect(requests[1]?.signal).toBe(controller.signal);
     expect(requests[1]?.groundProposal).toBeUndefined();
+    expect(requests[1]?.filterGroundedProposal).toBeUndefined();
     expect(requests[1]?.groundingRecovery).toEqual([{ code: "value_not_in_quote", count: 2 }]);
     expect(Object.isFrozen(requests[1])).toBe(true);
     expect(Object.isFrozen(requests[1]?.groundingRecovery)).toBe(true);
@@ -167,7 +168,7 @@ describe("canonical profile grounding recovery", () => {
     expect(result.facts.some((fact) => fact.value === "payment and analytics")).toBe(false);
   });
 
-  it("uses only replacement diagnostics and saves zero facts when the retry still fails grounding", async () => {
+  it("keeps grounded replacement facts, drops the rest, and warns once when the retry still fails grounding", async () => {
     const outputs = [
       proposal([
         {
@@ -179,6 +180,13 @@ describe("canonical profile grounding recovery", () => {
         },
       ]),
       proposal([
+        {
+          key: "grounded-fact",
+          category: "skill",
+          field: "name",
+          value: "TypeScript",
+          quote: "TypeScript",
+        },
         {
           key: "unknown-source-fact",
           category: "skill",
@@ -204,11 +212,39 @@ describe("canonical profile grounding recovery", () => {
     );
 
     expect(extract).toHaveBeenCalledTimes(2);
+    expect(result.facts.map((fact) => fact.value)).toEqual(["TypeScript"]);
+    const warnings = result.issues.filter((issue) => issue.message.includes("dropped"));
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toMatchObject({
+      code: "omission",
+      severity: "warning",
+      status: "open",
+      factIds: [],
+    });
+    expect(warnings[0]?.message).toBe(
+      "2 extracted facts were dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.",
+    );
+    expect(result.issues.some((issue) => issue.severity === "error")).toBe(false);
+    expect(JSON.stringify(result)).not.toMatch(/Python|ghost/u);
+  });
+
+  it("saves no facts and no error when the replacement keeps nothing grounded", async () => {
+    const invalid = proposal([
+      { key: "invalid", category: "skill", field: "name", value: "React", quote: "TypeScript" },
+    ]);
+    const extract = vi.fn(async () => invalid);
+
+    const result = await processCanonicalCandidateProfileExtraction(
+      { extract },
+      input([material({ text: "TypeScript" })]),
+    );
+
+    expect(extract).toHaveBeenCalledTimes(2);
     expect(result.facts).toEqual([]);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]?.message).toContain("unknown cited sources: 1");
-    expect(result.issues[0]?.message).toContain("values absent from evidence quotes: 1");
-    expect(result.issues[0]?.message).not.toContain("quotes absent from cited source text");
+    expect(result.issues.some((issue) => issue.severity === "error")).toBe(false);
+    expect(
+      result.issues.some((issue) => issue.message.includes("1 extracted fact was dropped")),
+    ).toBe(true);
   });
 
   it("does not retry schema, provider, or input failures", async () => {
@@ -289,6 +325,30 @@ describe("canonical profile grounding recovery", () => {
         ),
       ),
     ).toThrow(CandidateProfileGroundingError);
+  });
+
+  it("supplies a local filter that repairs quotes and drops only ungrounded facts", async () => {
+    let filter: CanonicalCandidateProfileExtractionRequest["filterGroundedProposal"];
+    const extract = vi.fn(async (request: CanonicalCandidateProfileExtractionRequest) => {
+      filter = request.filterGroundedProposal;
+      return proposal([]);
+    });
+    await processCanonicalCandidateProfileExtraction({ extract }, input());
+
+    const filtered = filter?.(
+      proposal([
+        {
+          key: "analytics",
+          category: "skill",
+          field: "name",
+          value: "analytics",
+          quote: "**analytics reporting**",
+        },
+        { key: "bad", category: "skill", field: "name", value: "Rust", quote: "payment" },
+      ]) as unknown as Parameters<NonNullable<typeof filter>>[0],
+    );
+    expect(filtered?.facts.map((fact) => fact.key)).toEqual(["analytics"]);
+    expect(filtered?.facts[0]?.evidence[0]?.quote).toBe("analytics reporting");
   });
 
   it("does not make a full-corpus replacement when a planned aggregate fails grounding", async () => {
