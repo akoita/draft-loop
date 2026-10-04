@@ -87,9 +87,10 @@ or imply representative-CV quality validation.
 
 An opt-in adapter also supports Gemini 3.7 Flash through Google's Gemini API
 for development ([#813](https://github.com/akoita/draft-loop/issues/813)).
-Default pairs and representative quality claims are unchanged. Free-tier Gemini
-API terms may allow Google to use submitted content, so candidate material
-needs a paid-tier key.
+The opt-in `development-gemini` preset pairs it with the GPT-6 Luna critic in
+the CLI and desktop. Default pairs and representative quality claims are
+unchanged. Free-tier Gemini API terms may allow Google to use submitted content,
+so candidate material needs a paid-tier key.
 
 Current cost-reporting work preserves validated OpenAI cached-input,
 cache-write, and reasoning-output counts in adapter results. Estimates use
@@ -1441,7 +1442,11 @@ Offer four curated models: `claude-sonnet-5-5`, `claude-opus-5-5`,
 The opt-in `development-glm` preset adds the GLM-5.3-Flash author through
 DeepInfra with the GPT-6 Luna critic; it uses the dedicated key and does not
 change defaults. Its conservative standard API price metadata was reviewed
-2026-10-02; quality is unvalidated and account availability unchecked.
+2026-10-02; quality is unvalidated and account availability unchecked. The
+opt-in `development-gemini` preset adds the Gemini 3.7 Flash author with the
+same critic and the dedicated Google key, with price metadata reviewed
+2026-10-04 and the same unvalidated status
+([#813](https://github.com/akoita/draft-loop/issues/813)).
 Existing exact profile versions and run snapshots remain compatible. A profile holds:
 
 - provider and exact model ID;

@@ -5,6 +5,7 @@ import {
   ProviderAdapterError,
   type ProviderErrorCode,
 } from "@draft-loop/providers";
+import { isGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { isDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import {
   createProviderAdapter,
@@ -180,12 +181,12 @@ export function buildModelSuggestionPreflightPlan(
     }
     const profile = entry.profile as unknown as ModelProfile;
     if (
-      profile.provider === "zai" &&
+      (profile.provider === "zai" || profile.provider === "google") &&
       Array.isArray(profile.roles) &&
       isRecord(profile.runtime) &&
       isRecord(profile.runtime.thinking) &&
       isRecord(profile.knownLimits) &&
-      isDeepInfraGLMAuthorProfile(profile)
+      (isDeepInfraGLMAuthorProfile(profile) || isGoogleGeminiAuthorProfile(profile))
     ) {
       continue;
     }

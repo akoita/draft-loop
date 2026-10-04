@@ -19,6 +19,11 @@ const development: ModelProfileReferences = {
   critic: { id: "economy-openai-critic", version: 1 },
 };
 
+const geminiDevelopment: ModelProfileReferences = {
+  author: { id: "dev-google-gemini-author", version: 1 },
+  critic: { id: "economy-openai-critic", version: 1 },
+};
+
 function scenario(profiles = standard): ModelProfileApiScenarioInput {
   return {
     profiles,
@@ -162,6 +167,25 @@ describe("model profile public API scenario estimates", () => {
     expect(
       estimateModelProfileApiScenario({
         ...scenario(standard),
+        authModes: { anthropic: "api-key", openai: "user-session" },
+      }),
+    ).toEqual({ status: "unavailable", reason: "subscription-billing" });
+  });
+
+  it("estimates the opt-in Gemini pair and checks subscription billing only for OpenAI", () => {
+    const geminiAndOpenAi = {
+      ...scenario(geminiDevelopment),
+      authModes: { anthropic: "user-session", openai: "api-key" } as const,
+    };
+    expect(estimateModelProfileApiScenario(geminiAndOpenAi)).toEqual({
+      status: "available",
+      authorUsd: 0.0225,
+      criticUsd: 0.0015,
+      totalUsd: 0.024,
+    });
+    expect(
+      estimateModelProfileApiScenario({
+        ...geminiAndOpenAi,
         authModes: { anthropic: "api-key", openai: "user-session" },
       }),
     ).toEqual({ status: "unavailable", reason: "subscription-billing" });

@@ -19,6 +19,10 @@ const development: ModelProfileReferences = {
   author: { id: "dev-deepinfra-glm-author", version: 1 },
   critic: { id: "economy-openai-critic", version: 1 },
 };
+const geminiDevelopment: ModelProfileReferences = {
+  author: { id: "dev-google-gemini-author", version: 1 },
+  critic: { id: "economy-openai-critic", version: 1 },
+};
 const apiKeyModes: RunProviderAuthModeConfiguration = {
   anthropic: "api-key",
   openai: "api-key",
@@ -61,6 +65,14 @@ describe("desktop model profile API budget scenario", () => {
     expect(html).toContain("zai/zai-org/GLM-5.3-Flash");
     expect(html).toContain("$0.15/1M input · $0.5/1M output");
     expect(html).toContain("Official DeepInfra model/pricing documentation");
+  });
+
+  it("labels the development Gemini public rates as Google documentation", () => {
+    const html = renderBudget(geminiDevelopment, apiKeyModes);
+    expect(html).toContain("dev-google-gemini-author@1");
+    expect(html).toContain("google/gemini-3.7-flash");
+    expect(html).toContain("$0.75/1M input · $3.75/1M output");
+    expect(html).toContain("Official Google model/pricing documentation");
   });
 
   it("shows public rates but no combined estimate for subscription or unknown authentication", () => {

@@ -141,15 +141,16 @@ export type ProviderAuthMode = (typeof providerAuthModes)[number];
  * refuses to build an adapter for any other company, so a company outside this
  * list is invalid input rather than an option this host declined to offer.
  */
-export const modelCompanies = ["anthropic", "openai", "zai", "local"] as const;
+export const modelCompanies = ["anthropic", "openai", "zai", "google", "local"] as const;
 export type ModelCompany = (typeof modelCompanies)[number];
 
 /**
  * The companies whose catalogue can be listed.
  *
  * Model discovery follows workspace companies rather than credential hosts:
- * `local` has no credential, and Z.ai uses DeepInfra as its credential host.
- * The list is exactly the set of companies accepted for workspace choices.
+ * `local` has no credential, Z.ai uses DeepInfra as its credential host, and
+ * Google uses the Gemini API key. The list is exactly the set of companies
+ * accepted for workspace choices.
  */
 export const modelDiscoveryProviders = modelCompanies;
 export type ModelDiscoveryProvider = (typeof modelDiscoveryProviders)[number];
