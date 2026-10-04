@@ -6,7 +6,9 @@ import {
   activeKnowledgeBases,
   KnowledgeBaseList,
   KnowledgeWorkspace,
+  SavedKnowledgeStatus,
   safeKnowledgeBaseDisplayName,
+  savedKnowledgeUnavailableMessage,
   selectCandidateKnowledgeBaseAndRefresh,
 } from "./knowledge.js";
 
@@ -35,6 +37,7 @@ function renderList(options: {
   intake: boolean;
   workspace: boolean;
   bases?: typeof store.knowledgeBases;
+  selected?: readonly string[];
 }) {
   return renderToStaticMarkup(
     <KnowledgeBaseList
@@ -43,6 +46,7 @@ function renderList(options: {
       disabled={false}
       intakeSupported={options.intake}
       workspaceSourcesSupported={options.workspace}
+      selectedKnowledgeBaseIds={options.selected ?? []}
       onSelect={noop}
       onImport={noop}
     />,
@@ -95,6 +99,43 @@ describe("desktop candidate knowledge workspace", () => {
     expect(html).toMatch(/class="button button-outline"[^>]*>Add file</);
     expect(html).toMatch(/class="button button-outline"[^>]*>Add directory</);
     expect(html).toMatch(/class="button button-outline"[^>]*>Import workspace candidate sources</);
+  });
+
+  it("marks the bases the workspace already uses and disables their select button", () => {
+    const bases = [
+      ...activeKnowledgeBases(store),
+      {
+        id: "active-2",
+        displayName: "Side projects",
+        description: "",
+        state: "active" as const,
+        isDefault: false,
+      },
+    ];
+    const html = renderList({ intake: true, workspace: true, bases, selected: ["active-2"] });
+    expect(html.match(/>In use</g)).toHaveLength(2);
+    expect(html.match(/<span class="meta-chip">In use<\/span>/g)).toHaveLength(1);
+    expect(html.match(/>Use this knowledge base</g)).toHaveLength(1);
+    expect(html).toMatch(/class="button button-primary" disabled=""[^>]*>In use</);
+
+    const none = renderList({ intake: true, workspace: true, bases });
+    expect(none).not.toContain("In use");
+    expect(none.match(/>Use this knowledge base</g)).toHaveLength(2);
+  });
+
+  it("explains an unavailable saved store and shows loading", () => {
+    expect(renderToStaticMarkup(<SavedKnowledgeStatus loading={false} unavailable />)).toContain(
+      savedKnowledgeUnavailableMessage,
+    );
+    expect(savedKnowledgeUnavailableMessage).toBe(
+      "The saved knowledge store could not be opened from its saved location. Open it again to continue.",
+    );
+    expect(renderToStaticMarkup(<SavedKnowledgeStatus loading unavailable />)).toContain(
+      "Loading saved knowledge…",
+    );
+    expect(renderToStaticMarkup(<SavedKnowledgeStatus loading={false} unavailable={false} />)).toBe(
+      "",
+    );
   });
 
   it("explains workspace import only when it is supported", () => {

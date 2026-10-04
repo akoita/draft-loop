@@ -9,6 +9,7 @@ export const bridgeCapabilities = [
   "knowledge.create",
   "knowledge.open",
   "knowledge.list",
+  "knowledge.current",
   "knowledge.readiness",
   "knowledge.sources",
   "knowledge.duplicates",

@@ -594,11 +594,17 @@ The desktop exposes the same CKB operations through a native boundary. Renderer
 messages never accept or return filesystem paths; the host owns native pickers
 and keeps paths local.
 
-- **Store access and inspection.** Desktop selection accepts only stores opened
-  in the current session. Combining CKBs requires visible approval. Both the CLI
+- **Store access and inspection.** Desktop selection accepts only stores the host
+  has opened, either in this session or by restoring the workspace's saved
+  store on reopen. Combining CKBs requires visible approval. Both the CLI
   and desktop can create, rename, and archive additional CKBs, while bounded
   diagnostics omit roots, labels, filenames, URLs, checksums, and content.
   Archival requires confirmation and cannot target the default CKB.
+
+- **Saved store on reopen.** When a workspace opens, the knowledge panel
+  reopens the store saved with its selection, marks the selected CKB "In use",
+  and shows no path. If the saved location is no longer readable, the panel asks
+  you to open the store again. Only the first saved entry's store is restored.
 
 - **File and URL intake.** Single-file intake uses a dedicated native picker and
   returns only opaque source and version identities. URL intake requires

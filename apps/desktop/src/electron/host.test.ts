@@ -4732,6 +4732,129 @@ describe("candidate knowledge native controls", () => {
     }
   });
 
+  it("restores the saved knowledge store after a restart without returning paths", async () => {
+    const parent = await mkdtemp(join(tmpdir(), "draft-loop-knowledge-current-"));
+    const workspaceRoot = join(parent, "workspace");
+    const storeRoot = join(parent, "candidate-knowledge");
+    try {
+      const sourcePath = join(parent, "resume.md");
+      await writeFile(sourcePath, "Local candidate evidence.\n", "utf8");
+      const firstHost = createNativeHost({
+        dialogs: {
+          chooseDirectory: async () => parent,
+          chooseFiles: async () => [],
+          chooseKnowledgeSourceFile: async () => sourcePath,
+        },
+      });
+      const workspace = await firstHost.invoke({
+        type: "workspace.create",
+        input: { name: "workspace", mode: "real" },
+      });
+      if (!workspace.ok) throw new Error("Expected workspace creation to succeed.");
+      const workspaceId = (workspace.value as { workspace: { id: string } }).workspace.id;
+      await expect(
+        firstHost.invoke({ type: "knowledge.current", input: { workspaceId } }),
+      ).resolves.toEqual({ ok: true, value: { store: null, selectedKnowledgeBaseIds: [] } });
+
+      const created = await firstHost.invoke({
+        type: "knowledge.create",
+        input: { name: "candidate-knowledge", displayName: "My evidence" },
+      });
+      if (!created.ok) throw new Error("Expected store creation to succeed.");
+      const storeId = (created.value as { storeId: string }).storeId;
+      const knowledgeBaseId = (created.value as { knowledgeBases: readonly { id: string }[] })
+        .knowledgeBases[0]?.id;
+      if (knowledgeBaseId === undefined) throw new Error("Expected a default knowledge base.");
+      await firstHost.invoke({
+        type: "knowledge.import-file",
+        input: { storeId, knowledgeBaseId, selection: "native-dialog" },
+      });
+      const selected = await firstHost.invoke({
+        type: "knowledge.select",
+        input: { workspaceId, entries: [{ storeId, knowledgeBaseId }] },
+      });
+      expect(selected).toMatchObject({ ok: true });
+
+      const restart = async () => {
+        const roots = [workspaceRoot];
+        const host = createNativeHost({
+          dialogs: {
+            chooseDirectory: async () => roots.shift(),
+            chooseFiles: async () => [],
+          },
+        });
+        await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+        return host;
+      };
+
+      const restarted = await restart();
+      await expect(
+        restarted.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+      const current = await restarted.invoke({
+        type: "knowledge.current",
+        input: { workspaceId },
+      });
+      expect(current).toMatchObject({
+        ok: true,
+        value: {
+          store: { storeId, knowledgeBases: [{ id: knowledgeBaseId, displayName: "My evidence" }] },
+          selectedKnowledgeBaseIds: [knowledgeBaseId],
+        },
+      });
+      expect(JSON.stringify(current)).not.toContain(parent);
+      await expect(
+        restarted.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({ ok: true, value: { storeId } });
+      await expect(
+        restarted.invoke({ type: "knowledge.current", input: { workspaceId: "other-workspace" } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+
+      // A store that now reports a different identity is not trusted.
+      const swappedService = createCandidateKnowledgeStoreService();
+      const swappedHost = createNativeHost({
+        knowledgeService: {
+          ...swappedService,
+          openStore: async (input: { storeRoot: string }) => {
+            const view = await swappedService.openStore(input);
+            return { ...view, store: { ...view.store, id: "some-other-store" } };
+          },
+        } as never,
+        dialogs: {
+          chooseDirectory: async () => workspaceRoot,
+          chooseFiles: async () => [],
+        },
+      });
+      await swappedHost.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const mismatched = await swappedHost.invoke({
+        type: "knowledge.current",
+        input: { workspaceId },
+      });
+      expect(mismatched).toEqual({
+        ok: true,
+        value: { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+      });
+      await expect(
+        swappedHost.invoke({ type: "knowledge.list", input: { storeId } }),
+      ).resolves.toMatchObject({ ok: false, error: { code: "not-found" } });
+
+      // A store that moved or was deleted is reported as unavailable, not as an error.
+      await rm(storeRoot, { recursive: true, force: true });
+      const missingHost = await restart();
+      const missing = await missingHost.invoke({
+        type: "knowledge.current",
+        input: { workspaceId },
+      });
+      expect(missing).toEqual({
+        ok: true,
+        value: { store: null, selectedKnowledgeBaseIds: [], unavailable: true },
+      });
+      expect(JSON.stringify(missing)).not.toContain(parent);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
   it("reports native-dialog cancellation without calling the knowledge service", async () => {
     const knowledgeService = {
       initializeStore: vi.fn(),

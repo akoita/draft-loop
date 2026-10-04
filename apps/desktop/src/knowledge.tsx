@@ -83,6 +83,8 @@ export interface KnowledgeBaseListProps {
   readonly disabled: boolean;
   readonly intakeSupported: boolean;
   readonly workspaceSourcesSupported: boolean;
+  /** Bases of this store the workspace already uses; marked "In use". */
+  readonly selectedKnowledgeBaseIds?: readonly string[];
   readonly onSelect: (storeId: string, knowledgeBaseId: string) => void;
   readonly onImport: (
     storeId: string,
@@ -97,82 +99,114 @@ export function KnowledgeBaseList({
   disabled,
   intakeSupported,
   workspaceSourcesSupported,
+  selectedKnowledgeBaseIds = [],
   onSelect,
   onImport,
 }: KnowledgeBaseListProps) {
   return (
     <ul className="knowledge-base-list" aria-label="Available candidate knowledge bases">
-      {knowledgeBases.map((knowledgeBase) => (
-        <li className="knowledge-base-card" key={knowledgeBase.id}>
-          <div className="knowledge-base-header">
-            <strong>{safeKnowledgeBaseDisplayName(knowledgeBase.displayName)}</strong>
-            {knowledgeBase.isDefault ? <span className="meta-chip">Default</span> : null}
-          </div>
-          <div className="knowledge-actions">
-            <button
-              type="button"
-              className="button button-primary"
-              disabled={disabled}
-              onClick={() => onSelect(storeId, knowledgeBase.id)}
-            >
-              Use this knowledge base
-            </button>
-            {intakeSupported ? (
-              <>
-                <button
-                  type="button"
-                  className="button button-outline"
-                  disabled={disabled}
-                  onClick={() => onImport(storeId, knowledgeBase.id, "file")}
-                >
-                  Add file
-                </button>
-                <button
-                  type="button"
-                  className="button button-outline"
-                  disabled={disabled}
-                  onClick={() => onImport(storeId, knowledgeBase.id, "directory")}
-                >
-                  Add directory
-                </button>
-              </>
-            ) : null}
-          </div>
-          {intakeSupported ? null : (
-            <p className="knowledge-hint">
-              File and directory intake is unavailable in this desktop host.
-            </p>
-          )}
-          {workspaceSourcesSupported ? (
-            <div className="knowledge-workspace-import">
-              <div className="knowledge-actions">
-                <button
-                  type="button"
-                  className="button button-outline"
-                  disabled={disabled}
-                  onClick={() => onImport(storeId, knowledgeBase.id, "workspace")}
-                >
-                  Import workspace candidate sources
-                </button>
-              </div>
-              <p className="knowledge-hint">
-                This imports all supported files from this workspace’s configured candidate-source
-                directory. It does not select the base automatically. Directory limits can produce a
-                partial result, and previously imported directories are rejected.
-              </p>
+      {knowledgeBases.map((knowledgeBase) => {
+        const inUse = selectedKnowledgeBaseIds.includes(knowledgeBase.id);
+        return (
+          <li className="knowledge-base-card" key={knowledgeBase.id}>
+            <div className="knowledge-base-header">
+              <strong>{safeKnowledgeBaseDisplayName(knowledgeBase.displayName)}</strong>
+              {knowledgeBase.isDefault ? <span className="meta-chip">Default</span> : null}
+              {inUse ? <span className="meta-chip">In use</span> : null}
             </div>
-          ) : (
-            <p className="knowledge-hint">
-              Workspace candidate-source import is unavailable in this desktop host.
-            </p>
-          )}
-        </li>
-      ))}
+            <div className="knowledge-actions">
+              <button
+                type="button"
+                className="button button-primary"
+                disabled={disabled || inUse}
+                onClick={() => onSelect(storeId, knowledgeBase.id)}
+              >
+                {inUse ? "In use" : "Use this knowledge base"}
+              </button>
+              {intakeSupported ? (
+                <>
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    disabled={disabled}
+                    onClick={() => onImport(storeId, knowledgeBase.id, "file")}
+                  >
+                    Add file
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    disabled={disabled}
+                    onClick={() => onImport(storeId, knowledgeBase.id, "directory")}
+                  >
+                    Add directory
+                  </button>
+                </>
+              ) : null}
+            </div>
+            {intakeSupported ? null : (
+              <p className="knowledge-hint">
+                File and directory intake is unavailable in this desktop host.
+              </p>
+            )}
+            {workspaceSourcesSupported ? (
+              <div className="knowledge-workspace-import">
+                <div className="knowledge-actions">
+                  <button
+                    type="button"
+                    className="button button-outline"
+                    disabled={disabled}
+                    onClick={() => onImport(storeId, knowledgeBase.id, "workspace")}
+                  >
+                    Import workspace candidate sources
+                  </button>
+                </div>
+                <p className="knowledge-hint">
+                  This imports all supported files from this workspace’s configured candidate-source
+                  directory. It does not select the base automatically. Directory limits can produce
+                  a partial result, and previously imported directories are rejected.
+                </p>
+              </div>
+            ) : (
+              <p className="knowledge-hint">
+                Workspace candidate-source import is unavailable in this desktop host.
+              </p>
+            )}
+          </li>
+        );
+      })}
       {knowledgeBases.length === 0 ? (
         <li className="knowledge-hint">No active knowledge bases are available.</li>
       ) : null}
     </ul>
   );
+}
+
+export const savedKnowledgeUnavailableMessage =
+  "The saved knowledge store could not be opened from its saved location. Open it again to continue.";
+
+export function SavedKnowledgeStatus({
+  loading,
+  unavailable,
+}: {
+  readonly loading: boolean;
+  readonly unavailable: boolean;
+}) {
+  if (loading) {
+    return (
+      <p className="knowledge-status" role="status">
+        Loading saved knowledge…
+      </p>
+    );
+  }
+  if (unavailable) {
+    return (
+      <p className="knowledge-status" role="status">
+        {savedKnowledgeUnavailableMessage}
+      </p>
+    );
+  }
+  return null;
 }
 
 export function KnowledgeWorkspace({
@@ -187,6 +221,19 @@ export function KnowledgeWorkspace({
   const [name, setName] = useState("candidate-knowledge");
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [selection, setSelection] = useState<{
+    readonly storeId: string;
+    readonly ids: readonly string[];
+  } | null>(null);
+  const [loadingSaved, setLoadingSaved] = useState(false);
+  const [savedUnavailable, setSavedUnavailable] = useState(false);
+  const loadCurrent = capabilities.getCurrentCandidateKnowledge;
+  const loadCurrentRef = useRef(loadCurrent);
+  loadCurrentRef.current = loadCurrent;
+  const hasLoadCurrent = loadCurrent !== undefined;
+  // Set once the user opens, creates or selects, so a late saved-store response
+  // cannot overwrite what they just did.
+  const userTouched = useRef(false);
   const pendingLatch = useRef(false);
   const operationGeneration = useRef(0);
 
@@ -199,6 +246,36 @@ export function KnowledgeWorkspace({
       }
     };
   }, [workspaceId]);
+
+  useEffect(() => {
+    userTouched.current = false;
+    const load = loadCurrentRef.current;
+    if (!hasLoadCurrent || load === undefined) return;
+    const generation = operationGeneration.current;
+    const isCurrent = () => operationGeneration.current === generation && !userTouched.current;
+    setStore(null);
+    setSelection(null);
+    setSavedUnavailable(false);
+    setLoadingSaved(true);
+    void load(workspaceId).then(
+      (result) => {
+        if (operationGeneration.current !== generation) return;
+        setLoadingSaved(false);
+        if (!isCurrent()) return;
+        if (result.store === null) {
+          setSavedUnavailable(result.unavailable === true);
+          return;
+        }
+        setStore(result.store);
+        setSelection({ storeId: result.store.storeId, ids: result.selectedKnowledgeBaseIds });
+      },
+      () => {
+        if (operationGeneration.current !== generation) return;
+        setLoadingSaved(false);
+        if (isCurrent()) setSavedUnavailable(true);
+      },
+    );
+  }, [workspaceId, hasLoadCurrent]);
 
   const perform = async (operation: (generation: number) => Promise<void>) => {
     if (pendingLatch.current || disabled || !supported) return;
@@ -222,7 +299,11 @@ export function KnowledgeWorkspace({
 
   const readStore = async (result: KnowledgeStoreResult, generation: number) => {
     if (result.storeId.trim() === "") throw new Error("Invalid store result");
-    if (operationGeneration.current === generation) setStore(result);
+    if (operationGeneration.current === generation) {
+      userTouched.current = true;
+      setStore(result);
+      setSavedUnavailable(false);
+    }
   };
 
   const createStore = () => {
@@ -257,6 +338,10 @@ export function KnowledgeWorkspace({
         isCurrent: () => operationGeneration.current === generation,
         refresh: onSelectionSaved,
       });
+      if (operationGeneration.current === generation) {
+        userTouched.current = true;
+        setSelection({ storeId, ids: [knowledgeBaseId] });
+      }
       if (refreshed && operationGeneration.current === generation) {
         setMessage("Candidate knowledge selected for this workspace.");
       }
@@ -387,6 +472,7 @@ export function KnowledgeWorkspace({
           Updating candidate knowledge…
         </p>
       ) : null}
+      <SavedKnowledgeStatus loading={loadingSaved} unavailable={savedUnavailable} />
       {message === null ? null : (
         <p className="knowledge-status" role="status">
           {message}
@@ -399,6 +485,9 @@ export function KnowledgeWorkspace({
           disabled={controlsDisabled}
           intakeSupported={intakeSupported}
           workspaceSourcesSupported={workspaceSourcesSupported}
+          selectedKnowledgeBaseIds={
+            selection !== null && selection.storeId === store.storeId ? selection.ids : []
+          }
           onSelect={selectKnowledgeBase}
           onImport={importIntoKnowledgeBase}
         />
