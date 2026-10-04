@@ -116,6 +116,12 @@ export interface AgentExecution<T> {
   readonly totalTokens: number;
   readonly estimatedUsd: number | null;
   readonly completedAt: string;
+  /**
+   * Content-free deterministic findings about how the output was built, such
+   * as ungrounded author content left out of the draft. They are added to the
+   * draft's findings when the step completes.
+   */
+  readonly outputFindings?: readonly ValidationIssue[];
 }
 
 export interface AuthorRequest {
@@ -1533,7 +1539,7 @@ export function createOrchestrationEngine(
             }),
       };
       const saved = await saveAndEmit(updated, "step.completed", { step, executionId: id });
-      return completeStep(saved, context, record);
+      return completeStep(saved, context, record, execution.outputFindings);
     } catch (error) {
       // A completed execution is immutable. If snapshot/event persistence
       // fails after it was saved, let the caller retry/resume and reuse that
@@ -1591,6 +1597,7 @@ export function createOrchestrationEngine(
     snapshot: RunSnapshot,
     context: ContextSnapshot,
     execution: ExecutionRecord,
+    outputFindings: readonly ValidationIssue[] = [],
   ): Promise<RunSnapshot> => {
     if (executionOutputIsArtifact(execution)) {
       const artifact = execution.output;
@@ -1617,7 +1624,7 @@ export function createOrchestrationEngine(
       const updated = {
         ...snapshot,
         artifact,
-        findings: validation.issues,
+        findings: [...validation.issues, ...outputFindings],
         state: "reviewing" as const,
         currentStep: "critic" as const,
         readinessDecision: null,

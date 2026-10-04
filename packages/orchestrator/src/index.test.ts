@@ -482,6 +482,28 @@ describe("durable orchestration", () => {
     );
   });
 
+  it("adds author output findings to the draft findings the critic receives", async () => {
+    const warning = {
+      code: "ungrounded-author-content-dropped",
+      category: "evidence",
+      severity: "warning",
+      message: "1 draft block was removed because it could not be matched to the cited evidence.",
+    } as const;
+    const { engine, critic } = engineFixture({
+      author: async () => ({
+        ...execution(artifact(), "anthropic", "author-test"),
+        outputFindings: [warning],
+      }),
+    });
+
+    const result = await engine.start(request());
+
+    expect(critic).toHaveBeenCalledWith(
+      expect.objectContaining({ deterministicFindings: expect.arrayContaining([warning]) }),
+    );
+    expect(result.findings).toEqual(expect.arrayContaining([warning]));
+  });
+
   it("persists a blocked approval decision and clears it when revision is requested", async () => {
     const unsupported = artifact();
     const claim = unsupported.claims[0];

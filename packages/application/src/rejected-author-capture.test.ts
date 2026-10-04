@@ -109,7 +109,7 @@ it("leaves capture disabled by default and does not capture accepted output", as
   });
   await expect(
     buildAuthorArtifactWithCapture(response("Built TypeScript tools."), inputs, root),
-  ).resolves.toHaveProperty("version", 1);
+  ).resolves.toMatchObject({ artifact: { version: 1 }, removedBlocks: 0, shortenedBlocks: 0 });
   expect(await readdir(root)).toEqual([]);
 });
 
@@ -181,6 +181,6 @@ it("does not call the rejection hook for accepted output", async () => {
   const hook = vi.fn();
   await expect(
     buildAuthorArtifactWithCapture(response("Built TypeScript tools."), inputs, undefined, hook),
-  ).resolves.toHaveProperty("version", 1);
+  ).resolves.toMatchObject({ artifact: { version: 1 }, removedBlocks: 0, shortenedBlocks: 0 });
   expect(hook).not.toHaveBeenCalled();
 });

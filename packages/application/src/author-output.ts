@@ -30,6 +30,7 @@ import {
   proposalIssues,
 } from "./author-diagnostic-counts.js";
 import { completeAuthorEvidenceCitations } from "./author-evidence-completion.js";
+import { filterGroundedAuthorProposal } from "./author-grounded-filter.js";
 import { completeCvProposalIssues } from "./complete-cv.js";
 
 function proposalFailureStage(error: unknown): ProviderFailureStage {
@@ -237,13 +238,39 @@ function normalizeEvidence(
   return evidenceByClaim;
 }
 
+/** A built artifact and how many ungrounded proposal blocks were left out of it. */
+export interface GroundedAuthorArtifact {
+  readonly artifact: DraftArtifact;
+  readonly removedBlocks: number;
+  readonly shortenedBlocks: number;
+}
+
 /**
  * Validate a provider proposal and build the canonical artifact locally.
  * Provider output contributes only content and references to already retrieved
  * local chunks; IDs, timestamps, statuses, evidence excerpts, and version
- * metadata are all application-owned.
+ * metadata are all application-owned. Any grounding issue rejects the proposal.
  */
 export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftArtifact {
+  return buildArtifact(options, false).artifact;
+}
+
+/**
+ * Like `buildAuthorArtifact`, but when the only grounding failures are confined
+ * to individual blocks, build the artifact from the blocks that pass instead of
+ * rejecting the whole proposal. The kept content passes the same checks; the
+ * counts let the caller tell the user what was left out.
+ */
+export function buildGroundedAuthorArtifact(
+  options: BuildAuthorArtifactOptions,
+): GroundedAuthorArtifact {
+  return buildArtifact(options, true);
+}
+
+function buildArtifact(
+  options: BuildAuthorArtifactOptions,
+  keepGroundedBlocks: boolean,
+): GroundedAuthorArtifact {
   if (options.executionId.trim() === "") {
     throw validationError(["executionId"], "execution id must not be empty");
   }
@@ -253,14 +280,22 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
     authorArtifactProposalSchema.parse(options.proposal),
     retrievedEvidence,
   );
-  const proposal = completeAuthorClaimCoverage(proposalWithCitations, retrievedEvidence);
-  const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);
+  const completedProposal = completeAuthorClaimCoverage(proposalWithCitations, retrievedEvidence);
+  // Unknown evidence references fail before grounding, whether or not blocks are kept.
+  normalizeEvidence(completedProposal, options.context, retrievedEvidence);
+  const requiredSections = options.requiredSections ?? [];
   const groundingIssues = completeCvProposalIssues(
-    proposal,
+    completedProposal,
     retrievedEvidence,
-    options.requiredSections ?? [],
+    requiredSections,
   );
-  if (groundingIssues.length > 0) {
+  const grounded =
+    groundingIssues.length === 0
+      ? { proposal: completedProposal, removedBlocks: 0, shortenedBlocks: 0 }
+      : keepGroundedBlocks
+        ? filterGroundedAuthorProposal(completedProposal, retrievedEvidence, requiredSections)
+        : undefined;
+  if (grounded === undefined) {
     throw new z.ZodError(
       groundingIssues.map((issue) => ({
         code: "custom",
@@ -273,6 +308,8 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
       })),
     );
   }
+  const { proposal, removedBlocks, shortenedBlocks } = grounded;
+  const evidenceByClaim = normalizeEvidence(proposal, options.context, retrievedEvidence);
   const executionHash = executionDigest(options.executionId);
   const claimCount = proposal.sections.reduce(
     (total, section) =>
@@ -339,9 +376,11 @@ export function buildAuthorArtifact(options: BuildAuthorArtifactOptions): DraftA
   };
 
   try {
-    return options.currentArtifact === null || options.currentArtifact === undefined
-      ? createArtifact(input)
-      : createArtifactVersion(options.currentArtifact, input);
+    const artifact =
+      options.currentArtifact === null || options.currentArtifact === undefined
+        ? createArtifact(input)
+        : createArtifactVersion(options.currentArtifact, input);
+    return { artifact, removedBlocks, shortenedBlocks };
   } catch {
     throw new z.ZodError([
       {
