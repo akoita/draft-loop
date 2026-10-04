@@ -6786,6 +6786,19 @@ describe("candidate knowledge native controls", () => {
       },
     });
 
+    await expect(
+      host.invoke({
+        type: "profile.catalog",
+        input: { workspaceId: "workspace-native", includeDrafts: true },
+      }),
+    ).resolves.toMatchObject({
+      ok: true,
+      value: {
+        workspaceId: "workspace-native",
+        summaries: [{ profileId: "profile-native", latestVersion: 1, status: "reviewed" }],
+      },
+    });
+
     expect(fixture.service.deriveCanonicalCandidateProfile).toHaveBeenNthCalledWith(1, {
       root,
       profileId: "profile-native",

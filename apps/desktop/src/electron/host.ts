@@ -2921,6 +2921,7 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
         workspace.descriptor.id,
         records,
         (record) => projectCanonicalCandidateProfileRecord(workspace.descriptor.id, record),
+        { includeDrafts: input.includeDrafts === true },
       );
     } catch {
       return fail(

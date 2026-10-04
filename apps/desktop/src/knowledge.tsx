@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { KnowledgeBaseSummary, KnowledgeStoreResult } from "./bridge.js";
+import { isKnowledgeOperationCancelled } from "./knowledge-cancel.js";
 import {
   hasDesktopKnowledgeIntakeCapabilities,
   hasWorkspaceSourcesIntakeCapabilities,
@@ -286,8 +287,8 @@ export function KnowledgeWorkspace({
     const generation = operationGeneration.current;
     try {
       await operation(generation);
-    } catch {
-      if (operationGeneration.current === generation) {
+    } catch (reason: unknown) {
+      if (operationGeneration.current === generation && !isKnowledgeOperationCancelled(reason)) {
         setMessage("The candidate knowledge operation could not be completed.");
       }
     } finally {

@@ -97,6 +97,7 @@ export type {
 export type {
   ReviewedCanonicalCandidateProfileCatalogInput,
   ReviewedCanonicalCandidateProfileCatalogResult,
+  SavedCanonicalCandidateProfileSummary,
 } from "./profile-catalog.js";
 
 export const supportedFileExtensions = [

@@ -3,6 +3,7 @@ import {
   ProfileCatalogValidationError,
   parseReviewedCanonicalCandidateProfileCatalogResult,
   type ReviewedCanonicalCandidateProfileCatalogResult,
+  type SavedCanonicalCandidateProfileSummary,
 } from "../profile-catalog.js";
 
 const maximumProfileHistoryVersions = 256;
@@ -11,6 +12,7 @@ export function projectReviewedCanonicalCandidateProfileCatalog(
   workspaceId: string,
   records: unknown,
   projectRecord: (record: unknown) => CanonicalCandidateProfileRecordResult,
+  options: { readonly includeDrafts?: boolean } = {},
 ): ReviewedCanonicalCandidateProfileCatalogResult {
   try {
     if (!Array.isArray(records)) throw new ProfileCatalogValidationError();
@@ -27,6 +29,7 @@ export function projectReviewedCanonicalCandidateProfileCatalog(
       }
     }
 
+    const summaries: SavedCanonicalCandidateProfileSummary[] = [];
     const profiles: ReviewedCanonicalCandidateProfileCatalogResult["profiles"][number][] = [];
     for (const [profileId, history] of histories) {
       if (history.length > maximumProfileHistoryVersions) {
@@ -34,6 +37,7 @@ export function projectReviewedCanonicalCandidateProfileCatalog(
       }
       history.sort((left, right) => left.version - right.version);
       let latestEligible: (typeof history)[number] | undefined;
+      let reviewedVersion: number | undefined;
       history.forEach((record, index) => {
         const expectedVersion = index + 1;
         if (
@@ -42,6 +46,9 @@ export function projectReviewedCanonicalCandidateProfileCatalog(
           record.parentVersion !== (expectedVersion === 1 ? null : expectedVersion - 1)
         ) {
           throw new ProfileCatalogValidationError();
+        }
+        if (record.status === "reviewed" && record.reviewedAt !== null) {
+          reviewedVersion = record.version;
         }
         if (
           record.status === "reviewed" &&
@@ -52,6 +59,17 @@ export function projectReviewedCanonicalCandidateProfileCatalog(
           latestEligible = record;
         }
       });
+
+      const latest = history[history.length - 1];
+      if (latest !== undefined) {
+        summaries.push({
+          profileId,
+          latestVersion: latest.version,
+          status: latest.status,
+          updatedAt: latest.updatedAt,
+          ...(reviewedVersion === undefined ? {} : { reviewedVersion }),
+        });
+      }
 
       if (latestEligible !== undefined && latestEligible.reviewedAt !== null) {
         profiles.push({
@@ -65,8 +83,15 @@ export function projectReviewedCanonicalCandidateProfileCatalog(
     profiles.sort((left, right) =>
       left.profileId < right.profileId ? -1 : left.profileId > right.profileId ? 1 : 0,
     );
+    summaries.sort(
+      (left, right) =>
+        Date.parse(right.updatedAt) - Date.parse(left.updatedAt) ||
+        (left.profileId < right.profileId ? -1 : left.profileId > right.profileId ? 1 : 0),
+    );
     return parseReviewedCanonicalCandidateProfileCatalogResult(
-      { workspaceId, profiles },
+      options.includeDrafts === true
+        ? { workspaceId, profiles, summaries }
+        : { workspaceId, profiles },
       workspaceId,
     );
   } catch {

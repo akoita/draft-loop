@@ -6,13 +6,27 @@ export interface ReviewedCanonicalCandidateProfileSummary {
   readonly reviewedAt: string;
 }
 
+/** One saved profile (draft or reviewed), summarized at its latest version. */
+export interface SavedCanonicalCandidateProfileSummary {
+  readonly profileId: string;
+  readonly latestVersion: number;
+  readonly status: "draft" | "reviewed";
+  readonly updatedAt: string;
+  /** The latest reviewed version, when any version was reviewed. */
+  readonly reviewedVersion?: number;
+}
+
 export interface ReviewedCanonicalCandidateProfileCatalogInput {
   readonly workspaceId: string;
+  /** Also return a summary of every saved profile, newest first. */
+  readonly includeDrafts?: true;
 }
 
 export interface ReviewedCanonicalCandidateProfileCatalogResult {
   readonly workspaceId: string;
   readonly profiles: readonly ReviewedCanonicalCandidateProfileSummary[];
+  /** Present only when the input asked for `includeDrafts`. */
+  readonly summaries?: readonly SavedCanonicalCandidateProfileSummary[];
 }
 
 export function reviewedCanonicalCandidateProfileChoice(
@@ -109,15 +123,86 @@ function timestamp(value: unknown): string {
 export function parseReviewedCanonicalCandidateProfileCatalogInput(
   value: unknown,
 ): ReviewedCanonicalCandidateProfileCatalogInput {
-  const input = exactObject(value, ["workspaceId"]);
-  return { workspaceId: workspaceIdentifier(input.workspaceId) };
+  const input = exactObject(value, ["workspaceId", "includeDrafts"]);
+  const workspaceId = workspaceIdentifier(input.workspaceId);
+  if (!("includeDrafts" in input)) return { workspaceId };
+  if (input.includeDrafts !== true) return invalid();
+  return { workspaceId, includeDrafts: true };
+}
+
+function parseSavedProfileSummaries(
+  value: unknown,
+): readonly SavedCanonicalCandidateProfileSummary[] {
+  if (!Array.isArray(value) || value.length > maximumCatalogEntries) return invalid();
+  const seen = new Set<string>();
+  let previous: { readonly updatedAt: number; readonly profileId: string } | undefined;
+  return value.map((entry) => {
+    const summary = exactObject(entry, [
+      "profileId",
+      "latestVersion",
+      "status",
+      "updatedAt",
+      "reviewedVersion",
+    ]);
+    const profileId = profileIdentifier(summary.profileId);
+    const latestVersion = version(summary.latestVersion);
+    if (summary.status !== "draft" && summary.status !== "reviewed") return invalid();
+    const updatedAt = timestamp(summary.updatedAt);
+    const reviewedVersion =
+      "reviewedVersion" in summary ? version(summary.reviewedVersion) : undefined;
+    if (
+      seen.has(profileId) ||
+      (reviewedVersion !== undefined && reviewedVersion > latestVersion) ||
+      (summary.status === "reviewed" && reviewedVersion !== latestVersion)
+    ) {
+      return invalid();
+    }
+    seen.add(profileId);
+    const time = Date.parse(updatedAt);
+    if (
+      previous !== undefined &&
+      (time > previous.updatedAt ||
+        (time === previous.updatedAt && profileId <= previous.profileId))
+    ) {
+      return invalid();
+    }
+    previous = { updatedAt: time, profileId };
+    return {
+      profileId,
+      latestVersion,
+      status: summary.status,
+      updatedAt,
+      ...(reviewedVersion === undefined ? {} : { reviewedVersion }),
+    };
+  });
+}
+
+/** Label for the saved-profile picker. */
+export function savedCanonicalCandidateProfileLabel(
+  summary: SavedCanonicalCandidateProfileSummary,
+): string {
+  return `${summary.profileId} · v${summary.latestVersion} · ${summary.status}`;
+}
+
+/**
+ * The profile to open automatically: the most recent saved one, only when nothing is typed or
+ * loaded yet. Summaries arrive newest first.
+ */
+export function defaultProfileToAutoload(
+  summaries: readonly SavedCanonicalCandidateProfileSummary[],
+  currentName: string,
+  loadedProfileId: string | null | undefined,
+): SavedCanonicalCandidateProfileSummary | undefined {
+  if (currentName.trim() !== "" || (loadedProfileId !== null && loadedProfileId !== undefined))
+    return undefined;
+  return summaries[0];
 }
 
 export function parseReviewedCanonicalCandidateProfileCatalogResult(
   value: unknown,
   expectedWorkspaceId?: string,
 ): ReviewedCanonicalCandidateProfileCatalogResult {
-  const result = exactObject(value, ["workspaceId", "profiles"]);
+  const result = exactObject(value, ["workspaceId", "profiles", "summaries"]);
   const workspaceId = workspaceIdentifier(result.workspaceId);
   if (expectedWorkspaceId !== undefined && workspaceId !== expectedWorkspaceId) return invalid();
   if (!Array.isArray(result.profiles) || result.profiles.length > maximumCatalogEntries) {
@@ -139,5 +224,7 @@ export function parseReviewedCanonicalCandidateProfileCatalogResult(
     return { profileId, version: profileVersion, reviewedAt };
   });
 
-  return { workspaceId, profiles };
+  return "summaries" in result
+    ? { workspaceId, profiles, summaries: parseSavedProfileSummaries(result.summaries) }
+    : { workspaceId, profiles };
 }

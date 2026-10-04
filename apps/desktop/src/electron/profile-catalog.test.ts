@@ -67,3 +67,57 @@ describe("reviewed profile catalog projection", () => {
     );
   });
 });
+
+describe("saved profile summaries projection", () => {
+  it("summarizes every profile at its latest version, newest first, only when requested", () => {
+    const records = [
+      projectedRecord("engineer", 1, "reviewed", { updatedAt: "2026-09-28T12:00:00.000Z" }),
+      projectedRecord("engineer", 2, "draft", { updatedAt: "2026-09-29T12:00:00.000Z" }),
+      projectedRecord("writer", 1, "draft", { updatedAt: "2026-09-30T12:00:00.000Z" }),
+      projectedRecord("analyst", 1, "reviewed", { updatedAt: "2026-09-27T12:00:00.000Z" }),
+    ];
+    const result = projectReviewedCanonicalCandidateProfileCatalog(
+      "workspace-a",
+      records,
+      (record) => record as CanonicalCandidateProfileRecordResult,
+      { includeDrafts: true },
+    );
+    expect(result.summaries).toEqual([
+      {
+        profileId: "writer",
+        latestVersion: 1,
+        status: "draft",
+        updatedAt: "2026-09-30T12:00:00.000Z",
+      },
+      {
+        profileId: "engineer",
+        latestVersion: 2,
+        status: "draft",
+        updatedAt: "2026-09-29T12:00:00.000Z",
+        reviewedVersion: 1,
+      },
+      {
+        profileId: "analyst",
+        latestVersion: 1,
+        status: "reviewed",
+        updatedAt: "2026-09-27T12:00:00.000Z",
+        reviewedVersion: 1,
+      },
+    ]);
+    expect(result.profiles.map((profile) => profile.profileId)).toEqual(["analyst", "engineer"]);
+    expect(project(records)).not.toHaveProperty("summaries");
+  });
+
+  it("lists draft-only workspaces that have no reviewed profile", () => {
+    const result = projectReviewedCanonicalCandidateProfileCatalog(
+      "workspace-a",
+      [projectedRecord("draft-only", 1, "draft")],
+      (record) => record as CanonicalCandidateProfileRecordResult,
+      { includeDrafts: true },
+    );
+    expect(result.profiles).toEqual([]);
+    expect(result.summaries).toEqual([
+      expect.objectContaining({ profileId: "draft-only", status: "draft" }),
+    ]);
+  });
+});
