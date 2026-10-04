@@ -1,6 +1,7 @@
 import { writeFile } from "node:fs/promises";
 import { ProviderAdapterError } from "@draft-loop/providers";
 import { describe, expect, it, vi } from "vitest";
+import { createGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import type { ProviderClientFactories } from "./local-provider-adapter.js";
 import { listModelProfileCatalog } from "./model-profile-catalog.js";
@@ -142,6 +143,42 @@ describe("registry-derived model-suggestion preflight", () => {
     expect(calls).toHaveLength(4);
     expect(resolvedProviders).toHaveLength(4);
     expect(resolvedProviders).not.toContain("deepinfra");
+  });
+
+  it("omits only the exact development Gemini profile without creating a Google request", async () => {
+    const catalog = listModelProfileCatalog().filter(
+      ({ profile }) => profile.provider !== "google" && profile.provider !== "zai",
+    );
+    const template = catalog[0];
+    if (template === undefined) throw new Error("expected a profile catalog");
+    const geminiEntry = { ...template, profile: createGoogleGeminiAuthorProfile() };
+    const planned = buildModelSuggestionPreflightPlan(apiModes, {
+      catalog: [...catalog, geminiEntry],
+    });
+    expect(planned.rows).toHaveLength(4);
+    expect(JSON.stringify(planned.rows)).not.toContain("gemini");
+
+    const { factories, calls } = apiFactories();
+    const resolvedProviders: string[] = [];
+    const result = await runModelSuggestionPreflight({
+      authModes: apiModes,
+      providerClientFactories: factories,
+      resolveCredential: async (provider) => {
+        resolvedProviders.push(provider);
+        return "test-only-api-key";
+      },
+      planDependencies: { catalog: [...catalog, geminiEntry] },
+    });
+    expect(result.passed).toBe(true);
+    expect(calls).toHaveLength(4);
+    expect(resolvedProviders).not.toContain("google");
+
+    const invalid = { ...template, profile: { ...geminiEntry.profile, id: "unknown-google" } };
+    expect(() =>
+      buildModelSuggestionPreflightPlan(apiModes, {
+        catalog: [...catalog, invalid] as unknown as typeof catalog,
+      }),
+    ).toThrow("Model-suggestion preflight configuration is invalid.");
   });
 
   it("rejects malformed or unknown DeepInfra profiles before any provider calls", async () => {

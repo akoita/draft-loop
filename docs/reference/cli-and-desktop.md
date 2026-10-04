@@ -28,14 +28,16 @@ controls, or CV quality.
 
 The paid validation cohort remains limited to the required Economy and Standard
 Anthropic/OpenAI destinations and supported optional Anthropic/OpenAI entries.
-The exact opt-in DeepInfra GLM development author profile is omitted from this
-cohort; listing a development preset does not add a provider to release checks.
+The exact opt-in DeepInfra GLM and Google Gemini development author profiles are
+omitted from this cohort; listing a development preset does not add a provider
+to release checks.
 
 ```sh
 pnpm --filter @draft-loop/cli start model-profiles
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset economy
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset standard
 pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-glm
+pnpm --filter @draft-loop/cli start start ./workspace --model-preset development-gemini
 pnpm --filter @draft-loop/cli start start ./workspace \
   --author-profile standard-anthropic-author@1 \
   --critic-profile standard-openai-critic@2
@@ -46,7 +48,9 @@ pnpm --filter @draft-loop/cli start start ./workspace \
 must support its selected role. Economy and standard are unvalidated opt-in
 pairs. The separate `development-glm` opt-in pair uses the Z.ai
 `zai-org/GLM-5.3-Flash` author through DeepInfra and the GPT-6 Luna critic; it
-requires `DEEPINFRA_API_KEY`. The active catalog contains five unique exact
+requires `DEEPINFRA_API_KEY`. The separate `development-gemini` opt-in pair uses
+the Gemini 3.7 Flash author and the GPT-6 Luna critic; it requires
+`GEMINI_API_KEY`. The active catalog contains six unique exact
 profile versions; older profile
 versions remain available for historical references but are not current
 choices. A CLI-selected pair is recorded on that run only. It does not change
@@ -54,13 +58,15 @@ workspace model settings, transmission approval, or credentials. Resume uses
 the pair already recorded in run history. Omitting profile options preserves
 the existing workspace-configured behavior.
 
-The opt-in Gemini 3.7 Flash development author has no preset. Select it with
+The opt-in Gemini 3.7 Flash development author is also selectable with
 `--author-profile dev-google-gemini-author@1` and an exact critic profile, or
 with `--author-company google --author-model gemini-3.7-flash`. It requires
 `GEMINI_API_KEY` from a paid-tier Gemini API project: free-tier terms let Google
-use submitted content. The desktop stores the key in its own settings row; see
-[Provider credentials](#provider-credentials). Selecting the Gemini author in
-the desktop is not available yet.
+use submitted content. The desktop offers the same `development-gemini` preset
+in its model picker and stores the key in its own settings row; see
+[Provider credentials](#provider-credentials). Desktop readiness for a Gemini
+author requires the Google key, and Gemini model discovery is manual: enter the
+exact model ID `gemini-3.7-flash`.
 
 Profile selection requires a supported configured authentication route. Current
 OpenAI Codex user-session and local routes reject profile selections; the CLI
@@ -410,11 +416,12 @@ You can still enter any exact model ID, and successful live discovery remains
 the displayed source. Each catalog entry shows its metadata review date;
 CLI-specific live availability for these suggestions has not been reverified. Economy and
 standard remain the curated pair presets, with a separate development GLM
-preset. The active catalog lists Claude Sonnet 5.5, Claude Opus 5.5, GPT-6
-Luna, GPT-6.1 Sol, and GLM-5.3-Flash through DeepInfra. Its standard uncached
-API rates are $0.15 per million input tokens and $0.50 per million output
-tokens, reviewed 2026-10-02; quality is unvalidated and account availability
-unchecked. Historical profile versions, including premium-tier entries, remain
+preset and a separate development Gemini preset. The active catalog lists
+Claude Sonnet 5.5, Claude Opus 5.5, GPT-6 Luna, GPT-6.1 Sol, GLM-5.3-Flash
+through DeepInfra, and Gemini 3.7 Flash. GLM's standard uncached API rates are
+$0.15 per million input tokens and $0.50 per million output tokens, reviewed
+2026-10-02; Gemini's are $0.75 and $3.75, reviewed 2026-10-04. Quality is
+unvalidated and account availability unchecked. Historical profile versions, including premium-tier entries, remain
 resolvable but are not offered as current suggestions or presets. All catalog
 quality entries are unvalidated and availability has not been checked; the
 review date documents metadata review, not a live provider probe. Local
@@ -424,7 +431,8 @@ Catalog price metadata covers the standard, uncached text API at up to 200,000
 input tokens. It excludes cache, tool, batch, regional, and subscription
 pricing. Sources are the official [Anthropic model overview] and [Sonnet 5.5
 overview], official OpenAI pages for [GPT-6.1 Sol] and [GPT-6 Luna], and the
-DeepInfra [GLM-5.3-Flash API page] and [model announcement].
+DeepInfra [GLM-5.3-Flash API page] and [model announcement], and Google's
+[Gemini API pricing] and [Gemini models] pages.
 
 OpenAI adapter responses retain valid cached-input, cache-write, and reasoning
 token details alongside input/output totals. A rate estimate accounts for
@@ -439,6 +447,8 @@ not persisted run totals or invoice amounts.
 [GPT-6 Luna]: https://developers.openai.com/api/docs/models/gpt-6-luna
 [GLM-5.3-Flash API page]: https://deepinfra.com/zai-org/GLM-5.3-Flash/api
 [model announcement]: https://deepinfra.com/blog/glm-5-3-flash-deepinfra
+[Gemini API pricing]: https://ai.google.dev/gemini-api/docs/pricing
+[Gemini models]: https://ai.google.dev/gemini-api/docs/models
 
 ## Writing policies
 

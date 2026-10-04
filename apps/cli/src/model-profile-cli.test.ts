@@ -56,6 +56,11 @@ describe("model profile CLI commands", () => {
       author: { id: "dev-deepinfra-glm-author", version: 1 },
       critic: { id: "economy-openai-critic", version: 1 },
     },
+    {
+      modelPreset: "development-gemini",
+      author: { id: "dev-google-gemini-author", version: 1 },
+      critic: { id: "economy-openai-critic", version: 1 },
+    },
   ] as const)(
     "forwards only the exact $modelPreset preset references to start",
     async ({ modelPreset, author, critic }) => {
@@ -162,6 +167,8 @@ describe("model profile CLI commands", () => {
     expect(startHelp).toContain("unvalidated");
     expect(startHelp).toContain("development-glm");
     expect(startHelp).toContain("DEEPINFRA_API_KEY");
+    expect(startHelp).toContain("development-gemini");
+    expect(startHelp).toContain("GEMINI_API_KEY");
     expect(startHelp).toContain("GEMINI_API_KEY");
     expect(startHelp).toContain("dev-google-gemini-author@1");
     expect(startHelp).toContain("pinned to this run");

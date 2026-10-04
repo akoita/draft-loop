@@ -2312,6 +2312,62 @@ describe("desktop capability bridge", () => {
     ).toThrow("invalid");
   });
 
+  it("accepts Google and the exact Gemini author through the runtime validators", async () => {
+    expect(validateBridgeCommand({ type: "models.list", input: { provider: "google" } })).toEqual({
+      type: "models.list",
+      input: { provider: "google" },
+    });
+    const pair = {
+      authorCompany: "google",
+      authorModel: "gemini-3.7-flash",
+      criticCompany: "openai",
+      criticModel: "gpt-6-luna",
+    };
+    expect(
+      validateBridgeCommand({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair },
+      }),
+    ).toEqual({
+      type: "workspace.configure-models",
+      input: { workspaceId: "ws-1", ...pair },
+    });
+    expect(
+      validateBridgeCommand({
+        type: "workspace.create",
+        input: { name: "gemini-development", mode: "real", ...pair },
+      }),
+    ).toMatchObject({ type: "workspace.create", input: pair });
+    expect(() =>
+      validateBridgeCommand({ type: "provider-auth.status", input: { provider: "google" } }),
+    ).toThrow("invalid");
+
+    const invoke = vi.fn<NativeBridge["invoke"]>(async () => ({
+      ok: true,
+      value: { workspaceId: "ws-1", ...pair, localEndpoint: null },
+    }));
+    const port = createCapabilityPort(bridge(invoke, ["workspace.configure-models"]));
+    await expect(
+      port.execute({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair },
+      } as never),
+    ).resolves.toEqual({
+      ok: true,
+      value: { workspaceId: "ws-1", ...pair, localEndpoint: null },
+    });
+    invoke.mockResolvedValueOnce({
+      ok: true,
+      value: { workspaceId: "ws-1", ...pair, authorCompany: "bedrock", localEndpoint: null },
+    });
+    await expect(
+      port.execute({
+        type: "workspace.configure-models",
+        input: { workspaceId: "ws-1", ...pair },
+      } as never),
+    ).resolves.toMatchObject({ ok: false });
+  });
+
   it("keeps candidate-knowledge paths behind the native bridge", async () => {
     expect(
       validateBridgeCommand({

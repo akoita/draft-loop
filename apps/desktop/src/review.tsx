@@ -2631,6 +2631,7 @@ export function ReviewWorkspace({
       anthropicConfigured: anthropicStatus.configured,
       openaiConfigured: openaiStatus.configured,
       deepinfraConfigured: deepinfraStatus.configured,
+      googleConfigured: googleStatus.configured,
       anthropicMode: anthropicAuthModeStatus.activeMode,
       openaiMode: openaiAuthModeStatus.activeMode,
       authorCompany: state.providerTransmissionPreflight.author.company as ModelCompany,

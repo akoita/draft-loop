@@ -7,6 +7,7 @@ export interface ProviderAuthenticationSummaryInput {
   readonly anthropicMode: ProviderAuthMode;
   readonly openaiMode: ProviderAuthMode;
   readonly deepinfraConfigured?: boolean;
+  readonly googleConfigured?: boolean;
   readonly authorCompany?: ModelCompany;
   readonly criticCompany?: ModelCompany;
 }
@@ -36,6 +37,7 @@ export function providerAuthenticationForPair({
   anthropicMode,
   openaiMode,
   deepinfraConfigured = false,
+  googleConfigured = false,
   authorCompany,
   criticCompany,
 }: ProviderAuthenticationSummaryInput): ProviderAuthenticationSummary {
@@ -73,6 +75,8 @@ export function providerAuthenticationForPair({
         return { ready: openaiConfigured, text: `OpenAI ${describeMode("OpenAI", openaiMode)}` };
       case "zai":
         return { ready: deepinfraConfigured, text: "DeepInfra API key" };
+      case "google":
+        return { ready: googleConfigured, text: "Google Gemini API key" };
       case "local":
         return { ready: true, text: "Local model server (no provider key required)" };
       default:

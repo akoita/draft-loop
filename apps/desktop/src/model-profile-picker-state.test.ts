@@ -66,6 +66,7 @@ describe("desktop model profile picker state", () => {
       "economy",
       "standard",
       "development-glm",
+      "development-gemini",
     ]);
     expect(economy).toEqual({
       author: { id: "economy-anthropic-author", version: 1 },
@@ -79,6 +80,16 @@ describe("desktop model profile picker state", () => {
       criticModel: "gpt-6-luna",
     });
     expect(modelProfileCatalog.every(({ profile }) => profile.roles.length > 0)).toBe(true);
+    const gemini = {
+      author: { id: "dev-google-gemini-author", version: 1 },
+      critic: { id: "economy-openai-critic", version: 1 },
+    };
+    expect(workspaceModelsForProfileReferences(gemini)).toEqual({
+      authorCompany: "google",
+      authorModel: "gemini-3.7-flash",
+      criticCompany: "openai",
+      criticModel: "gpt-6-luna",
+    });
   });
 
   it("blocks missing, failed, unsupported, stale, and pair-mismatched support safely", () => {

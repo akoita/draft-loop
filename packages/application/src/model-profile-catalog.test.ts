@@ -21,6 +21,7 @@ describe("model profile catalog", () => {
       "standard-anthropic-author@1",
       "standard-openai-critic@2",
       "dev-deepinfra-glm-author@1",
+      "dev-google-gemini-author@1",
     ]);
     for (const entry of catalog) {
       expect(entry).toMatchObject({
@@ -33,9 +34,11 @@ describe("model profile catalog", () => {
       });
       expect(entry.sources.length).toBeGreaterThan(0);
       expect(entry.sources.every((source) => source.startsWith("https://"))).toBe(true);
-      expect(entry.reviewedAt).toBe(
-        entry.profile.id === "dev-deepinfra-glm-author" ? "2026-10-02" : "2026-09-30",
-      );
+      const developmentReviewDates: Record<string, string> = {
+        "dev-deepinfra-glm-author": "2026-10-02",
+        "dev-google-gemini-author": "2026-10-04",
+      };
+      expect(entry.reviewedAt).toBe(developmentReviewDates[entry.profile.id] ?? "2026-09-30");
     }
 
     expect(
@@ -51,6 +54,7 @@ describe("model profile catalog", () => {
       "standard-anthropic-author@1": [4, 20],
       "standard-openai-critic@2": [2, 10],
       "dev-deepinfra-glm-author@1": [0.15, 0.5],
+      "dev-google-gemini-author@1": [0.75, 3.75],
     });
     expect(byId.get("economy-anthropic-author@1")?.sources).toEqual([
       "https://platform.claude.com/docs/en/models/sonnet-5-5/overview",
@@ -65,6 +69,18 @@ describe("model profile catalog", () => {
       "https://deepinfra.com/zai-org/GLM-5.3-Flash/api",
       "https://deepinfra.com/blog/glm-5-3-flash-deepinfra",
     ]);
+    expect(byId.get("dev-google-gemini-author@1")?.sources).toEqual([
+      "https://ai.google.dev/gemini-api/docs/pricing",
+      "https://ai.google.dev/gemini-api/docs/models",
+    ]);
+    expect(byId.get("dev-google-gemini-author@1")).toMatchObject({
+      profile: {
+        provider: "google",
+        modelId: "gemini-3.7-flash",
+        roles: ["author"],
+        runtime: { effort: "low", maxOutputTokens: 32768, thinking: { mode: "provider-default" } },
+      },
+    });
     expect(catalog.filter(({ profile }) => profile.id === "economy-openai-critic")).toHaveLength(1);
     expect(byId.get("dev-deepinfra-glm-author@1")).toMatchObject({
       profile: {
@@ -88,7 +104,7 @@ describe("model profile catalog", () => {
     catalog.pop();
 
     const next = listModelProfileCatalog();
-    expect(next).toHaveLength(5);
+    expect(next).toHaveLength(6);
     expect(next[0]).toMatchObject({
       profile: {
         id: "economy-anthropic-author",
@@ -104,7 +120,7 @@ describe("model profile catalog", () => {
     ).toEqual(["author"]);
   });
 
-  it("lists opt-in economy, standard, and development GLM exact, role-safe presets", () => {
+  it("lists opt-in economy, standard, and development GLM and Gemini exact, role-safe presets", () => {
     const presets = listModelProfilePresets();
 
     expect(presets).toEqual([
@@ -127,6 +143,13 @@ describe("model profile catalog", () => {
         label: "Development — GLM Flash — unvalidated",
         tier: "economy",
         author: { id: "dev-deepinfra-glm-author", version: 1 },
+        critic: { id: "economy-openai-critic", version: 1 },
+      },
+      {
+        id: "development-gemini",
+        label: "Development — Gemini Flash — unvalidated",
+        tier: "economy",
+        author: { id: "dev-google-gemini-author", version: 1 },
         critic: { id: "economy-openai-critic", version: 1 },
       },
     ]);

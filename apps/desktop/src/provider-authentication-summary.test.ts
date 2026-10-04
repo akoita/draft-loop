@@ -111,6 +111,38 @@ describe("providerAuthenticationSummary", () => {
     });
   });
 
+  it("bases readiness on the applied Gemini/OpenAI pair and its dedicated Google key", () => {
+    const base = {
+      fixtureMode: false,
+      anthropicConfigured: false,
+      openaiConfigured: true,
+      deepinfraConfigured: true,
+      anthropicMode: "api-key",
+      openaiMode: "api-key",
+      authorCompany: "google",
+      criticCompany: "openai",
+    } as const;
+    expect(providerAuthenticationForPair({ ...base, googleConfigured: false })).toEqual({
+      ready: false,
+      summary: "Configure Google Gemini API key for live review",
+    });
+    expect(providerAuthenticationForPair(base)).toEqual({
+      ready: false,
+      summary: "Configure Google Gemini API key for live review",
+    });
+    expect(providerAuthenticationForPair({ ...base, googleConfigured: true })).toEqual({
+      ready: true,
+      summary: "Google Gemini API key & OpenAI API key configured",
+    });
+    expect(
+      providerAuthenticationForPair({
+        ...base,
+        googleConfigured: true,
+        openaiConfigured: false,
+      }),
+    ).toEqual({ ready: false, summary: "Configure OpenAI API key for live review" });
+  });
+
   it("does not require keys for a local side and fails closed for unsupported identities", () => {
     const local = providerAuthenticationForPair({
       fixtureMode: false,

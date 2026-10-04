@@ -67,6 +67,9 @@ describe("desktop model profile picker rendering", () => {
     expect(html).toContain("Development — GLM Flash — unvalidated");
     expect(html).toContain("dev-deepinfra-glm-author@1");
     expect(html).toContain("zai/zai-org/GLM-5.3-Flash");
+    expect(html).toContain("Development — Gemini Flash — unvalidated");
+    expect(html).toContain("dev-google-gemini-author@1");
+    expect(html).toContain("google/gemini-3.7-flash");
     expect(html).not.toContain("Premium — unvalidated");
     expect(html).toContain("Author profile");
     expect(html).toContain("Critic profile");

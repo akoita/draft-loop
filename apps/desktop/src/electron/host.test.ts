@@ -1925,6 +1925,46 @@ describe("native host", () => {
     }
   });
 
+  it("records the Google Gemini destination for the Google company", async () => {
+    const root = await mkdtemp(join(tmpdir(), "draft-loop-host-google-endpoint-"));
+    const fixture = service(root);
+    const geminiWorkspace = {
+      ...descriptor(root),
+      fixtureMode: false,
+      author: { company: "google", model: "gemini-3.7-flash" },
+    };
+    fixture.service.readWorkspace.mockResolvedValue(geminiWorkspace);
+    try {
+      const host = createNativeHost({
+        applicationService: fixture.service,
+        dialogs: {
+          chooseDirectory: async () => root,
+          chooseFiles: async () => [],
+        },
+      });
+      await host.invoke({ type: "workspace.open", input: { selection: "native-dialog" } });
+      const review = await host.invoke({
+        type: "review.load",
+        input: { workspaceId: geminiWorkspace.id, runId: "run-native" },
+      });
+
+      expect(review).toMatchObject({
+        ok: true,
+        value: {
+          providerTransmissionPreflight: {
+            author: {
+              company: "google",
+              model: "gemini-3.7-flash",
+              endpoint: "https://generativelanguage.googleapis.com/",
+            },
+          },
+        },
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("falls back to the adapter default endpoint when a local workspace configures none", async () => {
     const root = await mkdtemp(join(tmpdir(), "draft-loop-host-local-default-"));
     const fixture = service(root);
@@ -3957,6 +3997,26 @@ describe("native host", () => {
           capability: "models.list",
           message:
             "DeepInfra model discovery is unavailable. Enter the exact model id zai-org/GLM-5.3-Flash.",
+        },
+      });
+      expect(discoveryFetch).not.toHaveBeenCalled();
+    });
+
+    it("keeps Gemini discovery manual and never falls through to OpenAI discovery", async () => {
+      const discoveryFetch = catalogueFetch({ data: [{ id: "must-not-be-returned" }] });
+      const credentials = createMemoryCredentialStore();
+      await credentials.set("openai", "synthetic-openai-key");
+      const host = hostWith(discoveryFetch, { credentials });
+
+      const result = await host.invoke({ type: "models.list", input: { provider: "google" } });
+
+      expect(result).toMatchObject({
+        ok: false,
+        error: {
+          code: "capability-unavailable",
+          capability: "models.list",
+          message:
+            "Google model discovery is unavailable. Enter the exact model id gemini-3.7-flash.",
         },
       });
       expect(discoveryFetch).not.toHaveBeenCalled();
