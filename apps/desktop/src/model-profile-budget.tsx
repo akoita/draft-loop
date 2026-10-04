@@ -178,7 +178,7 @@ export function ModelProfileBudget({
   };
 
   return (
-    <details className="model-profile-budget" open>
+    <details className="model-profile-budget">
       <summary>Illustrative public API token-cost scenario</summary>
       <p className="model-profile-budget-copy">
         Public standard uncached text API list rates in USD, up to 200,000 input tokens per call.

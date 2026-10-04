@@ -5,7 +5,6 @@ import { projectModelProfileSupport } from "./model-profile-bridge.js";
 import { ModelProfilePicker } from "./model-profile-picker.js";
 import {
   type ModelProfileSupportState,
-  modelProfileCatalog,
   modelProfilePresetReferences,
   modelProfilePresets,
 } from "./model-profile-picker-state.js";
@@ -54,7 +53,7 @@ function renderPicker(
 }
 
 describe("desktop model profile picker rendering", () => {
-  it("shows legacy mode, presets, exact role options, configured controls, and safe availability copy", () => {
+  it("shows legacy mode, preset cards, details, and safe availability copy", () => {
     const legacyHtml = renderPicker(supportState(true));
     expect(legacyHtml).toContain(
       "Applied next-run selection: workspace model settings (legacy path)",
@@ -62,36 +61,89 @@ describe("desktop model profile picker rendering", () => {
     expect(legacyHtml).not.toContain("Illustrative public API token-cost scenario");
     const html = renderPicker(supportState(true), economy);
     expect(html).toContain("Applied next-run profiles");
-    expect(html).toContain("Economy — unvalidated");
-    expect(html).toContain("Standard — unvalidated");
-    expect(html).toContain("Development — GLM Flash — unvalidated");
-    expect(html).toContain("dev-deepinfra-glm-author@1");
-    expect(html).toContain("zai/zai-org/GLM-5.3-Flash");
-    expect(html).toContain("Development — Gemini Flash — unvalidated");
-    expect(html).toContain("dev-google-gemini-author@1");
-    expect(html).toContain("google/gemini-3.7-flash");
-    expect(html).not.toContain("Premium — unvalidated");
-    expect(html).toContain("Author profile");
-    expect(html).toContain("Critic profile");
-    expect(html).toContain("economy-anthropic-author@1");
-    expect(html).toContain("economy-openai-critic@1");
-    expect(html).toContain("claude-sonnet-5-5");
-    expect(html).toContain("gpt-6-luna");
-    expect(html).toContain("effort medium; output 32768 tokens; thinking provider-default");
+    expect(html).toContain("Choose a model pair");
+    expect(html).toContain("Applied: Economy — Claude Sonnet 5.5 writes, GPT-6 Luna reviews");
     expect(html).toContain("Quality unvalidated; account availability unchecked");
-    expect(html).toContain("CV quality has not been validated");
-    expect(html).toContain("Authentication is never switched automatically.");
+    expect(html).toContain("effort medium; output 32768 tokens; thinking provider-default");
+    expect(html).toContain("<summary>Details</summary>");
+    expect(html).not.toContain("<details open");
+    expect(html).toContain("Quality for real CVs has not been validated");
+    expect(html).toContain("DraftLoop never switches your sign-in automatically.");
+    expect(html).toContain("Sending candidate material still asks for your approval each time.");
     expect(html).toContain("Public uncached API list rates");
     expect(html).toContain("Combined scenario estimate");
-    expect(modelProfileCatalog.length).toBeGreaterThan(0);
+    expect(html).not.toContain("Premium");
   });
 
-  it("keeps unsupported selections visible and disables Apply with a route explanation", () => {
+  it("renders one radio card per preset plus a custom pair with plain names, prices, and badges", () => {
+    const html = renderPicker(supportState(true), economy);
+    expect(html.match(/type="radio"/g)).toHaveLength(modelProfilePresets.length + 1);
+    expect(html.match(/name="model-preset-workspace-1"/g)).toHaveLength(
+      modelProfilePresets.length + 1,
+    );
+    expect(html).toContain('value="custom"');
+    const cards = html.slice(html.indexOf("<fieldset"), html.indexOf("</fieldset>"));
+    expect(cards).toContain(">Economy</span>");
+    expect(cards).toContain(">Standard</span>");
+    expect(cards).toContain(">Development — GLM Flash</span>");
+    expect(cards).toContain(">Development — Gemini Flash</span>");
+    expect(cards).toContain(">Custom pair</span>");
+    expect(cards).toContain("Claude Sonnet 5.5 writes · GPT-6 Luna reviews");
+    expect(cards).toContain("GLM-5.3 Flash writes · GPT-6 Luna reviews");
+    expect(cards).toContain("Gemini 3.7 Flash writes · GPT-6 Luna reviews");
+    expect(cards).toContain("Anthropic + OpenAI");
+    expect(cards).toContain("Z.ai via DeepInfra + OpenAI");
+    expect(cards).toContain("Google + OpenAI");
+    expect(cards).toContain(
+      "Writer $2 / $10 · Reviewer $0.10 / $0.50 per million tokens (input / output)",
+    );
+    expect(cards).toContain("Writer $0.75 / $3.75");
+    expect(cards).toContain("Unvalidated");
+    expect(cards).toContain("Development</span>");
+    expect(cards).not.toContain("economy-anthropic-author");
+    expect(cards).not.toContain("claude-sonnet-5-5");
+    expect(cards).not.toContain("unvalidated");
+    expect(cards).not.toContain("Not available with your current sign-in");
+  });
+
+  it("checks the applied preset and hides the exact selects", () => {
+    const html = renderPicker(supportState(true), economy);
+    expect(html).toMatch(/checked="" value="economy"/);
+    expect(html.match(/<summary>Details<\/summary>/g)).toHaveLength(1);
+    expect(html).not.toMatch(/checked="" value="custom"/);
+    expect(html).not.toContain('aria-label="Author profile"');
+    expect(html).not.toContain('aria-label="Critic profile"');
+  });
+
+  it("checks custom and shows the exact selects when no preset matches", () => {
+    const html = renderPicker(supportState(true), null);
+    expect(html).toMatch(/checked="" value="custom"/);
+    expect(html).not.toMatch(/checked="" value="economy"/);
+    expect(html).toContain('aria-label="Author profile"');
+    expect(html).toContain('aria-label="Critic profile"');
+    expect(html).toContain("economy-anthropic-author@1");
+    expect(html).toContain("economy-openai-critic@1");
+    const mixed: ModelProfileReferences = {
+      author: economy.author,
+      critic: { id: "standard-openai-critic", version: 2 },
+    };
+    const mixedHtml = renderPicker(supportState(true), mixed);
+    expect(mixedHtml).toMatch(/checked="" value="custom"/);
+    expect(mixedHtml).toContain('aria-label="Author profile"');
+    expect(mixedHtml).toContain(
+      "Applied: Custom pair — Claude Sonnet 5.5 writes, GPT-6.1 Sol reviews",
+    );
+  });
+
+  it("marks presets unavailable for the current sign-in and keeps Apply disabled", () => {
     const html = renderPicker(supportState(false), economy);
+    expect(html).toContain("Not available with your current sign-in");
     expect(html).toContain("Unsupported with the configured authentication route");
-    expect(html).toContain("unsupported with current route");
-    expect(html).toContain('disabled=""');
+    expect(html).toContain("The configured authentication route does not support");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Apply for future runs/);
     expect(html).toContain("Applied next-run profiles");
+    const custom = renderPicker(supportState(false), null);
+    expect(custom).toContain("unsupported with current route");
   });
 
   it("disables controls while busy and reports unavailable support", () => {
