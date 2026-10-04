@@ -206,4 +206,30 @@ describe("run model profile resolution", () => {
       ).toThrow(RunModelProfileError);
     }
   });
+
+  it("accepts only the exact development Gemini profile route", () => {
+    const gemini = defaultModelProfileRegistry.resolve("dev-google-gemini-author", 1, "author");
+    expect(
+      resolveRunModelProfiles(
+        references(gemini.id, "test-critic"),
+        registryFor(gemini),
+        apiKeyRoutes,
+      ).author,
+    ).toEqual(gemini);
+
+    for (const invalid of [
+      { ...gemini, modelId: "another-gemini-model" },
+      { ...gemini, runtime: { ...gemini.runtime, effort: "high" as const } },
+      { ...gemini, runtime: { ...gemini.runtime, thinking: { mode: "disabled" as const } } },
+      { ...gemini, runtime: { ...gemini.runtime, maxOutputTokens: 16384 } },
+    ]) {
+      expect(() =>
+        resolveRunModelProfiles(
+          references(invalid.id, "test-critic"),
+          registryFor(invalid),
+          apiKeyRoutes,
+        ),
+      ).toThrow(RunModelProfileError);
+    }
+  });
 });

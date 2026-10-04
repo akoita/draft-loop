@@ -1,6 +1,8 @@
 import { canonicalCandidateProfileFactCategories, type ModelSelection } from "@draft-loop/domain";
 import { describe, expect, it } from "vitest";
 import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
+import { createGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
+import { createGoogleGeminiExtractionProfile } from "./gemini-extraction-profile.js";
 import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import { createDeepInfraGLMExtractionProfile } from "./glm-extraction-profile.js";
 
@@ -72,6 +74,45 @@ describe("canonical candidate profile provider request contract", () => {
           ...model("zai", "other-glm-model"),
           profile: createDeepInfraGLMExtractionProfile(),
         },
+        "api-key",
+      ).maxOutputTokens,
+    ).toBe(8192);
+  });
+
+  it("uses the pinned budget only for exact development Gemini author and extraction profiles", () => {
+    for (const profile of [
+      createGoogleGeminiAuthorProfile(),
+      createGoogleGeminiExtractionProfile(),
+    ]) {
+      expect(
+        canonicalProfileRequest({ ...model("google", "gemini-3.7-flash"), profile }, "api-key")
+          .maxOutputTokens,
+      ).toBe(32768);
+    }
+
+    const extractionProfile = createGoogleGeminiExtractionProfile();
+    for (const profile of [
+      { ...extractionProfile, id: "tampered-profile" },
+      { ...extractionProfile, runtime: { ...extractionProfile.runtime, maxOutputTokens: 8192 } },
+      { ...extractionProfile, runtime: { ...extractionProfile.runtime, effort: "low" as const } },
+    ]) {
+      expect(
+        canonicalProfileRequest({ ...model("google", "gemini-3.7-flash"), profile }, "api-key")
+          .maxOutputTokens,
+      ).toBe(8192);
+    }
+    expect(
+      canonicalProfileRequest(model("google", "gemini-3.7-flash"), "api-key").maxOutputTokens,
+    ).toBe(8192);
+    expect(
+      canonicalProfileRequest(
+        { ...model("google", "other-gemini-model"), profile: extractionProfile },
+        "api-key",
+      ).maxOutputTokens,
+    ).toBe(8192);
+    expect(
+      canonicalProfileRequest(
+        { ...model("zai", "gemini-3.7-flash"), profile: extractionProfile },
         "api-key",
       ).maxOutputTokens,
     ).toBe(8192);

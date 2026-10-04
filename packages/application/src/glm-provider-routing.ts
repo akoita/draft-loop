@@ -1,11 +1,11 @@
 import type { DataExposurePolicy } from "@draft-loop/providers";
 
-export type ProviderCredentialName = "anthropic" | "openai" | "deepinfra";
+export type ProviderCredentialName = "anthropic" | "openai" | "deepinfra" | "google";
 export type ProviderCredentialResolver = (
   provider: ProviderCredentialName,
 ) => Promise<string | undefined>;
 
-export const supportedModelCompanies = ["anthropic", "openai", "local", "zai"] as const;
+export const supportedModelCompanies = ["anthropic", "openai", "local", "zai", "google"] as const;
 export type SupportedModelCompany = (typeof supportedModelCompanies)[number];
 
 export const providerAuthModes = ["api-key", "user-session"] as const;
@@ -39,7 +39,9 @@ export function resolveProviderAuthModes(
 export const environmentCredentialResolver: ProviderCredentialResolver = async (provider) => {
   if (provider === "anthropic") return process.env.ANTHROPIC_API_KEY;
   if (provider === "openai") return process.env.OPENAI_API_KEY;
-  return process.env.DEEPINFRA_API_KEY;
+  if (provider === "deepinfra") return process.env.DEEPINFRA_API_KEY;
+  if (provider === "google") return process.env.GEMINI_API_KEY;
+  return undefined;
 };
 
 export function providerDataPolicy(
@@ -49,7 +51,12 @@ export function providerDataPolicy(
 ): DataExposurePolicy {
   return {
     allowTransmission: allowProviderData,
-    allowedCompanies: company === "zai" ? ["deepinfra"] : supportedModelCompanies,
+    allowedCompanies:
+      company === "zai"
+        ? ["deepinfra"]
+        : company === "google"
+          ? ["google"]
+          : supportedModelCompanies,
     sensitiveData: true,
     sensitiveDataAcknowledged: allowProviderData,
     requestedRetention:
