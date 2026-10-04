@@ -39,6 +39,11 @@ import {
 } from "./model.js";
 import { providerAuthenticationForPair } from "./provider-authentication-summary.js";
 import type { PendingReviewAction } from "./review-dispatch.js";
+import {
+  startReviewBlockedTooltip,
+  startReviewBlockers,
+  startReviewBlockersId,
+} from "./start-review-blockers.js";
 import { ThemeToggle } from "./theme.js";
 
 interface ReviewWorkspaceProps {
@@ -2638,6 +2643,12 @@ export function ReviewWorkspace({
       criticCompany: state.providerTransmissionPreflight.critic.company as ModelCompany,
     });
     const modelKeysReady = authentication.ready;
+    const setupStartBlockers = startReviewBlockers({
+      setupReady: state.setup.ready,
+      nextSteps: state.setup.nextSteps,
+      transmissionReady,
+      startDisabledReason,
+    });
     return (
       <div className="app-frame">
         <SideRail onOpenSources={null} onOpenSettings={() => setSettingsOpen(true)} />
@@ -2885,16 +2896,6 @@ export function ReviewWorkspace({
               </div>
               {renderProviderTransmissionPreflight()}
               {profilePanel}
-              {state.setup.nextSteps.length > 0 ? (
-                <div className="setup-next-steps">
-                  <strong>Next steps</strong>
-                  <ul>
-                    {state.setup.nextSteps.map((step) => (
-                      <li key={step}>{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
               <div className="onboarding-footer">
                 <span>{state.setup.fixtureMode ? "Demo workspace" : "Real workspace"}</span>
                 <span>
@@ -2906,10 +2907,11 @@ export function ReviewWorkspace({
                   className="button button-primary"
                   type="button"
                   disabled={
-                    !state.setup.ready ||
-                    !transmissionReady ||
-                    startDisabledReason !== null ||
-                    pendingReviewAction?.action === "start"
+                    setupStartBlockers.length > 0 || pendingReviewAction?.action === "start"
+                  }
+                  title={startReviewBlockedTooltip(setupStartBlockers)}
+                  aria-describedby={
+                    setupStartBlockers.length > 0 ? startReviewBlockersId : undefined
                   }
                   onClick={() => onAction({ type: "start" })}
                 >
@@ -2918,10 +2920,19 @@ export function ReviewWorkspace({
                     : "Start author–critic review"}
                 </button>
               </div>
-              {startDisabledReason !== null ? (
-                <p className="setup-note setup-blocker" role="status">
-                  {startDisabledReason}
-                </p>
+              {setupStartBlockers.length > 0 ? (
+                <div
+                  className="setup-next-steps start-review-blockers"
+                  id={startReviewBlockersId}
+                  role="status"
+                >
+                  <strong>To start the review</strong>
+                  <ul>
+                    {setupStartBlockers.map((blocker) => (
+                      <li key={blocker}>{blocker}</li>
+                    ))}
+                  </ul>
+                </div>
               ) : null}
               {pendingReviewAction?.action === "start" ? (
                 <p className="pending-action-status" role="status" aria-live="polite">
