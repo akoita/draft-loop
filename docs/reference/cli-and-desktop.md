@@ -392,8 +392,14 @@ The native host can report which registered exact profiles the active
 workspace's configured authentication routes support. This is local metadata
 and makes no credential or provider calls. The editor's **Presets** view offers
 presets and role-specific exact profile choices when both model-configuration
-and route-support capabilities are available. Choices stay a draft until
-**Apply for future runs** saves their provider/model destinations.
+and route-support capabilities are available. Each preset is a card that names
+the writing and reviewing models in plain language, shows the providers and
+public per-million-token prices, and carries **Unvalidated**, **Development**,
+and **Not available with your current sign-in** badges where they apply. A
+**Custom pair** card reveals the exact author and critic profile selects, and
+exact IDs and runtime controls sit in a collapsed **Details** disclosure.
+Choices stay a draft until **Apply for future runs** saves their provider/model
+destinations.
 The renderer keeps the exact references for new starts; existing run records
 remain unchanged. Unsupported or unavailable routes block profile-backed starts,
 and provider-transmission acknowledgement is still required. OpenAI Codex

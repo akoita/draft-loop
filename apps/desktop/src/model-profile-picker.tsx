@@ -2,6 +2,7 @@ import type { ModelProfileReferences } from "@draft-loop/application/model-profi
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ModelProfileSupportResult } from "./bridge.js";
+import { customPresetValue, ModelPresetCards } from "./model-preset-cards.js";
 import { ModelProfileBudget } from "./model-profile-budget.js";
 import {
   type ModelProfileSupportState,
@@ -15,6 +16,7 @@ import {
   modelProfileRouteIsSupported,
   modelProfileSupportForContext,
 } from "./model-profile-picker-state.js";
+import { modelDisplayName, presetDisplayName } from "./model-profile-presentation.js";
 
 interface ModelProfilePickerProps {
   readonly workspaceId: string;
@@ -65,6 +67,19 @@ function presetForReferences(references: ModelProfileReferences | null): string 
       return modelProfileReferencesEqual(references, presetReferences);
     })?.id ?? ""
   );
+}
+
+function appliedPresetName(presetId: string): string {
+  const preset = modelProfilePresets.find((entry) => entry.id === presetId);
+  return preset === undefined ? "Custom pair" : presetDisplayName(preset.label);
+}
+
+function appliedModelName(
+  reference: { readonly id: string; readonly version: number },
+  role: "author" | "critic",
+): string {
+  const entry = modelProfileEntryForReference(reference, role);
+  return entry === undefined ? reference.id : modelDisplayName(entry.profile.modelId);
 }
 
 function ProfileDetails({
@@ -151,6 +166,7 @@ export function ModelProfilePicker({
         ? ""
         : referenceToken({ id: applied.critic.id, version: applied.critic.version }),
   }));
+  const [customMode, setCustomMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const mountedRef = useRef(false);
@@ -169,6 +185,7 @@ export function ModelProfilePicker({
           ? ""
           : referenceToken({ id: applied.critic.id, version: applied.critic.version }),
     });
+    setCustomMode(false);
     setError(null);
   }, [applied]);
 
@@ -189,14 +206,21 @@ export function ModelProfilePicker({
   const applyDisabled =
     disabled || saving || selectedProfiles === null || !supportReady || routeUnsupported;
 
+  const matchedPresetId = presetForReferences(selectedProfiles);
+  const showCustom = customMode || matchedPresetId === "";
+  const appliedPresetId = presetForReferences(applied);
+
   const onPresetChange = (presetId: string) => {
-    const preset = modelProfilePresets.find((entry) => entry.id === presetId);
-    if (preset === undefined) {
-      setDraft({ author: "", critic: "" });
+    if (presetId === customPresetValue) {
+      setCustomMode(true);
+      setError(null);
       return;
     }
+    const preset = modelProfilePresets.find((entry) => entry.id === presetId);
+    if (preset === undefined) return;
     const references = modelProfilePresetReferences(preset);
     if (references === null) return;
+    setCustomMode(false);
     setDraft({
       author: referenceToken(references.author),
       critic: referenceToken(references.critic),
@@ -242,8 +266,8 @@ export function ModelProfilePicker({
         <div>
           <h2>Model profiles for new runs</h2>
           <p>
-            Draft changes do not affect the applied pair. Apply saves workspace model destinations
-            for future runs; provider transmission requires current consent.
+            Choose which models write and review your next runs. Changing this does not affect runs
+            already in progress. Sending candidate material still asks for your approval each time.
           </p>
         </div>
         {onUseWorkspaceModels === undefined ? null : (
@@ -268,9 +292,9 @@ export function ModelProfilePicker({
         )}
       </div>
       <p className="model-profile-picker-notice">
-        CV quality has not been validated; account availability has not been checked. OpenAI Codex
-        user-session routes do not support these profiles. Authentication is never switched
-        automatically.
+        Quality for real CVs has not been validated for these presets, and account availability is
+        not checked. OpenAI Codex user-session routes cannot use these profiles. DraftLoop never
+        switches your sign-in automatically.
       </p>
       {supportMessage === null ? null : (
         <p className="model-profile-picker-status" role="status">
@@ -300,91 +324,105 @@ export function ModelProfilePicker({
       ) : (
         <div className="model-profile-picker-applied">
           <strong>Applied next-run profiles</strong>
+          <p className="model-profile-picker-applied-summary">
+            Applied: {appliedPresetName(appliedPresetId)} —{" "}
+            {appliedModelName(applied.author, "author")} writes,{" "}
+            {appliedModelName(applied.critic, "critic")} reviews
+          </p>
+          <details className="model-profile-picker-more">
+            <summary>Details</summary>
+            <div className="model-profile-picker-profile-pair">
+              <ProfileDetails
+                reference={applied.author}
+                profileRole="author"
+                support={supportResult}
+              />
+              <ProfileDetails
+                reference={applied.critic}
+                profileRole="critic"
+                support={supportResult}
+              />
+            </div>
+          </details>
+        </div>
+      )}
+      <ModelPresetCards
+        groupName={`model-preset-${workspaceId}`}
+        checkedValue={showCustom ? customPresetValue : matchedPresetId}
+        disabled={disabled || saving}
+        support={supportResult}
+        onSelect={onPresetChange}
+      />
+      {showCustom ? (
+        <div className="model-profile-picker-profile-pair">
+          {(["author", "critic"] as const).map((role) => {
+            const selected = selectedProfiles?.[role];
+            const selectedSupported =
+              selected === undefined || supportResult === undefined
+                ? undefined
+                : modelProfileRouteIsSupported(selected, supportResult);
+            return (
+              <div className="model-profile-picker-side" key={role}>
+                <label className="model-profile-picker-field">
+                  <span>{role === "author" ? "Author profile" : "Critic profile"}</span>
+                  <select
+                    value={draft[role]}
+                    disabled={disabled || saving}
+                    onChange={(event) => {
+                      setDraft((current) => ({ ...current, [role]: event.target.value }));
+                      setError(null);
+                    }}
+                    aria-label={`${role === "author" ? "Author" : "Critic"} profile`}
+                  >
+                    <option value="">Choose an exact {role} profile</option>
+                    {modelProfileCatalog
+                      .filter(({ profile }) => profile.roles.includes(role))
+                      .map(({ profile }) => {
+                        const isSupported =
+                          supportResult === undefined
+                            ? undefined
+                            : modelProfileRouteIsSupported(
+                                { id: profile.id, version: profile.version },
+                                supportResult,
+                              );
+                        return (
+                          <option key={profileToken(profile)} value={profileToken(profile)}>
+                            {profile.id}@{profile.version} — {profile.provider}/{profile.modelId} —{" "}
+                            {profile.tier}
+                            {isSupported === false ? " — unsupported with current route" : ""}
+                          </option>
+                        );
+                      })}
+                  </select>
+                </label>
+                {selectedSupported === false ? (
+                  <p className="model-profile-picker-status">
+                    Unsupported with the configured route.
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
+      {selectedProfiles === null ||
+      modelProfileReferencesEqual(selectedProfiles, applied) ? null : (
+        <details className="model-profile-picker-more">
+          <summary>Details</summary>
           <div className="model-profile-picker-profile-pair">
             <ProfileDetails
-              reference={applied.author}
+              reference={selectedProfiles.author}
               profileRole="author"
               support={supportResult}
             />
             <ProfileDetails
-              reference={applied.critic}
+              reference={selectedProfiles.critic}
               profileRole="critic"
               support={supportResult}
             />
           </div>
-        </div>
+        </details>
       )}
-      <label className="model-profile-picker-field">
-        <span>Profile preset</span>
-        <select
-          value={presetForReferences(selectedProfiles)}
-          disabled={disabled || saving}
-          onChange={(event) => onPresetChange(event.target.value)}
-          aria-label="Profile preset"
-        >
-          <option value="">Choose exact profiles</option>
-          {modelProfilePresets.map((preset) => (
-            <option key={preset.id} value={preset.id}>
-              {preset.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="model-profile-picker-profile-pair">
-        {(["author", "critic"] as const).map((role) => {
-          const selected = selectedProfiles?.[role];
-          const selectedSupported =
-            selected === undefined || supportResult === undefined
-              ? undefined
-              : modelProfileRouteIsSupported(selected, supportResult);
-          const selectedEntry =
-            selected === undefined ? undefined : modelProfileEntryForReference(selected, role);
-          return (
-            <div className="model-profile-picker-side" key={role}>
-              <label className="model-profile-picker-field">
-                <span>{role === "author" ? "Author profile" : "Critic profile"}</span>
-                <select
-                  value={draft[role]}
-                  disabled={disabled || saving}
-                  onChange={(event) => {
-                    setDraft((current) => ({ ...current, [role]: event.target.value }));
-                    setError(null);
-                  }}
-                  aria-label={`${role === "author" ? "Author" : "Critic"} profile`}
-                >
-                  <option value="">Choose an exact {role} profile</option>
-                  {modelProfileCatalog
-                    .filter(({ profile }) => profile.roles.includes(role))
-                    .map(({ profile }) => {
-                      const isSupported =
-                        supportResult === undefined
-                          ? undefined
-                          : modelProfileRouteIsSupported(
-                              { id: profile.id, version: profile.version },
-                              supportResult,
-                            );
-                      return (
-                        <option key={profileToken(profile)} value={profileToken(profile)}>
-                          {profile.id}@{profile.version} — {profile.provider}/{profile.modelId} —{" "}
-                          {profile.tier}
-                          {isSupported === false ? " — unsupported with current route" : ""}
-                        </option>
-                      );
-                    })}
-                </select>
-              </label>
-              {selectedEntry !== undefined && selected !== undefined ? (
-                <ProfileDetails reference={selected} profileRole={role} support={supportResult} />
-              ) : null}
-              {selectedSupported === false ? (
-                <p className="model-profile-picker-status">
-                  Unsupported with the configured route.
-                </p>
-              ) : null}
-            </div>
-          );
-        })}
-      </div>
       {selectedProfiles === null ? null : (
         <ModelProfileBudget
           references={selectedProfiles}

@@ -3100,6 +3100,158 @@ input[type="checkbox"] {
   justify-content: flex-end;
 }
 
+.model-profile-picker-applied-summary {
+  margin: var(--space-1) 0 0;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.model-profile-picker-more {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.model-profile-picker-more > summary {
+  width: fit-content;
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.model-profile-picker-more > summary:hover {
+  color: var(--text-1);
+}
+
+.model-profile-picker-more[open] > summary {
+  margin-bottom: var(--space-3);
+}
+
+.model-preset-cards {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.model-preset-cards > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  color: var(--text-4);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.model-preset-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-3);
+}
+
+.model-preset-card {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  background: var(--surface-2);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+/* Custom pair is the advanced path: a slim full-width row under the presets, never a lone card. */
+.model-preset-card-custom {
+  grid-column: 1 / -1;
+  padding-block: var(--space-3);
+}
+
+.model-preset-card:hover {
+  border-color: var(--border-strong);
+}
+
+.model-preset-card:has(input:checked) {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 1px var(--teal);
+  background: var(--teal-wash);
+}
+
+.model-preset-card:has(input:focus-visible) {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+.model-preset-card:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.model-preset-card > input[type="radio"] {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  margin: 0;
+  accent-color: var(--teal);
+}
+
+.model-preset-card-title {
+  padding-right: var(--space-6);
+  color: var(--text-1);
+  font-size: var(--text-md);
+  font-weight: 650;
+}
+
+.model-preset-card-line {
+  color: var(--text-2);
+  font-size: var(--text-sm);
+}
+
+.model-preset-card-meta {
+  color: var(--text-3);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
+.model-preset-card-price {
+  font-variant-numeric: tabular-nums;
+}
+
+.model-preset-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.model-preset-badge {
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  background: var(--surface-3);
+  color: var(--text-3);
+  font-size: var(--text-micro);
+  font-weight: 650;
+  letter-spacing: var(--label-tracking);
+  text-transform: uppercase;
+}
+
+.model-preset-badge-development {
+  background: var(--amber-wash);
+  color: var(--amber);
+}
+
+.model-preset-badge-unsupported {
+  background: var(--red-wash);
+  color: var(--red);
+}
+
 .model-profile-budget {
   display: grid;
   gap: var(--space-3);
