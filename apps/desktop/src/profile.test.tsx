@@ -217,8 +217,8 @@ describe("desktop canonical candidate profile", () => {
     for (const id of ["store-1", "ckb-1", "source-1", "version-1", "candidate-provided"]) {
       expect(html).toContain(id);
     }
-    // Category headings carry a count chip; issues cite facts by label and value.
-    expect(html).toContain('<span class="meta-chip">1</span></h4>');
+    // Category summaries carry a fact count; issues cite facts by label and value.
+    expect(html).toContain('<span class="profile-group-count"> · 1 fact</span>');
     expect(html).toContain("Facts: Employment end date: Platform engineer");
     expect(html).not.toContain("Facts: fact-role");
   });
@@ -527,6 +527,140 @@ describe("desktop canonical candidate profile", () => {
     expect(emptyMarkup).toContain("Mark latest draft reviewed");
     expect(emptyMarkup).toMatch(/<button[^>]*disabled=""[^>]*>Mark latest draft reviewed/u);
     expect(warningMarkup).toMatch(/<button[^>]*disabled=""[^>]*>Mark latest draft reviewed/u);
+  });
+
+  describe("large profile review navigation", () => {
+    function manyFacts(count: number): CanonicalCandidateProfileFactResult[] {
+      return Array.from({ length: count }, (_, index) => ({
+        id: `fact-${index}`,
+        category: index % 2 === 0 ? ("skill" as const) : ("role" as const),
+        field: "skillName",
+        value: `Value ${index}`,
+        provenance: [provenance],
+      }));
+    }
+
+    function render(
+      options: {
+        readonly draftFacts?: readonly CanonicalCandidateProfileFactResult[];
+        readonly draftIssues?: readonly CanonicalCandidateProfileIssueResult[];
+        readonly editable?: boolean;
+        readonly busy?: boolean;
+        readonly status?: "draft" | "reviewed";
+      } = {},
+    ) {
+      const handlers = {
+        onFactValueChange: vi.fn(),
+        onRemoveFact: vi.fn(),
+        onIssueStatusChange: vi.fn(),
+        onSave: vi.fn(),
+        onReview: vi.fn(),
+      };
+      const draftFacts = options.draftFacts ?? facts;
+      const base = record(options.status ?? "draft");
+      const draftIssues = options.draftIssues ?? [];
+      const current = { ...base, facts: draftFacts, issues: draftIssues };
+      const html = renderToStaticMarkup(
+        <ProfileDetails
+          record={current}
+          history={[current]}
+          draftFacts={draftFacts}
+          draftIssues={draftIssues}
+          editable={options.editable ?? true}
+          busy={options.busy ?? false}
+          {...handlers}
+        />,
+      );
+      return { html, handlers };
+    }
+
+    const categoryDetails = /<details class="profile-group profile-category"([^>]*)>/gu;
+
+    it("collapses every category of a large profile but keeps every row rendered", () => {
+      const large = manyFacts(41);
+      const { html, handlers } = render({ draftFacts: large });
+      const attributes = [...html.matchAll(categoryDetails)].map((match) => match[1]);
+      expect(attributes).toHaveLength(2);
+      for (const attribute of attributes) expect(attribute).not.toContain("open");
+      expect(html).toContain("Skill</span>");
+      expect(html).toContain("21 facts");
+      expect(html).toContain("20 facts");
+      for (const fact of large) {
+        expect(html).toContain(`aria-label="Value for fact ${fact.id}"`);
+      }
+      expect(html.match(/aria-label="Remove fact"/gu)).toHaveLength(41);
+      for (const handler of Object.values(handlers)) expect(handler).not.toHaveBeenCalled();
+    });
+
+    it("keeps a small profile expanded and offers filter and fold controls", () => {
+      const { html } = render({ draftFacts: manyFacts(2) });
+      const attributes = [...html.matchAll(categoryDetails)].map((match) => match[1]);
+      expect(attributes).toHaveLength(2);
+      for (const attribute of attributes) expect(attribute).toContain('open=""');
+      expect(html).toContain('type="search"');
+      expect(html).toContain('aria-label="Filter facts"');
+      expect(html).toContain('placeholder="Filter by label or value"');
+      expect(html).toContain(">Expand all</button>");
+      expect(html).toContain(">Collapse all</button>");
+      expect(html).not.toContain("No facts match this filter.");
+      expect(html).not.toContain('role="status"');
+    });
+
+    it("omits the fact toolbar when a version has no facts", () => {
+      const { html } = render({ draftFacts: [] });
+      expect(html).not.toContain('aria-label="Filter facts"');
+      expect(html).toContain("No facts are recorded in this version.");
+    });
+
+    it("folds issue status groups, opening only the open group", () => {
+      const resolved: CanonicalCandidateProfileIssueResult = {
+        ...(issues[1] as CanonicalCandidateProfileIssueResult),
+        id: "issue-resolved",
+        severity: "error",
+        status: "resolved",
+      };
+      const { html, handlers } = render({ draftIssues: [...issues, resolved] });
+      const groups = [...html.matchAll(/<details class="profile-issue-group"([^>]*)>/gu)].map(
+        (match) => match[1],
+      );
+      expect(groups).toHaveLength(3);
+      expect(groups.filter((attribute) => attribute?.includes('open=""'))).toHaveLength(1);
+      expect(html).toContain(
+        '<summary class="profile-group-summary"><span>Open</span><span class="profile-group-count"> · 1 issue</span></summary>',
+      );
+      expect(html).toContain("<span>Acknowledged</span>");
+      expect(html).toContain("<span>Resolved</span>");
+      for (const id of ["issue-date", "issue-omission", "issue-resolved"]) {
+        expect(html).toContain(`aria-label="Status for issue ${id}"`);
+      }
+      expect(handlers.onIssueStatusChange).not.toHaveBeenCalled();
+    });
+
+    it("explains why review is disabled and links the hint to the button", () => {
+      const blocked = render({ draftIssues: issues });
+      expect(blocked.html).toContain(
+        '<p class="profile-review-hint" id="profile-review-hint">1 issue is still open. Acknowledge or resolve it, then save.</p>',
+      );
+      expect(blocked.html).toMatch(
+        /<button[^>]*aria-describedby="profile-review-hint"[^>]*>Mark latest draft reviewed/u,
+      );
+
+      const historical = render({ editable: false });
+      expect(historical.html).toContain("Only the latest draft can be marked reviewed.");
+
+      const reviewed = render({ status: "reviewed", editable: false });
+      expect(reviewed.html).toContain("This version is already reviewed.");
+    });
+
+    it("shows no hint when review is allowed or the panel is busy", () => {
+      const allowed = render({ draftIssues: issues.slice(1) });
+      expect(allowed.html).not.toContain("profile-review-hint");
+      expect(allowed.html).not.toContain("aria-describedby");
+      expect(allowed.html).not.toMatch(/<button[^>]*disabled=""[^>]*>Mark latest draft reviewed/u);
+
+      const busy = render({ draftIssues: issues, busy: true });
+      expect(busy.html).not.toContain("profile-review-hint");
+    });
   });
 
   it("renders an accessible, path-free approval gate only for complete capabilities", () => {

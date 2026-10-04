@@ -40,6 +40,14 @@ import {
   sourceCountLabel,
   truncateProfileText,
 } from "./profile-presentation.js";
+import {
+  factCountLabel,
+  issueCountLabel,
+  profileFactCategoriesStartOpen,
+  profileIssueGroupStartsOpen,
+  profileReviewBlockedReason,
+  projectProfileFactCategories,
+} from "./profile-review-navigation.js";
 
 const profileIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/u;
 const absoluteUrlPattern = /\b(?:https?|ftp):\/\/[^\s<>"']+/giu;
@@ -485,6 +493,27 @@ export function ProfileDetails({
   const factsById = useMemo(() => new Map(draftFacts.map((fact) => [fact.id, fact])), [draftFacts]);
   const historical = history.length > 0 && record.version !== history.at(-1)?.version;
   const reviewAllowed = canReviewCanonicalCandidateProfile(record, draftFacts, draftIssues);
+  const reviewHint = profileReviewBlockedReason({
+    record,
+    draftFacts,
+    draftIssues,
+    editable,
+    busy,
+  });
+  const [filter, setFilter] = useState("");
+  const [factsBaseOpen] = useState(() => profileFactCategoriesStartOpen(draftFacts.length));
+  const [factOverrides, setFactOverrides] = useState<
+    ReadonlyMap<CanonicalCandidateProfileFactCategory, boolean>
+  >(() => new Map());
+  const [issueOverrides, setIssueOverrides] = useState<ReadonlyMap<string, boolean>>(
+    () => new Map(),
+  );
+  const factProjection = useMemo(
+    () => projectProfileFactCategories(factGroups, filter, factsBaseOpen, factOverrides),
+    [factGroups, filter, factsBaseOpen, factOverrides],
+  );
+  const setAllCategories = (open: boolean) =>
+    setFactOverrides(new Map(factGroups.map(([category]) => [category, open])));
 
   return (
     <>
@@ -542,31 +571,83 @@ export function ProfileDetails({
             {factGroups.length === 0 ? (
               <p className="profile-empty">No facts are recorded in this version.</p>
             ) : (
-              <div className="profile-groups">
-                {factGroups.map(([category, facts]) => (
-                  <section
-                    className="profile-group"
-                    key={category}
-                    aria-labelledby={`profile-facts-${category}`}
+              <>
+                <div className="profile-facts-toolbar">
+                  <input
+                    className="profile-facts-filter"
+                    type="search"
+                    aria-label="Filter facts"
+                    placeholder="Filter by label or value"
+                    value={filter}
+                    onChange={(event) => {
+                      setFilter(event.target.value);
+                      setFactOverrides(new Map());
+                    }}
+                  />
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    onClick={() => setAllCategories(true)}
                   >
-                    <h4 id={`profile-facts-${category}`}>
-                      {humanizeProfileCategory(category)}{" "}
-                      <span className="meta-chip">{facts.length}</span>
-                    </h4>
-                    <ul className="profile-fact-list">
-                      {facts.map((fact) => (
-                        <ProfileFact
-                          key={fact.id}
-                          fact={fact}
-                          editable={editable}
-                          onValueChange={(value) => onFactValueChange(fact.id, value)}
-                          onRemove={() => onRemoveFact(fact.id)}
-                        />
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-              </div>
+                    Expand all
+                  </button>
+                  <button
+                    className="button button-quiet"
+                    type="button"
+                    onClick={() => setAllCategories(false)}
+                  >
+                    Collapse all
+                  </button>
+                  {factProjection.filtering ? (
+                    <span className="profile-filter-count" role="status" aria-live="polite">
+                      {factProjection.matchCount} of {factProjection.totalCount} facts
+                    </span>
+                  ) : null}
+                </div>
+                {factProjection.filtering && factProjection.matchCount === 0 ? (
+                  <p className="profile-empty">No facts match this filter.</p>
+                ) : null}
+                <div className="profile-groups">
+                  {factProjection.categories.map((view) => (
+                    <details
+                      className="profile-group profile-category"
+                      key={view.category}
+                      open={view.open}
+                      onToggle={(event) => {
+                        const open = event.currentTarget.open;
+                        setFactOverrides((current) =>
+                          current.get(view.category) === open
+                            ? current
+                            : new Map(current).set(view.category, open),
+                        );
+                      }}
+                    >
+                      <summary className="profile-group-summary">
+                        <span id={`profile-facts-${view.category}`}>
+                          {humanizeProfileCategory(view.category)}
+                        </span>
+                        <span className="profile-group-count">
+                          {" · "}
+                          {factProjection.filtering
+                            ? `${view.facts.length} of ${factCountLabel(view.totalCount)}`
+                            : factCountLabel(view.totalCount)}
+                        </span>
+                      </summary>
+                      <ul className="profile-fact-list">
+                        {view.facts.map((fact) => (
+                          <ProfileFact
+                            key={fact.id}
+                            fact={fact}
+                            editable={editable}
+                            onValueChange={(value) => onFactValueChange(fact.id, value)}
+                            onRemove={() => onRemoveFact(fact.id)}
+                          />
+                        ))}
+                      </ul>
+                    </details>
+                  ))}
+                </div>
+              </>
             )}
           </section>
 
@@ -589,24 +670,48 @@ export function ProfileDetails({
                     aria-labelledby={`profile-issues-${severity}`}
                   >
                     <h4 id={`profile-issues-${severity}`}>{severity}</h4>
-                    {[...byStatus.entries()].map(([status, issues]) => (
-                      <div className="profile-issue-group" key={status}>
-                        <h5>{status}</h5>
-                        <ul className="profile-issue-list">
-                          {issues.map((issue) => (
-                            <ProfileIssue
-                              key={issue.id}
-                              issue={issue}
-                              factsById={factsById}
-                              editable={editable}
-                              onStatusChange={(nextStatus) =>
-                                onIssueStatusChange(issue.id, nextStatus)
-                              }
-                            />
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                    {[...byStatus.entries()].map(([status, issues]) => {
+                      const groupKey = `${severity}:${status}`;
+                      return (
+                        <details
+                          className="profile-issue-group"
+                          key={status}
+                          open={issueOverrides.get(groupKey) ?? profileIssueGroupStartsOpen(status)}
+                          onToggle={(event) => {
+                            const open = event.currentTarget.open;
+                            setIssueOverrides((current) =>
+                              current.get(groupKey) === open
+                                ? current
+                                : new Map(current).set(groupKey, open),
+                            );
+                          }}
+                        >
+                          <summary className="profile-group-summary">
+                            <span>
+                              {status.charAt(0).toUpperCase()}
+                              {status.slice(1)}
+                            </span>
+                            <span className="profile-group-count">
+                              {" · "}
+                              {issueCountLabel(issues.length)}
+                            </span>
+                          </summary>
+                          <ul className="profile-issue-list">
+                            {issues.map((issue) => (
+                              <ProfileIssue
+                                key={issue.id}
+                                issue={issue}
+                                factsById={factsById}
+                                editable={editable}
+                                onStatusChange={(nextStatus) =>
+                                  onIssueStatusChange(issue.id, nextStatus)
+                                }
+                              />
+                            ))}
+                          </ul>
+                        </details>
+                      );
+                    })}
                   </section>
                 ))}
               </div>
@@ -630,10 +735,16 @@ export function ProfileDetails({
             className="button button-primary"
             type="button"
             disabled={!editable || busy || !reviewAllowed}
+            aria-describedby={reviewHint === null ? undefined : "profile-review-hint"}
             onClick={onReview}
           >
             Mark latest draft reviewed
           </button>
+          {reviewHint === null ? null : (
+            <p className="profile-review-hint" id="profile-review-hint">
+              {reviewHint}
+            </p>
+          )}
         </div>
       )}
     </>
@@ -1227,6 +1338,7 @@ export function ProfileWorkspace({
         </p>
       ) : (
         <ProfileDetails
+          key={`${record.profileId}@${record.version}`}
           record={record}
           history={history}
           draftFacts={draftFacts}
