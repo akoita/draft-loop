@@ -18,6 +18,7 @@
     "@anthropic-ai/sdk": "0.117.1",
     "@draft-loop/domain": "workspace:*",
     "@draft-loop/schemas": "workspace:*",
+    "@google/genai": "2.24.0",
     "openai": "7.23.0",
     "zod": "4.4.3"
   }

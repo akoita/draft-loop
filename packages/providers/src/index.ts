@@ -1027,3 +1027,4 @@ export * from "./deepinfra-glm.js";
  * resolved before anything reads it.
  */
 export * from "./discovery.js";
+export * from "./google-gemini.js";
