@@ -6,6 +6,10 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./model-identities": {
+      "types": "./src/model-identities.ts",
+      "import": "./src/model-identities.ts"
     }
   },
   "files": [

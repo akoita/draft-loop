@@ -1,5 +1,5 @@
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
-import { googleGeminiCompany, googleGeminiModelId } from "@draft-loop/providers";
+import { googleGeminiCompany, googleGeminiModelId } from "@draft-loop/providers/model-identities";
 import { createGoogleGeminiAuthorProfile } from "./gemini-development-profile.js";
 
 export const googleGeminiExtractionProfileId = "dev-google-gemini-extraction" as const;

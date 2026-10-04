@@ -21,6 +21,11 @@ import {
   ProviderAdapterError,
   type RetryOptions,
 } from "./index.js";
+import {
+  googleGeminiCompany,
+  googleGeminiModelId,
+  googleGeminiProvider,
+} from "./model-identities.js";
 import { accountOpenAIUsage } from "./openai-usage.js";
 import {
   type CompiledOutputSchema,
@@ -28,9 +33,7 @@ import {
   withoutSchemaKeywords,
 } from "./structured-output-schema.js";
 
-export const googleGeminiProvider = "google" as const;
-export const googleGeminiCompany = "google" as const;
-export const googleGeminiModelId = "gemini-3.7-flash" as const;
+export { googleGeminiCompany, googleGeminiModelId, googleGeminiProvider };
 
 // Gemini rejects array item-count limits with INVALID_ARGUMENT; local validation still enforces them.
 const geminiUnsupportedSchemaKeywords: ReadonlySet<string> = new Set(["maxItems", "minItems"]);

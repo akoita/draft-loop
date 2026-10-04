@@ -1,5 +1,5 @@
 import type { ModelProfile } from "@draft-loop/domain/model-profile";
-import { googleGeminiCompany, googleGeminiModelId } from "@draft-loop/providers";
+import { googleGeminiCompany, googleGeminiModelId } from "@draft-loop/providers/model-identities";
 
 export const googleGeminiAuthorProfileId = "dev-google-gemini-author" as const;
 
