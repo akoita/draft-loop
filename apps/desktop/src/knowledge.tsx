@@ -77,6 +77,104 @@ export async function selectCandidateKnowledgeBaseAndRefresh(input: {
   return input.refresh(input.workspaceId);
 }
 
+export interface KnowledgeBaseListProps {
+  readonly storeId: string;
+  readonly knowledgeBases: readonly KnowledgeBaseSummary[];
+  readonly disabled: boolean;
+  readonly intakeSupported: boolean;
+  readonly workspaceSourcesSupported: boolean;
+  readonly onSelect: (storeId: string, knowledgeBaseId: string) => void;
+  readonly onImport: (
+    storeId: string,
+    knowledgeBaseId: string,
+    kind: "file" | "directory" | "workspace",
+  ) => void;
+}
+
+export function KnowledgeBaseList({
+  storeId,
+  knowledgeBases,
+  disabled,
+  intakeSupported,
+  workspaceSourcesSupported,
+  onSelect,
+  onImport,
+}: KnowledgeBaseListProps) {
+  return (
+    <ul className="knowledge-base-list" aria-label="Available candidate knowledge bases">
+      {knowledgeBases.map((knowledgeBase) => (
+        <li className="knowledge-base-card" key={knowledgeBase.id}>
+          <div className="knowledge-base-header">
+            <strong>{safeKnowledgeBaseDisplayName(knowledgeBase.displayName)}</strong>
+            {knowledgeBase.isDefault ? <span className="meta-chip">Default</span> : null}
+          </div>
+          <div className="knowledge-actions">
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={disabled}
+              onClick={() => onSelect(storeId, knowledgeBase.id)}
+            >
+              Use this knowledge base
+            </button>
+            {intakeSupported ? (
+              <>
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={disabled}
+                  onClick={() => onImport(storeId, knowledgeBase.id, "file")}
+                >
+                  Add file
+                </button>
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={disabled}
+                  onClick={() => onImport(storeId, knowledgeBase.id, "directory")}
+                >
+                  Add directory
+                </button>
+              </>
+            ) : null}
+          </div>
+          {intakeSupported ? null : (
+            <p className="knowledge-hint">
+              File and directory intake is unavailable in this desktop host.
+            </p>
+          )}
+          {workspaceSourcesSupported ? (
+            <div className="knowledge-workspace-import">
+              <div className="knowledge-actions">
+                <button
+                  type="button"
+                  className="button button-outline"
+                  disabled={disabled}
+                  onClick={() => onImport(storeId, knowledgeBase.id, "workspace")}
+                >
+                  Import workspace candidate sources
+                </button>
+              </div>
+              <p className="knowledge-hint">
+                This imports all supported files from this workspace’s configured candidate-source
+                directory. It does not select the base automatically. Directory limits can produce a
+                partial result, and previously imported directories are rejected.
+              </p>
+            </div>
+          ) : (
+            <p className="knowledge-hint">
+              Workspace candidate-source import is unavailable in this desktop host.
+            </p>
+          )}
+        </li>
+      ))}
+      {knowledgeBases.length === 0 ? (
+        <li className="knowledge-hint">No active knowledge bases are available.</li>
+      ) : null}
+    </ul>
+  );
+}
+
 export function KnowledgeWorkspace({
   workspaceId,
   capabilities,
@@ -245,87 +343,65 @@ export function KnowledgeWorkspace({
   const workspaceSourcesSupported = hasWorkspaceSourcesIntakeCapabilities(capabilities);
 
   return (
-    <section className="panel" aria-labelledby="candidate-knowledge-heading">
-      <h2 id="candidate-knowledge-heading">Candidate knowledge</h2>
-      <p>
-        Reusable candidate knowledge is separate from application material. Selecting one base
-        replaces the workspace’s current knowledge selection.
+    <section className="panel knowledge-panel" aria-labelledby="candidate-knowledge-heading">
+      <div>
+        <p className="eyebrow">Candidate knowledge</p>
+        <h2 id="candidate-knowledge-heading">Knowledge store</h2>
+      </div>
+      <p className="knowledge-copy">
+        Reusable career evidence, kept separate from application material. Choosing a base replaces
+        this workspace’s current knowledge selection.
       </p>
-      <div className="form-row">
-        <label htmlFor="candidate-knowledge-name">New store folder name</label>
-        <input
-          id="candidate-knowledge-name"
-          value={name}
-          onChange={(event) => setName(event.currentTarget.value)}
-          disabled={controlsDisabled}
-        />
+      <div className="knowledge-store-row">
+        <label className="setup-field" htmlFor="candidate-knowledge-name">
+          <span>New store folder name</span>
+          <input
+            id="candidate-knowledge-name"
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+            disabled={controlsDisabled}
+          />
+        </label>
+        <div className="knowledge-store-actions">
+          <button
+            type="button"
+            className="button button-primary"
+            disabled={controlsDisabled}
+            onClick={createStore}
+          >
+            Create knowledge store
+          </button>
+          <button
+            type="button"
+            className="button button-outline"
+            disabled={controlsDisabled}
+            onClick={openStore}
+          >
+            Open knowledge store
+          </button>
+        </div>
       </div>
-      <div className="button-row">
-        <button type="button" disabled={controlsDisabled} onClick={createStore}>
-          Create knowledge store
-        </button>
-        <button type="button" disabled={controlsDisabled} onClick={openStore}>
-          Open knowledge store
-        </button>
-      </div>
-      {pending ? <p role="status">Updating candidate knowledge…</p> : null}
-      {message === null ? null : <p role="status">{message}</p>}
+      {pending ? (
+        <p className="knowledge-status" role="status">
+          Updating candidate knowledge…
+        </p>
+      ) : null}
+      {message === null ? null : (
+        <p className="knowledge-status" role="status">
+          {message}
+        </p>
+      )}
       {store === null ? null : (
-        <ul aria-label="Available candidate knowledge bases">
-          {knowledgeBases.map((knowledgeBase) => (
-            <li key={knowledgeBase.id}>
-              <span>{safeKnowledgeBaseDisplayName(knowledgeBase.displayName)}</span>
-              <button
-                type="button"
-                disabled={controlsDisabled}
-                onClick={() => selectKnowledgeBase(store.storeId, knowledgeBase.id)}
-              >
-                Use this knowledge base
-              </button>
-              {intakeSupported ? (
-                <div>
-                  <button
-                    type="button"
-                    disabled={controlsDisabled}
-                    onClick={() => importIntoKnowledgeBase(store.storeId, knowledgeBase.id, "file")}
-                  >
-                    Add file
-                  </button>
-                  <button
-                    type="button"
-                    disabled={controlsDisabled}
-                    onClick={() =>
-                      importIntoKnowledgeBase(store.storeId, knowledgeBase.id, "directory")
-                    }
-                  >
-                    Add directory
-                  </button>
-                </div>
-              ) : (
-                <p>File and directory intake is unavailable in this desktop host.</p>
-              )}
-              <p>
-                This imports all supported files from this workspace’s configured candidate-source
-                directory. It does not select the base automatically. Directory limits can produce a
-                partial result, and previously imported directories are rejected.
-              </p>
-              {workspaceSourcesSupported ? (
-                <button
-                  type="button"
-                  disabled={controlsDisabled}
-                  onClick={() =>
-                    importIntoKnowledgeBase(store.storeId, knowledgeBase.id, "workspace")
-                  }
-                >
-                  Import workspace candidate sources
-                </button>
-              ) : (
-                <p>Workspace candidate-source import is unavailable in this desktop host.</p>
-              )}
-            </li>
-          ))}
-          {knowledgeBases.length === 0 ? <li>No active knowledge bases are available.</li> : null}
-        </ul>
+        <KnowledgeBaseList
+          storeId={store.storeId}
+          knowledgeBases={knowledgeBases}
+          disabled={controlsDisabled}
+          intakeSupported={intakeSupported}
+          workspaceSourcesSupported={workspaceSourcesSupported}
+          onSelect={selectKnowledgeBase}
+          onImport={importIntoKnowledgeBase}
+        />
       )}
     </section>
   );

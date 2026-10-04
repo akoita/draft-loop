@@ -6,6 +6,7 @@ const modelNames: Readonly<Record<string, string>> = {
   "claude-fable-5-1": "Claude Fable 5.1",
   "claude-sonnet-4-5": "Claude Sonnet 4.5",
   "gpt-6-luna": "GPT-6 Luna",
+  "gpt-5": "GPT-5",
   "gpt-6-sol": "GPT-6 Sol",
   "gpt-6.1-sol": "GPT-6.1 Sol",
   "gpt-6-astra": "GPT-6 Astra",
