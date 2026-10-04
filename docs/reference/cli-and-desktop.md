@@ -110,6 +110,10 @@ numbers within the safe-integer magnitude; fractional or changing timestamps
 are accepted and are not persisted or used as response identity. Null role or
 tool placeholders are treated as absent; actual tool calls remain rejected.
 
+The DeepInfra GLM and Google Gemini development routes retry temporary overload and
+rate-limit responses up to twice with a short backoff (about 2.5 s, then 5 s) before the
+request fails. Quota, billing, authentication, and invalid-request failures are never retried.
+
 ## Desktop diagnostics
 
 Packaged builds keep host-error diagnostics in `diagnostics/host-errors.jsonl`

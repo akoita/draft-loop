@@ -24,6 +24,7 @@ import {
 } from "@draft-loop/providers";
 import OpenAI from "openai";
 import { createAnthropicSdkClient } from "./anthropic-sdk-client.js";
+import { developmentProviderRetry } from "./development-provider-retry.js";
 import type { ProviderCredentialResolver } from "./glm-provider-routing.js";
 
 export type { ProviderCredentialResolver } from "./glm-provider-routing.js";
@@ -131,7 +132,7 @@ export async function createProviderAdapter(
     const client = providerClientFactories?.deepinfra?.(apiKey) ?? createDeepInfraGLMClient(apiKey);
     return createDeepInfraGLMAdapter<JsonObject, JsonObject>(client, {
       configuredModel: model,
-      ...(config.retry === undefined ? {} : { retry: config.retry }),
+      retry: config.retry ?? developmentProviderRetry,
       pricing: {
         inputUsdPerMillionTokens: 0.15,
         outputUsdPerMillionTokens: 0.5,
@@ -152,7 +153,7 @@ export async function createProviderAdapter(
     const client = providerClientFactories?.google?.(apiKey) ?? createGoogleGeminiClient(apiKey);
     return createGoogleGeminiAdapter<JsonObject, JsonObject>(client, {
       configuredModel: model,
-      ...(config.retry === undefined ? {} : { retry: config.retry }),
+      retry: config.retry ?? developmentProviderRetry,
       // Google's paid-tier list prices through 2026-12-31; they double from 2027-01-01.
       pricing: {
         inputUsdPerMillionTokens: 0.75,

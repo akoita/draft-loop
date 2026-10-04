@@ -10,7 +10,7 @@ import {
 } from "@draft-loop/providers";
 import { openSqliteStorage } from "@draft-loop/storage";
 import type { ChatCompletion } from "openai/resources/chat/completions";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createDeepInfraGLMAuthorProfile } from "./glm-development-profile.js";
 import { providerDataPolicy } from "./glm-provider-routing.js";
 import {
@@ -121,6 +121,91 @@ describe("DeepInfra GLM application route", () => {
     });
     expect(create.mock.calls[0]?.[1]).toMatchObject({ maxRetries: 0, timeout: 120_000 });
     expect(policy.allowedCompanies).toEqual(["deepinfra"]);
+  });
+
+  describe("temporary overload retry", () => {
+    const overloaded = () =>
+      Object.assign(new Error("Service temporarily overloaded."), { status: 503 });
+
+    async function runWith(
+      create: ReturnType<typeof glmClient>["create"],
+      config: Parameters<typeof createProviderAdapter>[0] = {},
+    ) {
+      const model = selection();
+      const authModes = { anthropic: "user-session", openai: "user-session" } as const;
+      const adapter = await createProviderAdapter(
+        config,
+        model,
+        true,
+        async () => "synthetic-deepinfra-key",
+        { deepinfra: () => ({ chat: { completions: { create } } }) },
+        authModes,
+      );
+      return adapter.execute({
+        contextSnapshotId: "glm-retry-snapshot",
+        model,
+        systemPrompt: "Return the requested JSON.",
+        input: { task: "test" },
+        outputSchema: schema,
+        outputName: "glm_test",
+        maxOutputTokens: 32768,
+        dataPolicy: providerDataPolicy("zai", true, authModes),
+      });
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("retries a temporary 503 once and then completes", async () => {
+      vi.useFakeTimers();
+      const { create } = glmClient({ answer: "ready" });
+      create.mockRejectedValueOnce(overloaded());
+      const pending = runWith(create);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await expect(pending).resolves.toMatchObject({ output: { answer: "ready" } });
+      expect(create).toHaveBeenCalledTimes(2);
+    });
+
+    it("stops after the third consecutive 503", async () => {
+      vi.useFakeTimers();
+      const { create } = glmClient({ answer: "unused" });
+      create.mockRejectedValue(overloaded());
+      const settled = expect(runWith(create)).rejects.toMatchObject({
+        code: "transient",
+        retryable: true,
+      });
+      await vi.advanceTimersByTimeAsync(30_000);
+      await settled;
+      expect(create).toHaveBeenCalledTimes(3);
+    });
+
+    it.each([
+      [
+        "credit exhaustion",
+        Object.assign(new Error("Insufficient credits"), { status: 402 }),
+        "quota-exhausted",
+      ],
+      [
+        "authentication",
+        Object.assign(new Error("Unauthorized"), { status: 401 }),
+        "authentication",
+      ],
+    ])("does not retry %s", async (_label, failure, code) => {
+      const { create } = glmClient({ answer: "unused" });
+      create.mockRejectedValue(failure);
+      await expect(runWith(create)).rejects.toMatchObject({ code, retryable: false });
+      expect(create).toHaveBeenCalledTimes(1);
+    });
+
+    it("honours an explicit retry configuration of zero retries", async () => {
+      const { create } = glmClient({ answer: "unused" });
+      create.mockRejectedValue(overloaded());
+      await expect(runWith(create, { retry: { maxRetries: 0 } })).rejects.toMatchObject({
+        code: "transient",
+      });
+      expect(create).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("rejects denied, missing-key, and unknown Z.ai routes before constructing a client", async () => {
