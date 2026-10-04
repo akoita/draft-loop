@@ -264,9 +264,11 @@ billing guidance; the app does not estimate charges from failed attempts.
 
 The desktop distinguishes a saved extraction failure, an empty profile, a draft
 that still needs human review, open issue blockers, and a reviewed version. An
-empty failed version shows up to three deduplicated, sanitized issue reasons.
-The action is labeled **Retry profile generation**; the existing provider-data
-approval must be granted again before selected material is sent.
+empty failed version shows one callout with up to three deduplicated, sanitized
+issue reasons; the version details only note that the failure is recorded rather
+than repeating the cause. The action is labeled **Retry profile generation**;
+the existing provider-data approval must be granted again before selected
+material is sent, and a hint says so while the approval box is unticked.
 
 While a profile is generating, the desktop shows a spinner, an elapsed timer,
 and, once the plan is known, which part is running (for example **Part 2 of 4**,
