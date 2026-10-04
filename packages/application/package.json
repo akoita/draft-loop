@@ -45,6 +45,7 @@
     "@draft-loop/schemas": "workspace:*",
     "@draft-loop/security": "workspace:*",
     "@draft-loop/storage": "workspace:*",
+    "@draft-loop/validation": "workspace:*",
     "openai": "7.23.0",
     "zod": "4.4.3"
   }

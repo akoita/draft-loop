@@ -15,6 +15,7 @@ import {
   environmentCredentialResolver,
   type IndependentReviewRecord,
   isLoopbackEndpoint,
+  JobRequirementUserError,
   type OpportunityDraftPatch,
   type OpportunitySourceInput,
   type PreviewKnowledgeSourceDirectoryRefreshResult,
@@ -5113,7 +5114,8 @@ export function createNativeHost(options: NativeHostOptions): NativeHost {
     } catch (error) {
       options.onError?.(error, command.type);
       const userMessage =
-        error instanceof SourceIngestionUserError
+        error instanceof SourceIngestionUserError ||
+        (command.type === "run.start" && error instanceof JobRequirementUserError)
           ? error.message
           : command.type === "profile.derive"
             ? userFixableProfileDerivationMessage(error)

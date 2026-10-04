@@ -109,6 +109,10 @@ Live use requires an explicit provider-transmission approval in the workspace,
 configured provider credentials, and may incur provider cost. Keep real
 candidate material out of the repository.
 
+List each job requirement as its own bullet line in `job.md`. A run started
+without a reviewed opportunity brief refuses long unbulleted paragraphs, such as
+a pasted web page, before any provider call.
+
 For the normal quality gate, run:
 
 ```sh

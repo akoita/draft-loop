@@ -157,6 +157,9 @@ importers:
       '@draft-loop/storage':
         specifier: workspace:*
         version: link:../storage
+      '@draft-loop/validation':
+        specifier: workspace:*
+        version: link:../validation
       openai:
         specifier: 7.23.0
         version: 7.23.0(undici@7.30.0)(ws@8.22.0)(zod@4.4.3)

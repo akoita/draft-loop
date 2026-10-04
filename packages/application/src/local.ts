@@ -93,6 +93,7 @@ import { canonicalExtractionProfileFor } from "./canonical-extraction-profile.js
 import { executeCanonicalProfileExtractionWithFallback } from "./canonical-profile-extraction-fallback.js";
 import { canonicalProfileRequest, promptVersion } from "./canonical-profile-provider-request.js";
 import { createChronologyRetrieval } from "./chronology-retrieval.js";
+import { CliUserError } from "./cli-user-error.js";
 import * as criticPrompt from "./critic-adjudication.js";
 import { assertExportRenderingQa } from "./export-qa.js";
 import { exactApprovedArtifactFailure } from "./export-readiness.js";
@@ -545,12 +546,7 @@ function safeSourceBasename(sourcePath: string): string {
   return name.length > 0 ? name.slice(0, 120) : "selected source";
 }
 
-export class CliUserError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "CliUserError";
-  }
-}
+export { CliUserError };
 
 export class SourceIngestionUserError extends CliUserError {
   constructor(sourcePath: string) {
