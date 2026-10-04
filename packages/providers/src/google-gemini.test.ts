@@ -886,6 +886,48 @@ describe("Google Gemini cancellation and errors", () => {
     expect(sleep).toHaveBeenCalledTimes(1);
   });
 
+  it("retries a stream the SDK reports as cut off and then succeeds", async () => {
+    const sleep = vi.fn(async () => undefined);
+    const interrupted = {
+      async *[Symbol.asyncIterator]() {
+        yield chunk({ text: '{"answer":' });
+        throw new Error("Incomplete JSON segment at the end");
+      },
+    };
+    const generate = vi
+      .fn<GenerateStream>()
+      .mockResolvedValueOnce(interrupted)
+      .mockResolvedValueOnce(validStream());
+    const adapter = new GoogleGeminiAdapter(
+      { models: { generateContentStream: generate } },
+      { configuredModel: selection(), retry: { maxRetries: 2, sleep } },
+    );
+
+    await expect(adapter.execute(request())).resolves.toMatchObject({ output: { answer: "ok" } });
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(sleep).toHaveBeenCalledTimes(1);
+  });
+
+  it("classifies an interrupted stream as retryable without leaking content", async () => {
+    const stream = {
+      async *[Symbol.asyncIterator]() {
+        yield chunk({ text: "partial candidate content" });
+        throw new Error("Incomplete JSON segment at the end");
+      },
+    };
+    const fixture = harness(stream);
+
+    const error = await fixture.adapter.execute(request()).catch((value: unknown) => value);
+
+    expect(error).toMatchObject({
+      code: "transient",
+      retryable: true,
+      diagnostics: [{ code: "stream_interrupted", path: "response.stream" }],
+    });
+    expect((error as Error).message).not.toContain("partial");
+    expect(JSON.stringify(error)).not.toContain("Incomplete JSON");
+  });
+
   it("normalizes a mid-stream API error without leaking its message", async () => {
     const stream = {
       async *[Symbol.asyncIterator]() {
