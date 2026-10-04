@@ -123,6 +123,102 @@ describe("Google Gemini application route", () => {
     expect(policy.requestedRetention).toBe("ephemeral-request");
   });
 
+  describe("temporary overload retry", () => {
+    const overloaded = () =>
+      Object.assign(new Error("The model is overloaded due to high demand."), { status: 503 });
+
+    async function runWith(
+      generate: ReturnType<typeof geminiClient>["generate"],
+      config: Parameters<typeof createProviderAdapter>[0] = {},
+    ) {
+      const model = selection();
+      const authModes = { anthropic: "user-session", openai: "user-session" } as const;
+      const adapter = await createProviderAdapter(
+        config,
+        model,
+        true,
+        async () => "synthetic-gemini-key",
+        { google: () => ({ models: { generateContentStream: generate } }) },
+        authModes,
+      );
+      return adapter.execute({
+        contextSnapshotId: "gemini-retry-snapshot",
+        model,
+        systemPrompt: "Return the requested JSON.",
+        input: { task: "test" },
+        outputSchema: schema,
+        outputName: "gemini_test",
+        maxOutputTokens: 32768,
+        dataPolicy: providerDataPolicy("google", true, authModes),
+      });
+    }
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("retries a temporary 503 once and then completes", async () => {
+      vi.useFakeTimers();
+      const { generate } = geminiClient({ answer: "ready" });
+      generate.mockRejectedValueOnce(overloaded());
+      const pending = runWith(generate);
+      await vi.advanceTimersByTimeAsync(10_000);
+      await expect(pending).resolves.toMatchObject({ output: { answer: "ready" } });
+      expect(generate).toHaveBeenCalledTimes(2);
+    });
+
+    it("stops after the third consecutive 503", async () => {
+      vi.useFakeTimers();
+      const { generate } = geminiClient({ answer: "unused" });
+      generate.mockRejectedValue(overloaded());
+      const pending = runWith(generate);
+      const settled = expect(pending).rejects.toMatchObject({
+        provider: "google",
+        code: "transient",
+        retryable: true,
+      });
+      await vi.advanceTimersByTimeAsync(30_000);
+      await settled;
+      expect(generate).toHaveBeenCalledTimes(3);
+    });
+
+    it.each([
+      [
+        "quota exhaustion",
+        Object.assign(new Error("You exceeded your current quota, please check your plan."), {
+          status: 429,
+        }),
+        "quota-exhausted",
+      ],
+      [
+        "authentication",
+        Object.assign(new Error("Unauthorized"), { status: 401 }),
+        "authentication",
+      ],
+      [
+        "an invalid API key",
+        Object.assign(new Error("API key not valid. Please pass a valid API key."), {
+          status: 400,
+        }),
+        "authentication",
+      ],
+    ])("does not retry %s", async (_label, failure, code) => {
+      const { generate } = geminiClient({ answer: "unused" });
+      generate.mockRejectedValue(failure);
+      await expect(runWith(generate)).rejects.toMatchObject({ code, retryable: false });
+      expect(generate).toHaveBeenCalledTimes(1);
+    });
+
+    it("honours an explicit retry configuration of zero retries", async () => {
+      const { generate } = geminiClient({ answer: "unused" });
+      generate.mockRejectedValue(overloaded());
+      await expect(runWith(generate, { retry: { maxRetries: 0 } })).rejects.toMatchObject({
+        code: "transient",
+      });
+      expect(generate).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("rejects denied, missing-key, and unknown Google routes before constructing a client", async () => {
     const { client } = geminiClient({ answer: "unused" });
     const resolveCredential = vi.fn<ProviderCredentialResolver>(async () => undefined);
