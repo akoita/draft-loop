@@ -205,6 +205,36 @@ describe("desktop canonical candidate profile", () => {
     expect(onDerive).not.toHaveBeenCalled();
   });
 
+  it("labels the generate button by whether generation or another operation is pending", () => {
+    const outcome = projectCanonicalCandidateProfileOutcome(null, "profile-1", null);
+    const render = (props: { busy: boolean; generating?: boolean }) =>
+      renderToStaticMarkup(
+        <ProfileGenerationAction
+          outcome={outcome}
+          profileIdValid
+          providerTransmissionApproved
+          onApprovalChange={() => undefined}
+          onDerive={() => undefined}
+          {...props}
+        />,
+      );
+
+    const generating = render({ busy: true, generating: true });
+    expect(generating).toContain("Generating…");
+    expect(generating).not.toContain("Working…");
+    expect(generating).toContain('disabled=""');
+
+    const otherBusy = render({ busy: true });
+    expect(otherBusy).toContain("Working…");
+    expect(otherBusy).not.toContain("Generating…");
+    expect(otherBusy).toContain('disabled=""');
+
+    const idle = render({ busy: false });
+    expect(idle).toContain("Derive profile");
+    expect(idle).not.toContain("Working…");
+    expect(idle).not.toContain("Generating…");
+  });
+
   it("disables review for empty facts and for open warning issues", () => {
     const emptyRecord = { ...record(), facts: [] };
     const emptyMarkup = renderToStaticMarkup(

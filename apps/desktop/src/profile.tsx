@@ -19,6 +19,7 @@ import {
   type ReviewedCanonicalCandidateProfileSummary,
   reviewedCanonicalCandidateProfileChoice,
 } from "./profile-catalog.js";
+import { ProfileGenerationProgress } from "./profile-generation-progress.js";
 import {
   type CanonicalCandidateProfileOutcome,
   canReviewCanonicalCandidateProfile,
@@ -185,6 +186,7 @@ export function ProfileGenerationAction({
   profileIdValid,
   providerTransmissionApproved,
   busy,
+  generating = false,
   onApprovalChange,
   onDerive,
 }: {
@@ -192,6 +194,7 @@ export function ProfileGenerationAction({
   readonly profileIdValid: boolean;
   readonly providerTransmissionApproved: boolean;
   readonly busy: boolean;
+  readonly generating?: boolean;
   readonly onApprovalChange: (approved: boolean) => void;
   readonly onDerive: () => void;
 }) {
@@ -212,7 +215,13 @@ export function ProfileGenerationAction({
         disabled={busy || !profileIdValid || !providerTransmissionApproved}
         onClick={onDerive}
       >
-        {busy ? "Working…" : outcome.retry ? "Retry profile generation" : "Derive profile"}
+        {busy
+          ? generating
+            ? "Generating…"
+            : "Working…"
+          : outcome.retry
+            ? "Retry profile generation"
+            : "Derive profile"}
       </button>
     </>
   );
@@ -556,6 +565,7 @@ export function ProfileWorkspace({
   const [providerTransmissionApproved, setProviderTransmissionApproved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [generationStartedAt, setGenerationStartedAt] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [catalogProfiles, setCatalogProfiles] = useState<
     readonly ReviewedCanonicalCandidateProfileSummary[]
@@ -682,10 +692,11 @@ export function ProfileWorkspace({
 
   const withBusy = async (
     operation: () => Promise<CanonicalCandidateProfileRecordResult | null>,
+    pendingMessage = "Working with the canonical candidate profile…",
   ): Promise<void> => {
     setBusy(true);
     setErrorMessage(null);
-    setStatusMessage("Working with the canonical candidate profile…");
+    setStatusMessage(pendingMessage);
     try {
       const result = await operation();
       setStatusMessage(projectCanonicalCandidateProfileOperationResult(result).message);
@@ -819,15 +830,20 @@ export function ProfileWorkspace({
     if (!isCanonicalCandidateProfileId(normalizedProfileId) || !providerTransmissionApproved)
       return;
     setProviderTransmissionApproved(false);
+    setGenerationStartedAt(Date.now());
     void withBusy(async () => {
-      const derived = await capabilities.deriveCanonicalCandidateProfile({
-        profileId: normalizedProfileId,
-        providerTransmissionApproved: true,
-      });
-      const refreshed = await refresh(normalizedProfileId, derived.version);
-      refreshCatalog();
-      return refreshed;
-    });
+      try {
+        const derived = await capabilities.deriveCanonicalCandidateProfile({
+          profileId: normalizedProfileId,
+          providerTransmissionApproved: true,
+        });
+        const refreshed = await refresh(normalizedProfileId, derived.version);
+        refreshCatalog();
+        return refreshed;
+      } finally {
+        setGenerationStartedAt(null);
+      }
+    }, "Generating profile…");
   };
 
   const save = (): void => {
@@ -995,6 +1011,7 @@ export function ProfileWorkspace({
           profileIdValid={isCanonicalCandidateProfileId(normalizedProfileId)}
           providerTransmissionApproved={providerTransmissionApproved}
           busy={busy}
+          generating={generationStartedAt !== null}
           onApprovalChange={setProviderTransmissionApproved}
           onDerive={derive}
         />
@@ -1011,11 +1028,17 @@ export function ProfileWorkspace({
         />
       )}
       <div
-        className={busy ? "profile-status boot-loading" : "profile-status"}
+        className={
+          busy && generationStartedAt === null ? "profile-status boot-loading" : "profile-status"
+        }
         role="status"
         aria-live="polite"
       >
-        {statusMessage}
+        {generationStartedAt === null ? (
+          statusMessage
+        ) : (
+          <ProfileGenerationProgress startedAt={generationStartedAt} />
+        )}
       </div>
       {errorMessage === null ? null : (
         <div className="error-banner profile-error" role="alert">
