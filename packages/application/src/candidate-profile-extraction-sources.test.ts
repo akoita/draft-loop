@@ -154,7 +154,7 @@ describe("canonical candidate profile extraction source preparation", () => {
     );
   });
 
-  it("rejects fact or issue citations to duplicate IDs omitted from the provider request", async () => {
+  it("never trusts fact or issue citations to duplicate IDs omitted from the provider request", async () => {
     const text = "Engineer and Staff Engineer";
     const sources = [material("source-a", text), material("source-b", text)];
     const invalidOutputs = [
@@ -192,16 +192,23 @@ describe("canonical candidate profile extraction source preparation", () => {
       },
     ];
 
-    for (const output of invalidOutputs) {
-      const { result, request } = await process(sources, output);
-      expect(request?.sources.map((source) => source.id)).toEqual(["source-a"]);
-      expect(result.facts).toEqual([]);
-      expect(result.issues).toHaveLength(1);
-      expect(result.issues[0]?.message).toBe(
-        "Claims could not be grounded. No facts were saved. Evidence failures: unknown cited sources: 1. Check model support before retrying.",
-      );
-      expect(result.issues[0]?.sourceRefs).toHaveLength(2);
-    }
+    const [factCitation, issueCitation] = invalidOutputs;
+    const factResult = await process(sources, factCitation);
+    expect(factResult.request?.sources.map((source) => source.id)).toEqual(["source-a"]);
+    expect(factResult.result.facts).toEqual([]);
+    const droppedFact = factResult.result.issues.find((issue) => issue.message.includes("dropped"));
+    expect(droppedFact?.message).toContain("1 extracted fact was dropped");
+    expect(droppedFact?.sourceRefs).toHaveLength(2);
+
+    const issueResult = await process(sources, issueCitation);
+    expect(issueResult.request?.sources.map((source) => source.id)).toEqual(["source-a"]);
+    expect(issueResult.result.facts.map((fact) => fact.value)).toEqual([
+      "Engineer",
+      "Staff Engineer",
+    ]);
+    expect(issueResult.result.issues.some((issue) => issue.message.includes("dropped"))).toBe(
+      false,
+    );
   });
 
   it("expands provider issue citations from a representative to its duplicate source versions", async () => {

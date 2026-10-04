@@ -201,7 +201,7 @@ describe("canonical profile evidence quote recovery", () => {
     expect(repaired.issues[0]?.factKeys).toEqual(["fact-a", "fact-b"]);
   });
 
-  it("repairs emphasis in the normal extraction path but rejects unsupported quotes as a whole", async () => {
+  it("repairs emphasis in the normal extraction path and drops only unsupported quotes", async () => {
     const source = {
       id: "source-a",
       mediaType: "text/markdown",
@@ -239,7 +239,7 @@ describe("canonical profile evidence quote recovery", () => {
     expect(recovered.facts[0]?.value).toBe("TypeScript");
     expect(recovered.facts[0]?.provenance).toEqual([source.reference]);
 
-    const rejected = await processCanonicalCandidateProfileExtraction(
+    const filtered = await processCanonicalCandidateProfileExtraction(
       extract([
         validFact,
         {
@@ -252,8 +252,9 @@ describe("canonical profile evidence quote recovery", () => {
       ]),
       request,
     );
-    expect(rejected.facts).toEqual([]);
-    expect(rejected.issues).toHaveLength(1);
-    expect(rejected.issues[0]?.message).toContain("could not be grounded");
+    expect(filtered.facts.map((fact) => fact.value)).toEqual(["TypeScript"]);
+    expect(filtered.issues.map((issue) => issue.message)).toContain(
+      "1 extracted fact was dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.",
+    );
   });
 });

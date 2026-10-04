@@ -36,46 +36,70 @@ function addCount(
   counts.set(code, (counts.get(code) ?? 0) + 1);
 }
 
-/** Reject the whole proposal while retaining only fixed evidence-failure counts. */
-export function assertCanonicalProfileEvidenceGrounded(
-  proposal: CanonicalCandidateProfileExtractionProposal,
-  referencesByRepresentativeId: ReadonlyMap<
-    string,
-    readonly CanonicalCandidateProfileProvenanceReference[]
-  >,
+type ProfileReferences = ReadonlyMap<
+  string,
+  readonly CanonicalCandidateProfileProvenanceReference[]
+>;
+
+/**
+ * The single definition of evidence grounding, shared by the whole-proposal assertion and the
+ * ungrounded-fact filter so the two cannot drift: a known source with references, a quote found in
+ * that source's text, and a fact value found in its quote.
+ */
+export function createCanonicalProfileEvidenceChecker(
+  referencesByRepresentativeId: ProfileReferences,
   sourceTexts: ReadonlyMap<string, string>,
-): void {
-  const counts = new Map<CandidateProfileGroundingDiagnosticCode, number>();
+) {
   const normalizedSourceTexts = new Map(
     [...sourceTexts].map(([sourceId, text]) => [sourceId, normalizedSemantic(text)]),
   );
 
-  const checkSource = (sourceId: string): boolean => {
+  const sourceFailures = (sourceId: string): readonly CandidateProfileGroundingDiagnosticCode[] => {
     const references = referencesByRepresentativeId.get(sourceId);
-    if (references !== undefined && references.length > 0 && normalizedSourceTexts.has(sourceId)) {
-      return true;
-    }
-    addCount(counts, "unknown_source");
-    return false;
+    return references !== undefined && references.length > 0 && normalizedSourceTexts.has(sourceId)
+      ? []
+      : ["unknown_source"];
   };
 
+  const evidenceFailures = (
+    factValue: string,
+    evidence: { readonly sourceId: string; readonly quote: string },
+  ): readonly CandidateProfileGroundingDiagnosticCode[] => {
+    const unknown = sourceFailures(evidence.sourceId);
+    if (unknown.length > 0) return unknown;
+    const value = normalizedSemantic(factValue);
+    const quote = normalizedSemantic(evidence.quote);
+    const sourceText = normalizedSourceTexts.get(evidence.sourceId) ?? "";
+    const failures: CandidateProfileGroundingDiagnosticCode[] = [];
+    if (quote.length === 0 || !sourceText.includes(quote)) failures.push("quote_not_in_source");
+    if (value.length === 0 || quote.length === 0 || !quote.includes(value)) {
+      failures.push("value_not_in_quote");
+    }
+    return failures;
+  };
+
+  return Object.freeze({ sourceFailures, evidenceFailures });
+}
+
+/** Reject the whole proposal while retaining only fixed evidence-failure counts. */
+export function assertCanonicalProfileEvidenceGrounded(
+  proposal: CanonicalCandidateProfileExtractionProposal,
+  referencesByRepresentativeId: ProfileReferences,
+  sourceTexts: ReadonlyMap<string, string>,
+): void {
+  const counts = new Map<CandidateProfileGroundingDiagnosticCode, number>();
+  const checker = createCanonicalProfileEvidenceChecker(referencesByRepresentativeId, sourceTexts);
+
   for (const fact of proposal.facts) {
-    const value = normalizedSemantic(fact.value);
     for (const evidence of fact.evidence) {
-      if (!checkSource(evidence.sourceId)) continue;
-      const quote = normalizedSemantic(evidence.quote);
-      const sourceText = normalizedSourceTexts.get(evidence.sourceId) ?? "";
-      if (quote.length === 0 || !sourceText.includes(quote)) {
-        addCount(counts, "quote_not_in_source");
-      }
-      if (value.length === 0 || quote.length === 0 || !quote.includes(value)) {
-        addCount(counts, "value_not_in_quote");
-      }
+      for (const code of checker.evidenceFailures(fact.value, evidence)) addCount(counts, code);
     }
   }
 
   for (const issue of proposal.issues) {
-    for (const sourceId of issue.sourceIds) checkSource(sourceId);
+    for (const sourceId of issue.sourceIds) {
+      for (const code of checker.sourceFailures(sourceId)) addCount(counts, code);
+    }
   }
 
   if (counts.size > 0) {

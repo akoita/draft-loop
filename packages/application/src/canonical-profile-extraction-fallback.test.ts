@@ -581,7 +581,6 @@ describe("canonical profile extraction output-limit fallback", () => {
   it.each([
     ["truncation", "output limit"],
     ["schema", "Profile output failed local validation"],
-    ["grounding", "could not be grounded"],
   ] as const)(
     "saves no partial facts when a later section has %s failure",
     async (kind, message) => {
@@ -591,18 +590,6 @@ describe("canonical profile extraction output-limit fallback", () => {
       if (firstWindow === undefined) throw new Error("Expected a first source window.");
       const { calls, executor } = executorFor((call) => {
         if (calls.length === 1) throw providerTruncation();
-        if (kind === "grounding" && call.input.groundingRecovery !== undefined) {
-          return proposal([
-            {
-              key: "still-ungrounded",
-              category: "skill",
-              field: "name",
-              value: "React",
-              sourceId: first.id,
-              quote: "not in the original text",
-            },
-          ]);
-        }
         if (call.input.extractionFocusSourceId === first.id) {
           const window = call.input.extractionFocusWindow as
             | { readonly start: number; readonly end: number; readonly text: string }
@@ -621,18 +608,7 @@ describe("canonical profile extraction output-limit fallback", () => {
             ]);
           }
           if (kind === "truncation") throw providerTruncation();
-          if (kind === "schema")
-            return { schemaVersion: 1, facts: [{ key: "malformed" }], issues: [] };
-          return proposal([
-            {
-              key: "ungrounded-later-fact",
-              category: "skill",
-              field: "name",
-              value: "React",
-              sourceId: first.id,
-              quote: "not in the original text",
-            },
-          ]);
+          return { schemaVersion: 1, facts: [{ key: "malformed" }], issues: [] };
         }
         if (call.input.extractionFocusSourceId === second.id) {
           return proposal([
@@ -656,7 +632,7 @@ describe("canonical profile extraction output-limit fallback", () => {
         input([first, second]),
       );
 
-      expect(calls).toHaveLength(kind === "grounding" ? 8 : 4);
+      expect(calls).toHaveLength(4);
       expect(result.facts).toEqual([]);
       expect(result.issues).toHaveLength(1);
       expect(result.issues[0]?.message).toContain(message);
@@ -794,7 +770,7 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it("saves no partial facts when completed batches fail source grounding", async () => {
+  it("keeps grounded facts and drops ungrounded ones when the full replacement still fails grounding", async () => {
     const first = material("source-a", "TypeScript");
     const second = material("source-b", "React");
     const { calls, executor } = executorFor((call) => {
@@ -812,6 +788,14 @@ describe("canonical profile extraction output-limit fallback", () => {
         ]);
       }
       return proposal([
+        {
+          key: "grounded-fact",
+          category: "skill",
+          field: "name",
+          value: "TypeScript",
+          sourceId: first.id,
+          quote: "TypeScript",
+        },
         {
           key: "ungrounded-fact",
           category: "skill",
@@ -831,9 +815,11 @@ describe("canonical profile extraction output-limit fallback", () => {
     );
 
     expect(calls).toHaveLength(4);
-    expect(result.facts).toEqual([]);
-    expect(result.issues).toHaveLength(1);
-    expect(result.issues[0]?.message).toContain("could not be grounded");
+    expect(result.facts.map((fact) => fact.value)).toEqual(["TypeScript"]);
+    const dropped = result.issues.find((issue) => issue.message.includes("was dropped"));
+    expect(dropped).toMatchObject({ code: "omission", severity: "warning", status: "open" });
+    expect(dropped?.factIds).toEqual([]);
+    expect(dropped?.sourceRefs).toEqual([first.reference, second.reference]);
   });
 
   it("stops before the next batch when the request is cancelled", async () => {
@@ -1102,10 +1088,57 @@ describe("canonical profile extraction output-limit fallback", () => {
     expect(calls).toHaveLength(2);
   });
 
-  it("reports a planned grounding failure with grounding guidance and no full-corpus request", async () => {
+  it("keeps grounded facts, drops ungrounded ones across planned calls, and never makes a full-corpus request", async () => {
     const first = material("source-a", "TypeScript\n".repeat(5_000));
     const second = material("source-b", "React\n".repeat(5_000));
-    const { calls, executor } = executorFor(() =>
+    const plannedCalls = planCanonicalProfileExtractionCalls([first, second]);
+    if (plannedCalls === null) throw new Error("Expected a proactive extraction plan.");
+    const { calls, executor } = executorFor((call) => {
+      const window = call.input.extractionWindow as { readonly start: number } | undefined;
+      if (window?.start !== 0) return proposal([]);
+      const [{ id, text }] = requestSources(call) as [{ id: string; text: string }];
+      return proposal([
+        {
+          key: "good",
+          category: "skill",
+          field: "name",
+          value: text.startsWith("TypeScript") ? "TypeScript" : "React",
+          sourceId: id,
+          quote: text.startsWith("TypeScript") ? "TypeScript" : "React",
+        },
+        {
+          key: "bad",
+          category: "skill",
+          field: "name",
+          value: "Rust",
+          sourceId: id,
+          quote: text.startsWith("TypeScript") ? "TypeScript" : "React",
+        },
+      ]);
+    });
+
+    const result = await processCanonicalCandidateProfileExtraction(
+      {
+        extract: (preparedRequest) =>
+          executeCanonicalProfileExtractionWithFallback(executor, preparedRequest, controls),
+      },
+      input([first, second]),
+    );
+
+    expect(calls).toHaveLength(plannedCalls.length + 2);
+    for (const [call] of calls) expect(requestSources(call)).toHaveLength(1);
+    expect(result.facts.map((fact) => fact.value).sort()).toEqual(["React", "TypeScript"]);
+    const dropped = result.issues.filter((issue) => issue.message.includes("were dropped"));
+    expect(dropped).toHaveLength(1);
+    expect(dropped[0]?.message).toContain("2 extracted facts were dropped");
+    expect(dropped[0]?.sourceRefs).toEqual([first.reference, second.reference]);
+    expect(JSON.stringify(result)).not.toContain("Rust");
+  });
+
+  it("saves no ungrounded fact and no fake fact when every planned fact is dropped", async () => {
+    const first = material("source-a", "TypeScript\n".repeat(5_000));
+    const second = material("source-b", "React\n".repeat(5_000));
+    const { executor } = executorFor(() =>
       proposal([
         {
           key: "bad",
@@ -1126,11 +1159,9 @@ describe("canonical profile extraction output-limit fallback", () => {
       input([first, second]),
     );
 
-    expect(calls).toHaveLength(2);
-    for (const [call] of calls) expect(requestSources(call)).toHaveLength(1);
     expect(result.facts).toEqual([]);
-    expect(result.issues[0]?.message).toContain("could not be grounded");
-    expect(result.issues[0]?.message).toContain("values absent from evidence quotes: 1");
+    expect(result.issues.some((issue) => issue.message.includes("were dropped"))).toBe(true);
+    expect(result.issues.every((issue) => issue.severity !== "error")).toBe(true);
   });
 
   it("grounds a planned call on arrival and recovers it with one bounded replacement", async () => {

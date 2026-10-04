@@ -90,6 +90,7 @@ describe("canonical candidate profile extraction", () => {
         },
       ],
       groundProposal: expect.any(Function),
+      filterGroundedProposal: expect.any(Function),
     });
     expect(JSON.stringify(extract.mock.calls)).not.toContain("knowledge-1");
     expect(JSON.stringify(extract.mock.calls)).not.toContain("version-1");
@@ -150,8 +151,10 @@ describe("canonical candidate profile extraction", () => {
 
     expect(ungroundedDuplicate).toHaveBeenCalledTimes(2);
     expect(rejected.facts).toEqual([]);
-    expect(rejected.issues[0]?.message).toContain("could not be grounded");
-    expect(rejected.issues[0]?.message).toContain("values absent from evidence quotes: 1");
+    expect(rejected.issues.some((issue) => issue.severity === "error")).toBe(false);
+    expect(rejected.issues.map((issue) => issue.message)).toContain(
+      "1 extracted fact was dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.",
+    );
   });
 
   it("keeps conflicting and duplicate facts while adding visible omissions", async () => {
@@ -251,7 +254,7 @@ describe("canonical candidate profile extraction", () => {
     expect(conflicts[0]?.factIds).toHaveLength(2);
   });
 
-  it("fails closed with one fixed content-free issue for invalid output or citations", async () => {
+  it("drops ungrounded facts with one content-free warning and fails closed on unusable input", async () => {
     const privateText = "private candidate content";
     const failure = await processCanonicalCandidateProfileExtraction(
       {
@@ -277,8 +280,8 @@ describe("canonical candidate profile extraction", () => {
     );
 
     expect(failure.facts).toEqual([]);
-    expect(failure.issues).toHaveLength(1);
-    expect(failure.issues[0]).toMatchObject({ code: "omission", severity: "error" });
+    expect(failure.issues.some((issue) => issue.severity === "error")).toBe(false);
+    expect(failure.issues.filter((issue) => issue.message.includes("dropped"))).toHaveLength(1);
     expect(JSON.stringify(failure)).not.toContain(privateText);
 
     const ungrounded = await processCanonicalCandidateProfileExtraction(
@@ -300,9 +303,8 @@ describe("canonical candidate profile extraction", () => {
       { operationId: "profile-operation", sources: [material()], allowProviderData: true },
     );
     expect(ungrounded.facts).toEqual([]);
-    expect(ungrounded.issues).toHaveLength(1);
-    expect(ungrounded.issues[0]?.message).toBe(
-      "Claims could not be grounded. No facts were saved. Evidence failures: values absent from evidence quotes: 1. Check model support before retrying.",
+    expect(ungrounded.issues.map((issue) => issue.message)).toContain(
+      "1 extracted fact was dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.",
     );
     expect(JSON.stringify(ungrounded)).not.toContain("Invented role");
 
@@ -331,8 +333,16 @@ describe("canonical candidate profile extraction", () => {
       },
       { operationId: "profile-operation", sources: [material()], allowProviderData: true },
     );
-    expect(mixed.facts).toEqual([]);
-    expect(mixed.issues[0]?.message).toContain("values absent from evidence quotes: 1");
+    expect(mixed.facts.map((fact) => fact.value)).toEqual(["Engineer"]);
+    expect(mixed.issues.map((issue) => issue.message)).toContain(
+      "1 extracted fact was dropped because their evidence quotes were not found in the cited sources. Review the profile for missing facts.",
+    );
+    expect(mixed.issues.find((issue) => issue.message.includes("dropped"))).toMatchObject({
+      code: "omission",
+      severity: "warning",
+      status: "open",
+      factIds: [],
+    });
     expect(JSON.stringify(mixed)).not.toContain("Invented skill");
 
     const thrown = await processCanonicalCandidateProfileExtraction(
