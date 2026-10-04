@@ -129,6 +129,7 @@ import {
   createKnowledgeSelectionSnapshot,
   type KnowledgeSelectionSnapshot,
 } from "./knowledge-base.js";
+import { selectionSnapshotsMatch } from "./knowledge-selection-match.js";
 import { requestLocalAdjudicatedRevision } from "./local-adjudicated-revision.js";
 import { defaultLocalModelEndpoint, isLoopbackEndpoint } from "./local-endpoint.js";
 import type {
@@ -699,16 +700,6 @@ async function validateConfiguredKnowledgeSelection(
 function selectionDriftFailure(): CliUserError {
   return new CliUserError(
     "The candidate knowledge selection changed; review is required before provider execution.",
-  );
-}
-
-function selectionSnapshotsMatch(
-  historical: KnowledgeSelectionSnapshot,
-  current: KnowledgeSelectionSnapshot,
-): boolean {
-  return (
-    historical.schemaVersion === current.schemaVersion &&
-    JSON.stringify(historical.entries) === JSON.stringify(current.entries)
   );
 }
 
